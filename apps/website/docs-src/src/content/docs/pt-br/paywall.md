@@ -1,6 +1,6 @@
 ---
 title: "Desbloqueio e paywall"
-description: "Compra única do Full Access, sem assinatura. Desbloqueie exportações ilimitadas, agendamento, fluxos com destino no Mac e suporte a Atalhos."
+description: "Compra única do Full Access, sem assinatura. Remova o limite compartilhado de 10 exportações e libere fluxos com destino no Mac e Atalhos."
 ---
 
 ## Preço
@@ -9,12 +9,12 @@ description: "Compra única do Full Access, sem assinatura. Desbloqueie exporta�
 <li>Sem assinatura nem cobrança recorrente.</li>
 <li>O preço local vigente é mostrado pela Apple antes da compra.</li>
 <li>Não há conta no servidor. O desbloqueio fica vinculado à transação StoreKit do seu Apple ID.</li>
+<li>Antes do desbloqueio, a mesma cota de 10 ações cobre exportações manuais e agendadas.</li>
 </ul>
 
 ## O que o Full Access desbloqueia
 <ul>
-<li>Exportações ilimitadas.</li>
-<li>Exportações agendadas em segundo plano.</li>
+<li>Ações ilimitadas de exportação manuais e agendadas após a cota gratuita compartilhada.</li>
 <li>Fluxos com destino no Mac.</li>
 <li>Intents dos Atalhos.</li>
 </ul>

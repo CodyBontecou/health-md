@@ -76,7 +76,7 @@ JSON-exports van Android zijn ontworpen voor compatibiliteit met de Obsidian-vis
 
 ## Planning en automatisering
 
-Geplande exports gebruiken een eenmalig exact alarm als je Android toegang geeft tot Alarmen en herinneringen. Een blijvende WorkManager-taak dient als reserve. Zonder toegang voor exacte alarmen is WorkManager de primaire planner. De gekozen tijd is dan een richttijd en geen harde garantie. Health.md houdt de exportgeschiedenis bij, kan gemiste geplande datums herstellen en laat je mislukte uitvoeringen opnieuw proberen.
+Geplande exports vereisen de eenmalige aankoop voor levenslange toegang. Geplande exports gebruiken een eenmalig exact alarm als je Android toegang geeft tot Alarmen en herinneringen. Een blijvende WorkManager-taak dient als reserve. Zonder toegang voor exacte alarmen is WorkManager de primaire planner. De gekozen tijd is dan een richttijd en geen harde garantie. Health.md houdt de exportgeschiedenis bij, kan gemiste geplande datums herstellen en laat je mislukte uitvoeringen opnieuw proberen.
 
 Voor Tasker, adb en andere automatiseringsprogramma's biedt Health.md uitsluitend expliciete broadcast-intents. Externe aanroepers moeten de receivercomponent rechtstreeks adresseren:
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-De automatisering gebruikt je huidige exportinstellingen, geselecteerde map, formaten en meetwaarden. Ook het gratis exporttegoed en de geschiedenis blijven van toepassing.
+Automatisering gebruikt standaard het actieve profiel met de bevroren bestemming, formaten, meetwaarden, tegoed en geschiedenis. Een meegegeven extra `PROFILE` kan een stabiel profiel via ID of naam selecteren; een onbekende verwijzing stopt veilig in plaats van actuele instellingen te gebruiken. Geplande uitvoeringen blijven ook aan hun profiel gebonden. Zie [Exportprofielen](/nl/docs/export-profiles/).
+
+### Achtergrondvereisten en geplande annulering
+
+- Sta Health Connect-lezingen op de achtergrond toe voor onbeheerde exports; open anders Health.md om de lezing af te ronden.
+- Houd meldingen aan voor actief werk, de vereiste voorgrondservice en herstelberichten.
+- Geef alleen toegang tot Alarmen en herinneringen voor exacte alarmen. Zonder die toegang blijft werk persistent maar is de tijd bij benadering.
+- Een geplande uitvoering annuleren stopt alleen die poging. Voltooide datums blijven behouden, andere zijn herhaalbaar en het schema blijft actief.
 
 ## Gezondheidsbronnen
 
 Health Connect is het standaardpad voor lokale exports. De Android-app bevat ook instellingen voor ecosystemen zoals Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar en WHOOP. Als die ecosystemen gegevens naar Health Connect schrijven, kan Health.md de bijbehorende Health Connect-records exporteren. Voor rechtstreekse imports van cloudproviders is toestemming van de provider nodig. Er kunnen daarnaast extra configuratie- of beschikbaarheidsbeperkingen gelden.
 
 Google Fit staat bewust niet in de lijst met ondersteunde providers, omdat Health Connect de voorkeurslaag van Android voor gezondheidsgegevens is.
+
+### Exacte lokale dagstappen
+
+Dagtotalen gebruiken exacte lokale daggrenzen met tijdzone. Health.md knipt en splitst Health Connect-intervallen bij lokale middernacht vóór aggregatie, zodat reizen en zomertijd geen stappen verschuiven.
 
 ## Prijzen en aankopen herstellen
 
@@ -118,6 +129,8 @@ Google Fit staat bewust niet in de lijst met ondersteunde providers, omdat Healt
 - Er is geen abonnement of terugkerende betaling.
 - Google Play toont vóór de aankoop de actuele lokale prijs.
 - Gebruik Aankoop herstellen met het Google-account waarmee Premium is gekocht.
+
+Na een tijdelijke verbreking van Google Play Billing maakt Health.md opnieuw verbinding en vernieuwt het recht automatisch. Premium verdwijnt niet permanent; gebruik Aankoop herstellen alleen als het account na netwerkherstel onopgelost blijft.
 
 ## Privacymodel
 
@@ -135,10 +148,11 @@ Wil je alles zo veel mogelijk lokaal houden, voer dan handmatige exports uit naa
 ## Gerelateerde documentatie
 
 <div class="related">
+  <a href="/nl/docs/export-profiles/"><span>Profielen</span>Bewaar onafhankelijke bestemmingen, uitvoerinstellingen, planningen en stabiele automatiserings-ID’s.</a>
   <a href="/nl/docs/export/"><span>Export</span>Handmatige exports, datumbereiken, voorbeelden, geschiedenis en bestandsuitvoer.</a>
   <a href="/nl/docs/metrics/"><span>Meetwaarden</span>Hoe selectie en categorieën van meetwaarden in Health.md werken.</a>
   <a href="/nl/docs/format/"><span>Formaten</span>Markdown, Bases, JSON, CSV, eenheden, bestandsnamen en frontmatter.</a>
   <a href="/nl/docs/visualizations-roadmap/"><span>Obsidian</span>Hoe geëxporteerde JSON en Markdown de Health.md-visualisaties aansturen.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Laatst bijgewerkt op 3 augustus 2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Laatst bijgewerkt op 31 augustus 2026</p>

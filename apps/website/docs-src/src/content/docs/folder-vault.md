@@ -35,9 +35,16 @@ description: "Pick where your Markdown files live and name the subfolder where e
 <p style="margin-top:6px;">If iOS revokes the security-scoped bookmark (rare — usually only if the underlying folder is deleted or moved), exports will start to fail. The fix is to re-pick the vault from <em>Settings</em>.</p>
 </div>
 
+## Replacing or moving a selected folder safely
+
+When a saved bookmark resolves at a changed path, Health.md rebinds automatically if persistent identity proves it is the same folder. It can also accept a successfully resolved security-scoped bookmark when neither the saved nor resolved folder exposes persistent identity, which is common for cloud providers. It never treats a nearby path alone as proof. Export history still shows the privacy-safe destination label used by each run.
+
+Select the folder again when it was deleted, access was revoked, persistent identities conflict, or identity evidence appears on only one side and the move cannot be verified. Health.md fails closed instead of writing to an ambiguous destination. Because every [export profile](/docs/export-profiles/) owns its destination, verify or reselect the affected folder for each profile.
+
 ## Related
 
 <div class="related">
+  <a href="/docs/export-profiles/"><span>Multiple destinations</span>Export Profiles — bind and verify a separate folder for each saved setup.</a>
   <a href="/docs/onboarding/"><span>Previous</span>Onboarding — where you first pick the vault.</a>
   <a href="/docs/export/"><span>Next</span>Run an export into your new vault.</a>
   <a href="/docs/format/"><span>Customize</span>Format Customization — how the files inside the subfolder are written.</a>

@@ -7,7 +7,7 @@ description: "수집되는 항목은 변경하지 않고 출력 형식을 제어
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>기본값입니다. 하루에 파일 하나를 생성합니다. 선택 사항인 YAML 프론트매터와 카테고리별 제목 섹션으로 구성됩니다.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Obsidian의 <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> 플러그인에 최적화된 구조화된 프론트매터를 사용하는 Markdown입니다. 숫자 속성은 숫자로, 날짜는 날짜로 유지됩니다.</p></div>
-<div class="option"><strong>JSON</strong><p>하루에 JSON 파일 하나를 생성합니다. 무손실 건강 기록이 활성화된 경우 스키마 v7 일일 요약에 기준 <code>healthmd.healthkit_records</code> v1 아카이브를 포함할 수 있습니다.</p></div>
+<div class="option"><strong>JSON</strong><p>하루에 JSON 파일 하나를 생성합니다. 무손실 건강 기록이 활성화된 경우 Apple 스키마 v8 일일 요약에 기준 <code>healthmd.healthkit_records</code> v1 아카이브를 포함할 수 있습니다.</p></div>
 <div class="option"><strong>CSV</strong><p><code>Date,Category,Metric,Value,Unit,Timestamp</code> 헤더를 사용하는 CSV 파일을 하루에 하나 생성합니다. 호환성 요약 행은 필드 5개로 구성되며 타임스탬프 열을 생략합니다. 타임스탬프가 있는 행과 정규 레코드 행은 필드 6개를 모두 포함합니다.</p></div>
 </div>
 
@@ -37,9 +37,16 @@ description: "수집되는 항목은 변경하지 않고 출력 형식을 제어
 ## 미리보기
 <p>형식 화면 하단의 실시간 미리보기 블록은 현재 설정으로 오늘 데이터를 렌더링합니다. 토글을 변경하고 미리보기를 확인한 다음 반복하는 것이 가장 빠르게 조정하는 방법입니다.</p>
 
+## 데이터 세부 수준과 프로필
+
+요약은 간결한 일일 프로젝션을 만듭니다. 상세 시계열은 측정 항목이 지원할 때 Apple과 Android에서 선택한 샘플과 구간을 추가합니다. 무손실 건강 기록은 정규 HealthKit 아카이브를 추가하는 Apple 전용 기능이며 Android 호환 계층이 아닙니다.
+
+세부 수준은 [내보내기 프로필](/ko/docs/export-profiles/)과 함께 고정됩니다. 활성 프로필에서 바꾸면 해당 프로필만 변경됩니다.
+
 ## 관련 문서
 
 <div class="related">
+  <a href="/ko/docs/export-profiles/"><span>프로필</span>워크플로별 세부 정보 수준과 형식을 저장합니다.</a>
   <a href="/ko/docs/metrics/"><span>항목</span>건강 항목 — 먼저 데이터를 선택하세요.</a>
   <a href="/ko/docs/individual-tracking/"><span>세분화</span>개별 추적 — 완전히 다른 출력 방식입니다(항목별 파일).</a>
   <a href="/ko/docs/daily-notes/"><span>Obsidian</span>일일 노트 주입 — 동일한 프론트매터 필드를 사용합니다.</a>

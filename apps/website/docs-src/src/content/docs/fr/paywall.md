@@ -1,6 +1,6 @@
 ---
 title: "Déverrouillage et paywall"
-description: "Achat unique de Full Access, sans abonnement. Déverrouillez les exports illimités, la planification, les flux de destination Mac et la prise en charge de Shortcuts."
+description: "Achat unique de Full Access, sans abonnement. Supprimez la limite commune de 10 exportations et déverrouillez les flux vers Mac ainsi que Raccourcis."
 ---
 
 ## Tarification
@@ -9,12 +9,12 @@ description: "Achat unique de Full Access, sans abonnement. Déverrouillez les e
 <li>Aucun abonnement ni paiement récurrent.</li>
 <li>Apple affiche le prix local en vigueur avant l’achat.</li>
 <li>Aucun compte côté serveur. Le déverrouillage est lié à la transaction StoreKit de votre Apple ID.</li>
+<li>Avant le déverrouillage, la même allocation de 10 actions couvre les exports manuels et planifiés.</li>
 </ul>
 
 ## Ce que Full Access déverrouille
 <ul>
-<li>Exports illimités.</li>
-<li>Exports planifiés en arrière-plan.</li>
+<li>Actions d’exportation manuelles et planifiées illimitées après l’allocation gratuite commune.</li>
 <li>Flux de destination Mac.</li>
 <li>App Intents pour Shortcuts.</li>
 </ul>

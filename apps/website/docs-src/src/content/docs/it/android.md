@@ -76,7 +76,7 @@ Le esportazioni JSON di Android sono progettate per essere compatibili con le vi
 
 ## Pianificazione e automazione
 
-Le esportazioni programmate utilizzano un allarme esatto una tantum quando concedi l'accesso ad Allarmi e promemoria di Android, con un'attività persistente di WorkManager come soluzione di riserva. Senza l'accesso agli allarmi esatti, WorkManager diventa il sistema di pianificazione principale, quindi l'ora selezionata è indicativa e non una garanzia assoluta. Health.md registra la cronologia delle esportazioni, può recuperare le date programmate non elaborate e consente di riprovare le esecuzioni non riuscite.
+Le esportazioni programmate richiedono l’acquisto a vita una tantum. Le esportazioni programmate utilizzano un allarme esatto una tantum quando concedi l'accesso ad Allarmi e promemoria di Android, con un'attività persistente di WorkManager come soluzione di riserva. Senza l'accesso agli allarmi esatti, WorkManager diventa il sistema di pianificazione principale, quindi l'ora selezionata è indicativa e non una garanzia assoluta. Health.md registra la cronologia delle esportazioni, può recuperare le date programmate non elaborate e consente di riprovare le esecuzioni non riuscite.
 
 Per Tasker, adb o altri strumenti di automazione, Health.md espone intent broadcast solo espliciti. I chiamanti esterni devono indirizzare direttamente il componente receiver:
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-L'automazione utilizza le impostazioni di esportazione correnti, la cartella selezionata, i formati, la selezione delle metriche, il conteggio delle esportazioni gratuite e la cronologia.
+L’automazione usa per impostazione predefinita il profilo attivo con destinazione, formati, metriche, conteggio e cronologia congelati. Un extra `PROFILE` può selezionare un profilo stabile per ID o nome; un riferimento sconosciuto fallisce in sicurezza anziché usare le impostazioni attuali. Anche le esecuzioni pianificate restano legate al profilo. Consulta [Profili di esportazione](/it/docs/export-profiles/).
+
+### Requisiti in background e annullamento pianificato
+
+- Consenti letture Health Connect in background per esportazioni non presidiate; altrimenti apri Health.md.
+- Mantieni le notifiche attive per mostrare il lavoro, il servizio in primo piano e gli avvisi di ripristino.
+- Concedi Sveglie e promemoria solo per allarmi esatti. Senza accesso, il lavoro è persistente ma l’orario approssimativo.
+- Annullare un’esecuzione pianificata ferma solo quel tentativo. Le date completate restano, le altre sono riprovabili e la pianificazione rimane attiva.
 
 ## Fonti dei dati sanitari
 
 Health Connect è il percorso locale di esportazione predefinito. L'app Android include anche un'area di configurazione delle fonti dei dati sanitari per ecosistemi come Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar e WHOOP. Quando questi ecosistemi scrivono in Health Connect, Health.md può esportare i relativi record di Health Connect. Le importazioni dirette dai provider cloud richiedono l'autorizzazione del provider e possono prevedere configurazioni aggiuntive o limitazioni di disponibilità.
 
 Google Fit è intenzionalmente escluso dall'elenco dei provider supportati perché Health Connect è il livello preferito da Android per i dati sanitari.
+
+### Passi giornalieri locali esatti
+
+I totali usano i limiti esatti del giorno locale con fuso. Health.md taglia e divide gli intervalli Health Connect alla mezzanotte locale prima dell’aggregazione, evitando spostamenti dovuti a viaggi o ora legale.
 
 ## Prezzi e ripristino
 
@@ -118,6 +129,8 @@ Google Fit è intenzionalmente escluso dall'elenco dei provider supportati perch
 - Non è previsto alcun abbonamento né alcun addebito ricorrente.
 - Google Play mostra il prezzo locale aggiornato prima dell'acquisto.
 - Ripristina acquisto utilizza l'account Google con cui è stato acquistato Full Access.
+
+Dopo una disconnessione temporanea da Google Play Billing, Health.md si riconnette e aggiorna automaticamente il diritto. Premium non viene rimosso definitivamente; usa Ripristina acquisto solo se l’account resta irrisolto dopo il ritorno della rete.
 
 ## Modello di privacy
 
@@ -135,10 +148,11 @@ Per la configurazione locale più rigorosa, esegui esportazioni manuali in una c
 ## Documentazione correlata
 
 <div class="related">
+  <a href="/it/docs/export-profiles/"><span>Profili</span>Salva destinazioni, impostazioni di output, pianificazioni e ID di automazione stabili indipendenti.</a>
   <a href="/it/docs/export/"><span>Esportazione</span>Flusso di esportazione manuale, intervalli di date, anteprime, cronologia e output dei file.</a>
   <a href="/it/docs/metrics/"><span>Metriche</span>Come funzionano la selezione delle metriche e le categorie in Health.md.</a>
   <a href="/it/docs/format/"><span>Formati</span>Markdown, Obsidian Bases, JSON, CSV, unità, nomi dei file e frontmatter.</a>
   <a href="/it/docs/visualizations-roadmap/"><span>Obsidian</span>Come i file JSON e Markdown esportati alimentano le visualizzazioni di Health.md.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Ultimo aggiornamento: 3 agosto 2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Ultimo aggiornamento: 31 agosto 2026</p>

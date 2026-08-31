@@ -22,7 +22,7 @@ De opdracht `healthmd` heeft twee werkmodi. Gebruik de backend van de Mac-app vo
 | Strikte onbewerkte export | Ja | Ja; systeemeigen Health Connect-momentopnames op Android |
 | Canonieke `healthmd extract` | Ja | Alleen iPhone |
 | Versleutelde context, getypeerde queries en bewijs | Ja | Alleen iPhone, platformonafhankelijke client |
-| `healthmd-mcp` | Ja | Nee |
+| `healthmd-mcp` | Ja | Ja, geïnstalleerd platformonafhankelijk compatibiliteitsprogramma |
 | Manual IP of Tailscale | Mac-synchronisatie of expliciete directe modus | Ja |
 | Rechtstreeks Nearby-transport | Alleen gebundeld Swift-hulpprogramma | Niet in de platformonafhankelijke Rust-client |
 
@@ -77,15 +77,15 @@ healthmd doctor
 ## Status van de platformonafhankelijke CLI
 
 <div class="availability preview">
-<strong>Preview · nog niet openbaar uitgebracht</strong>
-<p>De platformonafhankelijke Rust-CLI wacht op release-QA met een fysieke iPhone en op het eerste gekwalificeerde pakket.</p>
+<strong>Openbare preview · nog geen gekwalificeerde stabiele versie</strong>
+<p>De platformonafhankelijke Rust-CLI is openbaar verpakt, maar de exacte mobiele matrix wacht nog op fysieke releasekwalificatie.</p>
 </div>
 
-Een zelfstandige Rust-CLI is in ontwikkeling als `0.1.0-alpha.1`. De CLI werkt op macOS, Linux en Windows, gebruikt standaard rechtstreekse verbindingen via Manual IP of Tailscale en heeft de Mac-app niet nodig. De CLI koppelt met iPhone-bronnen via protocol v1 en met Android-bronnen via protocol v2, met geautomatiseerde compatibiliteitscontroles tussen Swift↔Rust en Kotlin↔Rust. Protocolcompatibiliteit is geïmplementeerd, maar de release-QA op fysieke apparaten en de publicatie van het pakket moeten nog worden afgerond voor de eerste openbare release.
+De zelfstandige Rust-CLI is beschikbaar als uitdrukkelijk ongekwalificeerde openbare preview. De CLI werkt op macOS, Linux en Windows, gebruikt standaard rechtstreekse verbindingen via Manual IP of Tailscale en heeft de Mac-app niet nodig. De CLI koppelt met iPhone-bronnen via protocol v1 en met Android-bronnen via protocol v2, met geautomatiseerde compatibiliteitscontroles tussen Swift↔Rust en Kotlin↔Rust. Protocolcompatibiliteit is geïmplementeerd, maar de release-QA op fysieke apparaten moet zijn afgerond vóór de eerste gekwalificeerde stabiele versie.
 
-Gebruik tot die release het gebundelde Mac-hulpprogramma. Vertrouw niet op ongepubliceerde URL's voor Homebrew, crates.io, GitHub-installatieprogramma's of downloads.
+Installeer de preview op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>. Gebruik de exacte mobiele build uit het releasebewijs; pakketpublicatie bewijst geen mobiele compatibiliteit.
 
-De platformonafhankelijke client ondersteunt op alle drie de desktopplatforms koppeling, status, onbewerkte export, bestemmingen voor gegenereerde bestanden, hervatten en annuleren, voor zowel iPhone- als Android-bronnen. Canonieke extractie en getypeerde MCP-queries zijn iPhone-mogelijkheden; onbewerkte Android-momentopnames houden hun systeemeigen Health Connect-contract in plaats van te worden omgezet in gegevens in HealthKit-vorm, en getypeerde Android-queries zijn niet geïmplementeerd. Bij export van gegenereerde bestanden behandelt de telefoon de bestemming als een ondoorzichtig doellabel. De ontvangende CLI valideert het doel en bindt het blijvend aan het bestandssysteem van de host. Android protocol v2 legt bestandsbestemmingen vast op elk CLI-besturingssysteem en beperkt elke gegenereerde taak tot 4,096 bestanden; iOS protocol v1 wijst bestandsbestemmingen af op Windows.
+De platformonafhankelijke client ondersteunt op alle drie de desktopplatforms koppeling, status, onbewerkte export, bestemmingen voor gegenereerde bestanden, hervatten en annuleren, voor zowel iPhone- als Android-bronnen. Canonieke extractie en getypeerde MCP-queries zijn iPhone-mogelijkheden; onbewerkte Android-momentopnames houden hun systeemeigen Health Connect-contract in plaats van te worden omgezet in gegevens in HealthKit-vorm, en getypeerde Android-queries zijn niet geïmplementeerd. Bij export van gegenereerde bestanden behandelt de telefoon de bestemming als een ondoorzichtig doellabel. De ontvangende CLI valideert het doel en bindt het blijvend aan het bestandssysteem van de host. Android protocol v2 legt bestandsbestemmingen vast op elk CLI-besturingssysteem en beperkt elke gegenereerde taak tot 4,096 bestanden.
 
 ## Overzicht van opdrachten
 
@@ -95,7 +95,7 @@ De platformonafhankelijke client ondersteunt op alle drie de desktopplatforms ko
 | `healthmd doctor` | De gereedheid van de Mac, versleutelde context en iPhone toelichten | Mac-app |
 | `healthmd metrics list` | De canonieke catalogus met opvraagbare meetwaarden teruggeven | Mac-app |
 | `healthmd extract` | Geselecteerde canonieke `healthmd.health_data`-objecten ophalen | Beide, iPhone-bron |
-| `healthmd query` | Geselecteerde getypeerde meetwaarden ophalen en opvragen | Mac-app |
+| `healthmd query` | Geselecteerde getypeerde meetwaarden ophalen en opvragen | Mac-app; rechtstreekse iPhone met TOOL en argumenten |
 | `healthmd sleep sessions` | Volwaardige slaapsessies en vaste vensters teruggeven | Mac-app |
 | `healthmd training align` | Work-outs afstemmen op de slaap ervoor en erna | Mac-app |
 | `healthmd workouts` | Getypeerde work-outs met bewijs weergeven | Mac-app |
@@ -144,16 +144,31 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
-
-# Run a saved export profile by UUID (frozen settings + destination)
-healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
-
-`--profile PROFILE_ID` lost een opgeslagen exportprofiel op de iPhone op via zijn stabiele UUID: de run gebruikt de bevroren metrieselectie, formaten en bestemming van dat profiel in plaats van de actuele app-instellingen. Het kan niet worden gecombineerd met `--use-iphone-settings` of metriek-/categoriselectors (het profiel bepaalt het instellingenbereik), en een onbekende UUID faalt met een getypeerde `profile_not_found`-fout in plaats van terug te vallen. Lees de UUID in de profielkiezer op het tabblad Exporteren van de app.
 
 Er geldt momenteel geen limiet voor het aantal kalenderdagen. Met `--all` vraagt de CLI de iPhone om het oudste beschikbare geselecteerde bronrecord te zoeken, het gevonden bereik vast te zetten en dit via afgebakende partities te verwerken. De beschikbare opslag en één uitzonderlijk gegevensrijke dag blijven praktische beperkingen.
 
 `--raw` vraagt tijdelijk canonieke verliesvrije bronrecords op zonder de iPhone-voorkeur te wijzigen. De opdracht schrijft geen gegenereerde bestanden en bevat geen sidecars van verbonden providers.
+
+### Draagbare profielgebaseerde bestandsexport
+
+De zelfstandige directe CLI kan op beide ondersteunde telefoonplatforms een opgeslagen profiel via de stabiele ID opzoeken. Het profiel levert de bevroren uitvoerinstellingen; de computerbestemming blijft expliciet:
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --last 7 \
+  --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+`--profile PROFILE_ID` kan niet worden gecombineerd met `--use-device-settings` of metriek-/categoriekiezers. Een onbekende ID stopt veilig in plaats van actuele instellingen te gebruiken. Kopieer de ID op iPhone of Android via **Instellingen → Exportprofielen → Profiel-ID**. Zie [Exportprofielen](/nl/docs/export-profiles/) voor automatisering en bestemmingsgedrag.
+
+De platformonafhankelijke directe client kan elke ondersteunde getypeerde iPhone-bewerking zonder MCP-envelop aanroepen:
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
 
 ## Canonieke extractie of afgeleide query?
 
@@ -173,7 +188,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7 is het openbare broncontract. Schema's voor queries, bewijs, taken en ontvangstbewijzen beschrijven transport of afgeleide weergaven. Ze vervangen het bronschema niet. Canonieke extractie is een iPhone-mogelijkheid; rechtstreekse Android-bronnen stellen in plaats daarvan systeemeigen Health Connect-momentopnames beschikbaar via onbewerkte export.
+`healthmd.health_data` v8 is het openbare Apple-broncontract. Schema's voor queries, bewijs, taken en ontvangstbewijzen beschrijven transport of afgeleide weergaven. Ze vervangen het bronschema niet. Canonieke extractie is een iPhone-mogelijkheid; rechtstreekse Android-bronnen stellen in plaats daarvan systeemeigen Health Connect-momentopnames beschikbaar via onbewerkte export.
 
 ## Machineleesbaar gedrag
 

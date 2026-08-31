@@ -22,7 +22,7 @@ description: "Macアプリまたはスマートフォン直接接続バックエ
 | 厳密な生データエクスポート | 対応 | 対応。AndroidではプロバイダネイティブなHealth Connectスナップショット |
 | 正規`healthmd extract` | 対応 | iPhoneのみ |
 | 暗号化コンテキスト、型付きクエリ、エビデンス | 対応 | iPhoneのみ（ポータブルクライアント） |
-| `healthmd-mcp` | 対応 | 非対応 |
+| `healthmd-mcp` | 対応 | 対応（インストール済みポータブル互換ランチャー） |
 | Manual IPまたはTailscale | Mac同期または明示的な直接接続モード | 対応 |
 | Nearby直接転送 | 同梱のSwiftヘルパーのみ | ポータブルRustクライアントでは非対応 |
 
@@ -77,15 +77,15 @@ healthmd doctor
 ## ポータブルCLIの提供状況
 
 <div class="availability preview">
-<strong>プレビュー · 公開パッケージは未提供</strong>
-<p>クロスプラットフォームのRust CLIは、実機iPhoneでのリリースQAと、最初の品質確認済みパッケージの公開を待っています。</p>
+<strong>公開プレビュー · まだ認定済み安定版ではありません</strong>
+<p>クロスプラットフォームのRust CLIは公開パッケージとして提供されていますが、正確なモバイル対応表は実機リリース認定を待っています。</p>
 </div>
 
-スタンドアロンのRust CLIは、`0.1.0-alpha.1`として開発中です。macOS、Linux、Windowsで動作し、既定ではManual IPまたはTailscaleによる直接接続を使用するため、Macアプリは不要です。プロトコルv1でiPhoneソースと、プロトコルv2でAndroidソースとペアリングし、Swift↔RustとKotlin↔Rustの自動互換性ゲートを備えています。プロトコル互換性は実装済みですが、最初の公開リリースまでに、実機デバイスでのリリースQAと公開パッケージの準備を完了する必要があります。
+スタンドアロンのRust CLIは、明示的に未認定の公開プレビューとして利用できます。macOS、Linux、Windowsで動作し、既定ではManual IPまたはTailscaleによる直接接続を使用するため、Macアプリは不要です。プロトコルv1でiPhoneソースと、プロトコルv2でAndroidソースとペアリングし、Swift↔RustとKotlin↔Rustの自動互換性ゲートを備えています。プロトコル互換性は実装済みですが、最初の認定済み安定版までに実機デバイスでのリリースQAを完了する必要があります。
 
-リリースされるまでは、同梱のMacヘルパーを使用してください。未公開のHomebrew、crates.io、GitHubインストーラー、ダウンロードURLに依存しないでください。
+macOSまたはLinuxでは、<code>brew install CodyBontecou/tap/healthmd</code>でプレビューをインストールします。リリース証拠に記載された正確なモバイルビルドを使用してください。パッケージ公開はモバイル互換性の証明ではありません。
 
-ポータブルクライアントは、iPhoneとAndroidの両方のソースについて、3つのデスクトッププラットフォームすべてで、ペアリング、status、生データエクスポート、生成ファイルの保存先、resume、cancelに対応します。正規抽出と型付きMCPクエリはiPhoneの機能です。Androidの生スナップショットはHealthKit形式のデータへ変換されず、プロバイダネイティブなHealth Connectコントラクトを維持します。Androidの型付きクエリは未実装です。生成ファイルのエクスポートでは、スマートフォンは保存先を不透明な対象ラベルとして扱い、受信側CLIがホストのファイルシステム上で検証し、永続的に紐づけます。Androidプロトコルv2は、すべてのCLIオペレーティングシステムでファイル保存先をコミットし、各生成ジョブの上限は4,096ファイルです。iOSプロトコルv1はWindows上でファイル保存先を拒否します。
+ポータブルクライアントは、iPhoneとAndroidの両方のソースについて、3つのデスクトッププラットフォームすべてで、ペアリング、status、生データエクスポート、生成ファイルの保存先、resume、cancelに対応します。正規抽出と型付きMCPクエリはiPhoneの機能です。Androidの生スナップショットはHealthKit形式のデータへ変換されず、プロバイダネイティブなHealth Connectコントラクトを維持します。Androidの型付きクエリは未実装です。生成ファイルのエクスポートでは、スマートフォンは保存先を不透明な対象ラベルとして扱い、受信側CLIがホストのファイルシステム上で検証し、永続的に紐づけます。Androidプロトコルv2は、すべてのCLIオペレーティングシステムでファイル保存先をコミットし、各生成ジョブの上限は4,096ファイルです。
 
 ## コマンド一覧
 
@@ -95,7 +95,7 @@ healthmd doctor
 | `healthmd doctor` | Mac、暗号化コンテキスト、iPhoneの準備状況を説明 | Macアプリ |
 | `healthmd metrics list` | クエリ可能な正規指標カタログを返す | Macアプリ |
 | `healthmd extract` | 選択した正規`healthmd.health_data`オブジェクトを取得 | 両方（iPhoneソース） |
-| `healthmd query` | 選択した型付き指標を取得して照会 | Macアプリ |
+| `healthmd query` | 選択した型付き指標を取得して照会 | Macアプリ、またはTOOLと引数を使うiPhone直接接続 |
 | `healthmd sleep sessions` | 第1級オブジェクトの睡眠セッションと固定時間枠を返す | Macアプリ |
 | `healthmd training align` | ワークアウトを前後の睡眠セッションと対応付け | Macアプリ |
 | `healthmd workouts` | エビデンス付きの型付きワークアウトを一覧表示 | Macアプリ |
@@ -144,16 +144,31 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
-
-# Run a saved export profile by UUID (frozen settings + destination)
-healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
-
-`--profile PROFILE_ID` は、保存されたエクスポートプロファイルをその安定した UUID で iPhone 上で解決します。実行では、アプリの現在の設定ではなく、そのプロファイルの凍結されたメトリック選択・フォーマット・保存先が使われます。`--use-iphone-settings` やメトリック/カテゴリセレクターとの併用はできず（プロファイルが設定スコープを所有します）、不明な UUID は型付きの `profile_not_found` エラーで失敗し、現在の設定へフォールバックすることはありません。UUID はアプリの「エクスポート」タブのプロファイル選択で確認してください。
 
 現在、暦日数に上限はありません。`--all`は、選択したソースレコードのうち最も古い利用可能なものをiPhoneに検出させ、解決した範囲を固定して、上限付きのパーティションで処理します。利用可能なストレージと、極端にデータ量の多い1日が実用上の制限になります。
 
 `--raw`は、iPhoneの設定を変更せず、一時的に正規のロスレスソースレコードを要求します。生成ファイルを書き込まず、接続済みプロバイダのサイドカーも含みません。
+
+### ポータブルCLIでのプロファイル別ファイル出力
+
+スタンドアロンDirect CLIは、対応するどちらのスマートフォンプラットフォームでも、安定IDから保存済みプロファイルを解決できます。プロファイルは固定された出力設定を提供し、コンピュータの保存先は明示的に指定します。
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --last 7 \
+  --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+`--profile PROFILE_ID` は `--use-device-settings` や指標/カテゴリ選択と併用できません。不明なIDは現在の設定へフォールバックせず、安全側で失敗します。iPhoneまたはAndroidの**設定 → エクスポートプロファイル → プロファイルID**でIDをコピーしてください。自動化と保存先の動作は[エクスポートプロファイル](/ja/docs/export-profiles/)を参照してください。
+
+ポータブル直接接続クライアントは、対応するiPhoneの型付き操作をMCPエンベロープなしで呼び出せます。
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
 
 ## 正規抽出と派生クエリの使い分け
 
@@ -173,7 +188,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7が公開ソースコントラクトです。クエリ、エビデンス、ジョブ、レシートの各スキーマは、転送または派生ビューを記述します。ソーススキーマを置き換えるものではありません。正規抽出はiPhoneの機能です。Androidの直接接続ソースでは、代わりに生データエクスポートを通じてプロバイダネイティブなHealth Connectスナップショットが提供されます。
+`healthmd.health_data` v8がAppleの公開ソースコントラクトです。クエリ、エビデンス、ジョブ、レシートの各スキーマは、転送または派生ビューを記述します。ソーススキーマを置き換えるものではありません。正規抽出はiPhoneの機能です。Androidの直接接続ソースでは、代わりに生データエクスポートを通じてプロバイダネイティブなHealth Connectスナップショットが提供されます。
 
 ## 機械可読動作
 

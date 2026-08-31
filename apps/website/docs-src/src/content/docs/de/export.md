@@ -37,9 +37,17 @@ description: "Der Tab „Export“ ist die zentrale Arbeitsfläche. Er zeigt, ob
 <div class="option"><strong>Export</strong><p>Führt den Export aus, zeigt den Fortschritt auf dem Hauptbildschirm und zeichnet das Ergebnis im Verlauf auf.</p></div>
 </div>
 
+## Datendetail auswählen
+
+<div class="options">
+<div class="option"><strong>Zusammenfassung</strong><p>Kompakte Tagessummen und Roll-ups für Notizen, Übersichten und zum Lesen.</p></div>
+<div class="option"><strong>Detaillierte Zeitreihen</strong><p>Ausgewählte Messpunkte und Intervalle mit Zeitstempel. Diese Stufe ist auf Apple und Android verfügbar, wenn die Metrik entsprechende Details bietet.</p></div>
+<div class="option"><strong>Verlustfreie Gesundheitsdatensätze</strong><p>Das kanonische Archiv der HealthKit-Quelldatensätze. Diese Stufe gibt es nur bei Apple; Android wandelt Health Connect-Datensätze nicht in ein HealthKit-Archiv um.</p></div>
+</div>
+
 ## Was beim „Exportieren“ tatsächlich geschieht
 <ol>
-<li>Für jeden Tag im Zeitraum werden die ausgewählten Zusammenfassungsprojektionen und, sofern Lossless Health Records aktiviert ist, deren kanonische Quelldatensätze und Abfragediagnosen erfasst.</li>
+<li>Für jeden Tag im Zeitraum werden ausgewählte Zusammenfassungen erfasst, bei detaillierten Zeitreihen kompatible Messpunkte ergänzt und bei Lossless Health Records kanonische Quelldatensätze samt Abfragediagnosen hinzugefügt.</li>
 <li>Das gewählte Format (Markdown, Bases, JSON oder CSV) und die Vorlage werden angewendet.</li>
 <li>Pro Tag wird eine Datei in <code>{vault}/{subfolder}/</code> geschrieben, über den Workflow mit dem verbundenen Mac übertragen oder als versionierter API-Envelope per POST an Ihren API-Endpunkt gesendet.</li>
 <li>Ist <em>Individual Tracking</em> aktiviert, werden für dateibasierte Ziele ausgewählte Markdown-Dateien pro Eintrag aus dem kanonischen Archiv abgeleitet.</li>
@@ -48,18 +56,27 @@ description: "Der Tab „Export“ ist die zentrale Arbeitsfläche. Er zeigt, ob
 
 <p>JSON und CSV können kanonische Datensätze erhalten. Markdown und Bases bleiben gut lesbar und zeigen kompakte Erfassungsdiagnosen, statt das Archiv einzubetten. Exakte Schemas und Auslassungsregeln finden Sie in der <a href="/de/docs/reference/">vollständigen Exportreferenz</a>.</p>
 
+## Stoppen, abbrechen und erneut versuchen
+
+Stoppen oder Abbrechen beendet nur den aktuellen Versuch. Bereits abgeschlossene Dateien und Tage bleiben erhalten, offene Tage können erneut versucht werden. Der Abbruch eines geplanten Versuchs deaktiviert den wiederkehrenden Zeitplan nicht.
+
+## Profile und verlässlicher Verlauf
+
+Ein gespeichertes Profil fixiert seine Einstellungen und sein Ziel für den Lauf. Profilbezogene geplante und automatisierte Verlaufszeilen speichern das beim Lauf verwendete Profil; der Verlauf behält außerdem eine datenschutzfreundliche Bezeichnung des tatsächlichen Ziels. Eine manuelle Export-Zeile kann den Profilnamen auslassen. Spätere Umbenennungen und Zieländerungen schreiben bestehende Einträge nicht um. Fehlende Profilreferenzen brechen sicher ab. Siehe [Exportprofile](/de/docs/export-profiles/).
+
 ## Tab-Leiste
 
 <p>Die vier Tabs am unteren Bildschirmrand – Export, Zeitplan, Synchronisierung und Einstellungen – decken die gesamte App ab. Alles Weitere befindet sich eine oder zwei Ebenen tiefer in den Einstellungen.</p>
 
 <div class="callout">
 <strong>Freischaltung.</strong>
-<p style="margin-top:6px;">Full Access schaltet unbegrenzte Exportdurchläufe, geplante Exporte, Mac-Ziele und Kurzbefehle frei. Weitere Informationen finden Sie auf der <a href="/de/docs/paywall/">Seite zu Freischaltung und Paywall</a>.</p>
+<p style="margin-top:6px;">Auf Apple-Plattformen gilt die kostenlose Freigrenze für 10 manuelle oder geplante Exportaktionen. Full Access hebt dieses Limit auf und schaltet Mac-Ziel-Workflows und Kurzbefehle frei. Android bietet dagegen 10 kostenlose manuelle Aktionen; für Zeitplanung ist dort die dauerhafte Freischaltung erforderlich. Die <a href="/de/docs/paywall/">Paywall-Seite</a> erklärt den Apple-Kauf.</p>
 </div>
 
 ## Verwandte Themen
 
 <div class="related">
+  <a href="/de/docs/export-profiles/"><span>Profile</span>Unabhängige Ziele, Einstellungen, Zeitpläne und Automatisierungs-IDs speichern.</a>
   <a href="/de/docs/scheduling/"><span>Tägliche Nutzung</span>Zeitplanung – automatisieren Sie den Vorgang, damit Sie nie wieder auf „Export“ tippen müssen.</a>
   <a href="/de/docs/api-endpoint/"><span>Integration</span>API-Endpunkt – senden Sie ausgewählte JSON-Daten direkt an Ihren eigenen Dienst.</a>
   <a href="/de/docs/format/"><span>Anpassen</span>Formatanpassung – ändern Sie das Erscheinungsbild jeder Datei.</a>

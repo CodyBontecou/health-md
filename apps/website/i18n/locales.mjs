@@ -25,6 +25,7 @@ export const authoredDocSlugs = Object.freeze([
   'docs/configuration',
   'docs/daily-notes',
   'docs/export',
+  'docs/export-profiles',
   'docs/folder-vault',
   'docs/format',
   'docs/individual-tracking',

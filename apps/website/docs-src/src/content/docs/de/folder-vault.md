@@ -35,9 +35,16 @@ description: "Wählen Sie den Speicherort Ihrer Markdown-Dateien und benennen Si
 <p style="margin-top:6px;">Falls iOS das security-scoped-Lesezeichen widerruft – selten und meist nur, wenn der zugrunde liegende Ordner gelöscht oder verschoben wurde –, schlagen Exporte fehl. Wählen Sie den Vault unter <em>Einstellungen</em> erneut aus.</p>
 </div>
 
+## Einen ausgewählten Ordner sicher ersetzen oder verschieben
+
+Wird ein gespeichertes Lesezeichen an einem anderen Pfad aufgelöst, bindet Health.md den Ordner automatisch neu, wenn die dauerhafte Identität denselben Ordner bestätigt. Die App kann auch ein erfolgreich aufgelöstes sicherheitsbezogenes Lesezeichen akzeptieren, wenn weder der gespeicherte noch der aufgelöste Ordner eine dauerhafte Identität bereitstellt – das ist bei Cloud-Anbietern üblich. Ein ähnlicher Pfad allein gilt nie als Beweis. Im Exportverlauf bleibt die datenschutzfreundliche Zielbezeichnung jedes Laufs erhalten.
+
+Wähle den Ordner erneut aus, wenn er gelöscht wurde, der Zugriff entzogen ist, dauerhafte Identitäten widersprüchlich sind oder Identitätsnachweise nur auf einer Seite vorliegen und der Wechsel nicht geprüft werden kann. Health.md schreibt nicht an ein mehrdeutiges Ziel. Da jedes [Exportprofil](/de/docs/export-profiles/) ein eigenes Ziel besitzt, prüfe oder wähle den betroffenen Ordner für jedes Profil neu aus.
+
 ## Verwandte Themen
 
 <div class="related">
+  <a href="/de/docs/export-profiles/"><span>Profile</span>Ordnerzugriff und Ziele pro Profil verwalten.</a>
   <a href="/de/docs/onboarding/"><span>Zurück</span>Einrichtung – dort wählen Sie den Vault zum ersten Mal aus.</a>
   <a href="/de/docs/export/"><span>Weiter</span>Führen Sie einen Export in Ihren neuen Vault aus.</a>
   <a href="/de/docs/format/"><span>Anpassen</span>Formatanpassung – legen Sie fest, wie Dateien im Unterordner geschrieben werden.</a>

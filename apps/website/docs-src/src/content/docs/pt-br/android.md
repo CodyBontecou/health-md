@@ -76,7 +76,7 @@ As exportações JSON do Android foram projetadas para serem compatíveis com as
 
 ## Agendamento e automação
 
-As exportações agendadas usam um alarme exato de execução única quando você concede acesso a Alarmes e lembretes do Android, com uma tarefa persistente do WorkManager como alternativa. Sem acesso a alarmes exatos, o WorkManager passa a ser o agendador principal; portanto, o horário selecionado é uma meta, não uma garantia rígida. O Health.md registra o histórico de exportações, pode recuperar datas agendadas perdidas e permite repetir execuções com falha.
+As exportações agendadas exigem a compra única e vitalícia. As exportações agendadas usam um alarme exato de execução única quando você concede acesso a Alarmes e lembretes do Android, com uma tarefa persistente do WorkManager como alternativa. Sem acesso a alarmes exatos, o WorkManager passa a ser o agendador principal; portanto, o horário selecionado é uma meta, não uma garantia rígida. O Health.md registra o histórico de exportações, pode recuperar datas agendadas perdidas e permite repetir execuções com falha.
 
 Para Tasker, adb ou outras ferramentas de automação, o Health.md disponibiliza intents de broadcast exclusivamente explícitas. Chamadores externos precisam indicar diretamente o componente receptor:
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-A automação usa suas configurações atuais de exportação, pasta selecionada, formatos, seleção de métricas, contabilização de exportações gratuitas e histórico.
+A automação usa por padrão o perfil ativo, incluindo destino, formatos, métricas, contabilização e histórico congelados. Um extra `PROFILE` pode selecionar um perfil estável por ID ou nome; uma referência desconhecida falha com segurança em vez de usar as configurações atuais. Execuções agendadas também ficam ligadas ao perfil. Consulte [Perfis de exportação](/pt-br/docs/export-profiles/).
+
+### Requisitos em segundo plano e cancelamento agendado
+
+- Permita leituras do Health Connect em segundo plano para exportações sem supervisão; caso contrário, abra o Health.md.
+- Mantenha as notificações ativadas para mostrar trabalho ativo, serviço em primeiro plano e avisos de recuperação.
+- Conceda Alarmes e lembretes somente para alarmes exatos. Sem acesso, o trabalho é persistente, mas o horário é aproximado.
+- Cancelar uma execução agendada interrompe só a tentativa. Datas concluídas permanecem, as pendentes podem ser repetidas e o agendamento segue ativo.
 
 ## Fontes de saúde
 
 O Health Connect é o caminho padrão para exportação local. O app para Android também inclui uma área de configuração de fontes de saúde para ecossistemas como Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar e WHOOP. Quando esses ecossistemas gravam no Health Connect, o Health.md pode exportar os registros resultantes do Health Connect. Importações diretas de provedores em nuvem exigem autorização do provedor e podem ter requisitos adicionais de configuração ou disponibilidade.
 
 O Google Fit foi intencionalmente excluído da lista de provedores compatíveis porque o Health Connect é a camada de dados de saúde preferencial do Android.
+
+### Passos diários locais exatos
+
+Os totais usam os limites exatos do dia local com fuso. O Health.md recorta e divide intervalos do Health Connect à meia-noite local antes de somar, evitando deslocamentos por viagens ou horário de verão.
 
 ## Preços e restauração
 
@@ -118,6 +129,8 @@ O Google Fit foi intencionalmente excluído da lista de provedores compatíveis 
 - Não há assinatura nem cobrança recorrente.
 - O Google Play mostra o preço local vigente antes da compra.
 - Restaurar Compra usa a Conta do Google que adquiriu o Premium.
+
+Após uma desconexão temporária do Google Play Billing, o Health.md se reconecta e atualiza o direito automaticamente. Premium não é removido permanentemente; use Restaurar compra apenas se a conta continuar pendente após a conexão voltar.
 
 ## Modelo de privacidade
 
@@ -135,10 +148,11 @@ Para manter tudo o mais local possível, faça exportações manuais para uma pa
 ## Documentação relacionada
 
 <div class="related">
+  <a href="/pt-br/docs/export-profiles/"><span>Perfis</span>Salve destinos, configurações de saída, agendamentos e IDs estáveis de automação independentes.</a>
   <a href="/pt-br/docs/export/"><span>Exportação</span>Fluxo de exportação manual, intervalos de datas, pré-visualizações, histórico e saída de arquivos.</a>
   <a href="/pt-br/docs/metrics/"><span>Métricas</span>Como funcionam a seleção de métricas e as categorias no Health.md.</a>
   <a href="/pt-br/docs/format/"><span>Formatos</span>Markdown, Bases, JSON, CSV, unidades, nomes de arquivos e frontmatter.</a>
   <a href="/pt-br/docs/visualizations-roadmap/"><span>Obsidian</span>Como JSON e Markdown exportados alimentam as visualizações do Health.md.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última atualização: 03/08/2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última atualização: 31/08/2026</p>

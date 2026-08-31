@@ -22,7 +22,7 @@ Der Befehl `healthmd` bietet zwei Betriebsarten. Verwenden Sie das Backend der M
 | Strikter Rohdatenexport | Ja | Ja; provider-native Health-Connect-Snapshots auf Android |
 | Kanonisches `healthmd extract` | Ja | Nur iPhone |
 | Verschlüsselter Kontext, typisierte Abfragen und Nachweise | Ja | Nur iPhone, portabler Client |
-| `healthmd-mcp` | Ja | Nein |
+| `healthmd-mcp` | Ja | Ja, installierter portabler Kompatibilitätsstarter |
 | Manual IP oder Tailscale | Mac-Synchronisierung oder ausdrücklicher Direktmodus | Ja |
 | Direkter Transport in der Nähe | Nur mitgelieferter Swift-Helfer | Nicht im portablen Rust-Client |
 
@@ -77,15 +77,15 @@ healthmd doctor
 ## Status der portablen CLI
 
 <div class="availability preview">
-<strong>Vorschau · noch nicht öffentlich paketiert</strong>
-<p>Die plattformübergreifende Rust-CLI wartet auf die Release-QA mit einem physischen iPhone und ihr erstes qualifiziertes Paket.</p>
+<strong>Öffentliche Vorschau · noch keine qualifizierte stabile Version</strong>
+<p>Die plattformübergreifende Rust-CLI ist öffentlich paketiert, ihre exakte mobile Matrix wartet jedoch noch auf die physische Release-Qualifikation.</p>
 </div>
 
-Eine eigenständige Rust-CLI befindet sich als `0.1.0-alpha.1` in Entwicklung. Sie läuft unter macOS, Linux und Windows, verwendet standardmäßig direkte Verbindungen über Manual IP oder Tailscale und benötigt die Mac-App nicht. Sie koppelt sich über Protokoll v1 mit iPhone-Quellen und über Protokoll v2 mit Android-Quellen, mit automatisierten Kompatibilitätsgates für Swift↔Rust und Kotlin↔Rust. Die Protokollkompatibilität ist implementiert; vor der ersten öffentlichen Veröffentlichung müssen jedoch noch die Release-QA auf physischen Geräten und die öffentliche Paketierung abgeschlossen werden.
+Die eigenständige Rust-CLI ist als ausdrücklich nicht qualifizierte öffentliche Vorschau verfügbar. Sie läuft unter macOS, Linux und Windows, verwendet standardmäßig direkte Verbindungen über Manual IP oder Tailscale und benötigt die Mac-App nicht. Sie koppelt sich über Protokoll v1 mit iPhone-Quellen und über Protokoll v2 mit Android-Quellen, mit automatisierten Kompatibilitätsgates für Swift↔Rust und Kotlin↔Rust. Die Protokollkompatibilität ist implementiert; vor der ersten qualifizierten stabilen Version muss die Release-QA auf physischen Geräten abgeschlossen sein.
 
-Verwenden Sie bis dahin den mitgelieferten Mac-Helfer. Verlassen Sie sich nicht auf unveröffentlichte Homebrew-, crates.io-, GitHub-Installationsprogramm- oder Download-URLs.
+Installieren Sie die Vorschau unter macOS oder Linux mit <code>brew install CodyBontecou/tap/healthmd</code>. Verwenden Sie den exakten mobilen Build aus den Release-Nachweisen; die Paketveröffentlichung beweist keine mobile Kompatibilität.
 
-Der portable Client unterstützt auf allen drei Desktop-Plattformen für iPhone- und Android-Quellen Kopplung, Status, Rohdatenexport, Ziele für generierte Dateien, Fortsetzung und Abbruch. Kanonische Extraktion und typisierte MCP-Abfragen sind iPhone-Funktionen; Android-Rohdaten-Snapshots bewahren ihren provider-nativen Health-Connect-Vertrag, statt in HealthKit-strukturierte Daten umgewandelt zu werden, und typisierte Android-Abfragen sind nicht implementiert. Beim Export generierter Dateien behandelt das Telefon das Ziel als opake Zielbezeichnung, während die empfangende CLI es validiert und dauerhaft an das Dateisystem des Hosts bindet. Android-Protokoll v2 schreibt Dateiziele unter jedem CLI-Betriebssystem fest und begrenzt jeden generierten Auftrag auf 4.096 Dateien; iOS-Protokoll v1 weist Dateiziele unter Windows zurück.
+Der portable Client unterstützt auf allen drei Desktop-Plattformen für iPhone- und Android-Quellen Kopplung, Status, Rohdatenexport, Ziele für generierte Dateien, Fortsetzung und Abbruch. Kanonische Extraktion und typisierte MCP-Abfragen sind iPhone-Funktionen; Android-Rohdaten-Snapshots bewahren ihren provider-nativen Health-Connect-Vertrag, statt in HealthKit-strukturierte Daten umgewandelt zu werden, und typisierte Android-Abfragen sind nicht implementiert. Beim Export generierter Dateien behandelt das Telefon das Ziel als opake Zielbezeichnung, während die empfangende CLI es validiert und dauerhaft an das Dateisystem des Hosts bindet. Android-Protokoll v2 schreibt Dateiziele unter jedem CLI-Betriebssystem fest und begrenzt jeden generierten Auftrag auf 4.096 Dateien.
 
 ## Befehlsübersicht
 
@@ -95,7 +95,7 @@ Der portable Client unterstützt auf allen drei Desktop-Plattformen für iPhone-
 | `healthmd doctor` | Bereitschaft von Mac, verschlüsseltem Kontext und iPhone erläutern | Mac-App |
 | `healthmd metrics list` | Den kanonischen Katalog abfragbarer Metriken zurückgeben | Mac-App |
 | `healthmd extract` | Ausgewählte kanonische `healthmd.health_data`-Objekte erfassen | Beide, iPhone-Quelle |
-| `healthmd query` | Ausgewählte typisierte Metriken erfassen und abfragen | Mac-App |
+| `healthmd query` | Ausgewählte typisierte Metriken erfassen und abfragen | Mac-App; direktes iPhone mit TOOL und Argumenten |
 | `healthmd sleep sessions` | Eigenständige Schlafsitzungen und feste Zeitfenster zurückgeben | Mac-App |
 | `healthmd training align` | Trainingseinheiten dem vorherigen und nachfolgenden Schlaf zuordnen | Mac-App |
 | `healthmd workouts` | Typisierte Trainingseinheiten mit Nachweisen auflisten | Mac-App |
@@ -144,16 +144,31 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
-
-# Run a saved export profile by UUID (frozen settings + destination)
-healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
-
-`--profile PROFILE_ID` löst ein gespeichertes Export-Profil auf dem iPhone über seine stabile UUID auf: Der Lauf verwendet die eingefrorene Metrikauswahl, Formate und das Ziel dieses Profils statt der live in der App gesetzten Einstellungen. Eine Kombination mit `--use-iphone-settings` oder Metrik-/Kategorie-Selektoren ist nicht möglich (das Profil besitzt den Einstellungsbereich), und eine unbekannte UUID schlägt mit einem typisierten `profile_not_found`-Fehler fehl, anstatt zurückzufallen. Die UUID finden Sie in der Profilauswahl des Export-Tabs in der App.
 
 Derzeit gibt es keine Begrenzung der Kalendertage. `--all` veranlasst das iPhone, den frühesten verfügbaren Datensatz der ausgewählten Quelle zu ermitteln, den aufgelösten Zeitraum festzuschreiben und ihn in begrenzten Partitionen zu verarbeiten. Verfügbarer Speicherplatz und ein einzelner ungewöhnlich datenreicher Tag bleiben praktische Grenzen.
 
 `--raw` fordert vorübergehend kanonische, verlustfreie Quelldatensätze an, ohne die iPhone-Einstellung zu ändern. Es schreibt keine generierten Dateien und enthält keine Sidecars verbundener Provider.
+
+### Portable profilbasierte Dateiexporte
+
+Die eigenständige direkte CLI kann ein gespeichertes Profil auf beiden unterstützten Smartphone-Plattformen anhand seiner stabilen ID auflösen. Das Profil liefert die fixierten Ausgabeeinstellungen; das Computerziel bleibt ausdrücklich angegeben:
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --last 7 \
+  --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+`--profile PROFILE_ID` lässt sich nicht mit `--use-device-settings` oder Metrik-/Kategorie-Selektoren kombinieren. Eine unbekannte ID bricht sicher ab, statt Live-Einstellungen zu verwenden. Kopiere die ID auf iPhone oder Android unter **Einstellungen → Exportprofile → Profil-ID**. [Exportprofile](/de/docs/export-profiles/) erklären Automatisierung und Zielverhalten.
+
+Der portable Direktclient kann jeden unterstützten typisierten iPhone-Vorgang ohne MCP-Hülle aufrufen:
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
 
 ## Kanonische Extraktion oder abgeleitete Abfrage?
 
@@ -173,7 +188,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7 ist der öffentliche Quellvertrag. Abfrage-, Nachweis-, Auftrags- und Belegschemas beschreiben die Übertragung oder abgeleitete Ansichten. Sie ersetzen das Quellschema nicht. Die kanonische Extraktion ist eine iPhone-Funktion; direkte Android-Quellen stellen stattdessen provider-native Health-Connect-Snapshots über den Rohdatenexport bereit.
+`healthmd.health_data` v8 ist der öffentliche Apple-Quellvertrag. Abfrage-, Nachweis-, Auftrags- und Belegschemas beschreiben die Übertragung oder abgeleitete Ansichten. Sie ersetzen das Quellschema nicht. Die kanonische Extraktion ist eine iPhone-Funktion; direkte Android-Quellen stellen stattdessen provider-native Health-Connect-Snapshots über den Rohdatenexport bereit.
 
 ## Maschinenlesbares Verhalten
 

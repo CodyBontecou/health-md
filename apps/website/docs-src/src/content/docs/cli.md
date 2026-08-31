@@ -22,7 +22,7 @@ The `healthmd` command has two operating modes. Use the Mac app backend when you
 | Strict raw export | Yes | Yes; provider-native Health Connect snapshots on Android |
 | Canonical `healthmd extract` | Yes | iPhone only |
 | Encrypted context, typed queries, and evidence | Yes | iPhone only, portable client |
-| `healthmd-mcp` | Yes | No |
+| `healthmd-mcp` | Yes | Yes, installed portable compatibility launcher |
 | Manual IP or Tailscale | Mac sync or explicit direct mode | Yes |
 | Nearby direct transport | Bundled Swift helper only | Not in the portable Rust client |
 
@@ -77,15 +77,15 @@ healthmd doctor
 ## Portable CLI status
 
 <div class="availability preview">
-<strong>Preview · not yet publicly packaged</strong>
-<p>The cross-platform Rust CLI awaits physical iPhone release QA and its first qualified package.</p>
+<strong>Public preview · not yet qualified stable</strong>
+<p>The cross-platform Rust CLI is publicly packaged, but its exact mobile matrix still awaits physical release qualification.</p>
 </div>
 
-A standalone Rust CLI is in `0.1.0-alpha.1` development. It runs on macOS, Linux, and Windows, uses direct Manual IP or Tailscale connections by default, and does not need the Mac app. It pairs with iPhone sources through protocol v1 and Android sources through protocol v2, with automated Swift↔Rust and Kotlin↔Rust compatibility gates. Protocol compatibility is implemented, but physical-device release QA and public packaging still need to finish before the first public release.
+The standalone Rust CLI is available as an explicitly unqualified public preview. It runs on macOS, Linux, and Windows, uses direct Manual IP or Tailscale connections by default, and does not need the Mac app. It pairs with iPhone sources through protocol v1 and Android sources through protocol v2, with automated Swift↔Rust and Kotlin↔Rust compatibility gates. Protocol compatibility is implemented, but physical-device release QA must finish before the first qualified stable release.
 
-Until that release exists, use the bundled Mac helper. Do not rely on unpublished Homebrew, crates.io, GitHub installer, or download URLs.
+On macOS or Linux, install the preview with <code>brew install CodyBontecou/tap/healthmd</code>. Use the exact matching mobile build named by release evidence; package publication does not prove mobile compatibility.
 
-The portable client supports pairing, status, raw export, generated-file destinations, resume, and cancel on all three desktop platforms for both iPhone and Android sources. Canonical extraction and typed MCP queries are iPhone capabilities; Android raw snapshots keep their provider-native Health Connect contract instead of being converted into HealthKit-shaped data, and Android typed queries are not implemented. For generated-file export, the phone treats the destination as an opaque target label while the receiving CLI validates and durably binds it under the host filesystem. Android protocol v2 commits file destinations on every CLI operating system and caps each generated job at 4,096 files; iOS protocol v1 rejects file destinations on Windows.
+The portable client supports pairing, status, raw export, generated-file destinations, resume, and cancel on all three desktop platforms for both iPhone and Android sources. Canonical extraction and typed MCP queries are iPhone capabilities; Android raw snapshots keep their provider-native Health Connect contract instead of being converted into HealthKit-shaped data, and Android typed queries are not implemented. For generated-file export, the phone treats the destination as an opaque target label while the receiving CLI validates and durably binds it under the host filesystem. Android protocol v2 commits file destinations on every CLI operating system and caps each generated job at 4,096 files.
 
 ## Command map
 
@@ -95,7 +95,7 @@ The portable client supports pairing, status, raw export, generated-file destina
 | `healthmd doctor` | Explain Mac, encrypted context, and iPhone readiness | Mac app |
 | `healthmd metrics list` | Return the canonical queryable metric catalog | Mac app |
 | `healthmd extract` | Acquire selected canonical `healthmd.health_data` objects | Both, iPhone source |
-| `healthmd query` | Acquire and query selected typed metrics | Mac app |
+| `healthmd query` | Acquire and query selected typed metrics | Mac app; direct iPhone with TOOL and arguments |
 | `healthmd sleep sessions` | Return first-class sleep sessions and fixed windows | Mac app |
 | `healthmd training align` | Align workouts with preceding and following sleep | Mac app |
 | `healthmd workouts` | List typed workouts with evidence | Mac app |
@@ -126,7 +126,7 @@ healthmd query --metric sleep_total --yesterday
 
 Fresh queries acquire only the supplied metrics, sources, dates, and summary or lossless detail. They do not change saved iPhone export settings.
 
-## File and raw exports
+## Bundled Mac file and raw exports
 
 ```bash
 # Use the Mac app's selected destination
@@ -144,16 +144,31 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
-
-# Run a saved export profile by UUID (frozen settings + destination)
-healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
-
-`--profile PROFILE_ID` resolves a saved export profile on the iPhone by its stable UUID — the run uses that profile's frozen metric selection, formats, and destination instead of the live in-app settings. It cannot be combined with `--use-iphone-settings` or metric/category selectors (the profile owns the settings scope), and an unknown UUID fails with a typed `profile_not_found` error rather than falling back. Read the UUID from the app's Export tab profile picker.
 
 There is no current calendar-day cap. `--all` asks the iPhone to discover the earliest available selected source record, pins the resolved range, and processes it through bounded partitions. Available storage and one unusually dense day remain practical limits.
 
 `--raw` temporarily requests canonical lossless source records without changing the iPhone preference. It writes no generated files and does not include connected-provider sidecars.
+
+### Portable profile-based file export
+
+The standalone direct CLI can resolve a saved profile on either supported phone platform by stable ID. The profile supplies its frozen output settings; the computer destination remains explicit:
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --last 7 \
+  --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+`--profile PROFILE_ID` cannot be combined with `--use-device-settings` or metric/category selectors, and an unknown ID fails closed rather than using live settings. Copy the ID from **Settings → Export Profiles → Profile ID** on iPhone or Android. See [Export profiles](/docs/export-profiles/) for automation and destination behavior.
+
+The portable direct client can invoke any supported iPhone typed operation without an MCP envelope:
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
 
 ## Canonical extraction or derived query?
 
@@ -173,7 +188,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7 is the public source contract. Query, evidence, job, and receipt schemas describe transport or derived views. They do not replace the source schema. Canonical extraction is an iPhone capability; Android direct sources expose provider-native Health Connect snapshots through raw export instead.
+`healthmd.health_data` v8 is the Apple public source contract. Query, evidence, job, and receipt schemas describe transport or derived views. They do not replace the source schema. Canonical extraction is an iPhone capability; Android direct sources expose provider-native Health Connect snapshots through raw export instead.
 
 ## Machine-readable behavior
 

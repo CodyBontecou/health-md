@@ -76,7 +76,7 @@ Android JSON exports are designed to be compatible with Health.md's Obsidian vis
 
 ## Scheduling and automation
 
-Scheduled exports use a one-shot exact alarm when you grant Android's Alarms & reminders access, with durable WorkManager work as a backup. Without exact-alarm access, WorkManager becomes the primary scheduler, so the selected time is a target rather than a hard guarantee. Health.md records export history, can recover missed scheduled dates, and lets you retry failed runs.
+Scheduled exports require the one-time lifetime unlock. Once unlocked, they use a one-shot exact alarm when you grant Android's Alarms & reminders access, with durable WorkManager work as a backup. Without exact-alarm access, WorkManager becomes the primary scheduler, so the selected time is a target rather than a hard guarantee. Health.md records export history, can recover missed scheduled dates, and lets you retry failed runs.
 
 For Tasker, adb, or other automation tools, Health.md exposes explicit-only broadcast intents. External callers must address the receiver component directly:
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-Automation uses your current export settings, selected folder, formats, metric selection, free/export accounting, and history.
+Automation uses the active profile by default, including its frozen destination, formats, metrics, accounting, and history. A supplied `PROFILE` extra can select a stable profile ID or name; an unknown reference fails closed instead of using current settings. Scheduled runs also stay bound to their profile. See [Export profiles](/docs/export-profiles/).
+
+### Background readiness and scheduled cancellation
+
+- Allow background Health Connect reads for unattended exports; otherwise open Health.md to complete the health-data read.
+- Keep notifications enabled so Android can show active work, foreground-service state, results, and recovery actions.
+- Grant Alarms & reminders only when you want exact-alarm scheduling. Without it, durable WorkManager work remains available but the chosen time is approximate.
+- Cancelling a scheduled run stops only that attempt. Completed dates remain complete, unresolved dates can be retried, and the recurring schedule remains enabled.
 
 ## Health sources
 
 Health Connect is the default local export path. The Android app also includes a health-source setup area for ecosystems such as Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar, and WHOOP. Where those ecosystems write into Health Connect, Health.md can export the resulting Health Connect records. Direct cloud-provider imports require provider authorization and may have extra setup or availability constraints.
 
 Google Fit is intentionally excluded from the supported-provider surface because Health Connect is Android's preferred health-data layer.
+
+### Exact local-day steps
+
+Daily step totals use exact zoned-local-day boundaries. Health.md clips and splits overlapping Health Connect intervals at local midnight before aggregating, so travel and daylight-saving changes do not shift steps into the wrong day.
 
 ## Pricing and restore
 
@@ -118,6 +129,8 @@ Google Fit is intentionally excluded from the supported-provider surface because
 - There is no subscription and no recurring charge.
 - Google Play shows the live local price before purchase.
 - Restore Purchase uses the Google account that bought Premium.
+
+If Google Play Billing disconnects transiently, Health.md reconnects and refreshes entitlement state automatically. A temporary service loss does not permanently remove Premium; use Restore Purchase only if the account remains unresolved after connectivity returns.
 
 ## Privacy model
 
@@ -135,10 +148,11 @@ If you want the strictest local setup, run manual exports to a local device fold
 ## Related docs
 
 <div class="related">
+  <a href="/docs/export-profiles/"><span>Profiles</span>Save independent destinations, output settings, schedules, and stable automation IDs.</a>
   <a href="/docs/export/"><span>Export</span>Manual export flow, date ranges, previews, history, and file output.</a>
   <a href="/docs/metrics/"><span>Metrics</span>How metric selection and categories work across Health.md.</a>
   <a href="/docs/format/"><span>Formats</span>Markdown, Bases, JSON, CSV, units, filenames, and frontmatter.</a>
   <a href="/docs/visualizations-roadmap/"><span>Obsidian</span>How exported JSON and Markdown power Health.md visualizations.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-08-03</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-08-31</p>

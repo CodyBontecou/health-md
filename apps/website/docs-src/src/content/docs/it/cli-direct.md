@@ -14,15 +14,26 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Anteprima · CLI diretta multipiattaforma</strong>
-<p>Il backend diretto Swift incluso è disponibile su macOS e si abbina all’iPhone. L’abbinamento con Android (protocollo v2) fa parte del client Rust multipiattaforma, in versione alpha, in attesa dei test di rilascio su iPhone e Android fisici e del primo pacchetto pubblico; i comandi per Linux e Windows descrivono il flusso di lavoro previsto.</p>
+<p>Il backend diretto Swift incluso è disponibile su macOS e si abbina all’iPhone. L’abbinamento con Android (protocollo v2) fa parte dell’anteprima pubblicamente distribuita del client Rust multipiattaforma. I test di rilascio su iPhone e Android fisici restano in attesa; i comandi per Linux e Windows descrivono un flusso di lavoro esplicitamente non qualificato.</p>
 </div>
+
+## Compatibilità mobile per 0.1.0-alpha.3
+
+Questa tabella autonoma è la matrice operativa dell’anteprima esplicitamente non qualificata. Nessuna coppia pubblica CLI/dispositivo mobile è ancora qualificata.
+
+| Sorgente mobile | Protocollo | Controparte tag-SHA esatta / soglia non qualificata | Operazioni Rust portatili | Stato pubblico |
+|---|---|---|---|---|
+| iPhone con esportazione | selettore 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Stato, dati grezzi, estrazione, file, ripresa, annullamento | Qualificazione fisica in sospeso |
+| iPhone con query | selettore 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 più MCP/query locale con 19 strumenti | Qualificazione fisica in sospeso |
+| Android | selettore 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Stato, dati nativi, file, ripresa, annullamento | Qualificazione fisica in sospeso |
+| Query MCP tipizzata Android | Non disponibile | Non implementata | Gli strumenti richiedono iPhone v3 | Non supportata |
 
 ## Funzioni supportate dalla modalità diretta
 
 - abbinamento iniziale e riconnessione attendibile con sorgenti iPhone (protocollo v1) o Android (protocollo v2);
 - controllo locale dei dispositivi attendibili e rimozione dell’abbinamento;
 - verifica in tempo reale della disponibilità del telefono;
-- esportazione rigorosa dei dati grezzi — `healthmd.health_data` con schema v7 su iPhone, snapshot nativi del provider di Health Connect su Android;
+- esportazione rigorosa dei dati grezzi — `healthmd.health_data` con schema v8 su iPhone, snapshot nativi del provider di Health Connect su Android;
 - estrazione canonica dei dati selezionati (solo iPhone);
 - esportazione di file generati dagli strumenti di produzione su entrambe le piattaforme telefoniche;
 - stato e ripresa delle attività locali persistenti;
@@ -160,7 +171,7 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 Ometti `--output` per inviare il JSON convalidato a stdout. Per risposte sensibili o di grandi dimensioni, un file di output è più sicuro.
 
-L’esportazione rigorosa dei dati grezzi su iPhone restituisce `healthmd.raw_result` v1, che contiene normali giornate `healthmd.health_data` con schema v7 e i relativi archivi canonici di origine. Richiede temporaneamente il livello di dettaglio senza perdita, senza modificare le impostazioni salvate sull’iPhone. Prima di esporre il risultato, la CLI convalida date esatte, profilo, schema, archivio, manifesti, catena dei digest, digest finale del corpo e stato di completamento.
+L’esportazione rigorosa dei dati grezzi su iPhone restituisce `healthmd.raw_result` v1, che contiene normali giornate `healthmd.health_data` con schema v8 e i relativi archivi canonici di origine. Richiede temporaneamente il livello di dettaglio senza perdita, senza modificare le impostazioni salvate sull’iPhone. Prima di esporre il risultato, la CLI convalida date esatte, profilo, schema, archivio, manifesti, catena dei digest, digest finale del corpo e stato di completamento.
 
 Una giornata completa ma priva di dati è un risultato valido. Se i dati richiesti sono mancanti, parziali, non riusciti, annullati, non supportati o ignorati, il risultato è `partial_success` e il codice di uscita è diverso da zero, salvo che sia stata specificata l’opzione `--allow-partial`.
 
@@ -192,6 +203,8 @@ healthmd --backend direct extract \
 
 Le selezioni di metrica, categoria, origine e dettaglio raggiungono l’iPhone prima che HealthKit legga i dati. Consulta [Estrazione canonica](/it/docs/cli-extract/) per i selettori degli oggetti, i puntatori JSON, JSONL e le ricevute.
 
+Mentre l’app resta in primo piano, una sessione diretta attendibile può riconnettersi automaticamente dopo un’interruzione temporanea, con tentativi e attese limitati. Questo non riattiva né promette accesso a un’app in background; riapri Health.md prima di riprendere.
+
 ## File generati dagli strumenti di produzione
 
 Nella modalità file diretta, il telefono esegue gli strumenti di esportazione di produzione di Health.md e trasferisce i file risultanti a una destinazione esplicita sul computer.
@@ -216,9 +229,10 @@ Per impostazione predefinita, una richiesta conserva formati, sottocartella Heal
 
 L’iPhone può preparare JSON, CSV, Markdown, ZIP, dizionari dei dati, riepiloghi aggregati, record individuali, note giornaliere e file complementari dei provider. Prima di salvare, la CLI convalida ogni percorso relativo, numero di byte, digest, manifesto dei file, identità della destinazione e impronta della richiesta. Rifiuta l’attraversamento delle directory, i collegamenti simbolici nelle directory superiori, le modifiche alla radice, le collisioni tra percorsi e le variazioni dei digest. La sovrascrittura è atomica. L’aggiunta e l’unione di file Markdown usano piani salvati, così la ripetizione dell’operazione non duplica il contenuto.
 
-Le destinazioni dei file generati con il protocollo v1 dell’iPhone funzionano su macOS e Linux, ma vengono rifiutate su Windows. Il protocollo v2 di Android conferma le destinazioni dei file su ogni sistema operativo della CLI — macOS, Linux e Windows — e limita ogni attività generata a 4.096 file.
+Le destinazioni dei file generati funzionano con il protocollo v1 dell’iPhone e il protocollo v2 di Android su ogni sistema operativo della CLI — macOS, Linux e Windows. Android limita ogni attività a 4.096 file.
 
-Le attività file del protocollo v2 di Android prendono il proprio ambito dalle selezioni di esportazione salvate sul dispositivo oppure da `--profile PROFILE_ID`; il profilo possiede le impostazioni e la destinazione congelate. I selettori CLI di metrica, categoria e dettaglio vengono rifiutati per le attività file su Android.
+Le attività file del protocollo v2 di Android prendono le impostazioni di output dalle selezioni salvate sul dispositivo oppure da `--profile PROFILE_ID`; i selettori CLI di metrica, categoria e dettaglio vengono rifiutati. Su entrambe le piattaforme telefoniche, `--profile` risolve le impostazioni di output congelate, mentre il parametro `--destination` obbligatorio continua a indicare la cartella esplicita sul computer.
+Per ID stabili e fallimenti sicuri, consulta [Profili di esportazione](/it/docs/export-profiles/).
 
 ## Comportamento in primo piano e in background
 
@@ -229,6 +243,8 @@ Sull’iPhone, se un’esportazione è già connessa quando l’app passa in bac
 Su Android, una sessione diretta attiva esegue un servizio in primo piano di sincronizzazione dei dati, visibile e avviato dall’utente. Tieni l’app in primo piano per l’abbinamento e le nuove attività.
 
 Sull’iPhone, un banner generale durante le operazioni dirette mostra la fase di acquisizione e trasferimento, le giornate completate, l’avanzamento in byte e lo stato sospeso o completato, senza visualizzare valori sanitari.
+
+Finché l’app del telefono resta in primo piano, una sessione diretta attendibile può riconnettersi automaticamente dopo un’interruzione temporanea. I tentativi usano ritardi crescenti fino a un breve valore massimo. Questo non riattiva né garantisce l’accesso a un’app in background; riapri Health.md prima di riprendere se l’app non è più in primo piano.
 
 ## Ripresa e annullamento delle attività persistenti
 

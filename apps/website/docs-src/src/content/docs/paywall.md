@@ -1,6 +1,6 @@
 ---
 title: "Unlock & Paywall"
-description: "One-time Full Access purchase, no subscription. Unlock unlimited exports, scheduling, Mac destination workflows, and Shortcuts support."
+description: "One-time Full Access purchase, no subscription. Remove the shared 10-export limit and unlock Mac destination workflows and Shortcuts support."
 ---
 
 ## Pricing
@@ -9,12 +9,12 @@ description: "One-time Full Access purchase, no subscription. Unlock unlimited e
 <li>No subscription and no recurring charge.</li>
 <li>The live local price is shown by Apple before purchase.</li>
 <li>No server-side account. The unlock is tied to your Apple ID StoreKit transaction.</li>
+<li>Before unlocking, the same 10-action allowance covers manual and scheduled exports.</li>
 </ul>
 
 ## What Full Access unlocks
 <ul>
-<li>Unlimited exports.</li>
-<li>Scheduled background exports.</li>
+<li>Unlimited manual and scheduled export actions after the shared free allowance.</li>
 <li>Mac destination workflows.</li>
 <li>Shortcuts intents.</li>
 </ul>

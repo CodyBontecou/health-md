@@ -22,7 +22,7 @@ description: "Mac 앱 또는 직접 휴대전화 백엔드를 선택하고, heal
 | 엄격한 원시 내보내기 | 예 | 예. Android에서는 제공자 고유의 Health Connect 스냅샷 |
 | 정규 `healthmd extract` | 예 | iPhone 전용 |
 | 암호화된 컨텍스트, 타입 지정 쿼리 및 증거 | 예 | iPhone 전용, 이식 가능한 클라이언트 |
-| `healthmd-mcp` | 예 | 아니요 |
+| `healthmd-mcp` | 예 | 예, 설치된 이식 가능 호환성 실행기 |
 | 수동 IP 또는 Tailscale | Mac 동기화 또는 명시적 직접 모드 | 예 |
 | 근거리 직접 전송 | 번들 Swift 도우미만 | 이식 가능한 Rust 클라이언트에서는 지원하지 않음 |
 
@@ -77,15 +77,15 @@ healthmd doctor
 ## 이식 가능한 CLI 상태
 
 <div class="availability preview">
-<strong>미리보기 · 아직 공개 패키지로 제공되지 않음</strong>
-<p>크로스 플랫폼 Rust CLI는 실물 iPhone 출시 QA와 첫 번째 적격 패키지를 기다리고 있습니다.</p>
+<strong>공개 미리보기 · 아직 검증된 안정 버전이 아님</strong>
+<p>크로스 플랫폼 Rust CLI는 공개 패키지로 제공되지만 정확한 모바일 매트릭스는 아직 실물 기기 출시 검증을 기다리고 있습니다.</p>
 </div>
 
-독립 실행형 Rust CLI는 `0.1.0-alpha.1`로 개발 중입니다. macOS, Linux 및 Windows에서 실행되고 기본적으로 직접 수동 IP 또는 Tailscale 연결을 사용하며 Mac 앱이 필요하지 않습니다. 프로토콜 v1으로 iPhone 소스와, 프로토콜 v2로 Android 소스와 페어링하며 자동화된 Swift↔Rust 및 Kotlin↔Rust 호환성 게이트를 갖추고 있습니다. 프로토콜 호환성은 구현되었지만 첫 공개 출시 전에 실물 기기 출시 QA와 공개 패키징을 완료해야 합니다.
+독립 실행형 Rust CLI는 명시적으로 검증되지 않은 공개 미리보기로 제공됩니다. macOS, Linux 및 Windows에서 실행되고 기본적으로 직접 수동 IP 또는 Tailscale 연결을 사용하며 Mac 앱이 필요하지 않습니다. 프로토콜 v1으로 iPhone 소스와, 프로토콜 v2로 Android 소스와 페어링하며 자동화된 Swift↔Rust 및 Kotlin↔Rust 호환성 게이트를 갖추고 있습니다. 프로토콜 호환성은 구현되었지만 첫 검증된 안정 버전 전에 실물 기기 출시 QA를 완료해야 합니다.
 
-출시되기 전까지는 번들 Mac 도우미를 사용하세요. 공개되지 않은 Homebrew, crates.io, GitHub 설치 프로그램 또는 다운로드 URL에 의존하지 마세요.
+macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 미리보기를 설치하세요. 릴리스 증거에 명시된 정확한 모바일 빌드를 사용해야 하며, 패키지 공개는 모바일 호환성을 증명하지 않습니다.
 
-이식 가능한 클라이언트는 세 데스크톱 플랫폼 모두에서 iPhone 및 Android 소스의 페어링, 상태, 원시 내보내기, 생성 파일 대상, 재개 및 취소를 지원합니다. 정규 추출과 타입 지정 MCP 쿼리는 iPhone 기능입니다. Android 원시 스냅샷은 HealthKit 형태 데이터로 변환되지 않고 Health Connect 제공자 고유 계약을 유지하며, Android 타입 지정 쿼리는 구현되지 않았습니다. 생성 파일 내보내기에서 휴대전화는 대상을 불투명한 대상 레이블로 취급하고 수신 CLI는 호스트 파일 시스템에서 이를 검증해 영속적으로 결합합니다. Android 프로토콜 v2는 모든 CLI 운영 체제에서 파일 대상을 커밋하며 생성 작업당 파일 수를 4,096개로 제한합니다. iOS 프로토콜 v1은 Windows에서 파일 대상을 거부합니다.
+이식 가능한 클라이언트는 세 데스크톱 플랫폼 모두에서 iPhone 및 Android 소스의 페어링, 상태, 원시 내보내기, 생성 파일 대상, 재개 및 취소를 지원합니다. 정규 추출과 타입 지정 MCP 쿼리는 iPhone 기능입니다. Android 원시 스냅샷은 HealthKit 형태 데이터로 변환되지 않고 Health Connect 제공자 고유 계약을 유지하며, Android 타입 지정 쿼리는 구현되지 않았습니다. 생성 파일 내보내기에서 휴대전화는 대상을 불투명한 대상 레이블로 취급하고 수신 CLI는 호스트 파일 시스템에서 이를 검증해 영속적으로 결합합니다. Android 프로토콜 v2는 모든 CLI 운영 체제에서 파일 대상을 커밋하며 생성 작업당 파일 수를 4,096개로 제한합니다.
 
 ## 명령 목록
 
@@ -95,7 +95,7 @@ healthmd doctor
 | `healthmd doctor` | Mac, 암호화된 컨텍스트 및 iPhone 준비 상태 설명 | Mac 앱 |
 | `healthmd metrics list` | 쿼리 가능한 정규 측정 항목 카탈로그 반환 | Mac 앱 |
 | `healthmd extract` | 선택한 정규 `healthmd.health_data` 객체 가져오기 | 둘 다, iPhone 소스 |
-| `healthmd query` | 선택한 타입 지정 측정 항목을 가져와 쿼리 | Mac 앱 |
+| `healthmd query` | 선택한 타입 지정 측정 항목을 가져와 쿼리 | Mac 앱, 또는 TOOL과 인수를 사용하는 직접 iPhone |
 | `healthmd sleep sessions` | 일급 객체인 수면 세션 및 고정 구간 반환 | Mac 앱 |
 | `healthmd training align` | 운동을 직전 및 직후 수면과 시간순으로 대조 | Mac 앱 |
 | `healthmd workouts` | 증거와 함께 타입이 지정된 운동 목록 표시 | Mac 앱 |
@@ -144,16 +144,31 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
-
-# Run a saved export profile by UUID (frozen settings + destination)
-healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
-
-`--profile PROFILE_ID`는 저장된 내보내기 프로필을 안정적인 UUID로 iPhone에서 해석합니다. 실행 시 앱의 현재 설정 대신 해당 프로필의 동결된 지표 선택, 형식, 대상이 사용됩니다. `--use-iphone-settings` 또는 지표/카테고리 선택기와 결합할 수 없고(프로필이 설정 범위를 소유합니다), 알 수 없는 UUID는 현재 설정으로 대체되지 않고 형식화된 `profile_not_found` 오류로 실패합니다. UUID는 앱의 내보내기 탭 프로필 선택기에서 확인하세요.
 
 현재 날짜 수 상한은 없습니다. `--all`은 iPhone에 선택한 소스 레코드 중 가장 이른 날짜를 찾도록 요청하고, 확인된 범위를 고정한 뒤 제한된 파티션으로 처리합니다. 사용 가능한 저장 공간과 비정상적으로 데이터가 밀집된 하루는 여전히 실질적인 제한입니다.
 
 `--raw`는 iPhone 환경설정을 변경하지 않고 일시적으로 정규 무손실 소스 레코드를 요청합니다. 생성 파일을 쓰지 않으며 연결된 제공자 사이드카를 포함하지 않습니다.
+
+### 휴대용 프로필 기반 파일 내보내기
+
+독립형 Direct CLI는 지원되는 두 휴대전화 플랫폼에서 안정 ID로 저장된 프로필을 확인할 수 있습니다. 프로필은 고정된 출력 설정을 제공하며 컴퓨터 대상은 명시적으로 지정합니다.
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --last 7 \
+  --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+`--profile PROFILE_ID`는 `--use-device-settings` 또는 측정 항목/카테고리 선택기와 함께 사용할 수 없습니다. 알 수 없는 ID는 현재 설정으로 대체되지 않고 안전하게 실패합니다. iPhone 또는 Android의 **설정 → 내보내기 프로필 → 프로필 ID**에서 ID를 복사하세요. 자동화와 대상 동작은 [내보내기 프로필](/ko/docs/export-profiles/)을 참조하세요.
+
+이식 가능한 직접 클라이언트는 지원되는 iPhone 타입 지정 작업을 MCP 엔벨로프 없이 호출할 수 있습니다.
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
 
 ## 정규 추출 또는 파생 쿼리
 
@@ -173,7 +188,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7은 공개 소스 계약입니다. 쿼리, 증거, 작업 및 수신 확인 스키마는 전송 또는 파생 보기를 설명합니다. 소스 스키마를 대체하지 않습니다. 정규 추출은 iPhone 기능이며, Android 직접 소스는 대신 원시 내보내기를 통해 제공자 고유의 Health Connect 스냅샷을 노출합니다.
+`healthmd.health_data` v8은 Apple 공개 소스 계약입니다. 쿼리, 증거, 작업 및 수신 확인 스키마는 전송 또는 파생 보기를 설명합니다. 소스 스키마를 대체하지 않습니다. 정규 추출은 iPhone 기능이며, Android 직접 소스는 대신 원시 내보내기를 통해 제공자 고유의 Health Connect 스냅샷을 노출합니다.
 
 ## 기계 판독 가능 동작
 

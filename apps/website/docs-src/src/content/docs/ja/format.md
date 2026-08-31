@@ -7,7 +7,7 @@ description: "収集する内容を変更せずに出力形式を調整します
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>デフォルトです。1日あたり1ファイルを生成します。YAML frontmatter（任意）と、カテゴリごとに見出しのあるセクションで構成されます。</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Obsidianの<a href="https://help.obsidian.md/Plugins/Bases">Bases</a>プラグイン向けに最適化された、構造化frontmatter付きのMarkdownです。数値プロパティは数値、日付は日付として保持されます。</p></div>
-<div class="option"><strong>JSON</strong><p>1日あたり1つのJSONファイルを生成します。ロスレスヘルスレコードが有効な場合、スキーマv7の日次サマリーに、正規の<code>healthmd.healthkit_records</code> v1アーカイブを埋め込むことができます。</p></div>
+<div class="option"><strong>JSON</strong><p>1日あたり1つのJSONファイルを生成します。ロスレスヘルスレコードが有効な場合、Appleスキーマv8の日次サマリーに、正規の<code>healthmd.healthkit_records</code> v1アーカイブを埋め込むことができます。</p></div>
 <div class="option"><strong>CSV</strong><p>1日あたり1つのCSVファイルを、ヘッダー<code>Date,Category,Metric,Value,Unit,Timestamp</code>で生成します。互換性サマリー行は5つのフィールドを含み、timestamp列を省略します。timestamp付きの行と正規レコード行は、6つすべてのフィールドを含みます。</p></div>
 </div>
 
@@ -37,9 +37,16 @@ description: "収集する内容を変更せずに出力形式を調整します
 ## プレビュー
 <p>「形式」画面の下部にあるライブプレビューブロックでは、現在の設定を使って当日のデータを表示します。設定をすばやく調整するには、項目を変更してプレビューを確認する操作を繰り返します。</p>
 
+## データ詳細とプロファイル
+
+概要はコンパクトな日次プロジェクションを生成します。詳細な時系列は、指標が対応する場合にAppleとAndroidで選択したサンプルと区間を追加します。ロスレスヘルスレコードは正規HealthKitアーカイブを追加するApple限定機能で、Android互換レイヤーではありません。
+
+詳細レベルは[エクスポートプロファイル](/ja/docs/export-profiles/)と一緒に固定されます。有効なプロファイルで変更しても、そのプロファイルだけが変わります。
+
 ## 関連項目
 
 <div class="related">
+  <a href="/ja/docs/export-profiles/"><span>プロファイル</span>ワークフローごとに詳細レベルと形式を保存します。</a>
   <a href="/ja/docs/metrics/"><span>対象</span>ヘルス指標 — まずデータを選択します。</a>
   <a href="/ja/docs/individual-tracking/"><span>詳細</span>個別トラッキング — エントリごとのファイルを生成する、別の出力方法です。</a>
   <a href="/ja/docs/daily-notes/"><span>Obsidian</span>デイリーノートへの挿入 — 同じfrontmatterフィールドを使用します。</a>

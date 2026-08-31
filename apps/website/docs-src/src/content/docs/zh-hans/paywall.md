@@ -1,6 +1,6 @@
 ---
 title: "解锁与付费墙"
-description: "一次性购买 Full Access，无需订阅。解锁无限导出、计划导出、Mac 目标位置工作流和快捷指令支持。"
+description: "一次性购买 Full Access，无需订阅。移除共用的 10 次导出上限，并解锁 Mac 目标工作流和快捷指令。"
 ---
 
 ## 价格
@@ -9,12 +9,12 @@ description: "一次性购买 Full Access，无需订阅。解锁无限导出、
 <li>无需订阅，也不会产生周期性费用。</li>
 <li>购买前，Apple 会显示当前本地价格。</li>
 <li>无需服务器端账户。解锁与您 Apple ID 的 StoreKit 交易绑定。</li>
+<li>解锁前，手动导出和计划导出共用同一份 10 次操作额度。</li>
 </ul>
 
 ## Full Access 解锁的功能
 <ul>
-<li>无限导出。</li>
-<li>计划后台导出。</li>
+<li>用完共用免费额度后，仍可无限执行手动和计划导出操作。</li>
 <li>Mac 目标位置工作流。</li>
 <li>快捷指令意图。</li>
 </ul>

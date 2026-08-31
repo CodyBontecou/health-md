@@ -76,7 +76,7 @@ JSON-Exporte unter Android sind auf Kompatibilität mit den Health.md-Visualisie
 
 ## Zeitplanung und Automatisierung
 
-Geplante Exporte verwenden einen einmaligen Alarm mit genauer Zeitangabe, wenn Sie Android den Zugriff auf „Wecker & Erinnerungen“ gewähren, und dauerhafte WorkManager-Aufträge als Ausweichlösung. Ohne Zugriff auf genaue Alarme wird WorkManager zum primären Zeitplaner. Die ausgewählte Uhrzeit ist dann ein Ziel und keine feste Garantie. Health.md zeichnet den Exportverlauf auf, kann verpasste geplante Exporttage nachholen und lässt Sie fehlgeschlagene Durchläufe wiederholen.
+Geplante Exporte erfordern die einmalige dauerhafte Freischaltung. Geplante Exporte verwenden einen einmaligen Alarm mit genauer Zeitangabe, wenn Sie Android den Zugriff auf „Wecker & Erinnerungen“ gewähren, und dauerhafte WorkManager-Aufträge als Ausweichlösung. Ohne Zugriff auf genaue Alarme wird WorkManager zum primären Zeitplaner. Die ausgewählte Uhrzeit ist dann ein Ziel und keine feste Garantie. Health.md zeichnet den Exportverlauf auf, kann verpasste geplante Exporttage nachholen und lässt Sie fehlgeschlagene Durchläufe wiederholen.
 
 Für Tasker, adb oder andere Automatisierungstools stellt Health.md Broadcast-Intents bereit, die nur explizit aufgerufen werden können. Externe Aufrufer müssen die Empfängerkomponente direkt adressieren:
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-Die Automatisierung verwendet Ihre aktuellen Exporteinstellungen, den ausgewählten Ordner, die Formate, die Metrikauswahl, die Anrechnung auf das kostenlose Exportkontingent und den Verlauf.
+Die Automatisierung verwendet standardmäßig das aktive Profil mit fixiertem Ziel, Formaten, Metriken, Anrechnung und Verlauf. Ein übergebenes Extra `PROFILE` kann ein stabiles Profil anhand von ID oder Name auswählen; ein unbekannter Verweis bricht sicher ab, statt aktuelle Einstellungen zu verwenden. Auch geplante Läufe bleiben an ihr Profil gebunden. Siehe [Exportprofile](/de/docs/export-profiles/).
+
+### Hintergrundbereitschaft und geplanter Abbruch
+
+- Erlaube Health-Connect-Lesevorgänge im Hintergrund für unbeaufsichtigte Exporte; andernfalls öffne Health.md zum Lesen der Daten.
+- Lass Benachrichtigungen aktiv, damit laufende Arbeit, nötige Vordergrunddienste und Wiederherstellungshinweise sichtbar sind.
+- Erlaube Alarme und Erinnerungen nur für exakte Alarme. Ohne diese Berechtigung bleibt die Arbeit persistent, die Uhrzeit aber ungefähr.
+- Der Abbruch eines geplanten Laufs stoppt nur diesen Versuch. Abgeschlossene Tage bleiben erhalten, offene sind wiederholbar und der Zeitplan bleibt aktiv.
 
 ## Gesundheitsquellen
 
 Health Connect ist der standardmäßige lokale Exportpfad. Die Android-App enthält außerdem einen Einrichtungsbereich für Gesundheitsquellen wie Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar und WHOOP. Wenn diese Ökosysteme Daten in Health Connect schreiben, kann Health.md die daraus entstehenden Health Connect-Datensätze exportieren. Direkte Importe von Cloud-Anbietern erfordern eine Autorisierung beim Anbieter und können zusätzliche Einrichtungs- oder Verfügbarkeitsbedingungen haben.
 
 Google Fit wird bewusst nicht als unterstützter Anbieter aufgeführt, da Health Connect die bevorzugte Gesundheitsdatenschicht von Android ist.
+
+### Exakte Tagesschritte
+
+Tagesschritte verwenden exakte lokale Tagesgrenzen mit Zeitzone. Health.md beschneidet und teilt Health-Connect-Intervalle an der lokalen Mitternacht, damit Reisen und Zeitumstellungen keine Schritte verschieben.
 
 ## Preise und Wiederherstellung
 
@@ -118,6 +129,8 @@ Google Fit wird bewusst nicht als unterstützter Anbieter aufgeführt, da Health
 - Es gibt kein Abonnement und keine wiederkehrenden Kosten.
 - Google Play zeigt vor dem Kauf den aktuellen lokalen Preis an.
 - „Kauf wiederherstellen“ verwendet das Google-Konto, mit dem Premium gekauft wurde.
+
+Nach einer vorübergehenden Trennung von Google Play Billing verbindet sich Health.md erneut und aktualisiert die Berechtigung automatisch. Premium geht dadurch nicht dauerhaft verloren; nutze Kauf wiederherstellen nur, wenn das Konto nach Rückkehr der Verbindung ungeklärt bleibt.
 
 ## Datenschutzmodell
 
@@ -135,10 +148,11 @@ Für eine möglichst strikt lokale Einrichtung führen Sie manuelle Exporte in e
 ## Verwandte Dokumentation
 
 <div class="related">
+  <a href="/de/docs/export-profiles/"><span>Profile</span>Speichere unabhängige Ziele, Ausgabeeinstellungen, Zeitpläne und stabile Automatisierungs-IDs.</a>
   <a href="/de/docs/export/"><span>Export</span>Manueller Exportablauf, Datumsbereiche, Vorschauen, Verlauf und Dateiausgabe.</a>
   <a href="/de/docs/metrics/"><span>Metriken</span>So funktionieren Metrikauswahl und Kategorien in Health.md.</a>
   <a href="/de/docs/format/"><span>Formate</span>Markdown, Bases, JSON, CSV, Einheiten, Dateinamen und frontmatter.</a>
   <a href="/de/docs/visualizations-roadmap/"><span>Obsidian</span>So bilden exportiertes JSON und Markdown die Grundlage für Health.md-Visualisierungen.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Zuletzt aktualisiert am 3. August 2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Zuletzt aktualisiert am 31. August 2026</p>

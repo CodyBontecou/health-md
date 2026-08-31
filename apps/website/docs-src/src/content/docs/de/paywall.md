@@ -1,6 +1,6 @@
 ---
 title: "Freischaltung & Paywall"
-description: "Einmaliger Kauf von Full Access ohne Abonnement. Schalten Sie unbegrenzte Exporte, Zeitplanung, Workflows mit Mac-Ziel und Kurzbefehle frei."
+description: "Einmaliger Kauf von Full Access ohne Abonnement. Heben Sie das gemeinsame Limit von 10 Exportaktionen auf und schalten Sie Mac-Ziel-Workflows und Kurzbefehle frei."
 ---
 
 ## Preis
@@ -9,12 +9,12 @@ description: "Einmaliger Kauf von Full Access ohne Abonnement. Schalten Sie unbe
 <li>Kein Abonnement und keine wiederkehrenden Kosten.</li>
 <li>Apple zeigt vor dem Kauf den aktuellen lokalen Preis an.</li>
 <li>Es gibt kein serverseitiges Konto. Die Freischaltung ist an die StoreKit-Transaktion Ihrer Apple ID gebunden.</li>
+<li>Vor der Freischaltung gilt dieselbe Freigrenze von 10 Aktionen für manuelle und geplante Exporte.</li>
 </ul>
 
 ## Was Full Access freischaltet
 <ul>
-<li>Unbegrenzte Exporte.</li>
-<li>Geplante Hintergrundexporte.</li>
+<li>Unbegrenzte manuelle und geplante Exportaktionen nach der gemeinsamen kostenlosen Freigrenze.</li>
 <li>Workflows mit Mac-Ziel.</li>
 <li>Intents für Kurzbefehle.</li>
 </ul>

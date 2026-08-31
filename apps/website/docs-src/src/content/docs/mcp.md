@@ -20,10 +20,10 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Preview · portable direct MCP</strong>
-<p>The separate 19-tool <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is implemented but not publicly packaged yet. Its cloud-free <code>serve-read-only</code> entry exposes only the 13 readiness/query tools after local pairing. Portable-only commands on this page are marked as preview.</p>
+<p>The separate 19-tool <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is publicly packaged as an explicitly unqualified preview. Its cloud-free <code>serve-read-only</code> entry exposes only the 13 readiness/query tools after local pairing. Install on macOS or Linux with <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
-## Requirements
+## Bundled Mac requirements
 
 - Health.md for Mac installed and open.
 - Health.md open on the connected iPhone when the refresh tool or an export starts fresh HealthKit work.
@@ -31,6 +31,13 @@ Codex / Claude / another local MCP host
 - The signed helper path shown under **Health.md for Mac → CLI**.
 
 The normal helper path is `/Applications/Health.md.app/Contents/Helpers/healthmd-mcp`. Supported core MCP protocol versions are `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`. Do not launch `healthmd-mcp` as an ordinary interactive command; the MCP host owns stdin and the process lifecycle.
+
+## Portable direct requirements
+
+- Install the standalone preview on macOS, Linux, or Windows; the Mac app and its loopback service are not required.
+- Pair once with a query-capable iPhone and keep Health.md foreground for each new typed request. Android typed MCP is not supported.
+- Use Manual IP or Tailscale reachability and native credential storage; Linux requires an unlocked Secret Service provider.
+- Configure the installed compatibility launcher or the same-binary stdio server. Both use the paired direct backend.
 
 ## Codex setup
 
@@ -77,9 +84,9 @@ Claude Desktop versions that advertise the stable MCP Apps extension render Heal
 
 ## Portable direct MCP preview
 
-After the standalone release, `healthmd setup codex` will pair a foreground iPhone and safely create a same-binary `healthmd mcp serve` entry. That topology uses authenticated encrypted Manual IP or Tailscale transport on port `17647`, native credential storage, and explicit per-request iPhone reads. Linux additionally requires an unlocked Secret Service provider; Windows uses Credential Manager.
+In the public standalone preview, `healthmd setup codex` pairs a foreground iPhone and safely creates a same-binary `healthmd mcp serve` entry. That topology uses authenticated encrypted Manual IP or Tailscale transport on port `17647`, native credential storage, and explicit per-request iPhone reads. Linux additionally requires an unlocked Secret Service provider; Windows uses Credential Manager.
 
-Until a `healthmd-cli/v<version>` release exists, do not rely on unpublished package or installer URLs. See [Direct phone CLI](/docs/cli-direct/) for the staged pairing and transport contract.
+Use the exact `healthmd-cli/v<version>` prerelease rather than the repository-wide latest-release pointer. See [Direct phone CLI](/docs/cli-direct/) for the explicitly unqualified pairing and transport contract.
 
 ## Native MCP App visualizations
 
@@ -137,7 +144,7 @@ The bundled Mac server exposes 21 fixed tools: 13 readiness/query tools, four ge
 
 | Tool | Purpose |
 |---|---|
-| `healthmd_export_files` | Run a durable export through the Mac app into its selected folder |
+| `healthmd_export_files` | Run a durable generated-file export; bundled Mac uses its selected folder, while portable direct MCP requires an explicit computer destination |
 | `healthmd_export_job_status` | Inspect export progress and destination receipt |
 | `healthmd_export_job_resume` | Resume the exact immutable durable export job |
 | `healthmd_export_job_cancel` | Explicitly cancel the export job |
@@ -236,7 +243,7 @@ Select and retain a writable destination folder in Health.md for Mac first. Afte
 
 Use `date_selection: "all_available"` without `date_range` for complete history. Optional `metric_ids`, `categories`, or `all_metrics` narrow iPhone acquisition without changing saved settings. `detail_level` applies only when one of those selections is present. `all_metrics` cannot be combined with explicit metric/category lists.
 
-To run a saved export profile instead, set `settings_policy` to `"profile"` and pass `profile_reference` with the profile's stable UUID (an optional display `name` is recorded for errors only):
+To run a saved export profile instead, set `settings_policy` to `"profile"` and pass `profile_reference` with the profile's stable UUID. The optional `name` is display and error context in the public protocol. Current phone implementations may consult it after an ID miss, but that behavior is not rename-safe; automation must treat the UUID as the stable identity:
 
 ```json
 {
@@ -247,7 +254,22 @@ To run a saved export profile instead, set `settings_policy` to `"profile"` and 
 }
 ```
 
-The profile owns the settings scope: `profile_reference` cannot be combined with `metric_ids`, `categories`, `all_metrics`, or the saved-settings policy, and an unknown UUID fails with a typed error instead of falling back to live settings.
+The profile owns the settings scope: `profile_reference` cannot be combined with `metric_ids`, `categories`, `all_metrics`, or the saved-settings policy, and an unresolvable reference fails with a typed error instead of falling back to live settings.
+
+The examples above use the bundled Mac destination. With portable direct MCP, every generated-file request also requires an existing absolute computer folder in `destination`; the phone profile supplies output settings, not that host path:
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" },
+  "destination": "/absolute/existing/HealthVault",
+  "wait_timeout_seconds": 300
+}
+```
+
+Portable direct rejects a missing, relative, nonexistent, or symlink destination before starting the phone job.
 
 Inspect:
 

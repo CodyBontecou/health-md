@@ -35,9 +35,17 @@ description: "L’onglet Export est l’espace de travail principal. Il indique 
 <div class="option"><strong>Export</strong><p>Lance l’export, affiche sa progression sur l’écran principal et consigne le résultat dans l’historique.</p></div>
 </div>
 
+## Choisir le niveau de détail des données
+
+<div class="options">
+<div class="option"><strong>Résumé</strong><p>Totaux quotidiens et synthèses compacts pour la lecture, les notes et les tableaux de bord.</p></div>
+<div class="option"><strong>Série chronologique détaillée</strong><p>Échantillons et intervalles horodatés sélectionnés. Ce niveau est disponible sur Apple et Android lorsque la métrique offre un détail approprié.</p></div>
+<div class="option"><strong>Dossiers de santé sans perte</strong><p>L’archive canonique des enregistrements sources HealthKit. Ce niveau est réservé à Apple ; Android ne transforme pas les enregistrements Health Connect en archive HealthKit.</p></div>
+</div>
+
 ## Ce que fait réellement l’export
 <ol>
-<li>Pour chaque jour de la plage, recueille les projections récapitulatives sélectionnées et, lorsque Lossless Health Records est activé, leurs enregistrements sources canoniques et diagnostics de requête.</li>
+<li>Pour chaque jour de la plage, recueille les résumés sélectionnés, ajoute les échantillons compatibles pour la série chronologique détaillée et, pour les dossiers de santé sans perte, ajoute les enregistrements sources canoniques et les diagnostics de requête.</li>
 <li>Applique le format choisi (Markdown, Bases, JSON ou CSV) et le modèle.</li>
 <li>Écrit un fichier par jour dans <code>{vault}/{subfolder}/</code>, transfère les fichiers via le flux Mac connecté ou envoie par POST une enveloppe d’API JSON versionnée à votre point de terminaison API.</li>
 <li>Si <em>Suivi individuel</em> est activé, dérive de l’archive canonique les fichiers Markdown sélectionnés par entrée pour les destinations basées sur des fichiers.</li>
@@ -45,12 +53,21 @@ description: "L’onglet Export est l’espace de travail principal. Il indique 
 </ol>
 <p>JSON et CSV peuvent préserver les enregistrements canoniques. Markdown et Bases restent lisibles et présentent des diagnostics de collecte concis au lieu d’intégrer l’archive. Consultez la <a href="/fr/docs/reference/">référence complète des exports</a> pour les schémas exacts et les règles d’omission.</p>
 
+## Arrêter, annuler et réessayer
+
+Arrêter ou annuler met fin uniquement à la tentative en cours. Les fichiers et dates terminés sont conservés, tandis que les dates non résolues restent réessayables. L’annulation d’une tentative planifiée ne désactive pas sa récurrence.
+
+## Profils et historique fiable
+
+Un profil enregistré fige ses réglages et sa destination pour l’exécution. Les lignes d’historique des exécutions planifiées et automatisées liées à un profil conservent le profil utilisé ; l’historique garde aussi un libellé respectueux de la confidentialité pour la destination réelle. Une ligne d’export manuel peut omettre le nom du profil. Les changements ultérieurs de nom ou de destination ne réécrivent pas l’historique existant. Une référence manquante échoue de façon sûre. Voir [Profils d’exportation](/fr/docs/export-profiles/).
+
 ## Barre d’onglets
 <p>Les quatre onglets au bas de l’écran — Export, Planification, Synchronisation, Réglages — couvrent toute l’app. Tout le reste se trouve à un ou deux niveaux dans Réglages.</p>
-<div class="callout"><strong>Comportement du déverrouillage.</strong><p style="margin-top:6px;">Full Access déverrouille les exports illimités, les exports planifiés, les destinations Mac et Shortcuts. <a href="/fr/docs/paywall/">Consultez la page Paywall</a> pour en savoir plus.</p></div>
+<div class="callout"><strong>Comportement du déverrouillage.</strong><p style="margin-top:6px;">Sur les plateformes Apple, l’allocation gratuite couvre 10 actions d’exportation manuelles ou planifiées. Full Access supprime cette limite et déverrouille les flux vers Mac ainsi que Raccourcis. Android offre plutôt 10 actions manuelles gratuites et exige l’achat à vie pour la planification. <a href="/fr/docs/paywall/">Consultez la page Paywall</a> pour l’achat Apple.</p></div>
 
 ## Pages associées
 <div class="related">
+  <a href="/fr/docs/export-profiles/"><span>Profils</span>Enregistrez des destinations, réglages, planifications et identifiants d’automatisation indépendants.</a>
 <a href="/fr/docs/scheduling/"><span>Au quotidien</span>Planification — automatisez l’opération pour ne plus avoir à toucher Export.</a>
 <a href="/fr/docs/api-endpoint/"><span>Intégrer</span>Point de terminaison API — envoyez le JSON sélectionné directement à votre service.</a>
 <a href="/fr/docs/format/"><span>Personnaliser</span>Personnalisation du format — modifiez l’apparence de chaque fichier.</a>

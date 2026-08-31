@@ -27,7 +27,7 @@ description: Export Apple Health or Health Connect data, connect the signed Mac 
 <div class="reference-stats">
 <div><strong>21</strong><span>bundled Mac MCP tools</span></div>
 <div><strong>4</strong><span>export formats</span></div>
-<div><strong>v7</strong><span>public export schema</span></div>
+<div><strong>v8</strong><span>Apple public export schema</span></div>
 <div><strong>0</strong><span>required Health.md cloud hops</span></div>
 </div>
 
@@ -65,8 +65,8 @@ A ready `doctor` result uses the `healthmd.cli_doctor` schema and includes next 
 
 <div class="related">
   <a href="/docs/agent-queries/"><span>Typed queries</span>Ask for metrics, sleep sessions, workouts, comparisons, coverage, and factual evidence.</a>
-  <a href="/docs/cli-direct/"><span>Preview · portable CLI</span>Direct phone access — understand Manual IP or Tailscale pairing with iPhone or Android before standalone packaging is released.</a>
-  <a href="/docs/cli-extract/"><span>Source data</span>Canonical extraction — acquire selected schema-v7 days, source records, projections, or JSONL.</a>
+  <a href="/docs/cli-direct/"><span>Preview · portable CLI</span>Direct phone access — review Manual IP or Tailscale pairing and the current unqualified iPhone/Android compatibility matrix.</a>
+  <a href="/docs/cli-extract/"><span>Source data</span>Canonical extraction — acquire selected schema-v8 days, source records, projections, or JSONL.</a>
   <a href="/docs/cli-jobs/"><span>Reliable runs</span>Durable jobs — handle timeouts, unknown outcomes, resume, cancellation, and partial results safely.</a>
   <a href="/docs/agent-api/"><span>Low level</span>Loopback API — use exact query, evidence, cursor, refresh, and durable job routes.</a>
   <a href="/docs/reference/integration-recipes/"><span>Patterns</span>Integration recipes — parse and validate Health.md outputs without weakening their contracts.</a>
@@ -80,7 +80,7 @@ A ready `doctor` result uses the `healthmd.cli_doctor` schema and includes next 
   <a href="/docs/reference/"><span>Contract map</span>Export reference — browse schemas, metrics, formats, records, and interoperability fixtures.</a>
   <a href="/docs/reference/api-and-cli/"><span>Automation</span>API &amp; CLI contracts — inspect envelopes, routes, exit behavior, and generated examples.</a>
   <a href="/docs/reference/evidence-packets/"><span>Agent results</span>Queries &amp; evidence — typed values, coverage, missingness, operations, and deterministic identities.</a>
-  <a href="/docs/reference/daily-records/"><span>Schema v7</span>Daily records — understand the public source document and its ownership rules.</a>
+  <a href="/docs/reference/daily-records/"><span>Schema v8</span>Daily records — understand the public source document and its ownership rules.</a>
   <a href="/docs/shared-metric-registry/"><span>Vocabulary</span>Metric registry — use stable cross-platform metric IDs, categories, units, and profile metadata.</a>
   <a href="/docs/reference/generated/"><span>Machine-readable</span>Generated artifacts — open canonical fields, fixtures, message inventories, and CLI contracts.</a>
 </div>
@@ -89,13 +89,22 @@ A ready `doctor` result uses the `healthmd.cli_doctor` schema and includes next 
 
 ## Apps and exports
 
+### Reliable profile-based exports
+
+- Choose Summary or shared Detailed Time-Series output; the canonical Lossless Health Records archive is Apple-only.
+- Save independent settings, destinations, and schedules as device-local profiles on iPhone or Android.
+- Stop or cancel only the active attempt: completed dates remain complete, unresolved dates remain retryable, and recurring schedules stay enabled.
+
+Start with [Export profiles](/docs/export-profiles/) to understand stable IDs, automation, destination history, and fail-closed behavior.
+
 <div class="related">
+  <a href="/docs/export-profiles/"><span>Repeatable workflows</span>Export Profiles — keep settings, destinations, schedules, and automation identity together.</a>
   <a href="/docs/iphone-first-export/"><span>Start here · iPhone</span>First export — authorize Apple Health, choose a folder, preview output, and verify written files.</a>
   <a href="/docs/android/"><span>Android</span>Health Connect — choose a document-provider folder and configure platform automation.</a>
   <a href="/docs/export/"><span>Files</span>Export — run explicit date ranges in Markdown, CSV, JSON, or Obsidian Bases.</a>
   <a href="/docs/format/"><span>Structure</span>Format customization — control units, dates, frontmatter, filenames, and write behavior.</a>
-  <a href="/docs/scheduling/"><span>Background</span>Scheduling — understand daily and weekly export behavior and platform limits.</a>
+  <a href="/docs/scheduling/"><span>Background</span>Scheduling — understand recurring cadences, recovery, and platform timing limits.</a>
   <a href="/docs/shortcuts/"><span>Automation</span>Shortcuts &amp; App Intents — trigger exports, summaries, and status checks from Apple workflows.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Documentation structure updated 2026-08-02</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Documentation structure updated 2026-08-31</p>

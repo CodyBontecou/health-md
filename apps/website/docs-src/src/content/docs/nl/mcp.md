@@ -20,10 +20,10 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe MCP</strong>
-<p>De afzonderlijke opzet met 19 tools via <code>healthmd mcp serve</code> voor macOS, Linux en Windows is geïmplementeerd, maar nog niet openbaar uitgebracht. Het cloudvrije beginpunt <code>serve-read-only</code> biedt na lokale koppeling alleen de 13 tools voor gereedheid en queries. Opdrachten op deze pagina die uitsluitend voor de platformonafhankelijke versie gelden, zijn als preview gemarkeerd.</p>
+<p>De afzonderlijke opzet met 19 tools via <code>healthmd mcp serve</code> voor macOS, Linux en Windows is openbaar verpakt als expliciet ongekwalificeerde preview. Het cloudvrije beginpunt <code>serve-read-only</code> biedt na lokale koppeling alleen de 13 tools voor gereedheid en queries. Installeer op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
-## Vereisten
+## Vereisten voor de gebundelde Mac-versie
 
 - Health.md voor Mac is geïnstalleerd en geopend.
 - Health.md is geopend op de verbonden iPhone wanneer de vernieuwingstool of een export nieuw HealthKit-werk start.
@@ -31,6 +31,13 @@ Codex / Claude / another local MCP host
 - Het pad van het ondertekende hulpprogramma onder **Health.md voor Mac → CLI**.
 
 Het gebruikelijke pad is `/Applications/Health.md.app/Contents/Helpers/healthmd-mcp`. Ondersteunde kernversies van het MCP-protocol zijn `2024-11-05`, `2025-03-26`, `2025-06-18` en `2025-11-25`. Start `healthmd-mcp` niet als een gewone interactieve opdracht. De MCP-host beheert stdin en de levenscyclus van het proces.
+
+## Vereisten voor rechtstreeks en platformonafhankelijk gebruik
+
+- Installeer de zelfstandige preview op macOS, Linux of Windows; de Mac-app en loopbackservice zijn niet vereist.
+- Koppel eenmaal een iPhone met queryondersteuning en houd Health.md voor elke nieuwe getypeerde aanvraag op de voorgrond. Android ondersteunt geen getypeerde MCP.
+- Gebruik Manual IP of Tailscale en systeemeigen opslag van inloggegevens; Linux vereist een ontgrendelde Secret Service-provider.
+- Configureer het geïnstalleerde compatibiliteitsprogramma of de stdio-server in hetzelfde binaire bestand. Beide gebruiken de gekoppelde directe backend.
 
 ## Codex configureren
 
@@ -77,9 +84,9 @@ Versies van Claude Desktop die de stabiele MCP Apps-extensie aankondigen, tonen 
 
 ## Preview van platformonafhankelijke directe MCP
 
-Na de zelfstandige release koppelt `healthmd setup codex` een iPhone-app op de voorgrond en maakt de opdracht veilig een item voor `healthmd mcp serve` in hetzelfde uitvoerbare bestand. Deze opzet gebruikt geauthenticeerd, versleuteld transport via Manual IP of Tailscale op poort `17647`, systeemeigen opslag voor inloggegevens en expliciete iPhone-uitlezingen per verzoek. Linux vereist daarnaast een ontgrendelde Secret Service-provider; Windows gebruikt Credential Manager.
+In de openbare zelfstandige preview koppelt `healthmd setup codex` een iPhone-app op de voorgrond en maakt de opdracht veilig een item voor `healthmd mcp serve` in hetzelfde uitvoerbare bestand. Deze opzet gebruikt geauthenticeerd, versleuteld transport via Manual IP of Tailscale op poort `17647`, systeemeigen opslag voor inloggegevens en expliciete iPhone-uitlezingen per verzoek. Linux vereist daarnaast een ontgrendelde Secret Service-provider; Windows gebruikt Credential Manager.
 
-Vertrouw niet op ongepubliceerde pakket- of installatie-URL's totdat er een release `healthmd-cli/v<version>` bestaat. Lees [CLI rechtstreeks naar de iPhone](/nl/docs/cli-direct/) voor het voorbereide koppelings- en transportcontract.
+Gebruik de exacte prerelease `healthmd-cli/v<version>` in plaats van de verwijzing naar de nieuwste release van de hele repository. Lees [CLI rechtstreeks naar de iPhone](/nl/docs/cli-direct/) voor het expliciet ongekwalificeerde koppelings- en transportcontract.
 
 ## Systeemeigen visualisaties in MCP App
 
@@ -137,7 +144,7 @@ De gebundelde Mac-server biedt 21 vaste tools: 13 voor gereedheid en query's, vi
 
 | Tool | Doel |
 |---|---|
-| `healthmd_export_files` | Een persistente export via de Mac-app naar de geselecteerde map uitvoeren |
+| `healthmd_export_files` | Een persistente bestandsexport uitvoeren; de gebundelde Mac gebruikt de geselecteerde map en draagbare directe MCP vereist een expliciete computerbestemming |
 | `healthmd_export_job_status` | De exportvoortgang en het bestemmingsbewijs bekijken |
 | `healthmd_export_job_resume` | De exacte onveranderlijke persistente exporttaak hervatten |
 | `healthmd_export_job_cancel` | De exporttaak expliciet annuleren |
@@ -231,7 +238,7 @@ Selecteer en bewaar eerst een beschrijfbare bestemmingsmap in Health.md voor Mac
 
 Gebruik `date_selection: "all_available"` zonder `date_range` voor de volledige geschiedenis. Optionele `metric_ids`, `categories` of `all_metrics` beperken de gegevensophaling op de iPhone zonder opgeslagen instellingen te wijzigen. `detail_level` geldt alleen als een van die selecties aanwezig is. `all_metrics` kan niet worden gecombineerd met expliciete lijsten van meetwaarden of categorieën.
 
-Om in plaats daarvan een opgeslagen exportprofiel uit te voeren, zet je `settings_policy` op `"profile"` en geef je `profile_reference` mee met de stabiele UUID van het profiel (een optionele weergavenaam `name` wordt alleen voor fouten vastgelegd):
+Om in plaats daarvan een opgeslagen profiel uit te voeren, zet je `settings_policy` op `"profile"` en geef je `profile_reference` mee met de stabiele UUID. In het openbare protocol biedt de optionele `name` context voor weergave en fouten. Huidige telefoonimplementaties kunnen die naam raadplegen als de ID niet wordt gevonden, maar dat gedrag is niet bestand tegen hernoemen; automatisering moet de UUID als stabiele identiteit behandelen:
 
 ```json
 {
@@ -242,7 +249,22 @@ Om in plaats daarvan een opgeslagen exportprofiel uit te voeren, zet je `setting
 }
 ```
 
-Het profiel bepaalt het instellingenbereik: `profile_reference` kan niet worden gecombineerd met `metric_ids`, `categories`, `all_metrics` of het beleid voor opgeslagen instellingen, en een onbekende UUID faalt met een getypeerde fout in plaats van terug te vallen op actuele instellingen.
+Het profiel bepaalt het instellingenbereik: `profile_reference` kan niet worden gecombineerd met `metric_ids`, `categories`, `all_metrics` of het beleid voor opgeslagen instellingen, en een niet-oplosbare verwijzing faalt met een getypeerde fout in plaats van terug te vallen op actuele instellingen.
+
+De voorbeelden hierboven gebruiken de bestemming van de gebundelde Mac. Bij draagbare directe MCP vereist elke bestandsaanvraag ook een bestaande absolute computermap in `destination`; het telefoonprofiel levert de uitvoerinstellingen, niet dat hostpad:
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" },
+  "destination": "/absolute/existing/HealthVault",
+  "wait_timeout_seconds": 300
+}
+```
+
+Draagbare directe MCP weigert een ontbrekende, relatieve, niet-bestaande of symbolisch gekoppelde bestemming voordat de telefoontaak start.
 
 Controleer:
 

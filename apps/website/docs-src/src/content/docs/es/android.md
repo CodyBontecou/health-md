@@ -76,7 +76,7 @@ Las exportaciones JSON de Android están diseñadas para ser compatibles con las
 
 ## Programación y automatización
 
-Las exportaciones programadas usan una alarma exacta de una sola ejecución cuando concedes acceso a Alarmas y recordatorios de Android, con una tarea persistente de WorkManager como respaldo. Sin ese acceso, WorkManager se convierte en el programador principal, por lo que la hora seleccionada es un objetivo y no una garantía estricta. Health.md registra el historial de exportaciones, puede recuperar las fechas programadas que no se ejecutaron y permite reintentar las ejecuciones fallidas.
+Las exportaciones programadas requieren la compra vitalicia única. Las exportaciones programadas usan una alarma exacta de una sola ejecución cuando concedes acceso a Alarmas y recordatorios de Android, con una tarea persistente de WorkManager como respaldo. Sin ese acceso, WorkManager se convierte en el programador principal, por lo que la hora seleccionada es un objetivo y no una garantía estricta. Health.md registra el historial de exportaciones, puede recuperar las fechas programadas que no se ejecutaron y permite reintentar las ejecuciones fallidas.
 
 Para Tasker, adb u otras herramientas de automatización, Health.md ofrece intents de difusión exclusivamente explícitos. Los clientes externos deben dirigirse directamente al componente receptor:
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-La automatización usa tus ajustes de exportación actuales, la carpeta y los formatos seleccionados, la selección de métricas, el cómputo de exportaciones gratuitas y el historial.
+La automatización usa por defecto el perfil activo, con su destino, formatos, métricas, cómputo e historial congelados. Un extra `PROFILE` puede seleccionar un perfil estable por identificador o nombre; una referencia desconocida falla de forma segura en vez de usar los ajustes actuales. Las ejecuciones programadas también permanecen vinculadas a su perfil. Consulta [Perfiles de exportación](/es/docs/export-profiles/).
+
+### Requisitos de segundo plano y cancelación programada
+
+- Permite lecturas de Health Connect en segundo plano para exportaciones desatendidas; si no, abre Health.md para completar la lectura.
+- Mantén activadas las notificaciones para mostrar trabajo activo, el servicio en primer plano y avisos de recuperación.
+- Concede Alarmas y recordatorios solo si deseas alarmas exactas. Sin ese permiso, el trabajo es persistente pero la hora es aproximada.
+- Cancelar una ejecución programada solo detiene ese intento. Las fechas terminadas se conservan, las pendientes pueden reintentarse y la programación sigue activa.
 
 ## Fuentes de salud
 
 Health Connect es la ruta predeterminada para las exportaciones locales. La aplicación para Android también incluye un área de configuración de fuentes de salud para ecosistemas como Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar y WHOOP. Cuando estos ecosistemas escriben datos en Health Connect, Health.md puede exportar los registros resultantes de Health Connect. Las importaciones directas desde proveedores en la nube requieren la autorización del proveedor y pueden tener requisitos adicionales de configuración o disponibilidad.
 
 Google Fit se excluye de forma intencional de los proveedores compatibles porque Health Connect es la capa de datos de salud preferida de Android.
+
+### Pasos diarios locales exactos
+
+Los pasos diarios usan límites exactos del día local con zona horaria. Health.md recorta y divide intervalos de Health Connect que cruzan la medianoche antes de agregarlos, por lo que los viajes y el horario de verano no desplazan pasos al día incorrecto.
 
 ## Precio y restauración
 
@@ -118,6 +129,8 @@ Google Fit se excluye de forma intencional de los proveedores compatibles porque
 - No hay suscripción ni cargos recurrentes.
 - Google Play muestra el precio local vigente antes de la compra.
 - **Restaurar Compra** usa la cuenta de Google con la que compraste **Premium**.
+
+Si Google Play Billing se desconecta temporalmente, Health.md se reconecta y actualiza el derecho automáticamente. Una interrupción no elimina Premium de forma permanente; usa Restaurar compra solo si la cuenta sigue sin resolverse al volver la conexión.
 
 ## Modelo de privacidad
 
@@ -135,10 +148,11 @@ Si quieres la configuración local más estricta, ejecuta exportaciones manuales
 ## Documentación relacionada
 
 <div class="related">
+  <a href="/es/docs/export-profiles/"><span>Perfiles</span>Guarda destinos, ajustes de salida, programaciones e identificadores estables de automatización independientes.</a>
   <a href="/es/docs/export/"><span>Exportación</span>Flujo de exportación manual, intervalos de fechas, vistas previas, historial y archivos de salida.</a>
   <a href="/es/docs/metrics/"><span>Métricas</span>Cómo funcionan la selección de métricas y las categorías en Health.md.</a>
   <a href="/es/docs/format/"><span>Formatos</span>Markdown, Bases, JSON, CSV, unidades, nombres de archivo y frontmatter.</a>
   <a href="/es/docs/visualizations-roadmap/"><span>Obsidian</span>Cómo el JSON y el Markdown exportados alimentan las visualizaciones de Health.md.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última actualización: 2026-08-03</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última actualización: 2026-08-31</p>

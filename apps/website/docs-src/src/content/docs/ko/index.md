@@ -27,7 +27,7 @@ description: Apple Health 또는 Health Connect 데이터를 내보내고, 서�
 <div class="reference-stats">
 <div><strong>21</strong><span>번들 Mac MCP 도구</span></div>
 <div><strong>4</strong><span>내보내기 형식</span></div>
-<div><strong>v7</strong><span>공개 내보내기 스키마</span></div>
+<div><strong>v8</strong><span>Apple 공개 내보내기 스키마</span></div>
 <div><strong>0</strong><span>필수 Health.md 클라우드 경유 횟수</span></div>
 </div>
 
@@ -63,8 +63,8 @@ HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
 
 <div class="related">
   <a href="/ko/docs/agent-queries/"><span>타입 지정 쿼리</span>측정 항목, 수면 세션, 운동, 비교, 데이터 범위 및 사실 기반 증거를 요청하세요.</a>
-  <a href="/ko/docs/cli-direct/"><span>미리보기 · 이식 가능한 CLI</span>iPhone 직접 액세스 — 독립 실행형 패키지가 출시되기 전에 수동 IP 또는 Tailscale 페어링 방식을 알아보세요.</a>
-  <a href="/ko/docs/cli-extract/"><span>소스 데이터</span>정규 추출 — 선택한 스키마 v7 일별 데이터, 소스 레코드, 프로젝션 또는 JSONL을 가져오세요.</a>
+  <a href="/ko/docs/cli-direct/"><span>미리보기 · 이식 가능한 CLI</span>휴대전화 직접 액세스 — 수동 IP 또는 Tailscale 페어링과 현재 미검증 iPhone/Android 호환성 매트릭스를 확인하세요.</a>
+  <a href="/ko/docs/cli-extract/"><span>소스 데이터</span>정규 추출 — 선택한 스키마 v8 일별 데이터, 소스 레코드, 프로젝션 또는 JSONL을 가져오세요.</a>
   <a href="/ko/docs/cli-jobs/"><span>신뢰할 수 있는 실행</span>영속 작업 — 시간 초과, 알 수 없는 결과, 재개, 취소 및 부분 결과를 안전하게 처리하세요.</a>
   <a href="/ko/docs/agent-api/"><span>저수준</span>루프백 API — 정확한 쿼리, 증거, 커서, 새로 고침 및 영속 작업 경로를 사용하세요.</a>
   <a href="/ko/docs/reference/integration-recipes/"><span>패턴</span>통합 레시피 — 계약을 약화하지 않고 Health.md 출력을 구문 분석하고 검증하세요.</a>
@@ -78,7 +78,7 @@ HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
   <a href="/ko/docs/reference/"><span>계약 맵</span>내보내기 참조 — 스키마, 측정 항목, 형식, 레코드 및 상호 운용성 픽스처를 살펴보세요.</a>
   <a href="/ko/docs/reference/api-and-cli/"><span>자동화</span>API 및 CLI 계약 — 엔벨로프, 경로, 종료 동작 및 생성된 예제를 검사하세요.</a>
   <a href="/ko/docs/reference/evidence-packets/"><span>에이전트 결과</span>쿼리 및 증거 — 타입이 지정된 값, 데이터 범위, 누락 상태, 작업 및 결정론적 식별자를 확인하세요.</a>
-  <a href="/ko/docs/reference/daily-records/"><span>스키마 v7</span>일별 레코드 — 공개 소스 문서와 그 소유권 규칙을 이해하세요.</a>
+  <a href="/ko/docs/reference/daily-records/"><span>스키마 v8</span>일별 레코드 — 공개 소스 문서와 그 소유권 규칙을 이해하세요.</a>
   <a href="/ko/docs/shared-metric-registry/"><span>용어</span>측정 항목 레지스트리 — 안정적인 크로스 플랫폼 측정 항목 ID, 카테고리, 단위 및 프로필 메타데이터를 사용하세요.</a>
   <a href="/ko/docs/reference/generated/"><span>기계 판독 가능</span>생성된 아티팩트 — 정규 필드, 픽스처, 메시지 인벤토리 및 CLI 계약을 여세요.</a>
 </div>
@@ -87,13 +87,22 @@ HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
 
 ## 앱 및 내보내기
 
+### 신뢰할 수 있는 프로필 기반 내보내기
+
+- 요약 또는 공통 상세 시계열을 선택하세요. 정규 무손실 아카이브는 Apple 전용입니다.
+- 독립된 설정, 대상 및 일정을 iPhone 또는 Android의 기기 로컬 프로필로 저장하세요.
+- 중지 또는 취소는 활성 시도에만 적용됩니다. 완료 날짜는 유지되고 미해결 날짜는 재시도할 수 있으며 일정은 활성화됩니다.
+
+안정 ID, 자동화, 대상 기록 및 안전한 실패는 [내보내기 프로필](/ko/docs/export-profiles/)에서 확인하세요.
+
 <div class="related">
+  <a href="/ko/docs/export-profiles/"><span>재사용 가능한 워크플로</span>내보내기 프로필 — 대상, 형식, 측정 항목, 일정 및 자동화 ID를 고정합니다.</a>
   <a href="/ko/docs/iphone-first-export/"><span>여기에서 시작 · iPhone</span>첫 내보내기 — Apple Health 접근을 허용하고, 폴더를 선택하고, 출력을 미리 보고, 작성된 파일을 확인하세요.</a>
   <a href="/ko/docs/android/"><span>Android</span>Health Connect — 문서 제공자 폴더를 선택하고 플랫폼 자동화를 구성하세요.</a>
   <a href="/ko/docs/export/"><span>파일</span>내보내기 — Markdown, CSV, JSON 또는 Obsidian Bases로 명시적인 날짜 범위를 실행하세요.</a>
   <a href="/ko/docs/format/"><span>구조</span>형식 사용자 정의 — 단위, 날짜, 프론트매터, 파일 이름 및 쓰기 동작을 제어하세요.</a>
-  <a href="/ko/docs/scheduling/"><span>백그라운드</span>예약 — 일별 및 주별 내보내기 동작과 플랫폼 제한을 이해하세요.</a>
+  <a href="/ko/docs/scheduling/"><span>백그라운드</span>예약 — 반복 주기, 복구 및 플랫폼별 시간 제한을 이해하세요.</a>
   <a href="/ko/docs/shortcuts/"><span>자동화</span>단축어 및 App Intents — Apple 워크플로에서 내보내기, 요약 및 상태 확인을 실행하세요.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">문서 구조 업데이트: 2026-08-02</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">문서 구조 업데이트: 2026-08-31</p>

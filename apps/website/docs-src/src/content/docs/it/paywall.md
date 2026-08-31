@@ -1,6 +1,6 @@
 ---
 title: "Sblocco e paywall"
-description: "Acquisto una tantum di Full Access, senza abbonamento. Sblocca esportazioni illimitate, programmazione, flussi di lavoro con destinazione Mac e supporto per Comandi Rapidi."
+description: "Acquisto una tantum di Full Access, senza abbonamento. Rimuove il limite condiviso di 10 esportazioni e sblocca i flussi verso Mac e Comandi rapidi."
 ---
 
 ## Prezzi
@@ -9,12 +9,12 @@ description: "Acquisto una tantum di Full Access, senza abbonamento. Sblocca esp
 <li>Nessun abbonamento e nessun addebito ricorrente.</li>
 <li>Apple mostra il prezzo locale aggiornato prima dell’acquisto.</li>
 <li>Nessun account lato server. Lo sblocco è associato alla transazione StoreKit del tuo Apple ID.</li>
+<li>Prima dello sblocco, la stessa quota di 10 azioni copre le esportazioni manuali e pianificate.</li>
 </ul>
 
 ## Cosa sblocca Full Access
 <ul>
-<li>Esportazioni illimitate.</li>
-<li>Esportazioni programmate in background.</li>
+<li>Azioni di esportazione manuali e pianificate illimitate dopo la quota gratuita condivisa.</li>
 <li>Flussi di lavoro con destinazione Mac.</li>
 <li>Intent di Comandi Rapidi.</li>
 </ul>

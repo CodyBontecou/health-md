@@ -7,7 +7,7 @@ description: "Contrôlez la mise en forme des sorties sans modifier les données
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>Format par défaut. Un fichier par jour. Frontmatter YAML (facultatif), puis sections avec titres pour chaque catégorie.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown avec un frontmatter structuré et optimisé pour l’extension <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> d’Obsidian. Les propriétés numériques restent des nombres et les dates restent des dates.</p></div>
-<div class="option"><strong>JSON</strong><p>Un fichier JSON par jour. Les résumés quotidiens du schéma v7 peuvent intégrer l’archive v1 faisant autorité <code>healthmd.healthkit_records</code> lorsque Lossless Health Records est activé.</p></div>
+<div class="option"><strong>JSON</strong><p>Un fichier JSON par jour. Les résumés quotidiens Apple du schéma v8 peuvent intégrer l’archive v1 faisant autorité <code>healthmd.healthkit_records</code> lorsque Lossless Health Records est activé.</p></div>
 <div class="option"><strong>CSV</strong><p>Un fichier CSV par jour avec l’en-tête <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Les lignes de résumé de compatibilité comportent cinq champs et omettent la colonne d’horodatage ; les lignes horodatées et celles des enregistrements canoniques en comportent six.</p></div>
 </div>
 <div class="callout"><strong>Besoin du contrat exact ?</strong><p style="margin-top:6px;">Consultez la <a href="/fr/docs/reference/export-formats/">référence des formats</a> issue de la production, les <a href="/fr/docs/reference/generated/core/csv-row-contracts/">contrats des lignes CSV</a> et les fixtures complètes téléchargeables.</p></div>
@@ -28,8 +28,15 @@ description: "Contrôlez la mise en forme des sorties sans modifier les données
 ## Aperçu
 <p>Au bas de l’écran Format, un aperçu dynamique affiche les données du jour avec vos réglages actuels. C’est le moyen le plus rapide d’affiner le résultat : modifiez une option, consultez l’aperçu, puis recommencez.</p>
 
+## Détail des données et profils
+
+Résumé produit des projections quotidiennes compactes. Série chronologique détaillée ajoute des échantillons et intervalles sélectionnés sur Apple et Android lorsque la métrique le permet. Dossiers de santé sans perte ajoute l’archive canonique HealthKit, réservée à Apple et non une compatibilité Android.
+
+Le détail est figé avec le [profil d’exportation](/fr/docs/export-profiles/). Le modifier lorsqu’un profil est actif ne change que ce profil.
+
 ## Pages associées
 <div class="related">
+<a href="/fr/docs/export-profiles/"><span>Profils</span>Enregistrez le niveau de détail et le format de chaque flux.</a>
 <a href="/fr/docs/metrics/"><span>Quoi</span>Métriques de santé — choisissez d’abord les données.</a>
 <a href="/fr/docs/individual-tracking/"><span>Détaillé</span>Suivi individuel — une sortie entièrement différente, avec un fichier par entrée.</a>
 <a href="/fr/docs/daily-notes/"><span>Obsidian</span>Injection dans les notes quotidiennes — utilise les mêmes champs de frontmatter.</a>

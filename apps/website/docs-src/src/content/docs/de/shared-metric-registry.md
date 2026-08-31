@@ -8,14 +8,14 @@ description: Plattformübergreifende Metrikidentitäten und Kompatibilitätsprof
 Das gemeinsame Rust-Register enthält deterministische Vertragsmetadaten, während Erfassung, Berechtigungen und Verfügbarkeitsprüfungen für HealthKit und Health Connect nativ bleiben.
 
 - 248 explizite semantische Zeilen
-- 230 geordnete Apple-v7-Auswahlen
+- 230 geordnete Apple-v8-Auswahlen
 - 106 geordnete Android-Auswahlen
 - 102 beibehaltene nicht verfügbare oder veraltete Android-Identitäten
 - Drei unabhängige Ausgabeprofile; kein vereinheitlichtes v8-Schema
 
 | Internes Profil | Öffentliches Profil | Schema | Geordnete Auswahlen | Ausgabedeskriptoren |
 |---|---|---:|---:|---:|
-| `apple_health_data_v8` | `apple-v8` | 7 | 230 | 226 |
+| `apple_health_data_v8` | `apple-v8` | 8 | 230 | 226 |
 | `android_frozen_v4` | `android-frozen-v4` | 4 | 106 | 161 |
 | `android_analytical_v5` | `android-analytical-v5` | 5 | 106 | 161 |
 

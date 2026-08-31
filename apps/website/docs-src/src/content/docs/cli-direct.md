@@ -14,15 +14,26 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Preview · portable direct CLI</strong>
-<p>The bundled Swift direct backend is available on macOS and pairs with iPhone. Android pairing (protocol v2) is part of the cross-platform Rust client, an alpha awaiting physical iPhone and Android release QA and its first public package; Linux and Windows commands describe the staged workflow.</p>
+<p>The bundled Swift direct backend is available on macOS and pairs with iPhone. Android pairing (protocol v2) is part of the publicly packaged cross-platform Rust preview. Its physical iPhone and Android release QA remains pending, so Linux and Windows commands describe an explicitly unqualified workflow.</p>
 </div>
+
+## Mobile compatibility for 0.1.0-alpha.3
+
+This standalone compatibility table is the actionable matrix for the explicitly unqualified preview. No public CLI/mobile pair is qualified yet.
+
+| Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
+|---|---|---|---|---|
+| Export-capable iPhone | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
+| Android | selector 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
 ## What direct mode supports
 
 - one-time pairing and trusted reconnect with iPhone (protocol v1) or Android (protocol v2) sources;
 - local trusted-device inspection and unpairing;
 - live phone readiness;
-- strict raw export — schema-v7 `healthmd.health_data` on iPhone, provider-native Health Connect snapshots on Android;
+- strict raw export — schema-v8 `healthmd.health_data` on iPhone, provider-native Health Connect snapshots on Android;
 - selected canonical extraction (iPhone only);
 - production-generated file export on both phone platforms;
 - durable local job status and resume;
@@ -160,7 +171,7 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 Omit `--output` to stream validated JSON to stdout. An output file is safer for sensitive or large responses.
 
-iPhone strict raw returns `healthmd.raw_result` v1 containing ordinary schema-v7 `healthmd.health_data` days and their canonical source archives. It temporarily requests lossless detail without changing saved iPhone settings. The CLI validates the exact dates, profile, schema, archive, manifests, digest chain, final body digest, and completion state before exposing the result.
+iPhone strict raw returns `healthmd.raw_result` v1 containing ordinary schema-v8 `healthmd.health_data` days and their canonical source archives. It temporarily requests lossless detail without changing saved iPhone settings. The CLI validates the exact dates, profile, schema, archive, manifests, digest chain, final body digest, and completion state before exposing the result.
 
 A complete-empty day is successful. Missing, partial, failed, cancelled, unsupported, or skipped requested data produces `partial_success` and a nonzero exit unless `--allow-partial` is explicit.
 
@@ -216,9 +227,9 @@ By default, a request keeps saved formats, Health subfolder, filenames, template
 
 The iPhone can stage JSON, CSV, Markdown, ZIP, data dictionaries, roll-ups, individual records, daily notes, and provider sidecars. The CLI validates each relative path, byte count, digest, file manifest, destination identity, and request fingerprint before committing. It rejects traversal, symlink ancestors, root mutation, path collisions, and digest changes. Overwrite is atomic. Append and Markdown merge use persisted plans so a replay does not duplicate content.
 
-Generated-file destinations work on macOS and Linux for iPhone protocol v1, which rejects them on Windows. Android protocol v2 commits file destinations on every CLI operating system — macOS, Linux, and Windows — and caps each generated job at 4,096 files.
+Generated-file destinations for both iPhone protocol v1 and Android protocol v2 work on every CLI operating system — macOS, Linux, and Windows. Android caps each generated job at 4,096 files.
 
-Android protocol v2 file jobs take their scope from the device's saved export selections or from `--profile PROFILE_ID`; the profile owns the frozen settings and destination. CLI metric, category, and detail selectors are rejected for Android file jobs.
+Android protocol v2 file jobs take their output settings from the device's saved export selections or from `--profile PROFILE_ID`; CLI metric, category, and detail selectors are rejected for Android file jobs. On either phone platform, `--profile` resolves frozen output settings while the required `--destination` remains the explicit computer folder. For stable IDs and fail-closed profile behavior, see [Export profiles](/docs/export-profiles/).
 
 ## Foreground and background behavior
 
@@ -229,6 +240,8 @@ On iPhone, if an export is already connected when the app moves to the backgroun
 On Android, an active direct session runs a visible, user-started data-sync foreground service. Keep the app in the foreground for pairing and new work.
 
 On iPhone, a global activity banner during direct work includes capture and transfer phase, completed days, byte progress, and paused or completed status without displaying health values.
+
+While the phone app remains foreground, a trusted direct session may reconnect automatically after a transient disconnect, retrying with backoff delays capped at a short maximum. This does not wake or promise access to a background app; reopen Health.md before resuming if the app is no longer foreground.
 
 ## Durable resume and cancel
 

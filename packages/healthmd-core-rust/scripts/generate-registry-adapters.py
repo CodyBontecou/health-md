@@ -273,7 +273,8 @@ def generated_ledger(document: dict) -> str:
 
 def website_page(document: dict) -> str:
     profiles = document["profiles"]
-    apple_count = len(next(p for p in profiles if p["platform"] == "apple")["ordered_selection_ids"])
+    apple_profile = next(p for p in profiles if p["platform"] == "apple")
+    apple_count = len(apple_profile["ordered_selection_ids"])
     android_count = len(next(p for p in profiles if p["platform"] == "android")["ordered_selection_ids"])
     semantic_count = len(document["metrics"])
     lines = [
@@ -287,7 +288,7 @@ def website_page(document: dict) -> str:
         "The shared Rust registry contains deterministic contract metadata while HealthKit and Health Connect capture, permissions, and availability checks remain native.",
         "",
         f"- {semantic_count} explicit semantic rows",
-        f"- {apple_count} ordered Apple v7 selections",
+        f"- {apple_count} ordered Apple v{apple_profile['public_schema_version']} selections",
         f"- {android_count} ordered Android selections",
         "- 102 preserved Android unavailable/stale identities",
         "- Three independent output profiles; no unified v8 schema",

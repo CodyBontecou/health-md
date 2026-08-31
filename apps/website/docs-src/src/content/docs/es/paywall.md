@@ -1,6 +1,6 @@
 ---
 title: "Desbloqueo y muro de pago"
-description: "Compra única Full Access, sin suscripción. Desbloquea exportaciones ilimitadas, programación, flujos de destino en Mac y compatibilidad con Shortcuts."
+description: "Compra única de Full Access, sin suscripción. Elimina el límite compartido de 10 exportaciones y desbloquea los flujos con destino Mac y Atajos."
 ---
 
 ## Precio
@@ -9,12 +9,12 @@ description: "Compra única Full Access, sin suscripción. Desbloquea exportacio
 <li>Sin suscripción y sin cargos recurrentes.</li>
 <li>Apple muestra el precio local vigente antes de la compra.</li>
 <li>Sin cuenta del lado del servidor. El desbloqueo se vincula a tu transacción de StoreKit del Apple ID.</li>
+<li>Antes de desbloquear, la misma asignación de 10 acciones cubre las exportaciones manuales y programadas.</li>
 </ul>
 
 ## Qué desbloquea Full Access
 <ul>
-<li>Exportaciones ilimitadas.</li>
-<li>Exportaciones programadas en segundo plano.</li>
+<li>Acciones ilimitadas de exportación manuales y programadas después de la asignación gratuita compartida.</li>
 <li>Flujos de destino en Mac.</li>
 <li>Intents de Shortcuts.</li>
 </ul>

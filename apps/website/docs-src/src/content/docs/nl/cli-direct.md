@@ -14,15 +14,26 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe CLI</strong>
-<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS en koppelt met de iPhone. Android-koppeling (protocol v2) maakt deel uit van de platformonafhankelijke Rust-client, een alpha die wacht op release-QA met fysieke iPhones en Android-toestellen en op het eerste openbare pakket. De opdrachten voor Linux en Windows beschrijven de voorbereide workflow.</p>
+<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS en koppelt met de iPhone. Android-koppeling (protocol v2) maakt deel uit van de openbaar verpakte preview van de platformonafhankelijke Rust-client. Release-QA met fysieke iPhones en Android-toestellen is nog niet voltooid; de opdrachten voor Linux en Windows beschrijven een expliciet ongekwalificeerde workflow.</p>
 </div>
+
+## Mobiele compatibiliteit voor 0.1.0-alpha.3
+
+Deze zelfstandige tabel is de toepasbare matrix voor de uitdrukkelijk ongekwalificeerde preview. Er is nog geen openbare CLI/mobiele combinatie gekwalificeerd.
+
+| Mobiele bron | Protocol | Exacte tag-SHA-tegenhanger / ongekwalificeerde ondergrens | Platformonafhankelijke Rust-bewerkingen | Openbare status |
+|---|---|---|---|---|
+| iPhone met export | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, onbewerkt, extractie, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
+| iPhone met queries | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus lokale MCP/query met 19 tools | Fysieke kwalificatie in afwachting |
+| Android | selector 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, systeemeigen onbewerkt, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
+| Getypeerde Android-MCP-query | Niet beschikbaar | Niet geïmplementeerd | Querytools vereisen iPhone v3 | Niet ondersteund |
 
 ## Ondersteuning in de directe modus
 
 - eenmalige koppeling en opnieuw verbinden met een vertrouwd apparaat bij bronnen op de iPhone (protocol v1) of op Android (protocol v2);
 - lokale inspectie en ontkoppeling van vertrouwde apparaten;
 - actuele gereedheid van de telefoon;
-- strikte onbewerkte export — schema v7 `healthmd.health_data` op de iPhone, systeemeigen Health Connect-momentopnames op Android;
+- strikte onbewerkte export — schema v8 `healthmd.health_data` op de iPhone, systeemeigen Health Connect-momentopnames op Android;
 - geselecteerde canonieke extractie (alleen iPhone);
 - export van bestanden met de productie-exporters op beide telefoonplatforms;
 - status en hervatting van persistente lokale taken;
@@ -160,7 +171,7 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 Laat `--output` weg om gevalideerde JSON naar stdout te streamen. Een uitvoerbestand is veiliger voor gevoelige of omvangrijke antwoorden.
 
-Strikte onbewerkte export op de iPhone geeft `healthmd.raw_result` v1 terug met gewone dagen volgens schema v7 `healthmd.health_data` en de bijbehorende canonieke bronarchieven. De export vraagt tijdelijk verliesvrij detail op zonder opgeslagen iPhone-instellingen te wijzigen. Voordat het resultaat beschikbaar komt, valideert de CLI de exacte datums, het profiel, schema, archief, de manifesten, digestketen, uiteindelijke digest van de hoofdtekst en voltooiingsstatus.
+Strikte onbewerkte export op de iPhone geeft `healthmd.raw_result` v1 terug met gewone dagen volgens schema v8 `healthmd.health_data` en de bijbehorende canonieke bronarchieven. De export vraagt tijdelijk verliesvrij detail op zonder opgeslagen iPhone-instellingen te wijzigen. Voordat het resultaat beschikbaar komt, valideert de CLI de exacte datums, het profiel, schema, archief, de manifesten, digestketen, uiteindelijke digest van de hoofdtekst en voltooiingsstatus.
 
 Een volledig lege dag geldt als geslaagd. Ontbrekende, gedeeltelijke, mislukte, geannuleerde, niet-ondersteunde of overgeslagen gevraagde gegevens leveren `partial_success` en een afsluitcode anders dan nul op, tenzij `--allow-partial` expliciet is opgegeven.
 
@@ -192,6 +203,8 @@ healthmd --backend direct extract \
 
 De selectie van meetwaarden, categorieën, bronnen en het detailniveau bereikt de iPhone voordat HealthKit wordt uitgelezen. Lees [Canonieke extractie](/nl/docs/cli-extract/) voor objectselecties, JSON Pointers, JSONL en ontvangstbewijzen.
 
+Zolang de telefoonapp op de voorgrond blijft, kan een vertrouwde rechtstreekse sessie na een tijdelijke verbreking automatisch opnieuw verbinden, met begrensde pogingen en wachttijden. Dit wekt geen achtergrondapp en belooft er geen toegang toe; open Health.md opnieuw vóór hervatten.
+
 ## Bestanden uit de productie-exporters
 
 In de rechtstreekse bestandsmodus voert de telefoon de productie-exporters van Health.md uit en draagt daarna de gemaakte bestanden over naar een expliciete bestemming op de computer.
@@ -216,9 +229,10 @@ Standaard behoudt een verzoek de opgeslagen formaten, Health-submap, bestandsnam
 
 De iPhone kan JSON, CSV, Markdown, ZIP, gegevenswoordenboeken, periodeoverzichten, individuele records, dagelijkse notities en provider-sidecars klaarzetten. Voordat bestanden worden vastgelegd, valideert de CLI elk relatief pad, byteaantal, elke digest, het bestandsmanifest, de bestemmingsidentiteit en de vingerafdruk van het verzoek. De CLI wijst directory traversal, symbolische koppelingen in bovenliggende mappen, wijzigingen aan de hoofdmap, padconflicten en gewijzigde digests af. Overschrijven is atomair. Toevoegen en samenvoegen van Markdown gebruiken opgeslagen plannen, zodat opnieuw afspelen geen dubbele inhoud oplevert.
 
-Bestemmingen voor gegenereerde bestanden werken op macOS en Linux voor iPhone protocol v1, dat ze op Windows afwijst. Android protocol v2 legt bestandsbestemmingen vast op elk CLI-besturingssysteem — macOS, Linux en Windows — en beperkt elke gegenereerde taak tot 4,096 bestanden.
+Bestemmingen voor gegenereerde bestanden werken voor zowel iPhone protocol v1 als Android protocol v2 op elk CLI-besturingssysteem — macOS, Linux en Windows. Android beperkt elke gegenereerde taak tot 4,096 bestanden.
 
-Bestandstaken van Android protocol v2 halen hun bereik uit de opgeslagen exportselecties op het apparaat of uit `--profile PROFILE_ID`; het profiel bepaalt de bevroren instellingen en de bestemming. Selectors voor meetwaarden, categorieën en details van de CLI worden afgewezen voor Android-bestandstaken.
+Bestandstaken van Android protocol v2 halen hun uitvoerinstellingen uit de opgeslagen exportselecties op het apparaat of uit `--profile PROFILE_ID`; metriek-, categorie- en detailkiezers van de CLI worden afgewezen. Op beide telefoonplatforms zoekt `--profile` bevroren uitvoerinstellingen op, terwijl het verplichte `--destination` de expliciete computermap blijft aanwijzen.
+Voor stabiele ID’s en veilig profielgedrag, zie [Exportprofielen](/nl/docs/export-profiles/).
 
 ## Gedrag op de voorgrond en achtergrond
 
@@ -229,6 +243,8 @@ Op de iPhone geldt: als een export al verbonden is wanneer de app naar de achter
 Op Android draait een actieve rechtstreekse sessie als zichtbare, door de gebruiker gestarte voorgronddienst voor gegevenssynchronisatie. Houd de app op de voorgrond voor koppeling en nieuw werk.
 
 Op de iPhone toont een algemene activiteitsbanner tijdens rechtstreeks werk de vastleggings- en overdrachtsfase, voltooide dagen, bytevoortgang en de gepauzeerde of voltooide status zonder gezondheidswaarden te tonen.
+
+Zolang de telefoon-app op de voorgrond blijft, kan een vertrouwde rechtstreekse sessie na een tijdelijke onderbreking automatisch opnieuw verbinden. Nieuwe pogingen gebruiken oplopende vertragingen met een korte bovengrens. Dit activeert een app op de achtergrond niet en belooft daar geen toegang toe; open Health.md opnieuw voordat je hervat als de app niet meer op de voorgrond staat.
 
 ## Persistente taken hervatten en annuleren
 

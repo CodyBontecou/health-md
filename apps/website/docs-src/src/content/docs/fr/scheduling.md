@@ -1,6 +1,6 @@
 ---
 title: "Planification"
-description: "Lancez automatiquement des exports, chaque jour ou chaque semaine, à l’heure choisie. Utilise les tâches d’arrière-plan iOS et, si l’appareil est verrouillé, une notification locale planifiée comme solution de repli."
+description: "Lancez automatiquement des exports selon une cadence quotidienne, hebdomadaire ou calendaire personnalisée. iOS utilise des tâches d’arrière-plan et une notification locale de récupération lorsque les données protégées sont indisponibles."
 ---
 
 ## L’onglet Planification
@@ -15,12 +15,12 @@ description: "Lancez automatiquement des exports, chaque jour ou chaque semaine,
 ## Réglages de planification
 <div class="options">
 <div class="option"><strong>Activer les exports planifiés</strong><p>Interrupteur principal en haut. Lorsqu’il est désactivé, il n’y a ni exécution en arrière-plan ni notification.</p></div>
-<div class="option"><strong>Fréquence</strong><p>Quotidienne, hebdomadaire ou mensuelle. Les exports quotidiens couvrent la veille, les exports hebdomadaires les 7 jours précédents et les exports mensuels les 30 jours précédents.</p></div>
+<div class="option"><strong>Fréquence</strong><p>Quotidienne, hebdomadaire ou personnalisée. Une planification personnalisée se répète tous les N jours, semaines ou mois à partir d’une date initiale. La période rétrospective détermine le nombre de jours terminés couverts.</p></div>
 <div class="option"><strong>Heure</strong><p>Heure et minute. Pour iOS, ce réglage est une indication et non une garantie ; consultez l’encadré sur les limites ci-dessous.</p></div>
 </div>
 
 ## Historique des exports
-<p>La liste au bas de l’écran Planification consigne chaque exécution planifiée et son résultat. Touchez une ligne pour afficher les détails. Les échecs comportent un bouton <em>Réessayer</em> qui relance précisément la plage de dates concernée.</p>
+<p>La liste au bas de l’écran Planification consigne chaque exécution planifiée et son résultat. Touchez une ligne pour afficher les détails. Les échecs comportent un bouton <em>Réessayer</em> qui relance la plage de dates avec les réglages et la destination actuellement configurés, puis crée une nouvelle ligne d’historique.</p>
 
 ## Fonctionnement réel de la planification iOS
 <div class="doc-diagram">
@@ -45,8 +45,18 @@ description: "Lancez automatiquement des exports, chaque jour ou chaque semaine,
 ## Contrôle par programmation
 <p>Vous pouvez activer ou désactiver la planification depuis Shortcuts à l’aide de l’App Intent <em>Turn Scheduled Export On or Off</em>. <a href="/fr/docs/shortcuts/">Voir Shortcuts</a> pour des exemples.</p>
 
+## Planifications par profil et annulation
+
+- Chaque profil conserve sa propre planification, y compris une cadence personnalisée ; changer le profil actif ne redirige pas une autre planification.
+- Un avertissement de collision apparaît lorsque des profils pourraient écrire les mêmes chemins générés vers la même destination. Vérifiez-le avant d’activer des planifications concurrentes ; Health.md ne modifie aucun profil en silence.
+- Arrêter ou Annuler termine seulement la tentative en cours. Les dates terminées restent acquises, les autres sont réessayables et la planification reste active.
+- Chaque ligne d’historique reste liée au profil d’exécution et au libellé confidentiel de la destination réellement utilisée.
+
+Gérez réglages figés et destination dans [Profils d’exportation](/fr/docs/export-profiles/).
+
 ## Pages associées
 <div class="related">
+  <a href="/fr/docs/export-profiles/"><span>Profils</span>Gérez des planifications et destinations indépendantes.</a>
   <a href="/fr/docs/export/"><span>Manuel</span>Export — pour des plages de dates ponctuelles.</a>
   <a href="/fr/docs/shortcuts/"><span>Automatiser</span>Shortcuts — activez ou désactivez la planification depuis des automatisations.</a>
   <a href="/fr/docs/sync/"><span>Plusieurs appareils</span>Synchronisation Mac — planifiez également sur Mac.</a>

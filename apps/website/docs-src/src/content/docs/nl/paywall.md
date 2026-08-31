@@ -1,6 +1,6 @@
 ---
 title: "Full Access en betaalmuur"
-description: "Full Access is een eenmalige aankoop zonder abonnement. Ontgrendel onbeperkte exports, planning, workflows met een Mac-bestemming en ondersteuning voor Shortcuts."
+description: "Full Access is een eenmalige aankoop zonder abonnement. Hef de gedeelde limiet van 10 exports op en ontgrendel Mac-bestemmingsworkflows en Opdrachten."
 ---
 
 ## Prijs
@@ -9,12 +9,12 @@ description: "Full Access is een eenmalige aankoop zonder abonnement. Ontgrendel
 <li>Er is geen abonnement of terugkerende betaling.</li>
 <li>Apple toont vóór de aankoop de actuele lokale prijs.</li>
 <li>Er is geen serveraccount. De ontgrendeling is gekoppeld aan de StoreKit-transactie van je Apple ID.</li>
+<li>Vóór ontgrendeling geldt dezelfde ruimte van 10 acties voor handmatige en geplande exports.</li>
 </ul>
 
 ## Wat Full Access ontgrendelt
 <ul>
-<li>Onbeperkte exports.</li>
-<li>Geplande exports op de achtergrond.</li>
+<li>Onbeperkte handmatige en geplande exportacties na de gedeelde gratis ruimte.</li>
 <li>Workflows met een Mac-bestemming.</li>
 <li>Shortcuts-intenties.</li>
 </ul>

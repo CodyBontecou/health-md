@@ -22,7 +22,7 @@ description: "选择 Mac 应用或手机直连后端，将 healthmd 与 iPhone �
 | 严格原始导出 | 支持 | 支持；Android 上为提供方原生的 Health Connect 快照 |
 | 规范 `healthmd extract` | 支持 | 仅限 iPhone |
 | 加密上下文、类型化查询和证据 | 支持 | 仅限 iPhone，可移植客户端 |
-| `healthmd-mcp` | 支持 | 不支持 |
+| `healthmd-mcp` | 支持 | 支持，已安装可移植兼容启动器 |
 | 手动 IP 或 Tailscale | Mac 同步或明确的直连模式 | 支持 |
 | “附近”直连传输 | 仅内置 Swift 辅助程序 | 可移植 Rust 客户端不支持 |
 
@@ -77,15 +77,15 @@ healthmd doctor
 ## 可移植 CLI 状态
 
 <div class="availability preview">
-<strong>预览版 · 尚无公开软件包</strong>
-<p>跨平台 Rust CLI 仍在等待实体 iPhone 发布质量验证和首个合格软件包。</p>
+<strong>公开预览版 · 尚非已验证的稳定版本</strong>
+<p>跨平台 Rust CLI 已公开打包，但其准确的移动端矩阵仍在等待实体设备发布验证。</p>
 </div>
 
-独立 Rust CLI 正以 `0.1.0-alpha.1` 版本开发。它可在 macOS、Linux 和 Windows 上运行，默认通过手动 IP 或 Tailscale 直连，不需要 Mac 应用。它通过协议 v1 与 iPhone 来源配对，通过协议 v2 与 Android 来源配对，并配有自动化的 Swift↔Rust 和 Kotlin↔Rust 兼容性门禁。协议兼容性已经实现，但在首次公开发布前，仍需完成实体设备发布质量验证和公开打包。
+独立 Rust CLI 以明确未经资格验证的公开预览版形式提供。它可在 macOS、Linux 和 Windows 上运行，默认通过手动 IP 或 Tailscale 直连，不需要 Mac 应用。它通过协议 v1 与 iPhone 来源配对，通过协议 v2 与 Android 来源配对，并配有自动化的 Swift↔Rust 和 Kotlin↔Rust 兼容性门禁。协议兼容性已经实现，但在首个已验证的稳定版本之前，仍需完成实体设备发布质量验证。
 
-正式版本发布前，请使用内置 Mac 辅助程序。不要依赖尚未发布的 Homebrew、crates.io、GitHub 安装程序或下载 URL。
+在 macOS 或 Linux 上，使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装预览版。请使用发布证据中指定的准确移动端构建版本；软件包发布并不能证明移动端兼容性。
 
-对于 iPhone 和 Android 来源，可移植客户端在三个桌面平台上都支持配对、状态检查、原始导出、生成文件目标位置、恢复和取消。规范提取和类型化 MCP 查询属于 iPhone 功能；Android 原始快照保持其 Health Connect 提供方原生契约，不会被转换为 HealthKit 形态的数据，Android 类型化查询尚未实现。生成文件导出时，手机会把目标位置视为不透明的目标标签，接收端 CLI 则会验证该标签，并将其持久绑定到主机文件系统中的目标位置。Android 协议 v2 在所有 CLI 操作系统上都能提交文件目标位置，并将每个生成作业限制在最多 4,096 个文件；iOS 协议 v1 会在 Windows 上拒绝文件目标位置。
+对于 iPhone 和 Android 来源，可移植客户端在三个桌面平台上都支持配对、状态检查、原始导出、生成文件目标位置、恢复和取消。规范提取和类型化 MCP 查询属于 iPhone 功能；Android 原始快照保持其 Health Connect 提供方原生契约，不会被转换为 HealthKit 形态的数据，Android 类型化查询尚未实现。生成文件导出时，手机会把目标位置视为不透明的目标标签，接收端 CLI 则会验证该标签，并将其持久绑定到主机文件系统中的目标位置。Android 协议 v2 在所有 CLI 操作系统上都能提交文件目标位置，并将每个生成作业限制在最多 4,096 个文件。
 
 ## 命令索引
 
@@ -95,7 +95,7 @@ healthmd doctor
 | `healthmd doctor` | 说明 Mac、加密上下文和 iPhone 就绪状态 | Mac 应用 |
 | `healthmd metrics list` | 返回可查询指标的规范目录 | Mac 应用 |
 | `healthmd extract` | 获取所选的规范 `healthmd.health_data` 对象 | 两者，iPhone 来源 |
-| `healthmd query` | 获取并查询所选类型化指标 | Mac 应用 |
+| `healthmd query` | 获取并查询所选类型化指标 | Mac 应用；或使用 TOOL 和参数的直连 iPhone |
 | `healthmd sleep sessions` | 返回一等的睡眠时段和固定窗口 | Mac 应用 |
 | `healthmd training align` | 将锻炼与前后睡眠对齐 | Mac 应用 |
 | `healthmd workouts` | 列出带证据的类型化锻炼 | Mac 应用 |
@@ -144,16 +144,31 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
-
-# Run a saved export profile by UUID (frozen settings + destination)
-healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
-
-`--profile PROFILE_ID` 通过稳定的 UUID 在 iPhone 上解析已保存的导出配置文件：运行时使用该配置文件冻结的指标选择、格式和目标，而不是应用的当前设置。它不能与 `--use-iphone-settings` 或指标/类别选择器组合（配置文件拥有设置范围），未知的 UUID 会以类型化的 `profile_not_found` 错误失败，而不会回退到当前设置。请在应用的“导出”标签页配置文件选择器中查看 UUID。
 
 目前没有日历日数量上限。`--all` 会要求 iPhone 查找所选来源记录中最早可用的一条，固定解析后的日期范围，再通过有界分区处理。可用存储空间和某个异常密集的日期仍是实际限制。
 
 `--raw` 会临时请求规范无损来源记录，但不会更改 iPhone 偏好设置。它不会写入生成文件，也不包含已连接提供方的辅助记录。
+
+### 可移植的配置文件生成文件导出
+
+独立 Direct CLI 可以在两个受支持的手机平台上通过稳定 ID 解析已保存的配置文件。配置文件提供固定的输出设置；电脑目标仍需明确指定：
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --last 7 \
+  --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+`--profile PROFILE_ID` 不能与 `--use-device-settings` 或指标/类别选择器组合。未知 ID 会以安全方式失败，而不会使用当前设置。请在 iPhone 或 Android 的**设置 → 导出配置文件 → 配置文件 ID**中复制 ID。有关自动化和目标行为，请参阅[导出配置文件](/zh-hans/docs/export-profiles/)。
+
+可移植直连客户端无需 MCP 封装即可调用任何受支持的 iPhone 类型化操作：
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
 
 ## 规范提取还是派生查询？
 
@@ -173,7 +188,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7 是公开来源契约。查询、证据、作业和回执架构描述传输或派生视图，不能替代来源架构。规范提取是 iPhone 功能；Android 直连来源则通过原始导出提供提供方原生的 Health Connect 快照。
+`healthmd.health_data` v8 是 Apple 公开来源契约。查询、证据、作业和回执架构描述传输或派生视图，不能替代来源架构。规范提取是 iPhone 功能；Android 直连来源则通过原始导出提供提供方原生的 Health Connect 快照。
 
 ## 机器可读行为
 

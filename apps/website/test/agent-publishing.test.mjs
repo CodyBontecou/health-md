@@ -95,7 +95,7 @@ test('localized agent docs preserve released-Mac and portable-preview boundaries
     assert.match(combined, /19/);
     assert.doesNotMatch(combined, /17(?:\s|-)*(?:tools|tool|herramient|werkzeug|outil|ferrament|strument|個|개|个)/iu);
     assert.match(mcp, /`tools\/list`/);
-    assert.doesNotMatch(mcp, /"destination"\s*:/);
+    assert.match(mcp, /"destination"\s*:\s*"\/absolute\/existing\/HealthVault"/);
   }
 });
 

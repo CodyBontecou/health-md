@@ -76,7 +76,7 @@ Android JSON 내보내기는 Health.md의 Obsidian 시각화와 호환되도록 
 
 ## 예약 및 자동화
 
-Android의 알람 및 리마인더 접근 권한을 부여하면 예약된 내보내기에 일회성 정확한 알람을 사용하며, 영속 WorkManager 작업을 대체 수단으로 사용합니다. 정확한 알람 접근 권한이 없으면 WorkManager가 기본 스케줄러가 되므로 선택한 시간은 보장된 실행 시각이 아니라 목표 시간이 됩니다. Health.md는 내보내기 기록을 저장하고, 누락된 예약 날짜를 복구하며, 실패한 실행을 다시 시도할 수 있게 해 줍니다.
+예약 내보내기에는 일회성 평생 구매가 필요합니다. Android의 알람 및 리마인더 접근 권한을 부여하면 예약된 내보내기에 일회성 정확한 알람을 사용하며, 영속 WorkManager 작업을 대체 수단으로 사용합니다. 정확한 알람 접근 권한이 없으면 WorkManager가 기본 스케줄러가 되므로 선택한 시간은 보장된 실행 시각이 아니라 목표 시간이 됩니다. Health.md는 내보내기 기록을 저장하고, 누락된 예약 날짜를 복구하며, 실패한 실행을 다시 시도할 수 있게 해 줍니다.
 
 Tasker, adb 또는 기타 자동화 도구를 위해 Health.md는 명시적 브로드캐스트 인텐트만 제공합니다. 외부 호출자는 수신기 구성 요소를 직접 지정해야 합니다.
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-자동화에는 현재 내보내기 설정, 선택한 폴더, 형식, 측정 항목 선택, 무료 내보내기 사용량 계산 및 기록이 적용됩니다.
+자동화는 기본적으로 활성 프로필의 고정된 대상, 형식, 측정 항목, 사용량 계산 및 기록을 적용합니다. `PROFILE` extra는 안정 프로필을 ID 또는 이름으로 선택할 수 있습니다. 알 수 없는 참조는 현재 설정을 사용하지 않고 안전하게 실패합니다. 예약 실행도 프로필에 고정됩니다. [내보내기 프로필](/ko/docs/export-profiles/)을 참조하세요.
+
+### 백그라운드 요구 사항 및 예약 실행 취소
+
+- 무인 내보내기를 위해 Health Connect 백그라운드 읽기를 허용하세요. 허용하지 않으면 Health.md를 열어 읽기를 완료합니다.
+- 활성 작업, 필수 포그라운드 서비스 및 복구 알림을 표시하도록 알림을 켜 두세요.
+- 정확한 알람을 원할 때만 알람 및 리마인더 권한을 부여하세요. 권한이 없어도 작업은 유지되지만 시간은 대략적입니다.
+- 예약 실행을 취소하면 해당 시도만 중지됩니다. 완료 날짜는 유지되고 미해결 날짜는 재시도할 수 있으며 일정은 계속 활성화됩니다.
 
 ## 건강 데이터 소스
 
 Health Connect가 기본 로컬 내보내기 경로입니다. Android 앱에는 Samsung Health, Huawei Health, Fitbit, Garmin, Withings, Oura, Polar 및 WHOOP 같은 생태계를 위한 건강 데이터 소스 설정 영역도 포함되어 있습니다. 해당 생태계가 Health Connect에 데이터를 기록하면 Health.md는 생성된 Health Connect 기록을 내보낼 수 있습니다. 클라우드 제공자에서 직접 가져오려면 제공자 인증이 필요하며 추가 설정 또는 이용 가능 여부에 제약이 있을 수 있습니다.
 
 Health Connect가 Android의 권장 건강 데이터 계층이므로 Google Fit은 지원 제공자 목록에서 제외됩니다.
+
+### 정확한 현지 날짜 걸음 수
+
+일일 걸음 수는 시간대가 적용된 정확한 현지 날짜 경계를 사용합니다. Health.md는 집계 전에 현지 자정에서 Health Connect 구간을 자르고 나눠 여행이나 일광 절약 시간으로 날짜가 이동하지 않게 합니다.
 
 ## 가격 및 구매 복원
 
@@ -118,6 +129,8 @@ Health Connect가 Android의 권장 건강 데이터 계층이므로 Google Fit�
 - 구독과 반복 청구는 없습니다.
 - 구매 전에 Google Play에 현재 현지 가격이 표시됩니다.
 - 구매 복원은 Premium을 구매한 Google 계정을 사용합니다.
+
+Google Play Billing이 일시적으로 끊기면 Health.md가 자동으로 다시 연결해 권한을 새로 고칩니다. 일시적인 장애로 Premium이 영구 제거되지 않습니다. 연결 복구 후에도 계정이 해결되지 않을 때만 구매 복원을 사용하세요.
 
 ## 개인정보 보호 모델
 
@@ -135,10 +148,11 @@ Android용 Health.md는 로컬 우선 방식입니다.
 ## 관련 문서
 
 <div class="related">
+  <a href="/ko/docs/export-profiles/"><span>프로필</span>독립적인 대상, 출력 설정, 일정 및 안정적인 자동화 ID를 저장합니다.</a>
   <a href="/ko/docs/export/"><span>내보내기</span>수동 내보내기 절차, 날짜 범위, 미리보기, 기록 및 파일 출력.</a>
   <a href="/ko/docs/metrics/"><span>측정 항목</span>Health.md 전반에서 측정 항목 선택과 카테고리가 작동하는 방식.</a>
   <a href="/ko/docs/format/"><span>형식</span>Markdown, Bases, JSON, CSV, 단위, 파일 이름 및 프론트매터.</a>
   <a href="/ko/docs/visualizations-roadmap/"><span>Obsidian</span>내보낸 JSON과 Markdown으로 Health.md 시각화를 구현하는 방식.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">최종 업데이트: 2026-08-03</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">최종 업데이트: 2026-08-31</p>

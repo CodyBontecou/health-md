@@ -14,15 +14,26 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>미리보기 · 이식 가능한 직접 CLI</strong>
-<p>번들 Swift 직접 백엔드는 macOS에서 사용할 수 있으며 iPhone과 페어링합니다. Android 페어링(프로토콜 v2)은 크로스 플랫폼 Rust 클라이언트의 일부이며, 이 클라이언트는 실제 iPhone 및 Android 출시 QA와 첫 공개 패키지를 기다리는 알파 버전입니다. Linux 및 Windows 명령은 준비된 워크플로를 설명합니다.</p>
+<p>번들 Swift 직접 백엔드는 macOS에서 사용할 수 있으며 iPhone과 페어링합니다. Android 페어링(프로토콜 v2)은 공개 패키지로 제공되는 크로스 플랫폼 Rust 미리보기의 일부입니다. 실제 iPhone 및 Android 출시 QA는 아직 완료되지 않았으며, Linux 및 Windows 명령은 명시적으로 검증되지 않은 워크플로를 설명합니다.</p>
 </div>
+
+## 0.1.0-alpha.3 모바일 호환성
+
+이 독립 실행형 표는 명시적으로 검증되지 않은 미리보기에 적용되는 호환성 매트릭스입니다. 아직 검증된 공개 CLI/모바일 조합은 없습니다.
+
+| 모바일 소스 | 프로토콜 | 정확한 태그-SHA 대응 버전 / 미검증 호환성 하한 | 이식 가능한 Rust 작업 | 공개 상태 |
+|---|---|---|---|---|
+| 내보내기 지원 iPhone | 선택기 1 / v1 | iOS 3.2.1(빌드 202608300209) / iOS 3.0.3 | 상태, 원시, 추출, 파일, 재개, 취소 | 실물 검증 대기 |
+| 쿼리 지원 iPhone | 선택기 1 / v1 + 쿼리 v3 | iOS 3.2.1(빌드 202608300209) / iOS 3.0.3 | V1 및 19개 도구 로컬 MCP/쿼리 | 실물 검증 대기 |
+| Android | 선택기 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | 상태, 제공자 고유 원시, 파일, 재개, 취소 | 실물 검증 대기 |
+| Android 타입 지정 MCP 쿼리 | 해당 없음 | 구현되지 않음 | 쿼리 도구에는 iPhone v3 필요 | 지원되지 않음 |
 
 ## 직접 모드 지원 기능
 
 - 일회성 페어링 및 iPhone(프로토콜 v1) 또는 Android(프로토콜 v2) 소스와의 신뢰된 재연결
 - 로컬 신뢰 기기 확인 및 페어링 해제
 - 실시간 휴대전화 준비 상태
-- 엄격한 원시 내보내기 — iPhone에서는 스키마 v7 `healthmd.health_data`, Android에서는 제공자 고유의 Health Connect 스냅샷
+- 엄격한 원시 내보내기 — iPhone에서는 스키마 v8 `healthmd.health_data`, Android에서는 제공자 고유의 Health Connect 스냅샷
 - 선택적 정규 추출(iPhone 전용)
 - 두 휴대전화 플랫폼 모두에서 프로덕션 생성 파일 내보내기
 - 영속 로컬 작업 상태 및 재개
@@ -160,7 +171,7 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 검증된 JSON을 stdout으로 스트리밍하려면 `--output`을 생략하세요. 민감하거나 큰 응답에는 출력 파일이 더 안전합니다.
 
-iPhone 엄격한 원시는 `healthmd.raw_result` v1을 반환합니다. 여기에는 일반 스키마 v7 `healthmd.health_data` 날짜와 정규 소스 아카이브가 포함됩니다. 저장된 iPhone 설정을 변경하지 않고 일시적으로 무손실 세부 정보를 요청합니다. CLI는 결과를 노출하기 전에 정확한 날짜, 프로필, 스키마, 아카이브, 매니페스트, 다이제스트 체인, 최종 본문 다이제스트 및 완료 상태를 검증합니다.
+iPhone 엄격한 원시는 `healthmd.raw_result` v1을 반환합니다. 여기에는 일반 스키마 v8 `healthmd.health_data` 날짜와 정규 소스 아카이브가 포함됩니다. 저장된 iPhone 설정을 변경하지 않고 일시적으로 무손실 세부 정보를 요청합니다. CLI는 결과를 노출하기 전에 정확한 날짜, 프로필, 스키마, 아카이브, 매니페스트, 다이제스트 체인, 최종 본문 다이제스트 및 완료 상태를 검증합니다.
 
 complete-empty 날짜는 성공입니다. 요청한 데이터가 누락, 부분, 실패, 취소, 미지원 또는 건너뜀 상태면 `partial_success`와 0이 아닌 종료 코드가 발생합니다. 이를 허용하려면 `--allow-partial`을 명시해야 합니다.
 
@@ -192,6 +203,8 @@ healthmd --backend direct extract \
 
 측정 항목, 카테고리, 소스 및 세부 정보 선택은 HealthKit 읽기 전에 iPhone에 전달됩니다. 객체 선택자, JSON Pointer, JSONL 및 수신 확인은 [정규 추출](/ko/docs/cli-extract/)을 참조하세요.
 
+휴대전화 앱이 포그라운드에 있는 동안 신뢰된 직접 세션은 일시적인 연결 해제 후 제한된 횟수와 지연으로 자동 재연결할 수 있습니다. 백그라운드 앱을 깨우거나 접근을 보장하지 않습니다. 앱이 포그라운드가 아니면 Health.md를 다시 연 뒤 재개하세요.
+
 ## 프로덕션 생성 파일
 
 직접 파일 모드는 휴대전화에 Health.md의 프로덕션 내보내기 도구를 실행하도록 요청한 뒤 생성된 파일을 명시적 컴퓨터 대상으로 전송합니다.
@@ -216,9 +229,10 @@ healthmd --backend direct export --yesterday --use-iphone-settings \
 
 iPhone은 JSON, CSV, Markdown, ZIP, 데이터 사전, 롤업, 개별 레코드, 일별 메모 및 제공자 사이드카를 준비할 수 있습니다. CLI는 커밋 전에 각 상대 경로, 바이트 수, 다이제스트, 파일 매니페스트, 대상 식별 정보 및 요청 지문을 검증합니다. 경로 순회, 심볼릭 링크 상위 경로, 루트 변경, 경로 충돌 및 다이제스트 변경을 거부합니다. 덮어쓰기는 원자적으로 수행됩니다. 추가 및 Markdown 병합은 재실행 시 콘텐츠가 중복되지 않도록 저장된 계획을 사용합니다.
 
-생성 파일 대상은 iPhone 프로토콜 v1의 경우 macOS 및 Linux에서 작동하며 프로토콜 v1은 Windows에서 이를 거부합니다. Android 프로토콜 v2는 모든 CLI 운영 체제 — macOS, Linux 및 Windows — 에서 파일 대상을 커밋하며 생성 작업당 파일 수를 4,096개로 제한합니다.
+생성 파일 대상은 iPhone 프로토콜 v1과 Android 프로토콜 v2 모두 모든 CLI 운영 체제 — macOS, Linux 및 Windows — 에서 작동합니다. Android는 생성 작업당 파일 수를 4,096개로 제한합니다.
 
-Android 프로토콜 v2 파일 작업의 범위는 기기에 저장된 내보내기 선택 또는 `--profile PROFILE_ID`에서 결정됩니다. 프로필이 동결된 설정과 대상을 소유합니다. Android 파일 작업에는 CLI 측정 항목, 카테고리 및 세부 정보 선택자가 거부됩니다.
+Android 프로토콜 v2 파일 작업은 기기에 저장된 선택 또는 `--profile PROFILE_ID`에서 출력 설정을 가져오며 CLI 측정 항목, 카테고리 및 세부 정보 선택자는 거부됩니다. 두 휴대전화 플랫폼 모두에서 `--profile`은 고정된 출력 설정을 확인하고, 필수 `--destination`은 계속 컴퓨터의 명시적 폴더를 지정합니다.
+안정 ID와 안전한 프로필 동작은 [내보내기 프로필](/ko/docs/export-profiles/).
 
 ## 포그라운드 및 백그라운드 동작
 
@@ -229,6 +243,8 @@ iPhone에서는 내보내기가 이미 연결된 상태에서 앱이 백그라�
 Android에서는 활성 직접 세션이 사용자가 시작한 표시되는 데이터 동기화 포그라운드 서비스를 실행합니다. 페어링 및 새 작업을 위해 앱을 포그라운드에 유지하세요.
 
 iPhone에서는 직접 작업 중 전역 활동 배너가 캡처 및 전송 단계, 완료된 날짜, 바이트 진행 상황, 일시 중지 또는 완료 상태를 건강 값 없이 포함합니다.
+
+휴대전화 앱이 포그라운드에 있는 동안 신뢰된 직접 세션은 일시적인 연결 해제 후 자동으로 다시 연결할 수 있습니다. 재시도 지연은 짧은 최대값까지 점차 늘어납니다. 이 동작은 백그라운드 앱을 깨우거나 접근을 보장하지 않습니다. 앱이 더 이상 포그라운드에 없다면 재개하기 전에 Health.md를 다시 여세요.
 
 ## 영속 재개 및 취소
 

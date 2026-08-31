@@ -35,8 +35,15 @@ description: "Choisissez l’emplacement de vos fichiers Markdown et nommez le s
 <p style="margin-top:6px;">Si iOS révoque le signet à portée de sécurité — cas rare, généralement lorsque le dossier sous-jacent est supprimé ou déplacé — les exports commencent à échouer. Pour corriger le problème, sélectionnez de nouveau le coffre dans <em>Réglages</em>.</p>
 </div>
 
+## Remplacer ou déplacer un dossier en sécurité
+
+Lorsqu’un signet enregistré se résout vers un autre chemin, Health.md relie automatiquement le dossier si son identité persistante confirme qu’il s’agit du même dossier. L’app peut aussi accepter un signet à accès sécurisé résolu avec succès lorsque ni le dossier enregistré ni le dossier résolu ne fournit d’identité persistante, ce qui est courant avec les fournisseurs cloud. Un chemin voisin ne constitue jamais une preuve. L’historique conserve le libellé de destination respectueux de la confidentialité utilisé par chaque exécution.
+
+Sélectionnez de nouveau le dossier s’il a été supprimé, si l’accès a été révoqué, si les identités persistantes se contredisent ou si une identité n’existe que d’un côté et que le déplacement ne peut pas être vérifié. Health.md n’écrit pas vers une destination ambiguë. Comme chaque [profil d’exportation](/fr/docs/export-profiles/) possède sa destination, vérifiez ou resélectionnez le dossier concerné pour chaque profil.
+
 ## Pages associées
 <div class="related">
+  <a href="/fr/docs/export-profiles/"><span>Profils</span>Gérez l’accès aux dossiers et les destinations par profil.</a>
   <a href="/fr/docs/onboarding/"><span>Précédent</span>Prise en main — l’étape où vous choisissez le coffre pour la première fois.</a>
   <a href="/fr/docs/export/"><span>Suivant</span>Lancez un export dans votre nouveau coffre.</a>
   <a href="/fr/docs/format/"><span>Personnaliser</span>Personnalisation du format — définissez la façon dont les fichiers du sous-dossier sont écrits.</a>

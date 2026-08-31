@@ -14,15 +14,26 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>预览版 · 可移植直连 CLI</strong>
-<p>macOS 上已可使用内置的 Swift 直连后端，可与 iPhone 配对。Android 配对（协议 v2）属于跨平台 Rust 客户端的一部分；该客户端仍处于 Alpha 阶段，正在等待实体 iPhone 和 Android 发布质量验证以及首个公开软件包；Linux 和 Windows 命令描述的是分阶段推出的工作流。</p>
+<p>macOS 上已可使用内置的 Swift 直连后端，可与 iPhone 配对。Android 配对（协议 v2）属于已公开打包的跨平台 Rust 预览版。实体 iPhone 和 Android 发布质量验证仍未完成；Linux 和 Windows 命令描述的是明确未经资格验证的工作流。</p>
 </div>
+
+## 0.1.0-alpha.3 移动端兼容性
+
+此独立表格是明确未经资格验证的预览版所采用的兼容性矩阵。目前尚无通过资格验证的公开 CLI/移动端组合。
+
+| 移动端来源 | 协议 | 准确 tag-SHA 对应版本／未经验证的兼容性下限 | 可移植 Rust 操作 | 公开状态 |
+|---|---|---|---|---|
+| 支持导出的 iPhone | 选择器 1 / v1 | iOS 3.2.1（构建 202608300209）/ iOS 3.0.3 | 状态、原始数据、提取、文件、恢复、取消 | 等待实机资格验证 |
+| 支持查询的 iPhone | 选择器 1 / v1 + 查询 v3 | iOS 3.2.1（构建 202608300209）/ iOS 3.0.3 | V1 加 19 工具本地 MCP／查询 | 等待实机资格验证 |
+| Android | 选择器 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | 状态、提供方原生数据、文件、恢复、取消 | 等待实机资格验证 |
+| Android 类型化 MCP 查询 | 不适用 | 尚未实现 | 查询工具要求 iPhone v3 | 不支持 |
 
 ## 直连模式支持的功能
 
 - 与 iPhone（协议 v1）或 Android（协议 v2）来源完成一次性配对和可信重连；
 - 在本地查看可信设备并解除配对；
 - 实时检查手机就绪状态；
-- 严格的原始导出——iPhone 上为 schema-v7 `healthmd.health_data`，Android 上为提供方原生的 Health Connect 快照；
+- 严格的原始导出——iPhone 上为 schema-v8 `healthmd.health_data`，Android 上为提供方原生的 Health Connect 快照；
 - 按选择范围进行规范提取（仅限 iPhone）；
 - 在两种手机平台上导出生产生成的文件；
 - 查看和恢复本地持久作业；
@@ -160,7 +171,7 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 省略 `--output` 时，经过验证的 JSON 会流式写入 stdout。对于敏感或大型响应，写入输出文件更安全。
 
-iPhone 严格原始导出返回 `healthmd.raw_result` v1，其中包含普通 schema-v7 `healthmd.health_data` 每日数据及其规范来源归档。它会临时请求无损详情，但不会更改 iPhone 中已保存的设置。CLI 会先验证精确日期、配置、架构、归档、清单、摘要链、最终正文摘要和完成状态，再公开结果。
+iPhone 严格原始导出返回 `healthmd.raw_result` v1，其中包含普通 schema-v8 `healthmd.health_data` 每日数据及其规范来源归档。它会临时请求无损详情，但不会更改 iPhone 中已保存的设置。CLI 会先验证精确日期、配置、架构、归档、清单、摘要链、最终正文摘要和完成状态，再公开结果。
 
 完全为空的日期也属于成功。请求的数据如果存在缺失、部分完成、失败、取消、不支持或跳过，则会产生 `partial_success` 和非零退出状态；只有明确使用 `--allow-partial` 时例外。
 
@@ -192,6 +203,8 @@ healthmd --backend direct extract \
 
 在读取 HealthKit 前，指标、类别、来源和详细程度选择就会发送到 iPhone。对象选择器、JSON Pointer、JSONL 和回执的说明见[规范提取](/zh-hans/docs/cli-extract/)。
 
+手机应用保持前台运行时，可信直连会话可在短暂断开后，通过次数和延迟均有界的尝试自动重连。这不会唤醒后台应用，也不承诺能访问后台应用；如果应用已不在前台，请重新打开 Health.md 后再恢复。
+
 ## 生产导出器生成的文件
 
 直连文件模式会要求手机运行 Health.md 的生产导出器，然后把生成的文件传输到明确指定的计算机目标位置。
@@ -216,9 +229,10 @@ healthmd --backend direct export --yesterday --use-iphone-settings \
 
 iPhone 可以暂存 JSON、CSV、Markdown、ZIP、数据字典、周期汇总、单条记录、每日笔记和提供方辅助文件。CLI 会先验证每个相对路径、字节数、摘要、文件清单、目标身份和请求指纹，再提交文件。它会拒绝路径遍历、符号链接祖先、根目录变更、路径冲突和摘要变化。覆盖操作采用原子写入；追加和 Markdown 合并使用持久计划，重放时不会重复内容。
 
-对于 iPhone 协议 v1，生成文件目标位置在 macOS 和 Linux 上可用，但会在 Windows 上被拒绝。Android 协议 v2 则在所有 CLI 操作系统——macOS、Linux 和 Windows——上都能提交文件目标位置，并将每个生成作业限制在最多 4,096 个文件。
+iPhone 协议 v1 和 Android 协议 v2 的生成文件目标都支持所有 CLI 操作系统——macOS、Linux 和 Windows。Android 会将每个生成作业限制在最多 4,096 个文件。
 
-Android 协议 v2 的文件作业范围取自设备上已保存的导出选择，或来自 `--profile PROFILE_ID`；配置文件拥有冻结的设置和目标位置。Android 文件作业会拒绝 CLI 的指标、类别和详细程度选择器。
+Android 协议 v2 的文件作业从设备上已保存的选择或 `--profile PROFILE_ID` 获取输出设置，并拒绝 CLI 的指标、类别和详细程度选择器。在两个手机平台上，`--profile` 都用于解析固定的输出设置，而必需的 `--destination` 仍明确指定电脑文件夹。
+有关稳定 ID 和安全失败，请参阅 [导出配置文件](/zh-hans/docs/export-profiles/).
 
 ## 前台与后台行为
 
@@ -229,6 +243,8 @@ Android 协议 v2 的文件作业范围取自设备上已保存的导出选择�
 在 Android 上，活动的直连会话会运行一个由用户启动且可见的数据同步前台服务。请在配对和启动新作业时让应用保持前台。
 
 在 iPhone 上，执行直连作业时显示的全局活动横幅包含采集和传输阶段、已完成天数、字节进度，以及暂停或完成状态，但不会显示健康数值。
+
+当手机应用保持在前台时，受信任的直连会话可在短暂断开后自动重连。重试延迟会逐步增加，但设有较短的上限。这不会唤醒后台应用，也不保证能够访问后台应用；如果 Health.md 已不在前台，请在恢复前重新打开它。
 
 ## 持久恢复与取消
 

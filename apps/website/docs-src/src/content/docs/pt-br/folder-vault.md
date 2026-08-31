@@ -35,8 +35,15 @@ description: "Escolha onde ficam seus arquivos Markdown e nomeie a subpasta em q
 <p style="margin-top:6px;">Se o iOS revogar o marcador com escopo de segurança — algo raro, geralmente restrito à exclusão ou movimentação da pasta original — as exportações começarão a falhar. Para corrigir, selecione novamente o cofre em <em>Ajustes</em>.</p>
 </div>
 
+## Substituir ou mover uma pasta com segurança
+
+Quando um marcador salvo é resolvido em outro caminho, o Health.md vincula a pasta novamente de forma automática se a identidade persistente confirmar que é a mesma pasta. O app também pode aceitar um marcador com escopo de segurança resolvido com sucesso quando nem a pasta salva nem a resolvida expõe uma identidade persistente, o que é comum em provedores de nuvem. Um caminho parecido, por si só, nunca serve como prova. O histórico continua mostrando o rótulo de destino que preserva a privacidade usado por cada execução.
+
+Selecione a pasta novamente se ela foi excluída, o acesso foi revogado, as identidades persistentes entram em conflito ou apenas um dos lados fornece identidade e a mudança não pode ser verificada. O Health.md não grava em um destino ambíguo. Como cada [perfil de exportação](/pt-br/docs/export-profiles/) possui seu destino, verifique ou selecione novamente a pasta afetada em cada perfil.
+
 ## Relacionados
 <div class="related">
+  <a href="/pt-br/docs/export-profiles/"><span>Perfis</span>Gerencie acesso a pastas e destinos por perfil.</a>
   <a href="/pt-br/docs/onboarding/"><span>Anterior</span>Introdução — onde você escolhe o cofre pela primeira vez.</a>
   <a href="/pt-br/docs/export/"><span>Próximo</span>Faça uma exportação para o novo cofre.</a>
   <a href="/pt-br/docs/format/"><span>Personalizar</span>Personalização do formato — como os arquivos da subpasta são gravados.</a>

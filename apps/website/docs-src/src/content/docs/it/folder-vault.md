@@ -35,9 +35,16 @@ description: "Scegli dove conservare i file Markdown e assegna un nome alla sott
 <p style="margin-top:6px;">Se iOS revoca il segnalibro con ambito di sicurezza (un caso raro, che si verifica in genere solo se la cartella sottostante viene eliminata o spostata), le esportazioni inizieranno a non riuscire. Per risolvere il problema, seleziona nuovamente il vault dalle <em>Impostazioni</em>.</p>
 </div>
 
+## Sostituire o spostare una cartella in sicurezza
+
+Quando un segnalibro salvato viene risolto in un percorso diverso, Health.md ricollega automaticamente la cartella se l’identità persistente conferma che è la stessa. L’app può anche accettare un segnalibro con ambito di sicurezza risolto correttamente quando né la cartella salvata né quella risolta espone un’identità persistente, situazione comune con i provider cloud. Un percorso simile da solo non è mai una prova. La cronologia continua a mostrare l’etichetta di destinazione rispettosa della privacy usata da ogni esecuzione.
+
+Seleziona di nuovo la cartella se è stata eliminata, l’accesso è stato revocato, le identità persistenti sono in conflitto oppure l’identità è presente su un solo lato e lo spostamento non può essere verificato. Health.md non scrive in una destinazione ambigua. Poiché ogni [profilo di esportazione](/it/docs/export-profiles/) possiede la propria destinazione, verifica o riseleziona la cartella interessata per ogni profilo.
+
 ## Contenuti correlati
 
 <div class="related">
+  <a href="/it/docs/export-profiles/"><span>Profili</span>Gestisci accesso alle cartelle e destinazioni per profilo.</a>
   <a href="/it/docs/onboarding/"><span>Precedente</span>Configurazione iniziale — dove scegli il vault per la prima volta.</a>
   <a href="/it/docs/export/"><span>Successivo</span>Esegui un’esportazione nel nuovo vault.</a>
   <a href="/it/docs/format/"><span>Personalizza</span>Personalizzazione del formato — come vengono scritti i file nella sottocartella.</a>

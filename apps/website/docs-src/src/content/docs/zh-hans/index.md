@@ -27,7 +27,7 @@ description: 导出 Apple Health 或 Health Connect 数据，将已签名的 Mac
 <div class="reference-stats">
 <div><strong>21</strong><span>个随附的 Mac MCP 工具</span></div>
 <div><strong>4</strong><span>种导出格式</span></div>
-<div><strong>v7</strong><span>公共导出架构</span></div>
+<div><strong>v8</strong><span>Apple 公共导出架构</span></div>
 <div><strong>0</strong><span>次必需的 Health.md 云端中转</span></div>
 </div>
 
@@ -63,8 +63,8 @@ HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
 
 <div class="related">
   <a href="/zh-hans/docs/agent-queries/"><span>类型化查询</span>查询指标、睡眠时段、锻炼、对比、覆盖情况和事实证据。</a>
-  <a href="/zh-hans/docs/cli-direct/"><span>预览 · 便携 CLI</span>直接访问 iPhone — 在独立软件包发布前，了解手动 IP 或 Tailscale 配对。</a>
-  <a href="/zh-hans/docs/cli-extract/"><span>源数据</span>规范提取 — 获取选定的架构 v7 每日数据、来源记录、投影或 JSONL。</a>
+  <a href="/zh-hans/docs/cli-direct/"><span>预览 · 便携 CLI</span>直接访问手机——查看手动 IP 或 Tailscale 配对以及当前尚未完成资格验证的 iPhone/Android 兼容性矩阵。</a>
+  <a href="/zh-hans/docs/cli-extract/"><span>源数据</span>规范提取 — 获取选定的架构 v8 每日数据、来源记录、投影或 JSONL。</a>
   <a href="/zh-hans/docs/cli-jobs/"><span>可靠运行</span>持久作业 — 安全处理超时、结果未知、恢复、取消和部分结果。</a>
   <a href="/zh-hans/docs/agent-api/"><span>底层接口</span>环回 API — 使用精确的查询、证据、游标、刷新和持久作业路由。</a>
   <a href="/zh-hans/docs/reference/integration-recipes/"><span>模式</span>集成方案 — 解析并验证 Health.md 输出，同时保持契约的严格性。</a>
@@ -78,7 +78,7 @@ HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
   <a href="/zh-hans/docs/reference/"><span>契约导航</span>导出参考 — 浏览架构、指标、格式、记录和互操作性测试样例。</a>
   <a href="/zh-hans/docs/reference/api-and-cli/"><span>自动化</span>API 与 CLI 契约 — 查看封装、路由、退出行为和生成的示例。</a>
   <a href="/zh-hans/docs/reference/evidence-packets/"><span>智能体结果</span>查询与证据 — 类型化值、覆盖范围、缺失状态、操作和确定性标识。</a>
-  <a href="/zh-hans/docs/reference/daily-records/"><span>架构 v7</span>每日记录 — 了解公开来源文档及其归属规则。</a>
+  <a href="/zh-hans/docs/reference/daily-records/"><span>架构 v8</span>每日记录 — 了解公开来源文档及其归属规则。</a>
   <a href="/zh-hans/docs/shared-metric-registry/"><span>词汇表</span>指标注册表 — 使用稳定的跨平台指标 ID、类别、单位和配置元数据。</a>
   <a href="/zh-hans/docs/reference/generated/"><span>机器可读</span>生成的构件 — 查看规范字段、测试样例、消息清单和 CLI 契约。</a>
 </div>
@@ -87,13 +87,22 @@ HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
 
 ## 应用与导出
 
+### 可靠的配置文件导出
+
+- 选择摘要或共享的详细时间序列；规范无损归档仅限 Apple。
+- 在 iPhone 或 Android 上将独立设置、目的地和计划保存为设备本地配置文件。
+- 停止或取消只影响当前尝试：已完成日期会保留，未解决日期可重试，重复计划保持启用。
+
+请从[导出配置文件](/zh-hans/docs/export-profiles/)开始了解稳定 ID、自动化、目的地历史和安全失败。
+
 <div class="related">
+  <a href="/zh-hans/docs/export-profiles/"><span>可复用工作流</span>导出配置文件——固定目标、格式、指标、计划和自动化 ID。</a>
   <a href="/zh-hans/docs/iphone-first-export/"><span>从这里开始 · iPhone</span>首次导出 — 授权 Apple Health、选择文件夹、预览输出并验证写入的文件。</a>
   <a href="/zh-hans/docs/android/"><span>Android</span>Health Connect — 选择文档提供方文件夹并配置平台自动化。</a>
   <a href="/zh-hans/docs/export/"><span>文件</span>导出 — 以 Markdown、CSV、JSON 或 Obsidian Bases 格式导出明确的日期范围。</a>
   <a href="/zh-hans/docs/format/"><span>结构</span>格式自定义 — 控制单位、日期、frontmatter、文件名和写入行为。</a>
-  <a href="/zh-hans/docs/scheduling/"><span>后台</span>计划导出 — 了解每日和每周导出行为及平台限制。</a>
+  <a href="/zh-hans/docs/scheduling/"><span>后台</span>计划导出——了解重复周期、恢复机制和平台时间限制。</a>
   <a href="/zh-hans/docs/shortcuts/"><span>自动化</span>快捷指令与 App Intents — 通过 Apple 工作流触发导出、摘要和状态检查。</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">文档结构更新于 2026-08-02</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">文档结构更新于 2026-08-31</p>

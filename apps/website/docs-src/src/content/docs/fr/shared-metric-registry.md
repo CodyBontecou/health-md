@@ -8,14 +8,14 @@ description: Identités multiplateformes des métriques Health.md et profils de 
 Le registre Rust partagé contient des métadonnées de contrat déterministes. La collecte, les autorisations et les contrôles de disponibilité de HealthKit et Health Connect restent propres à chaque plateforme.
 
 - 248 entrées sémantiques explicites
-- 230 sélections Apple v7 ordonnées
+- 230 sélections Apple v8 ordonnées
 - 106 sélections Android ordonnées
 - 102 identités Android indisponibles ou obsolètes conservées
 - Trois profils de sortie indépendants ; aucun schéma v8 unifié
 
 | Profil interne | Profil public | Schéma | Sélections ordonnées | Descripteurs de sortie |
 |---|---|---:|---:|---:|
-| `apple_health_data_v8` | `apple-v8` | 7 | 230 | 226 |
+| `apple_health_data_v8` | `apple-v8` | 8 | 230 | 226 |
 | `android_frozen_v4` | `android-frozen-v4` | 4 | 106 | 161 |
 | `android_analytical_v5` | `android-analytical-v5` | 5 | 106 | 161 |
 

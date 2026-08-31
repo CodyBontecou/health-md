@@ -14,15 +14,26 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Vista previa · CLI directa y portátil</strong>
-<p>El backend directo Swift incluido está disponible en macOS y se empareja con iPhone. El emparejamiento de Android (protocolo v2) forma parte del cliente Rust multiplataforma, una versión alfa a la espera del control de calidad del lanzamiento físico del iPhone y de Android y de su primer paquete público; los comandos de Linux y Windows describen el flujo de trabajo por etapas.</p>
+<p>El backend directo Swift incluido está disponible en macOS y se empareja con iPhone. El emparejamiento de Android (protocolo v2) forma parte de la vista previa públicamente empaquetada del cliente Rust multiplataforma. Las pruebas de lanzamiento en iPhone y Android físicos siguen pendientes; los comandos de Linux y Windows describen un flujo de trabajo explícitamente no cualificado.</p>
 </div>
+
+## Compatibilidad móvil para 0.1.0-alpha.3
+
+Esta tabla independiente es la matriz aplicable para la vista previa explícitamente no cualificada. Todavía no hay ninguna pareja pública CLI/móvil cualificada.
+
+| Fuente móvil | Protocolo | Contraparte tag-SHA exacta / compatibilidad mínima no cualificada | Operaciones Rust portátiles | Estado público |
+|---|---|---|---|---|
+| iPhone con exportación | selector 1 / v1 | iOS 3.2.1 (compilación 202608300209) / iOS 3.0.3 | Estado, datos sin procesar, extracción, archivos, reanudación, cancelación | Pendiente de cualificación física |
+| iPhone con consultas | selector 1 / v1 + consulta v3 | iOS 3.2.1 (compilación 202608300209) / iOS 3.0.3 | V1 más MCP/consulta local de 19 herramientas | Pendiente de cualificación física |
+| Android | selector 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Estado, datos nativos, archivos, reanudación, cancelación | Pendiente de cualificación física |
+| Consulta MCP tipada en Android | No disponible | No implementada | Las herramientas requieren iPhone v3 | No compatible |
 
 ## ¿Qué admite el modo directo?
 
 - emparejamiento único y reconexión confiable con fuentes iPhone (protocolo v1) o Android (protocolo v2);
 - inspección y desemparejamiento de dispositivos locales de confianza;
 - comprobación en directo de la disponibilidad del teléfono;
-- exportación estricta sin procesar — `healthmd.health_data` de esquema v7 en iPhone, instantáneas nativas del proveedor Health Connect en Android;
+- exportación estricta sin procesar — `healthmd.health_data` de esquema v8 en iPhone, instantáneas nativas del proveedor Health Connect en Android;
 - extracción canónica seleccionada (solo iPhone);
 - exportación de archivos generados en producción en ambas plataformas de teléfono;
 - estado y reanudación de tareas locales persistentes;
@@ -160,7 +171,7 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 Omite `--output` para transmitir JSON validado a la salida estándar. Un archivo de salida es más seguro para respuestas confidenciales o grandes.
 
-La exportación estricta sin procesar de iPhone devuelve `healthmd.raw_result` v1 que contiene días `healthmd.health_data` de esquema v7 ordinario y sus archivos fuente canónicos. Solicita temporalmente detalles sin pérdida sin cambiar la configuración guardada del iPhone. La CLI valida las fechas exactas, el perfil, el esquema, el archivo, los manifiestos, la cadena de resúmenes, el resumen final del cuerpo y el estado de finalización antes de exponer el resultado.
+La exportación estricta sin procesar de iPhone devuelve `healthmd.raw_result` v1 que contiene días `healthmd.health_data` de esquema v8 ordinario y sus archivos fuente canónicos. Solicita temporalmente detalles sin pérdida sin cambiar la configuración guardada del iPhone. La CLI valida las fechas exactas, el perfil, el esquema, el archivo, los manifiestos, la cadena de resúmenes, el resumen final del cuerpo y el estado de finalización antes de exponer el resultado.
 
 Un día completamente vacío es un éxito. Los datos solicitados faltantes, parciales, fallidos, cancelados, no admitidos u omitidos producen `partial_success` y una salida distinta de cero a menos que `--allow-partial` sea explícito.
 
@@ -192,6 +203,8 @@ healthmd --backend direct extract \
 
 La selección de métricas, categorías, fuentes y detalles llega al iPhone antes de que HealthKit lea. Consulta [Extracción canónica](/es/docs/cli-extract/) para selectores de objetos, punteros JSON, JSONL y recibos.
 
+Mientras la aplicación permanezca en primer plano, una sesión directa de confianza puede reconectarse automáticamente tras una interrupción temporal, con intentos y esperas limitados. Esto no despierta ni promete acceso a una aplicación en segundo plano; vuelve a abrir Health.md antes de reanudar.
+
 ## Archivos generados en producción
 
 El modo de archivo directo solicita al teléfono que ejecute los exportadores de producción de Health.md y luego transfiere los archivos resultantes a un destino informático explícito.
@@ -216,9 +229,10 @@ De forma predeterminada, una solicitud conserva los formatos guardados, la subca
 
 El iPhone puede almacenar archivos JSON, CSV, Markdown, ZIP, diccionarios de datos, datos agregados, registros individuales, notas diarias y datos auxiliares de proveedores. La CLI valida cada ruta relativa, recuento de bytes, resumen, manifiesto de archivo, identidad de destino y huella digital de solicitud antes de confirmar. Rechaza el recorrido, los ancestros de enlaces simbólicos, la mutación de raíz, las colisiones de rutas y los cambios de resumen. La sobrescritura es atómica. La combinación Append y Markdown usa planes persistentes para que un reintento no duplique el contenido.
 
-Los destinos de archivos generados funcionan en macOS y Linux con el protocolo v1 de iPhone, que los rechaza en Windows. El protocolo v2 de Android confirma los destinos de archivos en todos los sistemas operativos de la CLI — macOS, Linux y Windows — y limita cada tarea generada a 4096 archivos.
+Los destinos de archivos generados funcionan con el protocolo v1 de iPhone y el protocolo v2 de Android en todos los sistemas operativos de la CLI — macOS, Linux y Windows. Android limita cada tarea generada a 4096 archivos.
 
-Las tareas de archivos del protocolo v2 de Android toman su alcance de las selecciones de exportación guardadas del dispositivo o de `--profile PROFILE_ID`; el perfil es el dueño de la configuración congelada y del destino. Los selectores CLI de métrica, categoría y detalle se rechazan para las tareas de archivos de Android.
+Las tareas de archivos del protocolo v2 de Android toman sus ajustes de salida de las selecciones guardadas en el dispositivo o de `--profile PROFILE_ID`; los selectores CLI de métrica, categoría y detalle se rechazan. En ambas plataformas de teléfono, `--profile` resuelve ajustes de salida congelados, mientras que el `--destination` obligatorio sigue indicando la carpeta explícita del ordenador.
+Para identificadores estables y fallos seguros, consulta [Perfiles de exportación](/es/docs/export-profiles/).
 
 ## Comportamiento en primer plano y en segundo plano
 
@@ -229,6 +243,8 @@ En iPhone, si ya hay una exportación conectada cuando la aplicación pasa a seg
 En Android, una sesión directa activa ejecuta un servicio en primer plano de sincronización de datos, visible e iniciado por el usuario. Mantén la aplicación en primer plano para el emparejamiento y las tareas nuevas.
 
 En iPhone, un banner de actividad global durante la tarea directa incluye la fase de captura y transferencia, los días completados, el progreso de bytes y el estado de pausa o finalización sin mostrar valores de salud.
+
+Mientras la aplicación del teléfono permanezca en primer plano, una sesión directa de confianza puede volver a conectarse automáticamente tras una desconexión transitoria. Los reintentos usan demoras crecientes con un máximo breve. Esto no activa ni garantiza acceso a una aplicación en segundo plano; vuelve a abrir Health.md antes de reanudar si ya no está en primer plano.
 
 ## Reanudación y cancelación persistentes
 

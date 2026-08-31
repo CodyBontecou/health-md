@@ -20,10 +20,10 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>プレビュー · ポータブル直接接続MCP</strong>
-<p>macOS、Linux、Windows向けの別構成である19ツール版<code>healthmd mcp serve</code>は実装済みですが、まだ公開パッケージはありません。クラウドを使わない<code>serve-read-only</code>エントリは、ローカルでのペアリング後、準備状況とクエリに関する13個のツールだけを公開します。このページにあるポータブル版専用コマンドには、プレビューと明記しています。</p>
+<p>macOS、Linux、Windows向けの別構成である19ツール版<code>healthmd mcp serve</code>は、明示的に未認定の公開プレビューとして配布されています。クラウドを使わない<code>serve-read-only</code>エントリは、ローカルでのペアリング後、準備状況とクエリに関する13個のツールだけを公開します。macOSまたはLinuxでは<code>brew install CodyBontecou/tap/healthmd</code>でインストールします。</p>
 </div>
 
-## 要件
+## Mac同梱版の要件
 
 - Health.md for Macがインストール済みで開いていること
 - 更新ツールまたはエクスポートが新しいHealthKit処理を開始するときは、接続済みのiPhoneでHealth.mdを開いていること
@@ -31,6 +31,13 @@ Codex / Claude / another local MCP host
 - **Health.md for Mac → CLI**に表示される署名済みヘルパーのパス
 
 通常のヘルパーパスは`/Applications/Health.md.app/Contents/Helpers/healthmd-mcp`です。対応するMCPコアプロトコルのバージョンは、`2024-11-05`、`2025-03-26`、`2025-06-18`、`2025-11-25`です。`healthmd-mcp`を通常の対話型コマンドとして起動しないでください。標準入力とプロセスのライフサイクルはMCPホストが管理します。
+
+## ポータブル直接接続の要件
+
+- macOS、Linux、Windowsにスタンドアロンプレビューをインストールします。Macアプリとループバックサービスは不要です。
+- クエリ対応iPhoneと一度ペアリングし、新しい型付きリクエストごとにHealth.mdを前面に保ちます。Androidの型付きMCPには対応していません。
+- Manual IPまたはTailscaleによる到達性とOSの認証情報ストレージを使います。Linuxではロック解除済みSecret Serviceプロバイダが必要です。
+- インストール済み互換ランチャーまたは同じバイナリのstdioサーバーを設定します。どちらもペアリング済み直接接続バックエンドを使います。
 
 ## Codexの設定
 
@@ -77,9 +84,9 @@ Claude DesktopのMCP設定、または信頼済みのClaude Code `.mcp.json`で�
 
 ## ポータブル直接接続MCPのプレビュー
 
-スタンドアロン版の公開後は、`healthmd setup codex`によって前面表示中のiPhoneをペアリングし、同じバイナリの`healthmd mcp serve`エントリを安全に作成できるようになります。この構成では、ポート`17647`上の認証済みで暗号化されたManual IPまたはTailscale転送、ネイティブの認証情報ストレージ、リクエストごとに明示するiPhoneからの読み取りを使用します。Linuxでは、ロック解除済みのSecret Serviceプロバイダも必要です。WindowsではCredential Managerを使用します。
+公開スタンドアロンプレビューでは、`healthmd setup codex`が前面表示中のiPhoneをペアリングし、同じバイナリの`healthmd mcp serve`エントリを安全に作成します。この構成では、ポート`17647`上の認証済みで暗号化されたManual IPまたはTailscale転送、ネイティブの認証情報ストレージ、リクエストごとに明示するiPhoneからの読み取りを使用します。Linuxでは、ロック解除済みのSecret Serviceプロバイダも必要です。WindowsではCredential Managerを使用します。
 
-`healthmd-cli/v<version>`リリースが提供されるまでは、未公開のパッケージやインストーラーURLに依存しないでください。段階的なペアリングと転送のコントラクトについては、[iPhone直接接続CLI](/ja/docs/cli-direct/)を参照してください。
+リポジトリ全体の最新リリースポインターではなく、正確な`healthmd-cli/v<version>`プレリリースを使用してください。明示的に未認定のペアリングと転送のコントラクトについては、[iPhone直接接続CLI](/ja/docs/cli-direct/)を参照してください。
 
 ## ネイティブMCP Appの可視化
 
@@ -137,7 +144,7 @@ Health.mdは、安定版`io.modelcontextprotocol/ui`ネゴシエーションを`
 
 | ツール | 用途 |
 |---|---|
-| `healthmd_export_files` | Macアプリを介し、選択済みフォルダへ永続エクスポートを実行 |
+| `healthmd_export_files` | 永続ファイルエクスポートを実行。同梱Macは選択済みフォルダを使い、ポータブルDirect MCPはコンピュータの保存先を明示的に指定 |
 | `healthmd_export_job_status` | エクスポートの進捗と保存先レシートを確認 |
 | `healthmd_export_job_resume` | 変更不能な永続エクスポートジョブをそのまま再開 |
 | `healthmd_export_job_cancel` | エクスポートジョブを明示的にキャンセル |
@@ -231,7 +238,7 @@ healthmd mcp schema # complete fixed catalog
 
 全履歴には、`date_selection: "all_available"`を`date_range`なしで使用します。任意の`metric_ids`、`categories`、`all_metrics`で、保存済み設定を変更せずにiPhoneでの取得範囲を狭められます。`detail_level`は、これらの選択項目のいずれかがある場合だけ適用されます。`all_metrics`は、明示的な指標リストやカテゴリリストと併用できません。
 
-代わりに保存されたエクスポートプロファイルを実行するには、`settings_policy` を `"profile"` に設定し、プロファイルの安定した UUID を持つ `profile_reference` を渡します（省略可能な表示用 `name` はエラー時の記録専用です）:
+保存済みプロファイルを実行するには、`settings_policy`を`"profile"`に設定し、安定したUUIDを含む`profile_reference`を渡します。公開プロトコルでは、省略可能な`name`は表示とエラーの文脈です。現在のスマートフォン実装はIDが見つからない場合に名前を参照することがありますが、これは名前変更に強い動作ではありません。自動化ではUUIDを安定した識別子として扱ってください。
 
 ```json
 {
@@ -242,7 +249,22 @@ healthmd mcp schema # complete fixed catalog
 }
 ```
 
-プロファイルが設定スコープを所有します: `profile_reference` は `metric_ids`、`categories`、`all_metrics`、保存設定ポリシーと組み合わせることはできず、不明な UUID は型付きエラーで失敗し、現在の設定へフォールバックしません。
+プロファイルが設定スコープを所有します: `profile_reference` は `metric_ids`、`categories`、`all_metrics`、保存設定ポリシーと組み合わせることはできず、解決できない参照 は型付きエラーで失敗し、現在の設定へフォールバックしません。
+
+上の例は同梱Macの保存先を使います。ポータブルDirect MCPでは、すべての生成ファイル要求で、既存の絶対コンピュータフォルダを`destination`に指定する必要があります。スマートフォンのプロファイルが提供するのは出力設定であり、ホスト側のパスではありません。
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" },
+  "destination": "/absolute/existing/HealthVault",
+  "wait_timeout_seconds": 300
+}
+```
+
+保存先が未指定、相対パス、存在しない、またはシンボリックリンクの場合、ポータブルDirect MCPはスマートフォンのジョブを開始する前に拒否します。
 
 次の項目を確認します。
 

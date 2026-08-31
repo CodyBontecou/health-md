@@ -76,7 +76,7 @@ Android JSON 导出旨在与 Health.md 的 Obsidian 可视化兼容。Markdown �
 
 ## 计划与自动化
 
-当您授予 Android“闹钟和提醒”权限时，计划导出会使用一次性精确闹钟，并以持久的 WorkManager 工作作为后备。如果没有精确闹钟权限，WorkManager 将成为主要调度器，因此所选时间只是目标时间，无法严格保证。Health.md 会记录导出历史、恢复错过的计划日期，并允许您重试失败的运行。
+计划导出需要一次性终身购买。当您授予 Android“闹钟和提醒”权限时，计划导出会使用一次性精确闹钟，并以持久的 WorkManager 工作作为后备。如果没有精确闹钟权限，WorkManager 将成为主要调度器，因此所选时间只是目标时间，无法严格保证。Health.md 会记录导出历史、恢复错过的计划日期，并允许您重试失败的运行。
 
 对于 Tasker、adb 或其他自动化工具，Health.md 提供仅限显式调用的广播 intent。外部调用方必须直接指定接收器组件：
 
@@ -103,13 +103,24 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-自动化会使用您当前的导出设置、所选文件夹、格式、指标选择、免费/付费导出额度和历史记录。
+自动化默认使用当前配置文件，包括其冻结的目的地、格式、指标、额度计算和历史。`PROFILE` extra 可以通过 ID 或名称选择稳定配置文件；未知引用会以安全方式失败，而不会使用当前设置。计划运行也始终绑定到自己的配置文件。请参阅[导出配置文件](/zh-hans/docs/export-profiles/)。
+
+### 后台要求与计划取消
+
+- 无人值守导出需要允许后台读取 Health Connect；否则请打开 Health.md 完成读取。
+- 保持通知开启，以便显示进行中的工作、必要的前台服务状态和恢复提示。
+- 仅在需要精确闹钟时授予“闹钟和提醒”权限。没有该权限时，工作仍会持久保存，但时间只是大致目标。
+- 取消一次计划运行只会停止该次尝试。已完成日期会保留，未解决日期可重试，重复计划保持启用。
 
 ## 健康数据源
 
 Health Connect 是默认的本地导出路径。Android 应用还提供健康数据源设置区域，支持 Samsung Health、Huawei Health、Fitbit、Garmin、Withings、Oura、Polar 和 WHOOP 等生态系统。当这些生态系统将数据写入 Health Connect 时，Health.md 可以导出相应的 Health Connect 记录。直接从云服务提供方导入需要提供方授权，并且可能有额外的设置或可用性限制。
 
 受支持的提供方中有意不包含 Google Fit，因为 Health Connect 是 Android 首选的健康数据层。
+
+### 精确本地日步数
+
+每日步数使用带时区的准确本地日边界。Health.md 会在汇总前于本地午夜裁剪和拆分 Health Connect 区间，避免旅行或夏令时把步数移到错误日期。
 
 ## 定价与恢复购买
 
@@ -118,6 +129,8 @@ Health Connect 是默认的本地导出路径。Android 应用还提供健康数
 - 无需订阅，也没有周期性收费。
 - Google Play 会在购买前显示当前本地价格。
 - “恢复购买”会使用购买 Full Access 的 Google 账户。
+
+Google Play Billing 暂时断开时，Health.md 会自动重连并刷新权益。短暂服务中断不会永久移除 Premium；只有在连接恢复后账户仍未解决时才使用“恢复购买”。
 
 ## 隐私模式
 
@@ -135,10 +148,11 @@ Android 版 Health.md 采用本地优先模式：
 ## 相关文档
 
 <div class="related">
+  <a href="/zh-hans/docs/export-profiles/"><span>配置文件</span>保存独立的目标、输出设置、计划和稳定自动化 ID。</a>
   <a href="/zh-hans/docs/export/"><span>导出</span>手动导出流程、日期范围、预览、历史记录和文件输出。</a>
   <a href="/zh-hans/docs/metrics/"><span>指标</span>Health.md 各平台上的指标选择和类别工作方式。</a>
   <a href="/zh-hans/docs/format/"><span>格式</span>Markdown、Bases、JSON、CSV、单位、文件名和 frontmatter。</a>
   <a href="/zh-hans/docs/visualizations-roadmap/"><span>Obsidian</span>导出的 JSON 和 Markdown 如何驱动 Health.md 可视化。</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">最后更新于 2026-08-03</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">最后更新于 2026-08-31</p>
