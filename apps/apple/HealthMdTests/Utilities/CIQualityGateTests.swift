@@ -207,8 +207,18 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    runs-on: macos-26\n    timeout-minutes: 60"),
+            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: prepare-shared-core\n    runs-on: macos-26\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
+        )
+        XCTAssertEqual(
+            content.components(separatedBy: "- name: Prepare and validate shared Rust core for Apple").count - 1,
+            1,
+            "Apple CI must build the exact shared-core XCFramework only once"
+        )
+        XCTAssertEqual(
+            content.components(separatedBy: "needs: prepare-shared-core").count - 1,
+            3,
+            "All Xcode test jobs must consume the single prepared shared-core artifact"
         )
         XCTAssertTrue(
             content.contains("-test-timeouts-enabled YES"),
