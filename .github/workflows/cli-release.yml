@@ -66,45 +66,29 @@ jobs:
             echo "windows_signing=$(jq -r .windows_signing <<<"$result")"
           } >> "$GITHUB_OUTPUT"
 
-  qualify-cli:
-    name: Exact candidate / CLI
+  qualify-ci:
+    name: Qualify exact main CI
     needs: identity
     if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/cli-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
     permissions:
+      actions: write
       contents: read
-
-  qualify-core:
-    name: Exact candidate / shared core
-    needs: identity
-    if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/core-rust-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
-    permissions:
-      contents: read
-
-  qualify-apple:
-    name: Exact candidate / Apple counterpart
-    needs: identity
-    if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/apple-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
-    permissions:
-      contents: read
-
-  qualify-android:
-    name: Exact candidate / Android counterpart
-    needs: identity
-    if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/android-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
-    permissions:
-      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Reuse or recover exact-SHA component CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TAG: ${{ needs.identity.outputs.tag }}
+        run: |
+          python3 apps/cli/scripts/qualify-exact-ci.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --sha "$RELEASE_SHA" \
+            --ref "$RELEASE_TAG"
 
   plan:
     name: Distribution plan
@@ -175,7 +159,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if release="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -e --arg tag "$TAG" '[.[] | select(.tag_name == $tag)] | if length == 1 then .[0] else empty end')"; then
+          find_release() {
+            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              | jq -e --arg tag "$TAG" \
+                '[.[] | select(.tag_name == $tag)] | if length == 1 then .[0] else empty end'
+          }
+
+          if release="$(find_release)"; then
             test "$(jq -r .draft <<<"$release")" = true
             test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
             test "$(jq -r .prerelease <<<"$release")" = "$(jq -r .announcement_is_prerelease <<<"$PLAN")"
@@ -192,7 +182,21 @@ jobs:
             gh release create "$TAG" --verify-tag --target "$RELEASE_SHA" \
               "${release_flags[@]}" --title "$title" --notes-file "$notes"
           fi
-          release="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" | jq -e --arg tag "$TAG" '[.[] | select(.tag_name == $tag)] | if length == 1 then .[0] else empty end')"
+
+          # GitHub's release-list endpoint can lag a successful create. Recover within this
+          # job instead of forcing a whole release-workflow rerun after the draft already exists.
+          release=""
+          for attempt in $(seq 1 12); do
+            if release="$(find_release)"; then
+              break
+            fi
+            echo "Draft release is not visible yet (attempt $attempt/12); retrying..."
+            sleep 2
+          done
+          [[ -n "$release" ]] || {
+            echo "::error::Draft release was created but did not become readable in time"
+            exit 1
+          }
           release_id="$(jq -r .id <<<"$release")"
           [[ "$release_id" =~ ^[1-9][0-9]*$ ]]
           release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id")"
@@ -203,12 +207,11 @@ jobs:
 
   build-local-artifacts:
     name: Build local artifacts (${{ join(matrix.targets, ', ') }})
-    needs: [identity, plan, qualify-cli, qualify-core, qualify-apple, qualify-android]
+    # Candidate compilation is safe to overlap with exact-SHA qualification. Signing and
+    # publication remain fail-closed on qualify-ci below.
+    needs: [identity, plan]
     if: >-
       ${{ always() && needs.plan.result == 'success' &&
-          (needs.identity.outputs.publishing != 'true' ||
-           (needs.qualify-cli.result == 'success' && needs.qualify-core.result == 'success' &&
-            needs.qualify-apple.result == 'success' && needs.qualify-android.result == 'success')) &&
           fromJson(needs.plan.outputs.val).ci.github.artifacts_matrix.include != null &&
           (needs.plan.outputs.publishing == 'true' || fromJson(needs.plan.outputs.val).ci.github.pr_run_mode == 'upload') }}
     strategy:
@@ -296,8 +299,11 @@ jobs:
 
   sign-macos-artifacts:
     name: Sign and notarize macOS (${{ matrix.target }})
-    needs: [identity, build-local-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-local-artifacts.result == 'success' }}
+    needs: [identity, qualify-ci, build-local-artifacts]
+    if: >-
+      ${{ needs.identity.outputs.publishing == 'true' &&
+          needs.qualify-ci.result == 'success' &&
+          needs.build-local-artifacts.result == 'success' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     environment: cli-signing
@@ -351,13 +357,14 @@ jobs:
 
   sign-windows-artifacts:
     name: Authenticode sign Windows
-    needs: [identity, build-local-artifacts]
+    needs: [identity, qualify-ci, build-local-artifacts]
     # Skipped only while the committed ledger defers Windows Authenticode
     # (windows.status = pending_external_certificate_provisioning). The unsigned
     # Windows archive then flows through build-local artifacts and its integrity
     # is covered by the Sigstore-signed checksum closure.
     if: >-
       ${{ needs.identity.outputs.publishing == 'true' &&
+          needs.qualify-ci.result == 'success' &&
           needs.build-local-artifacts.result == 'success' &&
           needs.identity.outputs.windows_signing == 'qualified' }}
     runs-on: windows-2022
@@ -490,9 +497,10 @@ jobs:
 
   assemble-release-artifacts:
     name: Assemble exact signed candidate set
-    needs: [identity, build-local-artifacts, sign-macos-artifacts, sign-windows-artifacts]
+    needs: [identity, qualify-ci, build-local-artifacts, sign-macos-artifacts, sign-windows-artifacts]
     if: >-
       ${{ always() && needs.identity.outputs.publishing == 'true' &&
+          needs.qualify-ci.result == 'success' &&
           needs.build-local-artifacts.result == 'success' &&
           needs.sign-macos-artifacts.result == 'success' &&
           (needs.sign-windows-artifacts.result == 'success' ||
@@ -580,9 +588,10 @@ jobs:
 
   qualify-local-artifacts:
     name: Smoke packaged binaries (${{ join(matrix.targets, ', ') }})
-    needs: [identity, plan, build-local-artifacts, assemble-release-artifacts]
+    needs: [identity, plan, qualify-ci, build-local-artifacts, assemble-release-artifacts]
     if: >-
       ${{ always() && needs.build-local-artifacts.result == 'success' &&
+          (needs.identity.outputs.publishing != 'true' || needs.qualify-ci.result == 'success') &&
           (needs.identity.outputs.publishing != 'true' ||
            needs.assemble-release-artifacts.result == 'success') }}
     strategy:

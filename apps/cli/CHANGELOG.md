@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Shorten protected CLI releases without weakening qualification: reuse exact-SHA main CI with
+  immutable-tag recovery for missing/cancelled runs, build platform candidates in parallel, prepare
+  the Apple shared-core XCFramework once, recover GitHub draft read-after-create lag in place, and
+  provide a reviewer-driven watcher for prompt signing/publication approvals.
+
 ## 0.1.0-alpha.5
 
 - Render structured command results, discovery, schemas, and errors as concise human-readable text

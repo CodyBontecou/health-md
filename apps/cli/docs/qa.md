@@ -32,7 +32,10 @@ rustup run 1.85.0 cargo check --workspace --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 rustup run 1.85.0 cargo check -p healthmd-cli --all-targets \
   --no-default-features --features streamable-http --locked
-python3 -m unittest scripts/test_verify_release.py
+python3 -m unittest \
+  scripts/test_verify_release.py \
+  scripts/test_qualify_exact_ci.py \
+  scripts/test_watch_cli_release.py
 python3 scripts/verify-release.py
 dist plan --allow-dirty
 ```

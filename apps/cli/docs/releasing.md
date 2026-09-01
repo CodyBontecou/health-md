@@ -163,7 +163,10 @@ cargo test --workspace --all-features --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 rustup run 1.85.0 cargo check -p healthmd-cli --all-targets \
   --no-default-features --features streamable-http --locked
-python3 -m unittest scripts/test_verify_release.py
+python3 -m unittest \
+  scripts/test_verify_release.py \
+  scripts/test_qualify_exact_ci.py \
+  scripts/test_watch_cli_release.py
 python3 scripts/verify-release.py
 version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
 python3 scripts/smoke-crate-packages.py --version "$version"
@@ -185,11 +188,31 @@ digest documented there. `verify-release.py` allows
 an explicitly labeled SemVer prerelease tag to retain pending rows, rejects malformed rows for every
 channel, and rejects a stable `healthmd-cli/v<version>` tag while any required row is pending. The
 tag must point to the exact current `main` commit. It triggers
-`.github/workflows/cli-release.yml`, which creates a draft, reruns CLI/core/Apple/Android gates at
-the tag SHA, executes every packaged binary on its native runner, validates installers and
-checksums, builds SBOMs, and then waits for approval on the protected `cli-release` environment.
-Only that final job changes the draft to public, with `make_latest=false` so Apple remains the
-repository-wide latest release. Never publish an artifact built from uncommitted source.
+`.github/workflows/cli-release.yml`, which reuses successful main-push CLI/core/Apple/Android runs
+only when each run is bound to that exact SHA. A missing or concurrency-cancelled run is recovered
+by dispatching the same workflow at the immutable release tag; a failed exact-SHA run is never
+masked by a retry. The five platform archives build in parallel with this qualification, but no
+signing, assembly, upload, or publication can start until qualification succeeds. The workflow
+creates a draft with bounded read-after-create recovery, executes every packaged binary on its
+native runner, validates installers and checksums, builds SBOMs, and then waits for approval on the
+protected `cli-release` environment. Only that final job changes the draft to public, with
+`make_latest=false` so Apple remains the repository-wide latest release. Never publish an artifact
+built from uncommitted source.
+
+Keep the two required human decisions, but avoid unattended approval idle time by starting the
+review watcher after pushing the tag:
+
+```bash
+tag='healthmd-cli/v<VERSION>'
+run_id="$(gh run list --workflow cli-release.yml --branch "$tag" --limit 1 \
+  --json databaseId --jq '.[0].databaseId')"
+python3 apps/cli/scripts/watch-cli-release.py "$run_id"
+```
+
+The watcher never approves automatically. It accepts only an immutable CLI tag run, verifies
+exact-SHA CI plus all five candidate builds before offering `cli-signing`, verifies the remote
+draft bytes before offering `cli-release`, and requires an explicit `y` for each protected
+environment.
 
 The root workflow is a path-adjusted version of cargo-dist's generated workflow, so `dist generate
 --check` is not a release gate: it reports the intentionally absent generated root `release.yml`.

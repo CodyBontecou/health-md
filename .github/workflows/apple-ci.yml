@@ -19,7 +19,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prepare-shared-core:
+    name: Prepare shared Rust core once
+    runs-on: macos-26
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/apple
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Restore exact-source shared-core cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          key: >-
+            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('packages/healthmd-core-rust/Cargo.toml',
+            'packages/healthmd-core-rust/Cargo.lock',
+            'packages/healthmd-core-rust/rust-toolchain.toml',
+            'packages/healthmd-core-rust/crates/**',
+            'packages/healthmd-core-rust/scripts/*apple*',
+            'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+
+      - name: Prepare and validate shared Rust core for Apple
+        run: make prepare-healthmd-core-rust
+
+      - name: Share the exact prepared XCFramework
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-shared-core
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
   test-ios:
+    needs: prepare-shared-core
     # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
     # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
     runs-on: macos-26
@@ -82,8 +133,17 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Prepare and validate shared Rust core for Apple
-        run: make prepare-healthmd-core-rust
+      - name: Restore prepared shared Rust core
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Validate prepared shared Rust core
+        run: |
+          test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
+          test -f Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          make prepare-healthmd-core-rust
 
       - name: Select iOS Simulator
         id: simulator
@@ -183,6 +243,7 @@ jobs:
           retention-days: 14
 
   test-macos:
+    needs: prepare-shared-core
     # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
     runs-on: macos-26
     timeout-minutes: 75
@@ -204,8 +265,17 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Prepare and validate shared Rust core for Apple
-        run: make prepare-healthmd-core-rust
+      - name: Restore prepared shared Rust core
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Validate prepared shared Rust core
+        run: |
+          test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
+          test -f Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          make prepare-healthmd-core-rust
 
       - name: Validate macOS localizations
         run: make check-macos-localizations
@@ -251,6 +321,7 @@ jobs:
 
   test-ios-ui:
     name: iOS UI regressions
+    needs: prepare-shared-core
     runs-on: macos-26
     timeout-minutes: 60
     defaults:
@@ -271,8 +342,17 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Prepare and validate shared Rust core for Apple
-        run: make prepare-healthmd-core-rust
+      - name: Restore prepared shared Rust core
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Validate prepared shared Rust core
+        run: |
+          test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
+          test -f Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          make prepare-healthmd-core-rust
 
       - name: Select iOS Simulator
         id: simulator
@@ -443,16 +523,18 @@ jobs:
   gate:
     name: Apple CI
     if: ${{ always() }}
-    needs: [test-ios, test-ios-ui, test-macos, connectivity-package]
+    needs: [prepare-shared-core, test-ios, test-ios-ui, test-macos, connectivity-package]
     runs-on: ubuntu-24.04
     steps:
       - name: Require Apple checks
         env:
+          PREPARE_RESULT: ${{ needs.prepare-shared-core.result }}
           IOS_RESULT: ${{ needs.test-ios.result }}
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
           CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
         run: |
+          test "$PREPARE_RESULT" = success
           test "$IOS_RESULT" = success
           test "$IOS_UI_RESULT" = success
           test "$MACOS_RESULT" = success

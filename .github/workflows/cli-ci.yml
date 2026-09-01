@@ -344,7 +344,9 @@ jobs:
         run: |
           python3 -m unittest \
             apps/cli/scripts/test_verify_generated_release_metadata.py \
-            apps/cli/scripts/test_verify_release.py
+            apps/cli/scripts/test_verify_release.py \
+            apps/cli/scripts/test_qualify_exact_ci.py \
+            apps/cli/scripts/test_watch_cli_release.py
           python3 apps/cli/scripts/verify-release.py
       - name: Build and execute packaged source archives
         run: |
