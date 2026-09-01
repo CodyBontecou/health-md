@@ -40,7 +40,8 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Restore exact-source shared-core cache
+      - id: shared-core-cache
+        name: Restore exact-source shared-core cache
         uses: actions/cache@v4
         with:
           path: |
@@ -56,7 +57,14 @@ jobs:
             'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
 
       - name: Prepare and validate shared Rust core for Apple
+        if: ${{ steps.shared-core-cache.outputs.cache-hit != 'true' }}
         run: make prepare-healthmd-core-rust
+
+      - name: Validate cached or newly prepared shared Rust core
+        run: |
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
       - name: Share the exact prepared XCFramework
         uses: actions/upload-artifact@v4
@@ -142,8 +150,9 @@ jobs:
       - name: Validate prepared shared Rust core
         run: |
           test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
-          test -f Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
-          make prepare-healthmd-core-rust
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
       - name: Select iOS Simulator
         id: simulator
@@ -189,7 +198,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-ios IOS_SIM="${{ steps.simulator.outputs.ios_destination }}" 2>&1 | tee build/logs/build-ios.log
+          make test-ios CORE_RUST_PREPARE=: \
+            IOS_SIM="${{ steps.simulator.outputs.ios_destination }}" \
+            2>&1 | tee build/logs/build-ios.log
 
       - name: Report iOS test result
         if: ${{ !cancelled() }}
@@ -274,8 +285,9 @@ jobs:
       - name: Validate prepared shared Rust core
         run: |
           test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
-          test -f Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
-          make prepare-healthmd-core-rust
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
       - name: Validate macOS localizations
         run: make check-macos-localizations
@@ -285,7 +297,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make coverage 2>&1 | tee build/logs/build-macos.log
+          make coverage CORE_RUST_PREPARE=: 2>&1 | tee build/logs/build-macos.log
 
       - name: Verify generated export documentation
         if: ${{ success() }}
@@ -351,8 +363,9 @@ jobs:
       - name: Validate prepared shared Rust core
         run: |
           test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
-          test -f Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
-          make prepare-healthmd-core-rust
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
       - name: Select iOS Simulator
         id: simulator
