@@ -66,7 +66,7 @@ Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do 
 
 - Direct is standalone default. `mac-app` is reserved/unimplemented and never an implicit fallback.
 - Manual IP/Tailscale is portable. Nearby must return `transport_unsupported` in Rust.
-- Outcomes and argument failures are JSON on stdout. Help/version are text. Pairing instructions and health-free progress may use stderr.
+- Structured outcomes and argument failures share one canonical JSON model. Interactive terminals render it as readable text; pipes and `--json` emit JSON, while `--human` forces text. Help/version are text, exact artifacts bypass rendering, and pairing instructions or health-free progress may use stderr.
 - Never place health payloads in logs, diagnostics, fixtures, panic text, telemetry, or test reports.
 - Direct CLI Access is opt-in. Pairing, idle reconnect, and new work need foreground iPhone. Only an already-connected export gets finite iOS background time; expiration pauses durable work.
 - Direct trust is separate from Mac sync trust. Credentials use Keychain, Secret Service, or Windows Credential Manager. Never fall back to plaintext.
@@ -128,7 +128,10 @@ Never update one side of a wire change and call it complete.
 2. Keep domain/security logic outside the parser.
 3. Add explicit Rust/Swift protocol fields when semantics cross the wire.
 4. Pin exact request before network work.
-5. Return deterministic JSON for invalid combinations and runtime errors.
+5. Treat omitted execution requirements as local discovery where safe: return
+   `healthmd.cli_guidance/1` with `request_sent: false`, requirements, examples, and next actions.
+   Keep malformed/contradictory input and runtime failures nonzero, deterministic,
+   privacy-safe `healthmd.cli_error/1`; never embed rejected values or escaped Clap output.
 6. Update parser/client/protocol/iPhone tests, help, README, operator guidance, and QA.
 
 Do not add `--iphone` or require `--backend direct`; standalone already means direct iPhone.
@@ -190,6 +193,12 @@ rustup run 1.85.0 cargo check --workspace --all-features --locked
 python3 scripts/update-mcp-shared-assets.py --check
 dist plan --allow-dirty
 cargo run --bin healthmd -- --help
+cargo run --bin healthmd -- export
+cargo run --bin healthmd -- extract
+cargo run --bin healthmd -- query
+cargo run --bin healthmd -- query healthmd_sleep_sessions
+cargo run --bin healthmd -- resume
+cargo run --bin healthmd -- direct reset-trust
 cargo run --bin healthmd -- setup codex --help
 cargo run --bin healthmd -- mcp serve --help
 cargo run --bin healthmd -- mcp schema healthmd_sleep_sessions

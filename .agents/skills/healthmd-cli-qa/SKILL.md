@@ -53,6 +53,12 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 dist plan --allow-dirty
 cargo run --bin healthmd -- --help
+cargo run --bin healthmd -- export
+cargo run --bin healthmd -- extract
+cargo run --bin healthmd -- query
+cargo run --bin healthmd -- query healthmd_sleep_sessions
+cargo run --bin healthmd -- resume
+cargo run --bin healthmd -- direct reset-trust
 cargo run --bin healthmd -- setup codex --help
 cargo run --bin healthmd -- mcp serve --help
 cargo run --bin healthmd-mcp -- --help
@@ -94,15 +100,34 @@ The portable client does not require a macOS app build. If public exporter/metri
 ```bash
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --version </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --help </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd export </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd extract </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd query </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd query healthmd_sleep_sessions </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd resume </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd cancel </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd direct </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd direct unpair </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd direct reset-trust </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd mcp </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd setup </dev/null
 NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
 ```
 
 Pass:
 
 - direct is default and Manual IP is portable;
-- commands are status/export/extract/resume/cancel/direct trust management;
+- commands are status/export/extract/query/resume/cancel/direct/MCP/setup;
+- every incomplete command above exits zero with one `healthmd.cli_guidance/1` document,
+  `status: guidance`, and `request_sent: false`, without credentials, listeners, mutations, or
+  device contact;
+- selected query guidance is concise with `--human`, while captured output and `--json` contain the complete nested schema and executable argv example;
 - `direct devices` needs no network or Mac app;
-- failures are deterministic JSON on stdout;
+- captured output and `--json` produce deterministic `healthmd.cli_error/1` JSON with exact help and
+  bounded next actions, while `--human` produces readable recovery text; parser failures never echo
+  rejected values or escaped multiline Clap output in either mode;
+- every structured command is human-readable on a TTY, remains JSON through a pipe, and supports
+  explicit `--json`/`--human` overrides; exact artifacts and MCP JSON-RPC bypass rendering;
 - pairing/progress may use stderr but never health payloads.
 
 Negative smoke:

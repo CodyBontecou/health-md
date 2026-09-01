@@ -1,8 +1,11 @@
 #![forbid(unsafe_code)]
 
+mod guidance;
+mod output;
+
 use std::{
     fs,
-    io::{self, Write as _},
+    io::{self, IsTerminal as _, Write as _},
     path::{Path, PathBuf},
     process::ExitCode,
     time::Duration,
@@ -56,24 +59,33 @@ const WELCOME_TEXT: &str = concat!(
     version,
     about = "Portable command-line access to Health.md",
     long_about = "Request health exports from an open, paired iOS or Android device running Health.md. Source health reads always occur on the mobile device.",
-    after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  For sleep, run `healthmd query healthmd_sleep_sessions --arguments <JSON>` or call\n  the MCP operation with the identical JSON object. `healthmd extract` remains a\n  different canonical projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect complete JSON Schema and examples without contacting iPhone:\n    healthmd mcp schema healthmd_sleep_sessions\n    healthmd mcp schema healthmd_metric_chart\n    healthmd mcp schema                # complete fixed operation catalog"
+    after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  Inspect sleep arguments locally with `healthmd query healthmd_sleep_sessions`, then\n  rerun it with `--arguments <JSON>`. `healthmd extract` remains a different canonical\n  projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect arguments and examples without contacting iPhone; add --json for full schemas:\n    healthmd query healthmd_sleep_sessions\n    healthmd query healthmd_metric_chart\n    healthmd mcp schema                # fixed operation catalog"
 )]
 struct Cli {
-    /// Backend to use. Direct is the portable mobile connection.
+    /// Execution backend. `direct` is the portable mobile connection; `mac-app` is reserved.
     #[arg(long, global = true, default_value = "direct")]
     backend: Backend,
 
-    /// Explicit direct transport. Nearby is supported only by the legacy Apple client.
+    /// Direct transport. Use `manual-ip` for LAN or Tailscale; Nearby is legacy-only.
     #[arg(long, global = true, default_value = "manual-ip")]
     transport: Transport,
 
-    /// Trusted mobile installation UUID when more than one source is paired.
+    /// Trusted mobile installation UUID from `healthmd direct devices`.
+    /// Required only when more than one source is paired.
     #[arg(long, global = true)]
     device: Option<Uuid>,
 
-    /// Manual IP listener port used by the direct backend.
+    /// TCP listener port saved in the mobile app's Direct CLI settings.
     #[arg(long, global = true, default_value_t = healthmd_protocol::DEFAULT_MANUAL_IP_PORT)]
     port: u16,
+
+    /// Always emit stable machine-readable JSON for structured command output.
+    #[arg(long, global = true, conflicts_with = "human")]
+    json: bool,
+
+    /// Always emit readable terminal text, including when output is piped.
+    #[arg(long, global = true, conflicts_with = "json")]
+    human: bool,
 
     #[command(subcommand)]
     command: Command,
@@ -127,9 +139,12 @@ enum Command {
 }
 
 #[derive(Debug, Args)]
+#[command(
+    after_help = "DISCOVERY:\n  Run `healthmd mcp` without a subcommand to list available MCP commands. Add --json\n  for the machine contract. No listener is started in discovery mode."
+)]
 struct McpArgs {
     #[command(subcommand)]
-    command: McpCommand,
+    command: Option<McpCommand>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -141,7 +156,7 @@ enum McpCommand {
     /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
     #[cfg(feature = "streamable-http")]
     ServeHttp(Box<McpServeHttpArgs>),
-    /// Print the complete supported MCP tool JSON Schema and examples without contacting iPhone.
+    /// Inspect supported MCP tool inputs and examples without contacting iPhone.
     Schema(McpSchemaArgs),
 }
 
@@ -197,9 +212,12 @@ struct McpServeHttpArgs {
 }
 
 #[derive(Debug, Args)]
+#[command(
+    after_help = "DISCOVERY:\n  Run `healthmd setup` without a subcommand to list supported host integrations\n  without changing any configuration."
+)]
 struct SetupArgs {
     #[command(subcommand)]
-    command: SetupCommand,
+    command: Option<SetupCommand>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -209,24 +227,34 @@ enum SetupCommand {
 }
 
 #[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd setup codex\n  healthmd setup codex --skip-pairing\n\nThe generated MCP entry launches this same `healthmd mcp serve` executable identity so\nnative pairing credentials are not split across binaries. Existing unrelated Codex settings\nare preserved."
+)]
 struct SetupCodexArgs {
     /// Configure Codex without opening a pairing listener.
     #[arg(long)]
     skip_pairing: bool,
 
-    /// Maximum time to wait for iPhone pairing.
+    /// Maximum seconds to wait for iPhone pairing (30 through 600).
     #[arg(long, default_value_t = 180)]
     pairing_timeout: u64,
 }
 
 #[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd status\n  healthmd status --job <JOB_UUID>\n\nWithout --job, Health.md checks the paired foreground mobile source. With --job, it\nreads durable local state and does not contact the device."
+)]
 struct StatusArgs {
-    /// Read a durable local job instead of contacting iPhone.
+    /// Read one durable local job by UUID instead of contacting the mobile source.
     #[arg(long)]
     job: Option<Uuid>,
 }
 
 #[derive(Debug, Args)]
+#[command(
+    long_about = "Export either a validated platform-native raw artifact or production-generated Health.md files. Every execution requires exactly one date selection. Raw mode requires --raw; generated-file mode requires an existing absolute --destination directory. Running `healthmd export` with an incomplete request returns local guidance and never contacts a device.",
+    after_help = "MODES:\n  Raw artifact:\n    healthmd export --last 7 --raw --output week.json\n    Omit --output to stream validated JSON/NDJSON to stdout.\n\n  Generated files:\n    healthmd export --yesterday --destination <EXISTING_ABSOLUTE_DIRECTORY>\n    The mobile app's production exporters create files; the host validates and binds\n    the destination before transfer.\n\nDATE SELECTION (choose exactly one):\n  --yesterday | --last DAYS | --from YYYY-MM-DD --to YYYY-MM-DD | --all\n\nDISCOVERY:\n  Run `healthmd export` without a complete mode/date selection to receive structured\n  requirements, platform constraints, and argv examples without contacting a device."
+)]
 struct ExportArgs {
     #[command(flatten)]
     dates: DateArgs,
@@ -264,6 +292,7 @@ struct ExportArgs {
     #[arg(long)]
     allow_partial: bool,
 
+    /// Maximum seconds to wait for export preparation and transfer (5 through 900).
     #[arg(long, default_value_t = 300)]
     timeout: u64,
 
@@ -272,6 +301,10 @@ struct ExportArgs {
 }
 
 #[derive(Debug, Args)]
+#[command(
+    long_about = "Request a scoped canonical healthmd.health_data projection from a paired iOS source. Every execution requires exactly one date selection and at least one primary selector. This is distinct from typed sleep, workout, chart, and evidence queries.",
+    after_help = "REQUIRED:\n  Date: --yesterday | --last DAYS | --from DATE --to DATE | --all\n  Scope: --metric ID | --category NAME | --object ALIAS | --all-metrics\n\nEXAMPLES:\n  healthmd extract --category Sleep --last 7 --output sleep.json\n  healthmd extract --metric workouts --last 14 --object workouts --detail lossless\n  healthmd extract --category Sleep --last 7 --format jsonl --output sleep.jsonl\n\nFor typed sleep questions, run `healthmd query healthmd_sleep_sessions` first to\ninspect its argument synopsis; add --json for the exact schema."
+)]
 struct ExtractArgs {
     #[command(flatten)]
     dates: DateArgs,
@@ -287,69 +320,84 @@ struct ExtractArgs {
     #[arg(long)]
     allow_partial: bool,
 
+    /// Maximum seconds to wait for export preparation and transfer (5 through 900).
     #[arg(long, default_value_t = 300)]
     timeout: u64,
 
+    /// Canonical output encoding. JSONL also emits a health-free receipt.
     #[arg(long, value_enum, default_value = "json")]
     format: ExtractionFormat,
 }
 
 #[derive(Debug, Args)]
 #[command(
-    after_help = "EXAMPLES:\n  healthmd query healthmd_sleep_sessions --arguments '{\"dates\":{\"type\":\"all_available\"},\"all_pages\":true}'\n  healthmd query healthmd_metric_chart --arguments '{\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-01\",\"end_date\":\"2026-07-07\"}},\"metrics\":{\"type\":\"explicit\",\"metric_ids\":[\"sleep_total\"]}}'"
+    long_about = "Run one fixed typed operation through the same registry and canonical evaluator used by MCP. Omit OPERATION to list all query operations. Supply OPERATION without --arguments to inspect its inputs and executable argv examples; add --json for the complete schema. Discovery never opens credentials or contacts iPhone.",
+    after_help = "DISCOVERY:\n  healthmd query\n  healthmd query healthmd_sleep_sessions\n  healthmd mcp schema healthmd_sleep_sessions\n\nEXECUTION EXAMPLES:\n  healthmd query healthmd_sleep_sessions --arguments '{\"dates\":{\"type\":\"all_available\"},\"all_pages\":true}'\n  healthmd query healthmd_metric_chart --arguments '{\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-01\",\"end_date\":\"2026-07-07\"}},\"metrics\":{\"type\":\"explicit\",\"metric_ids\":[\"sleep_total\"]}}'\n\nThe JSON examples above are illustrative. Resolve the user's actual dates before execution."
 )]
 struct QueryArgs {
-    /// Fixed operation name from `healthmd mcp schema`.
-    operation: String,
+    /// Fixed operation name. Omit it to list all typed query operations.
+    operation: Option<String>,
 
-    /// Exact JSON object accepted by the corresponding MCP operation.
+    /// Exact JSON object accepted by the operation. Omit it to inspect that operation's schema.
     #[arg(long, value_name = "JSON")]
-    arguments: String,
+    arguments: Option<String>,
 
-    /// Maximum time to wait for the foreground iPhone query.
+    /// Maximum seconds to wait for the foreground iPhone query (1 through 3600).
     #[arg(long, default_value_t = 1_200)]
     timeout: u64,
 }
 
 #[derive(Debug, Args)]
 struct DateArgs {
+    /// Select yesterday in this computer's local calendar.
     #[arg(long, conflicts_with_all = ["last", "from", "to", "all"])]
     yesterday: bool,
 
+    /// Select the previous DAYS complete local-calendar days, ending yesterday.
     #[arg(long, value_name = "DAYS", conflicts_with_all = ["yesterday", "from", "to", "all"])]
     last: Option<u32>,
 
+    /// Inclusive range start. Must be supplied with --to.
     #[arg(long, value_name = "YYYY-MM-DD", requires = "to", conflicts_with_all = ["yesterday", "last", "all"])]
     from: Option<String>,
 
+    /// Inclusive range end. Must be supplied with --from and must not precede it.
     #[arg(long, value_name = "YYYY-MM-DD", requires = "from", conflicts_with_all = ["yesterday", "last", "all"])]
     to: Option<String>,
 
+    /// Select the source's complete available date scope. This may produce a large job.
     #[arg(long, conflicts_with_all = ["yesterday", "last", "from", "to"])]
     all: bool,
 }
 
 #[derive(Debug, Args)]
 struct SelectionArgs {
-    #[arg(long = "metric")]
+    /// Canonical metric ID. Repeat to select multiple metrics.
+    #[arg(long = "metric", value_name = "METRIC_ID")]
     metrics: Vec<String>,
 
-    #[arg(long = "category")]
+    /// Canonical category name. Repeat to select multiple categories.
+    #[arg(long = "category", value_name = "CATEGORY")]
     categories: Vec<String>,
 
-    #[arg(long, conflicts_with = "metrics")]
+    /// Select all supported metrics; cannot combine with --metric or --category.
+    #[arg(long, conflicts_with_all = ["metrics", "categories"])]
     all_metrics: bool,
 
+    /// Summary values or lossless source-record detail.
     #[arg(long, value_enum, default_value = "summary")]
     detail: Detail,
 
-    #[arg(long = "object")]
+    /// Canonical object alias or absolute JSON Pointer for extract (for example sleep or archive).
+    #[arg(long = "object", value_name = "ALIAS")]
     objects: Vec<String>,
 
-    #[arg(long = "field")]
+    /// RFC 6901 JSON Pointer to retain during extract. Repeat for multiple fields.
+    #[arg(long = "field", value_name = "JSON_POINTER")]
     fields: Vec<String>,
 
-    #[arg(long = "source")]
+    /// Canonical source ID. Repeat to select multiple sources.
+    #[arg(long = "source", value_name = "SOURCE_ID")]
     sources: Vec<String>,
 }
 
@@ -375,31 +423,48 @@ enum RawArtifactFormat {
 }
 
 #[derive(Debug, Args)]
+#[command(
+    long_about = "Resume the exact immutable request and destination bound to an interrupted durable direct job. Omit JOB_ID to receive identifier and option guidance without contacting a device.",
+    after_help = "EXAMPLES:\n  healthmd resume <JOB_UUID>\n  healthmd resume <JOB_UUID> --output resumed.json\n  healthmd status --job <JOB_UUID>\n\nResume never changes the saved peer, dates, selection, destination, or artifact format."
+)]
 struct ResumeArgs {
-    job_id: Uuid,
+    /// Durable job UUID from an export receipt or `healthmd status --job`.
+    job_id: Option<Uuid>,
 
+    /// Atomic output path for a resumed raw/extract artifact.
     #[arg(long)]
     output: Option<PathBuf>,
 
+    /// Output encoding when the immutable job type permits it.
     #[arg(long, value_enum)]
     format: Option<ExtractionFormat>,
 
+    /// Accept a validated partial result without a failure exit status.
     #[arg(long)]
     allow_partial: bool,
 
+    /// Maximum seconds to wait for resumed work (5 through 900).
     #[arg(long, default_value_t = 300)]
     timeout: u64,
 }
 
 #[derive(Debug, Args)]
+#[command(
+    long_about = "Request explicit cancellation of one durable direct job. Omit JOB_ID to inspect the required identifier. Timeouts, disconnections, Ctrl-C, and process exit do not imply cancellation.",
+    after_help = "EXAMPLE:\n  healthmd cancel <JOB_UUID>\n\nCancellation becomes terminal only after acknowledgement from the authenticated mobile source.\nUse `healthmd status --job <JOB_UUID>` to inspect pending acknowledgement."
+)]
 struct JobArgs {
-    job_id: Uuid,
+    /// Durable job UUID from an export receipt or status response.
+    job_id: Option<Uuid>,
 }
 
 #[derive(Debug, Args)]
+#[command(
+    after_help = "DISCOVERY:\n  Run `healthmd direct` without a subcommand to list pairing and trust-management\n  commands. Add --json for the machine contract. No listener or mutation is started."
+)]
 struct DirectArgs {
     #[command(subcommand)]
-    command: DirectCommand,
+    command: Option<DirectCommand>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -408,8 +473,11 @@ enum DirectCommand {
     Pair(PairArgs),
     /// List this installation and locally trusted devices without network access.
     Devices,
-    /// Remove local trust for one mobile source.
-    Unpair { device_id: Uuid },
+    /// Remove local trust for one mobile source. Omit `DEVICE_ID` to inspect requirements.
+    Unpair {
+        /// Trusted installation UUID from `healthmd direct devices`.
+        device_id: Option<Uuid>,
+    },
     /// Explicitly discard all local direct trust after confirmation.
     ResetTrust {
         #[arg(long)]
@@ -418,15 +486,20 @@ enum DirectCommand {
 }
 
 #[derive(Debug, Args)]
+#[command(
+    long_about = "Open a bounded Manual IP listener and pair this CLI installation with one foreground Health.md mobile app. iOS and Android use separate one-time code lengths. Generated codes and health-free progress are printed to stderr; the final structured result follows the global human/JSON output selection.",
+    after_help = "EXAMPLE:\n  healthmd direct pair\n\nKeep the command running. In Health.md, open Direct CLI Access and enter the displayed\naddress, port, and platform-specific code (or scan the iOS QR). Pairing trust is stored\nonly in the platform-native credential service."
+)]
 struct PairArgs {
-    /// Override the six-digit code used by iOS pairing.
+    /// Override the generated six-digit iOS pairing code.
     #[arg(long)]
     pairing_code: Option<String>,
 
-    /// Override the high-entropy twenty-digit code used by Android pairing.
+    /// Override the generated high-entropy twenty-digit Android pairing code.
     #[arg(long)]
     android_pairing_code: Option<String>,
 
+    /// Seconds to keep the pairing listener open (10 through 600).
     #[arg(long, default_value_t = 120)]
     timeout: u64,
 }
@@ -466,78 +539,124 @@ impl CommandSuccess {
 }
 
 fn main() -> ExitCode {
-    std::panic::set_hook(Box::new(|_| eprintln!("healthmd: internal error")));
+    std::panic::set_hook(Box::new(|_| {
+        eprintln!(
+            "healthmd: internal error; no reliable result was produced. Preserve any durable job ID, run `healthmd status --job <JOB_UUID>` when applicable, and retry with the same installed version."
+        );
+    }));
     if let Some(exit_code) = healthmd_client::credentials::run_credential_helper_if_requested() {
         return ExitCode::from(exit_code);
     }
-    if std::env::args_os().nth(1).is_none() {
-        print!("{WELCOME_TEXT}");
-        return ExitCode::SUCCESS;
+    let raw_arguments = std::env::args_os().collect::<Vec<_>>();
+    if raw_arguments.len() == 1 {
+        return if write_text_stdout(WELCOME_TEXT).is_ok() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::from(1)
+        };
+    }
+    #[cfg(debug_assertions)]
+    if raw_arguments.len() == 2
+        && raw_arguments[1].as_os_str() == "__credential-supervision-probe-v1"
+    {
+        let Ok(runtime) = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+        else {
+            return ExitCode::from(1);
+        };
+        let exit_code = if runtime
+            .block_on(healthmd_client::credentials::OsCredentialStore::supervision_probe())
+            .is_ok()
+        {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::from(1)
+        };
+        runtime.shutdown_timeout(Duration::from_secs(2));
+        return exit_code;
+    }
+    let output_mode = requested_output_mode(&raw_arguments);
+    let cli = match Cli::try_parse_from(raw_arguments.clone()) {
+        Ok(cli) => cli,
+        Err(error)
+            if matches!(
+                error.kind(),
+                ErrorKind::DisplayHelp
+                    | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand
+                    | ErrorKind::DisplayVersion
+            ) =>
+        {
+            return if write_text_stdout(&error.to_string()).is_ok() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            };
+        }
+        Err(error) => {
+            let value = guidance::parser_error(&error, &raw_arguments[1..]);
+            let _ = write_value_stdout(&value, output_mode);
+            return ExitCode::from(2);
+        }
+    };
+    let output_mode = output::OutputMode::resolve(cli.json, cli.human, io::stdout().is_terminal());
+    let error_context = guidance::ErrorContext::from_cli(&cli);
+    if let Some(value) = incomplete_command_guidance(&cli) {
+        return if write_value_stdout(&value, output_mode).is_ok() {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::from(1)
+        };
+    }
+    if let Command::Mcp(McpArgs {
+        command: Some(McpCommand::Schema(options)),
+    }) = &cli.command
+    {
+        return match mcp_schema(options) {
+            Ok(value) if write_value_stdout(&value, output_mode).is_ok() => ExitCode::SUCCESS,
+            Ok(_) => ExitCode::from(1),
+            Err(error) => {
+                let value = guidance::command_error(&error, &error_context);
+                let _ = write_value_stdout(&value, output_mode);
+                ExitCode::from(1)
+            }
+        };
     }
     let Ok(runtime) = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
     else {
-        eprintln!("healthmd: the asynchronous runtime is unavailable");
+        let error = CommandError {
+            backend: cli.backend.wire_name(),
+            code: "runtime_unavailable",
+            message: "The local asynchronous runtime could not start; no command was executed."
+                .into(),
+        };
+        let value = guidance::command_error(&error, &error_context);
+        let _ = write_value_stdout(&value, output_mode);
         return ExitCode::from(1);
     };
-    #[cfg(debug_assertions)]
-    {
-        let mut arguments = std::env::args_os();
-        let _executable = arguments.next();
-        if arguments.next().as_deref() == Some("__credential-supervision-probe-v1".as_ref())
-            && arguments.next().is_none()
-        {
-            let exit_code = if runtime
-                .block_on(healthmd_client::credentials::OsCredentialStore::supervision_probe())
-                .is_ok()
-            {
-                ExitCode::SUCCESS
-            } else {
-                ExitCode::from(1)
-            };
-            runtime.shutdown_timeout(Duration::from_secs(2));
-            return exit_code;
-        }
-    }
-    let exit_code = runtime.block_on(async_main());
+    let exit_code = runtime.block_on(async_main(cli, output_mode));
     runtime.shutdown_timeout(Duration::from_secs(2));
     exit_code
 }
 
+fn requested_output_mode(arguments: &[std::ffi::OsString]) -> output::OutputMode {
+    output::OutputMode::resolve(
+        arguments.iter().any(|argument| argument == "--json"),
+        arguments.iter().any(|argument| argument == "--human"),
+        io::stdout().is_terminal(),
+    )
+}
+
 #[allow(clippy::too_many_lines)]
-async fn async_main() -> ExitCode {
-    let cli = match Cli::try_parse() {
-        Ok(cli) => cli,
-        Err(error)
-            if matches!(
-                error.kind(),
-                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
-            ) =>
-        {
-            print!("{error}");
-            return ExitCode::SUCCESS;
-        }
-        Err(error) => {
-            let value = json!({
-                "backend": "direct",
-                "error": "invalid_request",
-                "message": error.to_string(),
-                "status": "failure"
-            });
-            println!(
-                "{}",
-                serde_json::to_string(&value).expect("JSON value encodes")
-            );
-            return ExitCode::from(2);
-        }
-    };
+async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
     let stdio_mcp = match &cli.command {
         Command::Mcp(McpArgs {
-            command: McpCommand::Serve(options),
+            command: Some(McpCommand::Serve(options)),
         }) => Some((options, false)),
         Command::Mcp(McpArgs {
-            command: McpCommand::ServeReadOnly(options),
+            command: Some(McpCommand::ServeReadOnly(options)),
         }) => Some((options, true)),
         _ => None,
     };
@@ -564,7 +683,7 @@ async fn async_main() -> ExitCode {
     }
     #[cfg(feature = "streamable-http")]
     if let Command::Mcp(McpArgs {
-        command: McpCommand::ServeHttp(options),
+        command: Some(McpCommand::ServeHttp(options)),
     }) = &cli.command
     {
         if cli.backend != Backend::Direct || cli.transport != Transport::ManualIp {
@@ -618,42 +737,36 @@ async fn async_main() -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
+    let error_context = guidance::ErrorContext::from_cli(&cli);
     match run(cli).await {
         Ok(success) => {
-            if let Err(error) = emit_output(success.output) {
-                let value = json!({
-                    "backend": "direct",
-                    "error": "output_write_failed",
-                    "message": error.to_string(),
-                    "status": "failure"
-                });
-                println!(
-                    "{}",
-                    serde_json::to_string(&value).expect("JSON value encodes")
-                );
+            if emit_output(success.output, output_mode).is_err() {
+                let error = CommandError {
+                    backend: "direct",
+                    code: "output_write_failed",
+                    message: "The command result could not be written to stdout or the requested output destination."
+                        .into(),
+                };
+                let value = guidance::command_error(&error, &error_context);
+                let _ = write_value_stdout(&value, output_mode);
                 return ExitCode::from(1);
             }
             ExitCode::from(success.exit_code)
         }
         Err(error) => {
-            let value = json!({
-                "backend": error.backend,
-                "error": error.code,
-                "message": error.message,
-                "status": "failure"
-            });
-            println!(
-                "{}",
-                serde_json::to_string(&value).expect("JSON value encodes")
-            );
+            let value = guidance::command_error(&error, &error_context);
+            let _ = write_value_stdout(&value, output_mode);
             ExitCode::from(1)
         }
     }
 }
 
 async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
+    if let Some(value) = incomplete_command_guidance(&cli) {
+        return Ok(CommandSuccess::json(value));
+    }
     if let Command::Mcp(McpArgs {
-        command: McpCommand::Schema(options),
+        command: Some(McpCommand::Schema(options)),
     }) = &cli.command
     {
         return mcp_schema(options).map(CommandSuccess::json);
@@ -665,19 +778,22 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
 
     match cli.command {
         Command::Direct(DirectArgs {
-            command: DirectCommand::Devices,
+            command: Some(DirectCommand::Devices),
         }) => direct_devices().await.map(CommandSuccess::json),
         Command::Direct(DirectArgs {
-            command: DirectCommand::Pair(options),
+            command: Some(DirectCommand::Pair(options)),
         }) => direct_pair(options, port).await.map(CommandSuccess::json),
         Command::Direct(DirectArgs {
-            command: DirectCommand::Unpair { device_id },
+            command:
+                Some(DirectCommand::Unpair {
+                    device_id: Some(device_id),
+                }),
         }) => direct_unpair(device_id).await.map(CommandSuccess::json),
         Command::Direct(DirectArgs {
-            command: DirectCommand::ResetTrust { confirm },
+            command: Some(DirectCommand::ResetTrust { confirm }),
         }) => direct_reset_trust(confirm).await.map(CommandSuccess::json),
         Command::Setup(SetupArgs {
-            command: SetupCommand::Codex(options),
+            command: Some(SetupCommand::Codex(options)),
         }) if backend == Backend::Direct => setup_codex(options, device, port)
             .await
             .map(CommandSuccess::json),
@@ -717,11 +833,63 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
     }
 }
 
+fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
+    let backend = cli.backend.wire_name();
+    match &cli.command {
+        Command::Export(options) => {
+            let missing_dates = !date_selection_is_present(&options.dates);
+            let missing_mode = !options.raw && options.destination.is_none();
+            (missing_dates || missing_mode)
+                .then(|| guidance::export(backend, missing_dates, missing_mode))
+        }
+        Command::Extract(options) => {
+            let missing_dates = !date_selection_is_present(&options.dates);
+            let missing_scope = !extract_scope_is_present(&options.selection);
+            (missing_dates || missing_scope)
+                .then(|| guidance::extract(backend, missing_dates, missing_scope))
+        }
+        Command::Query(options) if options.operation.is_none() => {
+            Some(guidance::query(backend, None))
+        }
+        Command::Query(options) if options.arguments.is_none() => {
+            Some(guidance::query(backend, options.operation.as_deref()))
+        }
+        Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume(backend)),
+        Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel(backend)),
+        Command::Direct(DirectArgs { command: None }) => Some(guidance::group(backend, "direct")),
+        Command::Direct(DirectArgs {
+            command: Some(DirectCommand::Unpair { device_id: None }),
+        }) => Some(guidance::unpair(backend)),
+        Command::Direct(DirectArgs {
+            command: Some(DirectCommand::ResetTrust { confirm: false }),
+        }) => Some(guidance::reset_trust(backend)),
+        Command::Mcp(McpArgs { command: None }) => Some(guidance::group(backend, "mcp")),
+        Command::Setup(SetupArgs { command: None }) => Some(guidance::group(backend, "setup")),
+        _ => None,
+    }
+}
+
+const fn date_selection_is_present(options: &DateArgs) -> bool {
+    options.yesterday
+        || options.last.is_some()
+        || options.from.is_some()
+        || options.to.is_some()
+        || options.all
+}
+
+fn extract_scope_is_present(options: &SelectionArgs) -> bool {
+    options.all_metrics
+        || !options.metrics.is_empty()
+        || !options.categories.is_empty()
+        || !options.objects.is_empty()
+}
+
 fn mcp_schema(options: &McpSchemaArgs) -> Result<Value, CommandError> {
-    mcp::tool_catalog(options.tool.as_deref()).map_err(|message| CommandError {
+    mcp::tool_catalog(options.tool.as_deref()).map_err(|_| CommandError {
         backend: "direct",
         code: "invalid_request",
-        message,
+        message: "The requested fixed MCP tool is unavailable. Run `healthmd mcp schema` to list every supported tool."
+            .into(),
     })
 }
 
@@ -757,18 +925,25 @@ async fn direct_query(
             "query timeout must be between 1 and 3600 seconds",
         ));
     }
-    let arguments: Value = serde_json::from_str(&options.arguments)
+    let Some(operation) = options.operation else {
+        return Ok(guidance::query("direct", None));
+    };
+    let Some(argument_text) = options.arguments else {
+        return Ok(guidance::query("direct", Some(&operation)));
+    };
+    let arguments: Value = serde_json::from_str(&argument_text)
         .map_err(|_| usage_error("--arguments must be one valid JSON object"))?;
     if !arguments.is_object() {
         return Err(usage_error("--arguments must be one valid JSON object"));
     }
+    healthmd_operations::query_invocation(&operation, &arguments).map_err(usage_error)?;
     mcp::query(
         mcp::ServeOptions {
             device_id: device,
             port,
             timeout_seconds: options.timeout,
         },
-        &options.operation,
+        &operation,
         arguments,
         tokio_util::sync::CancellationToken::new(),
     )
@@ -1543,8 +1718,11 @@ async fn direct_resume(
             "resume timeout must be between 5 and 900 seconds",
         ));
     }
+    let Some(job_id) = options.job_id else {
+        return Ok(CommandSuccess::json(guidance::resume("direct")));
+    };
     let client = DirectClient::open().map_err(client_error)?;
-    match client.v2_job_record(options.job_id) {
+    match client.v2_job_record(job_id) {
         Ok(record) => {
             match &record.request.product {
                 v2::ExportProduct::AndroidProviderNativeSnapshotV1 { format, .. } => {
@@ -1569,12 +1747,7 @@ async fn direct_resume(
                 _ => {}
             }
             let result = client
-                .resume_android(
-                    options.job_id,
-                    device,
-                    port,
-                    Duration::from_secs(options.timeout),
-                )
+                .resume_android(job_id, device, port, Duration::from_secs(options.timeout))
                 .await
                 .map_err(map_direct_client_error)?;
             let exit_code =
@@ -1590,9 +1763,7 @@ async fn direct_resume(
         Err(ClientError::JobNotFound) => {}
         Err(error) => return Err(map_direct_client_error(error)),
     }
-    let record = client
-        .job_record(options.job_id)
-        .map_err(map_direct_client_error)?;
+    let record = client.job_record(job_id).map_err(map_direct_client_error)?;
     if record.request.response_mode == ResponseMode::WriteFiles {
         if options.format == Some(ExtractionFormat::Jsonl) {
             return Err(usage_error(
@@ -1600,12 +1771,7 @@ async fn direct_resume(
             ));
         }
         let result = client
-            .resume_files(
-                options.job_id,
-                device,
-                port,
-                Duration::from_secs(options.timeout),
-            )
+            .resume_files(job_id, device, port, Duration::from_secs(options.timeout))
             .await
             .map_err(map_direct_file_error)?;
         return Ok(CommandSuccess {
@@ -1630,12 +1796,7 @@ async fn direct_resume(
             pointers
         });
     let result = client
-        .resume_raw(
-            options.job_id,
-            device,
-            port,
-            Duration::from_secs(options.timeout),
-        )
+        .resume_raw(job_id, device, port, Duration::from_secs(options.timeout))
         .await
         .map_err(map_direct_client_error)?;
     if let Some(pointers) = projection_pointers {
@@ -1649,7 +1810,7 @@ async fn direct_resume(
         }
         if options.format == Some(ExtractionFormat::Jsonl) {
             let artifact = client
-                .extraction_jsonl(options.job_id, &pointers)
+                .extraction_jsonl(job_id, &pointers)
                 .map_err(map_direct_client_error)?;
             return Ok(CommandSuccess {
                 output: CommandOutput::JsonlArtifact {
@@ -1661,7 +1822,7 @@ async fn direct_resume(
             });
         }
         let artifact = client
-            .extraction(options.job_id, &pointers)
+            .extraction(job_id, &pointers)
             .map_err(map_direct_client_error)?;
         return Ok(CommandSuccess {
             output: CommandOutput::Artifact {
@@ -1691,33 +1852,36 @@ async fn direct_cancel(
     device: Option<Uuid>,
     port: u16,
 ) -> Result<Value, CommandError> {
+    let Some(job_id) = options.job_id else {
+        return Ok(guidance::cancel("direct"));
+    };
     let client = DirectClient::open().map_err(client_error)?;
-    match client.v2_job_record(options.job_id) {
+    match client.v2_job_record(job_id) {
         Ok(record) => {
             let already_terminal = record.state.is_terminal();
             client
-                .cancel_android_job(options.job_id, device, port, Duration::from_secs(20))
+                .cancel_android_job(job_id, device, port, Duration::from_secs(20))
                 .await
                 .map_err(map_direct_client_error)?;
             let current = client
-                .v2_job_record(options.job_id)
+                .v2_job_record(job_id)
                 .map_err(map_direct_client_error)?;
             let status = serde_json::to_value(current.state).unwrap_or_else(|_| json!("unknown"));
             Ok(json!({
                 "backend": "direct",
-                "job_id": options.job_id.to_string().to_lowercase(),
+                "job_id": job_id.to_string().to_lowercase(),
                 "status": status,
                 "cancellation_applied": !already_terminal
             }))
         }
         Err(ClientError::JobNotFound) => {
             client
-                .cancel_job(options.job_id, device, port, Duration::from_secs(20))
+                .cancel_job(job_id, device, port, Duration::from_secs(20))
                 .await
                 .map_err(map_direct_client_error)?;
             Ok(json!({
                 "backend": "direct",
-                "job_id": options.job_id.to_string().to_lowercase(),
+                "job_id": job_id.to_string().to_lowercase(),
                 "status": "cancelled"
             }))
         }
@@ -1792,27 +1956,28 @@ fn direct_job_payload(record: &JobRecord) -> Value {
         "message": direct_job_status_message(record.state),
         "resumable": !record.state.is_terminal() && record.state != JobState::CancellationPending
     });
-    let object = payload.as_object_mut().expect("job payload is an object");
-    if let Some(total) = record.total_days {
-        object.insert("total_days".into(), json!(total));
-    }
-    if let Some(session) = record.session_id {
-        object.insert(
-            "session_id".into(),
-            json!(session.0.to_string().to_lowercase()),
-        );
-    }
-    if let Some(destination) = &record.request.destination {
-        object.insert("destination_path".into(), json!(destination.root_path));
-    }
-    if let Some(failure) = &record.failure {
-        object.insert(
-            "failure".into(),
-            json!({
-                "reason": serde_json::to_value(failure.reason).unwrap_or(Value::Null),
-                "message": "The iPhone export failed."
-            }),
-        );
+    if let Some(object) = payload.as_object_mut() {
+        if let Some(total) = record.total_days {
+            object.insert("total_days".into(), json!(total));
+        }
+        if let Some(session) = record.session_id {
+            object.insert(
+                "session_id".into(),
+                json!(session.0.to_string().to_lowercase()),
+            );
+        }
+        if let Some(destination) = &record.request.destination {
+            object.insert("destination_path".into(), json!(destination.root_path));
+        }
+        if let Some(failure) = &record.failure {
+            object.insert(
+                "failure".into(),
+                json!({
+                    "reason": serde_json::to_value(failure.reason).unwrap_or(Value::Null),
+                    "message": "The iPhone export failed."
+                }),
+            );
+        }
     }
     payload
 }
@@ -1867,12 +2032,32 @@ const fn direct_job_status_message(state: JobState) -> &'static str {
     }
 }
 
-fn emit_output(output: CommandOutput) -> io::Result<()> {
+fn write_text_stdout(text: &str) -> io::Result<()> {
+    let mut stdout = io::stdout().lock();
+    stdout.write_all(text.as_bytes())?;
+    stdout.flush()
+}
+
+fn write_json_stdout(value: &Value) -> io::Result<()> {
+    let mut stdout = io::stdout().lock();
+    serde_json::to_writer_pretty(&mut stdout, value).map_err(io::Error::other)?;
+    stdout.write_all(b"\n")?;
+    stdout.flush()
+}
+
+fn write_value_stdout(value: &Value, output_mode: output::OutputMode) -> io::Result<()> {
+    match output_mode {
+        output::OutputMode::Human => write_text_stdout(&output::render(
+            value,
+            output::color_enabled(io::stdout().is_terminal()),
+        )),
+        output::OutputMode::Json => write_json_stdout(value),
+    }
+}
+
+fn emit_output(output: CommandOutput, output_mode: output::OutputMode) -> io::Result<()> {
     match output {
-        CommandOutput::Json(value) => {
-            println!("{}", serde_json::to_string_pretty(&value)?);
-            Ok(())
-        }
+        CommandOutput::Json(value) => write_value_stdout(&value, output_mode),
         CommandOutput::JsonlArtifact {
             source,
             receipt,
@@ -2081,33 +2266,36 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Resume(_) => "resume",
         Command::Cancel(_) => "cancel",
         Command::Direct(DirectArgs {
-            command: DirectCommand::Pair(_),
+            command: Some(DirectCommand::Pair(_)),
         }) => "direct pair",
         Command::Direct(DirectArgs {
-            command: DirectCommand::Devices,
+            command: Some(DirectCommand::Devices),
         }) => "direct devices",
         Command::Direct(DirectArgs {
-            command: DirectCommand::Unpair { .. },
+            command: Some(DirectCommand::Unpair { .. }),
         }) => "direct unpair",
         Command::Direct(DirectArgs {
-            command: DirectCommand::ResetTrust { .. },
+            command: Some(DirectCommand::ResetTrust { .. }),
         }) => "direct reset-trust",
+        Command::Direct(DirectArgs { command: None }) => "direct",
         Command::Mcp(McpArgs {
-            command: McpCommand::Serve(_),
+            command: Some(McpCommand::Serve(_)),
         }) => "mcp serve",
         Command::Mcp(McpArgs {
-            command: McpCommand::ServeReadOnly(_),
+            command: Some(McpCommand::ServeReadOnly(_)),
         }) => "mcp serve-read-only",
         #[cfg(feature = "streamable-http")]
         Command::Mcp(McpArgs {
-            command: McpCommand::ServeHttp(_),
+            command: Some(McpCommand::ServeHttp(_)),
         }) => "mcp serve-http",
         Command::Mcp(McpArgs {
-            command: McpCommand::Schema(_),
+            command: Some(McpCommand::Schema(_)),
         }) => "mcp schema",
+        Command::Mcp(McpArgs { command: None }) => "mcp",
         Command::Setup(SetupArgs {
-            command: SetupCommand::Codex(_),
+            command: Some(SetupCommand::Codex(_)),
         }) => "setup codex",
+        Command::Setup(SetupArgs { command: None }) => "setup",
     }
 }
 
@@ -2235,7 +2423,7 @@ mod tests {
         ])
         .unwrap();
         let Command::Direct(DirectArgs {
-            command: DirectCommand::Pair(options),
+            command: Some(DirectCommand::Pair(options)),
         }) = parsed.command
         else {
             panic!("expected direct pair command");
@@ -2291,7 +2479,8 @@ mod tests {
         let help = command.render_long_help().to_string();
         assert!(help.contains("healthmd_sleep_sessions"));
         assert!(help.contains("start_date"));
-        assert!(help.contains("healthmd mcp schema healthmd_sleep_sessions"));
+        assert!(help.contains("healthmd query healthmd_sleep_sessions"));
+        assert!(help.contains("healthmd mcp schema"));
         assert!(help.contains("is not the sleep-session query API"));
     }
 
@@ -2308,8 +2497,66 @@ mod tests {
         let Command::Query(options) = parsed.command else {
             panic!("expected query command");
         };
-        assert_eq!(options.operation, "healthmd_sleep_sessions");
+        assert_eq!(
+            options.operation.as_deref(),
+            Some("healthmd_sleep_sessions")
+        );
+        assert!(options.arguments.is_some());
         assert_eq!(options.timeout, 1_200);
+    }
+
+    #[test]
+    fn incomplete_commands_enter_non_network_guidance_mode() {
+        let export = Cli::try_parse_from(["healthmd", "export"]).unwrap();
+        let export = incomplete_command_guidance(&export).expect("export should guide");
+        assert_eq!(export["status"], "guidance");
+        assert_eq!(export["request_sent"], false);
+        assert_eq!(export["missing"].as_array().map(Vec::len), Some(2));
+
+        let query = Cli::try_parse_from(["healthmd", "query", "healthmd_sleep_sessions"]).unwrap();
+        let query = incomplete_command_guidance(&query).expect("query should expose schema");
+        assert_eq!(
+            query.pointer("/input_schema/required/0"),
+            Some(&json!("dates"))
+        );
+
+        let resume = Cli::try_parse_from(["healthmd", "resume"]).unwrap();
+        let resume = incomplete_command_guidance(&resume).expect("resume should guide");
+        assert_eq!(
+            resume.pointer("/required/0/argument"),
+            Some(&json!("JOB_ID"))
+        );
+    }
+
+    #[test]
+    fn complete_requests_do_not_enter_guidance_mode() {
+        let export = Cli::try_parse_from(["healthmd", "export", "--yesterday", "--raw"]).unwrap();
+        assert!(incomplete_command_guidance(&export).is_none());
+
+        let query = Cli::try_parse_from([
+            "healthmd",
+            "query",
+            "healthmd_sleep_sessions",
+            "--arguments",
+            r#"{"dates":{"type":"all_available"}}"#,
+        ])
+        .unwrap();
+        assert!(incomplete_command_guidance(&query).is_none());
+    }
+
+    #[test]
+    fn destructive_reset_requires_discovery_before_confirmation() {
+        let inspect = Cli::try_parse_from(["healthmd", "direct", "reset-trust"]).unwrap();
+        let guidance = incomplete_command_guidance(&inspect).expect("reset should guide");
+        assert_eq!(guidance["request_sent"], false);
+        assert_eq!(
+            guidance.pointer("/required/0/argument"),
+            Some(&json!("--confirm"))
+        );
+
+        let confirmed =
+            Cli::try_parse_from(["healthmd", "direct", "reset-trust", "--confirm"]).unwrap();
+        assert!(incomplete_command_guidance(&confirmed).is_none());
     }
 
     #[test]
@@ -2329,7 +2576,7 @@ mod tests {
             Some(Uuid::parse_str("01234567-89ab-4cde-8fab-0123456789ab").unwrap())
         );
         let Command::Mcp(McpArgs {
-            command: McpCommand::Serve(options),
+            command: Some(McpCommand::Serve(options)),
         }) = mcp.command
         else {
             panic!("expected MCP serve command");
@@ -2347,7 +2594,7 @@ mod tests {
         ])
         .unwrap();
         let Command::Mcp(McpArgs {
-            command: McpCommand::ServeReadOnly(options),
+            command: Some(McpCommand::ServeReadOnly(options)),
         }) = read_only.command
         else {
             panic!("expected read-only MCP serve command");
@@ -2357,7 +2604,7 @@ mod tests {
         let schema =
             Cli::try_parse_from(["healthmd", "mcp", "schema", "healthmd_sleep_sessions"]).unwrap();
         let Command::Mcp(McpArgs {
-            command: McpCommand::Schema(options),
+            command: Some(McpCommand::Schema(options)),
         }) = schema.command
         else {
             panic!("expected MCP schema command");
@@ -2374,7 +2621,7 @@ mod tests {
         ])
         .unwrap();
         let Command::Setup(SetupArgs {
-            command: SetupCommand::Codex(options),
+            command: Some(SetupCommand::Codex(options)),
         }) = setup.command
         else {
             panic!("expected Codex setup command");
@@ -2407,7 +2654,7 @@ mod tests {
         ])
         .unwrap();
         let Command::Mcp(McpArgs {
-            command: McpCommand::ServeHttp(options),
+            command: Some(McpCommand::ServeHttp(options)),
         }) = parsed.command
         else {
             panic!("expected MCP Streamable HTTP command");
@@ -2441,7 +2688,7 @@ mod tests {
         ])
         .unwrap();
         let Command::Mcp(McpArgs {
-            command: McpCommand::ServeHttp(options),
+            command: Some(McpCommand::ServeHttp(options)),
         }) = parsed.command
         else {
             panic!("expected MCP Streamable HTTP command");

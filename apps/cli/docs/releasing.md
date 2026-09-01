@@ -114,7 +114,7 @@ keyless Sigstore identity and publishes `sha256.sum.sigstore.json`. Verify a dow
 with the exact tag identity before trusting its checksums:
 
 ```bash
-tag='healthmd-cli/v0.1.0-alpha.4'
+tag='healthmd-cli/v0.1.0-alpha.5'
 cosign verify-blob \
   --bundle sha256.sum.sigstore.json \
   --certificate-identity "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/$tag" \

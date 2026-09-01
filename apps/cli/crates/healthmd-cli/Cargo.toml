@@ -33,15 +33,16 @@ name = "healthmd-mcp"
 path = "src/bin/healthmd-mcp/main.rs"
 
 [dependencies]
+anstyle.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
 clap.workspace = true
 directories.workspace = true
 fs2.workspace = true
-healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.4" }
-healthmd-mcp = { path = "../healthmd-mcp", version = "=0.1.0-alpha.4" }
-healthmd-operations = { path = "../healthmd-operations", version = "=0.1.0-alpha.4" }
-healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.4" }
+healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.5" }
+healthmd-mcp = { path = "../healthmd-mcp", version = "=0.1.0-alpha.5" }
+healthmd-operations = { path = "../healthmd-operations", version = "=0.1.0-alpha.5" }
+healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.5" }
 if-addrs.workspace = true
 png.workspace = true
 qrcode.workspace = true

@@ -12,8 +12,13 @@ Use the installed standalone `healthmd`. Do not use the monorepo's `apps/apple/s
 
 - Direct Manual IP/Tailscale is the portable default. Never add `--backend mac-app` or `--transport nearby`.
 - On macOS/Linux use `NO_COLOR=1 TERM=dumb`, a hard `timeout`, and stdin from `/dev/null`. Give exports longer bounds than status.
-- Parse stdout JSON or the explicit output artifact. Pairing instructions and health-free progress may use stderr.
-- Never infer success from exit status alone.
+- Parse stdout JSON or the explicit output artifact. Add global `--json` whenever automation requires a structured result; interactive terminals otherwise render readable text. Pairing instructions and health-free progress may use stderr.
+- For an unfamiliar shape, run the incomplete command first: `healthmd export`, `extract`, `resume`,
+  `cancel`, or a selected `query` returns local `healthmd.cli_guidance/1` with requirements and
+  `request_sent: false`; it does not contact iPhone.
+- Never infer execution success from exit status alone. A zero exit may be non-network guidance;
+  require the expected result schema/status before reporting completion. Failures use
+  `healthmd.cli_error/1` with `help_command` and bounded `next_actions`.
 - Ask for physical iPhone actions when needed: open/unlock Health.md, scan a pairing QR with its in-app Direct CLI scanner (which connects automatically), enable Direct CLI Access, enter a fallback code, approve local-network access, or grant HealthKit read access.
 - Never print health values unless explicitly requested. Counts, dates, paths, statuses, and diagnostics are enough.
 - Never retry an unknown-outcome export blindly. Inspect its durable job first.

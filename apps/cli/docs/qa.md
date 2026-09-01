@@ -55,7 +55,18 @@ notification Disconnect action, requests status only, and retains no health payl
 release archive's checksum and assert that it contains both `healthmd` and
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
 `healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`,
-`healthmd mcp serve-read-only --help`, and `healthmd mcp schema healthmd_sleep_sessions`. Feed the
+`healthmd mcp serve-read-only --help`, and `healthmd mcp schema healthmd_sleep_sessions`. Also run
+`healthmd export`, `healthmd extract`, `healthmd query`,
+`healthmd query healthmd_sleep_sessions`, `healthmd resume`, `healthmd cancel`, `healthmd direct`,
+`healthmd direct unpair`, `healthmd direct reset-trust`, `healthmd mcp`, and `healthmd setup` without
+execution arguments while stdout is captured. Each must exit zero with one
+`healthmd.cli_guidance/1` JSON document, `status: guidance`, and `request_sent: false`, without
+opening credentials, starting a listener, mutating trust, or contacting a device. Repeat every
+command with `--human` and require readable headings, examples or next steps, and no leading JSON
+object syntax. Repeat representative commands with `--json` and require byte-equivalent JSON fields.
+Invalid flags and invalid typed JSON must exit nonzero with one privacy-safe `healthmd.cli_error/1`
+document when captured and readable recovery text with `--human`; rejected values and Clap's escaped
+multiline rendering must be absent in both modes. Feed the
 same bounded stdio initialize/tools calls to both serve modes: the complete mode must expose 19
 tools, while read-only mode must expose exactly 13 tools with `readOnlyHint`, no pairing resource,
 and no pairing/export-job declarations. Guess all six omitted tool names and require `Unknown tool`
@@ -116,7 +127,7 @@ Never attach raw output to an issue or CI log.
     the sibling `healthmd` on Unix and, on Windows, serves in-process while successfully supervising
     its own same-file helper against the fixed Credential Manager service/account. Repeat on macOS,
     Linux, and Windows without Health.md for Mac installed.
-12. Confirm stdout contains only the documented JSON/result stream, stderr contains no health
+12. Confirm stdout contains only the selected human, JSON, or exact artifact result stream; stderr contains no health
     payload, and private state/output permissions are appropriate on each platform.
 
 ## Physical Android gate

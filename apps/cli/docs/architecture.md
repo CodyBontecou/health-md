@@ -114,9 +114,15 @@ proxy for remote deployment; Host and browser Origin allowlists remain mandatory
 
 ### `healthmd-cli` (CLI workspace)
 
-Argument grammar, direct-mobile adapters, JSON results/errors, stderr progress, exit status, and
-transport startup. `healthmd query <operation> --arguments <JSON>` and MCP use identical registry
-normalization and canonical query execution; adapter envelopes alone differ.
+Argument grammar, local `healthmd.cli_guidance/1` discovery, actionable `healthmd.cli_error/1`
+envelopes, TTY-aware human rendering, direct-mobile adapters, stderr progress, exit status, and
+transport startup. The canonical `serde_json::Value` remains the sole command model: terminals render
+it as text, pipes and `--json` serialize it unchanged, and `--human` forces text without modifying the
+underlying contract. Raw artifacts bypass this renderer. Incomplete commands are resolved before
+credentials or network work; malformed and operational failures remain nonzero.
+`healthmd query <operation> --arguments <JSON>` and MCP use identical registry normalization
+and canonical query execution, while query discovery embeds that shared registry's schema and
+examples; adapter envelopes alone differ.
 The direct backend is the portable default.
 Pairing and local stdio MCP run through one installed `healthmd` executable (`healthmd mcp serve`) so
 Keychain/Secret Service/Credential Manager trust has one executable owner. `healthmd setup codex`

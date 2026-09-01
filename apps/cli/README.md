@@ -3,7 +3,7 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.4` explicitly unqualified preview candidate. Deployed iOS export
+> **Status:** `0.1.0-alpha.5` explicitly unqualified preview candidate. Deployed iOS export
 > protocol v1, Android application protocol v2, and capability-gated iPhone query protocol v3 are
 > implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. Complete
 > physical-device release QA is still required before the first qualified stable release.
@@ -57,7 +57,7 @@ build IDs because matching marketing versions or protocol numbers alone is insuf
 
 ## Installation
 
-The `0.1.0-alpha.4` workflow is configured to publish a checksummed, explicitly unqualified
+The `0.1.0-alpha.5` workflow is configured to publish a checksummed, explicitly unqualified
 preview. After the exact GitHub prerelease and tap formula are public, install it with:
 
 ```bash
@@ -98,7 +98,7 @@ manifest for integrity. macOS users may also use the notarized, stapled DMG. Rep
 with the complete version including any prerelease suffix:
 
 ```bash
-VERSION='0.1.0-alpha.4'
+VERSION='0.1.0-alpha.5'
 TAG="healthmd-cli/v$VERSION"
 BASE="https://github.com/CodyBontecou/health-md/releases/download/$TAG"
 curl -fLO "$BASE/healthmd-cli-installer.sh"
@@ -122,7 +122,7 @@ sh healthmd-cli-installer.sh
 ```
 
 ```powershell
-$Version = '0.1.0-alpha.4'
+$Version = '0.1.0-alpha.5'
 $Tag = "healthmd-cli/v$Version"
 $Base = "https://github.com/CodyBontecou/health-md/releases/download/$Tag"
 Invoke-WebRequest "$Base/healthmd-cli-installer.ps1" -OutFile healthmd-cli-installer.ps1
@@ -223,7 +223,7 @@ client. Source builds require Rust 1.85 or newer.
 3. On iOS, open **Direct CLI Access** in the Mac destination settings. On Android, open
    **Settings → Direct CLI**. Enter the computer's LAN/Tailscale address, port, and matching
    platform code, then pair.
-4. The final machine-readable pairing result is written to stdout.
+4. The final pairing result is human-readable in a terminal and machine-readable JSON when piped or invoked with `--json`.
 
 Trust is stored in Keychain, Secret Service, or Windows Credential Manager. Pairing is distinct from
 the Health.md Mac app's sync trust. Linux requires an unlocked freedesktop Secret Service provider
@@ -237,6 +237,25 @@ delete only the `com.codybontecou.obsidianhealth.direct-cli-trust` item, forget 
 mobile source, and pair again; never copy the secret into a file or shell command.
 
 ## Commands
+
+Incomplete commands are safe discovery requests. They exit successfully, list required
+choices/examples, and never contact a device. Interactive terminals receive concise human-readable
+text; pipes and `--json` receive the stable `healthmd.cli_guidance/1` JSON contract. A typed operation
+selected without `--arguments` shows an argument synopsis; add `--json` for its complete nested input
+schema:
+
+```bash
+healthmd export
+healthmd extract
+healthmd query
+healthmd query healthmd_sleep_sessions
+healthmd resume
+healthmd cancel
+healthmd direct
+healthmd mcp
+```
+
+Use the resulting structured requirements to build a complete execution request:
 
 ```bash
 # Readiness and local trust
@@ -281,11 +300,24 @@ The source app must remain open while pairing or starting a request. Android use
 user-started data-sync foreground service for an active direct session. Manual IP listens on TCP
 `17647` by default; use the global `--port` option when a different saved port is required.
 
-Command results and errors are JSON on stdout. Pairing instructions and non-sensitive progress may
-use stderr. Raw and extraction output is either streamed as JSON/JSONL or atomically committed to the
-explicit `--output` path. JSONL file output writes its health-free receipt beside it as
-`OUTPUT.receipt.json`. JSONL conversion bounds each daily item to 64 MiB; use JSON for an unusually
-dense day. A validated partial result exits nonzero unless `--allow-partial` is set.
+Structured command results, guidance, and errors are human-readable when stdout is an interactive
+terminal and remain JSON when stdout is piped or redirected. Global `--json` forces the stable JSON
+contract; global `--human` forces readable text through a pipe or pager. Pairing instructions and
+non-sensitive progress may use stderr. Incomplete JSON discovery uses `healthmd.cli_guidance/1` with
+`status: "guidance"`, `request_sent: false`, missing requirements, accepted modes, argv examples,
+and next actions. Malformed or operationally unsuccessful JSON uses `healthmd.cli_error/1` with a
+concise code, stable parser kind when applicable, command-specific help, and bounded recovery
+actions. Parser errors never expose Clap's multiline rendering or rejected user values. Explicit
+`--help` and `--version` remain text. Raw JSON/JSONL and generated-file artifacts retain their exact
+bytes. MCP server modes reserve stdout for JSON-RPC after launch, so formatting flags do not alter
+the protocol and startup diagnostics remain health-free stderr.
+
+See [CLI discovery, guidance, and error contract](docs/command-guidance.md) for fields, exit codes,
+privacy rules, and the recommended agent loop. Raw and extraction output is either streamed as
+JSON/JSONL or atomically committed to the explicit `--output` path. JSONL file output writes its
+health-free receipt beside it as `OUTPUT.receipt.json`. JSONL conversion bounds each daily item to
+64 MiB; use JSON for an unusually dense day. A validated partial result exits nonzero unless
+`--allow-partial` is set.
 
 ## Durability and security
 
@@ -437,7 +469,7 @@ or export. Query pages preserve explicit coverage/truncation receipts; if one re
 366,000-day / 64 MiB compact-context guard, partition dates or metric IDs across calls rather than treating the
 logical corpus as unavailable.
 
-See [the architecture](docs/architecture.md), [iOS export protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
+See [the architecture](docs/architecture.md), [CLI guidance/error contract](docs/command-guidance.md), [iOS export protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
 [iPhone query protocol v3](../../packages/contracts/direct-protocol/v3/protocol.md),
 [Android protocol v2](../../packages/contracts/direct-protocol/v2/protocol.md), [release QA](docs/qa.md), and
 [release process](docs/releasing.md).
@@ -451,6 +483,10 @@ cargo test --workspace --all-features          # experimental remote profiles
 cargo clippy --workspace --all-targets -- -D warnings
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo run -- --help
+cargo run -- export                       # local structured discovery
+cargo run -- extract                      # local structured discovery
+cargo run -- query                        # fixed typed-operation catalog
+cargo run -- query healthmd_sleep_sessions # exact schema and argv examples
 cargo run -- setup codex --help
 cargo run -- query --help
 cargo run -- mcp serve --help

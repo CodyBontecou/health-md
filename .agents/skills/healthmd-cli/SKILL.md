@@ -73,6 +73,25 @@ Do not use `apps/apple/scripts/healthmd`; it runs the legacy Swift compatibility
 
 ## Bound unfamiliar commands
 
+Use the CLI's non-network discovery mode instead of guessing required flags. These commands exit
+successfully with `healthmd.cli_guidance/1`, `status: guidance`, and `request_sent: false` without
+opening credentials or contacting a phone:
+
+```bash
+healthmd export
+healthmd extract
+healthmd query
+healthmd query healthmd_sleep_sessions
+healthmd resume
+healthmd cancel
+healthmd direct
+healthmd mcp
+```
+
+A selected query operation returns its complete `input_schema`, JSON examples, and an `argv` array.
+Malformed or runtime failures return `healthmd.cli_error/1` with `help_command` and bounded
+`next_actions`; follow those fields instead of scraping `message` or retrying blindly.
+
 On macOS/Linux use non-interactive execution and a hard process timeout:
 
 ```bash
@@ -81,7 +100,7 @@ NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
 NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 ```
 
-On Windows, use the automation host's process timeout. Give pairing and exports longer bounds than status. Command failures and results use JSON on stdout except help/version and explicit health streams/artifacts. Health-free progress and pairing instructions may use stderr. Parse the JSON or receipt; never infer success from exit status alone.
+On Windows, use the automation host's process timeout. Give pairing and exports longer bounds than status. Interactive terminals render command guidance, failures, and structured results as readable text; non-interactive pipes and explicit `--json` emit JSON. Use `--json` whenever an agent must parse the result. Explicit health streams/artifacts retain their exact bytes, and MCP server startup/transport diagnostics cannot use stdout because MCP reserves it for JSON-RPC. Health-free progress and pairing instructions may use stderr. Parse `schema` and `status` or the receipt; never infer execution success from exit status alone—a zero exit can intentionally mean non-network guidance.
 
 ## Pair once
 
@@ -137,9 +156,12 @@ Query workflow:
 5. Set `all_pages: true` only when complete bounded traversal is needed, or continue the exact opaque `next_cursor` unchanged.
 6. Report requested-scope completion separately from unrelated corpus warnings.
 
-Inspect the exact schema offline before constructing shell arguments:
+Inspect the exact schema offline before constructing shell arguments. The `query OPERATION` form
+returns the same nested schema plus an executable argv example:
 
 ```bash
+healthmd query healthmd_metric_chart
+healthmd query healthmd_sleep_sessions
 healthmd mcp schema healthmd_metric_chart
 healthmd mcp schema healthmd_sleep_sessions
 ```

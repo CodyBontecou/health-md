@@ -338,7 +338,7 @@ mod tests {
         assert_eq!(
             build_info(),
             BuildInfo {
-                crate_version: "0.1.0-alpha.4".to_owned(),
+                crate_version: "0.1.0-alpha.5".to_owned(),
                 core_source_revision: "development".to_owned(),
                 registry_sha256: REGISTRY_SHA256.to_owned(),
                 core_api_version: 4,

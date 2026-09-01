@@ -21,7 +21,7 @@ chrono-tz.workspace = true
 directories.workspace = true
 dunce.workspace = true
 fs2.workspace = true
-healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.4" }
+healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.5" }
 keyring.workspace = true
 same-file.workspace = true
 secrecy.workspace = true

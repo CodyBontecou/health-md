@@ -9,7 +9,13 @@ which exposes only the 13 readiness/query tools and needs no HTTP, OAuth, tunnel
 HTTP/OAuth profiles never expose local pairing or export-job tools. MCP hosts receive fully
 expanded nested input schemas and examples. Humans and troubleshooting agents can
 print the same schema locally with `healthmd mcp schema healthmd_sleep_sessions` without opening a
-listener or contacting iPhone.
+listener or contacting iPhone. Incomplete shell commands are also safe discovery requests:
+`healthmd export`, `healthmd extract`, `healthmd query`, and
+`healthmd query healthmd_sleep_sessions` return structured requirements or exact schemas without
+opening credentials or contacting a device. Interactive terminals render those envelopes as concise
+human-readable text; pipes and `--json` retain the stable JSON contracts, while `--human` forces text
+through a pager. Malformed and runtime failures use the same privacy-safe, actionable
+`healthmd.cli_error/1` model rather than escaped terminal error text.
 
 See the [project README](https://github.com/CodyBontecou/health-md/tree/main/apps/cli#readme) for installation,
 pairing, command examples, platform support, and security details.

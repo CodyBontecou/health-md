@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.5
+
+- Render structured command results, discovery, schemas, and errors as concise human-readable text
+  on interactive terminals while preserving the existing JSON model for pipes and explicit
+  `--json`; add `--human` for pagers and keep raw artifacts and MCP JSON-RPC byte-exact.
+- Make incomplete commands a local, non-network discovery surface: `export`, `extract`, `query`,
+  selected typed queries, durable job commands, and command groups now return structured
+  `healthmd.cli_guidance/1` requirements, schemas, examples, and next actions with a successful exit
+  instead of opaque missing-argument failures. Replace escaped Clap/runtime error strings with
+  privacy-safe `healthmd.cli_error/1` envelopes, stable parser kinds, accepted forms, exact help,
+  and code-specific recovery guidance; expand command help, automated tests, and agent-facing docs.
+- Publish this as an explicitly unqualified preview through the checksummed GitHub release,
+  Homebrew/Linuxbrew tap, and coordinated crates.io packages while stable qualification remains
+  pending.
+- Windows artifacts remain Authenticode-unsigned while the release identity ledger records pending
+  external certificate provisioning; verify them through the Sigstore-signed checksum closure.
+
 ## 0.1.0-alpha.4
 
 - Show a short, human-readable getting-started screen when `healthmd` is run without a command,
