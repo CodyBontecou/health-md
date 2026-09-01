@@ -74,8 +74,8 @@
       "manifest_version": 1,
       "path": "/agents/skills/healthmd-cli/manifest.json",
       "media_type": "application/json",
-      "bytes": 1483,
-      "sha256": "a2032aef9cb23e3e7880b845d62e4df8436b247efc7b8aac905a32b5d8e7c549"
+      "bytes": 1715,
+      "sha256": "813249a5e9d14659914a3053f8feef558d440c514e7108ea929f1d52b9f68746"
     },
     {
       "id": "reference_provenance",

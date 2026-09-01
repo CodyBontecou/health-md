@@ -45,7 +45,7 @@ Onboarding appears automatically on first launch. After onboarding, the same cor
 6. Tap **Select Export Folder** to choose an Obsidian vault or tap **Skip for Now**.
 7. Choose an Individual or Family Lifetime unlock, or tap **Try 10 Free Exports**.
 8. Use the Ready-screen **Connect** or **Choose Folder** repair actions if needed, then tap **Create My First Export**. Health.md completes onboarding and opens a preconfigured export preview.
-9. Optional: open **Mac Destination** to connect Health.md for Mac, choose a Mac folder, then select **Connected Mac** from the Export tab when exporting.
+9. Optional: open **Sync → Mac Destination** to connect Health.md for Mac, choose a Mac folder, then select **Connected Mac** from the Export tab when exporting.
 
 ## Example setup result with a selected folder
 

@@ -21,6 +21,7 @@ import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
@@ -32,6 +33,7 @@ import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -68,6 +70,8 @@ class ExportWorker @AssistedInject constructor(
     private val timeCalculator: ScheduledExportTimeCalculator,
     private val stateStore: ScheduledExportStateStore,
     private val exportScheduler: Lazy<ExportScheduler>,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = try {
@@ -323,7 +327,10 @@ class ExportWorker @AssistedInject constructor(
             pendingFolderOperationId ?: "folder-$admissionOperationId"
         } else null
         val historyOperationId = durableFolderOperationId ?: durableApiOperationId ?: admissionOperationId
-        val isPurchased = settingsRepository.isPurchased.first()
+        entitlementRepository.refresh()
+        val isPurchased = distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
         val dates = scheduledDates(
             settings,
             destinationFingerprint,

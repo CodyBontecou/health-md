@@ -190,13 +190,13 @@ uses the correct iOS-standard labels that would match updated lookups.
 
 ```bash
 # Full unit + contract suite
-./gradlew :app:testDebugUnitTest
+./gradlew :app:testPlayDebugUnitTest :app:testFdroidDebugUnitTest
 
 # Validation test only
-./gradlew :app:testDebugUnitTest --tests com.healthmd.export.PluginCompatibilityValidationTest
+./gradlew :app:testPlayDebugUnitTest --tests com.healthmd.export.PluginCompatibilityValidationTest
 
 # Release-readiness docs/metadata test
-./gradlew :app:testDebugUnitTest --tests com.healthmd.exportcontract.ReleaseReadinessTest
+./gradlew :app:testPlayDebugUnitTest --tests com.healthmd.exportcontract.ReleaseReadinessTest
 ```
 
 ---

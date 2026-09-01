@@ -66,6 +66,14 @@ fun OnboardingScreen(
     allowAutomaticAdvance: Boolean = true,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val pages = viewModel.pages
+    val distributionPolicy = viewModel.distributionPolicy
+    val healthPageIndex = pages.indexOf(OnboardingPage.HEALTH_ACCESS)
+    val folderPageIndex = pages.indexOf(OnboardingPage.FOLDER_SETUP)
+    val accessPageIndex = pages.indexOfFirst {
+        it == OnboardingPage.PLAY_ACCESS || it == OnboardingPage.INCLUDED_ACCESS
+    }
+    val readyPageIndex = pages.indexOf(OnboardingPage.READY)
     val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
     val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
     val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
@@ -136,7 +144,10 @@ fun OnboardingScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 5 })
+    val pagerState = rememberPagerState(
+        initialPage = initialPage.coerceIn(0, pages.lastIndex),
+        pageCount = { pages.size },
+    )
 
     LaunchedEffect(Unit) {
         viewModel.recordInitialOnboarding()
@@ -146,32 +157,32 @@ fun OnboardingScreen(
     // Welcome is recorded sequentially after the start event so cohort ordering is deterministic.
     LaunchedEffect(pagerState.settledPage) {
         if (pagerState.settledPage != 0) {
-            viewModel.recordSettledPage(pagerState.settledPage)
+            viewModel.recordSettledPage(pages[pagerState.settledPage])
         }
     }
 
     // Key auto-advance to the settled page. currentPage changes around the halfway
     // point of an animation, which would cancel this effect and leave the pager mid-swipe.
     LaunchedEffect(uiState.hasPermissions, pagerState.settledPage, allowAutomaticAdvance) {
-        if (allowAutomaticAdvance && pagerState.settledPage == 1 && uiState.hasPermissions) {
+        if (allowAutomaticAdvance && pagerState.settledPage == healthPageIndex && uiState.hasPermissions) {
             kotlinx.coroutines.delay(800)
-            pagerState.animateScrollToPage(2)
+            pagerState.animateScrollToPage(folderPageIndex)
         }
     }
 
     LaunchedEffect(uiState.folderUri, pagerState.settledPage, allowAutomaticAdvance) {
-        if (allowAutomaticAdvance && pagerState.settledPage == 2 && uiState.folderUri != null) {
+        if (allowAutomaticAdvance && pagerState.settledPage == folderPageIndex && uiState.folderUri != null) {
             kotlinx.coroutines.delay(800)
-            pagerState.animateScrollToPage(3)
+            pagerState.animateScrollToPage(accessPageIndex)
         }
     }
 
     // Only advance for an unlock initiated from this page. Existing purchasers
     // should still see the onboarding paywall instead of being immediately skipped.
     LaunchedEffect(isUnlocked, advanceAfterUnlock, pagerState.settledPage) {
-        if (isUnlocked && advanceAfterUnlock && pagerState.settledPage == 3) {
+        if (isUnlocked && advanceAfterUnlock && pagerState.settledPage == accessPageIndex) {
             advanceAfterUnlock = false
-            pagerState.animateScrollToPage(4)
+            pagerState.animateScrollToPage(readyPageIndex)
         }
     }
 
@@ -190,7 +201,7 @@ fun OnboardingScreen(
                     .padding(top = Spacing.xxl, bottom = Spacing.lg),
                 horizontalArrangement = Arrangement.Center,
             ) {
-                repeat(5) { index ->
+                repeat(pages.size) { index ->
                     val selected = pagerState.currentPage == index
                     val width by animateDpAsState(
                         targetValue = if (selected) 24.dp else 8.dp,
@@ -230,9 +241,9 @@ fun OnboardingScreen(
                             translationX = pageOffset * 100f * horizontalMotionDirection
                         },
                 ) {
-                    when (page) {
-                        0 -> WelcomePage(onUseSharedSetup = onUseSharedSetup)
-                        1 -> HealthAccessPage(
+                    when (pages[page]) {
+                        OnboardingPage.WELCOME -> WelcomePage(onUseSharedSetup = onUseSharedSetup)
+                        OnboardingPage.HEALTH_ACCESS -> HealthAccessPage(
                             hasPermissions = uiState.hasPermissions,
                             actionError = healthConnectError,
                             onDismissError = {
@@ -271,11 +282,11 @@ fun OnboardingScreen(
                                 }
                             },
                         )
-                        2 -> StorageSetupPage(
+                        OnboardingPage.FOLDER_SETUP -> StorageSetupPage(
                             folderName = folderDisplayName,
                             onSelectFolder = { folderPickerLauncher.launch(null) },
                         )
-                        3 -> PaywallScreen(
+                        OnboardingPage.PLAY_ACCESS -> PaywallScreen(
                             onPurchase = {
                                 viewModel.recordPurchaseTapped()
                                 (context as? Activity)?.let { activity ->
@@ -301,8 +312,11 @@ fun OnboardingScreen(
                                 paywallViewModel.debugToggleUnlock()
                             },
                             onDebugResetState = paywallViewModel::debugResetPurchaseState,
+                            purchasesAvailable = paywallViewModel.purchasesAvailable,
+                            fullAccessIncluded = distributionPolicy.fullAccessIncluded,
                         )
-                        4 -> ReadyPage(
+                        OnboardingPage.INCLUDED_ACCESS -> IncludedAccessPage()
+                        OnboardingPage.READY -> ReadyPage(
                             onComplete = { viewModel.completeOnboarding(onComplete) },
                         )
                     }
@@ -311,10 +325,10 @@ fun OnboardingScreen(
 
             // Bottom navigation
             OnboardingBottomBar(
-                currentPage = pagerState.currentPage,
-                canContinue = when (pagerState.currentPage) {
-                    1 -> uiState.hasPermissions
-                    2 -> uiState.folderUri != null
+                currentPage = pages[pagerState.currentPage],
+                canContinue = when (pages[pagerState.currentPage]) {
+                    OnboardingPage.HEALTH_ACCESS -> uiState.hasPermissions
+                    OnboardingPage.FOLDER_SETUP -> uiState.folderUri != null
                     else -> true
                 },
                 onBack = {
@@ -323,19 +337,20 @@ fun OnboardingScreen(
                     }
                 },
                 onContinue = {
-                    if (pagerState.currentPage == 3 && !isUnlocked) {
+                    if (pages[pagerState.currentPage] == OnboardingPage.PLAY_ACCESS && !isUnlocked) {
                         viewModel.recordContinueFreeTapped()
                     }
                     coroutineScope.launch {
-                        if (pagerState.currentPage < 4) {
+                        if (pagerState.currentPage < pages.lastIndex) {
                             pagerState.animateScrollToPage(pagerState.currentPage + 1)
                         }
                     }
                 },
                 onSkip = {
-                    when (pagerState.currentPage) {
-                        1 -> viewModel.recordHealthSkipped()
-                        2 -> viewModel.recordFolderSkipped()
+                    when (pages[pagerState.currentPage]) {
+                        OnboardingPage.HEALTH_ACCESS -> viewModel.recordHealthSkipped()
+                        OnboardingPage.FOLDER_SETUP -> viewModel.recordFolderSkipped()
+                        else -> Unit
                     }
                     coroutineScope.launch {
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
@@ -688,6 +703,93 @@ private fun StorageSetupPage(
 }
 
 @Composable
+private fun IncludedAccessPage() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = Spacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        GeistIconCircle(size = 96.dp) {
+            Icon(
+                Icons.Rounded.Verified,
+                contentDescription = null,
+                tint = AppColors.success,
+                modifier = Modifier.size(40.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.xl))
+
+        Text(
+            text = stringResource(R.string.fdroid_onboarding_access_title),
+            style = MaterialTheme.typography.headlineLarge,
+            color = AppColors.textPrimary,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        Text(
+            text = stringResource(R.string.fdroid_onboarding_access_body),
+            style = MaterialTheme.typography.bodyLarge,
+            color = AppColors.textSecondary,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(Spacing.lg))
+
+        GeistCard {
+            IncludedAccessFeatureRow(
+                icon = Icons.Outlined.AllInclusive,
+                title = stringResource(R.string.paywall_unlimited_exports),
+                description = stringResource(R.string.fdroid_onboarding_no_purchase),
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            IncludedAccessFeatureRow(
+                icon = Icons.Outlined.Schedule,
+                title = stringResource(R.string.paywall_scheduled_exports),
+                description = stringResource(R.string.fdroid_onboarding_no_play_services),
+            )
+        }
+    }
+}
+
+@Composable
+private fun IncludedAccessFeatureRow(
+    icon: ImageVector,
+    title: String,
+    description: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = AppColors.accent,
+            modifier = Modifier.size(24.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = AppColors.textPrimary,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textMuted,
+            )
+        }
+    }
+}
+
+@Composable
 private fun ReadyPage(
     onComplete: () -> Unit,
 ) {
@@ -785,7 +887,7 @@ private fun FeaturePill(
 
 @Composable
 private fun OnboardingBottomBar(
-    currentPage: Int,
+    currentPage: OnboardingPage,
     canContinue: Boolean,
     onBack: () -> Unit,
     onContinue: () -> Unit,
@@ -803,7 +905,7 @@ private fun OnboardingBottomBar(
     ) {
         // Back button
         AnimatedVisibility(
-            visible = currentPage > 0 && currentPage < 4,
+            visible = currentPage != OnboardingPage.WELCOME && currentPage != OnboardingPage.READY,
             enter = fadeIn() + slideInHorizontally { -it * horizontalMotionDirection },
             exit = fadeOut() + slideOutHorizontally { -it * horizontalMotionDirection },
         ) {
@@ -823,19 +925,22 @@ private fun OnboardingBottomBar(
         }
 
         // Spacer when back is hidden
-        if (currentPage == 0 || currentPage == 4) {
+        if (currentPage == OnboardingPage.WELCOME || currentPage == OnboardingPage.READY) {
             Spacer(modifier = Modifier.width(1.dp))
         }
 
         // Continue / Skip
         AnimatedVisibility(
-            visible = currentPage < 4,
+            visible = currentPage != OnboardingPage.READY,
             enter = fadeIn() + slideInHorizontally { it * horizontalMotionDirection },
             exit = fadeOut() + slideOutHorizontally { it * horizontalMotionDirection },
         ) {
             Row {
                 // Skip button for permission/storage pages
-                if ((currentPage == 1 && !canContinue) || (currentPage == 2 && !canContinue)) {
+                if (
+                    (currentPage == OnboardingPage.HEALTH_ACCESS ||
+                        currentPage == OnboardingPage.FOLDER_SETUP) && !canContinue
+                ) {
                     TextButton(onClick = onSkip) {
                         Text(
                             stringResource(R.string.onboarding_skip),

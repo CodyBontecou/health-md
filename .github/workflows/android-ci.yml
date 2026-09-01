@@ -153,27 +153,27 @@ jobs:
           set -euo pipefail
           # Keep Compose compiler peaks bounded and compile one app variant at a time.
           ./gradlew --no-daemon --max-workers=2 \
-            :app:testDebugUnitTest \
+            :app:testPlayDebugUnitTest \
             :healthmd-core:testDebugUnitTest \
             :wearable-contract:test \
             :wear:testDebugUnitTest \
             :direct-protocol:test \
             --stacktrace
-          ./gradlew --no-daemon --max-workers=2 :app:testReleaseUnitTest --stacktrace
-          ./gradlew --no-daemon --max-workers=2 :app:testE2eUnitTest --stacktrace
+          ./gradlew --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
+          ./gradlew --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
 
       - name: Run Wear lint, assemble, and bundle
         run: ./gradlew :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
 
       - name: Run Android lint
-        run: ./gradlew :app:lintDebug --stacktrace
+        run: ./gradlew :app:lintPlayDebug --stacktrace
 
       - name: Assemble debug app and validate packaged pair and retained Play-generated APK policy
         run: |
-          ./gradlew :app:assembleDebug :app:bundleDebug --stacktrace
+          ./gradlew :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
           ./scripts/test-wear-bundle-manifest-verifier.sh \
             wear/build/outputs/bundle/debug/wear-debug.aab \
-            app/build/outputs/bundle/debug/app-debug.aab
+            app/build/outputs/bundle/playDebug/app-play-debug.aab
           bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh
 
       - name: Enable KVM access
@@ -188,8 +188,106 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: |
-            cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
+            cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedFdroidDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
             cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
+
+  fdroid:
+    name: F-Droid clean build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout public source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - name: Install pinned Rust and Android native toolchains
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e local.properties
+          test -z "${HEALTHMD_ANDROID_KEYSTORE_PATH:-}"
+          rustup toolchain install 1.88.0 --profile minimal
+          rustup target add --toolchain 1.88.0 \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android \
+            i686-linux-android
+          rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
+          sdkmanager "ndk;27.1.12297006"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          min-wrapper-count: 1
+
+      - name: Test, lint, and build both F-Droid artifacts
+        run: |
+          ./gradlew --no-daemon --max-workers=2 \
+            :app:testFdroidDebugUnitTest \
+            :app:lintFdroidDebug \
+            :app:assembleFdroidDebug \
+            :app:assembleFdroidRelease \
+            --stacktrace
+          ./scripts/verify-fdroid-artifact.sh
+
+      - name: Scan F-Droid release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/fdroidserver"
+          "$RUNNER_TEMP/fdroidserver/bin/pip" install --disable-pip-version-check 'fdroidserver==2.4.5'
+          FDROID_BIN="$RUNNER_TEMP/fdroidserver/bin/fdroid" \
+            ./scripts/validate-fdroid-metadata.sh
+          mkdir -p app/build/reports
+          set +e
+          "$RUNNER_TEMP/fdroidserver/bin/fdroid" scanner --json --exit-code \
+            app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk \
+            > app/build/reports/fdroid-scanner-findings.json \
+            2> app/build/reports/fdroid-scanner.log
+          scanner_status=$?
+          set -e
+          if [[ -s app/build/reports/fdroid-scanner-findings.json ]]; then
+            findings=$(cat app/build/reports/fdroid-scanner-findings.json)
+          else
+            findings='{}'
+          fi
+          jq -n --argjson exitCode "$scanner_status" --argjson findings "$findings" \
+            '{fdroidserverVersion:"2.4.5", exitCode:$exitCode, findings:$findings}' \
+            > app/build/reports/fdroid-scanner.json
+          test "$scanner_status" -eq 0
+
+      - name: Retain unsigned F-Droid evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-fdroid-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            apps/android/app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
+            apps/android/app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk.sha256
+            apps/android/app/build/reports/fdroid-release-runtime-classpath.txt
+            apps/android/app/build/reports/fdroid-scanner.json
+            apps/android/app/build/reports/fdroid-scanner.log
 
   wear-emulator-smoke:
     name: Wear emulator smoke
@@ -300,15 +398,17 @@ jobs:
   gate:
     name: Android CI
     if: ${{ always() }}
-    needs: [test, wear-emulator-smoke, rust-kotlin-direct-interop]
+    needs: [test, fdroid, wear-emulator-smoke, rust-kotlin-direct-interop]
     runs-on: ubuntu-24.04
     steps:
       - name: Require Android checks
         env:
           TEST_RESULT: ${{ needs.test.result }}
+          FDROID_RESULT: ${{ needs.fdroid.result }}
           INTEROP_RESULT: ${{ needs.rust-kotlin-direct-interop.result }}
           WEAR_RESULT: ${{ needs.wear-emulator-smoke.result }}
         run: |
           test "$TEST_RESULT" = success
+          test "$FDROID_RESULT" = success
           test "$INTEROP_RESULT" = success
           test "$WEAR_RESULT" = success

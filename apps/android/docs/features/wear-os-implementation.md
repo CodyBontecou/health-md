@@ -2,7 +2,7 @@
 
 The expanded evidence-based audit is maintained in [`wear-os-completion-audit.md`](wear-os-completion-audit.md). It is authoritative for remaining manual, hardware, CI, signing, and Play gates; passing local proxies must not override it.
 
-Health.md for Wear OS is a non-standalone companion. Phone Health Connect is authoritative; the watch performs no Health Connect reads and no Health Services sensing. The private `:wearable-contract` is not an export/direct-protocol change.
+Health.md for Wear OS is a non-standalone **Google Play channel** companion. Phone Health Connect is authoritative; the watch performs no Health Connect reads and no Health Services sensing. Wear settings, services, Data Layer dependencies, and manifest capabilities are absent from the F-Droid phone variant. The private `:wearable-contract` is not an export/direct-protocol change.
 
 ## Prompt-to-artifact checklist
 
@@ -75,14 +75,14 @@ The collector fails unless the exact phone 29 / Wear 1,000,029 pair is installed
 ```bash
 ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wearable-contract:test :wear:testDebugUnitTest
 ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wear:lintDebug :wear:assembleDebug
-ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wear:bundleRelease :app:bundleRelease
+ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :app:testPlayDebugUnitTest :app:lintPlayDebug :app:assemblePlayDebug
+ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wear:bundleRelease :app:bundlePlayRelease
 RELEASE_STORE_FILE=/path/to/release.jks \
 RELEASE_STORE_PASSWORD=... RELEASE_KEY_ALIAS=... RELEASE_KEY_PASSWORD=... \
 WEAR_REQUIRE_SIGNING_ATTESTATION=true \
 ./scripts/validate-wear-artifact.sh \
   wear/build/outputs/bundle/release/wear-release.aab \
-  app/build/outputs/bundle/release/app-release.aab
+  app/build/outputs/bundle/playRelease/app-play-release.aab
 ```
 
 Post-upload Play signer evidence is captured read-only with `scripts/capture-google-play-generated-apk-evidence.sh`. It requires exact expected phone/Wear version codes and semantic version name plus an independently authorized Play signing certificate SHA-256, downloads the exact generated phone/Wear base-master split APKs used as installed `base.apk`, verifies package/version and actual APK certificates, and retains the exact bytes plus raw inventories and checksums in a non-overwritable evidence set. Both collector and release preflight run `verify-google-play-generated-apk-evidence.sh` so the receipt is rebound to those bytes and authorized signing-key group instead of being trusted as self-attested JSON. No Play edit is created.

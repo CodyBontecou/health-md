@@ -243,13 +243,13 @@ jobs:
       - name: Run focused default Practice policy test
         env:
           JAVA_TOOL_OPTIONS: -Dhealthmd.practice.expectedCompiledIn=false
-        run: ./gradlew --no-daemon :app:testDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
+        run: ./gradlew --no-daemon :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
 
       - name: Regenerate BuildConfig and run focused included Practice policy test
         env:
           JAVA_TOOL_OPTIONS: -Dhealthmd.practice.expectedCompiledIn=true
           PRACTICE_COMPILED_IN: included
-        run: ./gradlew --no-daemon :app:clean :app:testDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
+        run: ./gradlew --no-daemon :app:clean :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
 
   gate:
     name: Practice CI

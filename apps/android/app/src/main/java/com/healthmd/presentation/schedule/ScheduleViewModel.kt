@@ -10,8 +10,9 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ScheduleDateWindow
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +31,8 @@ import timber.log.Timber
 class ScheduleViewModel @Inject constructor(
     private val exportScheduler: ExportScheduler,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
     private val apiCredentialStore: APIExportCredentialStore? = null,
 ) : ViewModel() {
 
@@ -38,21 +40,21 @@ class ScheduleViewModel @Inject constructor(
     val uiState: StateFlow<ScheduleUiState> = _uiState.asStateFlow()
 
     init {
-        billingRepository.startConnection()
+        entitlementRepository.refresh()
 
         viewModelScope.launch {
             combine(
                 settingsRepository.exportSettings,
                 settingsRepository.exportFolderUri,
                 settingsRepository.isPurchased,
-                billingRepository.isUnlocked,
+                entitlementRepository.isUnlocked,
             ) { settings, folderUri, persistedPurchased, liveUnlocked ->
                 ScheduleCombinedState(settings, folderUri, persistedPurchased, liveUnlocked)
             }.collect { combined ->
                 val settings = combined.settings
                 val persistedPurchased = combined.persistedPurchased
                 val liveUnlocked = combined.liveUnlocked
-                val purchased = persistedPurchased || liveUnlocked
+                val purchased = distributionPolicy.fullAccessIncluded || persistedPurchased || liveUnlocked
                 _uiState.update {
                     it.copy(
                         isEnabled = settings.scheduleEnabled && purchased,
@@ -103,10 +105,12 @@ class ScheduleViewModel @Inject constructor(
         refreshAPIAuthorizationStatus()
         refreshSchedulingState()
 
-        viewModelScope.launch {
-            billingRepository.isUnlocked
-                .filter { it }
-                .collect { settingsRepository.setPurchased(true) }
+        if (!distributionPolicy.fullAccessIncluded) {
+            viewModelScope.launch {
+                entitlementRepository.isUnlocked
+                    .filter { it }
+                    .collect { settingsRepository.setPurchased(true) }
+            }
         }
     }
 

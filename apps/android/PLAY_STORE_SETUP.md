@@ -62,15 +62,15 @@ play-console/
 
 ## Build and release ownership
 
-Build both release bundles without Play credentials:
+Build both Play release bundles without Play credentials:
 
 ```bash
-./gradlew :app:bundleRelease :wear:bundleRelease
+./gradlew :app:bundlePlayRelease :wear:bundleRelease
 ```
 
 Outputs:
 
-- `app/build/outputs/bundle/release/app-release.aab`
+- `app/build/outputs/bundle/playRelease/app-play-release.aab`
 - `wear/build/outputs/bundle/release/wear-release.aab`
 
 Do not upload either module, move a track, submit review, or replace Play metadata from an ad hoc Gradle/Fastlane command. The protected annotated-tag workflow is the only supported AAB upload path and atomically assigns phone to `qa` plus Wear to `wear:qa`. Production mutation is exclusively the protected, evidence-gated `.github/workflows/android-promote-production.yml` path, using a production-only Play service account that the QA workflow cannot access. It atomically updates `production` and `wear:production` for the exact tagged pair.
@@ -136,14 +136,14 @@ Create a deterministic **USTAR** `wear-release-evidence.tar.gz` (for example, GN
 
 The initial paired AAB upload intentionally does **not** replace Wear screenshots: an exact Play-generated, Play-signed Wear APK does not exist until after that upload, so requiring its screenshots first would be circular. After Play form-factor recognition, generated-APK signer verification, closed-track installation, physical capture, and protected human visual approval, build a USTAR evidence submission containing `wear-play/`, `wear-screenshots/`, and `wear-play-screenshots/` (but not `wear-play-screenshot-upload/`). Submit it through `android-wear-evidence-submit.yml`, then dispatch `.github/workflows/android-wear-screenshots.yml` from the exact annotated `android/v<version>` tag with the semantic version, exact SHA/codes, and the submission run ID and attempt. The reviewer-protected `google-play-qa` workflow independently rechecks the exact submission attempt, APK bytes/signer, physical captures, reviewer/ticket, and source tag before materializing its QA-only Play credential. It invokes `sync-google-play-wear-screenshots.sh`, replaces exactly the two `en-US` Wear screenshots, verifies committed remote SHA-256 values, cleans credentials, and retains `wear-screenshot-upload-<version>-<sha>-attempt-<n>`. Do not invoke that implementation script with a local mutation credential. Supply the successful screenshot workflow run ID and exact attempt to later `android-wear-evidence.yml`; protected ingest downloads and injects the committed-edit receipt, while submitted archives are forbidden from supplying that namespace. Production promotion independently opens a non-committing verification edit and refuses to mutate tracks unless Play's committed screenshot hashes exactly match the sealed PNGs. This path is never a substitute for exact-installed-build capture and visual review.
 
-From `apps/android`, validate both signed bundles without Play credentials:
+From `apps/android`, validate both signed Play bundles without Play API credentials:
 
 ```bash
-./gradlew :app:bundleRelease :wear:bundleRelease
+./gradlew :app:bundlePlayRelease :wear:bundleRelease
 WEAR_REQUIRE_SIGNING_ATTESTATION=true \
   ./scripts/validate-wear-artifact.sh \
   wear/build/outputs/bundle/release/wear-release.aab \
-  app/build/outputs/bundle/release/app-release.aab
+  app/build/outputs/bundle/playRelease/app-play-release.aab
 ```
 
 Verify Play access only with `inspect-google-play-wear-readiness.sh` and a dedicated read-only service account. Do not use a publisher task as a credential check: even a task described as a dry run is not release evidence and encourages bypass of the paired protected workflow.

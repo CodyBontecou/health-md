@@ -22,7 +22,7 @@ Manual IP / Tailscale mode is an opt-in fallback that lets the iPhone connect di
 ## iPhone setup
 
 1. Open Health.md on iPhone.
-2. Go to **Mac Destination**.
+2. Open **Sync → Mac Destination**.
 3. In **Connect by IP Address**, enter:
    - the Mac Tailscale IP or hostname;
    - port `17646` unless you are using a custom build;

@@ -328,8 +328,8 @@ private fun connectionText(state: DirectCliConnectionState): String = when (stat
         DirectCliFailure.CONNECTION_FAILED -> stringResource(R.string.direct_cli_failure_connection)
         DirectCliFailure.SESSION_TIMEOUT -> stringResource(R.string.direct_cli_failure_timeout)
         DirectCliFailure.QUOTA_EXHAUSTED -> stringResource(R.string.direct_cli_failure_quota)
-        DirectCliFailure.FITBIT_RANGE_REQUIRED -> stringResource(
-            R.string.direct_cli_failure_fitbit_range,
+        DirectCliFailure.PROVIDER_RANGE_REQUIRED -> stringResource(
+            R.string.direct_cli_failure_provider_range,
         )
         DirectCliFailure.PROFILE_NOT_FOUND -> stringResource(
             R.string.direct_cli_failure_profile_not_found,

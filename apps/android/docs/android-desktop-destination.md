@@ -69,7 +69,7 @@ healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
 `DirectCliScreenTest` provides hermetic Compose coverage for unpaired validation, paired endpoint
 controls, connect/disconnect/forget actions, and health-free progress/error states. It runs as part
-of `:app:connectedDebugAndroidTest`.
+of `:app:connectedPlayDebugAndroidTest` and `:app:connectedFdroidDebugAndroidTest`.
 
 The opt-in live gate uses a separate `com.healthmd.android.e2e` build so Android Keystore trust,
 DataStore, jobs, and spools cannot collide with the installed app. From the repository root:

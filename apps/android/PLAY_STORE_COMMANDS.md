@@ -20,10 +20,10 @@ Run from `apps/android`.
 ### Build and test
 
 ```bash
-./gradlew :app:testDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test
-./gradlew :app:lintDebug :wear:lintDebug
-./gradlew :app:assembleDebug :wear:assembleDebug
-./gradlew :app:bundleRelease :wear:bundleRelease
+./gradlew :app:testPlayDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test
+./gradlew :app:lintPlayDebug :wear:lintDebug
+./gradlew :app:assemblePlayDebug :wear:assembleDebug
+./gradlew :app:bundlePlayRelease :wear:bundleRelease
 ```
 
 A release build requires externally supplied signing configuration. Local substitute signing proves only build/package behavior and is not production-signing evidence.
@@ -34,7 +34,7 @@ A release build requires externally supplied signing configuration. Local substi
 WEAR_REQUIRE_SIGNING_ATTESTATION=true \
   ./scripts/validate-wear-artifact.sh \
   wear/build/outputs/bundle/release/wear-release.aab \
-  app/build/outputs/bundle/release/app-release.aab
+  app/build/outputs/bundle/playRelease/app-play-release.aab
 
 bundle exec fastlane android validate_wear_release
 ```

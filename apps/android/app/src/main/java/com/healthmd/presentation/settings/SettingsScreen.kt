@@ -32,12 +32,13 @@ import com.healthmd.R
 import com.healthmd.data.health.providers.HealthProviderDirectExportStatus
 import com.healthmd.data.health.providers.HealthProviderId
 import com.healthmd.data.health.providers.HealthProviderState
+import com.healthmd.distribution.DistributionWearSettingsCard
+import com.healthmd.domain.distribution.DistributionChannel
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.ExportProfilesEntryCard
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.widget.setup.WidgetSettingsCard
-import com.healthmd.wear.WearSettingsCard
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -52,6 +53,7 @@ fun SettingsScreen(
     onNavigateToSharedSetup: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
+    val distributionPolicy = viewModel.distributionPolicy
     val protectionEnabled by viewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -139,7 +141,7 @@ fun SettingsScreen(
         }
 
         // Premium upgrade (show at top for free users)
-        if (!isPurchased) {
+        if (!isPurchased && distributionPolicy.purchasesAvailable) {
             GeistCardClickable(onClick = onNavigateToPaywall) {
                 Icon(
                     Icons.Outlined.WorkspacePremium,
@@ -172,7 +174,9 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         WidgetSettingsCard()
-        WearSettingsCard()
+        if (distributionPolicy.wearSyncAvailable) {
+            DistributionWearSettingsCard()
+        }
 
         // Profiles & Reports: occasional-use export configuration surfaces that
         // moved off the Export screen so daily export controls come first.
@@ -277,6 +281,89 @@ fun SettingsScreen(
                 }
             },
         )
+
+        GeistCard {
+            SectionLabel(stringResource(R.string.section_about))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Icon(
+                    Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(
+                            when (distributionPolicy.channel) {
+                                DistributionChannel.GOOGLE_PLAY -> R.string.distribution_channel_play
+                                DistributionChannel.FDROID -> R.string.distribution_channel_fdroid
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = stringResource(R.string.about_license_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
+            GeistCardClickable(onClick = { openExternalUrl(context, SOURCE_CODE_URL) }) {
+                Icon(
+                    Icons.Outlined.Code,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Text(
+                    stringResource(R.string.about_source_code),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.Outlined.ArrowOutward,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
+            GeistCardClickable(onClick = { openExternalUrl(context, LICENSE_URL) }) {
+                Icon(
+                    Icons.Outlined.Gavel,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Text(
+                    stringResource(R.string.about_license),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.Outlined.ArrowOutward,
+                    contentDescription = null,
+                    tint = AppColors.textMuted,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
 
         // Feedback
         GeistCard {
@@ -494,7 +581,7 @@ private fun HealthProviderRow(
                         providerState.isSelected -> stringResource(R.string.health_provider_status_selected)
                         providerState.isConnected -> stringResource(R.string.status_connected)
                         provider.isInstalled -> stringResource(R.string.health_provider_status_installed)
-                        providerState.isOAuthConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
+                        providerState.isDirectConnectionConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
                         else -> stringResource(definition.directExportStatus.labelRes)
                     },
                     style = MaterialTheme.typography.labelSmall,
@@ -528,6 +615,19 @@ private fun HealthProviderRow(
             contentDescription = stringResource(provider.actionLabelRes),
             tint = AppColors.textMuted,
             modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+private const val SOURCE_CODE_URL = "https://github.com/CodyBontecou/health-md"
+private const val LICENSE_URL = "https://github.com/CodyBontecou/health-md/blob/main/apps/android/LICENSE"
+
+private fun openExternalUrl(context: Context, url: String) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
         )
     }
 }

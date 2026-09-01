@@ -160,7 +160,8 @@
 
         <section id="product-analytics">
           <h2>자사 제품 분석</h2>
-          <p>Health.md는 온보딩, 활성화, 내보내기, 예약, 결제 화면 및 구매 흐름이 제대로 작동하는지 파악하기 위해 자사 Cloudflare Worker와 D1 데이터베이스를 사용합니다. Health.md는 앱에서 Firebase Analytics, Google Analytics, AppsFlyer, 타사 충돌 보고 SDK 또는 광고 SDK를 사용하지 않고 이러한 제한적인 제품 이벤트를 자동으로 수집합니다.</p>
+          <p><strong>Android F-Droid 빌드:</strong> Health.md 원격 측정을 전송하지 않으며 원격 측정용 설치 식별자, 이벤트 대기열, Worker 또는 영구 상태를 만들지 않습니다. Install Referrer, 온보딩 분석, Play Review, Billing, 직접 클라우드 제공업체 OAuth 및 Wear Data Layer는 컴파일되지 않습니다. 사용자가 구성한 API 엔드포인트로의 내보내기와 명시적인 Direct CLI 세션은 사용자가 시작한 제품 동작이며 Health.md 원격 측정이 아닙니다.</p>
+          <p>Apple 및 Google Play 빌드는 온보딩, 활성화, 내보내기, 예약, 결제 화면 및 구매 흐름이 제대로 작동하는지 파악하기 위해 자사 Cloudflare Worker와 D1 데이터베이스를 사용합니다. Health.md는 앱에서 Firebase Analytics, Google Analytics, AppsFlyer, 타사 충돌 보고 SDK 또는 광고 SDK를 사용하지 않고 이러한 제한적인 제품 이벤트를 자동으로 수집합니다.</p>
           <p>플랫폼 및 이벤트에 따라 허용된 페이로드에는 무작위 앱 설치 UUID, 무작위 이벤트 UUID, 이벤트 이름, 앱 버전, 빌드 번호, 플랫폼, 실험 또는 변형, 온보딩 단계 또는 명시적 건너뛰기, 제한된 무료 내보내기 횟수, 내보내기 대상 범주, 형식 수, 대략적인 측정 항목 수 및 날짜 범위 구간, 결제 화면 맥락, 제품 식별자, 구매 또는 복원 결과, 대략적인 권한 또는 오류 범주가 포함될 수 있습니다.</p>
           <p>설치 UUID는 해당 앱 설치 기간 동안 유지되므로 데이터는 <strong>익명이 아니라 가명 처리된 데이터</strong>입니다. 이 UUID는 무작위로 생성되며 사용자의 이름, 계정, 건강 식별자, 기기 하드웨어 식별자, Android ID 또는 Advertising ID에서 파생되지 않습니다.</p>
           <p>제품 분석에는 <strong>HealthKit 또는 Health Connect 값이나 식별자, 측정 항목 이름, 건강 관련 날짜</strong>, 약물, 운동, 내보내기 내용, 입력한 쿼리 결과, 폴더 또는 보관함 이름, 파일 경로, 피어 또는 기기 이름, 계정 데이터, 가격, <strong>자격 증명 또는 토큰</strong>, 사용자 텍스트, 원시 리퍼러, 전체 User-Agent 문자열 또는 저장된 IP 주소가 <strong>절대 포함되지 않습니다</strong>. 알 수 없는 이벤트, 속성 및 속성 값은 거부됩니다. 공개 클라이언트와 Worker 허용 목록은 <strong>건강 기록 및 내보낸 내용을 분석 페이로드로 나타낼 수 없도록</strong> 설계되었습니다.</p>

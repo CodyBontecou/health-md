@@ -632,6 +632,34 @@ html:not(:lang(en)) .hero-store-badge-google img {
   transform: translateY(-50%);
 }
 
+.hero-store-badge-fdroid {
+  width: 166px;
+  height: 55px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 17px;
+  border: 1px solid #2e2e31;
+  border-radius: 7px;
+  background: #202124;
+  color: #fff;
+  line-height: 1;
+  text-align: left;
+}
+
+.fdroid-badge-kicker {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.hero-store-badge-fdroid strong {
+  margin-top: 4px;
+  font-size: 21px;
+  letter-spacing: -0.025em;
+}
+
 .hero-trust {
   margin-top: 47px;
   color: #66666c;
@@ -2998,8 +3026,18 @@ html:lang(zh-Hans) .hero-intro p {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 22px;
   margin-top: 38px;
+}
+
+.channel-switch-warning {
+  max-width: 660px;
+  margin-top: 23px;
+  color: #72727b;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .site-footer {
@@ -3102,6 +3140,11 @@ html:lang(zh-Hans) .hero-intro p {
   .download-actions {
     gap: 9px;
     margin-top: 31px;
+  }
+
+  .channel-switch-warning {
+    margin-top: 20px;
+    font-size: 12px;
   }
 
   .site-footer {

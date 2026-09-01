@@ -74,9 +74,11 @@ enum UITestLaunchHelper {
     }
 
     enum Sync {
+        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"
+        static let directCLIToggle = "sync.directCLIToggle"
     }
 
     enum ConfigurationProtection {

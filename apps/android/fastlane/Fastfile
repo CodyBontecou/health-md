@@ -2,14 +2,14 @@ default_platform(:android)
 
 platform :android do
   private_lane :build_both do
-    sh("./gradlew :app:bundleRelease :wear:bundleRelease")
+    sh("./gradlew :app:bundlePlayRelease :wear:bundleRelease")
   end
 
   desc "Build and validate both AABs without uploading"
   lane :validate_wear_release do
     build_both
     ENV["WEAR_REQUIRE_SIGNING_ATTESTATION"] = "true"
-    sh("./scripts/validate-wear-artifact.sh wear/build/outputs/bundle/release/wear-release.aab app/build/outputs/bundle/release/app-release.aab")
+    sh("./scripts/validate-wear-artifact.sh wear/build/outputs/bundle/release/wear-release.aab app/build/outputs/bundle/playRelease/app-play-release.aab")
     sh("python3 ./scripts/validate-wear-play-assets.py")
   end
 

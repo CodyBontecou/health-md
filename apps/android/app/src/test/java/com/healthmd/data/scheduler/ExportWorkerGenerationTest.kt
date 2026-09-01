@@ -10,6 +10,7 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportResult
@@ -22,6 +23,7 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.export.FakeBillingRepository
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -620,6 +622,8 @@ class ExportWorkerGenerationTest {
                 timeCalculator = ScheduledExportTimeCalculator(),
                 stateStore = stateStore,
                 exportScheduler = Lazy { exportScheduler },
+                entitlementRepository = FakeBillingRepository(),
+                distributionPolicy = DistributionPolicy.play(),
             )
         }
         val builder = TestListenableWorkerBuilder<ExportWorker>(context)

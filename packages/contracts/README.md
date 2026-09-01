@@ -2,6 +2,8 @@
 
 This package contains language-neutral specifications, interoperability vectors, and a machine-readable inventory for public contracts shared across Health.md products. It does not replace Swift, Kotlin, Rust, or JavaScript build systems.
 
+The package is licensed under the [GNU Affero General Public License v3.0 only](LICENSE) (`AGPL-3.0-only`). Synthetic fixtures and schemas in this directory are distributed under the same terms unless a file carries a more specific notice.
+
 ## Contents
 
 | Path | Purpose |

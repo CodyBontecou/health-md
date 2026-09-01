@@ -102,7 +102,7 @@ class SharedSetupActivityLifecycleTest {
             scenario.onActivity { activity ->
                 activityIdentity = System.identityHashCode(activity)
                 originalActivityIntent = Intent(activity.intent)
-                assertNotNull(activity.wearPhoneSyncScheduler)
+                assertNotNull(activity.distributionRuntime)
                 activity.startActivity(
                     Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java)
                         .addFlags(

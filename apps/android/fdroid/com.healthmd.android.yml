@@ -1,0 +1,42 @@
+AntiFeatures:
+  NonFreeDep:
+    en-US: Health Connect availability depends on the proprietary Android system/provider component. Health.md itself and the AndroidX client are free software.
+    de-DE: Health Connect benötigt eine proprietäre Android-System- beziehungsweise Anbieterkomponente. Health.md und die AndroidX-Clientbibliothek sind freie Software.
+Categories:
+  - Health Manager
+  - Sports & Health
+License: AGPL-3.0-only
+AuthorName: Cody Bontecou
+WebSite: https://healthmd.isolated.tech
+SourceCode: https://github.com/CodyBontecou/health-md
+IssueTracker: https://github.com/CodyBontecou/health-md/issues
+Changelog: https://github.com/CodyBontecou/health-md/releases?q=android%2Fv
+
+AutoName: Health.md
+
+RepoType: git
+Repo: https://github.com/CodyBontecou/health-md.git
+
+Builds:
+  - versionName: 1.8.1
+    versionCode: 30
+    commit: android/v1.8.1
+    subdir: apps/android
+    output: app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk
+    srclibs:
+      - rustup@1.28.2
+    build:
+      - $$rustup$$/rustup-init.sh -y --profile minimal --default-toolchain 1.88.0
+        --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+      - source $HOME/.cargo/env
+      - cargo install cargo-ndk --version 4.1.2 --locked
+      - rustc --version | grep -F 'rustc 1.88.0'
+      - cargo ndk --version | grep -F 'cargo-ndk 4.1.2'
+    ndk: r27b
+    gradle:
+      - fdroid
+
+AutoUpdateMode: Version android/v%v
+UpdateCheckMode: Tags ^android/v[0-9]+\.[0-9]+\.[0-9]+$
+CurrentVersion: 1.8.1
+CurrentVersionCode: 30

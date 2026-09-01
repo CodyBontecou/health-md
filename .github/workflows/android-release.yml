@@ -176,7 +176,7 @@ jobs:
         env:
           CAMPAIGN_ATTRIBUTION_ENDPOINT_URL: ${{ secrets.CAMPAIGN_ATTRIBUTION_ENDPOINT_URL }}
           CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: ${{ secrets.CAMPAIGN_ATTRIBUTION_INGEST_TOKEN }}
-        run: ./gradlew --no-daemon :app:bundleRelease :wear:bundleRelease --stacktrace
+        run: ./gradlew --no-daemon :app:bundlePlayRelease :wear:bundleRelease --stacktrace
 
       - name: Inspect packaged ABIs, identities, components, and signing
         env:
@@ -186,8 +186,8 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
           WEAR_REQUIRE_SIGNING_ATTESTATION: 'true'
         run: |
-          ../../packages/healthmd-core-rust/scripts/inspect-android-aab.sh app/build/outputs/bundle/release/app-release.aab
-          ./scripts/validate-wear-artifact.sh wear/build/outputs/bundle/release/wear-release.aab app/build/outputs/bundle/release/app-release.aab
+          ../../packages/healthmd-core-rust/scripts/inspect-android-aab.sh app/build/outputs/bundle/playRelease/app-play-release.aab
+          ./scripts/validate-wear-artifact.sh wear/build/outputs/bundle/release/wear-release.aab app/build/outputs/bundle/playRelease/app-play-release.aab
 
       - name: Remove ephemeral signing credentials after inspection
         shell: bash
@@ -200,7 +200,7 @@ jobs:
           retention-days: 90
           if-no-files-found: error
           path: |
-            apps/android/app/build/outputs/bundle/release/app-release.aab
+            apps/android/app/build/outputs/bundle/playRelease/app-play-release.aab
             apps/android/wear/build/outputs/bundle/release/wear-release.aab
 
       # Retain every deterministic input before opening a Play edit. Protected ingest later proves
@@ -214,7 +214,7 @@ jobs:
           WEAR_VERSION_CODE: ${{ steps.version.outputs.wear_version_code }}
         run: |
           set -euo pipefail
-          phone_aab=app/build/outputs/bundle/release/app-release.aab
+          phone_aab=app/build/outputs/bundle/playRelease/app-play-release.aab
           wear_aab=wear/build/outputs/bundle/release/wear-release.aab
           test -f "$phone_aab" -a -f "$wear_aab"
           jq -n \

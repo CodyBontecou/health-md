@@ -1,0 +1,7 @@
+Health.md verwandelt Health-Connect-Daten in Dateien unter deiner Kontrolle. Wähle Gesundheitswerte aus, prüfe die Vorschau und exportiere Markdown, JSON, NDJSON, CSV oder Obsidian Bases in einen Geräteordner, einen Obsidian-Vault, einen Dokumentanbieter, an deinen eigenen API-Endpunkt oder an eine gekoppelte Health.md-CLI.
+
+Die F-Droid-Version enthält unbegrenzte manuelle und geplante Exporte, Automatisierungs-Intents, Widgets, Verlauf und Wiederholung, Rohdaten-Snapshots, PDF-Berichte, API-Ziele und Direct-CLI-Zugriff ohne Bezahlung. Es gibt kein Konto und keine Health.md-Cloud für Gesundheitsdaten.
+
+Diese Version verwendet ausschließlich Health Connect. Direkte Cloud-Anbieter für Fitbit, Oura, WHOOP und Withings, Google Play Billing und Review, Install Referrer, Health.md-Onboarding-Telemetrie sowie Wear-OS-Data-Layer-Unterstützung sind nicht enthalten.
+
+Unter Android 9–13 muss Health Connect gegebenenfalls separat installiert werden. Ab Android 14 ist es eine Systemkomponente. Deshalb wird die Health-Connect-Abhängigkeit als NonFreeDep offengelegt.

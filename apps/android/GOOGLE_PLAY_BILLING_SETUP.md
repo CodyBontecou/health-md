@@ -1,6 +1,6 @@
 # Google Play Billing Integration Guide
 
-This document walks through the complete setup of Google Play Billing for the Health MD Android app.
+This document walks through Google Play Billing for the `play` Android variant. The `fdroid` variant does not compile Billing and receives included full access through the channel-neutral entitlement boundary.
 
 ## Architecture Overview
 
@@ -11,23 +11,23 @@ UI Layer (PaywallScreen)
     ↓
 ViewModel (PaywallViewModel)
     ↓
-Repository (BillingRepository interface)
+EntitlementRepository + PurchaseRepository interfaces
     ↓
-Implementation (BillingRepositoryImpl)
+Play implementation (BillingRepositoryImpl)
     ↓
 Google Play Billing Client
 ```
 
 ### Components
 
-1. **BillingRepository** (`domain/repository/BillingRepository.kt`)
-   - Interface defining the billing contract
-   - `isUnlocked`: StateFlow tracking purchase state
-   - `launchPurchase()`: Initiates purchase flow
-   - `restorePurchase()`: Queries existing purchases
-   - `startConnection()`: Idempotently connects the application-scoped billing client
+1. **EntitlementRepository / PurchaseRepository** (`app/src/main/java/com/healthmd/domain/repository/`)
+   - Keep entitlement checks independent from store operations
+   - `isUnlocked`: `StateFlow` tracking full-access entitlement
+   - `refresh()`: refreshes a channel-backed entitlement or does nothing for included access
+   - `launchPurchase()` / `restorePurchase()`: purchase actions exposed only when `isAvailable`
+   - No Google Play SDK object crosses either interface
 
-2. **BillingRepositoryImpl** (`data/billing/BillingRepositoryImpl.kt`)
+2. **BillingRepositoryImpl** (`app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`)
    - Concrete implementation using Google Play Billing Client v8.3+
    - Handles product queries, purchase flow, and acknowledgment
    - Uses Billing-managed service reconnection with bounded transient-operation retries
@@ -43,14 +43,7 @@ Google Play Billing Client
    - Purchase and restore buttons
    - Error messaging support
 
-The repository and `BillingClient` are Hilt singletons with process lifetime. Screen
-ViewModels may call `startConnection()` for initial setup but must never call
-`BillingClient.endConnection()`: Google marks a closed client as terminal, and closing it
-when onboarding or the schedule screen is removed would break purchases elsewhere until the
-app process restarted. After initial setup, later `startConnection()` calls request one
-deduplicated product-and-purchase refresh rather than opening another manual connection. After
-a service disconnect, those normal Billing API calls trigger Billing 8 reconnection; the
-disconnect callback clears stale product details while preserving cached entitlement state.
+The Play repository and `BillingClient` are Hilt singletons with process lifetime. Screen ViewModels call the channel-neutral `refresh()` methods and must never call `BillingClient.endConnection()`: Google marks a closed client as terminal, and closing it when onboarding or the schedule screen is removed would break purchases elsewhere until the app process restarted. After initial setup, later refresh calls request one deduplicated product-and-purchase refresh rather than opening another manual connection. After a service disconnect, normal Billing API calls trigger Billing 8 reconnection; the disconnect callback clears stale product details while preserving cached entitlement state.
 
 ## Setup Instructions
 
@@ -71,7 +64,7 @@ disconnect callback clears stale product details while preserving cached entitle
 
 If you use a different product ID, update:
 
-**File**: `app/src/main/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`
+**File**: `app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`
 
 ```kotlin
 private const val PRODUCT_ID = "health_md_premium_lifetime"  // ← Update this
@@ -82,13 +75,13 @@ private const val PRODUCT_ID = "health_md_premium_lifetime"  // ← Update this
 The implementation is fully integrated. Build the app:
 
 ```bash
-./gradlew assembleDebug
+./gradlew :app:assemblePlayDebug
 ```
 
 Or install on connected device:
 
 ```bash
-./gradlew installDebug
+./gradlew :app:installPlayDebug
 ```
 
 ### Step 4: Test Purchases (Development)
@@ -143,9 +136,9 @@ composable(SubRoutes.PAYWALL) {
 
 ```kotlin
 @Inject
-lateinit var billingRepository: BillingRepository
+lateinit var entitlementRepository: EntitlementRepository
 
-val isPurchased = billingRepository.isPurchased.collectAsStateWithLifecycle()
+val isPurchased = entitlementRepository.isUnlocked.collectAsStateWithLifecycle()
 
 // Show paywall if not purchased
 if (!isPurchased.value) {

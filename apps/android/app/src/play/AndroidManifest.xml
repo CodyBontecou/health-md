@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- OAuth redirect callback for direct cloud health providers. -->
+        <activity
+            android:name=".presentation.oauth.OAuthCallbackActivity"
+            android:exported="true"
+            android:theme="@style/Theme.HealthMd">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="healthmd"
+                    android:host="oauth2redirect" />
+            </intent-filter>
+        </activity>
+
+        <!-- Signature-matched Wear Data Layer refresh/ack endpoint. -->
+        <service
+            android:name=".wear.WearPhoneDataLayerService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/healthmd/wear" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CAPABILITY_CHANGED" />
+                <data android:scheme="wear" android:host="*" />
+            </intent-filter>
+        </service>
+    </application>
+
+    <queries>
+        <package android:name="com.sec.android.app.shealth" />
+        <package android:name="com.huawei.health" />
+        <package android:name="com.fitbit.FitbitMobile" />
+        <package android:name="com.garmin.android.apps.connectmobile" />
+        <package android:name="com.withings.wiscale2" />
+        <package android:name="com.ouraring.oura" />
+        <package android:name="fi.polar.polarflow" />
+        <package android:name="com.whoop.android" />
+    </queries>
+</manifest>

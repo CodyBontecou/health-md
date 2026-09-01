@@ -52,6 +52,8 @@ fun PaywallScreen(
     priceText: String? = null,
     purchaseError: BillingError? = null,
     onClearError: () -> Unit = {},
+    purchasesAvailable: Boolean = true,
+    fullAccessIncluded: Boolean = false,
     // Debug props
     isDebugBuild: Boolean = false,
     debugUnlockOverride: Boolean? = null,
@@ -143,7 +145,11 @@ fun PaywallScreen(
             Spacer(modifier = Modifier.height(Spacing.sm))
             FeatureRow(Icons.Outlined.AutoAwesome, stringResource(R.string.paywall_future_features))
             Spacer(modifier = Modifier.height(Spacing.sm))
-            FeatureRow(Icons.Outlined.Payment, stringResource(R.string.paywall_one_time))
+            if (fullAccessIncluded) {
+                FeatureRow(Icons.Outlined.CheckCircle, stringResource(R.string.fdroid_full_access_included))
+            } else {
+                FeatureRow(Icons.Outlined.Payment, stringResource(R.string.paywall_one_time))
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -172,54 +178,55 @@ fun PaywallScreen(
             }
         }
 
-        // Purchase button with live price
-        val buttonText = when {
-            isPurchasing -> stringResource(R.string.paywall_purchasing)
-            priceText != null -> stringResource(R.string.paywall_unlock_button_price, priceText)
-            else -> stringResource(R.string.paywall_unlock_button)
-        }
-
-        PrimaryButton(
-            text = buttonText,
-            onClick = onPurchase,
-            isLoading = isPurchasing,
-            enabled = !isLoading,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        // Restore button
-        if (isRestoring) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    color = AppColors.accent,
-                    strokeWidth = 2.dp,
-                )
-                Text(
-                    text = stringResource(R.string.paywall_restoring),
-                    color = AppColors.accent,
-                    style = MaterialTheme.typography.labelLarge,
-                )
+        if (purchasesAvailable) {
+            // Purchase button with live, region-correct price.
+            val buttonText = when {
+                isPurchasing -> stringResource(R.string.paywall_purchasing)
+                priceText != null -> stringResource(R.string.paywall_unlock_button_price, priceText)
+                else -> stringResource(R.string.paywall_unlock_button)
             }
-        } else {
-            TextButton(
-                onClick = onRestore,
+
+            PrimaryButton(
+                text = buttonText,
+                onClick = onPurchase,
+                isLoading = isPurchasing,
                 enabled = !isLoading,
-            ) {
-                Text(
-                    text = stringResource(R.string.paywall_restore),
-                    color = if (isLoading) AppColors.textMuted else AppColors.accent,
-                    style = MaterialTheme.typography.labelLarge,
-                )
+            )
+
+            Spacer(modifier = Modifier.height(Spacing.sm))
+
+            if (isRestoring) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = AppColors.accent,
+                        strokeWidth = 2.dp,
+                    )
+                    Text(
+                        text = stringResource(R.string.paywall_restoring),
+                        color = AppColors.accent,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            } else {
+                TextButton(
+                    onClick = onRestore,
+                    enabled = !isLoading,
+                ) {
+                    Text(
+                        text = stringResource(R.string.paywall_restore),
+                        color = if (isLoading) AppColors.textMuted else AppColors.accent,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
         }
 
-        // Debug controls (debug builds only)
-        if (isDebugBuild) {
+        // Debug controls exist only for a real purchase channel.
+        if (isDebugBuild && purchasesAvailable) {
             Spacer(modifier = Modifier.height(Spacing.lg))
             DebugPurchaseControls(
                 debugUnlockOverride = debugUnlockOverride,

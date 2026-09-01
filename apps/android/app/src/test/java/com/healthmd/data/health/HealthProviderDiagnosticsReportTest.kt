@@ -28,10 +28,10 @@ class HealthProviderDiagnosticsReportTest {
                     installedPackageName = "com.ouraring.oura",
                     selected = true,
                     connected = true,
-                    oauthConfigured = DiagnosticValue.Yes,
-                    oauthTokenPresent = DiagnosticValue.Yes,
+                    connectionConfigured = DiagnosticValue.Yes,
+                    credentialPresent = DiagnosticValue.Yes,
                     available = DiagnosticValue.Yes,
-                    permissions = DiagnosticValue.Yes,
+                    accessReady = DiagnosticValue.Yes,
                     historicalReadPermission = DiagnosticValue.NotApplicable,
                     backgroundReadPermission = DiagnosticValue.NotApplicable,
                 ),
@@ -58,7 +58,7 @@ class HealthProviderDiagnosticsReportTest {
 
         assertThat(text).contains("Health.md redacted provider diagnostics")
         assertThat(text).contains("Selected provider: oura")
-        assertThat(text).contains("OAuth token present: yes")
+        assertThat(text).contains("credential present: yes")
         assertThat(text).contains("RATE_LIMITED")
         assertThat(text).doesNotContain("access_token")
         assertThat(text).doesNotContain("refresh_token")

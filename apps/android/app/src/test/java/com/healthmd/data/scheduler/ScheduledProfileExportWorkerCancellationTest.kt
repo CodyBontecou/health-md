@@ -9,6 +9,7 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportResult
@@ -18,6 +19,7 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.export.FakeBillingRepository
 import dagger.Lazy
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -387,6 +389,8 @@ class ScheduledProfileExportWorkerCancellationTest {
                 snapshotFactory = snapshotFactory,
                 folderAdoption = mockk<ProfileFolderAdoptionScope>(relaxed = true),
                 profileScheduler = Lazy { profileScheduler },
+                entitlementRepository = FakeBillingRepository(),
+                distributionPolicy = DistributionPolicy.play(),
             )
         }
         return TestListenableWorkerBuilder<ScheduledProfileExportWorker>(context)

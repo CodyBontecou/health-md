@@ -49,7 +49,7 @@ describe("practice component and production-disabled runtime boundary", () => {
     expect(workflow).toContain("-Dhealthmd.practice.expectedCompiledIn=false");
     expect(workflow).toContain("-Dhealthmd.practice.expectedCompiledIn=true");
     expect(workflow).toContain("PRACTICE_COMPILED_IN: included");
-    expect(workflow).toContain(":app:clean :app:testDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest");
+    expect(workflow).toContain(":app:clean :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest");
     expect(workflow).toContain("needs: [validate, practice-focused-apple-policy, practice-focused-android-policy]");
     expect(workflow.match(/ref: \$\{\{ github\.sha \}\}/g)).toHaveLength(3);
   });

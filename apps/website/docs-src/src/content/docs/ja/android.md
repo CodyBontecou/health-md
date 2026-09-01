@@ -8,6 +8,7 @@ description: Health.md for Androidをセットアップし、Health Connectの�
   <p>Health.md for Androidは、デバイス上でHealth Connectを読み取り、Markdown、Obsidian Bases、JSON、またはCSVを選択したフォルダに書き込みます。Health.mdアカウント、ヘルスデータ用クラウド、サブスクリプションは不要です。</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Playで入手</a>
+    <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">F-Droidで入手</a>
     <a class="docs-button-secondary" href="/ja/docs/export/">エクスポートドキュメントを読む</a>
   </div>
 </div>

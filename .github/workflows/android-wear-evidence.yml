@@ -148,7 +148,7 @@ jobs:
         run: |
           set -euo pipefail
           receipt="$RUNNER_TEMP/qa-upload-receipt/qa-upload-receipt.json"
-          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-release.aab -print)
+          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-play-release.aab -print)
           mapfile -t wear_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name wear-release.aab -print)
           [[ -f "$receipt" && ${#phone_aabs[@]} -eq 1 && ${#wear_aabs[@]} -eq 1 ]]
           phone_sha=$(sha256sum "${phone_aabs[0]}" | awk '{print $1}')
@@ -329,7 +329,7 @@ jobs:
           cp -R "$RUNNER_TEMP/screenshot-upload-artifact/wear-play-screenshot-upload" \
             "$root/wear-play-screenshot-upload"
           mkdir "$root/qa-upload"
-          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-release.aab -print)
+          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-play-release.aab -print)
           mapfile -t wear_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name wear-release.aab -print)
           [[ ${#phone_aabs[@]} -eq 1 && ${#wear_aabs[@]} -eq 1 ]]
           cp "${phone_aabs[0]}" "$root/qa-upload/phone-release.aab"

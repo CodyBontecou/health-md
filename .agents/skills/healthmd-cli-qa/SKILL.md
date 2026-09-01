@@ -155,7 +155,7 @@ Verify:
 
 - Exact CLI and iOS builds under test.
 - Health.md open on unlocked-enough iPhone.
-- **Settings → Mac Sync → Direct CLI Access** enabled with **Manual IP**.
+- **Sync → CLI → Direct CLI Access** enabled with **Manual IP**.
 - Local-network and selected HealthKit permissions.
 - Reachable LAN/Tailscale computer address and matching port.
 - Native credential storage available.
@@ -186,7 +186,7 @@ NO_COLOR=1 TERM=dumb timeout 300 \
 Pass:
 
 - pair code/instructions only on stderr and one success object on stdout;
-- scanning the QR from **Sync → Direct CLI Access → Scan Pairing QR** starts pairing automatically without a second Pair tap; camera denial recovers after Settings, malformed/noncanonical private hosts and external custom-URL opens cannot pair, and manual code entry remains available;
+- scanning the QR from **Sync → CLI → Direct CLI Access → Scan Pairing QR** starts pairing automatically without a second Pair tap; camera denial recovers after Settings, malformed/noncanonical private hosts and external custom-URL opens cannot pair, and manual code entry remains available;
 - negotiated local MCP Apps render the native pairing image in the inline pairing card; fallback hosts retain `image/png`, while no text or `structuredContent` contains the code, host, or pairing URI;
 - local trust records intended iPhone and reconnect needs no new code;
 - status says `backend: direct`, `mac_app: bypassed`, reports protected/readiness state, and no health values;

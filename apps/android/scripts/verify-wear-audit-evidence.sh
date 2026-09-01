@@ -83,7 +83,7 @@ if [[ -f "$local_emulator_receipt" ]]; then
 fi
 
 for spec in \
-  'phone:app/build/outputs/bundle/release/app-release.aab' \
+  'phone:app/build/outputs/bundle/playRelease/app-play-release.aab' \
   'Wear:wear/build/outputs/bundle/release/wear-release.aab'; do
   label=${spec%%:*}; artifact=${spec#*:}
   if [[ -f "$artifact" ]]; then

@@ -1526,7 +1526,7 @@
       },
       "evidenceLayer": "static-policy",
       "declaration": {
-        "normalizedAstSha256": "c0bc7039fb73ed432423d30980cb2d73c06cbacd7179eb707ec3ec21a4ff8b1d",
+        "normalizedAstSha256": "300dcb277a618fd68ccca5cccf219a0b2376fa8d01f0a84d7714d3cb9d2acc6d",
         "line": 25
       },
       "assertions": [
@@ -1708,8 +1708,8 @@
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-024",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "7aadd5e62d43f664552b729a5f3d73e775246fbf5ae52a6d10412134db6d1aba",
-          "excerpt": "expect(workflow).toContain(\":app:clean :app:testDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest\")",
+          "normalizedAstSha256": "1a7708422e469b46538f677e112f07783383ea01c94b544eaf79984b9b9ac583",
+          "excerpt": "expect(workflow).toContain(\":app:clean :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest\")",
           "line": 52
         },
         {

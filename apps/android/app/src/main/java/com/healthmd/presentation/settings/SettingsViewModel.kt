@@ -4,11 +4,13 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.health.HealthProviderDiagnosticsReporter
-import com.healthmd.data.health.oauth.OAuthAuthorizationManager
 import com.healthmd.data.health.providers.HealthProviderCatalog
+import com.healthmd.data.health.providers.HealthProviderConnectionManager
 import com.healthmd.data.health.providers.HealthProviderId
 import com.healthmd.data.health.providers.HealthProviderState
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.*
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -19,22 +21,31 @@ data class HealthProviderUiState(
     val provider: HealthProviderState,
     val isSelected: Boolean,
     val isConnected: Boolean,
-    val isOAuthConfigured: Boolean,
+    val isDirectConnectionConfigured: Boolean,
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val healthProviderCatalog: HealthProviderCatalog,
-    private val oauthAuthorizationManager: OAuthAuthorizationManager,
+    private val providerConnectionManager: HealthProviderConnectionManager,
     private val diagnosticsReporter: HealthProviderDiagnosticsReporter,
+    private val entitlementRepository: EntitlementRepository,
+    val distributionPolicy: DistributionPolicy,
 ) : ViewModel() {
 
     val settings: StateFlow<ExportSettings> = settingsRepository.exportSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExportSettings())
 
-    val isPurchased: StateFlow<Boolean> = settingsRepository.isPurchased
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isPurchased: StateFlow<Boolean> = combine(
+        settingsRepository.isPurchased,
+        entitlementRepository.isUnlocked,
+    ) { persisted, live -> distributionPolicy.fullAccessIncluded || persisted || live }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            distributionPolicy.fullAccessIncluded,
+        )
 
     private val _preventAccidentalChanges = MutableStateFlow<Boolean?>(null)
     val preventAccidentalChanges: StateFlow<Boolean?> = _preventAccidentalChanges.asStateFlow()
@@ -48,8 +59,16 @@ class SettingsViewModel @Inject constructor(
     private val providerRefreshSignal = MutableStateFlow(0)
 
     init {
+        entitlementRepository.refresh()
         viewModelScope.launch {
             settingsRepository.preventAccidentalChanges.collect(_preventAccidentalChanges)
+        }
+        if (!distributionPolicy.fullAccessIncluded) {
+            viewModelScope.launch {
+                entitlementRepository.isUnlocked
+                    .filter { it }
+                    .collect { settingsRepository.setPurchased(true) }
+            }
         }
     }
 
@@ -64,7 +83,7 @@ class SettingsViewModel @Inject constructor(
                 provider = providerState,
                 isSelected = selectedProviderId == providerId,
                 isConnected = providerId in connectedProviderIds,
-                isOAuthConfigured = oauthAuthorizationManager.isConfigured(providerId),
+                isDirectConnectionConfigured = providerConnectionManager.isConfigured(providerId),
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -113,7 +132,7 @@ class SettingsViewModel @Inject constructor(
         healthProviderCatalog.setupIntentFor(providerId)
 
     suspend fun getHealthProviderConnectionIntent(providerId: HealthProviderId): Intent? =
-        oauthAuthorizationManager.buildAuthorizationIntent(providerId.wireId)
+        providerConnectionManager.buildConnectionIntent(providerId.wireId)
 
     suspend fun buildRedactedDiagnosticsShareText(): String =
         diagnosticsReporter.buildReport().toShareText()
@@ -127,7 +146,7 @@ class SettingsViewModel @Inject constructor(
 
     fun disconnectHealthProvider(providerId: HealthProviderId) {
         viewModelScope.launch {
-            oauthAuthorizationManager.disconnect(providerId.wireId)
+            providerConnectionManager.disconnect(providerId.wireId)
             settingsRepository.setHealthProviderConnected(providerId.wireId, false)
             if (settingsRepository.getSelectedHealthProviderId() == providerId.wireId) {
                 settingsRepository.setSelectedHealthProviderId(HealthProviderId.HEALTH_CONNECT.wireId)

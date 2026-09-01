@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- The iPhone Sync tab now separates Mac Destination and CLI setup with a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first.
+
 ## [3.2.1] - 2026-08-30
 
 ### Added

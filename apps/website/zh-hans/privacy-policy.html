@@ -160,7 +160,8 @@
 
         <section id="product-analytics">
           <h2>第一方产品分析</h2>
-          <p>Health.md 使用第一方 Cloudflare Worker 和 D1 数据库，了解新手引导、激活、导出、计划任务、付费墙和购买流程是否正常运行。Health.md 会自动收集这些有限的产品事件；应用中不使用 Firebase Analytics、Google Analytics、AppsFlyer、第三方崩溃报告 SDK 或广告 SDK。</p>
+          <p><strong>Android F-Droid 版本：</strong>该版本不发送 Health.md 遥测，也不会创建遥测安装标识符、事件队列、Worker 或持久化遥测状态。Install Referrer、新手引导分析、Play Review、Billing、直连云服务提供方 OAuth 和 Wear Data Layer 均未编译进该版本。导出到用户配置的 API 端点以及明确发起的 Direct CLI 会话属于用户主动执行的产品操作，并非 Health.md 遥测。</p>
+          <p>Apple 和 Google Play 版本使用第一方 Cloudflare Worker 和 D1 数据库，了解新手引导、激活、导出、计划任务、付费墙和购买流程是否正常运行。Health.md 会自动收集这些有限的产品事件；应用中不使用 Firebase Analytics、Google Analytics、AppsFlyer、第三方崩溃报告 SDK 或广告 SDK。</p>
           <p>根据平台和事件，获准接收的数据载荷可能包含：随机应用安装 UUID、随机事件 UUID、事件名称、应用版本、构建号、平台、实验或变体、新手引导步骤或明确跳过操作、有上限的免费导出次数、导出目标类别、格式数量、粗粒度指标数量和日期跨度区间、付费墙上下文、产品标识符、购买或恢复结果，以及宽泛的授权或错误类别。</p>
           <p>安装 UUID 在该次应用安装期间持续有效，因此属于<strong>假名化标识，而非匿名标识</strong>。该标识随机生成，并非由您的姓名、账户、健康标识符、设备硬件标识符、Android ID 或 Advertising ID 派生。</p>
           <p>产品分析<strong>绝不包含 HealthKit 或 Health Connect 数值或标识符、指标名称、健康数据日期</strong>、药物、锻炼、导出内容、输入的查询结果、文件夹或知识库名称、文件路径、对等设备或设备名称、账户数据、价格、<strong>凭据或令牌</strong>、用户文本、原始来源网址、完整 User-Agent 字符串或存储的 IP 地址。未知事件、属性和属性值会被拒绝。公开客户端和 Worker 的允许列表经过专门设计，确保<strong>分析数据载荷无法表示健康记录和导出内容</strong>。</p>

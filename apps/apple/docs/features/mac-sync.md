@@ -6,7 +6,7 @@ For exhaustive capability, request, progress, bounded-transfer, acknowledgement,
 
 - **Docs status:** draft
 - **Video priority:** high
-- **Primary screen:** iPhone → Mac Destination / Export; Mac → Mac Destination
+- **Primary screen:** iPhone → Sync → Mac Destination / Export; Mac → Mac Destination
 - **Source files:** `HealthMd/Shared/Sync/SyncService.swift`, `HealthMd/Shared/Sync/SyncPayload.swift`, `HealthMd/Shared/Sync/ConnectedTransfer.swift`, `HealthMd/macOS/Managers/MacExportJobExecutor.swift`
 
 ## What it does

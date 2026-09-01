@@ -1,5 +1,6 @@
 package com.healthmd.presentation.export
 
+import android.app.Activity
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,14 +14,17 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.export.ReviewPromptPolicy
 import com.healthmd.domain.model.*
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.review.ReviewPromptResult
+import com.healthmd.domain.review.ReviewPrompter
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.RawExportFormat
@@ -143,7 +147,9 @@ class ExportViewModel @Inject constructor(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
+    private val reviewPrompter: ReviewPrompter,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val fileExportManager: FileExportManager,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
@@ -154,7 +160,9 @@ class ExportViewModel @Inject constructor(
     val routeConsentCoordinator: ExerciseRouteConsentCoordinator = ExerciseRouteConsentCoordinator(),
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ExportUiState())
+    private val _uiState = MutableStateFlow(
+        ExportUiState(isPurchased = distributionPolicy.fullAccessIncluded),
+    )
     val uiState: StateFlow<ExportUiState> = _uiState.asStateFlow()
 
     private val _requestReview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -166,16 +174,15 @@ class ExportViewModel @Inject constructor(
     private var reviewRequestState = ReviewRequestState.IDLE
 
     init {
-        // Ensure billing client is connected so isUnlocked reflects real purchase state
-        billingRepository.startConnection()
+        entitlementRepository.refresh()
 
         viewModelScope.launch {
             // Combine persisted purchase state with live billing state — user is considered
             // purchased if either source confirms it (handles offline / just-purchased cases)
             val isPurchasedFlow = combine(
                 settingsRepository.isPurchased,
-                billingRepository.isUnlocked,
-            ) { persisted, live -> persisted || live }
+                entitlementRepository.isUnlocked,
+            ) { persisted, live -> distributionPolicy.fullAccessIncluded || persisted || live }
 
             combine(
                 settingsRepository.exportSettings,
@@ -207,13 +214,29 @@ class ExportViewModel @Inject constructor(
         refreshAPIAuthorizationStatus()
 
         // Persist confirmed purchases to DataStore so the state survives offline / app restarts
-        viewModelScope.launch {
-            billingRepository.isUnlocked
-                .filter { it }
-                .collect { settingsRepository.setPurchased(true) }
+        if (!distributionPolicy.fullAccessIncluded) {
+            viewModelScope.launch {
+                entitlementRepository.isUnlocked
+                    .filter { it }
+                    .collect { settingsRepository.setPurchased(true) }
+            }
         }
 
         refreshPermissions()
+    }
+
+    fun performReviewPrompt(activity: Activity) {
+        if (!reviewPrompter.isAvailable || reviewRequestState != ReviewRequestState.PENDING) {
+            onReviewRequestFailed()
+            return
+        }
+        viewModelScope.launch {
+            when (reviewPrompter.prompt(activity)) {
+                ReviewPromptResult.Completed -> onReviewFlowCompleted()
+                ReviewPromptResult.Failed,
+                ReviewPromptResult.Unavailable -> onReviewRequestFailed()
+            }
+        }
     }
 
     fun onReviewRequestFailed() {
@@ -506,7 +529,7 @@ class ExportViewModel @Inject constructor(
 
             // Review prompts use their own counter, separate from free-tier quota. A Play
             // request failure must not consume the attempt; completion is reported by the UI.
-            if (ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
+            if (reviewPrompter.isAvailable && ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
                 settingsRepository.incrementSuccessfulExportCount()
                 val count = settingsRepository.getSuccessfulExportCount()
                 if (

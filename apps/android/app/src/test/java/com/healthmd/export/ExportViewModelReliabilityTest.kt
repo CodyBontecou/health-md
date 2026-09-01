@@ -2,6 +2,7 @@ package com.healthmd.export
 
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.HealthData
@@ -180,7 +181,9 @@ class ExportViewModelReliabilityTest {
             healthRepository = healthRepository,
             exportRepository = exportRepository,
             settingsRepository = settingsRepository,
-            billingRepository = billingRepository,
+            entitlementRepository = billingRepository,
+            distributionPolicy = DistributionPolicy.play(),
+            reviewPrompter = FakeReviewPrompter(),
             exportHistoryRepository = historyRepository,
             fileExportManager = fileExportManager,
         )

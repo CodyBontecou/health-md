@@ -94,8 +94,8 @@ NO_COLOR=1 TERM=dumb timeout 180 healthmd direct pair </dev/null
 While it waits:
 
 1. Read the six-digit code, candidate computer addresses, and port from stderr.
-2. On iPhone open **Health.md → Settings → Mac Sync → Direct CLI Access**.
-3. Enable access, select **Manual IP**, and enter the computer's LAN/Tailscale address, port, and code.
+2. On iPhone open **Health.md → Sync → CLI**.
+3. Enable **Direct CLI Access**, select **Manual IP**, and enter the computer's LAN/Tailscale address, port, and code.
 4. Keep Health.md foregrounded until stdout returns `healthmd.direct_pairing_result` with `status: success` for the intended iPhone.
 
 The default port is `17647`. If another port is saved on iPhone, pass it globally on every network command:

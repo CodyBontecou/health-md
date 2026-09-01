@@ -8,6 +8,7 @@ description: Configura Health.md for Android, exporta datos de Health Connect a 
   <p>Health.md for Android lee Health Connect en el dispositivo y escribe Markdown, Obsidian Bases, JSON o CSV en las carpetas que elijas. No necesitas una cuenta de Health.md, una nube para tus datos de salud ni una suscripción.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Descargar en Google Play</a>
+    <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Descargar en F-Droid</a>
     <a class="docs-button-secondary" href="/es/docs/export/">Consultar la documentación sobre exportación</a>
   </div>
 </div>

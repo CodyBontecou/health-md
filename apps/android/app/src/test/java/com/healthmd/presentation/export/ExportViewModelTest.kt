@@ -1,7 +1,6 @@
 package com.healthmd.presentation.export
 
 import android.net.Uri
-import com.android.billingclient.api.ProductDetails
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
@@ -12,11 +11,11 @@ import com.healthmd.data.export.APIExportUploader
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.health.HealthProviderDiagnosticsReporter
-import com.healthmd.data.health.oauth.OAuthAuthorizationManager
 import com.healthmd.data.health.providers.HealthProviderCatalog
+import com.healthmd.data.health.providers.HealthProviderConnectionManager
 import com.healthmd.data.storage.FileExportManager
-import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.FormatCustomization
@@ -29,11 +28,13 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.review.ReviewPromptResult
+import com.healthmd.domain.review.ReviewPrompter
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.presentation.settings.SettingsViewModel
 import com.healthmd.rawexport.ExportMode
@@ -454,8 +455,10 @@ class ExportViewModelTest {
         val settingsViewModel = SettingsViewModel(
             settingsRepository,
             mockk<HealthProviderCatalog>(relaxed = true),
-            mockk<OAuthAuthorizationManager>(relaxed = true),
+            mockk<HealthProviderConnectionManager>(relaxed = true),
             mockk<HealthProviderDiagnosticsReporter>(relaxed = true),
+            FakeBillingRepository(),
+            DistributionPolicy.play(),
         )
         settingsViewModel.resetSettings()
         advanceUntilIdle()
@@ -572,7 +575,7 @@ class ExportViewModelTest {
         healthRepository: HealthRepository,
         exportRepository: ExportRepository = FakeExportRepository(),
         settingsRepository: SettingsRepository = FakeSettingsRepository(),
-        billingRepository: BillingRepository = FakeBillingRepository(),
+        entitlementRepository: EntitlementRepository = FakeBillingRepository(),
         exportHistoryRepository: ExportHistoryRepository = FakeExportHistoryRepository(),
         apiEndpointExportRunner: APIEndpointExportRunner? = null,
         rawSnapshotService: RawSnapshotService? = null,
@@ -584,7 +587,9 @@ class ExportViewModelTest {
             healthRepository = healthRepository,
             exportRepository = exportRepository,
             settingsRepository = settingsRepository,
-            billingRepository = billingRepository,
+            entitlementRepository = entitlementRepository,
+            distributionPolicy = DistributionPolicy.play(),
+            reviewPrompter = FakeReviewPrompter(),
             exportHistoryRepository = exportHistoryRepository,
             fileExportManager = fileExportManager,
             apiEndpointExportRunner = apiEndpointExportRunner,
@@ -818,22 +823,17 @@ private class FakeSettingsRepository(
     }
 }
 
-private class FakeBillingRepository : BillingRepository {
+private class FakeBillingRepository : EntitlementRepository {
     override val isUnlocked: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-    override val isPurchasing: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-    override val isRestoring: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-    override val purchaseError: StateFlow<BillingError?> = MutableStateFlow<BillingError?>(null).asStateFlow()
-    override val productDetails: StateFlow<ProductDetails?> = MutableStateFlow<ProductDetails?>(null).asStateFlow()
-
-    override fun startConnection() = Unit
-    override suspend fun queryProduct() = Unit
-    override suspend fun launchPurchase(activity: android.app.Activity): Boolean = true
-    override suspend fun refreshPurchaseStatus() = Unit
-    override suspend fun restorePurchase(): Boolean = false
-    override suspend fun acknowledgePurchase(purchaseToken: String) = Unit
-    override fun clearError() = Unit
+    override fun refresh() = Unit
     override fun debugSetUnlocked(unlocked: Boolean) = Unit
-    override fun debugResetPurchaseState() = Unit
+    override fun debugReset() = Unit
+}
+
+private class FakeReviewPrompter : ReviewPrompter {
+    override val isAvailable: Boolean = true
+    override suspend fun prompt(activity: android.app.Activity): ReviewPromptResult =
+        ReviewPromptResult.Completed
 }
 
 private class FakeExportHistoryRepository : ExportHistoryRepository {

@@ -88,9 +88,7 @@ import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.util.runCatchingCancellable
 import com.healthmd.rawexport.ExportMode
-import com.google.android.play.core.review.ReviewManagerFactory
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -286,33 +284,12 @@ fun ExportScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // In-app review flow. Persist the attempt only after Play accepts and completes the
-    // launch task; a request failure remains eligible for a later meaningful success.
+    // The flavor-owned prompter contains every store SDK reference. F-Droid never emits this
+    // request, but an unavailable result also fails open without affecting export success.
     val activity = context as? Activity
     LaunchedEffect(Unit) {
         viewModel.requestReview.collect {
-            val act = activity
-            if (act == null) {
-                viewModel.onReviewRequestFailed()
-                return@collect
-            }
-            val reviewManager = ReviewManagerFactory.create(act)
-            reviewManager.requestReviewFlow()
-                .addOnSuccessListener { reviewInfo ->
-                    reviewManager.launchReviewFlow(act, reviewInfo)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                viewModel.onReviewFlowCompleted()
-                            } else {
-                                Timber.e(task.exception, "Failed to launch in-app review")
-                                viewModel.onReviewRequestFailed()
-                            }
-                        }
-                }
-                .addOnFailureListener { error ->
-                    Timber.e(error, "Failed to request in-app review")
-                    viewModel.onReviewRequestFailed()
-                }
+            activity?.let(viewModel::performReviewPrompt) ?: viewModel.onReviewRequestFailed()
         }
     }
 

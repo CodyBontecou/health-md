@@ -48,9 +48,9 @@ NO_COLOR=1 TERM=dumb timeout 180 healthmd direct pair </dev/null
 
 While it waits, tell the user to:
 
-1. In foreground Health.md, open **Sync → Direct CLI Access**, tap **Scan Pairing QR**, and scan the displayed image. The in-app scan starts pairing automatically; no second Pair tap is required. Do not open the QR as a custom URL.
+1. In foreground Health.md, open **Sync → CLI**, tap **Scan Pairing QR** under **Direct CLI Access**, and scan the displayed image. The in-app scan starts pairing automatically; no second Pair tap is required. Do not open the QR as a custom URL.
 2. Keep Health.md foregrounded through success.
-3. If in-app scanning is unavailable, open **Sync → Direct CLI Access**, enable **Manual IP**, and enter the printed LAN/Tailscale address, port, and six-digit code.
+3. If in-app scanning is unavailable, open **Sync → CLI**, enable **Direct CLI Access**, select **Manual IP**, and enter the printed LAN/Tailscale address, port, and six-digit code.
 
 Confirm stdout has `healthmd.direct_pairing_result`, `status: success`, and the intended device. After an unknown outcome, inspect `healthmd direct devices` rather than pairing again.
 

@@ -28,4 +28,4 @@ When building locally, always target the Pixel 7 device:
 - **Device serial:** `2C061FDH200CJN`
 - **ADB path:** `~/Library/Android/sdk/platform-tools/adb`
 
-Use `./gradlew installDebug` and pass the serial to install on the physical device.
+Use `./gradlew :app:installPlayDebug` and pass the serial to install the default Google Play channel on the physical device. Use `:app:assembleFdroidDebug` only when explicitly validating the F-Droid channel.

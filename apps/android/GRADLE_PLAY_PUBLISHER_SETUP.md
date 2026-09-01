@@ -9,9 +9,9 @@ Do not reintroduce `com.github.triplet.play`, a module `play {}` block, or Gradl
 From `apps/android`, Gradle may be used to build and test both artifacts without Play credentials:
 
 ```bash
-./gradlew :app:testDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test
-./gradlew :app:lintDebug :wear:lintDebug
-./gradlew :app:bundleRelease :wear:bundleRelease
+./gradlew :app:testPlayDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test
+./gradlew :app:lintPlayDebug :wear:lintDebug
+./gradlew :app:bundlePlayRelease :wear:bundleRelease
 ```
 
 Release bundles require signing configuration from `local.properties` or protected workflow inputs. Never commit a keystore or `local.properties`. Substitute signing is acceptable only for local package/runtime validation and is never production-signing evidence.
@@ -22,7 +22,7 @@ Validate both outputs together:
 WEAR_REQUIRE_SIGNING_ATTESTATION=true \
   ./scripts/validate-wear-artifact.sh \
   wear/build/outputs/bundle/release/wear-release.aab \
-  app/build/outputs/bundle/release/app-release.aab
+  app/build/outputs/bundle/playRelease/app-play-release.aab
 ```
 
 ## Play credentials

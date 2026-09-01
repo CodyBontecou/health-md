@@ -3,10 +3,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 verifier=./scripts/verify-google-play-generated-apk-evidence.sh
-phone_source=app/build/outputs/apk/debug/app-debug.apk
+phone_source=app/build/outputs/apk/play/debug/app-play-debug.apk
 wear_source=wear/build/outputs/apk/debug/wear-debug.apk
 [[ -f "$phone_source" && -f "$wear_source" ]] || {
-  echo 'Build :app:assembleDebug :wear:assembleDebug before this test' >&2; exit 1;
+  echo 'Build :app:assemblePlayDebug :wear:assembleDebug before this test' >&2; exit 1;
 }
 build_tools=${ANDROID_HOME:-$HOME/Library/Android/sdk}/build-tools/35.0.0
 apksigner=${APKSIGNER:-$build_tools/apksigner}

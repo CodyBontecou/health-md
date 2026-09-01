@@ -42,7 +42,8 @@ import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.ExportTarget
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.distribution.DistributionPolicy
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.export.ExportHistoryAccess
@@ -104,7 +105,7 @@ enum class DirectCliFailure {
     CONNECTION_FAILED,
     SESSION_TIMEOUT,
     QUOTA_EXHAUSTED,
-    FITBIT_RANGE_REQUIRED,
+    PROVIDER_RANGE_REQUIRED,
     PROFILE_NOT_FOUND,
     SOURCE_UNAVAILABLE,
     HEALTH_ACCESS_REQUIRED,
@@ -134,7 +135,9 @@ class DirectCliCoordinator @Inject constructor(
     private val rawRepositories: RawHealthRepositoryRegistry,
     private val healthRepository: HealthRepository,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
+    private val directRawRequestPolicy: DistributionDirectRawRequestPolicy,
     private val enginePinPlanner: ExportEnginePinPlanner,
     private val protocolAuthority: AndroidDirectProtocolAuthority,
     private val exportProfileRepository: ExportProfileRepository,
@@ -331,18 +334,30 @@ class DirectCliCoordinator @Inject constructor(
                 val product = productId(request.product)
                 val rawCapabilities = if (product == ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1) {
                     val providerId = request.product.getValue("provider_id").jsonPrimitive.content
-                    if (providerId == "fitbit" && !isBoundedFitbitRange(request.dateSelection)) {
+                    val rawRepository = rawRepositories.repositoryFor(providerId)
+                    if (rawRepository == null) {
+                        reject(
+                            channel,
+                            request.jobId,
+                            ErrorCode.SOURCE_UNAVAILABLE,
+                            phase,
+                            "The requested raw provider is unavailable in this distribution.",
+                            DirectCliFailure.SOURCE_UNAVAILABLE,
+                        )
+                        return
+                    }
+                    directRawRequestPolicy.validationError(providerId, request.dateSelection)?.let { error ->
                         reject(
                             channel,
                             request.jobId,
                             ErrorCode.INVALID_REQUEST,
                             phase,
-                            "Fitbit raw export requires an explicit range of at most 366 days.",
-                            DirectCliFailure.FITBIT_RANGE_REQUIRED,
+                            error,
+                            DirectCliFailure.PROVIDER_RANGE_REQUIRED,
                         )
                         return
                     }
-                    requireNotNull(rawRepositories.repositoryFor(providerId)).capabilities()
+                    rawRepository.capabilities()
                 } else {
                     null
                 }
@@ -762,17 +777,10 @@ class DirectCliCoordinator @Inject constructor(
     )
 
     private suspend fun isUnlocked(): Boolean {
-        billingRepository.startConnection()
-        return settingsRepository.isPurchased.first() || billingRepository.isUnlocked.first()
-    }
-
-    private fun isBoundedFitbitRange(selection: JsonObject): Boolean {
-        if (selection["type"]?.jsonPrimitive?.content != "exact") return false
-        val start = selection["start_date"]?.jsonPrimitive?.contentOrNull
-            ?.let(LocalDate::parse) ?: return false
-        val end = selection["end_date"]?.jsonPrimitive?.contentOrNull
-            ?.let(LocalDate::parse) ?: return false
-        return !end.isBefore(start) && ChronoUnit.DAYS.between(start, end) < MAXIMUM_FITBIT_RAW_DAYS
+        entitlementRepository.refresh()
+        return distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
     }
 
     private suspend fun resolveDates(
@@ -1005,7 +1013,6 @@ class DirectCliCoordinator @Inject constructor(
     companion object {
         private const val MAXIMUM_CLOCK_SKEW_SECONDS = 5L * 60L
         private const val PREPARATION_CANCEL_POLL_MILLIS = 250
-        private const val MAXIMUM_FITBIT_RAW_DAYS = 366L
         private val UNSUPPORTED_NATIVE_PROVIDERS = setOf(
             "polar",
             "samsung_health",

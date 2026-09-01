@@ -536,11 +536,11 @@
       "status": "deferred",
       "summary": "First-party Android campaign-install payload accepted by the website Worker; schema extraction is deferred.",
       "authorities": [
-        "apps/android/app/src/main/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
+        "apps/android/app/src/play/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
         "apps/website/cloudflare/attribution-worker/src/worker.js"
       ],
       "consumers": [
-        "apps/android/app/src/test/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
+        "apps/android/app/src/playTest/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
         "apps/website/test/attribution-worker.test.mjs"
       ],
       "documentation": [

@@ -57,7 +57,7 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
 
-    <!-- User-configured HTTP(S) API endpoint exports and direct cloud providers -->
+    <!-- User-configured HTTP(S) API endpoint exports and Direct CLI transport -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Background scheduling -->
@@ -187,21 +187,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- OAuth redirect callback for direct cloud health providers -->
-        <activity
-            android:name=".presentation.oauth.OAuthCallbackActivity"
-            android:exported="true"
-            android:theme="@style/Theme.HealthMd">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="healthmd"
-                    android:host="oauth2redirect" />
-            </intent-filter>
-        </activity>
-
         <!-- Android 13 and lower: standalone Health Connect rationale entry point. -->
         <activity
             android:name=".presentation.HealthPermissionsRationaleActivity"
@@ -262,20 +247,6 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- Signature-matched Wear Data Layer refresh/ack endpoint. -->
-        <service
-            android:name=".wear.WearPhoneDataLayerService"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/healthmd/wear" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.CAPABILITY_CHANGED" />
-                <data android:scheme="wear" android:host="*" />
-            </intent-filter>
-        </service>
-
         <!-- WorkManager uses this foreground service for expedited work on Android 9–11. -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
@@ -326,14 +297,6 @@
     <!-- Declare Health Connect usage -->
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
-        <package android:name="com.sec.android.app.shealth" />
-        <package android:name="com.huawei.health" />
-        <package android:name="com.fitbit.FitbitMobile" />
-        <package android:name="com.garmin.android.apps.connectmobile" />
-        <package android:name="com.withings.wiscale2" />
-        <package android:name="com.ouraring.oura" />
-        <package android:name="fi.polar.polarflow" />
-        <package android:name="com.whoop.android" />
         <intent>
             <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
         </intent>

@@ -157,6 +157,7 @@ fun HealthMdNavigation(
         }
     }
 
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
     val debugStartRoutes = if (BuildConfig.DEBUG) {
         listOf(
             SubRoutes.ONBOARDING,
@@ -174,7 +175,12 @@ fun HealthMdNavigation(
     } else {
         emptyList()
     }
-    val knownStartRoutes = NavDestination.entries.map { it.route } + PaywallEntryPoint.UPGRADE.route + debugStartRoutes
+    val paywallStartRoutes = if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+        listOf(PaywallEntryPoint.UPGRADE.route)
+    } else {
+        emptyList()
+    }
+    val knownStartRoutes = NavDestination.entries.map { it.route } + paywallStartRoutes + debugStartRoutes
     val startDestination = if (shouldSkipOnboarding) {
         initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
     } else {
@@ -183,7 +189,6 @@ fun HealthMdNavigation(
 
     // One graph-scoped owner exposes the device-local protection preference, toast, and
     // navigation request to every in-app configuration surface.
-    val settingsViewModel: SettingsViewModel = hiltViewModel()
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     val protectionEnabled by settingsViewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val blockedChangeToastId by settingsViewModel.blockedChangeToastId.collectAsStateWithLifecycle()
@@ -248,7 +253,9 @@ fun HealthMdNavigation(
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
                     onNavigateToPaywall = {
-                        navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                        }
                     },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
                 )
@@ -256,7 +263,9 @@ fun HealthMdNavigation(
             composable(NavDestination.SCHEDULE.route) {
                 ScheduleScreen(
                     onNavigateToPaywall = {
-                        navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        }
                     },
                 )
             }
@@ -266,7 +275,9 @@ fun HealthMdNavigation(
                     viewModel = settingsViewModel,
                     protectionSettingsRequestId = protectionSettingsRequestId,
                     onNavigateToPaywall = {
-                        navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                        }
                     },
                     onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
                     onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
@@ -368,44 +379,48 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 )
             }
-            PaywallEntryPoint.entries.forEach { entryPoint ->
-                composable(entryPoint.route) {
-                    val paywallViewModel: PaywallViewModel = hiltViewModel()
-                    val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
-                    val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
-                    val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
-                    val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
-                    val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
-                    val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
-                    val context = LocalContext.current
+            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                PaywallEntryPoint.entries.forEach { entryPoint ->
+                    composable(entryPoint.route) {
+                        val paywallViewModel: PaywallViewModel = hiltViewModel()
+                        val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+                        val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
+                        val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
+                        val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
+                        val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+                        val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
+                        val context = LocalContext.current
 
-                    // Navigate back automatically if purchase is successful
-                    LaunchedEffect(isUnlocked) {
-                        if (isUnlocked) {
-                            navController.popBackStack()
-                        }
-                    }
-
-                    PaywallScreen(
-                        onPurchase = {
-                            val activity = context as? android.app.Activity
-                            if (activity != null) {
-                                paywallViewModel.launchPurchaseFlow(activity)
+                        // Navigate back automatically if purchase is successful
+                        LaunchedEffect(isUnlocked) {
+                            if (isUnlocked) {
+                                navController.popBackStack()
                             }
-                        },
-                        onRestore = { paywallViewModel.restorePurchases() },
-                        onDismiss = { navController.popBackStack() },
-                        subtitle = stringResource(entryPoint.subtitleResource),
-                        isPurchasing = isPurchasing,
-                        isRestoring = isRestoring,
-                        priceText = priceText,
-                        purchaseError = purchaseError,
-                        onClearError = { paywallViewModel.clearError() },
-                        isDebugBuild = paywallViewModel.isDebugBuild,
-                        debugUnlockOverride = debugUnlockOverride,
-                        onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
-                        onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
-                    )
+                        }
+
+                        PaywallScreen(
+                            onPurchase = {
+                                val activity = context as? android.app.Activity
+                                if (activity != null) {
+                                    paywallViewModel.launchPurchaseFlow(activity)
+                                }
+                            },
+                            onRestore = { paywallViewModel.restorePurchases() },
+                            onDismiss = { navController.popBackStack() },
+                            subtitle = stringResource(entryPoint.subtitleResource),
+                            isPurchasing = isPurchasing,
+                            isRestoring = isRestoring,
+                            priceText = priceText,
+                            purchaseError = purchaseError,
+                            onClearError = { paywallViewModel.clearError() },
+                            isDebugBuild = paywallViewModel.isDebugBuild,
+                            debugUnlockOverride = debugUnlockOverride,
+                            onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
+                            onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
+                            purchasesAvailable = paywallViewModel.purchasesAvailable,
+                            fullAccessIncluded = paywallViewModel.distributionPolicy.fullAccessIncluded,
+                        )
+                    }
                 }
             }
         }

@@ -37,11 +37,11 @@ Credentials are written only under the protected runner's temporary directory an
 Build and validate without Play authentication:
 
 ```bash
-./gradlew :app:bundleRelease :wear:bundleRelease
+./gradlew :app:bundlePlayRelease :wear:bundleRelease
 WEAR_REQUIRE_SIGNING_ATTESTATION=true \
   ./scripts/validate-wear-artifact.sh \
   wear/build/outputs/bundle/release/wear-release.aab \
-  app/build/outputs/bundle/release/app-release.aab
+  app/build/outputs/bundle/playRelease/app-play-release.aab
 ```
 
 For a read-only Play query:

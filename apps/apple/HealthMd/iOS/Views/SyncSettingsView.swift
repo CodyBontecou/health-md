@@ -4,6 +4,11 @@ import SwiftUI
 // MARK: - Sync Settings View (iOS)
 
 struct SyncSettingsView: View {
+    private enum ConfigurationTarget: String {
+        case macDestination
+        case cli
+    }
+
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
@@ -17,6 +22,7 @@ struct SyncSettingsView: View {
     @State private var manualPairingCode = ""
     @State private var directCLIPairingCode = ""
     @State private var showDirectCLIPairingScanner = false
+    @State private var configurationTarget: ConfigurationTarget = .macDestination
     @FocusState private var focusedManualIPField: ManualIPField?
 
     private enum ManualIPField: Hashable {
@@ -39,14 +45,20 @@ struct SyncSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 syncHeader
-                syncToggleSection
-                    .configurationChangesProtected()
-                downloadMacSection
-                connectionSection
-                manualIPSection
-                directCLISection
-                macExportFlowSection
-                errorSection
+                configurationTargetPicker
+
+                switch configurationTarget {
+                case .macDestination:
+                    syncToggleSection
+                        .configurationChangesProtected()
+                    downloadMacSection
+                    connectionSection
+                    manualIPSection
+                    macExportFlowSection
+                    errorSection
+                case .cli:
+                    directCLISection
+                }
             }
             .padding(.horizontal, Spacing.s4)
             .padding(.top, Spacing.s4)
@@ -57,11 +69,19 @@ struct SyncSettingsView: View {
         .scrollDismissesKeyboard(.interactively)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
+            if directCLIService.pendingPairingLink != nil {
+                configurationTarget = .cli
+            }
             if syncEnabled && shouldStartRuntimeServices {
                 syncService.startAdvertising()
             }
             if directCLIEnabled && shouldStartRuntimeServices {
                 directCLIService.setEnabled(true)
+            }
+        }
+        .onChange(of: directCLIService.pendingPairingLink) { _, pairingLink in
+            if pairingLink != nil {
+                configurationTarget = .cli
             }
         }
         .onChange(of: directCLIService.isConnected) { _, connected in
@@ -94,18 +114,42 @@ struct SyncSettingsView: View {
 
     private var syncHeader: some View {
         HealthMdPageHeader(
-            title: "Mac Destination",
-            subtitle: "Let Health.md on Mac receive iPhone-configured exports over your local network."
+            title: configurationTarget == .macDestination ? "Mac Destination" : "CLI",
+            subtitle: configurationTarget == .macDestination
+                ? "Let Health.md on Mac receive iPhone-configured exports over your local network."
+                : "Let the healthmd command connect while this iPhone app is open, without running the Mac app."
         ) {
             HStack(spacing: Spacing.sm) {
-                SyncStatusPill(text: syncEnabled ? String(localized: "Enabled") : String(localized: "Disabled"), tone: syncEnabled ? .success : .muted)
-                if syncEnabled {
-                    SyncStatusPill(text: connectionStatusLabel, tone: connectionTone)
+                if configurationTarget == .macDestination {
+                    SyncStatusPill(
+                        text: syncEnabled ? String(localized: "Enabled") : String(localized: "Disabled"),
+                        tone: syncEnabled ? .success : .muted
+                    )
+                    if syncEnabled {
+                        SyncStatusPill(text: connectionStatusLabel, tone: connectionTone)
+                    }
+                } else {
+                    SyncStatusPill(
+                        text: directCLIEnabled ? String(localized: "Enabled") : String(localized: "Disabled"),
+                        tone: directCLIEnabled ? .success : .muted
+                    )
+                    if let directCLIHeaderStatusLabel {
+                        SyncStatusPill(text: directCLIHeaderStatusLabel, tone: directCLIHeaderStatusTone)
+                    }
                 }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(headerAccessibilityLabel)
         }
+    }
+
+    private var configurationTargetPicker: some View {
+        Picker("Sync", selection: $configurationTarget) {
+            Text("Mac Destination").tag(ConfigurationTarget.macDestination)
+            Text("CLI").tag(ConfigurationTarget.cli)
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier(AccessibilityID.Sync.configurationTargetPicker)
     }
 
     // MARK: - Sections
@@ -375,6 +419,7 @@ struct SyncSettingsView: View {
                     }
                 }
                 .tint(Color.accent)
+                .accessibilityIdentifier(AccessibilityID.Sync.directCLIToggle)
 
                 if directCLIService.needsPairingCode,
                    directCLIService.pendingPairingLink == nil {
@@ -564,10 +609,31 @@ struct SyncSettingsView: View {
     // MARK: - Helpers
 
     private var headerAccessibilityLabel: String {
-        if syncEnabled {
-            return "Mac destination enabled. Connection status: \(connectionStatusLabel)."
+        switch configurationTarget {
+        case .macDestination:
+            if syncEnabled {
+                return "Mac destination enabled. Connection status: \(connectionStatusLabel)."
+            }
+            return "Mac destination disabled."
+        case .cli:
+            guard directCLIEnabled else { return "Direct CLI access disabled." }
+            if directCLIService.isConnected { return "Direct CLI access enabled and connected." }
+            if directCLIService.isConnecting { return "Direct CLI access enabled and connecting." }
+            if directCLIService.hasPairedCLI { return "Direct CLI access enabled and ready." }
+            return "Direct CLI access enabled and waiting to pair."
         }
-        return "Mac destination disabled."
+    }
+
+    private var directCLIHeaderStatusLabel: String? {
+        guard directCLIEnabled else { return nil }
+        if directCLIService.isConnected { return String(localized: "Connected") }
+        if directCLIService.isConnecting { return String(localized: "Connecting…") }
+        if directCLIService.hasPairedCLI { return String(localized: "Ready") }
+        return nil
+    }
+
+    private var directCLIHeaderStatusTone: SyncStatusTone {
+        directCLIService.isConnecting ? .accent : .success
     }
 
     private var connectionStatusLabel: String {

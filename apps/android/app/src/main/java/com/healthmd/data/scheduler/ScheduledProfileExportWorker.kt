@@ -18,6 +18,7 @@ import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
@@ -27,6 +28,7 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -82,6 +84,8 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
     private val folderAdoption: ProfileFolderAdoptionScope,
     private val profileScheduler: dagger.Lazy<ScheduledProfileScheduler>,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = try {
@@ -185,7 +189,10 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         val dates = due.exportDates
-        val isPurchased = settingsRepository.isPurchased.first()
+        entitlementRepository.refresh()
+        val isPurchased = distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
         if (!isPurchased) {
             // Scheduled automation is a purchased capability on Android; record and stop.
             recordHistory(

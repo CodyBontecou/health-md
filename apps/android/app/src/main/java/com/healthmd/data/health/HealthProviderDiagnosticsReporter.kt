@@ -1,9 +1,8 @@
 package com.healthmd.data.health
 
 import com.healthmd.BuildConfig
-import com.healthmd.data.health.oauth.OAuthConfigRegistry
-import com.healthmd.data.health.oauth.OAuthTokenStore
 import com.healthmd.data.health.providers.HealthProviderCatalog
+import com.healthmd.data.health.providers.HealthProviderConnectionManager
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.repository.ExportHistoryRepository
@@ -17,8 +16,7 @@ class HealthProviderDiagnosticsReporter @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val providerCatalog: HealthProviderCatalog,
     private val providerRegistry: HealthProviderRegistry,
-    private val oauthConfigRegistry: OAuthConfigRegistry,
-    private val oauthTokenStore: OAuthTokenStore,
+    private val providerConnectionManager: HealthProviderConnectionManager,
     private val exportHistoryRepository: ExportHistoryRepository,
 ) {
     suspend fun buildReport(): RedactedHealthProviderDiagnosticsReport {
@@ -29,9 +27,10 @@ class HealthProviderDiagnosticsReporter @Inject constructor(
         val providerDiagnostics = providerStates.map { providerState ->
             val providerId = providerState.definition.id.wireId
             val provider = providerRegistry.providerFor(providerId)
-            val oauthConfigured = oauthConfigRegistry.isConfigured(providerId)
-            val tokenPresent = if (oauthConfigRegistry.get(providerId) != null) {
-                safeBoolean { oauthTokenStore.getToken(providerId) != null }
+            val supportsDirectConnection = providerConnectionManager.supportsDirectConnection(providerId)
+            val connectionConfigured = providerConnectionManager.isConfigured(providerId)
+            val credentialPresent = if (supportsDirectConnection) {
+                safeBoolean { providerConnectionManager.hasCredential(providerId) }
             } else {
                 DiagnosticValue.NotApplicable
             }
@@ -45,15 +44,15 @@ class HealthProviderDiagnosticsReporter @Inject constructor(
                 installedPackageName = providerState.installedPackageName,
                 selected = selectedProviderId == providerId,
                 connected = providerId in connectedProviderIds,
-                oauthConfigured = if (oauthConfigRegistry.get(providerId) != null) {
-                    DiagnosticValue.fromBoolean(oauthConfigured)
+                connectionConfigured = if (supportsDirectConnection) {
+                    DiagnosticValue.fromBoolean(connectionConfigured)
                 } else {
                     DiagnosticValue.NotApplicable
                 },
-                oauthTokenPresent = tokenPresent,
+                credentialPresent = credentialPresent,
                 available = safeBoolean { provider.isAvailable() },
-                permissions = if (oauthConfigRegistry.get(providerId) != null) {
-                    tokenPresent
+                accessReady = if (supportsDirectConnection) {
+                    credentialPresent
                 } else {
                     safeBoolean { provider.hasPermissions() }
                 },
@@ -139,10 +138,10 @@ data class RedactedHealthProviderDiagnosticsReport(
             appendLine("  installed: ${yesNo(provider.installed)}${provider.installedPackageName?.let { " ($it)" }.orEmpty()}")
             appendLine("  selected: ${yesNo(provider.selected)}")
             appendLine("  connected: ${yesNo(provider.connected)}")
-            appendLine("  OAuth configured: ${provider.oauthConfigured.label}")
-            appendLine("  OAuth token present: ${provider.oauthTokenPresent.label}")
+            appendLine("  direct connection configured: ${provider.connectionConfigured.label}")
+            appendLine("  credential present: ${provider.credentialPresent.label}")
             appendLine("  provider available: ${provider.available.label}")
-            appendLine("  permissions/token ready: ${provider.permissions.label}")
+            appendLine("  access ready: ${provider.accessReady.label}")
             appendLine("  historical read permission: ${provider.historicalReadPermission.label}")
             appendLine("  background read permission: ${provider.backgroundReadPermission.label}")
         }
@@ -167,7 +166,7 @@ data class RedactedHealthProviderDiagnosticsReport(
             }
         }
         appendLine()
-        appendLine("Redaction: this report excludes health measurements, OAuth token values, provider client secrets, and raw file paths.")
+        appendLine("Redaction: this report excludes health measurements, provider credential values, provider client secrets, and raw file paths.")
     }
 
     private fun yesNo(value: Boolean): String = if (value) "yes" else "no"
@@ -182,10 +181,10 @@ data class RedactedHealthProviderDiagnostics(
     val installedPackageName: String?,
     val selected: Boolean,
     val connected: Boolean,
-    val oauthConfigured: DiagnosticValue,
-    val oauthTokenPresent: DiagnosticValue,
+    val connectionConfigured: DiagnosticValue,
+    val credentialPresent: DiagnosticValue,
     val available: DiagnosticValue,
-    val permissions: DiagnosticValue,
+    val accessReady: DiagnosticValue,
     val historicalReadPermission: DiagnosticValue,
     val backgroundReadPermission: DiagnosticValue,
 )

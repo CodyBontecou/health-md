@@ -5,9 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.BuildConfig
 import com.healthmd.domain.billing.BillingError
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.distribution.DistributionPolicy
+import com.healthmd.domain.repository.EntitlementRepository
+import com.healthmd.domain.repository.PurchaseRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,116 +21,103 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import javax.inject.Inject
 
 @HiltViewModel
 class PaywallViewModel @Inject constructor(
-    private val billingRepository: BillingRepository,
+    private val entitlementRepository: EntitlementRepository,
+    private val purchaseRepository: PurchaseRepository,
     private val settingsRepository: SettingsRepository,
+    val distributionPolicy: DistributionPolicy,
 ) : ViewModel() {
 
-    /** Whether the user has unlocked premium features */
     val isUnlocked: StateFlow<Boolean> = combine(
         settingsRepository.isPurchased,
-        billingRepository.isUnlocked,
-    ) { persisted, live -> persisted || live }
+        entitlementRepository.isUnlocked,
+    ) { persisted, live -> distributionPolicy.fullAccessIncluded || persisted || live }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            distributionPolicy.fullAccessIncluded,
+        )
+
+    val isPurchasing: StateFlow<Boolean> = purchaseRepository.isPurchasing
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    /** Whether a purchase flow is currently in progress */
-    val isPurchasing: StateFlow<Boolean> = billingRepository.isPurchasing
+    val isRestoring: StateFlow<Boolean> = purchaseRepository.isRestoring
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    /** Whether a restore operation is currently in progress */
-    val isRestoring: StateFlow<Boolean> = billingRepository.isRestoring
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    /** Current typed purchase failure, if any */
-    val purchaseError: StateFlow<BillingError?> = billingRepository.purchaseError
+    val purchaseError: StateFlow<BillingError?> = purchaseRepository.purchaseError
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    /** Region-correct price supplied by Google Play; null until product details are available. */
-    val priceText: StateFlow<String?> = billingRepository.productDetails
-        .map { it?.oneTimePurchaseOfferDetails?.formattedPrice }
+    /** Region-correct price supplied by the active store; null until available. */
+    val priceText: StateFlow<String?> = purchaseRepository.offer
+        .map { it?.localizedPriceText }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    /** Whether this is a debug build (for showing debug controls) */
-    val isDebugBuild: Boolean = BuildConfig.DEBUG
+    val purchasesAvailable: Boolean =
+        distributionPolicy.purchasesAvailable && purchaseRepository.isAvailable
+    val isDebugBuild: Boolean = BuildConfig.DEBUG && purchasesAvailable
 
-    // Debug state for simulating unlock
     private val _debugUnlockOverride = MutableStateFlow<Boolean?>(null)
     val debugUnlockOverride: StateFlow<Boolean?> = _debugUnlockOverride.asStateFlow()
 
     init {
-        // Billing state is application-scoped; do not carry an error from an earlier paywall visit.
-        billingRepository.clearError()
-        // Connect to billing service and query product when ViewModel is created.
-        billingRepository.startConnection()
-        viewModelScope.launch {
-            billingRepository.isUnlocked
-                .filter { it }
-                .collect { settingsRepository.setPurchased(true) }
-        }
-    }
-
-    /**
-     * Launch the Google Play purchase flow.
-     * @param activity The activity to use for launching the purchase dialog
-     */
-    fun launchPurchaseFlow(activity: Activity) {
-        viewModelScope.launch {
-            try {
-                val success = billingRepository.launchPurchase(activity)
-                if (!success) {
-                    Timber.w("Purchase flow failed to launch")
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Error launching purchase flow")
+        purchaseRepository.clearError()
+        entitlementRepository.refresh()
+        purchaseRepository.refresh()
+        // Included F-Droid access must not create or mutate Play purchase persistence.
+        if (!distributionPolicy.fullAccessIncluded) {
+            viewModelScope.launch {
+                entitlementRepository.isUnlocked
+                    .filter { it }
+                    .collect { settingsRepository.setPurchased(true) }
             }
         }
     }
 
-    /**
-     * Restore previous purchases for users who reinstall or switch devices.
-     */
-    fun restorePurchases() {
+    fun launchPurchaseFlow(activity: Activity) {
+        if (!purchasesAvailable) return
         viewModelScope.launch {
             try {
-                val success = billingRepository.restorePurchase()
-                if (success) {
+                if (!purchaseRepository.launchPurchase(activity)) {
+                    Timber.w("Purchase flow failed to launch")
+                }
+            } catch (error: Exception) {
+                Timber.e(error, "Error launching purchase flow")
+            }
+        }
+    }
+
+    fun restorePurchases() {
+        if (!purchasesAvailable) return
+        viewModelScope.launch {
+            try {
+                if (purchaseRepository.restorePurchase()) {
                     Timber.d("Purchases restored successfully")
                 } else {
                     Timber.w("Failed to restore purchases")
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Error restoring purchases")
+            } catch (error: Exception) {
+                Timber.e(error, "Error restoring purchases")
             }
         }
     }
 
-    /**
-     * Clear any current error message.
-     */
     fun clearError() {
-        billingRepository.clearError()
+        purchaseRepository.clearError()
     }
 
-    // Debug methods (only functional in debug builds)
-
-    /**
-     * Debug: Toggle simulated unlock state for testing.
-     */
     fun debugToggleUnlock() {
-        if (!BuildConfig.DEBUG) return
-        val currentUnlocked = billingRepository.isUnlocked.value
-        val newState = !currentUnlocked
-        billingRepository.debugSetUnlocked(newState)
+        if (!BuildConfig.DEBUG || !purchasesAvailable) return
+        val newState = !entitlementRepository.isUnlocked.value
+        entitlementRepository.debugSetUnlocked(newState)
         _debugUnlockOverride.value = newState
         viewModelScope.launch { settingsRepository.setPurchased(newState) }
     }
 
     fun debugResetPurchaseState() {
-        if (!BuildConfig.DEBUG) return
-        billingRepository.debugResetPurchaseState()
+        if (!BuildConfig.DEBUG || !purchasesAvailable) return
+        entitlementRepository.debugReset()
         _debugUnlockOverride.value = null
         viewModelScope.launch {
             settingsRepository.setPurchased(false)

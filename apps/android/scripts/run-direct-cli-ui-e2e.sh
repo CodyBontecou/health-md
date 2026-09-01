@@ -73,8 +73,8 @@ echo "Prebuilding isolated Direct CLI UI E2E artifacts before opening the bounde
         --no-daemon \
         -Pkotlin.compiler.execution.strategy=in-process \
         -PhealthmdInstrumentedTestBuildType=e2e \
-        :app:assembleE2e \
-        :app:assembleE2eAndroidTest \
+        :app:assemblePlayE2e \
+        :app:assemblePlayE2eAndroidTest \
         --stacktrace </dev/null
 )
 
@@ -149,7 +149,7 @@ set +e
         --no-daemon \
         -Pkotlin.compiler.execution.strategy=in-process \
         -PhealthmdInstrumentedTestBuildType=e2e \
-        :app:connectedE2eAndroidTest \
+        :app:connectedPlayE2eAndroidTest \
         -Pandroid.testInstrumentationRunnerArguments.class="$INSTRUMENTATION_TEST" \
         -Pandroid.testInstrumentationRunnerArguments.directCliE2E=true \
         -Pandroid.testInstrumentationRunnerArguments.directCliHost="$HOST" \

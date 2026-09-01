@@ -9,6 +9,7 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.scheduler.ProfileFolderAdoptionScope
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
@@ -24,6 +25,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -71,6 +73,8 @@ class AutomationReceiver : BroadcastReceiver() {
     @Inject lateinit var exportProfileRepository: ExportProfileRepository
     @Inject lateinit var profileFolderAdoption: ProfileFolderAdoptionScope
     @Inject lateinit var apiEndpointExportRunner: APIEndpointExportRunner
+    @Inject lateinit var entitlementRepository: EntitlementRepository
+    @Inject lateinit var distributionPolicy: DistributionPolicy
 
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
@@ -209,7 +213,10 @@ class AutomationReceiver : BroadcastReceiver() {
         }
         val settings = profileSettingsAndName.settings ?: currentSettings
         val target = profile?.target ?: settings.exportTarget
-        val isPurchased = settingsRepository.isPurchased.first()
+        entitlementRepository.refresh()
+        val isPurchased = distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
         val freeExportsRemaining = settingsRepository.getFreeExportsRemaining()
         // A folder-bound profile satisfies the destination requirement on its own.
         val folderUri = settingsRepository.getExportFolderUri()

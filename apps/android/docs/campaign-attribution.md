@@ -1,6 +1,6 @@
 # First-party Android campaign attribution
 
-Health.md measures campaign installs without AppsFlyer, Firebase Analytics, Google Analytics, advertising identifiers, Android identifiers, or another analytics/attribution SDK. The only Play-specific dependency is Google's official Install Referrer library (`com.android.installreferrer:installreferrer:2.2`).
+The Google Play build measures campaign installs without AppsFlyer, Firebase Analytics, Google Analytics, advertising identifiers, Android identifiers, or another analytics/attribution SDK. The only Play-specific dependency is Google's official Install Referrer library (`com.android.installreferrer:installreferrer:2.2`). The F-Droid build does not compile attribution/referrer code, create attribution identity or state, or send Health.md attribution telemetry.
 
 This repository implements the Android client. The companion Cloudflare Worker is maintained separately in the Health.md website repository under `cloudflare/attribution-worker` and is deployed at `https://healthmd.app/v1/installs`. It uses the existing `healthmd-campaigns` D1 database. Android builds still require explicit endpoint/token configuration; without it, a valid sanitized event remains pending on-device and startup continues normally.
 
@@ -42,7 +42,7 @@ Empty and known organic values are terminal and create no campaign event. `SERVI
 Both settings default to an empty string. Configure them as Gradle properties:
 
 ```bash
-./gradlew assembleDebug \
+./gradlew :app:assemblePlayDebug \
   -PCAMPAIGN_ATTRIBUTION_ENDPOINT_URL=https://healthmd.app \
   -PCAMPAIGN_ATTRIBUTION_INGEST_TOKEN=replace-with-throttling-token
 ```
@@ -52,7 +52,7 @@ or environment variables:
 ```bash
 CAMPAIGN_ATTRIBUTION_ENDPOINT_URL=https://healthmd.app \
 CAMPAIGN_ATTRIBUTION_INGEST_TOKEN=replace-with-throttling-token \
-./gradlew assembleDebug
+./gradlew :app:assemblePlayDebug
 ```
 
 `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` is a base URL. The client appends `/v1/installs`. Release builds accept HTTPS only. Debug builds additionally accept HTTP only for `localhost`, `127.0.0.1`, or `::1`. URLs containing credentials, query parameters, or fragments are rejected.
@@ -63,7 +63,7 @@ On the configured maintainer machine, the production values are stored outside s
 
 ```bash
 source "$HOME/.config/healthmd/campaign-attribution.env"
-./gradlew assembleDebug
+./gradlew :app:assemblePlayDebug
 ```
 
 Release automation must inject the same two environment variables from its own secret store. The canonical `health-md` repository secrets and deployed Worker current token were rotated together on 2026-07-25. The prior token remains accepted by the Worker temporarily for internal-testing version 1.5.2; remove the overlap only after a newer Play build reaches the intended testers.

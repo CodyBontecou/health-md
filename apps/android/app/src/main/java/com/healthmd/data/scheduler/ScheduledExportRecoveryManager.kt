@@ -7,6 +7,7 @@ import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEnginePin
@@ -19,6 +20,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -44,6 +46,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private val rawSnapshotService: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
 ) {
 
     suspend fun inspectPendingRecovery(): ScheduledExportRecoveryStatus {
@@ -64,7 +68,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
             )
         }
 
-        if (!settingsRepository.isPurchased.first()) {
+        if (!hasFullAccess()) {
             return ScheduledExportRecoveryStatus(
                 pendingDates = pendingDates,
                 blocker = ScheduledExportRecoveryBlocker.PAYWALL_REQUIRED,
@@ -416,6 +420,13 @@ class ScheduledExportRecoveryManager @Inject constructor(
         target = target,
     )
 
+    private suspend fun hasFullAccess(): Boolean {
+        entitlementRepository.refresh()
+        return distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
+    }
+
     private suspend fun inspectPendingRecoveryIgnoringLock(): ScheduledExportRecoveryStatus {
         val settings = settingsRepository.getExportSettings()
         val pendingDates = ScheduledExportPendingRequests.pendingDates(settings)
@@ -426,7 +437,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 blocker = ScheduledExportRecoveryBlocker.NO_PENDING_DATES,
             )
         }
-        if (!settingsRepository.isPurchased.first()) {
+        if (!hasFullAccess()) {
             return ScheduledExportRecoveryStatus(
                 pendingDates = pendingDates,
                 blocker = ScheduledExportRecoveryBlocker.PAYWALL_REQUIRED,

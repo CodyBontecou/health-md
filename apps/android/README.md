@@ -2,7 +2,7 @@
 
 ## Wear OS companion
 
-The separately buildable `:wear` module ships under the same `com.healthmd.android` Play listing and signing identity as the phone artifact, with a non-colliding 1,000,000+ version-code range. `:wearable-contract` is the pure private aggregate transport contract. The phone remains Health Connect authoritative; the watch has no direct Health Connect or Health Services sensing. Build with `./gradlew :wear:assembleDebug` and see `docs/features/wear-os-implementation.md` for privacy, validation, release, emulator, and physical battery/OEM gates.
+The separately buildable `:wear` module ships only with the **Google Play** phone variant under the same `com.healthmd.android` Play listing and signing identity, with a non-colliding 1,000,000+ version-code range. The F-Droid variant does not include Wear Data Layer code or advertise a Wear companion. `:wearable-contract` is the pure private aggregate transport contract. The phone remains Health Connect authoritative; the watch has no direct Health Connect or Health Services sensing. Build with `./gradlew :wear:assembleDebug` and see `docs/features/wear-os-implementation.md` for privacy, validation, release, emulator, and physical battery/OEM gates.
 
 > **Health Connect to Markdown, JSON, NDJSON, CSV, and Obsidian Bases — private files you control.**
 
@@ -16,6 +16,20 @@ Health.md for Android turns Health Connect into a local-first health journal. Pi
 **[🌐 healthmd.isolated.tech](https://healthmd.isolated.tech)** · **[▶️ Google Play](https://play.google.com/store/apps/details?id=com.healthmd.android)** · **[📚 Docs](docs/)** · **[🐛 Issues](https://github.com/CodyBontecou/health-md/issues)** · **[💬 Discord](https://discord.gg/jNRWSSSz4N)** · **[⭐ Star this repo](https://github.com/CodyBontecou/health-md)**
 
 This component lives at `apps/android` in the Health.md monorepo. Run Gradle commands from this directory, or use the convenience targets in the repository-root `Makefile`.
+
+## Distribution channels
+
+Both variants use the same application ID (`com.healthmd.android`), version, Health Connect capture, exporters, schemas, automation protocol, widgets, and Direct CLI protocol.
+
+| Capability | Google Play | F-Droid |
+| --- | --- | --- |
+| Access model | 10 free manual exports, then one-time Play purchase | Full access included; no purchase or restore UI |
+| Health sources | Health Connect plus optional direct Fitbit, Oura, WHOOP, and Withings providers | Health Connect only |
+| Wear OS companion | Included | Unavailable |
+| Review, attribution, onboarding telemetry | Play review and bounded first-party telemetry are available/configuration-gated | Not compiled in; no Health.md telemetry or telemetry identity/state |
+| Release artifact | Signed `app-play-release.aab` | Unsigned `app-fdroid-release-unsigned.apk`, signed by F-Droid |
+
+Google Play and F-Droid sign the package with different keys. Switching channels requires uninstalling the installed app first; Android will remove local app state, and Health.md does not promise purchase or state migration across channel signatures. On Android 9–13, Health Connect must be available as the separate system/provider app; Android 14 and later include Health Connect in the system.
 
 ## Screenshots
 
@@ -58,7 +72,7 @@ One compatibility export action can write multiple formats for multiple days.
 Raw API Snapshot is a separate export product for migration and archival workflows. It writes one immutable, versioned JSON or NDJSON artifact for the selected range without converting native records into daily `HealthData` summaries.
 
 - Health Connect snapshots preserve every field exposed by the pinned AndroidX API, including native identity and metadata, nanosecond timestamps, nullable source offsets, raw enum values, nested samples/stages/routes/planned-workout structures, and exact FHIR JSON.
-- Fitbit, Oura, WHOOP, and Withings snapshots preserve exact successful provider response bytes and disclose endpoint pagination and server-side aggregation. Unsupported providers are reported rather than normalized or silently replaced with Health Connect.
+- In the Google Play build, Fitbit, Oura, WHOOP, and Withings snapshots preserve exact successful provider response bytes and disclose endpoint pagination and server-side aggregation. These direct cloud providers are absent from the F-Droid build rather than normalized or silently replaced with Health Connect.
 - Every artifact ends with a manifest containing per-type status, issues, counts, and checksums. Folder exports also receive a `.sha256` sidecar.
 - Raw snapshots can be previewed without a configured destination. Preview performs the provider-native read in private no-backup storage, keeps only bounded head/tail text in memory, and deletes the temporary artifact.
 - Raw API uploads require HTTPS, stream from private no-backup storage, and never follow redirects.
@@ -131,13 +145,11 @@ foreground service, resumable seven-day transfer jobs, private no-backup spools,
 checksums. It is not a schedule/automation target and never sends health data through a Health.md
 cloud service. See [Android desktop destination strategy](docs/android-desktop-destination.md).
 
-## Pricing
+## Access and pricing
 
-Health.md includes **10 free manual export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
+The **Google Play build** includes 10 free manual export actions. Unlimited manual exports, scheduling, automation, recovery, and Direct CLI export are unlocked with a one-time lifetime purchase through Google Play Billing. No subscription. The free counter tracks export actions, not files.
 
-Unlimited exports and scheduled automation are unlocked with a **one-time lifetime purchase** through Google Play Billing. No subscription. No recurring charge. The live price is shown by Google Play inside the app.
-
-The free counter tracks export actions, not files: exporting Markdown + JSON + CSV for a date range still counts as one export action.
+The **F-Droid build** includes full access with no payment, counter, paywall, purchase, or restore flow. This channel difference does not change export bytes or public protocols.
 
 ## Tech Stack
 
@@ -146,7 +158,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 - **Minimum Android:** 9.0 / API 28
 - **Compile SDK:** 36
 - **Health data:** AndroidX Health Connect Client 1.2.0-alpha02
-- **Purchases:** Google Play Billing 8.3
+- **Purchases:** Google Play Billing 8.3 in the Play variant only; full access is included in F-Droid
 - **Automation:** WorkManager, boot recovery, launcher shortcuts, explicit broadcast intents
 - **Storage:** Storage Access Framework, DataStore Preferences, Room, private Direct CLI spools
 - **Dependency injection:** Hilt + KSP
@@ -164,9 +176,9 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 | WorkManager | Scheduled exports, retry/recovery behavior, and reboot rescheduling |
 | DataStore Preferences | Export settings, folder URIs, purchase state, and local flags |
 | Room | Export history database and retry diagnostics |
-| Google Play Billing | One-time lifetime unlock |
-| Play In-App Review | User-initiated review prompt after successful exports |
-| Google Play Install Referrer | First-party campaign-install attribution without a general analytics SDK |
+| Google Play Billing (Play only) | One-time lifetime unlock |
+| Play In-App Review (Play only) | User-initiated review prompt after successful exports |
+| Google Play Install Referrer (Play only) | First-party campaign-install attribution without a general analytics SDK |
 | kotlinx.serialization | JSON export contracts and persisted settings models |
 | Timber | Debug logging |
 
@@ -174,12 +186,10 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 
 ```text
 app/
-  src/main/
+  src/main/                           # Shared Health Connect, export, UI, protocol, and automation code
     java/com/healthmd/
       automation/                    # Explicit Tasker/adb broadcast receiver
       data/
-        attribution/                  # Sanitized first-party campaign install attribution
-        billing/                      # Google Play Billing implementation
         export/                       # Markdown, JSON, CSV, Bases, daily-note, individual-entry exporters
         health/                       # Health Connect manager, provider catalog, and failure classification
         history/                      # Room export-history persistence
@@ -209,7 +219,11 @@ app/
         settings/                     # Advanced settings, format, frontmatter, daily notes
         theme/                        # Design tokens and Material theme
     res/                              # Icons, strings/localizations, shortcuts, themes
-  src/test/java/com/healthmd/          # Unit, export-contract, billing, scheduler, and view-model tests
+  src/play/                           # Billing, telemetry, OAuth providers, Play review, and Wear transport
+  src/fdroid/                         # Included access and no-op/absent Play integrations
+  src/test/java/com/healthmd/         # Shared unit and export-contract tests
+  src/playTest/java/com/healthmd/     # Play integration tests
+  src/fdroidTest/java/com/healthmd/   # F-Droid entitlement/privacy/absence tests
 
 docs/                                 # Export-contract docs, parity notes, automation, accessibility
 fastlane/                             # Non-publishing paired release validation lane
@@ -222,10 +236,12 @@ gradle/                               # Gradle wrapper and version catalog
 
 | Gradle target | Application ID / namespace | Platform |
 |---------------|----------------------------|----------|
-| `:app:assembleDebug` | `com.healthmd.android` / `com.healthmd` | Android debug APK |
-| `:app:bundleRelease` | `com.healthmd.android` / `com.healthmd` | Google Play AAB |
-| `:app:testDebugUnitTest` | `com.healthmd` | JVM unit and contract tests |
-| `:app:connectedDebugAndroidTest` | `com.healthmd.android` | Instrumented Android tests |
+| `:app:assemblePlayDebug` | `com.healthmd.android` / `com.healthmd` | Google Play debug APK |
+| `:app:bundlePlayRelease` | `com.healthmd.android` / `com.healthmd` | Signed Google Play AAB |
+| `:app:assembleFdroidDebug` | `com.healthmd.android` / `com.healthmd` | F-Droid debug APK |
+| `:app:assembleFdroidRelease` | `com.healthmd.android` / `com.healthmd` | Unsigned F-Droid release APK |
+| `:app:testPlayDebugUnitTest` / `:app:testFdroidDebugUnitTest` | `com.healthmd` | Shared plus channel-specific JVM tests |
+| `:app:connectedPlayDebugAndroidTest` / `:app:connectedFdroidDebugAndroidTest` | `com.healthmd.android` | Instrumented Android tests |
 
 ## Setup
 
@@ -239,17 +255,25 @@ gradle/                               # Gradle wrapper and version catalog
 ### Build from CLI
 
 ```bash
-# Debug build
-./gradlew :app:assembleDebug
+# Default developer/device channel
+./gradlew :app:assemblePlayDebug
+./gradlew :app:installPlayDebug
 
-# Install debug build on the connected device
-./gradlew :app:installDebug
+# Google Play release bundle
+./gradlew :app:bundlePlayRelease
 
-# Release app bundle for Google Play
-./gradlew :app:bundleRelease
+# F-Droid builds (release output intentionally remains unsigned)
+./gradlew :app:assembleFdroidDebug
+./gradlew :app:assembleFdroidRelease
+./scripts/verify-fdroid-artifact.sh
+
+# From the repository root
+make android-play-debug
+make android-fdroid-debug
+make android-fdroid-release
 ```
 
-Release signing is loaded from `local.properties` and must never be committed:
+Google Play release signing is loaded from `local.properties` and must never be committed. `fdroidRelease` ignores these credentials and remains unsigned:
 
 ```properties
 RELEASE_STORE_FILE=health-md-release.jks
@@ -261,7 +285,7 @@ RELEASE_KEY_PASSWORD=...
 First-party campaign attribution is disabled for central reporting unless the deployed Cloudflare ingestion base URL is supplied. The production token is abuse throttling, not a true secret:
 
 ```bash
-./gradlew :app:assembleDebug \
+./gradlew :app:assemblePlayDebug \
   -PCAMPAIGN_ATTRIBUTION_ENDPOINT_URL=https://healthmd.app \
   -PCAMPAIGN_ATTRIBUTION_INGEST_TOKEN=replace-with-throttling-token
 ```
@@ -273,7 +297,7 @@ The same names may be supplied as environment variables. Release builds require 
 Phone, Wear, and listing-image publication is owned by protected workflows, not local Gradle, Fastlane, or script mutation commands. `.github/workflows/android-release.yml` uploads the exact annotated-tag pair atomically to `qa`/`wear:qa`; `.github/workflows/android-wear-screenshots.yml` later verifies an exact-attempt protected physical-capture submission before replacing the two Wear images with the QA-only account; `.github/workflows/android-promote-production.yml` promotes both codes in one evidence-gated edit to `production`/`wear:production` with a separate account. Local tools may build and validate both AABs without publication:
 
 ```bash
-./gradlew :app:bundleRelease :wear:bundleRelease
+./gradlew :app:bundlePlayRelease :wear:bundleRelease
 bundle exec fastlane android validate_wear_release
 ```
 
@@ -284,19 +308,19 @@ See `PLAY_STORE_COMMANDS.md`, `PLAY_STORE_SETUP.md`, `GRADLE_PLAY_PUBLISHER_SETU
 Run the unit and export-contract suite:
 
 ```bash
-./gradlew :app:testDebugUnitTest
+./gradlew :app:testPlayDebugUnitTest :app:testFdroidDebugUnitTest
 ```
 
 Focused commands:
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests com.healthmd.export.PluginCompatibilityValidationTest
-./gradlew :app:testDebugUnitTest --tests com.healthmd.exportcontract.ReleaseReadinessTest
-./gradlew :app:lintDebug
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:testPlayDebugUnitTest --tests com.healthmd.export.PluginCompatibilityValidationTest
+./gradlew :app:testFdroidDebugUnitTest --tests com.healthmd.distribution.FdroidDistributionPolicyTest
+./gradlew :app:lintPlayDebug :app:lintFdroidDebug
+./gradlew :app:connectedPlayDebugAndroidTest :app:connectedFdroidDebugAndroidTest
 
 # Hermetic Direct CLI Compose workflow coverage on a connected device/emulator
-./gradlew :app:connectedDebugAndroidTest \
+./gradlew :app:connectedPlayDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.directcli.DirectCliScreenTest
 ```
 
@@ -306,7 +330,7 @@ notification-action tap, and (for profile cancellation) Health Connect backgroun
 Enable them only while driving that setup explicitly:
 
 ```bash
-./gradlew :app:connectedDebugAndroidTest \
+./gradlew :app:connectedPlayDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.scheduledExportCancellationQa=true
 ```
 
@@ -347,23 +371,26 @@ Health data stays local-first:
 
 - Health Connect records are read on Android and written directly to folders you choose.
 - Exports can target local/provider-backed folders or an HTTP(S) API endpoint explicitly configured by the user; Health.md does not run a health-data cloud.
-- Optional direct cloud-provider imports use provider OAuth tokens stored on-device; enabling those providers sends requests directly to that provider's API.
+- In the Play build, optional direct cloud-provider imports use provider OAuth tokens stored on-device and send requests directly to that provider's API. The providers and OAuth callbacks are absent from F-Droid.
 - Scheduled exports and installed widgets run locally through WorkManager and use Health Connect background access only when you enable scheduling or allow background widget refresh.
 - Export history and settings are stored locally with Room and DataStore.
 - Widget measurements are reduced to a bounded 14-day snapshot in credential-protected no-backup storage and deleted after the final widget is removed.
-- Billing is handled by Google Play; health samples and exported files are not sent to a Health.md server. API Endpoint records travel directly to the user-configured service.
-- Health.md uses no third-party analytics or attribution SDK. It uses two separate, bounded first-party systems: campaign-install attribution and coarse onboarding/pricing analytics.
+- In the Play build, billing is handled by Google Play; health samples and exported files are not sent to a Health.md server. API Endpoint records travel directly to the user-configured service.
+- The F-Droid build has no Health.md telemetry: attribution and onboarding analytics code, dependencies, endpoints, workers, identifiers, and state stores are not compiled into its APK. User-configured API destinations and explicit Direct CLI sessions remain product features, not Health.md telemetry.
+- The Play build uses no third-party analytics or attribution SDK. It has two separate, bounded first-party systems: campaign-install attribution and coarse onboarding/pricing analytics.
 - Campaign attribution sends only random app-install/event UUIDs, app version/build, optional Play timestamps, and sanitized campaign token/source/medium/content metadata to a configured first-party Cloudflare endpoint.
 - Onboarding analytics sends random app-install/event UUIDs plus allowlisted coarse page, skip, folder-selection, free-choice, purchase-tap, and completion milestones. Properties are limited to app version/build, Android platform, coarse onboarding step/context, bounded local free-export counts when safely available, and an allowlisted product ID on purchase taps.
 - Neither system sends health data or permission details, folder URI/name/path, raw referrers, Advertising ID, Android ID, hardware identifiers, exports, account/user text, prices, or raw errors. Their private install-scoped DataStores are excluded from backup and device transfer.
 - Pending onboarding analytics is capped at 50 events. Network-constrained WorkManager delivery and stable event UUIDs make both systems non-blocking and retry-safe.
 - Validated first-party analytics rows expire after at most 13 months; D1 rows omit raw IP addresses, full User-Agents, request URLs, headers, and unvalidated bodies.
-- Feedback, GitHub issues, Discord links, and review prompts are user-initiated.
+- Feedback, GitHub issues, and Discord links are user-initiated. Play review prompts are user-initiated and absent from F-Droid.
 
 If you want the strictest local setup, use manual Device Folder exports, choose a local-device folder, leave API Endpoint unconfigured, and disable Scheduled Exports.
 
 ## Documentation
 
+- [Distribution channel guide](docs/distribution-channels.md) — Play/F-Droid capability matrix, installation, switching, build, and release rules
+- [F-Droid dependency and asset license audit](fdroid/dependency-license-audit.md) — source-boundary and notice evidence
 - [Feature documentation index](docs/features/index.md) — the canonical per-feature page inventory (mirrors the Apple feature docs tree), with setup, export, formats, automation, devices, purchase, and privacy guides
 - [API Endpoint export](docs/api-endpoint-export.md) — compatibility HTTP(S) JSON uploads, encrypted custom headers, scheduling, and privacy
 - [Raw snapshot v1](docs/export-contract/raw-snapshot-v1.md) — API-complete snapshot semantics, manifests, checksums, and limitations
