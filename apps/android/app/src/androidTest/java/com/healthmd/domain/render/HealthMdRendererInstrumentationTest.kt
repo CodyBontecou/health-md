@@ -174,6 +174,6 @@ class HealthMdRendererInstrumentationTest {
     }
 
     private fun semanticResult(profile: String): ByteArray = """
-        {"schema":"healthmd.semantic_result","semantic_input_version":1,"canonical_model_version":1,"core_api_version":3,"registry_sha256":"da1ef4f1dd2c9117e5922ae64207510c743c8b14624a792bab93f98494ccb070","profile_revision":1,"session_id":"android-render-session","profile":"$profile","state":"completed","next_batch_index":1,"records_accepted":1,"records_filtered":0,"days":[{"owner_date":"2026-07-25","values":[{"output_key":"steps","semantic_id":"steps","aggregation":"sum","value":{"value_type":"number","number":{"representation":"unsigned_integer","decimal":"1234"},"unit":{"id":"count"}},"source_record_ids":["record-1"]}]}],"rollups":[],"retained_extensions":[]}
+        {"schema":"healthmd.semantic_result","semantic_input_version":1,"canonical_model_version":1,"core_api_version":3,"registry_sha256":"d5adddab745bdfc72edebbf9f2a640055f0c4134841296b2c691eba9b03355cf","profile_revision":1,"session_id":"android-render-session","profile":"$profile","state":"completed","next_batch_index":1,"records_accepted":1,"records_filtered":0,"days":[{"owner_date":"2026-07-25","values":[{"output_key":"steps","semantic_id":"steps","aggregation":"sum","value":{"value_type":"number","number":{"representation":"unsigned_integer","decimal":"1234"},"unit":{"id":"count"}},"source_record_ids":["record-1"]}]}],"rollups":[],"retained_extensions":[]}
     """.trimIndent().encodeToByteArray()
 }

@@ -4,10 +4,10 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 const FIXTURE: &[u8] = include_bytes!("fixtures/native-android-bases-requests-v1.json");
-const FIXTURE_SHA256: &str = "9bc0accd3ea2ba7ba0ecf961dee92a005f9e0434c0bfec1538e926b5fdbab8d1";
+const FIXTURE_SHA256: &str = "18abcb0fc232c02f6e90d9ce15afb587b6a631051cd63e68c80baf90a57ee0f6";
 const FULL_FIXTURE: &[u8] = include_bytes!("fixtures/native-android-render-requests-v1.json");
 const FULL_FIXTURE_SHA256: &str =
-    "95ef77902f2e2d98069fc1c88ce09e3fc35a261e3966481f2e0f6c3b455e0635";
+    "0971230e84dc02d598285b64113f0a6b7dd8ba3786217f1c84d21f0606776eb3";
 
 #[test]
 fn all_android_profile_formats_match_independent_native_bytes() {
