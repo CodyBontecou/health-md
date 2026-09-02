@@ -36,6 +36,19 @@ class DirectCliReleaseReadinessTest {
     }
 
     @Test
+    fun directCliSessionReconnectsAfterNonTerminalCloses() {
+        val coordinator = read(
+            "app/src/main/java/com/healthmd/direct/DirectCliCoordinator.kt",
+        )
+        assertThat(coordinator).contains("RECONNECT_INITIAL_BACKOFF_MILLIS = 250L")
+        assertThat(coordinator).contains("RECONNECT_MAXIMUM_BACKOFF_MILLIS = 2_000L")
+        assertThat(coordinator).contains("MAXIMUM_CONSECUTIVE_RECONNECT_FAILURES = 6")
+        assertThat(coordinator).contains("DirectCliCompletion.SessionFinished")
+        assertThat(coordinator).contains("currentCoroutineContext().ensureActive()")
+        assertThat(coordinator).contains("wake preflight")
+    }
+
+    @Test
     fun keystoreGeneratesItsOwnGcmIvAndPairingRefreshesTheScreen() {
         val trustStore = read(
             "app/src/main/java/com/healthmd/direct/DirectCliTrustStore.kt",

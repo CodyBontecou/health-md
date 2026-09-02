@@ -45,7 +45,7 @@ healthmd export --raw --yesterday --provider health_connect --raw-format ndjson
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 ```
 
-A visible data-sync notification ("Waiting for Health.md CLI" → transfer progress) runs during the session.
+A visible data-sync notification ("Waiting for Health.md CLI" → transfer progress) runs during the session. If the CLI closes a connection without a terminal outcome — including the wake window's readiness probe, which rebinds its listener for the real request — the session automatically reconnects with 250 ms to 2 s backoff and keeps waiting; it finishes only after a completed export, an explicit disconnect, or repeated unreachable CLI attempts.
 
 ## Tips
 

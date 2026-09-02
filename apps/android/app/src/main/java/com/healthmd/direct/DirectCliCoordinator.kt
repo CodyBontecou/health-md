@@ -72,6 +72,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -95,6 +96,15 @@ internal fun resolveDirectGeneratedFilesEnginePin(
     settings.executionEnginePin != null -> settings.executionEnginePin
     else -> planFreshPin()
 }
+
+/** Initial pause before the direct session reconnects to a listening CLI. */
+private const val RECONNECT_INITIAL_BACKOFF_MILLIS = 250L
+
+/** Maximum pause between reconnect attempts, matching the CLI's documented policy. */
+private const val RECONNECT_MAXIMUM_BACKOFF_MILLIS = 2_000L
+
+/** Consecutive failed reconnects before the session reports its outcome and stops. */
+private const val MAXIMUM_CONSECUTIVE_RECONNECT_FAILURES = 6
 
 sealed interface DirectCliCompletion {
     data class Paired(val listenerName: String) : DirectCliCompletion
@@ -197,33 +207,81 @@ class DirectCliCoordinator @Inject constructor(
         }
     }
 
+    /**
+     * Serve Direct CLI requests, reconnecting with bounded backoff whenever the CLI closes a
+     * connection without a terminal outcome.
+     *
+     * The RFC-0005 P1 wake preflight consumes one authenticated connection for its status probe
+     * and then rebinds its listener for the real operation request; a transient network drop ends
+     * a transfer the same way. Both must self-heal: after each non-terminal close the session
+     * returns to [DirectCliConnectionState.WaitingForCli] and reconnects with 250 ms to 2 s
+     * backoff. When the CLI stays away after a cleanly served request the session finishes
+     * normally; repeated failures to reach it report [DirectCliFailure.CONNECTION_FAILED]. User
+     * disconnect, forgetting the pairing, and the system foreground-service timeout still cancel
+     * the session immediately.
+     */
     suspend fun connectAndServe() = sessionMutex.withLock {
         val trust = requireNotNull(trustStore.load()) { "Pair with a CLI before connecting." }
-        _state.value = DirectCliConnectionState.WaitingForCli
         protocolAuthority.assertCompatible()
-        val connected = DirectClient.connect(
-            host = trust.host,
-            port = trust.port,
-            installationId = trustStore.installationId(),
-            displayName = Build.MODEL.ifBlank { "Android" },
-            trustedListener = trust,
-            deterministicCore = protocolAuthority,
-        )
-        connected.channel.use { channel ->
-            activeChannel = channel
+        var backoffMillis = RECONNECT_INITIAL_BACKOFF_MILLIS
+        var consecutiveFailures = 0
+        var servedSinceInterruption = false
+        var firstAttempt = true
+        while (true) {
+            _state.value = DirectCliConnectionState.WaitingForCli
+            if (!firstAttempt) {
+                delay(backoffMillis)
+                backoffMillis =
+                    (backoffMillis * 2).coerceAtMost(RECONNECT_MAXIMUM_BACKOFF_MILLIS)
+            }
+            firstAttempt = false
             try {
-                val transferNegotiation = negotiate(channel)
-                protocolAuthority.beginBootstrap()
-                _state.value = DirectCliConnectionState.Connected(connected.listener.displayName)
-                serve(channel, transferNegotiation)
-                if (_state.value is DirectCliConnectionState.Connected) {
-                    _state.value = DirectCliConnectionState.Completed(
-                        DirectCliCompletion.SessionFinished,
-                    )
+                val connected = DirectClient.connect(
+                    host = trust.host,
+                    port = trust.port,
+                    installationId = trustStore.installationId(),
+                    displayName = Build.MODEL.ifBlank { "Android" },
+                    trustedListener = trust,
+                    deterministicCore = protocolAuthority,
+                )
+                connected.channel.use { channel ->
+                    activeChannel = channel
+                    try {
+                        val transferNegotiation = negotiate(channel)
+                        protocolAuthority.beginBootstrap()
+                        _state.value = DirectCliConnectionState.Connected(
+                            connected.listener.displayName,
+                        )
+                        serve(channel, transferNegotiation)
+                    } finally {
+                        protocolAuthority.endOperation()
+                        activeChannel = null
+                    }
                 }
-            } finally {
-                protocolAuthority.endOperation()
-                activeChannel = null
+                consecutiveFailures = 0
+                backoffMillis = RECONNECT_INITIAL_BACKOFF_MILLIS
+                val state = _state.value
+                if (state is DirectCliConnectionState.Completed ||
+                    state is DirectCliConnectionState.Failed
+                ) {
+                    return
+                }
+                servedSinceInterruption = true
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                currentCoroutineContext().ensureActive()
+                consecutiveFailures++
+                if (consecutiveFailures > MAXIMUM_CONSECUTIVE_RECONNECT_FAILURES) {
+                    if (servedSinceInterruption) {
+                        _state.value = DirectCliConnectionState.Completed(
+                            DirectCliCompletion.SessionFinished,
+                        )
+                    } else {
+                        throw error
+                    }
+                    return
+                }
             }
         }
     }
