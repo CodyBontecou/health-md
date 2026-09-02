@@ -20,6 +20,8 @@
       "android.nutrition-meals",
       "android.contextual-source-fields",
       "android.skin-temperature",
+      "direct-cli.shared-qr-pairing",
+      "direct.cli_agent_wake",
       "core.shared-rust-metric-registry"
     ],
     "apple": [
@@ -42,6 +44,8 @@
       "automation.cancel-active-export",
       "apple.hearing-and-symptoms",
       "apple.typed-whoop-provider-section",
+      "direct-cli.shared-qr-pairing",
+      "direct.cli_agent_wake",
       "core.shared-rust-metric-registry"
     ]
   },
@@ -273,6 +277,8 @@
     "android.skin-temperature",
     "apple.typed-whoop-provider-section",
     "source.private-platform-database",
+    "direct-cli.shared-qr-pairing",
+    "direct.cli_agent_wake",
     "setup.share-portable-configuration",
     "core.shared-rust-metric-registry",
     "core.shared-rust-profile-engine"
