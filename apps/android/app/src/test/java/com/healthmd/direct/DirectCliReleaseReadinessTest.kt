@@ -78,6 +78,54 @@ class DirectCliReleaseReadinessTest {
     }
 
     @Test
+    fun qrPairingUsesOptionalOpenSourceCameraPathWithoutExternalDeepLinkAuthority() {
+        val manifest = read("app/src/main/AndroidManifest.xml")
+        assertThat(manifest).contains("android.permission.CAMERA")
+        assertThat(manifest).contains("android.hardware.camera.any")
+        assertThat(manifest).contains("android:required=\"false\"")
+        assertThat(manifest).doesNotContain("android:scheme=\"healthmd\"")
+
+        val build = read("app/build.gradle.kts")
+        assertThat(build).contains("libs.androidx.camera.camera2")
+        assertThat(build).contains("libs.zxing.core")
+        val scanner = read(
+            "app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingScanner.kt",
+        )
+        assertThat(scanner).contains("ProcessCameraProvider")
+        assertThat(scanner).contains("MultiFormatReader")
+    }
+
+    @Test
+    fun legacyPairingFallbackRequiresTypedRejectionAndChecksCancellation() {
+        val coordinator = read(
+            "app/src/main/java/com/healthmd/direct/DirectCliCoordinator.kt",
+        )
+        val pairingFlow = coordinator
+            .substringAfter("suspend fun pair(")
+            .substringBefore("suspend fun connectAndServe(")
+        assertThat(pairingFlow).contains("catch (sharedPairingError: PairingRejectedException)")
+        assertThat(pairingFlow).contains("currentCoroutineContext().ensureActive()")
+        assertThat(pairingFlow).doesNotContain(": Exception)")
+        assertThat(pairingFlow).doesNotContain(": IllegalStateException)")
+        assertThat(pairingFlow).doesNotContain(": Throwable)")
+    }
+
+    @Test
+    fun sharedPairingFixtureIsConsumedByRustSwiftAndKotlin() {
+        val fixture = File(
+            repoRoot(),
+            "../../packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        ).canonicalFile
+        assertThat(fixture.isFile).isTrue()
+        assertThat(fixture.readText()).contains("\"pairing_protocol_version\": 3")
+        assertThat(read("direct-protocol/build.gradle.kts"))
+            .contains("../../packages/contracts/direct-protocol/pairing-v3/fixtures")
+        assertThat(read(
+            "direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/SharedPairingV3InteropTest.kt",
+        )).contains("getResource(\"/shared-pairing-v3.json\")")
+    }
+
+    @Test
     fun sharedInteropFixtureIsConsumedByTheKotlinModule() {
         val fixture = File(
             repoRoot(),

@@ -5,6 +5,7 @@ All notable changes to Health.md will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- Direct CLI QR and manual onboarding now use the same high-entropy 20-digit pairing code as Android through shared pairing selector 3; six-digit Apple pairing remains only as a legacy CLI fallback.
 - The iPhone Sync tab now separates Mac Destination and CLI setup with a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first.
 
 ## [3.2.1] - 2026-08-30

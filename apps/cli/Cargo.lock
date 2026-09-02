@@ -1060,6 +1060,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "tokio-util",
  "unicode-casefold",
  "unicode-normalization",
  "uuid",
@@ -1098,6 +1099,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "tokio",
  "tokio-util",
  "uuid",
 ]

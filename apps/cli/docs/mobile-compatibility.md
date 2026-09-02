@@ -8,9 +8,9 @@ release matrix.
 
 | Mobile source and feature | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Public qualification |
 |---|---|---|---|
-| iPhone status/raw/extract/generated files/resume/cancel | selector 1, application v1 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
-| iPhone portable typed MCP queries | selector 1, application v1 + query v3 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
-| Android status/provider-native raw/generated files/resume/cancel | selector 2, application v2 | Health.md Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone status/raw/extract/generated files/resume/cancel | pairing selector 3 current (1 legacy), application v1 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone portable typed MCP queries | pairing selector 3 current (1 legacy), application v1 + query v3 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| Android status/provider-native raw/generated files/resume/cancel | pairing selector 3 current (2 legacy), application v2 | Health.md Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | **Pending; no public CLI/mobile pair qualified yet** |
 | Android typed MCP queries | N/A | Not implemented | Unsupported |
 
 The exact counterparts above are the mobile versions present at the CLI tag SHA. The lower floors
@@ -37,8 +37,11 @@ store build has a later version/build, update this ledger and release notes befo
 
 ## Compatibility rules
 
-- Query v3 is additive to iPhone v1 pairing and encrypted transport. Exports remain v1.
-- Android v2 uses its own high-entropy pairing selector and never downgrades to v1.
+- RFC-0005 P1 is a host-side wait-only wake window shared by iOS and Android. It changes no pairing,
+  application-protocol, query, or transfer bytes. APNs/FCM notification enrollment is not available
+  in this phase; opening Health.md manually unblocks the same in-flight request.
+- Shared pairing selector 3 is independent from iPhone query v3. It adds one 20-digit iOS/Android QR/code without changing application v1/v2 or encrypted transport.
+- Legacy Apple selector 1 and Android selector 2 remain byte-compatible. Android may retry high-entropy selector 2 for an older CLI and never downgrades its application protocol to v1.
 - An old v1-only iPhone remains usable for supported v1 operations; typed query tools report
   unsupported rather than sending an unknown message.
 - macOS, Linux, and Windows Rust clients use the deployed `macos_cli` wire role. Desktop OS changes

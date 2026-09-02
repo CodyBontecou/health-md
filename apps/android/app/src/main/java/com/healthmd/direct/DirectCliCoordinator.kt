@@ -9,6 +9,7 @@ import com.healthmd.domain.model.ExportProfileResolution
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.direct.protocol.ANDROID_APPLICATION_PROTOCOL_VERSION
+import com.healthmd.direct.protocol.ANDROID_PAIRING_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.ArtifactFormat
 import com.healthmd.direct.protocol.ArtifactKind
 import com.healthmd.direct.protocol.ArtifactManifest
@@ -25,12 +26,14 @@ import com.healthmd.direct.protocol.ExportPhase
 import com.healthmd.direct.protocol.ExportProgress
 import com.healthmd.direct.protocol.ExportRequest
 import com.healthmd.direct.protocol.JOB_LIFETIME_SECONDS
+import com.healthmd.direct.protocol.PairingRejectedException
 import com.healthmd.direct.protocol.PeerBinding
 import com.healthmd.direct.protocol.ProductCapability
 import com.healthmd.direct.protocol.ProductId
 import com.healthmd.direct.protocol.ProtocolLimits
 import com.healthmd.direct.protocol.ResolvedRange
 import com.healthmd.direct.protocol.SettingsPolicy
+import com.healthmd.direct.protocol.SHARED_PAIRING_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.SourceHello
 import com.healthmd.direct.protocol.SourceIdentity
 import com.healthmd.direct.protocol.SourceStatus
@@ -151,22 +154,39 @@ class DirectCliCoordinator @Inject constructor(
 
     suspend fun pair(host: String, port: Int, pairingCode: String) = sessionMutex.withLock {
         require(pairingCode.count { it in '0'..'9' } == 20) {
-            "Android pairing code must be twenty digits."
+            "The shared pairing code must be twenty digits."
         }
         _state.value = DirectCliConnectionState.Pairing
         protocolAuthority.assertCompatible()
-        val connected = DirectClient.connect(
+        fun connect(pairingProtocolVersion: Int) = DirectClient.connect(
             host = host,
             port = port,
             installationId = trustStore.installationId(),
             displayName = Build.MODEL.ifBlank { "Android" },
             pairingCode = pairingCode,
+            pairingProtocolVersion = pairingProtocolVersion,
             deterministicCore = protocolAuthority,
         )
+        val connected = try {
+            connect(SHARED_PAIRING_PROTOCOL_VERSION)
+        } catch (sharedPairingError: PairingRejectedException) {
+            // Selector 2 retains the same 20-digit entropy and supports CLI releases that
+            // predate the universal selector-3 QR profile. Transport failures and coroutine
+            // cancellation are never caught as downgrade signals.
+            currentCoroutineContext().ensureActive()
+            try {
+                connect(ANDROID_PAIRING_PROTOCOL_VERSION)
+            } catch (legacyPairingError: PairingRejectedException) {
+                legacyPairingError.addSuppressed(sharedPairingError)
+                throw legacyPairingError
+            }
+        }
         connected.channel.use { channel ->
             activeChannel = channel
             try {
+                currentCoroutineContext().ensureActive()
                 negotiate(channel)
+                currentCoroutineContext().ensureActive()
                 trustStore.save(connected.listener, host, port)
                 _state.value = DirectCliConnectionState.Completed(
                     DirectCliCompletion.Paired(connected.listener.displayName),

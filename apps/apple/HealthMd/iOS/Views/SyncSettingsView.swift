@@ -525,10 +525,13 @@ struct SyncSettingsView: View {
                                     .foregroundStyle(Color.textSecondary)
                             }
 
-                            SecureField("Pairing code", text: $directCLIPairingCode)
+                            SecureField("20-digit pairing code", text: $directCLIPairingCode)
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
                                 .configurationChangesProtected()
+                            Text("Current healthmd versions use one 20-digit code on iOS and Android. Six-digit entry remains available only for a legacy CLI.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.textSecondary)
 
                             Button {
                                 configurationProtection.performConfigurationChange {
@@ -765,7 +768,9 @@ struct SyncSettingsView: View {
 
     private var canConnectDirectCLI: Bool {
         let hasHost = !directCLIHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasCode = !ManualIPSyncSecurity.normalizedPairingCode(directCLIPairingCode).isEmpty
+        let codeDigits = ManualIPSyncSecurity.normalizedPairingCode(directCLIPairingCode).utf8.count
+        let hasCode = codeDigits == DirectPairingSecurity.sharedPairingCodeDigits
+            || codeDigits == DirectPairingSecurity.legacyPairingCodeDigits
         let transportReady = directCLITransport == DirectTransportKind.nearby.rawValue || hasHost
         return transportReady
             && !directCLIService.isConnecting

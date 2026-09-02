@@ -10,7 +10,7 @@ pub mod service;
 
 pub use backend::{
     BackendCapabilities, BackendError, CallContext, CallerIdentity, CallerMode, HealthDataBackend,
-    PairingStartResult, QueryDetailLevel, QueryPageRequest,
+    PairingStartResult, ProgressUpdate, QueryDetailLevel, QueryPageRequest,
 };
 pub use limits::OperationLimits;
 pub use model::SurfaceProfile;

@@ -14,7 +14,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Aperçu · CLI directe portable</strong>
-<p>Le back-end Swift direct intégré est disponible sur macOS et se jumelle avec l’iPhone. Le jumelage Android (protocole v2) fait partie de l’aperçu publiquement distribué du client Rust multiplateforme. Les tests QA de publication sur iPhone et Android physiques restent en attente ; les commandes Linux et Windows décrivent un flux de travail explicitement non qualifié.</p>
+<p>Le back-end Swift direct intégré est disponible sur macOS et se jumelle avec l’iPhone. Android avec protocole applicatif v2 fait partie de l’aperçu publiquement distribué du client Rust multiplateforme. Les versions iOS et Android actuelles utilisent le même sélecteur 3 et le même QR universel pour les nouveaux jumelages portables. Les tests QA de publication sur iPhone et Android physiques restent en attente ; les commandes Linux et Windows décrivent un flux de travail explicitement non qualifié.</p>
 </div>
 
 ## Compatibilité mobile pour 0.1.0-alpha.3
@@ -23,14 +23,14 @@ Ce tableau autonome est la matrice applicable à l’aperçu explicitement non q
 
 | Source mobile | Protocole | Contrepartie tag-SHA exacte / seuil non qualifié | Opérations Rust portables | Statut public |
 |---|---|---|---|---|
-| iPhone avec export | sélecteur 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | État, brut, extraction, fichiers, reprise, annulation | Qualification physique en attente |
-| iPhone avec requêtes | sélecteur 1 / v1 + requête v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus MCP/requête locale à 19 outils | Qualification physique en attente |
-| Android | sélecteur 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | État, brut natif, fichiers, reprise, annulation | Qualification physique en attente |
+| iPhone avec export | sélecteur 3 actuel (1 ancien) / application v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | État, brut, extraction, fichiers, reprise, annulation | Qualification physique en attente |
+| iPhone avec requêtes | sélecteur 3 actuel (1 ancien) / application v1 + requête v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus MCP/requête locale à 19 outils | Qualification physique en attente |
+| Android | sélecteur 3 actuel (2 ancien) / application v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | État, brut natif, fichiers, reprise, annulation | Qualification physique en attente |
 | Requête MCP typée Android | Non disponible | Non implémentée | Les outils exigent iPhone v3 | Non pris en charge |
 
 ## Ce que le mode direct prend en charge
 
-- le jumelage unique et la reconnexion de confiance avec des sources iPhone (protocole v1) ou Android (protocole v2) ;
+- le jumelage unique avec le sélecteur partagé 3 et la reconnexion de confiance avec des sources iPhone (protocole applicatif v1) ou Android (protocole applicatif v2) ;
 - l’inspection locale des appareils de confiance et la suppression du jumelage ;
 - l’état de préparation du téléphone en direct ;
 - l’export brut strict — `healthmd.health_data` au schéma v8 sur iPhone, instantanés Health Connect natifs du fournisseur sur Android ;
@@ -44,7 +44,7 @@ Le back-end direct de la commande `healthmd` n’émule pas les routes HTTP de c
 
 ## Prérequis
 
-- Un binaire `healthmd` compatible direct et une version Health.md correspondante : iPhone (protocole v1) ou Android (protocole v2). Le jumelage Android exige le client Rust portable ; l’utilitaire macOS intégré ne se jumelle qu’avec l’iPhone.
+- Un binaire `healthmd` compatible direct et une version Health.md correspondante : iPhone (protocole applicatif v1) ou Android (protocole applicatif v2). Le jumelage Android exige le client Rust portable ; l’utilitaire macOS intégré ne se jumelle qu’avec l’iPhone.
 - Health.md ouverte au premier plan sur le téléphone pour le jumelage et les nouvelles commandes.
 - **Settings > Mac Sync > Direct CLI Access** activé sur l’iPhone, ou **Settings → Direct CLI** sur Android.
 - Autorisation de santé de la plateforme (HealthKit ou Health Connect), données protégées, autorisation réseau local et quota d’export disponibles.
@@ -71,30 +71,23 @@ Démarrez l’écouteur sur l’ordinateur :
 healthmd direct pair --transport manual-ip
 ```
 
-Le client Rust portable écrit sur stderr un code iPhone à six chiffres, un code Android distinct à 20 chiffres, des adresses candidates pour l’ordinateur et le port de l’écouteur ; l’utilitaire macOS intégré n’affiche que le code iPhone à six chiffres. stdout reste réservé au résultat JSON final.
+Le client Rust portable affiche un QR universel pour iOS et Android et écrit sur stderr son code partagé à 20 chiffres, les adresses candidates de l’ordinateur, le port d’écoute et un code de secours à six chiffres pour les anciennes versions iOS. L’utilitaire macOS intégré continue de n’afficher que son ancien code iPhone à six chiffres. stdout reste réservé au résultat JSON final.
 
 Sur l’iPhone :
 
-1. Ouvrez **Health.md > Settings > Mac Sync > Direct CLI Access**.
-2. Activez Direct CLI Access.
-3. Sélectionnez **Manual IP**.
-4. Saisissez l’adresse LAN ou Tailscale de l’ordinateur.
-5. Saisissez le port `17647`, sauf si la CLI utilise un autre `--port` global.
-6. Saisissez le code de jumelage et touchez Pair.
-7. Gardez l’app ouverte jusqu’à ce que les deux côtés indiquent la réussite.
-
-Les codes de jumelage iPhone expirent au bout de 10 minutes. Ils ne sont jamais envoyés sur le réseau ni conservés.
+1. Ouvrez **Health.md > Settings > Mac Sync > Direct CLI Access** et activez l’accès.
+2. Touchez **Scanner le QR d’appariement** et scannez le QR universel ; le jumelage commence immédiatement après ce scan explicite.
+3. Si le scan est indisponible, sélectionnez **Manual IP** et saisissez l’adresse, le port et le code partagé à 20 chiffres. Une ancienne CLI peut encore utiliser le code à six chiffres.
+4. Gardez l’app ouverte jusqu’à ce que les deux côtés indiquent la réussite.
 
 ## Jumeler un téléphone Android
 
-Le jumelage Android utilise le client Rust portable et le code unique distinct à 20 chiffres (~66 bits) affiché par `healthmd direct pair`. Android ne retombe jamais sur le protocole iPhone.
-
 1. Ouvrez **Health.md > Settings → Direct CLI** sur le téléphone Android.
-2. Saisissez l’adresse LAN ou Tailscale de l’ordinateur et le port `17647`.
-3. Saisissez le code à 20 chiffres et confirmez le jumelage.
+2. Touchez **Scanner le QR d’appariement** et scannez le QR universel ; le jumelage commence immédiatement après ce scan explicite.
+3. Sans caméra ou autorisation, saisissez manuellement l’adresse, le port et le même code partagé à 20 chiffres.
 4. Gardez l’app ouverte ; Android exécute un service de premier plan de synchronisation de données, visible et démarré par l’utilisateur, pour une session directe active.
 
-Une fois le code unique consommé, la confiance de reconnexion s’appuie sur le Keystore.
+Les codes uniques ne sont jamais envoyés sur le réseau ni conservés. Après le jumelage, Keychain ou Android Keystore protège la confiance de reconnexion.
 
 Utilisez un autre port si nécessaire :
 
@@ -246,6 +239,8 @@ Sur l’iPhone, une bannière d’activité globale pendant le travail direct co
 
 Tant que l’application du téléphone reste au premier plan, une session directe approuvée peut se reconnecter automatiquement après une coupure passagère. Les nouvelles tentatives utilisent des délais croissants plafonnés à une courte durée. Cela ne réveille pas une application en arrière-plan et n’en garantit pas l’accès ; rouvrez Health.md avant de reprendre si elle n’est plus au premier plan.
 
+La fenêtre d’attente bornée de 120 secondes conserve la même requête pendant que la personne déverrouille le téléphone et ouvre Health.md. Réglez-la avec `--wake-timeout SECONDS` ; `0` la désactive. MCP utilise `HEALTHMD_WAKE_TIMEOUT`. Cette première phase n’envoie pas encore de notification push et ne contourne ni le déverrouillage ni les autorisations.
+
 ## Reprise d’une tâche persistante et annulation
 
 Les tâches directes expirent sept jours après leur création. Délai d’expiration, Ctrl-C, mort du processus, déconnexion et expiration en arrière-plan ne les annulent pas.
@@ -258,11 +253,12 @@ healthmd --backend direct cancel JOB_UUID
 
 La reprise conserve les dates, réglages, destination, empreinte de requête, appareil et limite de partition d’origine. Vous ne pouvez pas pointer une tâche fichier vers une autre destination lors de la reprise.
 
-La commande d’annulation enregistre une requête persistante, mais l’annulation ne devient définitive qu’après accusé de réception par l’iPhone. Si l’iPhone est indisponible, l’état reste `cancellation_pending`. Rouvrez le même iPhone et renouvelez la demande d’annulation.
+La commande d’annulation enregistre une requête persistante, mais l’annulation ne devient définitive qu’après accusé de réception par le téléphone jumelé. Si le téléphone est indisponible, l’état reste `cancellation_pending`. Rouvrez le même téléphone et renouvelez la demande d’annulation.
 
 ## Modèle de sécurité
 
-- Le jumelage utilise un accord de clés éphémère et des preuves de transcription liés au code de jumelage de la plateforme — le flux iPhone à six chiffres ou le code unique Android distinct à haute entropie de 20 chiffres (~66 bits).
+- Les jumelages portables actuels utilisent un accord de clés éphémère et des preuves de transcription du sélecteur 3 liées à un code partagé iOS/Android à haute entropie de 20 chiffres (~66 bits). Les anciens flux Apple sélecteur 1 et Android sélecteur 2 restent compatibles octet pour octet.
+- Les transferts QR ne sont acceptés que par les scanners explicites de l’application pour des adresses privées LAN/Tailscale canoniques ; l’ouverture d’une URL personnalisée externe ne peut pas autoriser le jumelage.
 - La reconnexion prouve un secret aléatoire stocké et les deux identités d’installation.
 - Chaque connexion dérive de nouvelles clés et de nouveaux nonces.
 - Les messages et trames binaires utilisent ChaCha20-Poly1305 avec des contrôles de séquence monotones.
@@ -277,12 +273,12 @@ Manual IP reste chiffré sur un réseau local ou Tailscale. Tailscale protège a
 
 | Erreur | Action |
 |---|---|
-| `direct_not_paired` | Jumelez cette installation CLI avec l’iPhone. |
+| `direct_not_paired` | Jumelez cette installation CLI avec la source mobile prévue. |
 | `direct_device_selection_required` | Passez le `--device` de confiance voulu. |
 | `direct_trust_invalid` | Conservez les diagnostics. Réinitialisez la confiance uniquement si la récupération est impossible. |
 | `direct_iphone_unavailable` | Vérifiez l’état au premier plan de l’app, le commutateur d’accès, l’adresse, le port, l’autorisation et la joignabilité LAN ou Tailscale. |
-| `direct_export_paused` | Inspectez la tâche, rouvrez l’iPhone et reprenez-la. |
-| `direct_cancellation_pending` | Rouvrez l’iPhone jumelé et renouvelez la demande d’annulation. |
+| `direct_export_paused` | Inspectez la tâche, rouvrez le téléphone jumelé et reprenez-la. |
+| `direct_cancellation_pending` | Rouvrez le téléphone jumelé et renouvelez la demande d’annulation. |
 | `transport_unsupported` | Utilisez Manual IP ou Tailscale dans le client portable. |
 | `backend_unsupported` | Utilisez le back-end de l’app Mac pour query, evidence, doctor, metrics ou MCP. |
 | `invalid_direct_raw_response` | Ne consommez pas la sortie. Conservez les diagnostics de validation. |

@@ -11,7 +11,8 @@ use uuid::Uuid;
 use crate::{
     ANDROID_APPLICATION_PROTOCOL_VERSION, ANDROID_PAIRING_PROTOCOL_VERSION,
     CURRENT_PROTOCOL_VERSION, DEFAULT_MANUAL_IP_PORT, IOS_APPLICATION_PROTOCOL_VERSION,
-    JOB_LIFETIME_SECONDS, MAXIMUM_PACKET_BYTES, TRANSFER_FRAME_BYTES, crypto,
+    JOB_LIFETIME_SECONDS, MAXIMUM_PACKET_BYTES, SHARED_PAIRING_PROTOCOL_VERSION,
+    TRANSFER_FRAME_BYTES, crypto,
     encoding::{SwiftUuid, canonical_json},
     models::{ExportRequest as AppleExportRequest, TransferChunk},
     transfer::{
@@ -122,10 +123,11 @@ pub struct DirectProtocolInfo {
 pub fn direct_protocol_info() -> DirectProtocolInfo {
     DirectProtocolInfo {
         protocol_api_revision: PROTOCOL_API_REVISION,
-        direct_pairing_protocol_version: u32::from(CURRENT_PROTOCOL_VERSION),
+        direct_pairing_protocol_version: u32::from(SHARED_PAIRING_PROTOCOL_VERSION),
         supported_pairing_protocol_versions: vec![
             u32::from(CURRENT_PROTOCOL_VERSION),
             u32::from(ANDROID_PAIRING_PROTOCOL_VERSION),
+            u32::from(SHARED_PAIRING_PROTOCOL_VERSION),
         ],
         apple_application_protocol_version: IOS_APPLICATION_PROTOCOL_VERSION as u32,
         android_application_protocol_version: ANDROID_APPLICATION_PROTOCOL_VERSION as u32,
@@ -332,17 +334,18 @@ pub fn negotiate_owned_transfer(
     })
 }
 
-/// Closed pairing transcript profile backed by reviewed v1/v2 Rust crypto.
+/// Closed pairing transcript profile backed by reviewed v1/v2/v3 Rust crypto.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PairingProfile {
     AppleV1,
     AndroidV2,
+    SharedV3,
 }
 
 /// Constant-time verification of a new-pairing client transcript.
 ///
 /// Every key, nonce, and verifier input must be exactly 32 bytes. The pairing code must be six
-/// ASCII digits for Apple v1 or twenty ASCII digits for Android v2. This operation does not read or
+/// ASCII digits for Apple v1 or twenty ASCII digits for Android v2/shared v3. This operation does not read or
 /// persist trust and returns no secret-bearing error.
 ///
 /// # Errors
@@ -369,6 +372,12 @@ pub fn verify_pairing_client_transcript(
             client_nonce,
         ),
         PairingProfile::AndroidV2 => crypto::android_pairing_verifier(
+            pairing_code,
+            installation_id,
+            client_public_key,
+            client_nonce,
+        ),
+        PairingProfile::SharedV3 => crypto::shared_pairing_verifier(
             pairing_code,
             installation_id,
             client_public_key,
@@ -698,7 +707,7 @@ fn validate_pairing_code(
 ) -> Result<(), ProtocolFoundationError> {
     let expected_length = match profile {
         PairingProfile::AppleV1 => 6,
-        PairingProfile::AndroidV2 => 20,
+        PairingProfile::AndroidV2 | PairingProfile::SharedV3 => 20,
     };
     if pairing_code.len() == expected_length
         && pairing_code.bytes().all(|byte| byte.is_ascii_digit())
@@ -718,8 +727,8 @@ mod tests {
     fn info_pins_deployed_versions_and_limits_without_bumping_wire_versions() {
         let info = direct_protocol_info();
         assert_eq!(info.protocol_api_revision, 1);
-        assert_eq!(info.direct_pairing_protocol_version, 1);
-        assert_eq!(info.supported_pairing_protocol_versions, [1, 2]);
+        assert_eq!(info.direct_pairing_protocol_version, 3);
+        assert_eq!(info.supported_pairing_protocol_versions, [1, 2, 3]);
         assert_eq!(info.apple_application_protocol_version, 1);
         assert_eq!(info.android_application_protocol_version, 2);
         assert_eq!(info.maximum_control_json_bytes, 2 * 1_024 * 1_024);

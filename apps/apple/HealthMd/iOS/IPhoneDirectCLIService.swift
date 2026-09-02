@@ -131,8 +131,13 @@ nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
     let pairingCode: String
 
     init?(url: URL) {
-        guard url.scheme?.lowercased() == "healthmd",
-              url.host?.lowercased() == "direct-cli",
+        let rawURL = url.absoluteString
+        guard rawURL.utf8.count <= 512,
+              rawURL.utf8.allSatisfy({ (0x21...0x7e).contains($0) }),
+              !rawURL.contains("%"),
+              rawURL.hasPrefix("healthmd://direct-cli/pair?"),
+              url.scheme == "healthmd",
+              url.host == "direct-cli",
               url.path == "/pair",
               url.user == nil,
               url.password == nil,
@@ -152,10 +157,11 @@ nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
               host.utf8.count <= 15,
               Self.isAllowedLocalPairingHost(host),
               let portText = values["port"],
+              portText.utf8.allSatisfy({ (48...57).contains($0) }),
               let port = UInt16(portText),
               port > 0,
               let pairingCode = values["code"],
-              pairingCode.utf8.count == 6,
+              pairingCode.utf8.count == DirectPairingSecurity.sharedPairingCodeDigits,
               pairingCode.utf8.allSatisfy({ (48...57).contains($0) }) else { return nil }
         self.host = host
         self.port = port

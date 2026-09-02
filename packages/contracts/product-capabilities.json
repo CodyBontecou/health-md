@@ -634,6 +634,45 @@
       ]
     },
     {
+      "id": "direct-cli.shared-qr-pairing",
+      "name": "Direct CLI QR pairing",
+      "classification": "shared",
+      "summary": "Pair either mobile platform to the portable CLI from one in-app QR and shared 20-digit authentication profile, with manual entry fallback.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/direct-protocol/pairing-v3/protocol.md",
+        "apps/apple/HealthMd/iOS/Views/DirectCLIPairingScannerView.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingScanner.kt"
+      ]
+    },
+    {
+      "id": "direct.cli_agent_wake",
+      "name": "Direct CLI agent wake window",
+      "classification": "shared",
+      "summary": "Keep an unavailable direct query, export, resume, or cancellation request waiting for a bounded, cancellable window so opening either mobile app unblocks the same in-flight request; push-notification enrollment remains a later phase.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/architecture/rfc-0005-direct-cli-agent-wake.md",
+        "apps/cli/README.md"
+      ]
+    },
+    {
       "id": "setup.share-portable-configuration",
       "name": "Share My Setup",
       "classification": "planned",

@@ -59,6 +59,7 @@
 
     <!-- User-configured HTTP(S) API endpoint exports and Direct CLI transport -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Background scheduling -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -69,6 +70,11 @@
 
     <!-- Notifications for export status -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- QR onboarding is optional; manual host, port, and code entry always remains available. -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
 
     <application
         android:name=".HealthMdApplication"

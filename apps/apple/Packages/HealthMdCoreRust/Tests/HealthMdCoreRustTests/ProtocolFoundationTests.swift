@@ -8,8 +8,8 @@ final class ProtocolFoundationTests: XCTestCase {
     func testCanonicalV1V2FixturesAndProtocolInfoCrossPackagedBoundary() throws {
         let info = try service.directProtocolInfo()
         XCTAssertEqual(info.protocolApiRevision, 1)
-        XCTAssertEqual(info.directPairingProtocolVersion, 1)
-        XCTAssertEqual(info.supportedPairingProtocolVersions, [1, 2])
+        XCTAssertEqual(info.directPairingProtocolVersion, 3)
+        XCTAssertEqual(info.supportedPairingProtocolVersions, [1, 2, 3])
         XCTAssertEqual(info.appleApplicationProtocolVersion, 1)
         XCTAssertEqual(info.androidApplicationProtocolVersion, 2)
         XCTAssertEqual(info.manualIpPort, 17_647)
@@ -63,6 +63,21 @@ final class ProtocolFoundationTests: XCTestCase {
             request.pairingCodeBytes.resetBytes(in: request.pairingCodeBytes.indices)
         }
         XCTAssertTrue(try service.verifyPairingClientTranscript(request))
+
+        var sharedRequest = CoreDirectPairingVerifierRequest(
+            profile: .sharedV3,
+            pairingCodeBytes: Data("12345678901234567890".utf8),
+            clientInstallationId: "abcdefab-cdef-4abc-8def-abcdefabcdef",
+            clientPublicKey: Data(hex: "8f40c5adb68f25624ae5b214ea767a6ec94d829d3d7b5e1ad1ba6f3e2138285f"),
+            clientNonce: Data((0x40 ... 0x5f).map(UInt8.init)),
+            expectedVerifier: Data(hex: "121179c5d61c9b2be3abd2b245d3048bc86ef6f8ec9dff663151be9e971c94ec")
+        )
+        defer {
+            sharedRequest.pairingCodeBytes.resetBytes(
+                in: sharedRequest.pairingCodeBytes.indices
+            )
+        }
+        XCTAssertTrue(try service.verifyPairingClientTranscript(sharedRequest))
 
         var keyRequest = CoreDirectSessionKeyRequest(
             sharedSecret: Data(hex: "9663aa1da97e848a914a436d04163dfbb89178f107f1b5b77ed3854203382854"),

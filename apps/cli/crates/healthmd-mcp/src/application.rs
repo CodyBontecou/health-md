@@ -5,9 +5,10 @@ use std::sync::{
 
 use healthmd_operations::{
     CallContext, CallerIdentity, CallerMode, HealthDataBackend, HealthOperations, OperationLimits,
-    SurfaceProfile,
+    ProgressUpdate, SurfaceProfile,
 };
 use serde_json::{Value, json};
+use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -191,6 +192,25 @@ impl HealthMdSession {
         .await
     }
 
+    pub(crate) async fn call_tool_with_progress(
+        &self,
+        name: &str,
+        arguments: Value,
+        cancellation: CancellationToken,
+        session_id: Option<String>,
+        progress: Option<mpsc::Sender<ProgressUpdate>>,
+    ) -> Result<Value, ApplicationError> {
+        self.call_tool_as_with_progress(
+            self.caller.clone(),
+            name,
+            arguments,
+            cancellation,
+            session_id,
+            progress,
+        )
+        .await
+    }
+
     /// Execute a tool with a transport-authenticated caller. HTTP adapters use this after token
     /// verification; local stdio uses the session's fixed caller through [`Self::call_tool`].
     ///
@@ -205,6 +225,19 @@ impl HealthMdSession {
         arguments: Value,
         cancellation: CancellationToken,
         session_id: Option<String>,
+    ) -> Result<Value, ApplicationError> {
+        self.call_tool_as_with_progress(caller, name, arguments, cancellation, session_id, None)
+            .await
+    }
+
+    pub(crate) async fn call_tool_as_with_progress(
+        &self,
+        caller: CallerIdentity,
+        name: &str,
+        arguments: Value,
+        cancellation: CancellationToken,
+        session_id: Option<String>,
+        progress: Option<mpsc::Sender<ProgressUpdate>>,
     ) -> Result<Value, ApplicationError> {
         if !self.application.tool_exists_for_caller(name, &caller) {
             return Err(ApplicationError::invalid_params("Unknown tool"));
@@ -227,6 +260,7 @@ impl HealthMdSession {
             caller,
             cancellation: cancellation.clone(),
             session_id,
+            progress,
         };
         match name {
             "healthmd_status" => {
@@ -278,9 +312,19 @@ impl HealthMdSession {
         let value = tokio::select! {
             result = self.application.query_pages(context, invocation) => match result {
                 Ok(value) => value,
-                Err(error) => return Ok(result::query_tool_result(
-                    result::backend_error(&error), true, self.ui_enabled(), false,
-                )),
+                Err(error) => {
+                    let value = if error.code == "healthmd_request_cancelled" {
+                        result::cancelled(None)
+                    } else {
+                        result::backend_error(&error)
+                    };
+                    return Ok(result::query_tool_result(
+                        value,
+                        true,
+                        self.ui_enabled(),
+                        false,
+                    ));
+                }
             },
             () = context.cancellation.cancelled() => return Ok(result::query_tool_result(
                 result::cancelled(None), true, self.ui_enabled(), false,
@@ -375,6 +419,9 @@ impl HealthMdSession {
             response = self.application.operations.backend().start_export(context, job_id, arguments) => {
                 match response {
                     Ok(value) => value,
+                    Err(error) if error.code == "healthmd_request_cancelled" => {
+                        result::cancelled(Some(job_id))
+                    }
                     Err(error) => export_error_value(&error, job_id),
                 }
             },
@@ -429,7 +476,13 @@ impl HealthMdSession {
             .map_err(|_| ApplicationError::invalid_params("Invalid tool arguments"))?;
         let value = tokio::select! {
             response = self.application.operations.backend().resume_export(context, job_id, arguments) => {
-                response.unwrap_or_else(|error| export_error_value(&error, job_id))
+                match response {
+                    Ok(value) => value,
+                    Err(error) if error.code == "healthmd_request_cancelled" => {
+                        result::cancelled(Some(job_id))
+                    }
+                    Err(error) => export_error_value(&error, job_id),
+                }
             },
             () = context.cancellation.cancelled() => result::cancelled(Some(job_id)),
         };
@@ -455,7 +508,13 @@ impl HealthMdSession {
             .map_err(|_| ApplicationError::invalid_params("Invalid tool arguments"))?;
         let value = tokio::select! {
             response = self.application.operations.backend().cancel_export(context, job_id) => {
-                response.unwrap_or_else(|error| export_error_value(&error, job_id))
+                match response {
+                    Ok(value) => value,
+                    Err(error) if error.code == "healthmd_request_cancelled" => {
+                        result::cancelled(Some(job_id))
+                    }
+                    Err(error) => export_error_value(&error, job_id),
+                }
             },
             () = context.cancellation.cancelled() => result::cancelled(Some(job_id)),
         };
@@ -1130,6 +1189,39 @@ mod tests {
             requests[0].query.pointer("/page/cursor"),
             Some(&json!("opaque-resume"))
         );
+    }
+
+    #[tokio::test]
+    async fn backend_wait_cancellation_uses_the_canonical_local_outcome() {
+        let backend = ScriptedBackend::new([Err(BackendError::new(
+            "healthmd_request_cancelled",
+            "The local direct mobile wait was cancelled.",
+        ))]);
+        let application = Arc::new(HealthMdApplication::new(
+            backend,
+            SurfaceProfile::RemoteReadOnly,
+        ));
+        let session = application.session(CallerIdentity::loopback());
+        let result = session
+            .call_tool(
+                "healthmd_query",
+                raw_query_arguments(false),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        let text: Value = serde_json::from_str(
+            result
+                .pointer("/content/0/text")
+                .and_then(Value::as_str)
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(text["error"], "healthmd_request_cancelled");
+        assert_eq!(text["status"], "cancelled");
+        assert_eq!(text["operation_outcome"], "cancelled");
+        assert_eq!(result["isError"], true);
     }
 
     #[tokio::test]

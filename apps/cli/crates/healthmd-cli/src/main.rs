@@ -15,11 +15,14 @@ use chrono::{Duration as ChronoDuration, Local, SecondsFormat, Timelike as _, Ut
 use clap::{Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
 use healthmd_cli::{
     mcp, onboarding,
-    pairing::{LocalAddress, ios_pairing_link, local_ipv4_addresses, preferred_pairing_address},
+    pairing::{LocalAddress, local_ipv4_addresses, pairing_link, preferred_pairing_address},
 };
 use healthmd_client::{
     ClientError,
-    direct::{DirectClient, SourceStatus},
+    direct::{
+        DEFAULT_WAKE_TIMEOUT_SECONDS, DirectClient, MAXIMUM_WAKE_TIMEOUT_SECONDS, SourceStatus,
+        WakeWindow,
+    },
     file_receiver::GeneratedDestination,
     job::{JobRecord, JobState},
 };
@@ -297,6 +300,9 @@ struct ExportArgs {
     timeout: u64,
 
     #[command(flatten)]
+    wake: WakeArgs,
+
+    #[command(flatten)]
     selection: SelectionArgs,
 }
 
@@ -324,6 +330,9 @@ struct ExtractArgs {
     #[arg(long, default_value_t = 300)]
     timeout: u64,
 
+    #[command(flatten)]
+    wake: WakeArgs,
+
     /// Canonical output encoding. JSONL also emits a health-free receipt.
     #[arg(long, value_enum, default_value = "json")]
     format: ExtractionFormat,
@@ -345,6 +354,16 @@ struct QueryArgs {
     /// Maximum seconds to wait for the foreground iPhone query (1 through 3600).
     #[arg(long, default_value_t = 1_200)]
     timeout: u64,
+
+    #[command(flatten)]
+    wake: WakeArgs,
+}
+
+#[derive(Clone, Copy, Debug, Args)]
+struct WakeArgs {
+    /// Seconds to wait for an unavailable paired phone to become active; 0 disables waiting.
+    #[arg(long, default_value_t = DEFAULT_WAKE_TIMEOUT_SECONDS)]
+    wake_timeout: u64,
 }
 
 #[derive(Debug, Args)]
@@ -446,6 +465,9 @@ struct ResumeArgs {
     /// Maximum seconds to wait for resumed work (5 through 900).
     #[arg(long, default_value_t = 300)]
     timeout: u64,
+
+    #[command(flatten)]
+    wake: WakeArgs,
 }
 
 #[derive(Debug, Args)]
@@ -456,6 +478,9 @@ struct ResumeArgs {
 struct JobArgs {
     /// Durable job UUID from an export receipt or status response.
     job_id: Option<Uuid>,
+
+    #[command(flatten)]
+    wake: WakeArgs,
 }
 
 #[derive(Debug, Args)]
@@ -487,17 +512,21 @@ enum DirectCommand {
 
 #[derive(Debug, Args)]
 #[command(
-    long_about = "Open a bounded Manual IP listener and pair this CLI installation with one foreground Health.md mobile app. iOS and Android use separate one-time code lengths. Generated codes and health-free progress are printed to stderr; the final structured result follows the global human/JSON output selection.",
-    after_help = "EXAMPLE:\n  healthmd direct pair\n\nKeep the command running. In Health.md, open Direct CLI Access and enter the displayed\naddress, port, and platform-specific code (or scan the iOS QR). Pairing trust is stored\nonly in the platform-native credential service."
+    long_about = "Open a bounded Manual IP listener and pair this CLI installation with one foreground Health.md mobile app. Current iOS and Android releases share one high-entropy 20-digit QR/code; a six-digit Apple-v1 code remains only for legacy compatibility. Generated codes and health-free progress are printed to stderr; the final structured result follows the global human/JSON output selection.",
+    after_help = "EXAMPLE:\n  healthmd direct pair\n\nKeep the command running. In Health.md on iOS or Android, open Direct CLI Access and\nscan the universal QR (or enter its 20-digit code manually). A six-digit legacy Apple\ncode remains available for older iOS releases. Pairing trust is stored only in the\nplatform-native credential service."
 )]
 struct PairArgs {
-    /// Override the generated six-digit iOS pairing code.
+    /// Override the generated six-digit legacy Apple-v1 pairing code.
     #[arg(long)]
     pairing_code: Option<String>,
 
-    /// Override the generated high-entropy twenty-digit Android pairing code.
-    #[arg(long)]
+    /// Deprecated compatibility override for the shared twenty-digit pairing code.
+    #[arg(long, conflicts_with = "shared_pairing_code")]
     android_pairing_code: Option<String>,
+
+    /// Override the shared twenty-digit iOS/Android pairing code encoded in the QR.
+    #[arg(long, conflicts_with = "android_pairing_code")]
+    shared_pairing_code: Option<String>,
 
     /// Seconds to keep the pairing listener open (10 through 600).
     #[arg(long, default_value_t = 120)]
@@ -669,6 +698,7 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
             device_id: cli.device,
             port: cli.port,
             timeout_seconds: options.timeout_seconds,
+            wake_timeout_seconds: None,
         };
         let result = if read_only {
             mcp::serve_read_only(options).await
@@ -694,6 +724,7 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
             device_id: cli.device,
             port: cli.port,
             timeout_seconds: options.timeout_seconds,
+            wake_timeout_seconds: None,
         };
         let http_options = mcp::HttpServerOptions {
             bind: options.bind,
@@ -925,6 +956,7 @@ async fn direct_query(
             "query timeout must be between 1 and 3600 seconds",
         ));
     }
+    validate_wake_timeout(options.wake)?;
     let Some(operation) = options.operation else {
         return Ok(guidance::query("direct", None));
     };
@@ -942,6 +974,7 @@ async fn direct_query(
             device_id: device,
             port,
             timeout_seconds: options.timeout,
+            wake_timeout_seconds: Some(options.wake.wake_timeout),
         },
         &operation,
         arguments,
@@ -955,6 +988,12 @@ async fn direct_query(
             code: "direct_initialization_failed",
             message: "The direct client could not initialize native trust state.".to_owned(),
         },
+        mcp::QueryError::Backend(error) if error.code == "direct_source_unavailable" => {
+            direct_error("direct_wake_window_expired", error.message)
+        }
+        mcp::QueryError::Backend(error) if error.code == "healthmd_request_cancelled" => {
+            direct_error("direct_wait_cancelled", error.message)
+        }
         mcp::QueryError::Backend(error) => CommandError {
             backend: "direct",
             code: "healthmd_query_failed",
@@ -1023,19 +1062,19 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
             "pair timeout must be between 10 and 600 seconds",
         ));
     }
-    let ios_code = match options.pairing_code {
+    let legacy_apple_code = match options.pairing_code {
         Some(code) => code,
         None => generate_pairing_code(6)?,
     };
-    let android_code = match options.android_pairing_code {
+    let shared_code = match options.shared_pairing_code.or(options.android_pairing_code) {
         Some(code) => code,
         None => generate_pairing_code(20)?,
     };
-    let ios_code = healthmd_client::handshake::normalize_pairing_code(&ios_code);
-    let android_code = healthmd_client::handshake::normalize_pairing_code(&android_code);
-    if ios_code.len() != 6 || android_code.len() != 20 {
+    let legacy_apple_code = healthmd_client::handshake::normalize_pairing_code(&legacy_apple_code);
+    let shared_code = healthmd_client::handshake::normalize_pairing_code(&shared_code);
+    if legacy_apple_code.len() != 6 || shared_code.len() != 20 {
         return Err(usage_error(
-            "iOS pairing requires 6 ASCII digits and Android pairing requires 20 ASCII digits",
+            "shared pairing requires 20 ASCII digits; legacy Apple v1 requires 6 ASCII digits",
         ));
     }
     let addresses = local_ipv4_addresses();
@@ -1051,15 +1090,15 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
     let client = DirectClient::open().map_err(client_error)?;
     let result = client
         .pair(
-            &ios_code,
-            &android_code,
+            &legacy_apple_code,
+            &shared_code,
             port,
             Duration::from_secs(options.timeout),
             |bound_port| {
                 eprintln!(
-                    "Open Health.md on iPhone → Settings → Mac Sync → Direct CLI Access. Enable Manual IP, enter computer address {address_text}, port {bound_port}, and iOS code {ios_code}. Android code: {android_code}."
+                    "Open Health.md → Direct CLI Access and scan the universal QR, or enter computer address {address_text}, port {bound_port}, and shared 20-digit code {shared_code}. Legacy iOS code: {legacy_apple_code}."
                 );
-                print_ios_pairing_qr(&addresses, bound_port, &ios_code);
+                print_pairing_qr(&addresses, bound_port, &shared_code);
             },
         )
         .await
@@ -1154,6 +1193,7 @@ async fn setup_codex_pairing(
         PairArgs {
             pairing_code: None,
             android_pairing_code: None,
+            shared_pairing_code: None,
             timeout: pairing_timeout,
         },
         port,
@@ -1242,6 +1282,49 @@ async fn setup_codex(
     }))
 }
 
+fn validate_wake_timeout(options: WakeArgs) -> Result<(), CommandError> {
+    if options.wake_timeout > MAXIMUM_WAKE_TIMEOUT_SECONDS {
+        return Err(usage_error(
+            "wake timeout must be between 0 and 3600 seconds",
+        ));
+    }
+    Ok(())
+}
+
+async fn wait_for_wake_window(
+    client: &DirectClient,
+    device: Option<Uuid>,
+    port: u16,
+    options: WakeArgs,
+) -> Result<(), CommandError> {
+    validate_wake_timeout(options)?;
+    client
+        .wait_for_active_source(
+            device,
+            port,
+            WakeWindow::from_seconds(options.wake_timeout),
+            &tokio_util::sync::CancellationToken::new(),
+            |progress| eprintln!("{}", progress.message),
+        )
+        .await
+        .map_err(|error| match error {
+            ClientError::TimedOut => direct_error("direct_wake_window_expired", error),
+            ClientError::WaitCancelled => direct_error("direct_wait_cancelled", error),
+            other => map_direct_client_error(other),
+        })
+}
+
+fn pinned_wake_device(requested: Option<Uuid>, pinned: Uuid) -> Result<Uuid, CommandError> {
+    if let Some(requested) = requested {
+        if requested != pinned {
+            return Err(map_direct_client_error(ClientError::DeviceNotPaired(
+                requested,
+            )));
+        }
+    }
+    Ok(pinned)
+}
+
 async fn direct_status(
     options: StatusArgs,
     device: Option<Uuid>,
@@ -1325,6 +1408,7 @@ async fn direct_status(
             "display_name": Value::Null
         },
         "active_export": Value::Null,
+        "wake_window": WakeWindow::default().status_value(),
         "direct_cli": {
             "paired": true,
             "transport": "manual-ip",
@@ -1346,6 +1430,7 @@ async fn direct_export(
             "export timeout must be between 5 and 900 seconds",
         ));
     }
+    validate_wake_timeout(options.wake)?;
     let source_client = DirectClient::open().map_err(client_error)?;
     let selected_source = source_client
         .selected_source(device)
@@ -1391,6 +1476,7 @@ async fn direct_export(
         destination: None,
     };
     let client = DirectClient::open().map_err(client_error)?;
+    wait_for_wake_window(&client, device, port, options.wake).await?;
     let result = client
         .export_raw(request, device, port, Duration::from_secs(options.timeout))
         .await
@@ -1469,6 +1555,7 @@ async fn direct_android_export(
             },
             destination: None,
         };
+        wait_for_wake_window(&client, Some(source_id), port, options.wake).await?;
         let result = client
             .export_android(request, None, Some(source_id), port, timeout)
             .await
@@ -1552,6 +1639,7 @@ async fn direct_android_export(
             display_name,
         }),
     };
+    wait_for_wake_window(&client, Some(source_id), port, options.wake).await?;
     let result = client
         .export_android(
             request,
@@ -1616,6 +1704,7 @@ async fn direct_file_export(
     )
     .map_err(operation_input_error)?;
     let client = DirectClient::open().map_err(client_error)?;
+    wait_for_wake_window(&client, device, port, options.wake).await?;
     let result = client
         .export_files(invocation.request, device, port, invocation.timeout)
         .await
@@ -1640,6 +1729,7 @@ async fn direct_extract(
             "extract timeout must be between 5 and 900 seconds",
         ));
     }
+    validate_wake_timeout(options.wake)?;
     let normalized = operation_selection_options(&options.selection)
         .extract()
         .map_err(operation_input_error)?;
@@ -1668,6 +1758,7 @@ async fn direct_extract(
         destination: None,
     };
     let pointers = normalized.projection_pointers;
+    wait_for_wake_window(&client, device, port, options.wake).await?;
     let transfer = client
         .export_raw(request, device, port, Duration::from_secs(options.timeout))
         .await
@@ -1718,6 +1809,7 @@ async fn direct_resume(
             "resume timeout must be between 5 and 900 seconds",
         ));
     }
+    validate_wake_timeout(options.wake)?;
     let Some(job_id) = options.job_id else {
         return Ok(CommandSuccess::json(guidance::resume("direct")));
     };
@@ -1746,6 +1838,11 @@ async fn direct_resume(
                 }
                 _ => {}
             }
+            if record.state.resume_requires_source() {
+                let wake_device =
+                    pinned_wake_device(device, record.request.source_installation_id)?;
+                wait_for_wake_window(&client, Some(wake_device), port, options.wake).await?;
+            }
             let result = client
                 .resume_android(job_id, device, port, Duration::from_secs(options.timeout))
                 .await
@@ -1764,6 +1861,19 @@ async fn direct_resume(
         Err(error) => return Err(map_direct_client_error(error)),
     }
     let record = client.job_record(job_id).map_err(map_direct_client_error)?;
+    if record.state.resume_requires_source() {
+        // An unbound job (crash window before its first connection) keeps the caller's device
+        // selection; a bound job pins the wake preflight to its exact source.
+        let wake_device = match record
+            .peer_binding
+            .as_ref()
+            .map(|binding| binding.source_installation_id.0)
+        {
+            Some(pinned) => Some(pinned_wake_device(device, pinned)?),
+            None => device,
+        };
+        wait_for_wake_window(&client, wake_device, port, options.wake).await?;
+    }
     if record.request.response_mode == ResponseMode::WriteFiles {
         if options.format == Some(ExtractionFormat::Jsonl) {
             return Err(usage_error(
@@ -1852,15 +1962,40 @@ async fn direct_cancel(
     device: Option<Uuid>,
     port: u16,
 ) -> Result<Value, CommandError> {
+    validate_wake_timeout(options.wake)?;
     let Some(job_id) = options.job_id else {
         return Ok(guidance::cancel("direct"));
     };
     let client = DirectClient::open().map_err(client_error)?;
     match client.v2_job_record(job_id) {
         Ok(record) => {
+            let wake_device = pinned_wake_device(device, record.request.source_installation_id)?;
             let already_terminal = record.state.is_terminal();
+            if !already_terminal {
+                // Preserve the existing cross-process contract: persist the explicit cancellation
+                // before opening a second listener, so an active export that owns the port can
+                // deliver it.
+                client
+                    .request_android_job_cancellation(job_id, Some(wake_device))
+                    .map_err(map_direct_client_error)?;
+                if let Err(error) =
+                    wait_for_wake_window(&client, Some(wake_device), port, options.wake).await
+                {
+                    // The durable marker is already persisted, so local wait expiry or
+                    // interruption reports the truthful pending state, never terminal cancellation.
+                    if matches!(
+                        error.code,
+                        "direct_wake_window_expired" | "direct_wait_cancelled"
+                    ) {
+                        return Err(map_direct_client_error(ClientError::CancellationPending(
+                            job_id,
+                        )));
+                    }
+                    return Err(error);
+                }
+            }
             client
-                .cancel_android_job(job_id, device, port, Duration::from_secs(20))
+                .cancel_android_job(job_id, Some(wake_device), port, Duration::from_secs(20))
                 .await
                 .map_err(map_direct_client_error)?;
             let current = client
@@ -1875,8 +2010,43 @@ async fn direct_cancel(
             }))
         }
         Err(ClientError::JobNotFound) => {
+            let record = client.job_record(job_id).map_err(map_direct_client_error)?;
+            let delivery_device = if record.state.is_terminal() {
+                device
+            } else {
+                let pinned_device = record
+                    .peer_binding
+                    .as_ref()
+                    .map(|binding| binding.source_installation_id.0)
+                    .ok_or_else(|| {
+                        map_direct_client_error(ClientError::JobNotResumable(
+                            job_id,
+                            "unbound".into(),
+                        ))
+                    })?;
+                let wake_device = pinned_wake_device(device, pinned_device)?;
+                client
+                    .request_job_cancellation(job_id, Some(wake_device))
+                    .map_err(map_direct_client_error)?;
+                if let Err(error) =
+                    wait_for_wake_window(&client, Some(wake_device), port, options.wake).await
+                {
+                    // The durable marker is already persisted, so local wait expiry or
+                    // interruption reports the truthful pending state, never terminal cancellation.
+                    if matches!(
+                        error.code,
+                        "direct_wake_window_expired" | "direct_wait_cancelled"
+                    ) {
+                        return Err(map_direct_client_error(ClientError::CancellationPending(
+                            job_id,
+                        )));
+                    }
+                    return Err(error);
+                }
+                Some(wake_device)
+            };
             client
-                .cancel_job(job_id, device, port, Duration::from_secs(20))
+                .cancel_job(job_id, delivery_device, port, Duration::from_secs(20))
                 .await
                 .map_err(map_direct_client_error)?;
             Ok(json!({
@@ -2143,17 +2313,17 @@ fn generate_pairing_code(digit_count: usize) -> Result<String, CommandError> {
     })
 }
 
-fn print_ios_pairing_qr(addresses: &[LocalAddress], port: u16, pairing_code: &str) {
+fn print_pairing_qr(addresses: &[LocalAddress], port: u16, pairing_code: &str) {
     let Some(address) = preferred_pairing_address(addresses) else {
         return;
     };
-    let link = ios_pairing_link(&address.address, port, pairing_code);
+    let link = pairing_link(&address.address, port, pairing_code);
     let Ok(code) = QrCode::new(link.as_bytes()) else {
         return;
     };
     let rendered = code.render::<unicode::Dense1x2>().quiet_zone(true).build();
     eprintln!(
-        "In foreground Health.md, open Sync > Direct CLI Access, tap Scan Pairing QR, and scan this image:\n{rendered}"
+        "In foreground Health.md on iOS or Android, open Direct CLI Access, tap Scan Pairing QR, and scan this image:\n{rendered}"
     );
 }
 
@@ -2248,6 +2418,7 @@ fn direct_error(code: &'static str, _error: impl std::fmt::Display) -> CommandEr
         "job_not_found" => "The durable direct job was not found.",
         "job_expired" => "The durable direct job expired after seven days.",
         "cancelled" => "The direct export was cancelled.",
+        "direct_wait_cancelled" => "The local direct mobile wait was cancelled.",
         _ => "The direct mobile source is unavailable.",
     };
     CommandError {
@@ -2358,10 +2529,10 @@ mod tests {
     }
 
     #[test]
-    fn ios_pairing_link_is_exact_and_ephemeral() {
+    fn shared_pairing_link_is_exact_and_ephemeral() {
         assert_eq!(
-            ios_pairing_link("192.168.1.42", 17_647, "123456"),
-            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
+            pairing_link("192.168.1.42", 17_647, "12345678901234567890"),
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345678901234567890"
         );
     }
 
@@ -2411,14 +2582,14 @@ mod tests {
     }
 
     #[test]
-    fn platform_specific_pairing_code_overrides_parse() {
+    fn shared_and_legacy_pairing_code_overrides_parse() {
         let parsed = Cli::try_parse_from([
             "healthmd",
             "direct",
             "pair",
             "--pairing-code",
             "123456",
-            "--android-pairing-code",
+            "--shared-pairing-code",
             "12345678901234567890",
         ])
         .unwrap();
@@ -2430,9 +2601,10 @@ mod tests {
         };
         assert_eq!(options.pairing_code.as_deref(), Some("123456"));
         assert_eq!(
-            options.android_pairing_code.as_deref(),
+            options.shared_pairing_code.as_deref(),
             Some("12345678901234567890")
         );
+        assert!(options.android_pairing_code.is_none());
     }
 
     #[test]
@@ -2503,6 +2675,33 @@ mod tests {
         );
         assert!(options.arguments.is_some());
         assert_eq!(options.timeout, 1_200);
+        assert_eq!(options.wake.wake_timeout, DEFAULT_WAKE_TIMEOUT_SECONDS);
+
+        let disabled = Cli::try_parse_from([
+            "healthmd",
+            "query",
+            "healthmd_sleep_sessions",
+            "--arguments",
+            r#"{"dates":{"type":"all_available"}}"#,
+            "--wake-timeout",
+            "0",
+        ])
+        .unwrap();
+        let Command::Query(options) = disabled.command else {
+            panic!("expected query command");
+        };
+        assert_eq!(options.wake.wake_timeout, 0);
+    }
+
+    #[test]
+    fn durable_wake_uses_the_job_pinned_device() {
+        let pinned = Uuid::new_v4();
+        assert_eq!(pinned_wake_device(None, pinned).unwrap(), pinned);
+        assert_eq!(pinned_wake_device(Some(pinned), pinned).unwrap(), pinned);
+
+        let other = Uuid::new_v4();
+        let error = pinned_wake_device(Some(other), pinned).unwrap_err();
+        assert_eq!(error.code, "direct_device_not_paired");
     }
 
     #[test]

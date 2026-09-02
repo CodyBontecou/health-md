@@ -100,6 +100,8 @@ class ProductCapabilityManifestTest {
             "export.profiles",
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
+            "direct-cli.shared-qr-pairing",
+            "direct.cli_agent_wake",
         )
 
         val appleCapabilities = setOf(

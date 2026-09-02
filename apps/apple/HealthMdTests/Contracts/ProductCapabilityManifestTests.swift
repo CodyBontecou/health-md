@@ -93,6 +93,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.profiles",
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
+        "direct-cli.shared-qr-pairing",
+        "direct.cli_agent_wake",
     ]
 
     private static let appleCapabilities: Set<String> = [

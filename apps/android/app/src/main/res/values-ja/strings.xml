@@ -738,7 +738,11 @@
     <string name="direct_cli_intro_title">暗号化されたデスクトップ向けエクスポート</string>
     <string name="direct_cli_intro_body">CLI はパソコン上で待機します。Health.md が直接接続し、クラウド中継を使わずにエクスポートを送信します。</string>
     <string name="direct_cli_pair_step_run">1. パソコンで次を実行します：</string>
-    <string name="direct_cli_pair_step_enter">2. CLI に表示されたパソコンのアドレスと20桁の Android コードを入力します。</string>
+    <string name="direct_cli_pair_step_enter">2. 下の共通QRコードをスキャンするか、パソコンのアドレス、ポート、共通の20桁ペアリングコードを入力します。</string>
+    <string name="direct_cli_scan_qr">ペアリングQRをスキャン</string>
+    <string name="direct_cli_camera_unavailable">カメラでスキャンできません。可能であればカメラへのアクセスを許可するか、アドレス、ポート、コードを手動で入力してください。</string>
+    <string name="direct_cli_invalid_qr">有効なHealth.md Direct CLIペアリングQRではありません。</string>
+    <string name="direct_cli_scan_qr_hint">healthmd direct pairに表示されたQRへカメラを向けてください。</string>
     <string name="direct_cli_computer_address">パソコンのアドレス</string>
     <string name="direct_cli_port">ポート</string>
     <string name="direct_cli_pairing_code">ペアリングコード</string>

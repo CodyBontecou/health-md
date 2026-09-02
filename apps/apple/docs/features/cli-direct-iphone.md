@@ -34,7 +34,7 @@ Direct mode supports pairing, device inspection, status, canonical `extract`, st
 - For Nearby: both devices on a network where Multipeer discovery is permitted and local-network permission granted.
 - For file mode: an existing absolute writable desktop destination on macOS, Linux, or Windows supplied with `--destination`.
 
-Direct access is foreground-scoped for pairing and new commands. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. If an active export is already connected when Health.md enters the background, the app requests finite iOS background execution time and keeps that export running until it completes or the system expires the allowance. Expiration disconnects the channel and leaves the durable job paused for resume. Idle discovery and new connections still stop in the background, so this is not a fully unattended background or cron interface.
+Direct access is foreground-scoped for pairing and new commands. The portable CLI's RFC-0005 P1 wake window can keep an unavailable query/export/resume/cancel request open for 120 seconds while the user unlocks and foregrounds Health.md; it does not wake the suspended app itself. `--wake-timeout 0` disables this host-only wait, and notification enrollment remains unavailable until a later APNs phase. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. If an active export is already connected when Health.md enters the background, the app requests finite iOS background execution time and keeps that export running until it completes or the system expires the allowance. Expiration disconnects the channel and leaves the durable job paused for resume. Idle discovery and new connections still stop in the background, so this is not a fully unattended background or cron interface.
 
 ## Backends and transports
 
@@ -56,7 +56,7 @@ No failed mode falls back to another backend, Manual IP, Nearby, or the Mac app.
 
 ## Pairing
 
-Pairing creates a trust relationship distinct from the Health.md Mac app's own sync trust. The six-digit code is short-lived and is never sent over the wire or persisted.
+Pairing creates a trust relationship distinct from the Health.md Mac app's own sync trust. Current Manual IP onboarding uses the same short-lived, high-entropy 20-digit code on iOS and Android; the code is never sent over the wire or persisted. The six-digit Apple profile remains only for legacy/Nearby compatibility.
 
 ### Manual IP or Tailscale
 
@@ -67,11 +67,11 @@ Pairing creates a trust relationship distinct from the Health.md Mac app's own s
    ```
 
 2. Keep that command running. On iPhone, open Health.md's **Sync** tab, choose **CLI**, then tap **Scan Pairing QR** under **Direct CLI Access** and point the in-app camera at the terminal QR.
-3. The in-app scan is the explicit pairing action. Health.md accepts only a private-LAN or Tailscale IPv4 endpoint, validates the exact port and one-time code, and starts the authenticated connection automatically without a second Pair tap. External `healthmd://` opens are rejected because another app cannot prove that the user scanned the QR. If a direct operation is active, the handoff waits and starts automatically when that operation finishes. If the first connection fails, the in-app card offers Retry and Cancel without persisting the code.
-4. If in-app QR scanning is unavailable, open **Sync → CLI**, enable Direct CLI Access, select **Manual IP**, enter the shown LAN/Tailscale address, port, and code, then tap Pair.
+3. The in-app scan is the explicit pairing action. Health.md accepts only a private-LAN or Tailscale IPv4 endpoint, validates the exact port and shared 20-digit one-time code, and starts the selector-3 authenticated connection automatically without a second Pair tap. External `healthmd://` opens are rejected because another app cannot prove that the user scanned the QR. If a direct operation is active, the handoff waits and starts automatically when that operation finishes. If the first connection fails, the in-app card offers Retry and Cancel without persisting the code.
+4. If in-app QR scanning is unavailable, open **Sync → CLI**, enable Direct CLI Access, select **Manual IP**, enter the shown LAN/Tailscale address, port, and 20-digit code, then tap Pair. Six-digit manual entry remains available only for an older CLI.
 5. The CLI prints the final machine-readable pairing result on stdout.
 
-For Codex, `healthmd setup codex` combines this pairing flow with safe, idempotent host configuration. Pairing accepts `--port PORT`, `--timeout SECONDS`, and `--pairing-code CODE` for controlled automation. If a non-default Manual IP port is saved on iPhone, pass the same global `--port PORT` before later status/export/resume/cancel commands. Avoid putting a pairing code in shell history unless necessary.
+For Codex, `healthmd setup codex` combines this pairing flow with safe, idempotent host configuration. Pairing accepts `--port PORT`, `--timeout SECONDS`, and `--shared-pairing-code CODE` for controlled automation; `--pairing-code` overrides only the six-digit legacy Apple fallback. If a non-default Manual IP port is saved on iPhone, pass the same global `--port PORT` before later status/export/resume/cancel commands. Avoid putting a pairing code in shell history unless necessary.
 
 ### Nearby (bundled Swift client only)
 

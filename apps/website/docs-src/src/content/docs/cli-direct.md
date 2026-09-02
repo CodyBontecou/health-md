@@ -14,7 +14,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Preview · portable direct CLI</strong>
-<p>The bundled Swift direct backend is available on macOS and pairs with iPhone. Android pairing (protocol v2) is part of the publicly packaged cross-platform Rust preview. Its physical iPhone and Android release QA remains pending, so Linux and Windows commands describe an explicitly unqualified workflow.</p>
+<p>The bundled Swift direct backend is available on macOS and pairs with iPhone. Android application protocol v2 is part of the publicly packaged cross-platform Rust preview. Current iOS and Android releases use the same selector-3 universal QR for new portable pairing. Physical iPhone and Android release QA remains pending, so Linux and Windows commands describe an explicitly unqualified workflow.</p>
 </div>
 
 ## Mobile compatibility for 0.1.0-alpha.3
@@ -23,14 +23,14 @@ This standalone compatibility table is the actionable matrix for the explicitly 
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
-| Android | selector 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
+| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
 ## What direct mode supports
 
-- one-time pairing and trusted reconnect with iPhone (protocol v1) or Android (protocol v2) sources;
+- shared selector-3 one-time pairing and trusted reconnect with iPhone (application v1) or Android (application v2) sources;
 - local trusted-device inspection and unpairing;
 - live phone readiness;
 - strict raw export — schema-v8 `healthmd.health_data` on iPhone, provider-native Health Connect snapshots on Android;
@@ -44,7 +44,7 @@ The `healthmd` command's direct backend does not emulate the Mac app's encrypted
 
 ## Requirements
 
-- A direct-capable `healthmd` binary and a matching Health.md build: iPhone (protocol v1) or Android (protocol v2). Android pairing requires the portable Rust client; the bundled macOS helper pairs with iPhone only.
+- A direct-capable `healthmd` binary and a matching Health.md build: iPhone (application v1) or Android (application v2). Android pairing requires the portable Rust client; the bundled macOS helper pairs with iPhone only.
 - Health.md open in the foreground on the phone for pairing and new commands.
 - **Settings > Mac Sync > Direct CLI Access** enabled on iPhone, or **Settings → Direct CLI** on Android.
 - Platform health permission (HealthKit or Health Connect), protected data, local network permission, and export quota available.
@@ -71,28 +71,25 @@ Start the listener on the computer:
 healthmd direct pair --transport manual-ip
 ```
 
-The portable Rust client writes a six-digit iPhone code, a separate 20-digit Android code, candidate computer addresses, and the listener port to stderr; the bundled macOS helper prints only the six-digit iPhone code. stdout stays reserved for the final JSON result.
+The portable Rust client renders one universal iOS/Android QR and writes its shared 20-digit code, candidate computer addresses, listener port, and a six-digit legacy-iOS fallback to stderr. The bundled macOS helper still prints only its legacy six-digit iPhone code. stdout stays reserved for the final JSON result.
 
 On iPhone:
 
-1. Open **Health.md > Settings > Mac Sync > Direct CLI Access**.
-2. Enable Direct CLI Access.
-3. Select **Manual IP**.
-4. Enter the computer's LAN or Tailscale address.
-5. Enter port `17647`, unless the CLI uses another global `--port`.
-6. Enter the pairing code and tap Pair.
-7. Keep the app open until both sides report success.
+1. Open **Health.md > Sync > CLI > Direct CLI Access**.
+2. Tap **Scan Pairing QR** and scan the universal QR shown by the portable CLI. A valid in-app scan starts pairing immediately; do not open it as a custom URL.
+3. If scanning is unavailable, enable **Manual IP** and enter the LAN/Tailscale address, port, and shared 20-digit code. Six-digit entry remains available only for the bundled or another legacy Apple client.
+4. Keep the app open until both sides report success.
 
-iPhone pairing codes expire after 10 minutes. They are never sent over the network or persisted.
+Portable pairing codes expire when their bounded listener closes (after two minutes by default, at most ten minutes). They are never sent over the network or persisted.
 
 ## Pair an Android phone
 
-Android pairing uses the portable Rust client and the separate 20-digit (~66-bit) one-time code printed by `healthmd direct pair`. Android never downgrades to the iPhone protocol.
+Android pairing uses the portable Rust client's same universal selector-3 QR and 20-digit (~66-bit) code. Android never downgrades its application protocol to iPhone v1.
 
 1. Open **Health.md > Settings → Direct CLI** on the Android phone.
-2. Enter the computer's LAN or Tailscale address and port `17647`.
-3. Enter the 20-digit code and confirm pairing.
-4. Keep the app open; Android runs a visible, user-started data-sync foreground service for an active direct session.
+2. Tap **Scan pairing QR**; a valid in-app scan starts pairing immediately.
+3. If camera access or hardware is unavailable, enter the same LAN/Tailscale address, port, and 20-digit code manually.
+4. Keep the app open; Android runs a visible, user-started data-sync foreground service for an active direct session. Both Play and F-Droid builds use CameraX and ZXing Core rather than a Google-only scanner service.
 
 After the one-time code is consumed, reconnect trust is Keystore-backed.
 
@@ -233,7 +230,14 @@ Android protocol v2 file jobs take their output settings from the device's saved
 
 ## Foreground and background behavior
 
-Pairing and new work require the phone app in the foreground. Direct CLI Access does not turn the phone into a headless export server and cannot wake the app on demand.
+Pairing and new work require the phone app in the foreground. Direct CLI Access does not turn the phone into a headless export server or authorize background capture.
+
+For query, export, extract, resume, and cancel, the portable CLI now keeps an unavailable request
+open for a bounded 120-second wake window. Unlock and open Health.md before it expires and the same
+request continues without a re-run. Use `--wake-timeout SECONDS` per command (`0` disables); MCP
+uses `HEALTHMD_WAKE_TIMEOUT` and emits health-free progress when the caller supplied a progress
+token. This is the wait-only first phase: status reports notification enrollment unavailable, and
+no APNs or FCM notification is sent yet.
 
 On iPhone, if an export is already connected when the app moves to the background, Health.md requests finite iOS background execution time. The export may finish during that allowance. If iOS expires the allowance, the connection closes and the durable job pauses. Reopen Health.md and resume the same job.
 
@@ -241,7 +245,7 @@ On Android, an active direct session runs a visible, user-started data-sync fore
 
 On iPhone, a global activity banner during direct work includes capture and transfer phase, completed days, byte progress, and paused or completed status without displaying health values.
 
-While the phone app remains foreground, a trusted direct session may reconnect automatically after a transient disconnect, retrying with backoff delays capped at a short maximum. This does not wake or promise access to a background app; reopen Health.md before resuming if the app is no longer foreground.
+While the phone app remains foreground, a trusted direct session may reconnect automatically after a transient disconnect, retrying with backoff delays capped at a short maximum. The host wake window waits for that reconnect but does not launch a suspended app, bypass unlock, or promise background access.
 
 ## Durable resume and cancel
 
@@ -255,11 +259,12 @@ healthmd --backend direct cancel JOB_UUID
 
 Resume keeps the original dates, settings, destination, request fingerprint, device, and partition frontier. You cannot point a file job at a different destination during resume.
 
-Cancel records a durable request, but cancellation becomes terminal only after the iPhone acknowledges it. If the iPhone is unavailable, status remains `cancellation_pending`. Reopen the same iPhone and retry cancel.
+Cancel records a durable request, but cancellation becomes terminal only after the paired phone acknowledges it. If the phone is unavailable, status remains `cancellation_pending`. Reopen the same phone and retry cancel.
 
 ## Security model
 
-- Pairing uses ephemeral key agreement and transcript proofs bound to the platform pairing code — the six-digit iPhone flow or the separate high-entropy 20-digit (~66-bit) Android one-time code.
+- Current portable onboarding uses ephemeral key agreement and selector-3 transcript proofs bound to one shared high-entropy 20-digit (~66-bit) iOS/Android code. Legacy Apple selector 1 and Android selector 2 remain byte-compatible.
+- QR handoffs are accepted only by explicit in-app scanners for canonical private-LAN/Tailscale addresses; external custom-URL opens cannot authorize pairing.
 - Reconnect proves a random stored secret and both installation identities.
 - Each connection derives fresh keys and nonces.
 - Messages and binary frames use ChaCha20-Poly1305 with monotonic sequence checks.
@@ -274,12 +279,12 @@ Manual IP remains encrypted on a local network or Tailscale. Tailscale protects 
 
 | Error | Action |
 |---|---|
-| `direct_not_paired` | Pair this CLI installation with iPhone. |
+| `direct_not_paired` | Pair this CLI installation with the intended mobile source. |
 | `direct_device_selection_required` | Pass the intended trusted `--device`. |
 | `direct_trust_invalid` | Preserve diagnostics. Reset trust only when recovery is impossible. |
-| `direct_iphone_unavailable` | Check app foreground state, access toggle, address, port, permission, and LAN or Tailscale reachability. |
-| `direct_export_paused` | Inspect the job, reopen iPhone, and resume it. |
-| `direct_cancellation_pending` | Reopen the paired iPhone and retry cancel. |
+| `direct_iphone_unavailable` | Check the paired phone’s foreground state, access toggle, address, port, permission, and LAN or Tailscale reachability. |
+| `direct_export_paused` | Inspect the job, reopen the paired phone, and resume it. |
+| `direct_cancellation_pending` | Reopen the paired phone and retry cancel. |
 | `transport_unsupported` | Use Manual IP or Tailscale in the portable client. |
 | `backend_unsupported` | Use the Mac app backend for query, evidence, doctor, metrics, or MCP. |
 | `invalid_direct_raw_response` | Do not consume the output. Keep validation diagnostics. |

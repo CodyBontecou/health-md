@@ -850,10 +850,14 @@
     <string name="direct_cli_intro_title">Encrypted desktop exports</string>
     <string name="direct_cli_intro_body">The CLI listens on your computer. Health.md connects directly and sends the export without a cloud relay.</string>
     <string name="direct_cli_pair_step_run">1. On your computer, run:</string>
-    <string name="direct_cli_pair_step_enter">2. Enter the computer address and 20-digit Android code shown by the CLI.</string>
+    <string name="direct_cli_scan_qr">Scan pairing QR</string>
+    <string name="direct_cli_camera_unavailable">Camera scanning is unavailable. Allow camera access if available, or enter the address, port, and code manually.</string>
+    <string name="direct_cli_invalid_qr">Not a valid Health.md Direct CLI pairing QR.</string>
+    <string name="direct_cli_scan_qr_hint">Point the camera at the QR shown by healthmd direct pair.</string>
+    <string name="direct_cli_pair_step_enter">Or enter the computer address, port, and shared 20-digit code manually.</string>
     <string name="direct_cli_computer_address">Computer address</string>
     <string name="direct_cli_port">Port</string>
-    <string name="direct_cli_pairing_code">Pairing code</string>
+    <string name="direct_cli_pairing_code">20-digit pairing code</string>
     <string name="direct_cli_pair_button">Pair with CLI</string>
     <string name="direct_cli_paired_listener">Paired with %1$s</string>
     <string name="direct_cli_save_address">Save address</string>

@@ -16,12 +16,15 @@ import org.bouncycastle.crypto.params.X25519PublicKeyParameters
 
 private val CODE_DOMAIN = "HealthMd.DirectCLI.Code.".toByteArray(StandardCharsets.UTF_8)
 private val ANDROID_CODE_DOMAIN = "HealthMd.DirectCLI.Code.v2.".toByteArray(StandardCharsets.UTF_8)
+private val SHARED_CODE_DOMAIN = "HealthMd.DirectCLI.Code.v3.".toByteArray(StandardCharsets.UTF_8)
 private val PAIRING_DOMAIN = "HealthMd.DirectCLI.PairingVerifier.v1".toByteArray(StandardCharsets.UTF_8)
 private val ANDROID_PAIRING_DOMAIN = "HealthMd.DirectCLI.PairingVerifier.v2".toByteArray(StandardCharsets.UTF_8)
+private val SHARED_PAIRING_DOMAIN = "HealthMd.DirectCLI.PairingVerifier.v3".toByteArray(StandardCharsets.UTF_8)
 private val SESSION_DOMAIN = "HealthMd.DirectCLI.SessionKey.v1".toByteArray(StandardCharsets.UTF_8)
 private val TRUSTED_CLIENT_DOMAIN = "HealthMd.DirectCLI.TrustedClient.v1".toByteArray(StandardCharsets.UTF_8)
 private val PAIRING_SERVER_DOMAIN = "HealthMd.DirectCLI.PairingServer.v1".toByteArray(StandardCharsets.UTF_8)
 private val ANDROID_PAIRING_SERVER_DOMAIN = "HealthMd.DirectCLI.PairingServer.v2".toByteArray(StandardCharsets.UTF_8)
+private val SHARED_PAIRING_SERVER_DOMAIN = "HealthMd.DirectCLI.PairingServer.v3".toByteArray(StandardCharsets.UTF_8)
 private val TRUSTED_SERVER_DOMAIN = "HealthMd.DirectCLI.TrustedServer.v1".toByteArray(StandardCharsets.UTF_8)
 
 data class CryptoFrame(
@@ -98,6 +101,21 @@ object DirectCrypto {
         ),
     )
 
+    fun sharedPairingVerifier(
+        pairingCode: String,
+        clientInstallationId: String,
+        clientPublicKey: ByteArray,
+        clientNonce: ByteArray,
+    ): ByteArray = hmacSha256(
+        pairingCodeKey(pairingCode, SHARED_CODE_DOMAIN),
+        transcript(
+            SHARED_PAIRING_DOMAIN,
+            clientInstallationId.lowercase().toByteArray(StandardCharsets.US_ASCII),
+            clientPublicKey,
+            clientNonce,
+        ),
+    )
+
     fun trustedClientVerifier(
         reconnectSecret: ByteArray,
         clientInstallationId: String,
@@ -157,6 +175,27 @@ object DirectCrypto {
     ): ByteArray = serverVerifier(
         domain = ANDROID_PAIRING_SERVER_DOMAIN,
         key = pairingCodeKey(pairingCode, ANDROID_CODE_DOMAIN),
+        clientInstallationId = clientInstallationId,
+        clientPublicKey = clientPublicKey,
+        clientNonce = clientNonce,
+        serverInstallationId = serverInstallationId,
+        serverPublicKey = serverPublicKey,
+        serverNonce = serverNonce,
+        sealedReconnectSecret = sealedReconnectSecret,
+    )
+
+    fun sharedPairingServerVerifier(
+        pairingCode: String,
+        clientInstallationId: String,
+        clientPublicKey: ByteArray,
+        clientNonce: ByteArray,
+        serverInstallationId: String,
+        serverPublicKey: ByteArray,
+        serverNonce: ByteArray,
+        sealedReconnectSecret: CryptoFrame,
+    ): ByteArray = serverVerifier(
+        domain = SHARED_PAIRING_SERVER_DOMAIN,
+        key = pairingCodeKey(pairingCode, SHARED_CODE_DOMAIN),
         clientInstallationId = clientInstallationId,
         clientPublicKey = clientPublicKey,
         clientNonce = clientNonce,

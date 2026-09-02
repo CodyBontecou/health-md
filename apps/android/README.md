@@ -128,8 +128,8 @@ Raw API Snapshot delivery uses a separate streaming contract. It requires HTTPS,
 
 ### Standalone Direct CLI
 
-The Android app can pair with the cross-platform `healthmd` CLI over a manually entered LAN or
-Tailscale address. The CLI listens on the computer; Android connects outbound and streams either a
+The Android app can pair with the cross-platform `healthmd` CLI by scanning its universal in-app QR
+or entering the LAN/Tailscale address manually. The CLI listens on the computer; Android connects outbound and streams either a
 validated provider-native raw snapshot or the same generated Markdown/JSON/CSV/Bases content used by
 folder exports.
 
@@ -139,7 +139,7 @@ healthmd export --raw --yesterday --provider health_connect --raw-format ndjson
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 ```
 
-Pair and connect from **Settings → Direct CLI** with the 20-digit Android code printed by the CLI. Pairing and every command are explicit user actions.
+Pair from **Settings → Direct CLI** by scanning the QR or entering its shared 20-digit code. The same selector-3 QR/code works on iOS and Android; manual entry remains available without camera permission. Pairing and every command are explicit user actions.
 The direct session uses authenticated encryption, Android Keystore-backed trust, a visible data-sync
 foreground service, resumable seven-day transfer jobs, private no-backup spools, and exact artifact
 checksums. It is not a schedule/automation target and never sends health data through a Health.md
@@ -160,6 +160,7 @@ The **F-Droid build** includes full access with no payment, counter, paywall, pu
 - **Health data:** AndroidX Health Connect Client 1.2.0-alpha02
 - **Purchases:** Google Play Billing 8.3 in the Play variant only; full access is included in F-Droid
 - **Automation:** WorkManager, boot recovery, launcher shortcuts, explicit broadcast intents
+- **QR scanning:** CameraX + ZXing Core in both Play and F-Droid variants; no Google-only scanner service
 - **Storage:** Storage Access Framework, DataStore Preferences, Room, private Direct CLI spools
 - **Dependency injection:** Hilt + KSP
 - **Serialization:** kotlinx.serialization JSON
@@ -335,8 +336,9 @@ Enable them only while driving that setup explicitly:
 ```
 
 The opt-in Direct CLI network E2E drives the real **Settings → Direct CLI** UI, foreground service,
-Android Keystore trust, Rust pairing/authenticated transport, v2 negotiation, the foreground
-notification and its Disconnect action, status, forget, and code-based re-pair. It deliberately
+Android Keystore trust, selector-3 pairing, selector-2 trusted reconnect, Rust authenticated
+transport, v2 application negotiation, the foreground notification and its Disconnect action,
+status, forget, and rejection-only selector-2 fallback against an emulated legacy CLI. It deliberately
 requests no export and records no health payload. The
 script installs `com.healthmd.android.e2e`, never mutates `com.healthmd.android`, and uninstalls the
 isolated app after the run:
@@ -346,6 +348,8 @@ ANDROID_SERIAL=2C061FDH200CJN \
 HEALTHMD_ANDROID_E2E_HOST=<computer-LAN-or-Tailscale-address> \
   ./scripts/run-direct-cli-ui-e2e.sh
 ```
+
+Set `HEALTHMD_ANDROID_E2E_FLAVOR=fdroid` to drive the same gate against the F-Droid flavor; both flavors also open the granted-camera QR scanner, confirm manual entry survives rotation, and require the runtime camera-denial dialog flows to stay on the manual physical QA gate.
 
 Use `10.0.2.2` as the host for an Android emulator. The script starts the matching ignored Rust
 listener automatically, creates an ephemeral 20-digit code, bounds both sides with timeouts, and
@@ -361,6 +365,7 @@ Health.md requests permissions only when a feature needs them:
 - **Health Connect historical access** — used for large manual exports beyond the normal read window
 - **Health Connect background access** — used only when scheduled exports are enabled or installed widgets need background refresh
 - **Notifications** — optional status notifications for completed or failed scheduled exports
+- **Camera** — optional and requested only after **Scan pairing QR**; QR frames are decoded on-device and never saved or uploaded
 - **Boot completed** — reschedules exports after device restart
 - **User-selected files** — writes to folders chosen through Android's Storage Access Framework
 - **Explicit automation receiver** — allows Tasker/adb integrations without implicit broadcast triggers
@@ -375,6 +380,7 @@ Health data stays local-first:
 - Scheduled exports and installed widgets run locally through WorkManager and use Health Connect background access only when you enable scheduling or allow background widget refresh.
 - Export history and settings are stored locally with Room and DataStore.
 - Widget measurements are reduced to a bounded 14-day snapshot in credential-protected no-backup storage and deleted after the final widget is removed.
+- Direct CLI pairing QR frames are decoded in memory on-device; Health.md does not save or upload camera images or register the QR handoff as an external pairing link.
 - In the Play build, billing is handled by Google Play; health samples and exported files are not sent to a Health.md server. API Endpoint records travel directly to the user-configured service.
 - The F-Droid build has no Health.md telemetry: attribution and onboarding analytics code, dependencies, endpoints, workers, identifiers, and state stores are not compiled into its APK. User-configured API destinations and explicit Direct CLI sessions remain product features, not Health.md telemetry.
 - The Play build uses no third-party analytics or attribution SDK. It has two separate, bounded first-party systems: campaign-install attribution and coarse onboarding/pricing analytics.

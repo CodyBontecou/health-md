@@ -164,6 +164,20 @@ Verify:
 
 Pairing/new commands need foreground iPhone. An already-connected export may receive finite iOS background time; expiration must pause rather than corrupt or falsely complete.
 
+## RFC-0005 P1 wake-window matrix
+
+Test unreachable, authenticated `app_active: false`, late availability, expiry, local cancellation,
+and disabled (`--wake-timeout 0`) paths on both source platforms. The default is 120 seconds with
+250 ms to 2 s retries. The same in-flight operation must continue after the user opens Health.md;
+do not accept a test that requires re-running it. Expiry stays `direct_source_unavailable` with
+additive `wake_window_seconds`. MCP calls with a progress token emit health-free
+`notifications/progress` at wait start and about every 10 seconds; cancellation interrupts the
+wait immediately without becoming terminal phone-side cancellation.
+
+P1 is wait-only. `healthmd status`/`healthmd.direct_readiness` must report enrollment unavailable,
+and no test should expect APNs or FCM. Keep outer process timeouts longer than wake plus operation
+bounds.
+
 ## Live LAN E2E
 
 ```bash

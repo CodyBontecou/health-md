@@ -789,7 +789,11 @@
     <string name="direct_cli_intro_title">एन्क्रिप्टेड डेस्कटॉप निर्यात</string>
     <string name="direct_cli_intro_body">CLI आपके कंप्यूटर पर कनेक्शन की प्रतीक्षा करता है। Health.md सीधे कनेक्ट होकर बिना किसी क्लाउड रिले के निर्यात भेजता है।</string>
     <string name="direct_cli_pair_step_run">1. अपने कंप्यूटर पर यह चलाएँ:</string>
-    <string name="direct_cli_pair_step_enter">2. CLI द्वारा दिखाया गया कंप्यूटर पता और 20-अंकीय Android कोड दर्ज करें।</string>
+    <string name="direct_cli_pair_step_enter">2. नीचे दिया गया यूनिवर्सल QR स्कैन करें, या कंप्यूटर पता, पोर्ट और साझा 20-अंकीय पेयरिंग कोड दर्ज करें।</string>
+    <string name="direct_cli_scan_qr">पेयरिंग QR स्कैन करें</string>
+    <string name="direct_cli_camera_unavailable">कैमरा स्कैन उपलब्ध नहीं है। संभव हो तो कैमरा एक्सेस दें, या पता, पोर्ट और कोड मैन्युअल रूप से दर्ज करें।</string>
+    <string name="direct_cli_invalid_qr">यह मान्य Health.md Direct CLI पेयरिंग QR नहीं है।</string>
+    <string name="direct_cli_scan_qr_hint">कैमरे को healthmd direct pair द्वारा दिखाए गए QR की ओर करें।</string>
     <string name="direct_cli_computer_address">कंप्यूटर पता</string>
     <string name="direct_cli_port">पोर्ट</string>
     <string name="direct_cli_pairing_code">पेयरिंग कोड</string>

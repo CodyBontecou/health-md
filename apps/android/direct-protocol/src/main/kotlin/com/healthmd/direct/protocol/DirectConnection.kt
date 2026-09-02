@@ -246,6 +246,7 @@ object DirectClient {
         installationId: String,
         displayName: String,
         pairingCode: String? = null,
+        pairingProtocolVersion: Int = ANDROID_PAIRING_PROTOCOL_VERSION,
         trustedListener: TrustedListener? = null,
         deterministicCore: DirectProtocolDeterministicCore =
             NativeDirectProtocolDeterministicCore,
@@ -255,18 +256,34 @@ object DirectClient {
             val normalizedCode = pairingCode.orEmpty().filter { it in '0'..'9' }
             val reconnect = if (normalizedCode.isEmpty()) trustedListener else null
             require(normalizedCode.length == 20 || reconnect != null) {
-                "Enter the 20-digit Android pairing code shown by the healthmd CLI."
+                "Enter the shared 20-digit pairing code shown by the healthmd CLI."
+            }
+            require(
+                pairingProtocolVersion == ANDROID_PAIRING_PROTOCOL_VERSION ||
+                    pairingProtocolVersion == SHARED_PAIRING_PROTOCOL_VERSION
+            ) { "Unsupported direct pairing protocol." }
+            require(reconnect == null || pairingProtocolVersion == ANDROID_PAIRING_PROTOCOL_VERSION) {
+                "Trusted Android reconnects must retain pairing selector 2."
             }
 
             val keyPair = DirectCrypto.ephemeralKeyPair()
             val clientNonce = DirectCrypto.randomBytes(32)
             val codeVerifier = if (reconnect == null) {
-                DirectCrypto.androidPairingVerifier(
-                    normalizedCode,
-                    installationId,
-                    keyPair.publicKey,
-                    clientNonce,
-                )
+                if (pairingProtocolVersion == SHARED_PAIRING_PROTOCOL_VERSION) {
+                    DirectCrypto.sharedPairingVerifier(
+                        normalizedCode,
+                        installationId,
+                        keyPair.publicKey,
+                        clientNonce,
+                    )
+                } else {
+                    DirectCrypto.androidPairingVerifier(
+                        normalizedCode,
+                        installationId,
+                        keyPair.publicKey,
+                        clientNonce,
+                    )
+                }
             } else {
                 ByteArray(0)
             }
@@ -279,7 +296,7 @@ object DirectClient {
                 )
             }
             packet.send(LegacyCodec.pairingRequest(PairingRequest(
-                protocolVersion = ANDROID_PAIRING_PROTOCOL_VERSION,
+                protocolVersion = pairingProtocolVersion,
                 deviceName = displayName,
                 clientPublicKey = keyPair.publicKey,
                 clientNonce = clientNonce,
@@ -289,8 +306,8 @@ object DirectClient {
             )))
 
             val response = LegacyCodec.pairingResponse(packet.receive())
-            require(response.protocolVersion == ANDROID_PAIRING_PROTOCOL_VERSION) {
-                "The CLI uses an incompatible Android pairing protocol."
+            require(response.protocolVersion == pairingProtocolVersion) {
+                "The CLI uses an incompatible pairing protocol."
             }
             if (reconnect != null) {
                 require(reconnect.installationId.equals(response.listenerInstallationId, ignoreCase = true)) {
@@ -309,16 +326,29 @@ object DirectClient {
             }
 
             val expectedVerifier = if (reconnect == null) {
-                DirectCrypto.androidPairingServerVerifier(
-                    normalizedCode,
-                    installationId,
-                    keyPair.publicKey,
-                    clientNonce,
-                    response.listenerInstallationId,
-                    response.serverPublicKey,
-                    response.serverNonce,
-                    response.sealedReconnectSecret,
-                )
+                if (pairingProtocolVersion == SHARED_PAIRING_PROTOCOL_VERSION) {
+                    DirectCrypto.sharedPairingServerVerifier(
+                        normalizedCode,
+                        installationId,
+                        keyPair.publicKey,
+                        clientNonce,
+                        response.listenerInstallationId,
+                        response.serverPublicKey,
+                        response.serverNonce,
+                        response.sealedReconnectSecret,
+                    )
+                } else {
+                    DirectCrypto.androidPairingServerVerifier(
+                        normalizedCode,
+                        installationId,
+                        keyPair.publicKey,
+                        clientNonce,
+                        response.listenerInstallationId,
+                        response.serverPublicKey,
+                        response.serverNonce,
+                        response.sealedReconnectSecret,
+                    )
+                }
             } else {
                 DirectCrypto.trustedServerVerifier(
                     reconnect.reconnectSecret,

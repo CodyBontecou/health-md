@@ -52,6 +52,8 @@ pub enum ClientError {
     PairingConflict,
     #[error("the direct mobile operation timed out")]
     TimedOut,
+    #[error("the local direct mobile waiter was cancelled")]
+    WaitCancelled,
     #[error("the direct iPhone does not support bounded query protocol v3")]
     QueryUnsupported,
     #[error("the direct iPhone query was rejected ({code}): {message}")]

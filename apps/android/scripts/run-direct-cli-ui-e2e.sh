@@ -17,6 +17,15 @@ HOST="${HEALTHMD_ANDROID_E2E_HOST:-}"
 BIND_ADDRESS="${HEALTHMD_ANDROID_E2E_BIND:-0.0.0.0}"
 PORT="${HEALTHMD_ANDROID_E2E_PORT:-18648}"
 PAIRING_CODE="${HEALTHMD_ANDROID_E2E_PAIRING_CODE:-}"
+FLAVOR="${HEALTHMD_ANDROID_E2E_FLAVOR:-play}"
+case "$FLAVOR" in
+    play|fdroid) ;;
+    *)
+        echo "HEALTHMD_ANDROID_E2E_FLAVOR must be play or fdroid." >&2
+        exit 2
+        ;;
+esac
+FLAVOR_TASK="$(printf '%s' "$FLAVOR" | tr '[:lower:]' '[:upper:]' | cut -c1)$(printf '%s' "$FLAVOR" | cut -c2-)"
 LISTENER_TEST="accepts_android_ui_pair_reconnect_disconnect_status_and_repair"
 INSTRUMENTATION_TEST="com.healthmd.presentation.directcli.DirectCliLiveE2ETest"
 E2E_APP_ID="com.healthmd.android.e2e"
@@ -73,8 +82,8 @@ echo "Prebuilding isolated Direct CLI UI E2E artifacts before opening the bounde
         --no-daemon \
         -Pkotlin.compiler.execution.strategy=in-process \
         -PhealthmdInstrumentedTestBuildType=e2e \
-        :app:assemblePlayE2e \
-        :app:assemblePlayE2eAndroidTest \
+        :app:assemble"${FLAVOR_TASK}"E2e \
+        :app:assemble"${FLAVOR_TASK}"E2eAndroidTest \
         --stacktrace </dev/null
 )
 
@@ -105,8 +114,8 @@ NO_COLOR=1 TERM=dumb timeout 20 "$ADB" -s "$SERIAL" uninstall "$E2E_TEST_APP_ID"
 NO_COLOR=1 TERM=dumb timeout 20 "$ADB" -s "$SERIAL" uninstall "$E2E_APP_ID" \
     </dev/null >/dev/null 2>&1 || true
 
-echo "Running isolated Direct CLI UI E2E on $MODEL ($SERIAL), target $E2E_APP_ID."
-echo "The gate covers wrong-code rejection, pair, reconnect, disconnect, status, forget, and re-pair."
+echo "Running isolated Direct CLI UI E2E on $MODEL ($SERIAL), target $E2E_APP_ID ($FLAVOR flavor)."
+echo "The gate covers wrong-code rejection, pair, reconnect, disconnect, status, forget, and selector-2 fallback."
 
 (
     cd "$CLI_ROOT"
@@ -149,7 +158,7 @@ set +e
         --no-daemon \
         -Pkotlin.compiler.execution.strategy=in-process \
         -PhealthmdInstrumentedTestBuildType=e2e \
-        :app:connectedPlayE2eAndroidTest \
+        :app:connected"${FLAVOR_TASK}"E2eAndroidTest \
         -Pandroid.testInstrumentationRunnerArguments.class="$INSTRUMENTATION_TEST" \
         -Pandroid.testInstrumentationRunnerArguments.directCliE2E=true \
         -Pandroid.testInstrumentationRunnerArguments.directCliHost="$HOST" \
@@ -181,6 +190,7 @@ required_markers=(
     ANDROID_UI_E2E_PAIRED
     ANDROID_UI_E2E_DISCONNECTED
     ANDROID_UI_E2E_STATUS_COMPLETE
+    ANDROID_UI_E2E_LEGACY_FALLBACK_COMPLETE
     ANDROID_UI_E2E_COMPLETE
 )
 for marker in "${required_markers[@]}"; do

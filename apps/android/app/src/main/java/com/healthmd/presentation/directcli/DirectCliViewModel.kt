@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class DirectCliUiState(
@@ -65,6 +66,17 @@ class DirectCliViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             pairingCode = value.filter { it in '0'..'9' }.take(20),
         )
+    }
+
+    fun pair(link: DirectCliPairingLink) {
+        _uiState.update {
+            it.copy(
+                host = link.host,
+                port = link.port.toString(),
+                pairingCode = link.pairingCode,
+            )
+        }
+        pair()
     }
 
     fun pair() {

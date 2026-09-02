@@ -1,0 +1,19 @@
+{
+  "schema": "healthmd.direct_pairing_interop",
+  "schema_version": 1,
+  "pairing_protocol_version": 3,
+  "pairing_code": "12345678901234567890",
+  "client_installation_id": "abcdefab-cdef-4abc-8def-abcdefabcdef",
+  "client_public_key_hex": "8f40c5adb68f25624ae5b214ea767a6ec94d829d3d7b5e1ad1ba6f3e2138285f",
+  "client_nonce_hex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+  "server_installation_id": "01234567-89ab-4cde-8fab-0123456789ab",
+  "server_public_key_hex": "358072d6365880d1aeea329adf9121383851ed21a28e3b75e965d0d2cd166254",
+  "server_nonce_hex": "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+  "sealed_nonce_hex": "a0a1a2a3a4a5a6a7a8a9aaab",
+  "sealed_ciphertext_hex": "4798e04752b793b6a368cdf50a84733ac50a881e0e0518ee1a951a2ec9f874bc",
+  "sealed_tag_hex": "16a9167d55402161d3f1794b4e10a26c",
+  "pairing_code_key_hex": "cb21292106fc3797e18d3d3bd7225e60aef8c3c5729dc14f612787a895f27646",
+  "pairing_client_verifier_hex": "121179c5d61c9b2be3abd2b245d3048bc86ef6f8ec9dff663151be9e971c94ec",
+  "pairing_server_verifier_hex": "69f94e3f62b6bd9dd4bfe961795694537b7f383fc6defc2892ffc1584858dc5e",
+  "qr_payload": "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345678901234567890"
+}

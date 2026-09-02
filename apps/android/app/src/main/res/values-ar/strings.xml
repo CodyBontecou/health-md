@@ -868,7 +868,11 @@
     <string name="direct_cli_intro_title">عمليات تصدير سطح المكتب المشفّرة</string>
     <string name="direct_cli_intro_body">ينتظر CLI الاتصالات على جهاز الكمبيوتر لديك. يتصل Health.md به مباشرةً ويرسل التصدير من دون وسيط سحابي.</string>
     <string name="direct_cli_pair_step_run">1. على جهاز الكمبيوتر، شغّل:</string>
-    <string name="direct_cli_pair_step_enter">2. أدخل عنوان الكمبيوتر ورمز Android المكوّن من 20 رقمًا الظاهر في CLI.</string>
+    <string name="direct_cli_pair_step_enter">2. امسح رمز QR العام أدناه، أو أدخل عنوان الكمبيوتر والمنفذ ورمز الاقتران المشترك المكوّن من 20 رقمًا.</string>
+    <string name="direct_cli_scan_qr">مسح رمز QR للاقتران</string>
+    <string name="direct_cli_camera_unavailable">المسح بالكاميرا غير متاح. اسمح بالوصول إلى الكاميرا إن أمكن، أو أدخل العنوان والمنفذ والرمز يدويًا.</string>
+    <string name="direct_cli_invalid_qr">هذا ليس رمز QR صالحًا لاقتران Health.md Direct CLI.</string>
+    <string name="direct_cli_scan_qr_hint">وجّه الكاميرا إلى رمز QR الذي يعرضه healthmd direct pair.</string>
     <string name="direct_cli_computer_address">عنوان الكمبيوتر</string>
     <string name="direct_cli_port">المنفذ</string>
     <string name="direct_cli_pairing_code">رمز الاقتران</string>

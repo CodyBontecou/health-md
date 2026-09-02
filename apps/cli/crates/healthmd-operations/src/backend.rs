@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use async_trait::async_trait;
 use serde_json::Value;
+use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -72,12 +73,28 @@ pub enum CallerMode {
     OAuth,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProgressUpdate {
+    pub progress: u64,
+    pub total: Option<u64>,
+    pub message: String,
+}
+
 /// Per-call state that is safe to pass through application and backend layers.
 #[derive(Clone, Debug)]
 pub struct CallContext {
     pub caller: CallerIdentity,
     pub cancellation: CancellationToken,
     pub session_id: Option<String>,
+    pub progress: Option<mpsc::Sender<ProgressUpdate>>,
+}
+
+impl CallContext {
+    pub fn report_progress(&self, update: ProgressUpdate) {
+        if let Some(progress) = &self.progress {
+            let _ = progress.try_send(update);
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -117,6 +134,7 @@ pub struct BackendError {
     pub message: String,
     pub retryable: bool,
     pub job_id: Option<Uuid>,
+    pub wake_window_seconds: Option<u64>,
 }
 
 impl BackendError {
@@ -126,6 +144,7 @@ impl BackendError {
             message: message.into(),
             retryable: false,
             job_id: None,
+            wake_window_seconds: None,
         }
     }
 
@@ -138,6 +157,12 @@ impl BackendError {
     #[must_use]
     pub fn with_job_id(mut self, job_id: Uuid) -> Self {
         self.job_id = Some(job_id);
+        self
+    }
+
+    #[must_use]
+    pub const fn with_wake_window_seconds(mut self, seconds: u64) -> Self {
+        self.wake_window_seconds = Some(seconds);
         self
     }
 }

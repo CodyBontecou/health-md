@@ -14,7 +14,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Anteprima · CLI diretta multipiattaforma</strong>
-<p>Il backend diretto Swift incluso è disponibile su macOS e si abbina all’iPhone. L’abbinamento con Android (protocollo v2) fa parte dell’anteprima pubblicamente distribuita del client Rust multipiattaforma. I test di rilascio su iPhone e Android fisici restano in attesa; i comandi per Linux e Windows descrivono un flusso di lavoro esplicitamente non qualificato.</p>
+<p>Il backend diretto Swift incluso è disponibile su macOS e si abbina all’iPhone. Android con protocollo applicativo v2 fa parte dell’anteprima pubblicamente distribuita del client Rust multipiattaforma. Le versioni attuali di iOS e Android usano lo stesso selettore 3 e lo stesso QR universale per i nuovi abbinamenti portatili. I test di rilascio su iPhone e Android fisici restano in attesa; i comandi per Linux e Windows descrivono un flusso di lavoro esplicitamente non qualificato.</p>
 </div>
 
 ## Compatibilità mobile per 0.1.0-alpha.3
@@ -23,14 +23,14 @@ Questa tabella autonoma è la matrice operativa dell’anteprima esplicitamente 
 
 | Sorgente mobile | Protocollo | Controparte tag-SHA esatta / soglia non qualificata | Operazioni Rust portatili | Stato pubblico |
 |---|---|---|---|---|
-| iPhone con esportazione | selettore 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Stato, dati grezzi, estrazione, file, ripresa, annullamento | Qualificazione fisica in sospeso |
-| iPhone con query | selettore 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 più MCP/query locale con 19 strumenti | Qualificazione fisica in sospeso |
-| Android | selettore 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Stato, dati nativi, file, ripresa, annullamento | Qualificazione fisica in sospeso |
+| iPhone con esportazione | selettore 3 attuale (1 precedente) / applicazione v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Stato, dati grezzi, estrazione, file, ripresa, annullamento | Qualificazione fisica in sospeso |
+| iPhone con query | selettore 3 attuale (1 precedente) / applicazione v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 più MCP/query locale con 19 strumenti | Qualificazione fisica in sospeso |
+| Android | selettore 3 attuale (2 precedente) / applicazione v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Stato, dati nativi, file, ripresa, annullamento | Qualificazione fisica in sospeso |
 | Query MCP tipizzata Android | Non disponibile | Non implementata | Gli strumenti richiedono iPhone v3 | Non supportata |
 
 ## Funzioni supportate dalla modalità diretta
 
-- abbinamento iniziale e riconnessione attendibile con sorgenti iPhone (protocollo v1) o Android (protocollo v2);
+- abbinamento iniziale tramite il selettore condiviso 3 e riconnessione attendibile con sorgenti iPhone (protocollo applicativo v1) o Android (protocollo applicativo v2);
 - controllo locale dei dispositivi attendibili e rimozione dell’abbinamento;
 - verifica in tempo reale della disponibilità del telefono;
 - esportazione rigorosa dei dati grezzi — `healthmd.health_data` con schema v8 su iPhone, snapshot nativi del provider di Health Connect su Android;
@@ -44,7 +44,7 @@ Il backend diretto del comando `healthmd` non emula le route HTTP con contesto c
 
 ## Requisiti
 
-- Un binario `healthmd` compatibile con la modalità diretta e una versione corrispondente di Health.md: iPhone (protocollo v1) o Android (protocollo v2). L’abbinamento con Android richiede il client Rust multipiattaforma; l’helper incluso per macOS si abbina solo all’iPhone.
+- Un binario `healthmd` compatibile con la modalità diretta e una versione corrispondente di Health.md: iPhone (protocollo applicativo v1) o Android (protocollo applicativo v2). L’abbinamento con Android richiede il client Rust multipiattaforma; l’helper incluso per macOS si abbina solo all’iPhone.
 - Health.md aperta in primo piano sul telefono per l’abbinamento e l’avvio di nuovi comandi.
 - **Impostazioni > Sincronizzazione Mac > Accesso CLI diretto** attivato sull’iPhone, oppure **Impostazioni → Direct CLI** su Android.
 - Autorizzazione sanitaria della piattaforma (HealthKit o Health Connect), dati protetti disponibili, autorizzazione per la rete locale e quota di esportazione sufficiente.
@@ -71,30 +71,23 @@ Avvia il listener sul computer:
 healthmd direct pair --transport manual-ip
 ```
 
-Il client Rust multipiattaforma scrive su stderr un codice di sei cifre per l’iPhone, un codice separato di 20 cifre per Android, i possibili indirizzi del computer e la porta del listener; l’helper incluso per macOS stampa soltanto il codice di sei cifre per l’iPhone. stdout resta riservato al risultato JSON finale.
+Il client Rust multipiattaforma mostra un QR universale per iOS e Android e scrive su stderr il relativo codice condiviso di 20 cifre, i possibili indirizzi del computer, la porta del listener e un codice di riserva di sei cifre per le versioni iOS precedenti. L’helper incluso per macOS continua a mostrare soltanto il vecchio codice iPhone di sei cifre. stdout resta riservato al risultato JSON finale.
 
 Sull’iPhone:
 
-1. Apri **Health.md > Impostazioni > Sincronizzazione Mac > Accesso CLI diretto**.
-2. Attiva Accesso CLI diretto.
-3. Seleziona **IP manuale**.
-4. Inserisci l’indirizzo LAN o Tailscale del computer.
-5. Inserisci la porta `17647`, salvo che la CLI usi un’altra opzione globale `--port`.
-6. Inserisci il codice di abbinamento e tocca Abbina.
-7. Lascia aperta l’app finché entrambi i dispositivi non confermano il completamento.
-
-I codici di abbinamento dell’iPhone scadono dopo 10 minuti. Non vengono mai inviati in rete né salvati.
+1. Apri **Health.md > Impostazioni > Sincronizzazione Mac > Accesso CLI diretto** e attiva l’accesso.
+2. Tocca **Scansiona QR di abbinamento** e scansiona il QR universale; l’abbinamento inizia subito dopo questa scansione esplicita.
+3. Se la scansione non è disponibile, seleziona **IP manuale** e inserisci indirizzo, porta e codice condiviso di 20 cifre. Una CLI precedente può ancora usare il codice di sei cifre.
+4. Lascia aperta l’app finché entrambi i dispositivi non confermano il completamento.
 
 ## Abbinare un telefono Android
 
-L’abbinamento con Android usa il client Rust multipiattaforma e il codice monouso separato di 20 cifre (circa 66 bit) stampato da `healthmd direct pair`. Android non effettua mai il downgrade al protocollo dell’iPhone.
-
 1. Apri **Health.md > Impostazioni → Direct CLI** sul telefono Android.
-2. Inserisci l’indirizzo LAN o Tailscale del computer e la porta `17647`.
-3. Inserisci il codice di 20 cifre e conferma l’abbinamento.
+2. Tocca **Scansiona QR di abbinamento** e scansiona il QR universale; l’abbinamento inizia subito dopo questa scansione esplicita.
+3. Senza fotocamera o autorizzazione, inserisci manualmente indirizzo, porta e lo stesso codice condiviso di 20 cifre.
 4. Lascia aperta l’app; per una sessione diretta attiva, Android esegue un servizio in primo piano di sincronizzazione dei dati, visibile e avviato dall’utente.
 
-Dopo che il codice monouso è stato consumato, l’attendibilità di riconnessione è basata su Keystore.
+I codici monouso non vengono mai inviati in rete né salvati. Dopo l’abbinamento, Keychain o Android Keystore protegge l’attendibilità per la riconnessione.
 
 Se necessario, usa un’altra porta:
 
@@ -246,6 +239,8 @@ Sull’iPhone, un banner generale durante le operazioni dirette mostra la fase d
 
 Finché l’app del telefono resta in primo piano, una sessione diretta attendibile può riconnettersi automaticamente dopo un’interruzione temporanea. I tentativi usano ritardi crescenti fino a un breve valore massimo. Questo non riattiva né garantisce l’accesso a un’app in background; riapri Health.md prima di riprendere se l’app non è più in primo piano.
 
+La finestra di attesa limitata di 120 secondi mantiene aperta la stessa richiesta mentre la persona sblocca il telefono e apre Health.md. Puoi configurarla con `--wake-timeout SECONDS`; `0` la disattiva. MCP usa `HEALTHMD_WAKE_TIMEOUT`. Questa prima fase non invia ancora notifiche push e non aggira lo sblocco o le autorizzazioni.
+
 ## Ripresa e annullamento delle attività persistenti
 
 Le attività dirette scadono sette giorni dopo la creazione. Timeout, Ctrl-C, chiusura del processo, disconnessione e scadenza dell’esecuzione in background non le annullano.
@@ -258,11 +253,12 @@ healthmd --backend direct cancel JOB_UUID
 
 La ripresa conserva date, impostazioni, destinazione, impronta della richiesta, dispositivo e limite delle partizioni originali. Durante la ripresa non puoi assegnare una destinazione diversa a un’attività di tipo file.
 
-Il comando di annullamento registra una richiesta persistente, ma l’annullamento diventa definitivo solo dopo la conferma dell’iPhone. Se l’iPhone non è disponibile, lo stato resta `cancellation_pending`. Riapri lo stesso iPhone e ripeti il comando di annullamento.
+Il comando di annullamento registra una richiesta persistente, ma l’annullamento diventa definitivo solo dopo la conferma del telefono abbinato. Se il telefono non è disponibile, lo stato resta `cancellation_pending`. Riapri lo stesso telefono e ripeti il comando di annullamento.
 
 ## Modello di sicurezza
 
-- L’abbinamento usa uno scambio di chiavi effimero e prove della trascrizione legate al codice di abbinamento della piattaforma: il flusso di sei cifre dell’iPhone oppure il codice monouso separato di 20 cifre ad alta entropia (circa 66 bit) di Android.
+- Gli abbinamenti portatili attuali usano uno scambio di chiavi effimero e prove della trascrizione del selettore 3 legate a un codice condiviso iOS/Android ad alta entropia di 20 cifre (circa 66 bit). I precedenti flussi Apple selettore 1 e Android selettore 2 restano compatibili byte per byte.
+- I passaggi QR sono accettati solo dagli scanner espliciti nell’app per indirizzi privati LAN/Tailscale canonici; l’apertura di un URL personalizzato esterno non può autorizzare l’abbinamento.
 - La riconnessione dimostra il possesso di un segreto casuale salvato e delle identità di entrambe le installazioni.
 - Ogni connessione genera nuove chiavi e nuovi nonce.
 - I messaggi e i frame binari usano ChaCha20-Poly1305 con controlli monotoni della sequenza.
@@ -277,12 +273,12 @@ IP manuale resta crittografato sia su una rete locale sia tramite Tailscale. Tai
 
 | Errore | Intervento |
 |---|---|
-| `direct_not_paired` | Abbina questa installazione della CLI all’iPhone. |
+| `direct_not_paired` | Abbina questa installazione della CLI alla sorgente mobile prevista. |
 | `direct_device_selection_required` | Specifica il dispositivo attendibile desiderato con `--device`. |
 | `direct_trust_invalid` | Conserva i dati diagnostici. Reimposta l’attendibilità solo se il ripristino è impossibile. |
 | `direct_iphone_unavailable` | Controlla che l’app sia in primo piano, l’accesso sia attivo e indirizzo, porta, autorizzazioni e connessione LAN o Tailscale siano corretti. |
-| `direct_export_paused` | Controlla l’attività, riapri l’iPhone e riprendila. |
-| `direct_cancellation_pending` | Riapri l’iPhone abbinato e ripeti l’annullamento. |
+| `direct_export_paused` | Controlla l’attività, riapri il telefono abbinato e riprendila. |
+| `direct_cancellation_pending` | Riapri il telefono abbinato e ripeti l’annullamento. |
 | `transport_unsupported` | Nel client multipiattaforma usa IP manuale o Tailscale. |
 | `backend_unsupported` | Per query, dati di riscontro, diagnostica, metriche o MCP usa il backend dell’app per Mac. |
 | `invalid_direct_raw_response` | Non usare l’output. Conserva i dati diagnostici della convalida. |

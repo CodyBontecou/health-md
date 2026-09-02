@@ -59,8 +59,8 @@ class HealthMdCoreInstrumentationTest {
         val service = HealthMdCoreService()
         val info = service.getDirectProtocolInfo()
         assertThat(info.protocolApiRevision).isEqualTo(1u)
-        assertThat(info.directPairingProtocolVersion).isEqualTo(1u)
-        assertThat(info.supportedPairingProtocolVersions).containsExactly(1u, 2u).inOrder()
+        assertThat(info.directPairingProtocolVersion).isEqualTo(3u)
+        assertThat(info.supportedPairingProtocolVersions).containsExactly(1u, 2u, 3u).inOrder()
         assertThat(info.appleApplicationProtocolVersion).isEqualTo(1u)
         assertThat(info.androidApplicationProtocolVersion).isEqualTo(2u)
         assertThat(info.maximumChunkBytes).isEqualTo(512uL * 1_024uL)
@@ -90,6 +90,7 @@ class HealthMdCoreInstrumentationTest {
 
         val applePairingCode = "123456".encodeToByteArray()
         val androidPairingCode = "12345678901234567890".encodeToByteArray()
+        val sharedPairingCode = "12345678901234567890".encodeToByteArray()
         val sharedSecret = decodeHex(
             "9663aa1da97e848a914a436d04163dfbb89178f107f1b5b77ed3854203382854",
         )
@@ -128,6 +129,22 @@ class HealthMdCoreInstrumentationTest {
                     ),
                 ),
             ).isTrue()
+            assertThat(
+                service.verifyPairingClientTranscript(
+                    CoreDirectPairingVerifierRequest(
+                        profile = CoreDirectPairingProfile.SHARED_V3,
+                        pairingCodeBytes = sharedPairingCode,
+                        clientInstallationId = "abcdefab-cdef-4abc-8def-abcdefabcdef",
+                        clientPublicKey = decodeHex(
+                            "8f40c5adb68f25624ae5b214ea767a6ec94d829d3d7b5e1ad1ba6f3e2138285f",
+                        ),
+                        clientNonce = clientNonce,
+                        expectedVerifier = decodeHex(
+                            "121179c5d61c9b2be3abd2b245d3048bc86ef6f8ec9dff663151be9e971c94ec",
+                        ),
+                    ),
+                ),
+            ).isTrue()
             val key = service.deriveSessionKey(
                 CoreDirectSessionKeyRequest(sharedSecret, clientNonce, serverNonce),
             )
@@ -139,6 +156,7 @@ class HealthMdCoreInstrumentationTest {
         } finally {
             applePairingCode.fill(0)
             androidPairingCode.fill(0)
+            sharedPairingCode.fill(0)
             sharedSecret.fill(0)
             clientNonce.fill(0)
             serverNonce.fill(0)

@@ -738,7 +738,11 @@
     <string name="direct_cli_intro_title">加密的桌面导出</string>
     <string name="direct_cli_intro_body">CLI 在您的电脑上监听。Health.md 会直接连接并发送导出，无需云端中转。</string>
     <string name="direct_cli_pair_step_run">1. 在电脑上运行：</string>
-    <string name="direct_cli_pair_step_enter">2. 输入 CLI 显示的电脑地址和 20 位 Android 代码。</string>
+    <string name="direct_cli_pair_step_enter">2. 扫描下方的通用二维码，或输入电脑地址、端口和共享的 20 位配对代码。</string>
+    <string name="direct_cli_scan_qr">扫描配对二维码</string>
+    <string name="direct_cli_camera_unavailable">无法使用摄像头扫描。请在可用时允许摄像头访问，或手动输入地址、端口和代码。</string>
+    <string name="direct_cli_invalid_qr">这不是有效的 Health.md Direct CLI 配对二维码。</string>
+    <string name="direct_cli_scan_qr_hint">将摄像头对准 healthmd direct pair 显示的二维码。</string>
     <string name="direct_cli_computer_address">电脑地址</string>
     <string name="direct_cli_port">端口</string>
     <string name="direct_cli_pairing_code">配对代码</string>

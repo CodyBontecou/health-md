@@ -14,7 +14,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Prévia · CLI direta portátil</strong>
-<p>O backend direto Swift integrado está disponível no macOS e emparelha com o iPhone. O emparelhamento com Android (protocolo v2) faz parte da prévia publicamente empacotada do cliente Rust multiplataforma. A validação de lançamento em iPhones e telefones Android físicos continua pendente; os comandos para Linux e Windows descrevem um fluxo de trabalho explicitamente não qualificado.</p>
+<p>O backend direto Swift integrado está disponível no macOS e emparelha com o iPhone. O Android com protocolo de aplicação v2 faz parte da prévia publicamente empacotada do cliente Rust multiplataforma. As versões atuais de iOS e Android usam o mesmo seletor 3 e o mesmo QR universal em novos emparelhamentos portáteis. A validação de lançamento em iPhones e telefones Android físicos continua pendente; os comandos para Linux e Windows descrevem um fluxo de trabalho explicitamente não qualificado.</p>
 </div>
 
 ## Compatibilidade móvel para 0.1.0-alpha.3
@@ -23,14 +23,14 @@ Esta tabela independente é a matriz aplicável para a prévia explicitamente n�
 
 | Fonte móvel | Protocolo | Correspondente tag-SHA exato / piso não qualificado | Operações Rust portáteis | Status público |
 |---|---|---|---|---|
-| iPhone com exportação | seletor 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, dados brutos, extração, arquivos, retomada, cancelamento | Qualificação física pendente |
-| iPhone com consultas | seletor 1 / v1 + consulta v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 mais MCP/consulta local com 19 ferramentas | Qualificação física pendente |
-| Android | seletor 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, dados nativos, arquivos, retomada, cancelamento | Qualificação física pendente |
+| iPhone com exportação | seletor 3 atual (1 antigo) / aplicação v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, dados brutos, extração, arquivos, retomada, cancelamento | Qualificação física pendente |
+| iPhone com consultas | seletor 3 atual (1 antigo) / aplicação v1 + consulta v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 mais MCP/consulta local com 19 ferramentas | Qualificação física pendente |
+| Android | seletor 3 atual (2 antigo) / aplicação v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, dados nativos, arquivos, retomada, cancelamento | Qualificação física pendente |
 | Consulta MCP tipada no Android | Não disponível | Não implementada | As ferramentas exigem iPhone v3 | Sem suporte |
 
 ## O que o modo direto oferece
 
-- emparelhamento único e reconexão confiável com fontes iPhone (protocolo v1) ou Android (protocolo v2);
+- emparelhamento único pelo seletor compartilhado 3 e reconexão confiável com fontes iPhone (protocolo de aplicação v1) ou Android (protocolo de aplicação v2);
 - inspeção local de dispositivos confiáveis e desemparelhamento;
 - prontidão do telefone em tempo real;
 - exportação bruta estrita — `healthmd.health_data` no schema v8 no iPhone e snapshots nativos do Health Connect no Android;
@@ -44,7 +44,7 @@ O backend direto do comando `healthmd` não emula as rotas HTTP de contexto crip
 
 ## Requisitos
 
-- Um binário `healthmd` com suporte ao modo direto e uma versão correspondente do Health.md: iPhone (protocolo v1) ou Android (protocolo v2). O emparelhamento com Android exige o cliente Rust portátil; o auxiliar integrado do macOS emparelha somente com o iPhone.
+- Um binário `healthmd` com suporte ao modo direto e uma versão correspondente do Health.md: iPhone (protocolo de aplicação v1) ou Android (protocolo de aplicação v2). O emparelhamento com Android exige o cliente Rust portátil; o auxiliar integrado do macOS emparelha somente com o iPhone.
 - O Health.md aberto em primeiro plano no telefone para emparelhamento e novos comandos.
 - **Ajustes > Sincronização com Mac > Acesso ao Direct CLI** ativado no iPhone, ou **Ajustes → Direct CLI** no Android.
 - Permissão de saúde da plataforma (HealthKit ou Health Connect), dados protegidos, permissão de rede local e cota de exportação disponíveis.
@@ -71,30 +71,23 @@ Inicie o listener no computador:
 healthmd direct pair --transport manual-ip
 ```
 
-O cliente Rust portátil grava em stderr um código de seis dígitos para o iPhone, um código separado de 20 dígitos para o Android, possíveis endereços do computador e a porta do listener; o auxiliar integrado do macOS imprime apenas o código de seis dígitos do iPhone. O stdout permanece reservado para o resultado JSON final.
+O cliente Rust portátil mostra um QR universal para iOS e Android e grava em stderr o código compartilhado de 20 dígitos, possíveis endereços do computador, a porta do listener e um código alternativo de seis dígitos para versões antigas do iOS. O auxiliar integrado do macOS continua mostrando apenas o código antigo de seis dígitos do iPhone. O stdout permanece reservado para o resultado JSON final.
 
 No iPhone:
 
-1. Abra **Health.md > Ajustes > Sincronização com Mac > Acesso ao Direct CLI**.
-2. Ative o Acesso ao Direct CLI.
-3. Selecione **IP manual**.
-4. Digite o endereço LAN ou Tailscale do computador.
-5. Digite a porta `17647`, a menos que a CLI use outra opção global `--port`.
-6. Digite o código de emparelhamento e toque em Emparelhar.
-7. Mantenha o app aberto até que ambos os lados informem sucesso.
-
-Os códigos de emparelhamento do iPhone expiram após 10 minutos. Eles nunca são enviados pela rede nem mantidos de forma persistente.
+1. Abra **Health.md > Ajustes > Sincronização com Mac > Acesso ao Direct CLI** e ative o acesso.
+2. Toque em **Escanear QR de emparelhamento** e escaneie o QR universal; o emparelhamento começa imediatamente após essa leitura explícita.
+3. Se a leitura não estiver disponível, selecione **IP manual** e digite endereço, porta e o código compartilhado de 20 dígitos. Uma CLI antiga ainda pode usar o código de seis dígitos.
+4. Mantenha o app aberto até que ambos os lados informem sucesso.
 
 ## Emparelhe um telefone Android
 
-O emparelhamento com Android usa o cliente Rust portátil e o código de uso único separado de 20 dígitos (~66 bits) impresso por `healthmd direct pair`. O Android nunca faz downgrade para o protocolo do iPhone.
-
 1. Abra **Health.md > Ajustes → Direct CLI** no telefone Android.
-2. Digite o endereço LAN ou Tailscale do computador e a porta `17647`.
-3. Digite o código de 20 dígitos e confirme o emparelhamento.
+2. Toque em **Escanear QR de emparelhamento** e escaneie o QR universal; o emparelhamento começa imediatamente após essa leitura explícita.
+3. Sem câmera ou permissão, digite manualmente endereço, porta e o mesmo código compartilhado de 20 dígitos.
 4. Mantenha o app aberto; o Android executa um serviço de primeiro plano visível de sincronização de dados, iniciado pelo usuário, para uma sessão direta ativa.
 
-Depois que o código de uso único é consumido, a confiança de reconexão fica protegida pelo Keystore.
+Os códigos de uso único nunca são enviados pela rede nem mantidos de forma persistente. Após o emparelhamento, o Keychain ou o Android Keystore protege a confiança de reconexão.
 
 Use outra porta quando necessário:
 
@@ -246,6 +239,8 @@ No iPhone, um banner de atividade global durante tarefas diretas inclui a fase d
 
 Enquanto o app do telefone permanecer em primeiro plano, uma sessão direta confiável poderá se reconectar automaticamente após uma interrupção temporária. As tentativas usam atrasos progressivos limitados a um máximo curto. Isso não desperta nem garante acesso a um app em segundo plano; reabra o Health.md antes de retomar se ele não estiver mais em primeiro plano.
 
+A janela de espera limitada de 120 segundos mantém a mesma solicitação aberta enquanto a pessoa desbloqueia o telefone e abre o Health.md. Ajuste com `--wake-timeout SECONDS`; `0` desativa. O MCP usa `HEALTHMD_WAKE_TIMEOUT`. Esta primeira fase ainda não envia notificação push nem ignora o desbloqueio ou as permissões.
+
 ## Retomada e cancelamento persistentes
 
 As tarefas diretas expiram sete dias após a criação. Timeout, Ctrl-C, encerramento do processo, desconexão e expiração da execução em segundo plano não as cancelam.
@@ -258,11 +253,12 @@ healthmd --backend direct cancel JOB_UUID
 
 A retomada preserva as datas, os ajustes, o destino, a impressão digital da solicitação, o dispositivo e a fronteira das partições originais. Você não pode direcionar uma tarefa de arquivos a outro destino durante a retomada.
 
-O cancelamento registra uma solicitação persistente, mas só se torna terminal após a confirmação pelo iPhone. Se o iPhone estiver indisponível, o status permanecerá `cancellation_pending`. Reabra o mesmo iPhone e tente cancelar novamente.
+O cancelamento registra uma solicitação persistente, mas só se torna terminal após a confirmação pelo telefone emparelhado. Se o telefone estiver indisponível, o status permanecerá `cancellation_pending`. Reabra o mesmo telefone e tente cancelar novamente.
 
 ## Modelo de segurança
 
-- O emparelhamento usa uma troca efêmera de chaves e provas de transcrição vinculadas ao código de emparelhamento da plataforma — o fluxo de seis dígitos do iPhone ou o código de uso único separado de 20 dígitos (~66 bits), de alta entropia, do Android.
+- Os emparelhamentos portáteis atuais usam troca efêmera de chaves e provas de transcrição do seletor 3 vinculadas a um código compartilhado de alta entropia com 20 dígitos (~66 bits) para iOS e Android. Os fluxos antigos do seletor 1 da Apple e do seletor 2 do Android permanecem compatíveis byte a byte.
+- As transferências por QR são aceitas apenas por scanners explícitos dentro do app para endereços privados LAN/Tailscale canônicos; abrir uma URL personalizada externa não pode autorizar o emparelhamento.
 - A reconexão comprova um segredo aleatório armazenado e as identidades de ambas as instalações.
 - Cada conexão deriva novas chaves e nonces.
 - Mensagens e quadros binários usam ChaCha20-Poly1305 com verificações de sequência monotônica.
@@ -277,12 +273,12 @@ O IP manual permanece criptografado em uma rede local ou no Tailscale. O Tailsca
 
 | Erro | Ação |
 |---|---|
-| `direct_not_paired` | Emparelhe esta instalação da CLI com o iPhone. |
+| `direct_not_paired` | Emparelhe esta instalação da CLI com a fonte móvel desejada. |
 | `direct_device_selection_required` | Informe o `--device` confiável desejado. |
 | `direct_trust_invalid` | Preserve os diagnósticos. Redefina a confiança somente quando a recuperação for impossível. |
 | `direct_iphone_unavailable` | Verifique o estado do app em primeiro plano, a opção de acesso, o endereço, a porta, a permissão e a acessibilidade pela LAN ou pelo Tailscale. |
-| `direct_export_paused` | Inspecione a tarefa, reabra o iPhone e retome-a. |
-| `direct_cancellation_pending` | Reabra o iPhone emparelhado e tente cancelar novamente. |
+| `direct_export_paused` | Inspecione a tarefa, reabra o telefone emparelhado e retome-a. |
+| `direct_cancellation_pending` | Reabra o telefone emparelhado e tente cancelar novamente. |
 | `transport_unsupported` | Use IP manual ou Tailscale no cliente portátil. |
 | `backend_unsupported` | Use o backend do app para Mac para consultas, evidências, diagnóstico, métricas ou MCP. |
 | `invalid_direct_raw_response` | Não consuma a saída. Preserve os diagnósticos de validação. |

@@ -126,7 +126,7 @@ class AndroidDirectProtocolAuthorityTest {
 
         override fun protocolInfo() = AndroidDirectProtocolInfo(
             protocolApiRevision = 1u,
-            supportedPairingProtocolVersions = listOf(1u, 2u),
+            supportedPairingProtocolVersions = listOf(1u, 2u, 3u),
             androidApplicationProtocolVersion = 2u,
             manualIpPort = 17_647u,
             maximumControlJsonBytes = (2 * 1_024 * 1_024).toULong(),

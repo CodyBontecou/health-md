@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add RFC-0005's shared P1 agent-wake window: query/export/extract/resume/cancel now wait up to
+  120 seconds for an unavailable paired phone, retry with bounded backoff, support
+  `--wake-timeout`/`HEALTHMD_WAKE_TIMEOUT` and immediate local cancellation, report one shared
+  readiness object, and emit health-free MCP progress notifications. APNs/FCM enrollment remains
+  unavailable in this wait-only phase.
+- Unify new iOS and Android Direct CLI onboarding around one 20-digit selector-3 pairing code and universal in-app QR, while preserving byte-exact Apple selector 1, Android selector 2, and trusted reconnect compatibility.
 - Shorten protected CLI releases without weakening qualification: reuse exact-SHA main CI with
   immutable-tag recovery for missing/cancelled runs, build platform candidates in parallel, prepare
   the Apple shared-core XCFramework once, recover GitHub draft read-after-create lag in place, and

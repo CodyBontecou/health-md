@@ -1012,6 +1012,74 @@ def validate_native_renderer_golden(path: Path) -> None:
             fail(f"{context}: format coverage is incomplete")
 
 
+def validate_shared_pairing_v3_fixture(path: Path) -> None:
+    context = "healthmd.direct.shared-pairing v3 fixture"
+    payload = require_exact_keys(
+        load_json(path, context),
+        {
+            "schema",
+            "schema_version",
+            "pairing_protocol_version",
+            "pairing_code",
+            "client_installation_id",
+            "client_public_key_hex",
+            "client_nonce_hex",
+            "server_installation_id",
+            "server_public_key_hex",
+            "server_nonce_hex",
+            "sealed_nonce_hex",
+            "sealed_ciphertext_hex",
+            "sealed_tag_hex",
+            "pairing_code_key_hex",
+            "pairing_client_verifier_hex",
+            "pairing_server_verifier_hex",
+            "qr_payload",
+        },
+        context,
+    )
+    if payload["schema"] != "healthmd.direct_pairing_interop" or payload["schema_version"] != 1:
+        fail(f"{context}: schema discriminator must identify fixture version 1")
+    if payload["pairing_protocol_version"] != 3:
+        fail(f"{context}: pairing_protocol_version must be 3")
+    if not re.fullmatch(r"[0-9]{20}", payload["pairing_code"]):
+        fail(f"{context}: pairing_code must be twenty ASCII digits")
+    if not all(
+        isinstance(payload[field], str)
+        and re.fullmatch(
+            r"[0-9a-f]{64}",
+            payload[field],
+        )
+        for field in (
+            "client_public_key_hex",
+            "client_nonce_hex",
+            "server_public_key_hex",
+            "server_nonce_hex",
+            "sealed_ciphertext_hex",
+            "pairing_code_key_hex",
+            "pairing_client_verifier_hex",
+            "pairing_server_verifier_hex",
+        )
+    ):
+        fail(f"{context}: keys, nonces, ciphertext, and verifiers must be 32-byte lowercase hex")
+    if not re.fullmatch(r"[0-9a-f]{24}", payload["sealed_nonce_hex"]):
+        fail(f"{context}: sealed_nonce_hex must be 12-byte lowercase hex")
+    if not re.fullmatch(r"[0-9a-f]{32}", payload["sealed_tag_hex"]):
+        fail(f"{context}: sealed_tag_hex must be 16-byte lowercase hex")
+    uuid_pattern = re.compile(
+        r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+    )
+    if not uuid_pattern.fullmatch(payload["client_installation_id"]) or not uuid_pattern.fullmatch(
+        payload["server_installation_id"]
+    ):
+        fail(f"{context}: installation IDs must be lowercase canonical UUIDs")
+    expected_qr = (
+        "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code="
+        + payload["pairing_code"]
+    )
+    if payload["qr_payload"] != expected_qr:
+        fail(f"{context}: qr_payload does not match the canonical private-LAN handoff")
+
+
 def validate_v2_fixture(path: Path) -> None:
     context = "healthmd.direct.android v2 fixture"
     expected = {
@@ -2672,6 +2740,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     fail(f"{fixture_context}: unknown healthmd.direct.ios fixture file")
             elif identifier == "healthmd.direct.ios-query":
                 validate_v3_fixture(fixture_path)
+            elif identifier == "healthmd.direct.shared-pairing":
+                validate_shared_pairing_v3_fixture(fixture_path)
             elif identifier == "healthmd.direct.android":
                 if fixture_path.name == "interop.json":
                     validate_v2_fixture(fixture_path)

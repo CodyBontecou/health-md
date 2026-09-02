@@ -37,7 +37,7 @@ separate Android daily-record product is enabled.
 
 1. Run `healthmd direct pair` on the computer.
 2. Open **Settings → Direct CLI** in the Android app.
-3. Enter the displayed computer address, port, and 20-digit Android pairing code.
+3. Scan the universal pairing QR inside Health.md, or enter its computer address, port, and shared 20-digit code manually.
 4. For each command, start the CLI command first and tap **Connect** in Android.
 
 Examples:
@@ -51,7 +51,8 @@ healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
 ## Security and lifecycle
 
-- The deployed X25519/HMAC/ChaCha20-Poly1305 pairing and transport are reused.
+- New iOS/Android pairing uses shared selector 3 with a 20-digit domain-separated transcript; deployed selectors 1/2 and X25519/ChaCha20-Poly1305 transport remain compatible.
+- QR input is accepted only by the explicit in-app scanner, never an external custom-URL intent; camera hardware and permission are optional.
 - The reconnect secret is encrypted by an Android Keystore AES-GCM key.
 - Trust, jobs, and health artifacts live under `noBackupFilesDir/direct-cli/`.
 - The absolute desktop path never leaves the CLI; Android receives an opaque destination binding.

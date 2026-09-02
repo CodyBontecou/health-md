@@ -14,7 +14,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Vorschau · portable direkte CLI</strong>
-<p>Das mitgelieferte direkte Swift-Backend ist unter macOS verfügbar und koppelt sich mit dem iPhone. Die Android-Kopplung (Protokoll v2) ist Teil der öffentlich paketierten Vorschau des plattformübergreifenden Rust-Clients. Die Release-QA auf physischen iPhone- und Android-Geräten steht noch aus; die Befehle für Linux und Windows beschreiben einen ausdrücklich unqualifizierten Arbeitsablauf.</p>
+<p>Das mitgelieferte direkte Swift-Backend ist unter macOS verfügbar und koppelt sich mit dem iPhone. Android mit Anwendungsprotokoll v2 ist Teil der öffentlich paketierten Vorschau des plattformübergreifenden Rust-Clients. Aktuelle iOS- und Android-Apps verwenden für neue portable Kopplungen denselben Selektor 3 und denselben universellen QR-Code. Die Release-QA auf physischen iPhone- und Android-Geräten steht noch aus; die Befehle für Linux und Windows beschreiben einen ausdrücklich unqualifizierten Arbeitsablauf.</p>
 </div>
 
 ## Mobile Kompatibilität für 0.1.0-alpha.3
@@ -23,14 +23,14 @@ Diese eigenständige Kompatibilitätstabelle ist die maßgebliche Matrix der aus
 
 | Mobile Quelle | Protokoll | Exaktes Tag-SHA-Gegenstück / nicht qualifizierte Untergrenze | Portable Rust-Vorgänge | Öffentlicher Status |
 |---|---|---|---|---|
-| Exportfähiges iPhone | Auswahl 1 / v1 | iOS 3.2.1 (Build 202608300209) / iOS 3.0.3 | Status, Rohdaten, Extraktion, Dateien, Fortsetzen, Abbrechen | Physische Qualifikation ausstehend |
-| Abfragefähiges iPhone | Auswahl 1 / v1 + Abfrage v3 | iOS 3.2.1 (Build 202608300209) / iOS 3.0.3 | V1 plus lokales MCP/Abfrage mit 19 Tools | Physische Qualifikation ausstehend |
-| Android | Auswahl 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native Rohdaten, Dateien, Fortsetzen, Abbrechen | Physische Qualifikation ausstehend |
+| Exportfähiges iPhone | Auswahl 3 aktuell (1 alt) / Anwendung v1 | iOS 3.2.1 (Build 202608300209) / iOS 3.0.3 | Status, Rohdaten, Extraktion, Dateien, Fortsetzen, Abbrechen | Physische Qualifikation ausstehend |
+| Abfragefähiges iPhone | Auswahl 3 aktuell (1 alt) / Anwendung v1 + Abfrage v3 | iOS 3.2.1 (Build 202608300209) / iOS 3.0.3 | V1 plus lokales MCP/Abfrage mit 19 Tools | Physische Qualifikation ausstehend |
+| Android | Auswahl 3 aktuell (2 alt) / Anwendung v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native Rohdaten, Dateien, Fortsetzen, Abbrechen | Physische Qualifikation ausstehend |
 | Typisierte Android-MCP-Abfrage | Nicht verfügbar | Nicht implementiert | Abfragetools erfordern iPhone v3 | Nicht unterstützt |
 
 ## Unterstützte Funktionen des Direktmodus
 
-- einmalige Kopplung und vertrauenswürdige Wiederverbindung mit iPhone-Quellen (Protokoll v1) oder Android-Quellen (Protokoll v2);
+- einmalige Kopplung über den gemeinsamen Selektor 3 sowie vertrauenswürdige Wiederverbindung mit iPhone-Quellen (Anwendungsprotokoll v1) oder Android-Quellen (Anwendungsprotokoll v2);
 - lokale Prüfung und Entkopplung vertrauenswürdiger Geräte;
 - Live-Bereitschaft des Telefons;
 - strikter Rohdatenexport — Schema-v8-`healthmd.health_data` auf dem iPhone, provider-native Health-Connect-Snapshots auf Android;
@@ -44,7 +44,7 @@ Das direkte Backend des Befehls `healthmd` emuliert nicht die HTTP-Routen der Ma
 
 ## Voraussetzungen
 
-- Eine direktfähige `healthmd`-Binärdatei und eine passende Health.md-Version: iPhone (Protokoll v1) oder Android (Protokoll v2). Die Android-Kopplung erfordert den portablen Rust-Client; der mitgelieferte macOS-Helfer koppelt sich nur mit dem iPhone.
+- Eine direktfähige `healthmd`-Binärdatei und eine passende Health.md-Version: iPhone (Anwendungsprotokoll v1) oder Android (Anwendungsprotokoll v2). Die Android-Kopplung erfordert den portablen Rust-Client; der mitgelieferte macOS-Helfer koppelt sich nur mit dem iPhone.
 - Health.md muss für Kopplung und neue Befehle im Vordergrund des Telefons geöffnet sein.
 - **Settings > Mac Sync > Direct CLI Access** muss auf dem iPhone aktiviert sein oder **Settings → Direct CLI** auf Android.
 - Plattform-Gesundheitsberechtigung (HealthKit oder Health Connect), geschützte Daten, Berechtigung für das lokale Netzwerk und Exportkontingent müssen verfügbar sein.
@@ -71,30 +71,23 @@ Starten Sie den Listener auf dem Computer:
 healthmd direct pair --transport manual-ip
 ```
 
-Der portable Rust-Client gibt einen sechsstelligen iPhone-Code, einen separaten 20-stelligen Android-Code, mögliche Computeradressen und den Listener-Port auf stderr aus; der mitgelieferte macOS-Helfer gibt nur den sechsstelligen iPhone-Code aus. stdout bleibt für das abschließende JSON-Ergebnis reserviert.
+Der portable Rust-Client zeigt einen universellen iOS-/Android-QR-Code an und schreibt dessen gemeinsamen 20-stelligen Code, mögliche Computeradressen, den Listener-Port sowie einen sechsstelligen Fallback für ältere iOS-Versionen auf stderr. Der mitgelieferte macOS-Helfer zeigt weiterhin nur seinen alten sechsstelligen iPhone-Code an. stdout bleibt für das abschließende JSON-Ergebnis reserviert.
 
 Auf dem iPhone:
 
-1. Öffnen Sie **Health.md > Settings > Mac Sync > Direct CLI Access**.
-2. Aktivieren Sie Direct CLI Access.
-3. Wählen Sie **Manual IP**.
-4. Geben Sie die LAN- oder Tailscale-Adresse des Computers ein.
-5. Geben Sie Port `17647` ein, sofern die CLI keinen anderen globalen `--port` verwendet.
-6. Geben Sie den Kopplungscode ein und tippen Sie auf Pair.
-7. Lassen Sie die App geöffnet, bis beide Seiten Erfolg melden.
-
-iPhone-Kopplungscodes laufen nach 10 Minuten ab. Sie werden weder über das Netzwerk gesendet noch dauerhaft gespeichert.
+1. Öffnen Sie **Health.md > Settings > Mac Sync > Direct CLI Access** und aktivieren Sie den Zugriff.
+2. Tippen Sie auf **Scan Pairing QR** und scannen Sie den universellen QR-Code; nach dem ausdrücklichen Scan beginnt die Kopplung sofort.
+3. Falls Scannen nicht verfügbar ist, wählen Sie **Manual IP** und geben Computeradresse, Port und den gemeinsamen 20-stelligen Code ein. Für einen älteren CLI ist weiterhin der sechsstellige Code möglich.
+4. Lassen Sie die App geöffnet, bis beide Seiten Erfolg melden.
 
 ## Android-Telefon koppeln
 
-Die Android-Kopplung verwendet den portablen Rust-Client und den separaten 20-stelligen (~66 Bit) Einmalcode, den `healthmd direct pair` ausgibt. Android fällt nie auf das iPhone-Protokoll zurück.
-
 1. Öffnen Sie **Health.md > Settings → Direct CLI** auf dem Android-Telefon.
-2. Geben Sie die LAN- oder Tailscale-Adresse des Computers und Port `17647` ein.
-3. Geben Sie den 20-stelligen Code ein und bestätigen Sie die Kopplung.
+2. Tippen Sie auf **Scan pairing QR** und scannen Sie den universellen QR-Code; nach dem ausdrücklichen Scan beginnt die Kopplung sofort.
+3. Ohne Kamera oder Berechtigung können Sie Computeradresse, Port und denselben gemeinsamen 20-stelligen Code manuell eingeben.
 4. Lassen Sie die App geöffnet; Android führt für eine aktive Direktsitzung einen sichtbaren, vom Benutzer gestarteten Datensynchronisierungs-Vordergrunddienst aus.
 
-Nach dem Verbrauch des Einmalcodes ist das Vertrauen für die Wiederverbindung Keystore-gesichert.
+Die Einmalcodes werden weder über das Netzwerk gesendet noch dauerhaft gespeichert. Nach erfolgreicher Kopplung schützen Keychain beziehungsweise Android Keystore die Vertrauensdaten für Wiederverbindungen.
 
 Verwenden Sie bei Bedarf einen anderen Port:
 
@@ -246,6 +239,8 @@ Auf dem iPhone zeigt ein globales Aktivitätsbanner während direkter Arbeit Erf
 
 Solange die Smartphone-App im Vordergrund bleibt, kann eine vertrauenswürdige Direktsitzung nach einer vorübergehenden Trennung automatisch erneut verbinden. Die Wiederholungsverzögerung steigt bis zu einem kurzen Höchstwert. Dadurch wird eine App im Hintergrund weder geweckt noch erreichbar gemacht; öffne Health.md vor dem Fortsetzen erneut, wenn die App nicht mehr im Vordergrund ist.
 
+Das 120-sekündige, begrenzte Wartefenster hält denselben Auftrag offen, während die Person Health.md entsperrt und öffnet. Mit `--wake-timeout SECONDS` lässt es sich anpassen; `0` deaktiviert es. MCP verwendet `HEALTHMD_WAKE_TIMEOUT`. Diese erste Phase sendet noch keine Push-Benachrichtigung und umgeht weder Entsperrung noch Berechtigungen.
+
 ## Persistente Aufträge fortsetzen und abbrechen
 
 Direkte Aufträge laufen sieben Tage nach ihrer Erstellung ab. Zeitlimit, Ctrl-C, Prozessende, Verbindungsabbruch und Ablauf der Hintergrundzeit brechen sie nicht ab.
@@ -258,11 +253,12 @@ healthmd --backend direct cancel JOB_UUID
 
 Bei der Fortsetzung bleiben ursprüngliche Datumswerte, Einstellungen, Ziel, Anfragefingerabdruck, Gerät und Partitionsfortschritt erhalten. Ein Dateiauftrag kann beim Fortsetzen nicht auf ein anderes Ziel verweisen.
 
-Der Abbruch wird dauerhaft angefordert, ist aber erst endgültig, wenn das iPhone ihn bestätigt. Ist das iPhone nicht verfügbar, bleibt der Status `cancellation_pending`. Öffnen Sie dasselbe iPhone erneut und wiederholen Sie den Abbruch.
+Der Abbruch wird dauerhaft angefordert, ist aber erst endgültig, wenn das gekoppelte Telefon ihn bestätigt. Ist das Telefon nicht verfügbar, bleibt der Status `cancellation_pending`. Öffnen Sie dasselbe Telefon erneut und wiederholen Sie den Abbruch.
 
 ## Sicherheitsmodell
 
-- Die Kopplung verwendet ephemeren Schlüsselaustausch und an den Plattform-Kopplungscode gebundene Transkript-Nachweise — den sechsstelligen iPhone-Ablauf oder den separaten 20-stelligen (~66 Bit) Android-Einmalcode mit hoher Entropie.
+- Aktuelle portable Kopplungen verwenden ephemeren Schlüsselaustausch und Selektor-3-Transkript-Nachweise, die an einen gemeinsamen hochentropischen 20-stelligen (~66 Bit) iOS-/Android-Code gebunden sind. Die alten Apple-Selektor-1- und Android-Selektor-2-Abläufe bleiben bytekompatibel.
+- QR-Übergaben werden nur durch ausdrückliche Scanner in der App für kanonische private LAN-/Tailscale-Adressen akzeptiert; externe benutzerdefinierte URLs können keine Kopplung autorisieren.
 - Die Wiederverbindung weist ein zufälliges gespeichertes Geheimnis und beide Installationsidentitäten nach.
 - Jede Verbindung leitet neue Schlüssel und Nonces ab.
 - Nachrichten und Binärframes verwenden ChaCha20-Poly1305 mit monotonen Sequenzprüfungen.
@@ -277,12 +273,12 @@ Manual IP bleibt im lokalen Netzwerk oder über Tailscale verschlüsselt. Tailsc
 
 | Fehler | Maßnahme |
 |---|---|
-| `direct_not_paired` | Diese CLI-Installation mit dem iPhone koppeln. |
+| `direct_not_paired` | Diese CLI-Installation mit dem vorgesehenen Mobilgerät koppeln. |
 | `direct_device_selection_required` | Gewünschtes vertrauenswürdiges `--device` angeben. |
 | `direct_trust_invalid` | Diagnosen aufbewahren. Vertrauen nur zurücksetzen, wenn Wiederherstellung unmöglich ist. |
 | `direct_iphone_unavailable` | Vordergrundstatus, Zugriffsschalter, Adresse, Port, Berechtigung und LAN- oder Tailscale-Erreichbarkeit prüfen. |
-| `direct_export_paused` | Auftrag prüfen, iPhone erneut öffnen und Auftrag fortsetzen. |
-| `direct_cancellation_pending` | Gekoppeltes iPhone erneut öffnen und Abbruch wiederholen. |
+| `direct_export_paused` | Auftrag prüfen, gekoppeltes Telefon erneut öffnen und Auftrag fortsetzen. |
+| `direct_cancellation_pending` | Gekoppeltes Telefon erneut öffnen und Abbruch wiederholen. |
 | `transport_unsupported` | Im portablen Client Manual IP oder Tailscale verwenden. |
 | `backend_unsupported` | Für Abfrage, Nachweise, doctor, Metriken oder MCP das Backend der Mac-App verwenden. |
 | `invalid_direct_raw_response` | Ausgabe nicht verwenden. Validierungsdiagnosen aufbewahren. |

@@ -842,7 +842,11 @@
     <string name="direct_cli_intro_title">Зашифрований експорт на комп’ютер</string>
     <string name="direct_cli_intro_body">CLI очікує підключення на вашому комп’ютері. Health.md підключається безпосередньо й передає експорт без хмарного посередника.</string>
     <string name="direct_cli_pair_step_run">1. Виконайте на комп’ютері:</string>
-    <string name="direct_cli_pair_step_enter">2. Введіть адресу комп’ютера та 20-значний код Android, показаний у CLI.</string>
+    <string name="direct_cli_pair_step_enter">2. Відскануйте універсальний QR-код нижче або введіть адресу комп’ютера, порт і спільний 20-значний код сполучення.</string>
+    <string name="direct_cli_scan_qr">Сканувати QR-код сполучення</string>
+    <string name="direct_cli_camera_unavailable">Сканування камерою недоступне. Дозвольте доступ до камери, якщо можливо, або введіть адресу, порт і код вручну.</string>
+    <string name="direct_cli_invalid_qr">Це неприпустимий QR-код сполучення Health.md Direct CLI.</string>
+    <string name="direct_cli_scan_qr_hint">Наведіть камеру на QR-код, показаний командою healthmd direct pair.</string>
     <string name="direct_cli_computer_address">Адреса комп’ютера</string>
     <string name="direct_cli_port">Порт</string>
     <string name="direct_cli_pairing_code">Код сполучення</string>

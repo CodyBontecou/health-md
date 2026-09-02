@@ -14,7 +14,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe CLI</strong>
-<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS en koppelt met de iPhone. Android-koppeling (protocol v2) maakt deel uit van de openbaar verpakte preview van de platformonafhankelijke Rust-client. Release-QA met fysieke iPhones en Android-toestellen is nog niet voltooid; de opdrachten voor Linux en Windows beschrijven een expliciet ongekwalificeerde workflow.</p>
+<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS en koppelt met de iPhone. Android met applicatieprotocol v2 maakt deel uit van de openbaar verpakte preview van de platformonafhankelijke Rust-client. Huidige iOS- en Android-versies gebruiken dezelfde selector 3 en dezelfde universele QR voor nieuwe platformonafhankelijke koppelingen. Release-QA met fysieke iPhones en Android-toestellen is nog niet voltooid; de opdrachten voor Linux en Windows beschrijven een expliciet ongekwalificeerde workflow.</p>
 </div>
 
 ## Mobiele compatibiliteit voor 0.1.0-alpha.3
@@ -23,14 +23,14 @@ Deze zelfstandige tabel is de toepasbare matrix voor de uitdrukkelijk ongekwalif
 
 | Mobiele bron | Protocol | Exacte tag-SHA-tegenhanger / ongekwalificeerde ondergrens | Platformonafhankelijke Rust-bewerkingen | Openbare status |
 |---|---|---|---|---|
-| iPhone met export | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, onbewerkt, extractie, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
-| iPhone met queries | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus lokale MCP/query met 19 tools | Fysieke kwalificatie in afwachting |
-| Android | selector 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, systeemeigen onbewerkt, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
+| iPhone met export | huidige selector 3 (oude 1) / applicatie v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, onbewerkt, extractie, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
+| iPhone met queries | huidige selector 3 (oude 1) / applicatie v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus lokale MCP/query met 19 tools | Fysieke kwalificatie in afwachting |
+| Android | huidige selector 3 (oude 2) / applicatie v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, systeemeigen onbewerkt, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
 | Getypeerde Android-MCP-query | Niet beschikbaar | Niet geïmplementeerd | Querytools vereisen iPhone v3 | Niet ondersteund |
 
 ## Ondersteuning in de directe modus
 
-- eenmalige koppeling en opnieuw verbinden met een vertrouwd apparaat bij bronnen op de iPhone (protocol v1) of op Android (protocol v2);
+- eenmalige koppeling via gedeelde selector 3 en opnieuw verbinden met een vertrouwd apparaat bij bronnen op de iPhone (applicatieprotocol v1) of op Android (applicatieprotocol v2);
 - lokale inspectie en ontkoppeling van vertrouwde apparaten;
 - actuele gereedheid van de telefoon;
 - strikte onbewerkte export — schema v8 `healthmd.health_data` op de iPhone, systeemeigen Health Connect-momentopnames op Android;
@@ -44,7 +44,7 @@ De rechtstreekse backend van de opdracht `healthmd` bootst de HTTP-routes voor v
 
 ## Vereisten
 
-- Een versie van `healthmd` die rechtstreekse toegang ondersteunt en een bijpassende Health.md-build: iPhone (protocol v1) of Android (protocol v2). Android-koppeling vereist de platformonafhankelijke Rust-client; het gebundelde macOS-hulpprogramma koppelt alleen met de iPhone.
+- Een versie van `healthmd` die rechtstreekse toegang ondersteunt en een bijpassende Health.md-build: iPhone (applicatieprotocol v1) of Android (applicatieprotocol v2). Android-koppeling vereist de platformonafhankelijke Rust-client; het gebundelde macOS-hulpprogramma koppelt alleen met de iPhone.
 - Health.md op de voorgrond van de telefoon voor koppeling en nieuwe opdrachten.
 - **Instellingen > Mac-synchronisatie > Direct CLI-toegang** ingeschakeld op de iPhone, of **Instellingen → Direct CLI** op Android.
 - Beschikbare gezondheidstoestemming van het platform (HealthKit of Health Connect), beveiligde gegevens, toestemming voor het lokale netwerk en exporttegoed.
@@ -71,30 +71,23 @@ Start de listener op de computer:
 healthmd direct pair --transport manual-ip
 ```
 
-De platformonafhankelijke Rust-client schrijft een zescijferige iPhone-code, een aparte twintigcijferige Android-code, mogelijke computeradressen en de listenerpoort naar stderr; het gebundelde macOS-hulpprogramma toont alleen de zescijferige iPhone-code. Stdout blijft gereserveerd voor het uiteindelijke JSON-resultaat.
+De platformonafhankelijke Rust-client toont één universele QR-code voor iOS en Android en schrijft de gedeelde code van twintig cijfers, mogelijke computeradressen, de listenerpoort en een zescijferige reservecode voor oudere iOS-versies naar stderr. Het gebundelde macOS-hulpprogramma toont nog steeds alleen de oude zescijferige iPhone-code. Stdout blijft gereserveerd voor het uiteindelijke JSON-resultaat.
 
 Op de iPhone:
 
-1. Open **Health.md > Instellingen > Mac-synchronisatie > Direct CLI-toegang**.
-2. Schakel Direct CLI-toegang in.
-3. Selecteer **Manual IP**.
-4. Voer het LAN- of Tailscale-adres van de computer in.
-5. Voer poort `17647` in, tenzij de CLI een andere algemene `--port` gebruikt.
-6. Voer de koppelingscode in en tik op Koppelen.
-7. Houd de app geopend totdat beide kanten melden dat de koppeling is geslaagd.
-
-Koppelingscodes voor de iPhone verlopen na 10 minuten. Ze worden nooit via het netwerk verstuurd of blijvend opgeslagen.
+1. Open **Health.md > Instellingen > Mac-synchronisatie > Direct CLI-toegang** en schakel de toegang in.
+2. Tik op **QR-code voor koppelen scannen** en scan de universele QR; de koppeling start direct na deze expliciete scan.
+3. Als scannen niet beschikbaar is, selecteer je **Manual IP** en voer je adres, poort en de gedeelde twintigcijferige code in. Bij een oudere CLI blijft de zescijferige code bruikbaar.
+4. Houd de app geopend totdat beide kanten melden dat de koppeling is geslaagd.
 
 ## Een Android-telefoon koppelen
 
-Android-koppeling gebruikt de platformonafhankelijke Rust-client en de aparte eenmalige code van twintig cijfers (~66 bits) die `healthmd direct pair` afdrukt. Android schakelt nooit terug op het iPhone-protocol.
-
 1. Open **Health.md > Instellingen → Direct CLI** op de Android-telefoon.
-2. Voer het LAN- of Tailscale-adres van de computer en poort `17647` in.
-3. Voer de code van twintig cijfers in en bevestig de koppeling.
+2. Tik op **QR-code voor koppelen scannen** en scan de universele QR; de koppeling start direct na deze expliciete scan.
+3. Zonder camera of toestemming kun je adres, poort en dezelfde gedeelde twintigcijferige code handmatig invoeren.
 4. Houd de app geopend; voor een actieve rechtstreekse sessie draait Android een zichtbare, door de gebruiker gestarte voorgronddienst voor gegevenssynchronisatie.
 
-Nadat de eenmalige code is verbruikt, is het vertrouwen voor opnieuw verbinden gebaseerd op de Keystore.
+De eenmalige codes worden nooit via het netwerk verstuurd of blijvend opgeslagen. Na het koppelen beschermt Keychain of Android Keystore het vertrouwen voor opnieuw verbinden.
 
 Gebruik zo nodig een andere poort:
 
@@ -246,6 +239,8 @@ Op de iPhone toont een algemene activiteitsbanner tijdens rechtstreeks werk de v
 
 Zolang de telefoon-app op de voorgrond blijft, kan een vertrouwde rechtstreekse sessie na een tijdelijke onderbreking automatisch opnieuw verbinden. Nieuwe pogingen gebruiken oplopende vertragingen met een korte bovengrens. Dit activeert een app op de achtergrond niet en belooft daar geen toegang toe; open Health.md opnieuw voordat je hervat als de app niet meer op de voorgrond staat.
 
+Het begrensde wachtvenster van 120 seconden houdt hetzelfde verzoek open terwijl de gebruiker de telefoon ontgrendelt en Health.md opent. Pas het aan met `--wake-timeout SECONDS`; `0` schakelt het uit. MCP gebruikt `HEALTHMD_WAKE_TIMEOUT`. Deze eerste fase verzendt nog geen pushmelding en omzeilt ontgrendeling of machtigingen niet.
+
 ## Persistente taken hervatten en annuleren
 
 Rechtstreekse taken verlopen zeven dagen nadat ze zijn aangemaakt. Een time-out, Ctrl-C, beëindigd proces, verbroken verbinding of verstreken achtergrondtijd annuleert ze niet.
@@ -258,11 +253,12 @@ healthmd --backend direct cancel JOB_UUID
 
 Bij hervatten blijven de oorspronkelijke datums, instellingen, bestemming, vingerafdruk van het verzoek, het apparaat en het partitievoortgangspunt behouden. Je kunt een bestandstaak tijdens het hervatten niet naar een andere bestemming laten schrijven.
 
-Annuleren legt een blijvend verzoek vast, maar de annulering is pas definitief nadat de iPhone deze heeft bevestigd. Als de iPhone niet beschikbaar is, blijft de status `cancellation_pending`. Open dezelfde iPhone opnieuw en probeer de annulering nogmaals.
+Annuleren legt een blijvend verzoek vast, maar de annulering is pas definitief nadat de gekoppelde telefoon deze heeft bevestigd. Als de telefoon niet beschikbaar is, blijft de status `cancellation_pending`. Open dezelfde telefoon opnieuw en probeer de annulering nogmaals.
 
 ## Beveiligingsmodel
 
-- De koppeling gebruikt tijdelijke sleuteluitwisseling en transcriptbewijzen die aan de koppelingscode van het platform zijn gebonden — de zescijferige iPhone-stroom of de aparte eenmalige Android-code van twintig cijfers (~66 bits) met hoge entropie.
+- Huidige platformonafhankelijke koppelingen gebruiken tijdelijke sleuteluitwisseling en transcriptbewijzen van selector 3 die zijn gebonden aan één gedeelde iOS-/Android-code van twintig cijfers (~66 bits) met hoge entropie. De oude Apple-selector-1- en Android-selector-2-stromen blijven bytecompatibel.
+- QR-overdrachten worden alleen geaccepteerd door expliciete scanners in de app voor canonieke privé-LAN-/Tailscale-adressen; een externe aangepaste URL kan koppeling niet autoriseren.
 - Bij opnieuw verbinden worden een willekeurig opgeslagen geheim en beide installatie-identiteiten bewezen.
 - Elke verbinding leidt nieuwe sleutels en nonces af.
 - Berichten en binaire frames gebruiken ChaCha20-Poly1305 met controles op oplopende volgnummers.
@@ -277,12 +273,12 @@ Manual IP blijft versleuteld op een lokaal netwerk of via Tailscale. Tailscale b
 
 | Fout | Actie |
 |---|---|
-| `direct_not_paired` | Koppel deze CLI-installatie met de iPhone. |
+| `direct_not_paired` | Koppel deze CLI-installatie met de bedoelde mobiele bron. |
 | `direct_device_selection_required` | Geef met `--device` het bedoelde vertrouwde apparaat door. |
 | `direct_trust_invalid` | Bewaar de diagnostiek. Stel vertrouwen alleen opnieuw in als herstel onmogelijk is. |
 | `direct_iphone_unavailable` | Controleer of de app op de voorgrond staat, de toegangsschakelaar, het adres, de poort, toestemming en bereikbaarheid via LAN of Tailscale. |
-| `direct_export_paused` | Bekijk de taak, open de iPhone opnieuw en hervat de taak. |
-| `direct_cancellation_pending` | Open de gekoppelde iPhone opnieuw en probeer de annulering nogmaals. |
+| `direct_export_paused` | Bekijk de taak, open de gekoppelde telefoon opnieuw en hervat de taak. |
+| `direct_cancellation_pending` | Open de gekoppelde telefoon opnieuw en probeer de annulering nogmaals. |
 | `transport_unsupported` | Gebruik Manual IP of Tailscale in de platformonafhankelijke client. |
 | `backend_unsupported` | Gebruik de backend van de Mac-app voor query's, bewijs, doctor, meetwaarden of MCP. |
 | `invalid_direct_raw_response` | Gebruik de uitvoer niet. Bewaar de validatiediagnostiek. |

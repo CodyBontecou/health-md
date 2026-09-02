@@ -17,6 +17,7 @@ use healthmd_protocol::{
     },
 };
 use tokio::{net::TcpListener, time::Instant};
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
@@ -37,6 +38,66 @@ use crate::{
 
 const MAXIMUM_AUTHENTICATION_ATTEMPTS: usize = 8;
 const MAXIMUM_REQUEST_CLOCK_SKEW: chrono::Duration = chrono::Duration::minutes(5);
+const WAKE_INITIAL_BACKOFF: Duration = Duration::from_millis(250);
+const WAKE_MAXIMUM_BACKOFF: Duration = Duration::from_secs(2);
+const WAKE_PROGRESS_INTERVAL: Duration = Duration::from_secs(10);
+
+pub const DEFAULT_WAKE_TIMEOUT_SECONDS: u64 = 120;
+pub const MAXIMUM_WAKE_TIMEOUT_SECONDS: u64 = 3_600;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct WakeWindow {
+    timeout: Duration,
+}
+
+impl WakeWindow {
+    #[must_use]
+    pub const fn from_seconds(timeout_seconds: u64) -> Self {
+        Self {
+            timeout: Duration::from_secs(timeout_seconds),
+        }
+    }
+
+    #[must_use]
+    pub const fn timeout(self) -> Duration {
+        self.timeout
+    }
+
+    #[must_use]
+    pub const fn timeout_seconds(self) -> u64 {
+        self.timeout.as_secs()
+    }
+
+    #[must_use]
+    pub const fn enabled(self) -> bool {
+        !self.timeout.is_zero()
+    }
+
+    #[must_use]
+    pub fn status_value(self) -> serde_json::Value {
+        serde_json::json!({
+            "enabled": self.enabled(),
+            "timeout_seconds": self.timeout_seconds(),
+            "enrollment": {
+                "state": "unavailable",
+                "mode": "wait_only"
+            }
+        })
+    }
+}
+
+impl Default for WakeWindow {
+    fn default() -> Self {
+        Self::from_seconds(DEFAULT_WAKE_TIMEOUT_SECONDS)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WakeProgress {
+    pub elapsed_seconds: u64,
+    pub timeout_seconds: u64,
+    pub message: &'static str,
+}
 
 struct TrustLease {
     _file: fs::File,
@@ -214,8 +275,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// incompatible source, or unavailable secure storage.
     pub async fn pair<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         on_listening: F,
@@ -224,8 +285,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         F: FnOnce(u16),
     {
         self.pair_expected_source(
-            ios_pairing_code,
-            android_pairing_code,
+            legacy_apple_pairing_code,
+            shared_pairing_code,
             port,
             timeout,
             None,
@@ -245,8 +306,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// [`Self::pair`], plus an authentication error when the peer is not an iPhone.
     pub async fn pair_ios<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         on_listening: F,
@@ -255,8 +316,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         F: FnOnce(u16),
     {
         self.pair_expected_source(
-            ios_pairing_code,
-            android_pairing_code,
+            legacy_apple_pairing_code,
+            shared_pairing_code,
             port,
             timeout,
             Some(SourceKind::Ios),
@@ -277,8 +338,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// plus the bounded errors documented by [`Self::pair_ios`].
     pub async fn pair_first_ios<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         on_listening: F,
@@ -287,8 +348,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         F: FnOnce(u16),
     {
         self.pair_expected_source(
-            ios_pairing_code,
-            android_pairing_code,
+            legacy_apple_pairing_code,
+            shared_pairing_code,
             port,
             timeout,
             Some(SourceKind::Ios),
@@ -301,8 +362,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     #[allow(clippy::too_many_arguments)]
     async fn pair_expected_source<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         expected_source: Option<SourceKind>,
@@ -312,11 +373,11 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     where
         F: FnOnce(u16),
     {
-        let ios_code = crate::handshake::normalize_pairing_code(ios_pairing_code);
-        let android_code = crate::handshake::normalize_pairing_code(android_pairing_code);
-        if ios_code.len() != 6 || android_code.len() != 20 {
+        let legacy_apple_code = crate::handshake::normalize_pairing_code(legacy_apple_pairing_code);
+        let shared_code = crate::handshake::normalize_pairing_code(shared_pairing_code);
+        if legacy_apple_code.len() != 6 || shared_code.len() != 20 {
             return Err(ClientError::Authentication(
-                "iOS pairing requires 6 digits and Android pairing requires 20 digits".into(),
+                "shared pairing requires 20 digits; legacy Apple v1 requires 6 digits".into(),
             ));
         }
         let listener = bind_listener(port).await?;
@@ -325,7 +386,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let mut connection = self
             .accept_compatible_with_policy(
                 &listener,
-                Some((&ios_code, &android_code)),
+                Some((&legacy_apple_code, &shared_code)),
                 None,
                 timeout,
                 new_pairing_policy,
@@ -386,8 +447,124 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let selected = self.selected_device_id(device_id).await?;
         let listener = bind_listener(port).await?;
         let bound_port = listener.local_addr().map_err(connection_error)?.port();
+        self.status_on_listener(&listener, selected, bound_port, timeout)
+            .await
+    }
+
+    /// Wait for the selected authenticated mobile app to report that it is active.
+    ///
+    /// The listener remains bound for the complete bounded wake window. Unreachable peers and
+    /// authenticated inactive statuses are retried with a 250 ms to 2 s backoff. A local waiter
+    /// cancellation is distinct from phone-side durable-job cancellation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ClientError::WaitCancelled`] on local cancellation, [`ClientError::TimedOut`] on
+    /// wake-window expiry, or a non-retryable trust/authentication/protocol error.
+    pub async fn wait_for_active_source<F>(
+        &self,
+        device_id: Option<Uuid>,
+        port: u16,
+        wake_window: WakeWindow,
+        cancellation: &CancellationToken,
+        mut on_progress: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut(WakeProgress),
+    {
+        if !wake_window.enabled() {
+            return Ok(());
+        }
+        let selected = self.selected_device_id(device_id).await?;
+        let source = self.selected_source(Some(selected)).await?;
+        let waiting_message = match source.platform {
+            Some(PeerPlatform::Android) => {
+                "Waiting for Android; open Health.md or tap the wake notification."
+            }
+            _ => "Waiting for iPhone; open Health.md or tap the wake notification.",
+        };
+        let listener = bind_listener(port).await?;
+        let bound_port = listener.local_addr().map_err(connection_error)?.port();
+        let started = Instant::now();
+        let deadline = started + wake_window.timeout();
+        let mut backoff = WAKE_INITIAL_BACKOFF;
+        let mut waiting_reported = false;
+        let mut next_progress = WAKE_PROGRESS_INTERVAL;
+
+        loop {
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
+            let attempt_timeout = remaining.min(backoff);
+            let attempt_started = Instant::now();
+            let attempt = tokio::select! {
+                result = self.status_on_listener(
+                    &listener,
+                    selected,
+                    bound_port,
+                    attempt_timeout,
+                ) => result,
+                () = tokio::time::sleep(remaining) => return Err(ClientError::TimedOut),
+                () = cancellation.cancelled() => return Err(ClientError::WaitCancelled),
+            };
+            match attempt {
+                Ok(result) if source_status_is_active(&result.status) => return Ok(()),
+                Ok(_) | Err(ClientError::TimedOut | ClientError::Connection(_)) => {}
+                Err(error) => return Err(error),
+            }
+
+            let elapsed = started.elapsed();
+            if waiting_reported {
+                while elapsed >= next_progress {
+                    on_progress(WakeProgress {
+                        elapsed_seconds: elapsed.as_secs(),
+                        timeout_seconds: wake_window.timeout_seconds(),
+                        message: waiting_message,
+                    });
+                    next_progress += WAKE_PROGRESS_INTERVAL;
+                }
+            } else {
+                waiting_reported = true;
+                on_progress(WakeProgress {
+                    elapsed_seconds: elapsed.as_secs(),
+                    timeout_seconds: wake_window.timeout_seconds(),
+                    message: waiting_message,
+                });
+                while elapsed >= next_progress {
+                    next_progress += WAKE_PROGRESS_INTERVAL;
+                }
+            }
+
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
+            let delay = attempt_timeout
+                .saturating_sub(attempt_started.elapsed())
+                .min(remaining);
+            if !delay.is_zero() {
+                tokio::select! {
+                    () = tokio::time::sleep(delay) => {}
+                    () = cancellation.cancelled() => return Err(ClientError::WaitCancelled),
+                }
+            }
+            backoff = backoff.saturating_mul(2).min(WAKE_MAXIMUM_BACKOFF);
+        }
+    }
+
+    async fn status_on_listener(
+        &self,
+        listener: &TcpListener,
+        selected: Uuid,
+        bound_port: u16,
+        timeout: Duration,
+    ) -> Result<StatusResult, ClientError> {
         let mut connection = self
-            .accept_compatible(&listener, None, Some(selected), timeout)
+            .accept_compatible(listener, None, Some(selected), timeout)
             .await?;
         let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
         let (source, application_protocol_version) =
@@ -1173,6 +1350,22 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         RawReceiver::new(self.layout.clone(), jobs).extraction_jsonl(job_id, pointers)
     }
 
+    /// Durably record an explicit cancellation request for an Android job without opening a
+    /// network listener. An already-running export process can observe and deliver this marker.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent, corrupt, pinned to another device, or terminal in
+    /// a state other than already cancelled.
+    pub fn request_android_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<(), ClientError> {
+        self.prepare_android_job_cancellation(job_id, device_id)
+            .map(|_| ())
+    }
+
     /// Deliver a durable cancellation request to the Android source.
     ///
     /// # Errors
@@ -1185,29 +1378,10 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         port: u16,
         timeout: Duration,
     ) -> Result<(), ClientError> {
-        let jobs = V2JobStore::new(self.layout.clone())?;
-        let mut record = jobs.load(job_id)?;
-        if record.state == JobState::Cancelled {
+        let Some((jobs, selected)) = self.prepare_android_job_cancellation(job_id, device_id)?
+        else {
             return Ok(());
-        }
-        if record.state.is_terminal() {
-            return Err(ClientError::JobNotResumable(
-                job_id,
-                format!("{:?}", record.state).to_lowercase(),
-            ));
-        }
-        let selected = record.request.source_installation_id;
-        if let Some(requested) = device_id {
-            if requested != selected {
-                return Err(ClientError::DeviceNotPaired(requested));
-            }
-        }
-        jobs.request_cancellation(job_id)?;
-        record.state = JobState::CancellationPending;
-        record.updated_at = Utc::now();
-        record.message = Some("Cancellation is pending delivery to Android.".into());
-        jobs.save(&record)?;
-
+        };
         let deadline = Instant::now() + timeout;
         let result = async {
             let listener = bind_listener(port).await?;
@@ -1257,6 +1431,21 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         result.map_err(|_| ClientError::CancellationPending(job_id))
     }
 
+    /// Durably record an explicit cancellation request for an iPhone job without opening a
+    /// network listener. An already-running export process can observe and deliver this marker.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent, corrupt, unbound, pinned to another device, or
+    /// terminal in a state other than already cancelled.
+    pub fn request_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<(), ClientError> {
+        self.prepare_job_cancellation(job_id, device_id).map(|_| ())
+    }
+
     /// Deliver a durable cancellation request to the job's pinned iPhone.
     ///
     /// # Errors
@@ -1269,33 +1458,9 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         port: u16,
         timeout: Duration,
     ) -> Result<(), ClientError> {
-        let jobs = JobStore::new(self.layout.clone())?;
-        let mut record = jobs.load(job_id)?;
-        if record.state == JobState::Cancelled {
+        let Some((jobs, selected)) = self.prepare_job_cancellation(job_id, device_id)? else {
             return Ok(());
-        }
-        if record.state.is_terminal() {
-            return Err(ClientError::JobNotResumable(
-                job_id,
-                format!("{:?}", record.state).to_lowercase(),
-            ));
-        }
-        let selected = record
-            .peer_binding
-            .as_ref()
-            .map(|binding| binding.source_installation_id.0)
-            .ok_or_else(|| ClientError::JobNotResumable(job_id, "unbound".into()))?;
-        if let Some(requested) = device_id {
-            if requested != selected {
-                return Err(ClientError::DeviceNotPaired(requested));
-            }
-        }
-        jobs.request_cancellation(job_id)?;
-        record.state = JobState::CancellationPending;
-        record.updated_at = Utc::now();
-        record.message = Some("Cancellation is pending delivery to the paired iPhone.".into());
-        jobs.save(&record)?;
-
+        };
         let result = async {
             let listener = bind_listener(port).await?;
             let mut connection = self
@@ -1325,6 +1490,70 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         }
         .await;
         result.map_err(|_| ClientError::CancellationPending(job_id))
+    }
+
+    fn prepare_android_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<Option<(V2JobStore, Uuid)>, ClientError> {
+        let jobs = V2JobStore::new(self.layout.clone())?;
+        let mut record = jobs.load(job_id)?;
+        if record.state == JobState::Cancelled {
+            return Ok(None);
+        }
+        if record.state.is_terminal() {
+            return Err(ClientError::JobNotResumable(
+                job_id,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
+        }
+        let selected = record.request.source_installation_id;
+        if let Some(requested) = device_id {
+            if requested != selected {
+                return Err(ClientError::DeviceNotPaired(requested));
+            }
+        }
+        jobs.request_cancellation(job_id)?;
+        record.state = JobState::CancellationPending;
+        record.updated_at = Utc::now();
+        record.message = Some("Cancellation is pending delivery to Android.".into());
+        jobs.save(&record)?;
+        Ok(Some((jobs, selected)))
+    }
+
+    fn prepare_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<Option<(JobStore, Uuid)>, ClientError> {
+        let jobs = JobStore::new(self.layout.clone())?;
+        let mut record = jobs.load(job_id)?;
+        if record.state == JobState::Cancelled {
+            return Ok(None);
+        }
+        if record.state.is_terminal() {
+            return Err(ClientError::JobNotResumable(
+                job_id,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
+        }
+        let selected = record
+            .peer_binding
+            .as_ref()
+            .map(|binding| binding.source_installation_id.0)
+            .ok_or_else(|| ClientError::JobNotResumable(job_id, "unbound".into()))?;
+        if let Some(requested) = device_id {
+            if requested != selected {
+                return Err(ClientError::DeviceNotPaired(requested));
+            }
+        }
+        jobs.request_cancellation(job_id)?;
+        record.state = JobState::CancellationPending;
+        record.updated_at = Utc::now();
+        record.message = Some("Cancellation is pending delivery to the paired iPhone.".into());
+        jobs.save(&record)?;
+        Ok(Some((jobs, selected)))
     }
 
     /// Resume a durable generated-file job without changing its request or destination.
@@ -1923,6 +2152,9 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     ) -> Result<(), ClientError> {
         let _lease = acquire_trust_lease(self.layout.clone()).await?;
         let mut state = self.load_trust().await?;
+        if state.client(device_id).and_then(|client| client.platform) == Some(platform) {
+            return Ok(());
+        }
         if !state.set_client_platform(device_id, platform) {
             return Err(ClientError::DeviceNotPaired(device_id));
         }
@@ -2040,6 +2272,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             }
         }
         Err(last_error)
+    }
+}
+
+const fn source_status_is_active(status: &SourceStatus) -> bool {
+    match status {
+        SourceStatus::Ios(status) => status.app_active,
+        SourceStatus::Android(status) => status.app_active,
     }
 }
 
@@ -2188,14 +2427,18 @@ async fn receive_android_source_hello(
 const fn pairing_protocol_matches_platform(version: i32, platform: PeerPlatform) -> bool {
     matches!(
         (version, platform),
-        (1, PeerPlatform::Ios) | (2, PeerPlatform::Android)
+        (1, PeerPlatform::Ios)
+            | (2, PeerPlatform::Android)
+            | (3, PeerPlatform::Ios | PeerPlatform::Android)
     )
 }
 
 const fn pairing_protocol_matches_source(version: i32, source: SourceKind) -> bool {
     matches!(
         (version, source),
-        (1, SourceKind::Ios) | (2, SourceKind::Android)
+        (1, SourceKind::Ios)
+            | (2, SourceKind::Android)
+            | (3, SourceKind::Ios | SourceKind::Android)
     )
 }
 
@@ -3441,10 +3684,15 @@ mod tests {
     }
 
     #[test]
-    fn pairing_protocol_cannot_downgrade_android_to_the_ios_code_path() {
+    fn pairing_protocols_preserve_legacy_platform_binding_and_share_v3() {
         assert!(pairing_protocol_matches_source(1, SourceKind::Ios));
         assert!(pairing_protocol_matches_source(2, SourceKind::Android));
+        assert!(pairing_protocol_matches_source(3, SourceKind::Ios));
+        assert!(pairing_protocol_matches_source(3, SourceKind::Android));
+        assert!(pairing_protocol_matches_platform(3, PeerPlatform::Ios));
+        assert!(pairing_protocol_matches_platform(3, PeerPlatform::Android));
         assert!(!pairing_protocol_matches_source(1, SourceKind::Android));
+        assert!(!pairing_protocol_matches_source(2, SourceKind::Ios));
         assert!(!pairing_protocol_matches_platform(1, PeerPlatform::Android));
     }
 

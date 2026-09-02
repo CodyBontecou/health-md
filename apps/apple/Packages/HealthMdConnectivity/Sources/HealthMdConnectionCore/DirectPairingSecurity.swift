@@ -5,7 +5,12 @@ import Foundation
 /// It deliberately does not accept credentials issued for the classic Mac-app
 /// manual-IP transport even though both channels share the same packet framing.
 public enum DirectPairingSecurity {
-    public static let protocolVersion = 1
+    public static let legacyAppleProtocolVersion = 1
+    public static let sharedProtocolVersion = 3
+    /// Compatibility default for the bundled legacy Swift server. New QR pairing selects v3 explicitly.
+    public static let protocolVersion = legacyAppleProtocolVersion
+    public static let legacyPairingCodeDigits = 6
+    public static let sharedPairingCodeDigits = 20
     public static let pairingCodeLifetime: TimeInterval = 10 * 60
     public static let reconnectSecretByteCount = 32
 
@@ -17,9 +22,11 @@ public enum DirectPairingSecurity {
     public static let tcpKeepaliveCount = 3
 
     private static let pairingDomain = Data("HealthMd.DirectCLI.PairingVerifier.v1".utf8)
+    private static let sharedPairingDomain = Data("HealthMd.DirectCLI.PairingVerifier.v3".utf8)
     private static let sessionDomain = Data("HealthMd.DirectCLI.SessionKey.v1".utf8)
     private static let trustedClientDomain = Data("HealthMd.DirectCLI.TrustedClient.v1".utf8)
     private static let pairingServerDomain = Data("HealthMd.DirectCLI.PairingServer.v1".utf8)
+    private static let sharedPairingServerDomain = Data("HealthMd.DirectCLI.PairingServer.v3".utf8)
     private static let trustedServerDomain = Data("HealthMd.DirectCLI.TrustedServer.v1".utf8)
 
     public static func pairingVerifier(
@@ -45,6 +52,37 @@ public enum DirectPairingSecurity {
         ManualIPSyncSecurity.timingSafeCompare(
             verifier,
             pairingVerifier(
+                pairingCode: pairingCode,
+                clientInstallationID: clientInstallationID,
+                clientPublicKey: clientPublicKey,
+                clientNonce: clientNonce
+            )
+        )
+    }
+
+    public static func sharedPairingVerifier(
+        pairingCode: String,
+        clientInstallationID: UUID,
+        clientPublicKey: Data,
+        clientNonce: Data
+    ) -> Data {
+        var payload = sharedPairingDomain
+        append(Data(clientInstallationID.uuidString.lowercased().utf8), to: &payload)
+        append(clientPublicKey, to: &payload)
+        append(clientNonce, to: &payload)
+        return authenticationCode(payload, keyData: sharedPairingCodeKey(pairingCode))
+    }
+
+    public static func sharedPairingVerifierIsValid(
+        _ verifier: Data,
+        pairingCode: String,
+        clientInstallationID: UUID,
+        clientPublicKey: Data,
+        clientNonce: Data
+    ) -> Bool {
+        ManualIPSyncSecurity.timingSafeCompare(
+            verifier,
+            sharedPairingVerifier(
                 pairingCode: pairingCode,
                 clientInstallationID: clientInstallationID,
                 clientPublicKey: clientPublicKey,
@@ -107,6 +145,29 @@ public enum DirectPairingSecurity {
         )
     }
 
+    public static func sharedPairingServerVerifier(
+        pairingCode: String,
+        clientInstallationID: UUID,
+        clientPublicKey: Data,
+        clientNonce: Data,
+        serverInstallationID: UUID,
+        serverPublicKey: Data,
+        serverNonce: Data,
+        sealedReconnectSecret: ManualIPEncryptedFrame
+    ) -> Data {
+        serverVerifier(
+            domain: sharedPairingServerDomain,
+            keyData: sharedPairingCodeKey(pairingCode),
+            clientInstallationID: clientInstallationID,
+            clientPublicKey: clientPublicKey,
+            clientNonce: clientNonce,
+            serverInstallationID: serverInstallationID,
+            serverPublicKey: serverPublicKey,
+            serverNonce: serverNonce,
+            sealedReconnectSecret: sealedReconnectSecret
+        )
+    }
+
     public static func trustedServerVerifier(
         reconnectSecret: Data,
         clientInstallationID: UUID,
@@ -151,6 +212,11 @@ public enum DirectPairingSecurity {
     private static func pairingCodeKey(_ code: String) -> Data {
         let normalized = ManualIPSyncSecurity.normalizedPairingCode(code)
         return Data(SHA256.hash(data: Data("HealthMd.DirectCLI.Code.\(normalized)".utf8)))
+    }
+
+    private static func sharedPairingCodeKey(_ code: String) -> Data {
+        let normalized = ManualIPSyncSecurity.normalizedPairingCode(code)
+        return Data(SHA256.hash(data: Data("HealthMd.DirectCLI.Code.v3.\(normalized)".utf8)))
     }
 
     private static func authenticationCode(_ payload: Data, keyData: Data) -> Data {

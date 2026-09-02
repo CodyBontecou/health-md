@@ -18,12 +18,15 @@ type HmacSha256 = Hmac<Sha256>;
 
 const CODE_DOMAIN: &[u8] = b"HealthMd.DirectCLI.Code.";
 const ANDROID_CODE_DOMAIN: &[u8] = b"HealthMd.DirectCLI.Code.v2.";
+const SHARED_CODE_DOMAIN: &[u8] = b"HealthMd.DirectCLI.Code.v3.";
 const PAIRING_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingVerifier.v1";
 const ANDROID_PAIRING_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingVerifier.v2";
+const SHARED_PAIRING_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingVerifier.v3";
 const SESSION_DOMAIN: &[u8] = b"HealthMd.DirectCLI.SessionKey.v1";
 const TRUSTED_CLIENT_DOMAIN: &[u8] = b"HealthMd.DirectCLI.TrustedClient.v1";
 const PAIRING_SERVER_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingServer.v1";
 const ANDROID_PAIRING_SERVER_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingServer.v2";
+const SHARED_PAIRING_SERVER_DOMAIN: &[u8] = b"HealthMd.DirectCLI.PairingServer.v3";
 const TRUSTED_SERVER_DOMAIN: &[u8] = b"HealthMd.DirectCLI.TrustedServer.v1";
 
 #[derive(Debug, Error)]
@@ -119,6 +122,25 @@ pub fn android_pairing_verifier(
     authentication_code(&key[..], &transcript)
 }
 
+/// Build the shared v3 new-pairing client proof used by Apple and Android QR pairing.
+#[must_use]
+pub fn shared_pairing_verifier(
+    pairing_code: &str,
+    client_installation_id: Uuid,
+    client_public_key: &[u8],
+    client_nonce: &[u8],
+) -> [u8; 32] {
+    let mut transcript = SHARED_PAIRING_DOMAIN.to_vec();
+    append_field(
+        &mut transcript,
+        lowercase_uuid(client_installation_id).as_bytes(),
+    );
+    append_field(&mut transcript, client_public_key);
+    append_field(&mut transcript, client_nonce);
+    let key = shared_pairing_code_key(pairing_code);
+    authentication_code(&key[..], &transcript)
+}
+
 #[must_use]
 pub fn trusted_client_verifier(
     reconnect_secret: &[u8],
@@ -188,6 +210,33 @@ pub fn android_pairing_server_verifier(
     let key = android_pairing_code_key(pairing_code);
     server_verifier(
         ANDROID_PAIRING_SERVER_DOMAIN,
+        &key[..],
+        client_installation_id,
+        client_public_key,
+        client_nonce,
+        server_installation_id,
+        server_public_key,
+        server_nonce,
+        Some(sealed_reconnect_secret),
+    )
+}
+
+/// Build the shared v3 new-pairing server proof used by Apple and Android QR pairing.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn shared_pairing_server_verifier(
+    pairing_code: &str,
+    client_installation_id: Uuid,
+    client_public_key: &[u8],
+    client_nonce: &[u8],
+    server_installation_id: Uuid,
+    server_public_key: &[u8],
+    server_nonce: &[u8],
+    sealed_reconnect_secret: &EncryptedFrame,
+) -> [u8; 32] {
+    let key = shared_pairing_code_key(pairing_code);
+    server_verifier(
+        SHARED_PAIRING_SERVER_DOMAIN,
         &key[..],
         client_installation_id,
         client_public_key,
@@ -325,6 +374,10 @@ fn pairing_code_key(pairing_code: &str) -> Zeroizing<[u8; 32]> {
 
 fn android_pairing_code_key(pairing_code: &str) -> Zeroizing<[u8; 32]> {
     pairing_code_key_with_domain(pairing_code, ANDROID_CODE_DOMAIN)
+}
+
+fn shared_pairing_code_key(pairing_code: &str) -> Zeroizing<[u8; 32]> {
+    pairing_code_key_with_domain(pairing_code, SHARED_CODE_DOMAIN)
 }
 
 fn pairing_code_key_with_domain(pairing_code: &str, domain: &[u8]) -> Zeroizing<[u8; 32]> {

@@ -24,10 +24,11 @@ The exact resolved graph is produced by:
 
 | Family | License evidence/result |
 | --- | --- |
-| AndroidX (Compose, Activity, Lifecycle, Navigation, Health Connect client, WorkManager, DataStore, Room, Security, Glance) | Apache-2.0 project/artifact licenses |
+| AndroidX (Compose, Activity, Lifecycle, Navigation, CameraX, Health Connect client, WorkManager, DataStore, Room, Security, Glance) | Apache-2.0 project/artifact licenses |
 | Kotlin standard library and kotlinx serialization/coroutines | Apache-2.0 |
 | Dagger/Hilt | Apache-2.0 |
 | Guava | Apache-2.0 |
+| ZXing Core | Apache-2.0; decoder library only, with no Google Play services or network scanner dependency |
 | Timber | Apache-2.0 |
 | PDFBox-Android and Apache PDFBox transitive code | Apache-2.0; retained notice at `app/src/main/assets/licenses/pdfbox-android-notice.txt` |
 | Bouncy Castle provider | MIT-style Bouncy Castle license |

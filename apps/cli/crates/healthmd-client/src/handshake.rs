@@ -123,7 +123,7 @@ async fn authenticate_inner<C: CredentialStore>(
     else {
         return Err(authentication_error("expected a pairing request"));
     };
-    if !matches!(request.protocol_version, 1 | 2) {
+    if !matches!(request.protocol_version, 1..=3) {
         return Err(authentication_error(
             "incompatible pairing protocol version",
         ));
@@ -162,33 +162,41 @@ async fn authenticate_inner<C: CredentialStore>(
         })
     });
 
-    let normalized_code = pairing_codes.map(|(ios, android)| {
-        if request.protocol_version == 2 {
-            normalize_pairing_code(android)
+    // Selector 1 retains the deployed six-digit Apple v1 secret. Selectors 2 and 3 use the
+    // same high-entropy 20-digit out-of-band secret, while their HMAC domains remain distinct.
+    let normalized_code = pairing_codes.map(|(legacy_apple, shared)| {
+        if request.protocol_version == 1 {
+            normalize_pairing_code(legacy_apple)
         } else {
-            normalize_pairing_code(ios)
+            normalize_pairing_code(shared)
         }
     });
-    let required_code_length = if request.protocol_version == 2 { 20 } else { 6 };
+    let required_code_length = if request.protocol_version == 1 { 6 } else { 20 };
     let code_pairing = normalized_code.as_ref().is_some_and(|code| {
         code.len() == required_code_length
             && request.code_verifier.len() == 32
             && crypto::constant_time_equal(
                 &request.code_verifier,
-                &if request.protocol_version == 2 {
-                    crypto::android_pairing_verifier(
+                &match request.protocol_version {
+                    1 => crypto::pairing_verifier(
                         code,
                         client_id.0,
                         &request.client_public_key,
                         &request.client_nonce,
-                    )
-                } else {
-                    crypto::pairing_verifier(
+                    ),
+                    2 => crypto::android_pairing_verifier(
                         code,
                         client_id.0,
                         &request.client_public_key,
                         &request.client_nonce,
-                    )
+                    ),
+                    3 => crypto::shared_pairing_verifier(
+                        code,
+                        client_id.0,
+                        &request.client_public_key,
+                        &request.client_nonce,
+                    ),
+                    _ => unreachable!("pairing selector was validated"),
                 },
             )
     });
@@ -229,8 +237,8 @@ async fn authenticate_inner<C: CredentialStore>(
         let code = normalized_code
             .as_deref()
             .expect("code pairing has a normalized code");
-        if request.protocol_version == 2 {
-            crypto::android_pairing_server_verifier(
+        match request.protocol_version {
+            1 => crypto::pairing_server_verifier(
                 code,
                 client_id.0,
                 &request.client_public_key,
@@ -239,9 +247,8 @@ async fn authenticate_inner<C: CredentialStore>(
                 &server_public_key,
                 &server_nonce,
                 &sealed_reconnect_secret,
-            )
-        } else {
-            crypto::pairing_server_verifier(
+            ),
+            2 => crypto::android_pairing_server_verifier(
                 code,
                 client_id.0,
                 &request.client_public_key,
@@ -250,7 +257,18 @@ async fn authenticate_inner<C: CredentialStore>(
                 &server_public_key,
                 &server_nonce,
                 &sealed_reconnect_secret,
-            )
+            ),
+            3 => crypto::shared_pairing_server_verifier(
+                code,
+                client_id.0,
+                &request.client_public_key,
+                &request.client_nonce,
+                owner_installation_id.0,
+                &server_public_key,
+                &server_nonce,
+                &sealed_reconnect_secret,
+            ),
+            _ => unreachable!("pairing selector was validated"),
         }
     };
 
@@ -258,13 +276,14 @@ async fn authenticate_inner<C: CredentialStore>(
     let device = TrustedClient {
         installation_id: client_id,
         display_name: request.device_name,
-        platform: existing.as_ref().and_then(|saved| saved.platform).or(Some(
-            if request.protocol_version == 2 {
-                healthmd_protocol::wire::PeerPlatform::Android
-            } else {
-                healthmd_protocol::wire::PeerPlatform::Ios
+        platform: existing.as_ref().and_then(|saved| saved.platform).or(
+            match request.protocol_version {
+                1 => Some(healthmd_protocol::wire::PeerPlatform::Ios),
+                2 => Some(healthmd_protocol::wire::PeerPlatform::Android),
+                3 => None,
+                _ => unreachable!("pairing selector was validated"),
             },
-        )),
+        ),
         reconnect_secret,
         paired_at: existing.as_ref().map_or(now, |saved| saved.paired_at),
         last_connected_at: now,

@@ -5,7 +5,7 @@ This document specifies the Android-capable Health.md direct application protoco
 Protocol v2 is an application-layer extension. It deliberately reuses these deployed v1 transport properties from [the v1 contract](../v1/protocol.md):
 
 - TCP port `17647` and `u64be(length) || JSON` outer packets;
-- the deployed protocol-v1 packet framing and X25519/reconnect-secret handshake, with Android pairing protocol version 2 using a short-lived 20-digit high-entropy code and the same domain-separated authentication proofs;
+- the deployed protocol-v1 packet framing and X25519/reconnect-secret handshake, with legacy Android pairing selector 2 or current shared selector 3 using a short-lived 20-digit high-entropy code and independently domain-separated authentication proofs;
 - encrypted `HMDSC001` sequenced channel;
 - `HMDDIRCT` binary transfer frame version 1;
 - 2 MiB packet and 512 KiB chunk limits;
@@ -24,7 +24,7 @@ The selected application version is the highest common version. The CLI requires
 | `ios` | 1 |
 | `android` | 2 |
 
-Android MUST fail closed rather than downgrade to application v1. Once version 2 is selected, every non-binary control payload uses the envelope below. Android `PairingRequest.protocolVersion` 2 selects the reviewed Android code transcripts, while the reused secure-channel and binary framing remain version 1; application version 2 is negotiated independently.
+Android MUST fail closed rather than downgrade to application v1. Once version 2 is selected, every non-binary control payload uses the envelope below. Android `PairingRequest.protocolVersion` 3 selects the current [shared pairing profile](../pairing-v3/protocol.md); selector 2 remains compatible with older clients and CLIs. The reused secure-channel and binary framing remain version 1, and application version 2 is negotiated independently.
 
 ## Encoding
 
@@ -137,9 +137,10 @@ A CLI job is complete only after `completion_confirmed`. Pending partition bytes
 
 ## Runtime constraints
 
-The Android connection is initially manual and user-started:
+The Android connection is user-started from the foreground Direct CLI screen:
 
 - the CLI listener must already be running;
+- the app may scan the universal in-app QR or accept the same host, port, and 20-digit code manually; camera permission and hardware remain optional;
 - Android uses a short-lived foreground `dataSync` service;
 - one direct export may run at a time;
 - no boot reconnect, WorkManager destination, schedule target, automation target, or mDNS discovery;
@@ -171,9 +172,9 @@ The CLI must be released before Android direct export is enabled in production.
 The transport-independent Rust authority in `healthmd-protocol::foundation`, exposed through the
 thin shared-core UniFFI package at protocol API revision 1, can validate/fingerprint the exact v2
 request model, canonicalize complete `Envelope` JSON, process opaque deployed `HMDDIRCT` frames,
-reuse transfer negotiation, verify the reviewed Android new-pairing client transcript, and derive
+reuse transfer negotiation, verify the reviewed selector-2 and selector-3 new-pairing client transcripts, and derive
 the reused reviewed session key. This internal revision is not negotiated and does not alter
-application version 2, Android pairing selector 2, shared secure/binary framing version 1, any
+application version 2, legacy Android pairing selector 2, shared secure/binary framing version 1, any
 envelope discriminator, timestamp/UUID rule, hash, limit, or fixture in this specification.
 
 Stateful `HMDSC001` sequence/replay enforcement, seal/open and AEAD nonce/key lifecycle, trusted

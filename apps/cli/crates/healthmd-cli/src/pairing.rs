@@ -182,10 +182,10 @@ impl PairingCoordinator {
         }
         let address = preferred_pairing_address(&local_ipv4_addresses())
             .ok_or(PairingCoordinatorError::AddressUnavailable)?;
-        let ios_code = generate_numeric_code(6)?;
-        // Direct protocol negotiation remains multi-platform. This secret Android code is never
-        // exposed, and pair_ios rejects/forgets a non-iOS peer before returning.
-        let android_code = generate_numeric_code(20)?;
+        let legacy_apple_code = generate_numeric_code(6)?;
+        // The QR exposes only the shared high-entropy selector-3 code. This MCP surface remains
+        // iPhone-scoped, so pair_first_ios rejects and forgets an Android peer after negotiation.
+        let shared_code = generate_numeric_code(20)?;
         let operation_guard = Arc::clone(&self.operation_gate)
             .try_lock_owned()
             .map_err(|_| PairingCoordinatorError::Busy)?;
@@ -219,14 +219,15 @@ impl PairingCoordinator {
 
         let client = Arc::clone(&self.client);
         let configured_port = self.port;
-        let ios_code_for_listener = ios_code.clone();
+        let legacy_apple_code_for_listener = legacy_apple_code.clone();
+        let shared_code_for_listener = shared_code.clone();
         let terminal_sender = state_sender.clone();
         let task = tokio::spawn(async move {
             let _operation_guard = operation_guard;
             let result = client
                 .pair_first_ios(
-                    &ios_code_for_listener,
-                    &android_code,
+                    &legacy_apple_code_for_listener,
+                    &shared_code_for_listener,
                     configured_port,
                     Duration::from_secs(timeout_seconds),
                     move |bound_port| {
@@ -274,7 +275,7 @@ impl PairingCoordinator {
             return Err(PairingCoordinatorError::ListenerUnavailable);
         }
 
-        let link = ios_pairing_link(&address.address, bound_port, &ios_code);
+        let link = pairing_link(&address.address, bound_port, &shared_code);
         let qr_png = match render_qr_png(&link) {
             Ok(png) => png,
             Err(error) => {
@@ -516,7 +517,7 @@ pub fn generate_numeric_code(digit_count: usize) -> Result<String, PairingCoordi
     Ok(code)
 }
 
-pub fn ios_pairing_link(address: &str, port: u16, pairing_code: &str) -> String {
+pub fn pairing_link(address: &str, port: u16, pairing_code: &str) -> String {
     format!("healthmd://direct-cli/pair?host={address}&port={port}&code={pairing_code}")
 }
 
@@ -712,10 +713,10 @@ mod tests {
 
     #[test]
     fn pairing_link_is_exact_and_qr_is_a_decodable_square_png() {
-        let link = ios_pairing_link("192.168.1.42", 17_647, "123456");
+        let link = pairing_link("192.168.1.42", 17_647, "12345678901234567890");
         assert_eq!(
             link,
-            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345678901234567890"
         );
         let bytes = render_qr_png(&link).unwrap();
         assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");

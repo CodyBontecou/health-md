@@ -14,7 +14,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>预览版 · 可移植直连 CLI</strong>
-<p>macOS 上已可使用内置的 Swift 直连后端，可与 iPhone 配对。Android 配对（协议 v2）属于已公开打包的跨平台 Rust 预览版。实体 iPhone 和 Android 发布质量验证仍未完成；Linux 和 Windows 命令描述的是明确未经资格验证的工作流。</p>
+<p>macOS 上已可使用内置的 Swift 直连后端，可与 iPhone 配对。使用应用协议 v2 的 Android 属于已公开打包的跨平台 Rust 预览版。当前 iOS 和 Android 版本在新的可移植配对中使用相同的选择器 3 和通用二维码。实体 iPhone 和 Android 发布质量验证仍未完成；Linux 和 Windows 命令描述的是明确未经资格验证的工作流。</p>
 </div>
 
 ## 0.1.0-alpha.3 移动端兼容性
@@ -23,14 +23,14 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 | 移动端来源 | 协议 | 准确 tag-SHA 对应版本／未经验证的兼容性下限 | 可移植 Rust 操作 | 公开状态 |
 |---|---|---|---|---|
-| 支持导出的 iPhone | 选择器 1 / v1 | iOS 3.2.1（构建 202608300209）/ iOS 3.0.3 | 状态、原始数据、提取、文件、恢复、取消 | 等待实机资格验证 |
-| 支持查询的 iPhone | 选择器 1 / v1 + 查询 v3 | iOS 3.2.1（构建 202608300209）/ iOS 3.0.3 | V1 加 19 工具本地 MCP／查询 | 等待实机资格验证 |
-| Android | 选择器 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | 状态、提供方原生数据、文件、恢复、取消 | 等待实机资格验证 |
+| 支持导出的 iPhone | 当前选择器 3（旧版 1）/ 应用 v1 | iOS 3.2.1（构建 202608300209）/ iOS 3.0.3 | 状态、原始数据、提取、文件、恢复、取消 | 等待实机资格验证 |
+| 支持查询的 iPhone | 当前选择器 3（旧版 1）/ 应用 v1 + 查询 v3 | iOS 3.2.1（构建 202608300209）/ iOS 3.0.3 | V1 加 19 工具本地 MCP／查询 | 等待实机资格验证 |
+| Android | 当前选择器 3（旧版 2）/ 应用 v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | 状态、提供方原生数据、文件、恢复、取消 | 等待实机资格验证 |
 | Android 类型化 MCP 查询 | 不适用 | 尚未实现 | 查询工具要求 iPhone v3 | 不支持 |
 
 ## 直连模式支持的功能
 
-- 与 iPhone（协议 v1）或 Android（协议 v2）来源完成一次性配对和可信重连；
+- 通过共享选择器 3 完成一次性配对，并与 iPhone（应用协议 v1）或 Android（应用协议 v2）来源进行可信重连；
 - 在本地查看可信设备并解除配对；
 - 实时检查手机就绪状态；
 - 严格的原始导出——iPhone 上为 schema-v8 `healthmd.health_data`，Android 上为提供方原生的 Health Connect 快照；
@@ -44,7 +44,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 ## 要求
 
-- 支持直连的 `healthmd` 二进制文件，以及与之匹配的 Health.md 版本：iPhone（协议 v1）或 Android（协议 v2）。Android 配对需要可移植 Rust 客户端；内置 macOS 辅助程序只能与 iPhone 配对。
+- 支持直连的 `healthmd` 二进制文件，以及与之匹配的 Health.md 版本：iPhone（应用协议 v1）或 Android（应用协议 v2）。Android 配对需要可移植 Rust 客户端；内置 macOS 辅助程序只能与 iPhone 配对。
 - 配对和启动新命令时，Health.md 必须在手机前台保持打开。
 - 在 iPhone 上启用**设置 > Mac 同步 > Direct CLI 访问**，或在 Android 上启用**设置 → Direct CLI**。
 - 已授予平台健康权限（HealthKit 或 Health Connect），受保护数据可用，本地网络权限已授予，并有可用的导出额度。
@@ -71,30 +71,23 @@ CLI 充当监听器。手机会连接到 Direct CLI 访问中填写的计算机�
 healthmd direct pair --transport manual-ip
 ```
 
-可移植 Rust 客户端会把六位 iPhone 配对码、单独的 20 位 Android 配对码、候选计算机地址和监听端口写入 stderr；内置 macOS 辅助程序只会输出六位 iPhone 配对码。stdout 始终保留给最终 JSON 结果。
+可移植 Rust 客户端会显示一个 iOS/Android 通用二维码，并把共享的 20 位代码、候选计算机地址、监听端口以及供旧版 iOS 使用的六位备用代码写入 stderr。内置 macOS 辅助程序仍只显示旧版六位 iPhone 代码。stdout 始终保留给最终 JSON 结果。
 
 在 iPhone 上：
 
-1. 打开 **Health.md > 设置 > Mac 同步 > Direct CLI 访问**。
-2. 启用 Direct CLI 访问。
-3. 选择**手动 IP**。
-4. 输入计算机的 LAN 或 Tailscale 地址。
-5. 输入端口 `17647`；如果 CLI 使用了其他全局 `--port`，则输入对应端口。
-6. 输入配对码并轻点“配对”。
-7. 保持应用打开，直到双方都报告成功。
-
-iPhone 配对码会在 10 分钟后过期，绝不会通过网络发送或持久保存。
+1. 打开 **Health.md > 设置 > Mac 同步 > Direct CLI 访问**并启用访问。
+2. 轻点**扫描配对二维码**并扫描通用二维码；完成这次明确的应用内扫描后，配对会立即开始。
+3. 无法扫描时，选择**手动 IP**并输入地址、端口和共享的 20 位代码。旧版 CLI 仍可使用六位代码。
+4. 保持应用打开，直到双方都报告成功。
 
 ## 配对 Android 手机
 
-Android 配对使用可移植 Rust 客户端，以及 `healthmd direct pair` 输出的单独 20 位（约 66 比特）一次性配对码。Android 绝不会降级到 iPhone 协议。
-
 1. 在 Android 手机上打开 **Health.md > 设置 → Direct CLI**。
-2. 输入计算机的 LAN 或 Tailscale 地址，以及端口 `17647`。
-3. 输入 20 位配对码并确认配对。
+2. 轻点**扫描配对二维码**并扫描通用二维码；完成这次明确的应用内扫描后，配对会立即开始。
+3. 没有摄像头或权限时，可手动输入地址、端口和同一个共享 20 位代码。
 4. 保持应用打开；在活动的直连会话期间，Android 会运行一个由用户启动且可见的数据同步前台服务。
 
-一次性配对码使用完毕后，重连信任将由 Android Keystore 保护。
+一次性代码绝不会通过网络发送或持久保存。配对后，Keychain 或 Android Keystore 会保护重连信任。
 
 需要时可以改用其他端口：
 
@@ -246,6 +239,8 @@ Android 协议 v2 的文件作业从设备上已保存的选择或 `--profile PR
 
 当手机应用保持在前台时，受信任的直连会话可在短暂断开后自动重连。重试延迟会逐步增加，但设有较短的上限。这不会唤醒后台应用，也不保证能够访问后台应用；如果 Health.md 已不在前台，请在恢复前重新打开它。
 
+120 秒的有限等待窗口会在用户解锁手机并打开 Health.md 时保留同一请求。使用 `--wake-timeout SECONDS` 调整；`0` 可禁用。MCP 使用 `HEALTHMD_WAKE_TIMEOUT`。此第一阶段尚不发送推送通知，也不会绕过解锁或权限。
+
 ## 持久恢复与取消
 
 直连作业会在创建七天后到期。超时、Ctrl-C、进程终止、断开连接和后台时间耗尽都不会取消作业。
@@ -258,11 +253,12 @@ healthmd --backend direct cancel JOB_UUID
 
 恢复作业会保留原始日期、设置、目标位置、请求指纹、设备和分区提交边界。恢复文件作业时，不能改用其他目标位置。
 
-取消会记录持久请求，但只有在 iPhone 确认后才成为终止状态。如果 iPhone 不可用，状态会保持为 `cancellation_pending`。请重新打开同一台 iPhone，再次执行取消。
+取消会记录持久请求，但只有在已配对的手机确认后才成为终止状态。如果手机不可用，状态会保持为 `cancellation_pending`。请重新打开同一台手机，再次执行取消。
 
 ## 安全模型
 
-- 配对使用临时密钥协商以及与平台配对码绑定的握手记录证明——即 iPhone 的六位配对流程，或 Android 单独的高熵 20 位（约 66 比特）一次性配对码。
+- 当前可移植配对使用临时密钥协商，以及与一个 iOS/Android 共享的高熵 20 位（约 66 比特）代码绑定的选择器 3 握手记录证明。旧版 Apple 选择器 1 和 Android 选择器 2 流程保持逐字节兼容。
+- 二维码交接只允许通过应用内明确启用的扫描器接收，并仅接受规范的私有 LAN/Tailscale 地址；打开外部自定义网址不能授权配对。
 - 重连时会验证随机保存的密钥和两端安装身份。
 - 每次连接都会派生新的密钥和 nonce。
 - 消息和二进制帧使用 ChaCha20-Poly1305，并检查单调递增的序列号。
@@ -277,12 +273,12 @@ healthmd --backend direct cancel JOB_UUID
 
 | 错误 | 处理方法 |
 |---|---|
-| `direct_not_paired` | 将此 CLI 安装与 iPhone 配对。 |
+| `direct_not_paired` | 将此 CLI 安装与目标移动数据源配对。 |
 | `direct_device_selection_required` | 通过 `--device` 指定目标可信设备。 |
 | `direct_trust_invalid` | 保留诊断信息。只有无法恢复时才重置信任。 |
 | `direct_iphone_unavailable` | 检查应用前台状态、访问开关、地址、端口、权限，以及 LAN 或 Tailscale 的可达性。 |
-| `direct_export_paused` | 检查作业，重新打开 iPhone，再恢复作业。 |
-| `direct_cancellation_pending` | 重新打开已配对的 iPhone，再次执行取消。 |
+| `direct_export_paused` | 检查作业，重新打开已配对的手机，再恢复作业。 |
+| `direct_cancellation_pending` | 重新打开已配对的手机，再次执行取消。 |
 | `transport_unsupported` | 在可移植客户端中使用手动 IP 或 Tailscale。 |
 | `backend_unsupported` | 查询、证据、doctor、指标或 MCP 请使用 Mac 应用后端。 |
 | `invalid_direct_raw_response` | 不要使用输出，并保留验证诊断信息。 |

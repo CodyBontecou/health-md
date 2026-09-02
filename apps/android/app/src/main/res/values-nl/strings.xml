@@ -815,7 +815,11 @@
     <string name="direct_cli_intro_title">Versleutelde desktop-exports</string>
     <string name="direct_cli_intro_body">De CLI luistert op je computer. Health.md maakt rechtstreeks verbinding en verzendt de export zonder tussenstation in de cloud.</string>
     <string name="direct_cli_pair_step_run">1. Voer op je computer het volgende uit:</string>
-    <string name="direct_cli_pair_step_enter">2. Voer het computeradres en de 20-cijferige Android-code in die door de CLI worden weergegeven.</string>
+    <string name="direct_cli_pair_step_enter">2. Scan de universele QR-code hieronder of voer het computeradres, de poort en de gedeelde 20-cijferige koppelingscode in.</string>
+    <string name="direct_cli_scan_qr">QR-code voor koppelen scannen</string>
+    <string name="direct_cli_camera_unavailable">Scannen met de camera is niet beschikbaar. Sta indien mogelijk cameratoegang toe of voer adres, poort en code handmatig in.</string>
+    <string name="direct_cli_invalid_qr">Dit is geen geldige Health.md Direct CLI-QR-code voor koppelen.</string>
+    <string name="direct_cli_scan_qr_hint">Richt de camera op de QR-code die healthmd direct pair toont.</string>
     <string name="direct_cli_computer_address">Computeradres</string>
     <string name="direct_cli_port">Poort</string>
     <string name="direct_cli_pairing_code">Koppelingscode</string>

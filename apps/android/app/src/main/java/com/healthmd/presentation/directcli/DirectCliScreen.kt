@@ -27,6 +27,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -50,6 +53,7 @@ object DirectCliTestTags {
     const val PORT = "direct_cli_port"
     const val PAIRING_CODE = "direct_cli_pairing_code"
     const val PAIR = "direct_cli_pair"
+    const val SCAN_QR = "direct_cli_scan_qr"
     const val PAIRED_LISTENER = "direct_cli_paired_listener"
     const val SAVE_ENDPOINT = "direct_cli_save_endpoint"
     const val CONNECT = "direct_cli_connect"
@@ -66,6 +70,7 @@ fun DirectCliScreen(
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val connection by viewModel.connection.collectAsStateWithLifecycle()
     val protection = LocalConfigurationProtection.current
+    var showPairingScanner by rememberSaveable { mutableStateOf(false) }
 
     fun configurationChange(action: () -> Unit) {
         if (protection.enabled) protection.onBlockedChange() else action()
@@ -82,12 +87,22 @@ fun DirectCliScreen(
         onHostChange = { value -> configurationChange { viewModel.updateHost(value) } },
         onPortChange = { value -> configurationChange { viewModel.updatePort(value) } },
         onPairingCodeChange = { value -> configurationChange { viewModel.updatePairingCode(value) } },
+        onScanQr = { configurationChange { showPairingScanner = true } },
         onPair = { configurationChange(viewModel::pair) },
         onSaveEndpoint = { configurationChange(viewModel::saveEndpoint) },
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
         onForget = { configurationChange(viewModel::forget) },
     )
+    if (showPairingScanner) {
+        DirectCliPairingScanner(
+            onPairingLink = { link ->
+                showPairingScanner = false
+                viewModel.pair(link)
+            },
+            onDismiss = { showPairingScanner = false },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,6 +114,7 @@ fun DirectCliContent(
     onHostChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
     onPairingCodeChange: (String) -> Unit,
+    onScanQr: () -> Unit,
     onPair: () -> Unit,
     onSaveEndpoint: () -> Unit,
     onConnect: () -> Unit,
@@ -150,6 +166,14 @@ fun DirectCliContent(
                     style = MaterialTheme.typography.titleSmall,
                 )
                 CommandText("healthmd direct pair")
+                Button(
+                    onClick = onScanQr,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(DirectCliTestTags.SCAN_QR),
+                ) {
+                    Text(stringResource(R.string.direct_cli_scan_qr))
+                }
                 Text(stringResource(R.string.direct_cli_pair_step_enter))
                 OutlinedTextField(
                     value = ui.host,

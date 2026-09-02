@@ -828,7 +828,11 @@
     <string name="direct_cli_intro_title">Exportaciones de escritorio cifradas</string>
     <string name="direct_cli_intro_body">La CLI está a la escucha en tu computadora. Health.md se conecta directamente y envía la exportación sin intermediarios en la nube.</string>
     <string name="direct_cli_pair_step_run">1. En tu computadora, ejecuta:</string>
-    <string name="direct_cli_pair_step_enter">2. Introduce la dirección de la computadora y el código de Android de 20 dígitos que muestra la CLI.</string>
+    <string name="direct_cli_pair_step_enter">2. Escanea el QR universal de abajo o introduce la dirección de la computadora, el puerto y el código de emparejamiento compartido de 20 dígitos.</string>
+    <string name="direct_cli_scan_qr">Escanear QR de emparejamiento</string>
+    <string name="direct_cli_camera_unavailable">El escaneo con cámara no está disponible. Permite el acceso a la cámara si es posible o introduce manualmente la dirección, el puerto y el código.</string>
+    <string name="direct_cli_invalid_qr">No es un QR de emparejamiento válido de Health.md Direct CLI.</string>
+    <string name="direct_cli_scan_qr_hint">Apunta la cámara al QR que muestra healthmd direct pair.</string>
     <string name="direct_cli_computer_address">Dirección de la computadora</string>
     <string name="direct_cli_port">Puerto</string>
     <string name="direct_cli_pairing_code">Código de emparejamiento</string>

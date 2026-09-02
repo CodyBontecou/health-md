@@ -789,7 +789,11 @@
     <string name="direct_cli_intro_title">এনক্রিপ্টেড ডেস্কটপ এক্সপোর্ট</string>
     <string name="direct_cli_intro_body">CLI আপনার কম্পিউটারে সংযোগের অপেক্ষায় থাকে। Health.md সরাসরি সংযোগ করে এবং কোনো ক্লাউড রিলে ছাড়াই রপ্তানি পাঠায়।</string>
     <string name="direct_cli_pair_step_run">1. আপনার কম্পিউটারে চালান:</string>
-    <string name="direct_cli_pair_step_enter">2. CLI-তে দেখানো কম্পিউটার ঠিকানা এবং ২০-সংখ্যার Android কোড লিখুন।</string>
+    <string name="direct_cli_pair_step_enter">2. নিচের সার্বজনীন QR স্ক্যান করুন, অথবা কম্পিউটারের ঠিকানা, পোর্ট ও শেয়ার করা ২০-সংখ্যার পেয়ারিং কোড লিখুন।</string>
+    <string name="direct_cli_scan_qr">পেয়ারিং QR স্ক্যান করুন</string>
+    <string name="direct_cli_camera_unavailable">ক্যামেরা স্ক্যান উপলভ্য নয়। সম্ভব হলে ক্যামেরা অ্যাক্সেস দিন, অথবা ঠিকানা, পোর্ট ও কোড হাতে লিখুন।</string>
+    <string name="direct_cli_invalid_qr">এটি বৈধ Health.md Direct CLI পেয়ারিং QR নয়।</string>
+    <string name="direct_cli_scan_qr_hint">healthmd direct pair-এ দেখানো QR-এর দিকে ক্যামেরা ধরুন।</string>
     <string name="direct_cli_computer_address">কম্পিউটার ঠিকানা</string>
     <string name="direct_cli_port">পোর্ট</string>
     <string name="direct_cli_pairing_code">পেয়ারিং কোড</string>

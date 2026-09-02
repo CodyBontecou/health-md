@@ -29,13 +29,13 @@ reserved aliases, alternate data streams, symlinks, junctions, reparse points, a
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust behavior | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus bounded MCP queries | Pending physical qualification |
-| Android | selector 2 / v2 | Android 1.8.1 (30) / Android 1.5.4 (25) | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus bounded MCP queries | Pending physical qualification |
+| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.1 (30) / Android 1.5.4 (25) | Status, native raw, files, resume, cancel | Pending physical qualification |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
-No public CLI/mobile pair is qualified yet. V3 is additive to v1 pairing and transport, not a
-pairing selector, transfer-frame version, Android protocol, or export protocol. The authoritative
+No public CLI/mobile pair is qualified yet. Shared pairing selector 3 is separate from iPhone query
+v3 and changes neither application protocol nor transfer framing. The authoritative
 [compatibility ledger](mobile-compatibility.md) and per-release evidence record exact mobile builds.
 
 ## Portable MCP contract
@@ -54,8 +54,16 @@ The QR bearer secret is omitted from text/structured results, and the pairing to
 require local stdio identity. Pairing start is first-device onboarding only: existing
 mobile trust or an explicit server device pin fails closed instead of creating ambiguous routing.
 Query tools require a foreground query-capable iPhone and
-v3. Generated-file export, resume, and cancellation remain durable protocol-v1 operations and
-require host approval. Unix `healthmd-mcp` uses `exec(2)` to become the sibling `healthmd`.
+v3. Before query/export/resume/cancel dispatch, one shared `healthmd-client` wake window keeps the
+listener bound for up to 120 seconds and retries authenticated readiness with 250 ms to 2 s
+backoff. MCP cancellation drops this local wait immediately without creating phone-side job
+cancellation, and stdio emits health-free `notifications/progress` when the caller supplied a
+progress token. `HEALTHMD_WAKE_TIMEOUT=0` disables the MCP window. This is RFC-0005 P1 only: no
+push credential exists and APNs/FCM is not part of the data path. The experimental feature-gated
+Streamable HTTP relay additionally bounds each request at 300 seconds — a pre-existing transport
+limit that the wake window does not extend — so keep `HEALTHMD_WAKE_TIMEOUT` low or disable it
+behind that relay. Generated-file export, resume,
+and cancellation remain durable protocol-v1 operations and require host approval. Unix `healthmd-mcp` uses `exec(2)` to become the sibling `healthmd`.
 Windows has no `exec(2)`, so `healthmd-mcp.exe` serves in-process and supervises its own same-file
 helper against the same fixed Credential Manager service/account.
 
@@ -101,8 +109,9 @@ a stale mirror. It has no Clap, JSON-RPC, HTTP, OAuth, credentials, networking, 
 ### `healthmd-client` (CLI workspace)
 
 Platform-facing implementation: TCP listener, secure channel, OS credential storage, separate v1
-and v2 durable jobs, product-aware disk-backed receivers, raw validation, and safe destination
-commits. Transport and product selection are explicit and never fall back.
+and v2 durable jobs, the shared bounded/cancellable active-source wake window, product-aware
+disk-backed receivers, raw validation, and safe destination commits. Transport and product
+selection are explicit and never fall back.
 
 ### `healthmd-mcp` (CLI workspace)
 

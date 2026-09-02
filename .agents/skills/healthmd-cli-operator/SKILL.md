@@ -50,7 +50,7 @@ While it waits, tell the user to:
 
 1. In foreground Health.md, open **Sync → CLI**, tap **Scan Pairing QR** under **Direct CLI Access**, and scan the displayed image. The in-app scan starts pairing automatically; no second Pair tap is required. Do not open the QR as a custom URL.
 2. Keep Health.md foregrounded through success.
-3. If in-app scanning is unavailable, open **Sync → CLI**, enable **Direct CLI Access**, select **Manual IP**, and enter the printed LAN/Tailscale address, port, and six-digit code.
+3. If in-app scanning is unavailable, open **Sync → CLI**, enable **Direct CLI Access**, select **Manual IP**, and enter the printed LAN/Tailscale address, port, and shared 20-digit code. Use the six-digit Apple code only with a legacy iOS release.
 
 Confirm stdout has `healthmd.direct_pairing_result`, `status: success`, and the intended device. After an unknown outcome, inspect `healthmd direct devices` rather than pairing again.
 
@@ -72,7 +72,20 @@ Require:
 - `iphone.can_trigger_exports == true` for generated files;
 - no conflicting `iphone.active_job_id`.
 
-Ignore status `destination.selected`: direct file mode uses the command's explicit destination. If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
+Ignore status `destination.selected`: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy; P1 uses `enrollment.state: unavailable` and sends no push. If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
+
+## Waiting for an unavailable phone
+
+Query, export, extract, resume, and cancel wait up to 120 seconds by default. When health-free
+progress says the phone is unavailable, ask the user to unlock it and open Health.md; do not stop
+and re-run the command. Set `--wake-timeout SECONDS` when a different bounded window is needed, or
+`--wake-timeout 0` for explicit fail-fast behavior. Set the shell's outer `timeout` longer than the
+wake window plus the command's operation timeout.
+
+For MCP, configure `HEALTHMD_WAKE_TIMEOUT`; cancellation interrupts the wait immediately. P1 does
+not send APNs/FCM, so do not promise a notification. Wake expiry preserves
+`direct_source_unavailable` and adds `wake_window_seconds`. Neither expiry nor local cancellation
+is terminal phone-side job cancellation.
 
 ## Strict raw
 

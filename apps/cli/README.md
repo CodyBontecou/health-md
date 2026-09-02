@@ -23,6 +23,25 @@ open Health.md iOS or Android app -> platform health provider -> private bounded
 Manual IP is portable. Apple's MultipeerConnectivity-based Nearby transport remains available only
 in the legacy Swift client. No command silently falls back to another backend or transport.
 
+### Bounded wake window
+
+Query, export, extract, resume, and cancellation commands wait up to 120 seconds when the paired
+phone is unreachable or reports that Health.md is inactive. Unlocking the phone and opening
+Health.md lets the same in-flight command continue; no re-run is needed. Override the window per
+command with `--wake-timeout SECONDS`, or pass `--wake-timeout 0` to retain fail-fast behavior.
+The operation's existing `--timeout` starts after this readiness window.
+
+MCP uses the same implementation and default. Set `HEALTHMD_WAKE_TIMEOUT=SECONDS` in the MCP host
+environment (`0` disables), and provide an MCP progress token to receive health-free
+`notifications/progress` updates while the phone is unavailable. `healthmd status` reports the
+local `wake_window`, and `healthmd.direct_readiness` reports the same object as `wake`.
+
+This release implements RFC-0005 P1 (wait-only) on both mobile platforms. APNs/FCM enrollment is
+not implemented, so the enrollment state is `unavailable`: no notification is sent and the user
+must notice the request and open Health.md manually. The wake window never performs background
+capture, changes pairing trust, bypasses protected-data/permission checks, or routes health data
+through a worker.
+
 ## Platform support
 
 | Capability | macOS | Linux | Windows |
@@ -31,6 +50,7 @@ in the legacy Swift client. No command silently falls back to another backend or
 | iOS canonical raw export and extract | Yes | Yes | Yes |
 | Android provider-native JSON/NDJSON raw export | Yes | Yes | Yes |
 | Durable status, resume, cancellation | Yes | Yes | Yes |
+| Bounded wait-only agent wake window | Yes | Yes | Yes |
 | Generated-file destination commits | Yes | Yes | Yes |
 | Manual IP / Tailscale | Yes | Yes | Yes |
 | Nearby / MultipeerConnectivity | No | No | No |
@@ -45,13 +65,14 @@ in-memory JSON validation is capped at 64 MiB.
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
-| Android | selector 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
+| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
-No public CLI/mobile pair is qualified yet. V3 does not replace v1 pairing, transport, exports, or
-transfer frames, and Android never downgrades to v1. See the authoritative
+No public CLI/mobile pair is qualified yet. Shared pairing selector 3 is independent from iPhone
+query v3; it does not replace application v1/v2, transport, exports, or transfer frames, and Android
+never downgrades its application protocol to v1. See the authoritative
 [mobile compatibility ledger](docs/mobile-compatibility.md); every release records exact mobile
 build IDs because matching marketing versions or protocol numbers alone is insufficient.
 
@@ -218,11 +239,11 @@ client. Source builds require Rust 1.85 or newer.
    healthmd direct pair
    ```
 
-2. Keep the command running. Its iOS code, high-entropy 20-digit Android code, listener addresses,
-   and port are printed to stderr.
-3. On iOS, open **Direct CLI Access** in the Mac destination settings. On Android, open
-   **Settings → Direct CLI**. Enter the computer's LAN/Tailscale address, port, and matching
-   platform code, then pair.
+2. Keep the command running. One universal QR, its shared 20-digit code, listener addresses, port,
+   and a six-digit legacy-iOS fallback are printed to stderr.
+3. On iOS, open **Sync → Direct CLI Access**. On Android, open **Settings → Direct CLI**. Scan the
+   universal QR inside Health.md to pair immediately, or enter the same LAN/Tailscale address, port,
+   and shared 20-digit code manually.
 4. The final pairing result is human-readable in a terminal and machine-readable JSON when piped or invoked with `--json`.
 
 Trust is stored in Keychain, Secret Service, or Windows Credential Manager. Pairing is distinct from
@@ -321,7 +342,8 @@ health-free receipt beside it as `OUTPUT.receipt.json`. JSONL conversion bounds 
 
 ## Durability and security
 
-- iOS keeps its deployed six-digit pairing flow; Android pairing uses a separate 20-digit (~66-bit) one-time code before Keystore-backed reconnect trust.
+- New iOS and Android onboarding shares selector 3 and one 20-digit (~66-bit) one-time code; legacy selectors 1/2 and established reconnect trust remain compatible.
+- Pairing QR handoffs are accepted only by explicit in-app scanners over canonical private-LAN/Tailscale addresses; externally opened custom URLs do not authorize pairing.
 - TCP packets, binary chunks, partitions, Markdown merges, and extraction projections are bounded.
 - Requests, peer bindings, destination identity, manifests, and request fingerprints are immutable
   across resume.

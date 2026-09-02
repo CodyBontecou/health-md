@@ -751,7 +751,11 @@
     <string name="direct_cli_intro_title">Компьютерге шифрланған экспорттар</string>
     <string name="direct_cli_intro_body">CLI компьютеріңізде қосылымды күтеді. Health.md тікелей қосылып, экспортты бұлттық делдалсыз жібереді.</string>
     <string name="direct_cli_pair_step_run">1. Компьютерде мына пәрменді орындаңыз:</string>
-    <string name="direct_cli_pair_step_enter">2. Компьютер мекенжайын және CLI көрсеткен 20 цифрдан тұратын Android кодын енгізіңіз.</string>
+    <string name="direct_cli_pair_step_enter">2. Төмендегі әмбебап QR кодын сканерлеңіз немесе компьютер мекенжайын, портты және ортақ 20 цифрлы жұптастыру кодын енгізіңіз.</string>
+    <string name="direct_cli_scan_qr">Жұптастыру QR кодын сканерлеу</string>
+    <string name="direct_cli_camera_unavailable">Камерамен сканерлеу қолжетімсіз. Мүмкін болса, камераға рұқсат беріңіз немесе мекенжайды, портты және кодты қолмен енгізіңіз.</string>
+    <string name="direct_cli_invalid_qr">Бұл жарамды Health.md Direct CLI жұптастыру QR коды емес.</string>
+    <string name="direct_cli_scan_qr_hint">Камераны healthmd direct pair көрсеткен QR кодына бағыттаңыз.</string>
     <string name="direct_cli_computer_address">Компьютер мекенжайы</string>
     <string name="direct_cli_port">Порт</string>
     <string name="direct_cli_pairing_code">Жұптастыру коды</string>

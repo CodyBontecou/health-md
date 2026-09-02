@@ -828,7 +828,11 @@
     <string name="direct_cli_intro_title">Exportações de desktop criptografadas</string>
     <string name="direct_cli_intro_body">A CLI escuta em seu computador. Health.md se conecta diretamente e envia a exportação sem retransmissão na nuvem.</string>
     <string name="direct_cli_pair_step_run">1. No seu computador, execute:</string>
-    <string name="direct_cli_pair_step_enter">2. Insira o endereço do computador e o código Android de 20 dígitos mostrado pela CLI.</string>
+    <string name="direct_cli_pair_step_enter">2. Escaneie o QR universal abaixo ou insira o endereço do computador, a porta e o código de pareamento compartilhado de 20 dígitos.</string>
+    <string name="direct_cli_scan_qr">Escanear QR de pareamento</string>
+    <string name="direct_cli_camera_unavailable">A leitura pela câmera não está disponível. Permita o acesso à câmera se possível ou insira manualmente o endereço, a porta e o código.</string>
+    <string name="direct_cli_invalid_qr">Este não é um QR de pareamento válido do Health.md Direct CLI.</string>
+    <string name="direct_cli_scan_qr_hint">Aponte a câmera para o QR exibido por healthmd direct pair.</string>
     <string name="direct_cli_computer_address">Endereço do computador</string>
     <string name="direct_cli_port">Porta</string>
     <string name="direct_cli_pairing_code">Código de pareamento</string>

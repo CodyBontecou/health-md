@@ -19,6 +19,8 @@ pub mod wire;
 pub const CURRENT_PROTOCOL_VERSION: u16 = 1;
 /// Android direct-pairing protocol version selecting the reviewed v2 code transcripts.
 pub const ANDROID_PAIRING_PROTOCOL_VERSION: u16 = 2;
+/// Shared high-entropy direct-pairing selector used by new Apple and Android QR flows.
+pub const SHARED_PAIRING_PROTOCOL_VERSION: u16 = 3;
 /// Deployed iOS export application protocol version.
 pub const IOS_APPLICATION_PROTOCOL_VERSION: i32 = 1;
 /// Capability-gated iOS direct-query application protocol version.

@@ -72,7 +72,8 @@ Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do 
 - Direct trust is separate from Mac sync trust. Credentials use Keychain, Secret Service, or Windows Credential Manager. Never fall back to plaintext.
 - Preserve explicit device and port. Never switch peer, port, backend, or transport silently.
 - Peer/install binding, dates, destination, settings, request fingerprint, manifests, partition chain, and committed frontier are immutable across resume.
-- Timeout, Ctrl-C, process death, disconnect, or background expiry never means cancellation. Only iPhone acknowledgement is terminal.
+- Timeout, Ctrl-C, process death, disconnect, background expiry, or local wake-wait cancellation never means phone-side cancellation. Only mobile acknowledgement is terminal.
+- RFC-0005 P1 keeps unavailable query/export/resume/cancel requests in one shared 120-second wake window (`--wake-timeout`; MCP `HEALTHMD_WAKE_TIMEOUT`) with 250 ms to 2 s retries. It emits only health-free progress. P1 has no APNs/FCM enrollment and must report that notification state as unavailable.
 - Strict raw/extract validate the complete disk spool before exposure. Incomplete extract emits no values without `--allow-partial`.
 - File mode requires an existing absolute destination, production iPhone exporters, bounded transfer, and restart-safe overwrite/append/Markdown merge receipts.
 - Protocol v1 destination text is opaque on iPhone. The receiving host validates and binds an existing native absolute non-symlink directory before sending; file mode works on macOS, Linux, and Windows.
@@ -138,9 +139,22 @@ Do not add `--iphone` or require `--backend direct`; standalone already means di
 
 ### Pairing/reconnect
 
-Preserve six-digit out-of-band code, ephemeral Curve25519, HMAC transcript proofs, fresh nonces/session keys, installation binding, native credentials, replay rejection, and separate trust domain. Codes never cross wire or persist. Write trust durably before success acknowledgement.
+Preserve selector 1's six-digit Apple transcript and selector 2's 20-digit Android transcript byte-for-byte. Current onboarding uses selector 3 with one shared 20-digit iOS/Android QR/code and independently domain-separated client/server HMAC transcripts. Preserve ephemeral Curve25519, fresh nonces/session keys, installation binding, native credentials, replay rejection, and separate trust domains. Codes never cross wire or persist. Write trust durably before success acknowledgement.
 
 Test wrong code/peer, replaced identity, corrupt credentials, multiple devices, unpair on both sides, explicit reset, and unavailable Linux Secret Service.
+
+### Agent wake window
+
+Keep the wait/retry policy in `healthmd-client`; CLI and MCP adapters must call the same function.
+Retry only unreachable transport and authenticated inactive-source outcomes. Keep the listener,
+selected peer, port, operation request, and durable-job semantics fixed. `0` disables preflight.
+Expiry retains the public `direct_source_unavailable` outcome with additive
+`wake_window_seconds`. MCP cancellation must interrupt every accept/sleep and remain distinct from
+terminal source cancellation. Emit `notifications/progress` only for a valid caller progress token,
+at wait start and about every 10 seconds, with no operation, metric, date, or payload detail.
+
+Until P2/P3 lands with reviewed contracts and worker endpoints, do not create or persist wake
+credentials, promise a push notification, or alter any direct protocol bytes.
 
 ### Raw/export extraction
 

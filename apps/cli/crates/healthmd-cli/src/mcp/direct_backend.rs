@@ -4,14 +4,17 @@ use async_trait::async_trait;
 use chrono::{Local, Utc};
 use healthmd_client::{
     ClientError,
-    direct::{DirectClient, SourceStatus, StatusResult},
+    direct::{
+        DEFAULT_WAKE_TIMEOUT_SECONDS, DirectClient, MAXIMUM_WAKE_TIMEOUT_SECONDS, SourceStatus,
+        StatusResult, WakeWindow,
+    },
     file_receiver::FileReceiptPayload,
     job::{JobRecord, JobState},
 };
 use healthmd_operations::{
     BackendCapabilities, BackendError, CallContext, CallerIdentity, CallerMode, HealthDataBackend,
-    PairingStartResult, QueryDetailLevel, QueryPageRequest, generated_file_export_from_value,
-    job_id as parse_job_id,
+    PairingStartResult, ProgressUpdate, QueryDetailLevel, QueryPageRequest,
+    generated_file_export_from_value, job_id as parse_job_id,
 };
 use healthmd_protocol::{
     encoding::SwiftUuid,
@@ -38,10 +41,12 @@ struct DirectBackendConfiguration {
     device_id: Option<Uuid>,
     port: u16,
     timeout: Duration,
+    wake_window: WakeWindow,
 }
 
 impl DirectIphoneBackend {
     pub fn open(options: &ServeOptions) -> Result<Self, ServeError> {
+        let wake_window = configured_wake_window(options)?;
         let client = Arc::new(DirectClient::open().map_err(|_| ServeError)?);
         let operation_gate = Arc::new(Mutex::new(()));
         let pairing = PairingCoordinator::new(
@@ -56,10 +61,52 @@ impl DirectIphoneBackend {
                 device_id: options.device_id,
                 port: options.port,
                 timeout: Duration::from_secs(options.timeout_seconds),
+                wake_window,
             },
             operation_gate,
             pairing,
         })
+    }
+
+    async fn wait_for_active_source(&self, context: &CallContext) -> Result<(), BackendError> {
+        self.wait_for_active_source_on(context, self.configuration.device_id)
+            .await
+    }
+
+    async fn wait_for_active_source_on(
+        &self,
+        context: &CallContext,
+        device_id: Option<Uuid>,
+    ) -> Result<(), BackendError> {
+        let wake_window = self.configuration.wake_window;
+        self.client
+            .wait_for_active_source(
+                device_id,
+                self.configuration.port,
+                wake_window,
+                &context.cancellation,
+                |progress| {
+                    context.report_progress(ProgressUpdate {
+                        progress: progress.elapsed_seconds,
+                        total: Some(progress.timeout_seconds),
+                        message: progress.message.to_owned(),
+                    });
+                },
+            )
+            .await
+            .map_err(|error| wake_backend_error(&error, wake_window))
+    }
+
+    fn validate_pinned_device(&self, pinned: Uuid) -> Result<(), BackendError> {
+        if let Some(requested) = self.configuration.device_id {
+            if requested != pinned {
+                return Err(backend_error(
+                    &ClientError::DeviceNotPaired(requested),
+                    None,
+                ));
+            }
+        }
+        Ok(())
     }
 }
 
@@ -85,7 +132,7 @@ impl HealthDataBackend for DirectIphoneBackend {
                 self.configuration.timeout,
             )
             .await
-            .map(|result| status_value(&result))
+            .map(|result| status_value(&result, self.configuration.wake_window))
             .map_err(|error| backend_error(&error, None))
     }
 
@@ -104,7 +151,8 @@ impl HealthDataBackend for DirectIphoneBackend {
                 "status": "not_paired",
                 "ready": false,
                 "message": message,
-                "next_tool": next_tool
+                "next_tool": next_tool,
+                "wake": self.configuration.wake_window.status_value()
             }));
         }
         self.readiness(context).await
@@ -134,10 +182,11 @@ impl HealthDataBackend for DirectIphoneBackend {
 
     async fn query_page(
         &self,
-        _context: &CallContext,
+        context: &CallContext,
         request: QueryPageRequest,
     ) -> Result<Value, BackendError> {
         let _gate = self.operation_gate.lock().await;
+        self.wait_for_active_source(context).await?;
         let detail_level = match request.detail_level {
             QueryDetailLevel::Summary => DirectQueryDetailLevel::Summary,
             QueryDetailLevel::Lossless => DirectQueryDetailLevel::Lossless,
@@ -162,7 +211,7 @@ impl HealthDataBackend for DirectIphoneBackend {
 
     async fn start_export(
         &self,
-        _context: &CallContext,
+        context: &CallContext,
         job_id: Uuid,
         arguments: &Value,
     ) -> Result<Value, BackendError> {
@@ -174,6 +223,7 @@ impl HealthDataBackend for DirectIphoneBackend {
         )
         .map_err(|_| BackendError::new("healthmd_invalid_export", "Invalid export arguments."))?;
         let _gate = self.operation_gate.lock().await;
+        self.wait_for_active_source(context).await?;
         self.client
             .export_files(
                 invocation.request,
@@ -199,18 +249,18 @@ impl HealthDataBackend for DirectIphoneBackend {
 
     async fn resume_export(
         &self,
-        _context: &CallContext,
+        context: &CallContext,
         job_id: Uuid,
         arguments: &Value,
     ) -> Result<Value, BackendError> {
         let (_, timeout) = parse_job_id(arguments, true).map_err(|_| {
             BackendError::new("healthmd_invalid_export", "Invalid export arguments.")
         })?;
-        if self
+        let record = self
             .client
             .job_record(job_id)
-            .is_ok_and(|record| record.request.response_mode != ResponseMode::WriteFiles)
-        {
+            .map_err(|error| backend_error(&error, Some(job_id)))?;
+        if record.request.response_mode != ResponseMode::WriteFiles {
             return Err(BackendError::new(
                 "healthmd_job_terminal",
                 "This durable job is not a generated-file export.",
@@ -218,6 +268,22 @@ impl HealthDataBackend for DirectIphoneBackend {
             .with_job_id(job_id));
         }
         let _gate = self.operation_gate.lock().await;
+        if record.state.resume_requires_source() {
+            // An unbound job (crash window before its first connection) keeps the configured
+            // device selection; a bound job pins the wake preflight to its exact source.
+            let wake_device = match record
+                .peer_binding
+                .as_ref()
+                .map(|binding| binding.source_installation_id.0)
+            {
+                Some(pinned) => {
+                    self.validate_pinned_device(pinned)?;
+                    Some(pinned)
+                }
+                None => self.configuration.device_id,
+            };
+            self.wait_for_active_source_on(context, wake_device).await?;
+        }
         self.client
             .resume_files(
                 job_id,
@@ -232,15 +298,52 @@ impl HealthDataBackend for DirectIphoneBackend {
 
     async fn cancel_export(
         &self,
-        _context: &CallContext,
+        context: &CallContext,
         job_id: Uuid,
     ) -> Result<Value, BackendError> {
-        // Cancellation intentionally bypasses the operation gate. The direct client durably stores
-        // the marker before delivering it on the authenticated channel.
+        // Cancellation intentionally bypasses the operation gate. Persist the explicit marker
+        // before opening a second listener so an active export that owns the port can deliver it.
+        let record = self
+            .client
+            .job_record(job_id)
+            .map_err(|error| backend_error(&error, Some(job_id)))?;
+        let delivery_device = if record.state.is_terminal() {
+            self.configuration.device_id
+        } else {
+            let pinned = record
+                .peer_binding
+                .as_ref()
+                .map(|binding| binding.source_installation_id.0)
+                .ok_or_else(|| {
+                    backend_error(
+                        &ClientError::JobNotResumable(job_id, "unbound".into()),
+                        Some(job_id),
+                    )
+                })?;
+            self.validate_pinned_device(pinned)?;
+            self.client
+                .request_job_cancellation(job_id, Some(pinned))
+                .map_err(|error| backend_error(&error, Some(job_id)))?;
+            if let Err(error) = self.wait_for_active_source_on(context, Some(pinned)).await {
+                // The durable marker is already persisted, so local wait expiry or interruption
+                // reports the truthful pending state, never terminal phone-side cancellation.
+                if matches!(
+                    error.code.as_str(),
+                    "direct_source_unavailable" | "healthmd_request_cancelled"
+                ) {
+                    return Err(backend_error(
+                        &ClientError::CancellationPending(job_id),
+                        Some(job_id),
+                    ));
+                }
+                return Err(error.with_job_id(job_id));
+            }
+            Some(pinned)
+        };
         self.client
             .cancel_job(
                 job_id,
-                self.configuration.device_id,
+                delivery_device,
                 self.configuration.port,
                 self.configuration.timeout,
             )
@@ -256,7 +359,39 @@ impl HealthDataBackend for DirectIphoneBackend {
     }
 }
 
-fn status_value(result: &StatusResult) -> Value {
+fn configured_wake_window(options: &ServeOptions) -> Result<WakeWindow, ServeError> {
+    let timeout_seconds = if let Some(value) = options.wake_timeout_seconds {
+        value
+    } else {
+        match std::env::var("HEALTHMD_WAKE_TIMEOUT") {
+            Ok(value) => value.parse::<u64>().map_err(|_| ServeError)?,
+            Err(std::env::VarError::NotPresent) => DEFAULT_WAKE_TIMEOUT_SECONDS,
+            Err(std::env::VarError::NotUnicode(_)) => return Err(ServeError),
+        }
+    };
+    if timeout_seconds > MAXIMUM_WAKE_TIMEOUT_SECONDS {
+        return Err(ServeError);
+    }
+    Ok(WakeWindow::from_seconds(timeout_seconds))
+}
+
+fn wake_backend_error(error: &ClientError, wake_window: WakeWindow) -> BackendError {
+    match error {
+        ClientError::TimedOut => BackendError::new(
+            "direct_source_unavailable",
+            "The direct mobile source is unavailable.",
+        )
+        .retryable(true)
+        .with_wake_window_seconds(wake_window.timeout_seconds()),
+        ClientError::WaitCancelled => BackendError::new(
+            "healthmd_request_cancelled",
+            "The local direct mobile wait was cancelled.",
+        ),
+        other => backend_error(other, None),
+    }
+}
+
+fn status_value(result: &StatusResult, wake_window: WakeWindow) -> Value {
     let query = result.peer_capabilities.query.as_ref();
     match &result.status {
         SourceStatus::Ios(source) => {
@@ -284,7 +419,8 @@ fn status_value(result: &StatusResult) -> Value {
                 "can_trigger_queries": source.can_trigger_queries,
                 "active_job_id": source.active_job_id,
                 "active_query_request_id": source.active_query_request_id,
-                "query_capabilities": query
+                "query_capabilities": query,
+                "wake": wake_window.status_value()
             })
         }
         SourceStatus::Android(_) => json!({
@@ -294,7 +430,8 @@ fn status_value(result: &StatusResult) -> Value {
             "ready": false,
             "message": "This paired source does not support the direct iPhone query protocol.",
             "application_protocol_version": result.application_protocol_version,
-            "port": result.port
+            "port": result.port,
+            "wake": wake_window.status_value()
         }),
     }
 }
@@ -492,6 +629,43 @@ fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explicit_mcp_wake_override_is_bounded_and_can_disable_waiting() {
+        let options = ServeOptions {
+            device_id: None,
+            port: 17_647,
+            timeout_seconds: 1_200,
+            wake_timeout_seconds: Some(0),
+        };
+        let disabled = configured_wake_window(&options).unwrap();
+        assert!(!disabled.enabled());
+        assert_eq!(
+            disabled.status_value()["enrollment"]["state"],
+            "unavailable"
+        );
+        assert_eq!(disabled.status_value()["enrollment"]["mode"], "wait_only");
+
+        let invalid = ServeOptions {
+            wake_timeout_seconds: Some(MAXIMUM_WAKE_TIMEOUT_SECONDS + 1),
+            ..options
+        };
+        assert!(configured_wake_window(&invalid).is_err());
+    }
+
+    #[test]
+    fn wake_expiry_and_local_cancellation_remain_distinct() {
+        let expired = wake_backend_error(&ClientError::TimedOut, WakeWindow::from_seconds(37));
+        assert_eq!(expired.code, "direct_source_unavailable");
+        assert!(expired.retryable);
+        assert_eq!(expired.wake_window_seconds, Some(37));
+
+        let cancelled =
+            wake_backend_error(&ClientError::WaitCancelled, WakeWindow::from_seconds(37));
+        assert_eq!(cancelled.code, "healthmd_request_cancelled");
+        assert!(!cancelled.retryable);
+        assert_eq!(cancelled.wake_window_seconds, None);
+    }
 
     #[test]
     fn read_only_stdio_guidance_never_advertises_hidden_pairing_tools() {

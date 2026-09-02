@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Build
 import android.service.notification.StatusBarNotification
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
@@ -21,6 +22,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.direct.DirectCliCompletion
 import com.healthmd.direct.DirectCliConnectionState
@@ -187,6 +189,45 @@ class DirectCliLiveE2ETest {
         forgetAndWait("final forget")
     }
 
+    @Test
+    fun scannerOpensWithGrantedCameraAndManualEntrySurvivesRotation() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val uiDevice = UiDevice.getInstance(instrumentation)
+        // Grant camera up front so opening the scanner binds CameraX deterministically without
+        // the runtime permission dialog. That dialog is non-cancelable on current Android and
+        // invisible to uiautomator/accessibility queries from instrumentation, so the denial
+        // and permanent-denial recovery flows stay on the manual physical QA gate.
+        instrumentation.uiAutomation.grantRuntimePermission(
+            context.packageName,
+            Manifest.permission.CAMERA,
+        )
+
+        compose.onNode(hasText("Direct CLI") and hasClickAction())
+            .performScrollTo()
+            .performClick()
+        waitForNode(hasTestTag(DirectCliTestTags.SCREEN))
+        compose.onNodeWithTag(DirectCliTestTags.HOST).assertExists()
+        compose.onNodeWithTag(DirectCliTestTags.PORT).assertExists()
+        compose.onNodeWithTag(DirectCliTestTags.PAIRING_CODE).assertExists()
+        compose.onNodeWithTag(DirectCliTestTags.PAIR).assertExists()
+
+        // Manual entry and screen identity must survive a configuration change.
+        uiDevice.setOrientationLeft()
+        waitForNode(hasTestTag(DirectCliTestTags.SCREEN))
+        compose.onNodeWithTag(DirectCliTestTags.PAIRING_CODE).assertExists()
+        uiDevice.setOrientationNatural()
+        waitForNode(hasTestTag(DirectCliTestTags.SCREEN))
+
+        // With camera granted, the scanner must open its live scanning surface.
+        click(DirectCliTestTags.SCAN_QR)
+        waitForNode(hasText(context.getString(R.string.direct_cli_scan_qr_hint)))
+        compose.onNode(
+            hasContentDescription(context.getString(R.string.close)) and hasClickAction(),
+        ).performClick()
+        waitForNode(hasTestTag(DirectCliTestTags.PAIR))
+        assertNull(entryPoint.trustStore().load())
+    }
+
     private fun enterPairingDetails(code: String) {
         compose.onNodeWithTag(DirectCliTestTags.HOST).performTextClearance()
         compose.onNodeWithTag(DirectCliTestTags.HOST).performTextInput(host)
@@ -298,6 +339,7 @@ class DirectCliLiveE2ETest {
         const val ARG_PAIRING_CODE = "directCliPairingCode"
         const val LISTENER_NAME = "Rust Android UI E2E CLI"
         const val UI_TIMEOUT_MILLIS = 30_000L
+        const val DIALOG_TIMEOUT_MILLIS = 5_000L
         const val NETWORK_TIMEOUT_MILLIS = 60_000L
         const val CLEANUP_TIMEOUT_MILLIS = 15_000L
         const val POLL_INTERVAL_MILLIS = 25L

@@ -28,7 +28,17 @@ impl JsonRpcSession {
     }
 
     pub async fn handle(&self, input: &str, cancellation: CancellationToken) -> Option<String> {
-        self.handle_with_caller(input, cancellation, None, None)
+        self.handle_with_caller(input, cancellation, None, None, None)
+            .await
+    }
+
+    pub async fn handle_with_notifications(
+        &self,
+        input: &str,
+        cancellation: CancellationToken,
+        notifications: tokio::sync::mpsc::Sender<String>,
+    ) -> Option<String> {
+        self.handle_with_caller(input, cancellation, None, None, Some(notifications))
             .await
     }
 
@@ -43,7 +53,7 @@ impl JsonRpcSession {
         caller: CallerIdentity,
         session_id: Option<String>,
     ) -> Option<String> {
-        self.handle_with_caller(input, cancellation, Some(caller), session_id)
+        self.handle_with_caller(input, cancellation, Some(caller), session_id, None)
             .await
     }
 
@@ -53,6 +63,7 @@ impl JsonRpcSession {
         cancellation: CancellationToken,
         caller: Option<CallerIdentity>,
         session_id: Option<String>,
+        notifications: Option<tokio::sync::mpsc::Sender<String>>,
     ) -> Option<String> {
         let request: Value = match serde_json::from_str(input) {
             Ok(value) => value,
@@ -115,23 +126,8 @@ impl JsonRpcSession {
                     .map(|content| json!({"contents": [content]}))
             }
             "tools/call" => {
-                let name = params
-                    .get("name")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default();
-                let arguments = params
-                    .get("arguments")
-                    .cloned()
-                    .unwrap_or_else(|| json!({}));
-                if let Some(caller) = caller {
-                    self.session
-                        .call_tool_as(caller, name, arguments, cancellation, session_id)
-                        .await
-                } else {
-                    self.session
-                        .call_tool(name, arguments, cancellation, session_id)
-                        .await
-                }
+                self.call_tool_request(caller, &params, cancellation, session_id, notifications)
+                    .await
             }
             _ => Err(crate::application::ApplicationError {
                 code: -32_601,
@@ -142,6 +138,62 @@ impl JsonRpcSession {
             Ok(result) => response_success(id, result),
             Err(error) => response_error(id, error.code, error.message),
         })
+    }
+
+    async fn call_tool_request(
+        &self,
+        caller: Option<CallerIdentity>,
+        params: &Value,
+        cancellation: CancellationToken,
+        session_id: Option<String>,
+        notifications: Option<tokio::sync::mpsc::Sender<String>>,
+    ) -> Result<Value, crate::application::ApplicationError> {
+        let name = params
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let arguments = params
+            .get("arguments")
+            .cloned()
+            .unwrap_or_else(|| json!({}));
+        let progress_token = params
+            .pointer("/_meta/progressToken")
+            .filter(|token| valid_progress_token(token))
+            .cloned();
+        let (progress, forwarder) = match (progress_token, notifications) {
+            (Some(token), Some(notifications)) => {
+                let (sender, mut receiver) = tokio::sync::mpsc::channel(16);
+                let forwarder = tokio::spawn(async move {
+                    while let Some(update) = receiver.recv().await {
+                        let _ = notifications
+                            .send(progress_notification(&token, &update))
+                            .await;
+                    }
+                });
+                (Some(sender), Some(forwarder))
+            }
+            _ => (None, None),
+        };
+        let result = if let Some(caller) = caller {
+            self.session
+                .call_tool_as_with_progress(
+                    caller,
+                    name,
+                    arguments,
+                    cancellation,
+                    session_id,
+                    progress,
+                )
+                .await
+        } else {
+            self.session
+                .call_tool_with_progress(name, arguments, cancellation, session_id, progress)
+                .await
+        };
+        if let Some(forwarder) = forwarder {
+            let _ = forwarder.await;
+        }
+        result
     }
 
     fn initialize(&self, params: &Value) -> Result<Value, crate::application::ApplicationError> {
@@ -181,6 +233,31 @@ impl JsonRpcSession {
             "instructions": self.session.instructions()
         }))
     }
+}
+
+fn valid_progress_token(value: &Value) -> bool {
+    match value {
+        Value::String(value) => value.len() <= MAXIMUM_REQUEST_ID_BYTES,
+        Value::Number(value) => value.as_i64().is_some(),
+        _ => false,
+    }
+}
+
+fn progress_notification(token: &Value, update: &healthmd_operations::ProgressUpdate) -> String {
+    let mut params = json!({
+        "progressToken": token,
+        "progress": update.progress,
+        "message": update.message
+    });
+    if let Some(total) = update.total {
+        params["total"] = Value::from(total);
+    }
+    serde_json::to_string(&json!({
+        "jsonrpc": "2.0",
+        "method": "notifications/progress",
+        "params": params
+    }))
+    .expect("progress notification")
 }
 
 pub(crate) fn request_id_key(value: &Value) -> Result<String, ()> {
@@ -240,7 +317,12 @@ mod tests {
             }
         }
 
-        async fn readiness(&self, _context: &CallContext) -> Result<Value, BackendError> {
+        async fn readiness(&self, context: &CallContext) -> Result<Value, BackendError> {
+            context.report_progress(healthmd_operations::ProgressUpdate {
+                progress: 10,
+                total: Some(120),
+                message: "Waiting for the paired source.".to_owned(),
+            });
             Ok(json!({"ready": true}))
         }
 
@@ -300,6 +382,42 @@ mod tests {
                 .map(Vec::len),
             Some(13)
         );
+    }
+
+    #[tokio::test]
+    async fn forwards_bounded_mcp_progress_notifications() {
+        let dispatcher = dispatcher();
+        let (sender, mut receiver) = tokio::sync::mpsc::channel(4);
+        let response = dispatcher
+            .handle_with_notifications(
+                r#"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"healthmd_status","arguments":{},"_meta":{"progressToken":"wake-7"}}}"#,
+                CancellationToken::new(),
+                sender,
+            )
+            .await
+            .unwrap();
+        assert!(serde_json::from_str::<Value>(&response).unwrap()["result"].is_object());
+        let notification: Value = serde_json::from_str(&receiver.recv().await.unwrap()).unwrap();
+        assert_eq!(notification["method"], json!("notifications/progress"));
+        assert_eq!(notification["params"]["progressToken"], json!("wake-7"));
+        assert_eq!(notification["params"]["progress"], json!(10));
+        assert_eq!(notification["params"]["total"], json!(120));
+    }
+
+    #[tokio::test]
+    async fn ignores_progress_updates_without_a_valid_caller_token() {
+        let dispatcher = dispatcher();
+        let (sender, mut receiver) = tokio::sync::mpsc::channel(4);
+        let response = dispatcher
+            .handle_with_notifications(
+                r#"{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"healthmd_status","arguments":{},"_meta":{"progressToken":{"invalid":true}}}}"#,
+                CancellationToken::new(),
+                sender,
+            )
+            .await
+            .unwrap();
+        assert!(serde_json::from_str::<Value>(&response).unwrap()["result"].is_object());
+        assert!(receiver.try_recv().is_err());
     }
 
     #[tokio::test]

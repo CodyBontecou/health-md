@@ -789,7 +789,11 @@
     <string name="direct_cli_intro_title">ਇੰਕ੍ਰਿਪਟਡ ਡੈਸਕਟੌਪ ਨਿਰਯਾਤ</string>
     <string name="direct_cli_intro_body">CLI ਤੁਹਾਡੇ ਕੰਪਿਊਟਰ ਉੱਤੇ ਕਨੈਕਸ਼ਨ ਦੀ ਉਡੀਕ ਕਰਦਾ ਹੈ। Health.md ਸਿੱਧਾ ਜੁੜ ਕੇ ਕਿਸੇ ਕਲਾਊਡ ਰੀਲੇ ਤੋਂ ਬਿਨਾਂ ਨਿਰਯਾਤ ਭੇਜਦਾ ਹੈ।</string>
     <string name="direct_cli_pair_step_run">1. ਆਪਣੇ ਕੰਪਿਊਟਰ \'ਤੇ, ਇਹ ਚਲਾਓ:</string>
-    <string name="direct_cli_pair_step_enter">2. CLI ਵੱਲੋਂ ਦਿਖਾਇਆ ਕੰਪਿਊਟਰ ਐਡਰੈੱਸ ਅਤੇ 20 ਅੰਕਾਂ ਵਾਲਾ Android ਕੋਡ ਦਾਖਲ ਕਰੋ।</string>
+    <string name="direct_cli_pair_step_enter">2. ਹੇਠਾਂ ਦਿੱਤਾ ਸਾਂਝਾ QR ਸਕੈਨ ਕਰੋ, ਜਾਂ ਕੰਪਿਊਟਰ ਐਡਰੈੱਸ, ਪੋਰਟ ਅਤੇ ਸਾਂਝਾ 20-ਅੰਕਾਂ ਵਾਲਾ ਪੇਅਰਿੰਗ ਕੋਡ ਦਾਖਲ ਕਰੋ।</string>
+    <string name="direct_cli_scan_qr">ਪੇਅਰਿੰਗ QR ਸਕੈਨ ਕਰੋ</string>
+    <string name="direct_cli_camera_unavailable">ਕੈਮਰਾ ਸਕੈਨ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਜੇ ਸੰਭਵ ਹੋਵੇ ਤਾਂ ਕੈਮਰਾ ਪਹੁੰਚ ਦਿਓ, ਜਾਂ ਐਡਰੈੱਸ, ਪੋਰਟ ਅਤੇ ਕੋਡ ਹੱਥੀਂ ਦਾਖਲ ਕਰੋ।</string>
+    <string name="direct_cli_invalid_qr">ਇਹ Health.md Direct CLI ਦਾ ਵੈਧ ਪੇਅਰਿੰਗ QR ਨਹੀਂ ਹੈ।</string>
+    <string name="direct_cli_scan_qr_hint">ਕੈਮਰਾ healthmd direct pair ਵੱਲੋਂ ਦਿਖਾਏ QR ਵੱਲ ਕਰੋ।</string>
     <string name="direct_cli_computer_address">ਕੰਪਿਊਟਰ ਐਡਰੈੱਸ</string>
     <string name="direct_cli_port">ਪੋਰਟ</string>
     <string name="direct_cli_pairing_code">ਪੇਅਰਿੰਗ ਕੋਡ</string>

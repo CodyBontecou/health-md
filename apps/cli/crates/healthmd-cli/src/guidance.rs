@@ -39,6 +39,7 @@ pub(super) struct ErrorContext {
     backend: &'static str,
     command: &'static str,
     query_operation: Option<&'static str>,
+    wake_window_seconds: Option<u64>,
 }
 
 impl ErrorContext {
@@ -52,10 +53,19 @@ impl ErrorContext {
                 .map(|candidate| candidate.name),
             _ => None,
         };
+        let wake_window_seconds = match &cli.command {
+            Command::Export(options) => Some(options.wake.wake_timeout),
+            Command::Extract(options) => Some(options.wake.wake_timeout),
+            Command::Query(options) => Some(options.wake.wake_timeout),
+            Command::Resume(options) => Some(options.wake.wake_timeout),
+            Command::Cancel(options) => Some(options.wake.wake_timeout),
+            _ => None,
+        };
         Self {
             backend: cli.backend.wire_name(),
             command: command_name(&cli.command),
             query_operation,
+            wake_window_seconds,
         }
     }
 }
@@ -137,6 +147,7 @@ pub(super) fn export(backend: &'static str, missing_dates: bool, missing_mode: b
         ],
         "common_options": [
             {"argument": "--timeout <SECONDS>", "default": 300, "minimum": 5, "maximum": 900},
+            {"argument": "--wake-timeout <SECONDS>", "default": 120, "minimum": 0, "maximum": 3600},
             {"argument": "--device <UUID>", "description": "Global option used when more than one source is paired."}
         ],
         "examples": [
@@ -214,7 +225,8 @@ pub(super) fn extract(backend: &'static str, missing_dates: bool, missing_scope:
             "--format <json|jsonl>",
             "--output <FILE>",
             "--allow-partial",
-            "--timeout <SECONDS>"
+            "--timeout <SECONDS>",
+            "--wake-timeout <SECONDS>"
         ],
         "platform_note": "Canonical extraction is currently available for paired iOS sources only. Typed sleep/workout questions should use `healthmd query` instead.",
         "examples": [
@@ -344,6 +356,12 @@ fn query_operation(backend: &'static str, operation: &OperationDefinition) -> Va
                 "argument": "--timeout <SECONDS>",
                 "default": 1200,
                 "minimum": 1,
+                "maximum": 3600
+            },
+            {
+                "argument": "--wake-timeout <SECONDS>",
+                "default": 120,
+                "minimum": 0,
                 "maximum": 3600
             }
         ],
@@ -497,17 +515,31 @@ fn positional(
 }
 
 pub(super) fn command_error(error: &CommandError, context: &ErrorContext) -> Value {
+    let public_code = if error.code == "direct_wake_window_expired" {
+        "direct_source_unavailable"
+    } else if error.code == "direct_wait_cancelled" {
+        "request_cancelled"
+    } else {
+        error.code
+    };
     let mut payload = json!({
         "schema": ERROR_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "failure",
         "backend": error.backend,
-        "error": error.code,
+        "error": public_code,
         "message": error.message,
         "command": format!("healthmd {}", context.command),
         "help_command": format!("healthmd {} --help", context.command),
-        "next_actions": recovery_actions(error.code, context.command)
+        "next_actions": recovery_actions(public_code, context.command)
     });
+    if error.code == "direct_wake_window_expired" {
+        if let (Some(object), Some(seconds)) =
+            (payload.as_object_mut(), context.wake_window_seconds)
+        {
+            object.insert("wake_window_seconds".into(), Value::from(seconds));
+        }
+    }
     if matches!(error.code, "invalid_request" | "runtime_unavailable") {
         if let Some(object) = payload.as_object_mut() {
             object.insert("request_sent".into(), Value::Bool(false));
@@ -735,6 +767,7 @@ fn accepted_arguments(path: &str) -> Value {
             "--raw-format <json|ndjson>",
             "--allow-partial",
             "--timeout <SECONDS>",
+            "--wake-timeout <SECONDS>",
         ],
         "extract" => &[
             "--yesterday | --last <DAYS> | --from <DATE> --to <DATE> | --all",
@@ -746,16 +779,23 @@ fn accepted_arguments(path: &str) -> Value {
             "--output <FILE>",
             "--allow-partial",
             "--timeout <SECONDS>",
+            "--wake-timeout <SECONDS>",
         ],
-        "query" => &["[OPERATION]", "--arguments <JSON>", "--timeout <SECONDS>"],
+        "query" => &[
+            "[OPERATION]",
+            "--arguments <JSON>",
+            "--timeout <SECONDS>",
+            "--wake-timeout <SECONDS>",
+        ],
         "resume" => &[
             "[JOB_UUID]",
             "--output <FILE>",
             "--format <json|jsonl>",
             "--allow-partial",
             "--timeout <SECONDS>",
+            "--wake-timeout <SECONDS>",
         ],
-        "cancel" => &["[JOB_UUID]"],
+        "cancel" => &["[JOB_UUID]", "--wake-timeout <SECONDS>"],
         "direct pair" => &[
             "--pairing-code <6 DIGITS>",
             "--android-pairing-code <20 DIGITS>",
@@ -969,6 +1009,7 @@ mod tests {
             backend: "direct",
             command: "query",
             query_operation: Some("healthmd_sleep_sessions"),
+            wake_window_seconds: Some(120),
         };
         let error = CommandError {
             backend: "direct",
@@ -982,6 +1023,24 @@ mod tests {
             value.pointer("/guidance/input_schema/required/0"),
             Some(&json!("dates"))
         );
+    }
+
+    #[test]
+    fn wake_expiry_preserves_the_public_error_and_adds_the_window() {
+        let context = ErrorContext {
+            backend: "direct",
+            command: "query",
+            query_operation: Some("healthmd_sleep_sessions"),
+            wake_window_seconds: Some(37),
+        };
+        let error = CommandError {
+            backend: "direct",
+            code: "direct_wake_window_expired",
+            message: "The direct mobile source is unavailable.".into(),
+        };
+        let value = command_error(&error, &context);
+        assert_eq!(value["error"], "direct_source_unavailable");
+        assert_eq!(value["wake_window_seconds"], 37);
     }
 
     #[test]

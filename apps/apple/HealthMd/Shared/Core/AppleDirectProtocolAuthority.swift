@@ -338,6 +338,7 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
             return build.coreAPIVersion == Self.expectedCoreAPIVersion
                 && info.protocolAPIRevision == Self.expectedProtocolAPIRevision
                 && info.supportedPairingProtocolVersions.contains(1)
+                && info.supportedPairingProtocolVersions.contains(3)
                 && info.appleApplicationProtocolVersion == UInt32(HealthMdDirectProtocol.currentVersion)
                 && info.manualIPPort == UInt32(HealthMdDirectProtocol.defaultManualIPPort)
                 && info.maximumControlJSONBytes == UInt64(HealthMdDirectProtocol.maximumPacketBytes)

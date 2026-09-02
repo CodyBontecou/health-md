@@ -485,6 +485,7 @@ The `components` tokens above give ready-to-use values per element (`backgroundC
 - Error button: solid `red-800` fill with white text, for destructive actions.
 - Input: `background-100` fill, translucent border, 6px radius.
 - Dialog: `background-100` fill, translucent border, 12px radius, fixed header and footer, and a scrollable body. Keep it within the `md` breakpoint and 90% of the available height so system navigation stays clear.
+- Camera QR scanner: use the scoped, theme-independent `scanner-scrim` (`rgba(0, 0, 0, 0.7)`) and `scanner-content` (`#ffffff`) tokens over the live preview, with a 260px square frame and a 4px frame border. Camera-unavailable states return to the normal theme surface and text tokens.
 
 The variant tokens are the default medium (40px) size. Use the `button-small`/`input-small` (32px) and `button-large`/`input-large` (48px) tokens for the other sizes; large buttons step up to `button-16`. Hover and active states step up the scale: a `100` fill becomes `200` on hover and `300` on active, and borders move from `400` to `500` to `600`. Disabled uses a `gray-100` fill, `gray-700` text, and a not-allowed cursor. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #000000, 0 0 0 4px #c5add9`): a 2px gap in the surface color, then a 2px `brand-primary` ring.
 

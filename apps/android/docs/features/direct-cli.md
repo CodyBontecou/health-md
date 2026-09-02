@@ -21,7 +21,8 @@ Pair the Android app with the standalone cross-platform `healthmd` CLI on your M
 
 1. On the computer: `healthmd direct pair`.
 2. On the phone: **Settings → Direct CLI** ("Encrypted desktop exports").
-3. Enter the **Computer address**, **Port**, and the **20-digit Android pairing code** the CLI prints, then tap **Pair with CLI**.
+3. Tap **Scan pairing QR** and scan the universal code shown by the CLI. Pairing starts immediately after a valid in-app scan.
+4. If the camera is unavailable or denied, enter the **Computer address**, **Port**, and shared **20-digit pairing code**, then tap **Pair with CLI**.
 
 ## Prerequisites
 
@@ -31,9 +32,11 @@ Pair the Android app with the standalone cross-platform `healthmd` CLI on your M
 
 ## Setup
 
-1. Run `healthmd direct pair` on the computer and note the code + address.
-2. Enter them in the app and pair.
+1. Run `healthmd direct pair` on the computer and leave it open.
+2. Scan its QR from the Direct CLI screen, or enter the same address, port, and 20-digit code manually.
 3. For each transfer, start the CLI command first, then tap **Connect** in the app. Save addresses you reuse with **Save address**.
+
+The QR scanner is implemented with CameraX and ZXing Core in both Play and F-Droid builds. Camera access is optional and requested only after **Scan pairing QR** is tapped. Health.md does not register the `healthmd://direct-cli` handoff as an external app link; only an explicit scan inside this screen can authorize pairing.
 
 ## Example output
 
@@ -55,7 +58,9 @@ A visible data-sync notification ("Waiting for Health.md CLI" → transfer progr
 | Problem | Likely cause | Fix |
 |---|---|---|
 | Connection failed | Wrong address/port or different network | Verify the CLI's printed address; check LAN/Tailscale reachability |
-| Pairing rejected | Wrong or expired 20-digit code | Re-run `healthmd direct pair` and re-enter |
+| Pairing rejected | Wrong or expired 20-digit code | Re-run `healthmd direct pair` and scan or re-enter the new code |
+| Camera unavailable or denied | No camera hardware or permission | Close the scanner and use manual address, port, and code entry |
+| QR rejected | Payload is malformed, public-addressed, or not a current Direct CLI QR | Scan the QR printed by the active `healthmd direct pair` command |
 | Device locked error | Phone locked mid-session | Unlock and reconnect |
 | Quota exhausted | Transfer quota for the pairing used up | Cancel/resume or re-pair |
 
@@ -63,10 +68,16 @@ A visible data-sync notification ("Waiting for Health.md CLI" → transfer progr
 
 - **Suggested title:** Your Android Health Data, Straight to Your Desktop
 - **Hook:** "The CLI listens. Your phone knocks. No cloud."
-- **Demo flow:** run pair → enter code → `healthmd export` → files land in the destination folder.
-- **Key screenshot/recording moments:** pairing form, foreground-service notification, CLI output.
+- **Demo flow:** run pair → scan QR → `healthmd export` → files land in the destination folder.
+- **Key screenshot/recording moments:** universal QR, in-app scanner, manual fallback, foreground-service notification, CLI output.
 - **CTA / next video:** Raw API Snapshots.
 
 ## Implementation notes
 
-`DirectConnection` normalizes the pairing code to 20 digits (`require(normalizedCode.length == 20 || reconnect != null)`). The session uses authenticated encryption with Android Keystore-backed trust, a `dataSync` foreground service (`FOREGROUND_SERVICE_DATA_SYNC`), private no-backup spools, partitioned resumable seven-day jobs, and exact artifact checksums (protocol v2: `direct-protocol/` Kotlin + `packages/contracts/direct-protocol/v2/`). Failure states map to user copy (`CONNECTION_FAILED`, `SESSION_TIMEOUT`, `QUOTA_EXHAUSTED`, `DEVICE_LOCKED`, …). Destination strategy and topology: [Android desktop destination strategy](../android-desktop-destination.md).
+The portable CLI's RFC-0005 P1 wake window keeps an unavailable export/resume/cancel request open
+for 120 seconds while the user opens this screen and restarts the direct session. It is host-only,
+uses no new protocol bytes, and can be disabled with `--wake-timeout 0`. FCM enrollment is not
+available in P1, so no new wake notification is sent; the existing foreground-service notification
+is unchanged.
+
+New pairing uses shared selector 3 and its domain-separated 20-digit transcript (`packages/contracts/direct-protocol/pairing-v3/`). Selector 2 remains as a high-entropy fallback for older CLIs; trusted reconnect keeps selector 2. The strict QR parser accepts only the exact in-app handoff, canonical private-LAN/Tailscale IPv4, a valid port, and exactly 20 ASCII digits. The session uses authenticated encryption with Android Keystore-backed trust, a `dataSync` foreground service (`FOREGROUND_SERVICE_DATA_SYNC`), private no-backup spools, partitioned resumable seven-day jobs, and exact artifact checksums (application protocol v2: `direct-protocol/` Kotlin + `packages/contracts/direct-protocol/v2/`). Failure states map to user copy (`CONNECTION_FAILED`, `SESSION_TIMEOUT`, `QUOTA_EXHAUSTED`, `DEVICE_LOCKED`, …). Destination strategy and topology: [Android desktop destination strategy](../android-desktop-destination.md).

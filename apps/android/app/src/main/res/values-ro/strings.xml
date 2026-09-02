@@ -828,7 +828,11 @@
     <string name="direct_cli_intro_title">Exporturi desktop criptate</string>
     <string name="direct_cli_intro_body">CLI-ul ascultă pe computer. Health.md se conectează direct și trimite exportul fără un serviciu intermediar în cloud.</string>
     <string name="direct_cli_pair_step_run">1. Pe computer, rulați:</string>
-    <string name="direct_cli_pair_step_enter">2. Introduceți adresa computerului și codul Android din 20 de cifre afișat de CLI.</string>
+    <string name="direct_cli_pair_step_enter">2. Scanați codul QR universal de mai jos sau introduceți adresa computerului, portul și codul de asociere comun din 20 de cifre.</string>
+    <string name="direct_cli_scan_qr">Scanați codul QR de asociere</string>
+    <string name="direct_cli_camera_unavailable">Scanarea cu camera nu este disponibilă. Permiteți accesul la cameră dacă este posibil sau introduceți manual adresa, portul și codul.</string>
+    <string name="direct_cli_invalid_qr">Acesta nu este un cod QR valid de asociere Health.md Direct CLI.</string>
+    <string name="direct_cli_scan_qr_hint">Îndreptați camera spre codul QR afișat de healthmd direct pair.</string>
     <string name="direct_cli_computer_address">Adresa computerului</string>
     <string name="direct_cli_port">Port</string>
     <string name="direct_cli_pairing_code">Cod de asociere</string>

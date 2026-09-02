@@ -12,7 +12,8 @@ The CLI is the TCP listener and the foreground iPhone connects to it.
 | Property | Value |
 |---|---:|
 | Manual IP/Tailscale port | 17647 |
-| Pairing/application/transfer version | 1 |
+| Application/transfer version | 1 |
+| Pairing selector | 1 (legacy) or 3 (current shared profile) |
 | Maximum outer JSON packet | 2 MiB |
 | Binary chunk body | 512 KiB |
 | Partition range | 32–64 MiB |
@@ -48,6 +49,10 @@ Other rules:
 - Protocol v1 requires the portable client to advertise the legacy role string `macos_cli`.
 
 ## Pairing handshake
+
+This section pins legacy Apple pairing selector `1`. Current 20-digit iOS/Android onboarding uses
+the additive [shared pairing profile v3](../pairing-v3/protocol.md); the application and transfer
+protocols below remain version 1.
 
 The iPhone sends a `pairingRequest` outer packet with protocol version 1, name, 32-byte X25519
 public key, 32-byte nonce, code verifier, and installation UUID. A trusted reconnect sends an empty
@@ -139,6 +144,26 @@ durable jobs, canonical extraction, and transfer capabilities `[1]`, binary fram
 32/48/64 MiB partition bounds, and four in-flight chunks. Select the highest common versions,
 intersect partition bounds, clamp the larger preferred size into the intersection, and clamp the
 minimum peer window to 1–8.
+
+## Wake enrollment (planned — RFC-0005 P2; not implemented)
+
+Status: staged design only. No current peer sends or accepts any wake message, no fixture exists,
+and implementing it requires the external consumer-notifications-worker endpoints plus a security
+review of the wake-key domain separation to land first ([RFC-0005](../../../../docs/architecture/rfc-0005-direct-cli-agent-wake.md)).
+Nothing in this section changes any v1 byte, discriminator, transcript, or fixture shipped today;
+it follows the same additive, capability-gated pattern query protocol v3 used on v1.
+
+- Each side may add an optional `wake` object to its `PeerCapabilities` hello:
+  `{ "supported": <bool> }`. Absent means unsupported. Peers that did not advertise wake support
+  must never send or receive a wake message; an unexpected wake discriminator fails closed.
+- After both sides advertise support on a connected, authenticated channel, the phone may send one
+  `WakeEnrollment` control message: `{ "wakeID": <opaque server-assigned string, at most 128
+  bytes>, "wakeKey": <base64 of exactly 32 random bytes> }`. The key is generated solely for wake
+  HMAC verification, never derived from or reused for pairing, channel, or session secrets.
+- A later `WakeEnrollment` on the same binding replaces the stored pair (rotation). Unpairing
+  deletes the CLI-side credential and the phone-side worker registration together.
+- Wake material and any wake request carry no health data, dates, metric identity, or request
+  contents. The CLI-side P1 wait-only behavior is unchanged when no wake credential exists.
 
 ## Requests and fingerprints
 

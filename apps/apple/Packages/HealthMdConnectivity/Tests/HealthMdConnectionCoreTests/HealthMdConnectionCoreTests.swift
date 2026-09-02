@@ -90,6 +90,63 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         ))
     }
 
+    func testSharedPairingV3MatchesCanonicalCrossPlatformFixture() throws {
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent(
+                "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json"
+            )
+        let fixture = try JSONDecoder().decode(
+            SharedPairingV3Fixture.self,
+            from: Data(contentsOf: fixtureURL)
+        )
+        XCTAssertEqual(fixture.pairingProtocolVersion, DirectPairingSecurity.sharedProtocolVersion)
+        let clientID = try XCTUnwrap(UUID(uuidString: fixture.clientInstallationID))
+        let serverID = try XCTUnwrap(UUID(uuidString: fixture.serverInstallationID))
+        let clientPublicKey = try Data(strictHex: fixture.clientPublicKeyHex)
+        let clientNonce = try Data(strictHex: fixture.clientNonceHex)
+        let serverPublicKey = try Data(strictHex: fixture.serverPublicKeyHex)
+        let serverNonce = try Data(strictHex: fixture.serverNonceHex)
+        let sealed = ManualIPEncryptedFrame(
+            nonce: try Data(strictHex: fixture.sealedNonceHex),
+            ciphertext: try Data(strictHex: fixture.sealedCiphertextHex),
+            tag: try Data(strictHex: fixture.sealedTagHex)
+        )
+
+        XCTAssertEqual(
+            DirectPairingSecurity.sharedPairingVerifier(
+                pairingCode: fixture.pairingCode,
+                clientInstallationID: clientID,
+                clientPublicKey: clientPublicKey,
+                clientNonce: clientNonce
+            ),
+            try Data(strictHex: fixture.pairingClientVerifierHex)
+        )
+        XCTAssertEqual(
+            DirectPairingSecurity.sharedPairingServerVerifier(
+                pairingCode: fixture.pairingCode,
+                clientInstallationID: clientID,
+                clientPublicKey: clientPublicKey,
+                clientNonce: clientNonce,
+                serverInstallationID: serverID,
+                serverPublicKey: serverPublicKey,
+                serverNonce: serverNonce,
+                sealedReconnectSecret: sealed
+            ),
+            try Data(strictHex: fixture.pairingServerVerifierHex)
+        )
+        XCTAssertEqual(
+            fixture.qrPayload,
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345678901234567890"
+        )
+    }
+
     func testDirectMessageRoundTripsAndFingerprintIsDeterministic() throws {
         let request = DirectExportRequest(
             jobID: UUID(uuidString: "00000000-0000-4000-8000-000000000001")!,
@@ -626,6 +683,65 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         try FileManager.default.createSymbolicLink(at: symbolicLink, withDestinationURL: file)
         XCTAssertThrowsError(try DirectTransferFile.inspect(symbolicLink))
         XCTAssertThrowsError(try DirectTransferFile.inspect(directory))
+    }
+}
+
+private struct SharedPairingV3Fixture: Decodable {
+    let pairingProtocolVersion: Int
+    let pairingCode: String
+    let clientInstallationID: String
+    let clientPublicKeyHex: String
+    let clientNonceHex: String
+    let serverInstallationID: String
+    let serverPublicKeyHex: String
+    let serverNonceHex: String
+    let sealedNonceHex: String
+    let sealedCiphertextHex: String
+    let sealedTagHex: String
+    let pairingClientVerifierHex: String
+    let pairingServerVerifierHex: String
+    let qrPayload: String
+
+    enum CodingKeys: String, CodingKey {
+        case pairingProtocolVersion = "pairing_protocol_version"
+        case pairingCode = "pairing_code"
+        case clientInstallationID = "client_installation_id"
+        case clientPublicKeyHex = "client_public_key_hex"
+        case clientNonceHex = "client_nonce_hex"
+        case serverInstallationID = "server_installation_id"
+        case serverPublicKeyHex = "server_public_key_hex"
+        case serverNonceHex = "server_nonce_hex"
+        case sealedNonceHex = "sealed_nonce_hex"
+        case sealedCiphertextHex = "sealed_ciphertext_hex"
+        case sealedTagHex = "sealed_tag_hex"
+        case pairingClientVerifierHex = "pairing_client_verifier_hex"
+        case pairingServerVerifierHex = "pairing_server_verifier_hex"
+        case qrPayload = "qr_payload"
+    }
+}
+
+private enum StrictHexError: Error {
+    case invalid
+}
+
+private extension Data {
+    init(strictHex value: String) throws {
+        guard value.utf8.count.isMultiple(of: 2),
+              value.utf8.allSatisfy({
+                  (48...57).contains($0) || (97...102).contains($0)
+              }) else { throw StrictHexError.invalid }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(value.utf8.count / 2)
+        var index = value.startIndex
+        while index < value.endIndex {
+            let next = value.index(index, offsetBy: 2)
+            guard let byte = UInt8(value[index..<next], radix: 16) else {
+                throw StrictHexError.invalid
+            }
+            bytes.append(byte)
+            index = next
+        }
+        self = Data(bytes)
     }
 }
 
