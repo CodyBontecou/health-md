@@ -175,8 +175,10 @@ class DirectCliLiveE2ETest {
         waitForDirectCliNotificationToDisappear()
 
         click(DirectCliTestTags.CONNECT)
-        val status = waitForState<DirectCliConnectionState.Completed>("status session")
-        assertEquals(DirectCliCompletion.SessionFinished, status.outcome)
+        // The CLI closes the connection after its status probe. The session now reconnects with
+        // bounded backoff instead of finishing; the listener-side gate asserts the status bytes.
+        waitForState<DirectCliConnectionState.Connected>("status session connection")
+        waitForState<DirectCliConnectionState.WaitingForCli>("status probe close returns to waiting")
 
         forgetAndWait("forget before re-pair")
         waitForNode(hasTestTag(DirectCliTestTags.PAIR))

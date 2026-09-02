@@ -273,25 +273,73 @@ async fn accept_ui_connection(
     .await
 }
 
-async fn reject_shared_pairing_as_legacy_cli(listener: &TcpListener) {
-    let mut connection = PacketConnection::new(accept_ui_stream(listener).await.unwrap());
-    let packet = tokio::time::timeout(Duration::from_secs(30), connection.receive())
-        .await
-        .expect("Android did not send a pairing request")
-        .expect("Android pairing request was malformed");
-    let SyncPacket::PairingRequest(Unlabeled { value: request }) = packet else {
-        panic!("expected Android pairing request");
-    };
-    assert_eq!(request.protocol_version, 3);
-    connection
-        .send(&SyncPacket::PairingRejected(Unlabeled::from(
-            PairingRejected {
-                reason: "legacy CLI does not support pairing selector 3".into(),
-            },
-        )))
-        .await
-        .unwrap();
-    eprintln!("ANDROID_UI_E2E_LEGACY_REJECTION_SENT");
+/// After the CLI closes a non-terminal connection (for example the status probe), the Android
+/// session reconnects with bounded backoff until it gives up or the user disconnects. Absorb
+/// those trusted session reconnects — authenticate, negotiate, then close without work — until
+/// the next fresh shared-selector pairing attempt arrives, and reject that attempt exactly as an
+/// old CLI would so Android exercises its selector-2 fallback.
+async fn drain_session_reconnects_then_reject_shared_pairing(
+    listener: &TcpListener,
+    server_id: &SwiftUuid,
+    trust_store: &TrustStore<MemoryCredentials>,
+) {
+    loop {
+        let mut connection = PacketConnection::new(accept_ui_stream(listener).await.unwrap());
+        let packet = match tokio::time::timeout(Duration::from_secs(30), connection.receive()).await
+        {
+            Ok(Ok(packet)) => Some(packet),
+            Ok(Err(_)) | Err(_) => None, // aborted before sending a pairing request
+        };
+        let Some(SyncPacket::PairingRequest(Unlabeled { value: request })) = packet else {
+            continue;
+        };
+        if request.code_verifier.is_empty() {
+            // A leftover session reconnect, possibly aborted mid-handshake when the UI test
+            // disconnects or forgets the session. Absorb it and keep waiting for the pairing.
+            match authenticate(
+                connection,
+                *server_id,
+                "Rust Android UI E2E CLI",
+                None,
+                trust_store,
+                Duration::from_secs(30),
+            )
+            .await
+            {
+                Ok(mut reconnect) => {
+                    assert!(!reconnect.was_new_pairing);
+                    // Negotiate and close without work; an aborted negotiation is also fine.
+                    if reconnect
+                        .channel
+                        .send(&DirectMessage::Hello(Unlabeled::from(
+                            PeerCapabilities::portable_cli_all_versions(*server_id),
+                        )))
+                        .await
+                        .is_ok()
+                    {
+                        let _ = reconnect.channel.receive().await;
+                    }
+                }
+                Err(ClientError::Connection(_) | ClientError::TimedOut) => {}
+                Err(error) => panic!("unexpected session reconnect failure: {error:?}"),
+            }
+            continue;
+        }
+        assert_eq!(
+            request.protocol_version, 3,
+            "expected the fresh shared-selector pairing attempt"
+        );
+        connection
+            .send(&SyncPacket::PairingRejected(Unlabeled::from(
+                PairingRejected {
+                    reason: "legacy CLI does not support pairing selector 3".into(),
+                },
+            )))
+            .await
+            .unwrap();
+        eprintln!("ANDROID_UI_E2E_LEGACY_REJECTION_SENT");
+        return;
+    }
 }
 
 async fn negotiate_ui_connection(
@@ -441,7 +489,8 @@ async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
 
     // Emulate an old CLI that rejects the shared selector. Android may retry selector 2 only
     // after this explicit pairing rejection; the second connection must complete legacy pairing.
-    reject_shared_pairing_as_legacy_cli(&listener).await;
+    // Leftover session reconnects from the status phase are absorbed first.
+    drain_session_reconnects_then_reject_shared_pairing(&listener, &server_id, &store).await;
     let mut repaired = accept_ui_connection(
         &listener,
         &server_id,
