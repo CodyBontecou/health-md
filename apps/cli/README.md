@@ -40,7 +40,8 @@ This release implements RFC-0005 P1 (wait-only) on both mobile platforms, plus t
 P2: when a paired phone has enrolled wake material (which requires the external notifications
 worker to exist), the CLI sends one best-effort `/wake/request` nudge at wait start. Configure
 the worker with `HEALTHMD_WAKE_WORKER_URL`; opt out per command with `--no-wake` or for MCP with
-`HEALTHMD_NO_WAKE=1`. No mobile app enrolls yet, so the enrollment state stays `unavailable`,
+`HEALTHMD_NO_WAKE=1`. Build with the `wake-worker` Cargo feature to include the worker HTTP
+client — the default local build keeps its no-remote-HTTP guarantee and degrades to P1. No mobile app enrolls yet, so the enrollment state stays `unavailable`,
 no notification is sent, and the user must notice the request and open Health.md manually. The
 wake window never performs background capture, changes pairing trust, bypasses
 protected-data/permission checks, or routes health data through a worker.

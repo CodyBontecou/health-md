@@ -149,8 +149,9 @@ minimum peer window to 1–8.
 
 Status: the portable CLI now advertises the wake capability, accepts and stores enrollments,
 rotates on re-enrollment, removes the material with the trust entry on unpair, and sends one
-best-effort worker wake request at the start of each wake window (`HEALTHMD_WAKE_WORKER_URL`;
-`--no-wake`/`HEALTHMD_NO_WAKE` opt out). No current mobile app enrolls yet — phone-side
+best-effort worker wake request at the start of each wake window (the `wake-worker` build
+feature; `HEALTHMD_WAKE_WORKER_URL`; `--no-wake`/`HEALTHMD_NO_WAKE` opt out — the default
+build keeps its no-remote-HTTP guarantee). No current mobile app enrolls yet — phone-side
 enrollment waits on the external worker
 ([spec](../../../../docs/architecture/rfc-0005-worker-spec.md)) — so deployed behavior remains
 wait-only P1 and no fixture exists yet. This section changes no shipped v1 byte, discriminator,

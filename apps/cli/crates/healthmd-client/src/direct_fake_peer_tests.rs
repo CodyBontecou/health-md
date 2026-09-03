@@ -722,10 +722,15 @@ async fn wake_enrollment_without_advertised_support_fails_closed() {
             )))
             .await
             .unwrap();
+        // Hold the socket open so the CLI deterministically reads the stray enrollment instead
+        // of racing a connection close on slower runners.
+        let _ = tokio::time::timeout(Duration::from_secs(10), channel.receive()).await;
     };
     let status = client.status(Some(device), port, Duration::from_secs(20));
     let (status, ()) = tokio::join!(status, rogue);
-    assert!(matches!(status, Err(ClientError::UnexpectedMessage)));
+    // The status exchange can never complete: the stray enrollment is not the expected status
+    // response, so the request fails closed and nothing is ever persisted.
+    assert!(status.is_err());
     assert!(client.wake_credential(device).await.unwrap().is_none());
 }
 

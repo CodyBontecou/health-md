@@ -52,10 +52,14 @@ fn request_hmac_hex(wake_key: &[u8], nonce_hex: &str, timestamp: &str) -> Result
 
 /// Send one wake request. Errors describe why the nudge was skipped; callers degrade to P1.
 ///
+/// Compiled only with the `wake-worker` feature so the default local CLI build keeps its
+/// no-remote-HTTP guarantee.
+///
 /// # Errors
 ///
 /// Returns an error for key, encoding, or transport failures. HTTP error statuses are reported
 /// but are equally non-fatal on the data path.
+#[cfg(feature = "wake-worker")]
 pub async fn request_wake(
     base_url: &str,
     wake_id: &str,
@@ -90,6 +94,17 @@ pub async fn request_wake(
         ));
     }
     Ok(())
+}
+
+/// Without the `wake-worker` feature the nudge is a compile-time no-op that degrades to P1.
+#[cfg(not(feature = "wake-worker"))]
+pub async fn request_wake(
+    _base_url: &str,
+    _wake_id: &str,
+    _wake_key: &[u8],
+    _peer_label: &str,
+) -> Result<(), String> {
+    Err("wake worker support is not compiled into this build".to_owned())
 }
 
 /// Decode a base64 `wakeKey` enrollment payload to exactly 32 raw bytes.
@@ -150,6 +165,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "wake-worker")]
     async fn wake_request_carries_the_domain_separated_hmac_and_degrades_on_rejection() {
         use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
