@@ -40,21 +40,27 @@ final class IPhoneDirectWakeManager: ObservableObject, IPhoneDirectWakeManaging 
     private let worker: any DirectWakeWorkerRegistering
     private let pushRegistration: PushRegistrationManager
     private let requestNotificationAuthorization: @MainActor () async -> Bool
+    private let registerForPushNotifications: @MainActor () async -> Void
 
     init(
         defaults: UserDefaults = .standard,
         keychain: any DirectWakeCredentialStoring = DirectWakeKeychain(),
         worker: (any DirectWakeWorkerRegistering)? = nil,
         pushRegistration: PushRegistrationManager? = nil,
-        requestNotificationAuthorization: (@MainActor () async -> Bool)? = nil
+        requestNotificationAuthorization: (@MainActor () async -> Bool)? = nil,
+        registerForPushNotifications: (@MainActor () async -> Void)? = nil
     ) {
+        let push = pushRegistration ?? .shared
         self.defaults = defaults
         self.keychain = keychain
-        self.pushRegistration = pushRegistration ?? .shared
-        self.worker = worker ?? DirectWakeWorkerClient(pushRegistration: self.pushRegistration)
+        self.pushRegistration = push
+        self.worker = worker ?? DirectWakeWorkerClient(pushRegistration: push)
         self.requestNotificationAuthorization = requestNotificationAuthorization ?? {
             let center = UNUserNotificationCenter.current()
             return (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
+        }
+        self.registerForPushNotifications = registerForPushNotifications ?? {
+            await push.registerForRemoteNotificationsIfNeeded()
         }
         if defaults.bool(forKey: Self.enabledKey), keychain.load() != nil {
             state = .enrolled
@@ -91,7 +97,7 @@ final class IPhoneDirectWakeManager: ObservableObject, IPhoneDirectWakeManaging 
             state = .unavailable(reason: "Notification permission was not granted.")
             return
         }
-        await pushRegistration.registerForRemoteNotificationsIfNeeded()
+        await registerForPushNotifications()
 
         var key = Data(count: 32)
         let status = key.withUnsafeMutableBytes { buffer in

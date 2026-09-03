@@ -28,6 +28,26 @@ final class IPhoneDirectWakeManagerTests: XCTestCase {
         }
     }
 
+    /// Counts registerForPushNotifications invocations so tests can pin the enable() ordering
+    /// without touching the real UNUserNotificationCenter (whose permission dialog hangs a
+    /// headless fresh simulator — the Apple CI test-ios timeout root cause).
+    private nonisolated final class PushRegistrationSpy: @unchecked Sendable {
+        private let lock = NSLock()
+        private var count = 0
+
+        func record() {
+            lock.lock()
+            count += 1
+            lock.unlock()
+        }
+
+        var callCount: Int {
+            lock.lock()
+            defer { lock.unlock() }
+            return count
+        }
+    }
+
     private final class FakeWorker: DirectWakeWorkerRegistering, @unchecked Sendable {
         enum Behavior {
             case succeed(wakeID: String)
@@ -61,11 +81,13 @@ final class IPhoneDirectWakeManagerTests: XCTestCase {
         defaults.removePersistentDomain(forName: "wake-manager-unavailable-test")
         let keychain = MemoryKeychain()
         let worker = FakeWorker(behavior: .fail)
+        let pushSpy = PushRegistrationSpy()
         let manager = IPhoneDirectWakeManager(
             defaults: defaults,
             keychain: keychain,
             worker: worker,
-            requestNotificationAuthorization: { true }
+            requestNotificationAuthorization: { true },
+            registerForPushNotifications: { pushSpy.record() }
         )
 
         await manager.enable()
@@ -78,6 +100,7 @@ final class IPhoneDirectWakeManagerTests: XCTestCase {
         XCTAssertNil(keychain.load())
         XCTAssertFalse(defaults.bool(forKey: IPhoneDirectWakeManager.enabledKey))
         XCTAssertEqual(worker.registrations.count, 1, "one registration attempt, no retries")
+        XCTAssertEqual(pushSpy.callCount, 1, "push registration precedes worker contact")
     }
 
     @MainActor
@@ -85,11 +108,13 @@ final class IPhoneDirectWakeManagerTests: XCTestCase {
         let defaults = UserDefaults(suiteName: "wake-manager-denied-test")!
         defaults.removePersistentDomain(forName: "wake-manager-denied-test")
         let worker = FakeWorker(behavior: .succeed(wakeID: "wake-ok"))
+        let pushSpy = PushRegistrationSpy()
         let manager = IPhoneDirectWakeManager(
             defaults: defaults,
             keychain: MemoryKeychain(),
             worker: worker,
-            requestNotificationAuthorization: { false }
+            requestNotificationAuthorization: { false },
+            registerForPushNotifications: { pushSpy.record() }
         )
 
         await manager.enable()
@@ -98,6 +123,7 @@ final class IPhoneDirectWakeManagerTests: XCTestCase {
             return XCTFail("expected unavailable, got \(manager.state)")
         }
         XCTAssertTrue(worker.registrations.isEmpty)
+        XCTAssertEqual(pushSpy.callCount, 0, "denied notifications must never register for push")
     }
 
     @MainActor
@@ -106,16 +132,19 @@ final class IPhoneDirectWakeManagerTests: XCTestCase {
         defaults.removePersistentDomain(forName: "wake-manager-enrolled-test")
         let keychain = MemoryKeychain()
         let worker = FakeWorker(behavior: .succeed(wakeID: "wake-opaque-1"))
+        let pushSpy = PushRegistrationSpy()
         let manager = IPhoneDirectWakeManager(
             defaults: defaults,
             keychain: keychain,
             worker: worker,
-            requestNotificationAuthorization: { true }
+            requestNotificationAuthorization: { true },
+            registerForPushNotifications: { pushSpy.record() }
         )
 
         await manager.enable()
 
         XCTAssertEqual(manager.state, .enrolled)
+        XCTAssertEqual(pushSpy.callCount, 1)
         XCTAssertTrue(manager.advertisesWake)
         let enrollment = try XCTUnwrap(manager.currentEnrollment())
         XCTAssertEqual(enrollment.wakeID, "wake-opaque-1")
