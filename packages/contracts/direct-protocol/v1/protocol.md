@@ -155,9 +155,11 @@ the default build keeps its no-remote-HTTP guarantee). The iPhone advertises wak
 when the opt-in setting is enabled, sends the enrollment immediately after a CLI hello that
 advertised wake support, and stores its half in the Keychain; enabling requests notification
 authorization, registers the verification hash and APNs token with the worker, and removing the
-pairing deletes both sides' material. Because the worker
-([spec](../../../../docs/architecture/rfc-0005-worker-spec.md)) is not deployed yet, enrollment
-cannot complete and deployed behavior remains wait-only P1; no fixture exists yet. This section
+pairing deletes both sides' material. The wake worker
+([spec](../../../../docs/architecture/rfc-0005-worker-spec.md), the dedicated `healthmd-wake` script deployed
+2026-09-03) now exists, but no phone has enrolled against it yet until the opt-in setting ships in a
+release; until a release carries enrollment, deployed behavior remains wait-only P1; no fixture
+exists yet. This section
 changes no shipped v1 byte, discriminator, transcript, or fixture; it follows the same additive,
 capability-gated pattern query protocol v3 used on v1.
 

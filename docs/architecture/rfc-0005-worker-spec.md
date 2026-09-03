@@ -1,6 +1,6 @@
 # RFC-0005 P2 worker specification: `healthmd-receipt-verifier` wake endpoints
 
-- Status: **Specification for implementation — not yet built**
+- Status: **Deployed — dedicated `healthmd-wake` worker live at `healthmd-wake.costream.workers.dev` since 2026-09-03 (physical QA pending)**
 - Owner: consumer notifications-worker owner (`healthmd-receipt-verifier`)
 - Proposal date: 2026-09-02
 - Parent: [RFC-0005: Direct CLI agent wake](rfc-0005-direct-cli-agent-wake.md)
@@ -57,18 +57,18 @@ Request fields:
 | `wakeId` | string | From enrollment. |
 | `nonce` | string (hex, ≥ 128 bits) | Fresh per request. |
 | `timestamp` | string (RFC 3339) | Reject outside a ±120 s window. |
-| `hmac` | string (hex) | `HMAC-SHA256(wakeKey, "healthmd.wake.v1" ‖ nonce ‖ timestamp)` over the raw 32-byte key. |
+| `hmac` | string (hex) | `HMAC-SHA256(SHA-256(wakeKey), "healthmd.wake.v1" ‖ nonce ‖ timestamp)`. The HMAC **key** is the verification hash — the registered `SHA-256(wakeKey)` — so the worker verifies requests without ever holding the raw key (see amendment). |
 | `peerLabel` | string, optional | Computer display name for the notification body, ≤ 128 bytes. |
 
 Processing order:
 
 1. Look up `wakeId`; unknown → `404` with code `wake_unknown`.
-2. Verify HMAC against the stored verification hash, constant-time; mismatch → `401`
-   `wake_hmac_invalid`. (The hash store makes offline guessing useless; the HMAC proves the
-   caller holds the raw key.)
+2. Verify the HMAC: the key is the stored verification hash itself (`SHA-256(wakeKey)` raw bytes), and the message is the domain label, nonce hex, and timestamp concatenated as ASCII; compare constant-time, mismatch → `401` `wake_hmac_invalid`. (The hash-keyed HMAC proves the caller can derive the registered hash, i.e. holds the raw key, while the raw key itself never crosses the wire or rests in worker storage.)
 3. Check the timestamp window; stale → `401` `wake_timestamp_stale`.
 4. Dedupe: at most one delivered wake per `wakeId` per 30 s; a repeat inside the window returns
-   `200` with `{"status":"deduplicated"}` (idempotent nudge, never a new authorization).
+   `200` with `{"status":"deduplicated"}` (idempotent nudge, never a new authorization). A
+   replayed **nonce** (any request reusing a burned nonce) is rejected with `401`
+   `wake_nonce_replayed` before dedupe is considered.
 5. Hourly budget: at most 6 delivered wakes per `wakeId`; beyond → `429` `wake_rate_limited`
    with `retryAfterSeconds`.
 6. Send **one visible APNs push** to the stored token. Silent pushes are not used: they are
@@ -144,3 +144,22 @@ Rows are keyed to the pairing, not the install; unpair removes the row regardles
 - CLI-side credential storage and wake POST (in `apps/cli` once these endpoints exist).
 - Android/FCM transport (P3; the row schema already accommodates a transport token).
 - Any change to the existing `/devices/register` or scheduled-export paths.
+
+## Amendment (2026-09-03): HMAC key and deployment topology
+
+Two corrections, both forced by implementation reality and recorded in the RFC decision log
+(entry 4):
+
+1. **HMAC key.** The original text keyed the HMAC with the raw `wakeKey` while registration
+   stores only its SHA-256 — a construction the worker cannot verify. The HMAC is now keyed by
+   the registered verification hash itself (`SHA-256(wakeKey)` raw bytes). The CLI derives the
+   key identically; the construction is pinned cross-language (Rust test in
+   `apps/cli/crates/healthmd-client/src/wake.rs`, worker test in the `healthmd-wake` repository)
+   with the shared vector raw key `[7;32]`, nonce `"aa"`, timestamp `2026-09-03T00:00:00Z` →
+   `b7575fa94db932357824b886ac6b23d17eaed58048ee346622fa2add58d2138f`.
+2. **Deployment.** The `healthmd-receipt-verifier` worker's source was lost with an old machine,
+   and reconstructing a production paywall/scheduling worker blind was rejected. The wake
+   endpoints ship as the dedicated `healthmd-wake` script (`healthmd-wake.costream.workers.dev`,
+   own D1 `healthmd-wake` database, own APNs secret bindings); the receipt-verifier stays frozen
+   and untouched. Supersedes the original "extends the existing worker" framing and RFC-0005
+   decision 3.

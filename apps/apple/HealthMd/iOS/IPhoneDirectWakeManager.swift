@@ -209,7 +209,7 @@ protocol DirectWakeWorkerRegistering: Sendable {
     func unregister(wakeID: String) async throws
 }
 
-/// Client for the consumer notifications worker wake endpoints
+/// Client for the dedicated `healthmd-wake` doorbell worker's endpoints
 /// ([RFC-0005 worker spec](https://healthmd.dev)). No health data, dates, metric identity, or
 /// request contents ever appear in a request.
 struct DirectWakeWorkerClient: DirectWakeWorkerRegistering {
@@ -218,7 +218,7 @@ struct DirectWakeWorkerClient: DirectWakeWorkerRegistering {
     private let session: URLSession
 
     init(
-        baseURL: URL = URL(string: "https://healthmd-receipt-verifier.costream.workers.dev")!,
+        baseURL: URL = URL(string: "https://healthmd-wake.costream.workers.dev")!,
         pushRegistration: PushRegistrationManager,
         session: URLSession = .shared
     ) {

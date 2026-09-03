@@ -19,6 +19,17 @@ use std::time::Duration;
 /// Domain separation label for wake HMACs. Must match the worker specification exactly.
 pub const WAKE_HMAC_DOMAIN: &str = "healthmd.wake.v1";
 
+/// Derive the HMAC key from the raw wake key: `SHA-256(wakeKey)`.
+///
+/// This is exactly the verification hash the phone registers with the worker, so the worker can
+/// verify wake requests without ever holding the raw key (RFC-0005 privacy invariant; the raw key
+/// never crosses the wire to the worker). Pinned cross-language in the worker's test suite.
+#[cfg(any(test, feature = "wake-worker"))]
+fn wake_hmac_key(wake_key: &[u8]) -> [u8; 32] {
+    use sha2::Digest as _;
+    sha2::Sha256::digest(wake_key).into()
+}
+
 #[cfg(feature = "wake-worker")]
 const WAKE_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -49,7 +60,7 @@ fn hex(bytes: &[u8]) -> String {
 
 #[cfg(any(test, feature = "wake-worker"))]
 fn request_hmac_hex(wake_key: &[u8], nonce_hex: &str, timestamp: &str) -> Result<String, String> {
-    let mut mac = Hmac::<Sha256>::new_from_slice(wake_key)
+    let mut mac = Hmac::<Sha256>::new_from_slice(&wake_hmac_key(wake_key))
         .map_err(|error| format!("wake key rejected: {error}"))?;
     mac.update(WAKE_HMAC_DOMAIN.as_bytes());
     mac.update(nonce_hex.as_bytes());
@@ -133,6 +144,7 @@ mod tests {
 
     #[test]
     fn hmac_is_domain_separated_and_deterministic() {
+        use sha2::Digest as _;
         let key = [7_u8; 32];
         let first = request_hmac_hex(&key, "aa", "2026-09-03T00:00:00Z").unwrap();
         let second = request_hmac_hex(&key, "aa", "2026-09-03T00:00:00Z").unwrap();
@@ -142,11 +154,23 @@ mod tests {
         assert_ne!(first, other_nonce);
         let wrong_key = request_hmac_hex(&[8_u8; 32], "aa", "2026-09-03T00:00:00Z").unwrap();
         assert_ne!(first, wrong_key);
-        // A manually computed vector pins the exact construction.
-        let mut mac = Hmac::<Sha256>::new_from_slice(&key).unwrap();
+        // A manually computed vector pins the exact construction: the HMAC key is
+        // SHA-256 of the raw wake key (the registered verification hash), and the
+        // message is the domain label, nonce hex, and timestamp as ASCII. The same
+        // vector is pinned in the healthmd-wake worker's test suite.
+        let derived_key: [u8; 32] = sha2::Sha256::digest(key).into();
+        assert_eq!(
+            hex(&derived_key),
+            "4bb06f8e4e3a7715d201d573d0aa423762e55dabd61a2c02278fa56cc6d294e0"
+        );
+        let mut mac = Hmac::<Sha256>::new_from_slice(&derived_key).unwrap();
         mac.update(b"healthmd.wake.v1");
         mac.update(b"aa");
         mac.update(b"2026-09-03T00:00:00Z");
+        assert_eq!(
+            first,
+            "b7575fa94db932357824b886ac6b23d17eaed58048ee346622fa2add58d2138f"
+        );
         assert_eq!(first, hex(&mac.finalize().into_bytes()));
     }
 
