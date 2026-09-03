@@ -36,7 +36,7 @@ final class IPhoneDirectWakeManager: ObservableObject, IPhoneDirectWakeManaging 
     @Published private(set) var state: EnrollmentState = .disabled
 
     private nonisolated(unsafe) let defaults: UserDefaults
-    private nonisolated(unsafe) let keychain: any DirectWakeCredentialStoring
+    private let keychain: any DirectWakeCredentialStoring
     private let worker: any DirectWakeWorkerRegistering
     private let pushRegistration: PushRegistrationManager
     private let requestNotificationAuthorization: @MainActor () async -> Bool
@@ -45,18 +45,18 @@ final class IPhoneDirectWakeManager: ObservableObject, IPhoneDirectWakeManaging 
         defaults: UserDefaults = .standard,
         keychain: any DirectWakeCredentialStoring = DirectWakeKeychain(),
         worker: (any DirectWakeWorkerRegistering)? = nil,
-        pushRegistration: PushRegistrationManager = .shared,
+        pushRegistration: PushRegistrationManager? = nil,
         requestNotificationAuthorization: (@MainActor () async -> Bool)? = nil
     ) {
         self.defaults = defaults
         self.keychain = keychain
-        self.pushRegistration = pushRegistration
-        self.worker = worker ?? DirectWakeWorkerClient(pushRegistration: pushRegistration)
+        self.pushRegistration = pushRegistration ?? .shared
+        self.worker = worker ?? DirectWakeWorkerClient(pushRegistration: self.pushRegistration)
         self.requestNotificationAuthorization = requestNotificationAuthorization ?? {
             let center = UNUserNotificationCenter.current()
             return (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
         }
-        if defaults.bool(forKey: Self.enabledKey), let credential = keychain.load() {
+        if defaults.bool(forKey: Self.enabledKey), keychain.load() != nil {
             state = .enrolled
         }
     }
@@ -129,12 +129,12 @@ final class IPhoneDirectWakeManager: ObservableObject, IPhoneDirectWakeManaging 
     }
 }
 
-struct DirectWakeCredential: Equatable {
+nonisolated struct DirectWakeCredential: Equatable {
     let wakeID: String
     let wakeKey: Data
 }
 
-protocol DirectWakeCredentialStoring: Sendable {
+nonisolated protocol DirectWakeCredentialStoring: Sendable {
     func load() -> DirectWakeCredential?
     func save(_ credential: DirectWakeCredential)
     func clear()
@@ -142,7 +142,7 @@ protocol DirectWakeCredentialStoring: Sendable {
 
 /// Keychain-backed wake credential storage. The raw key never leaves the device except inside
 /// the authenticated direct channel enrollment.
-struct DirectWakeKeychain: DirectWakeCredentialStoring {
+nonisolated struct DirectWakeKeychain: DirectWakeCredentialStoring {
     private let service: String
     private let account: String
 
@@ -171,7 +171,7 @@ struct DirectWakeKeychain: DirectWakeCredentialStoring {
             wakeID: credential.wakeID, wakeKey: credential.wakeKey
         )
         guard let blob = try? JSONEncoder().encode(payload) else { return }
-        var query = Self.baseQuery(service: service, account: account)
+        let query = Self.baseQuery(service: service, account: account)
         SecItemDelete(query as CFDictionary)
         var add = query
         add[kSecValueData as String] = blob
@@ -193,7 +193,7 @@ struct DirectWakeKeychain: DirectWakeCredentialStoring {
     }
 }
 
-private struct DirectWakeCredentialPayload: Codable {
+private nonisolated struct DirectWakeCredentialPayload: Codable {
     let wakeID: String
     let wakeKey: Data
 }

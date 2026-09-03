@@ -5,7 +5,7 @@ import XCTest
 @testable import HealthMd
 
 final class IPhoneDirectWakeManagerTests: XCTestCase {
-    private final class MemoryKeychain: DirectWakeCredentialStoring, @unchecked Sendable {
+    private nonisolated final class MemoryKeychain: DirectWakeCredentialStoring, @unchecked Sendable {
         private var credential: DirectWakeCredential?
         private let lock = NSLock()
 
