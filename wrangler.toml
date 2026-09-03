@@ -23,7 +23,7 @@ BUNDLE_ID = "com.codybontecou.obsidianhealth"
 [[d1_databases]]
 binding = "DB"
 database_name = "healthmd-wake"
-database_id = "REPLACE_AFTER_D1_CREATE"
+database_id = "a9b607f9-9413-4b0e-9879-ae7e5ab348a8"
 
 # Secrets (set via `wrangler secret put`, never committed):
 #   APNS_AUTH_KEY — full PEM body of the .p8 APNs key
