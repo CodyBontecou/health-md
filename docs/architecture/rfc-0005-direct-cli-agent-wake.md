@@ -60,7 +60,7 @@ Pure local change; no protocol or phone work required. Immediately useful even w
 
 ## P2 — iOS APNs wake
 
-Resolved: wake endpoints extend the existing consumer notifications worker (`healthmd-receipt-verifier`), which already holds the APNs credentials and device-token store. No dedicated worker deployment. Rate limits are enforced per `wake_id` to isolate abuse.
+Resolved: wake endpoints extend the existing consumer notifications worker (`healthmd-receipt-verifier`), which already holds the APNs credentials and device-token store. No dedicated worker deployment. Rate limits are enforced per `wake_id` to isolate abuse. The full endpoint, verification, rate-limit, and notification contract is specified in [rfc-0005-worker-spec.md](rfc-0005-worker-spec.md).
 
 ### Enrollment (opt-in, from the phone)
 
