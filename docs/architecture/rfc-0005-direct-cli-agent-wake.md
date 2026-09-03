@@ -1,6 +1,6 @@
 # RFC-0005: Direct CLI agent wake — tap-to-unblock a locked phone
 
-- Status: **Proposed — P1 implemented for review; P2/P3 require owner acceptance and external worker delivery**
+- Status: **Proposed — P1 implemented and physically verified; P2 implemented in-repo (activation pending worker deployment and physical QA); P3 staged**
 - Proposal date: 2026-09-02
 - Owners required for acceptance: Apple, Android, CLI, contracts, shared core, security/privacy, product/support, and the consumer notifications-worker owner
 - Related: [Cross-platform unification policy](cross-platform-unification-policy.md), [direct protocol contracts](../../packages/contracts/direct-protocol/README.md), [RFC-0004](rfc-0004-unified-health-data-v9.md)

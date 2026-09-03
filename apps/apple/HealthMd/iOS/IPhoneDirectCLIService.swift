@@ -310,6 +310,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private let heartbeatPolicy: IPhoneDirectCLIIdleHeartbeatPolicy
     private let heartbeatClock = ContinuousClock()
     private let protocolAuthority: AppleDirectProtocolAuthority
+    private let wakeManager: (any IPhoneDirectWakeManaging)?
     private lazy var client = DirectManualIPClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
@@ -353,12 +354,14 @@ final class IPhoneDirectCLIService: ObservableObject {
         defaults: UserDefaults = .standard,
         reconnectPolicy: IPhoneDirectCLIReconnectPolicy = .production,
         heartbeatPolicy: IPhoneDirectCLIIdleHeartbeatPolicy = .production,
-        protocolAuthority: AppleDirectProtocolAuthority = .shared
+        protocolAuthority: AppleDirectProtocolAuthority = .shared,
+        wakeManager: (any IPhoneDirectWakeManaging)? = nil
     ) {
         self.defaults = defaults
         self.reconnectPolicy = reconnectPolicy
         self.heartbeatPolicy = heartbeatPolicy
         self.protocolAuthority = protocolAuthority
+        self.wakeManager = wakeManager
         self.installationID = Self.loadOrCreateInstallationID(defaults: defaults)
         let trustStore = ManualIPTrustStore(
             service: "com.codybontecou.obsidianhealth.direct-cli-ios-trust",
@@ -641,6 +644,9 @@ final class IPhoneDirectCLIService: ObservableObject {
     func forgetPairedCLI() {
         disconnect(clearError: true)
         clearPendingPairingLinkState()
+        if let wakeManager {
+            Task { await wakeManager.forgetAll() }
+        }
         do {
             try client.forgetServer()
             needsPairingCode = true
@@ -822,7 +828,10 @@ final class IPhoneDirectCLIService: ObservableObject {
                 ],
                 platform: .iOS,
                 installationID: installationID,
-                query: .current
+                query: .current,
+                wake: wakeManager?.advertisesWake == true
+                    ? DirectWakeCapabilities(supported: true)
+                    : nil
             )))
             guard !Task.isCancelled,
                   isEnabled,
@@ -1051,6 +1060,14 @@ final class IPhoneDirectCLIService: ObservableObject {
             remoteCapabilities = capabilities
             protocolAuthority.beginBootstrap()
             try commitProvisionalPairingTrustIfNeeded(for: sessionID)
+            // RFC-0005 P2: only a CLI that advertised wake support reads the enrollment, and
+            // only a phone with valid material sends it — the deterministic handshake keeps
+            // older CLIs (no wake advertisement) byte-compatible and fail-closed.
+            if capabilities.wake?.supported == true,
+               let wakeManager,
+               let enrollment = wakeManager.currentEnrollment() {
+                try await channel.send(.wakeEnrollment(enrollment))
+            }
         case .statusRequest:
             if !appIsActive {
                 try await channel.send(.statusResponse(DirectIPhoneStatus(
@@ -1195,7 +1212,8 @@ final class IPhoneDirectCLIService: ObservableObject {
              .exportAccepted, .exportProgress, .exportRejected,
              .transferSession, .rawDayManifest, .fileManifest, .transferOpen,
              .transferChunk, .transferPartitionComplete, .transferFinalize,
-             .completionConfirmed, .cancelAcknowledged, .pong:
+             .completionConfirmed, .cancelAcknowledged, .pong, .wakeEnrollment:
+            // Only the phone sends wake enrollments; receiving one here is a protocol violation.
             break
         }
     }

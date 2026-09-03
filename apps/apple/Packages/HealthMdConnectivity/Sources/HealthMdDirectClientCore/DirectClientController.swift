@@ -441,7 +441,7 @@ public final class DirectClientController: @unchecked Sendable {
                             try await receiver.cancel(jobID: jobID)
                             await store.clearCancellationRequest(jobID: jobID)
                             throw DirectRawReceiverError.cancelled
-                        case .hello, .statusRequest, .statusResponse, .exportRequest,
+                        case .hello, .wakeEnrollment, .statusRequest, .statusResponse, .exportRequest,
                              .queryRequest, .queryResponse, .queryRejected,
                              .transferDisposition, .transferChunk,
                              .transferChunkAcknowledgement,
@@ -672,7 +672,7 @@ public final class DirectClientController: @unchecked Sendable {
                             try await receiver.cancel(jobID: jobID)
                             await store.clearCancellationRequest(jobID: jobID)
                             throw DirectRawReceiverError.cancelled
-                        case .hello, .statusRequest, .statusResponse, .exportRequest,
+                        case .hello, .wakeEnrollment, .statusRequest, .statusResponse, .exportRequest,
                              .queryRequest, .queryResponse, .queryRejected,
                              .transferDisposition, .transferChunk,
                              .transferChunkAcknowledgement,

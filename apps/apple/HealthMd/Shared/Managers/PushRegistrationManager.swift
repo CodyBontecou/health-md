@@ -32,6 +32,7 @@ final class PushRegistrationManager: @unchecked Sendable {
     /// HealthMd-related items live under the same service).
     private static let keychainService = "com.codybontecou.obsidianhealth"
     private static let userIdKeychainAccount = "pushRegistrationUserId"
+    private static let deviceTokenKeychainAccount = "pushRegistrationDeviceToken"
 
     init(
         session: URLSession = .shared,
@@ -39,6 +40,13 @@ final class PushRegistrationManager: @unchecked Sendable {
     ) {
         self.session = session
         self.baseURL = baseURL
+    }
+
+    /// The hex-encoded APNs token from the most recent successful registration, or `nil` before
+    /// the system delivers one. Consumed by features (RFC-0005 wake) that register additional
+    /// worker rows for this install.
+    var lastDeviceTokenHex: String? {
+        readKeychainString(account: Self.deviceTokenKeychainAccount)
     }
 
     // MARK: - Identity
@@ -105,6 +113,7 @@ final class PushRegistrationManager: @unchecked Sendable {
     func submitDeviceToken(_ token: Data) {
         let hex = token.map { String(format: "%02x", $0) }.joined()
         logger.info("APNs token captured: \(hex.prefix(8), privacy: .public)…")
+        writeKeychainString(account: Self.deviceTokenKeychainAccount, value: hex)
         Task { await self.postRegisterDevice(apnsToken: hex) }
     }
 

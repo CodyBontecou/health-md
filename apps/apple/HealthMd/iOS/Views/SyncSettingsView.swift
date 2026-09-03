@@ -12,6 +12,7 @@ struct SyncSettingsView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject var directWakeManager: IPhoneDirectWakeManager
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage(IPhoneDirectCLIService.enabledKey) private var directCLIEnabled = false
     @AppStorage(IPhoneDirectCLIService.hostKey) private var directCLIHost = ""
@@ -420,6 +421,43 @@ struct SyncSettingsView: View {
                 }
                 .tint(Color.accent)
                 .accessibilityIdentifier(AccessibilityID.Sync.directCLIToggle)
+
+                if directCLIService.hasPairedCLI {
+                    SyncRowDivider()
+                    Toggle(isOn: Binding(
+                        get: {
+                            if case .enrolled = directWakeManager.state { return true }
+                            return false
+                        },
+                        set: { enabled in
+                            configurationProtection.performConfigurationChange {
+                                Task { @MainActor in
+                                    if enabled {
+                                        await directWakeManager.enable()
+                                    } else {
+                                        await directWakeManager.disable()
+                                    }
+                                }
+                            }
+                        }
+                    )) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Allow paired computers to send wake requests")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Get a notification when the CLI is waiting for this phone, so unlocking and opening Health.md finishes the same command. Requires the wake service; the CLI keeps waiting without it.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                    }
+                    .tint(Color.accent)
+                    .disabled(directWakeManager.state == .enrolling)
+                    if case .unavailable(let reason) = directWakeManager.state {
+                        Text(reason)
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
 
                 if directCLIService.needsPairingCode,
                    directCLIService.pendingPairingLink == nil {

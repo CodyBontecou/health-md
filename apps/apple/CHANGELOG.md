@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- RFC-0005 P2 wake notifications: an opt-in Direct CLI Access setting registers a per-pairing wake key with the notifications worker and forwards the enrollment to the paired CLI, which can request one visible "requesting data" push while its wake window holds. Until the worker deploys, the setting reports unavailable and waiting stays notification-free.
+
 ### Changed
 - Direct CLI QR and manual onboarding now use the same high-entropy 20-digit pairing code as Android through shared pairing selector 3; six-digit Apple pairing remains only as a legacy CLI fallback.
 - The iPhone Sync tab now separates Mac Destination and CLI setup with a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first.

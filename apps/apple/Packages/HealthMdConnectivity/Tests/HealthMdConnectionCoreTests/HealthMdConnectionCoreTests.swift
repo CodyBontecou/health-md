@@ -316,6 +316,59 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         )
     }
 
+    func testWakeEnrollmentAndCapabilityUseExactWireShapes() throws {
+        let key = Data(repeating: 7, count: 32)
+        let enrollment = DirectWakeEnrollment(
+            wakeID: "wake-opaque-one",
+            wakeKey: key.base64EncodedString()
+        )
+        XCTAssertTrue(enrollment.isValid)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let message = try JSONSerialization.jsonObject(
+            with: encoder.encode(DirectMessage.wakeEnrollment(enrollment))
+        ) as? [String: Any]
+        let wrapped = message?["wakeEnrollment"] as? [String: Any]
+        let payload = wrapped?["_0"] as? [String: Any]
+        XCTAssertEqual(payload?.count, 2)
+        XCTAssertEqual(payload?["wakeID"] as? String, "wake-opaque-one")
+        XCTAssertEqual(payload?["wakeKey"] as? String, key.base64EncodedString())
+
+        let capabilities = DirectPeerCapabilities(
+            platform: .iOS,
+            installationID: UUID(),
+            wake: DirectWakeCapabilities(supported: true)
+        )
+        let capabilitiesData = try encoder.encode(capabilities)
+        let decoded = try JSONDecoder().decode(DirectPeerCapabilities.self, from: capabilitiesData)
+        XCTAssertEqual(decoded.wake, DirectWakeCapabilities(supported: true))
+        // A hello without the wake field decodes as unsupported — older peers stay compatible.
+        var legacy = try JSONSerialization.jsonObject(with: capabilitiesData) as! [String: Any]
+        legacy.removeValue(forKey: "wake")
+        let legacyDecoded = try JSONDecoder().decode(
+            DirectPeerCapabilities.self, from: JSONSerialization.data(withJSONObject: legacy)
+        )
+        XCTAssertNil(legacyDecoded.wake)
+    }
+
+    func testWakeEnrollmentValidityFailsClosed() {
+        let validKey = Data(repeating: 1, count: 32).base64EncodedString()
+        XCTAssertFalse(DirectWakeEnrollment(wakeID: "", wakeKey: validKey).isValid)
+        XCTAssertFalse(
+            DirectWakeEnrollment(
+                wakeID: String(repeating: "a", count: 129), wakeKey: validKey
+            ).isValid
+        )
+        XCTAssertFalse(DirectWakeEnrollment(wakeID: "bad\nkey", wakeKey: validKey).isValid)
+        XCTAssertFalse(
+            DirectWakeEnrollment(
+                wakeID: "ok", wakeKey: Data(repeating: 1, count: 31).base64EncodedString()
+            ).isValid
+        )
+        XCTAssertFalse(DirectWakeEnrollment(wakeID: "ok", wakeKey: "not base64 !!").isValid)
+    }
+
     func testProfilePolicyMatchesSwiftReferenceFixture() throws {
         // Export-profiles decision 10: byte-exact reference vectors for the
         // additive settings_policy=profile request shape. Values deliberately

@@ -78,6 +78,38 @@ public enum DirectQueryDetailLevel: String, Codable, CaseIterable, Equatable, Ha
     case lossless
 }
 
+/// RFC-0005 P2 wake capability advertised on the hello. Absent means unsupported; a peer that
+/// did not advertise must never send or receive a wake enrollment.
+public struct DirectWakeCapabilities: Codable, Equatable, Sendable {
+    public let supported: Bool
+
+    public init(supported: Bool) {
+        self.supported = supported
+    }
+}
+
+/// Wake enrollment the phone delivers immediately after a hello when both sides advertised
+/// wake support. `wakeKey` is base64 of exactly 32 random bytes used only for the worker HMAC;
+/// it is never derived from or reused for pairing, channel, or session secrets.
+public struct DirectWakeEnrollment: Codable, Equatable, Sendable {
+    public let wakeID: String
+    public let wakeKey: String
+
+    public init(wakeID: String, wakeKey: String) {
+        self.wakeID = wakeID
+        self.wakeKey = wakeKey
+    }
+
+    /// The identifier stays opaque (1...128 printable ASCII bytes) and the key must decode to
+    /// exactly 32 bytes before anything is persisted or forwarded.
+    public var isValid: Bool {
+        guard (1...128).contains(wakeID.utf8.count),
+              wakeID.utf8.allSatisfy({ (0x20...0x7e).contains($0) }),
+              let key = Data(base64Encoded: wakeKey) else { return false }
+        return key.count == 32
+    }
+}
+
 public struct DirectQueryCapabilities: Codable, Equatable, Sendable {
     public let schemaVersions: [Int]
     public let operations: [String]
@@ -125,6 +157,7 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
     public let supportsCanonicalExtraction: Bool
     public let transfer: DirectTransferCapabilities
     public let query: DirectQueryCapabilities?
+    public let wake: DirectWakeCapabilities?
 
     public init(
         protocolVersions: [Int] = [HealthMdDirectProtocol.currentVersion],
@@ -134,7 +167,8 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         supportsDurableJobs: Bool = true,
         supportsCanonicalExtraction: Bool = true,
         transfer: DirectTransferCapabilities = .current,
-        query: DirectQueryCapabilities? = nil
+        query: DirectQueryCapabilities? = nil,
+        wake: DirectWakeCapabilities? = nil
     ) {
         self.protocolVersions = Array(Set(protocolVersions)).sorted()
         self.platform = platform
@@ -144,6 +178,7 @@ public struct DirectPeerCapabilities: Codable, Equatable, Sendable {
         self.supportsCanonicalExtraction = supportsCanonicalExtraction
         self.transfer = transfer
         self.query = query
+        self.wake = wake
     }
 
     public func negotiatedProtocolVersion(with peer: Self) -> Int? {
@@ -580,6 +615,7 @@ public struct DirectExportFailure: Codable, Equatable, Sendable {
 
 public enum DirectMessage: Codable, Equatable, Sendable {
     case hello(DirectPeerCapabilities)
+    case wakeEnrollment(DirectWakeEnrollment)
     case statusRequest(DirectStatusRequest)
     case statusResponse(DirectIPhoneStatus)
     case exportRequest(DirectExportRequest)

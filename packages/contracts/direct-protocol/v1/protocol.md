@@ -145,18 +145,21 @@ durable jobs, canonical extraction, and transfer capabilities `[1]`, binary fram
 intersect partition bounds, clamp the larger preferred size into the intersection, and clamp the
 minimum peer window to 1–8.
 
-## Wake enrollment (RFC-0005 P2; CLI side implemented, phone side pending worker deployment)
+## Wake enrollment (RFC-0005 P2; implemented in-repo, activation pending worker deployment)
 
-Status: the portable CLI now advertises the wake capability, accepts and stores enrollments,
-rotates on re-enrollment, removes the material with the trust entry on unpair, and sends one
-best-effort worker wake request at the start of each wake window (the `wake-worker` build
-feature; `HEALTHMD_WAKE_WORKER_URL`; `--no-wake`/`HEALTHMD_NO_WAKE` opt out — the default
-build keeps its no-remote-HTTP guarantee). No current mobile app enrolls yet — phone-side
-enrollment waits on the external worker
-([spec](../../../../docs/architecture/rfc-0005-worker-spec.md)) — so deployed behavior remains
-wait-only P1 and no fixture exists yet. This section changes no shipped v1 byte, discriminator,
-transcript, or fixture; it follows the same additive, capability-gated pattern query protocol v3
-used on v1.
+Status: both sides are implemented. The portable CLI advertises the wake capability, accepts
+and stores enrollments, rotates on re-enrollment, removes the material with the trust entry on
+unpair, and sends one best-effort worker wake request at the start of each wake window (the
+`wake-worker` build feature; `HEALTHMD_WAKE_WORKER_URL`; `--no-wake`/`HEALTHMD_NO_WAKE` opt out —
+the default build keeps its no-remote-HTTP guarantee). The iPhone advertises wake in its hello
+when the opt-in setting is enabled, sends the enrollment immediately after a CLI hello that
+advertised wake support, and stores its half in the Keychain; enabling requests notification
+authorization, registers the verification hash and APNs token with the worker, and removing the
+pairing deletes both sides' material. Because the worker
+([spec](../../../../docs/architecture/rfc-0005-worker-spec.md)) is not deployed yet, enrollment
+cannot complete and deployed behavior remains wait-only P1; no fixture exists yet. This section
+changes no shipped v1 byte, discriminator, transcript, or fixture; it follows the same additive,
+capability-gated pattern query protocol v3 used on v1.
 
 - Each side may add an optional `wake` object to its `PeerCapabilities` hello:
   `{ "supported": <bool> }`. Absent means unsupported. Peers that did not advertise wake support

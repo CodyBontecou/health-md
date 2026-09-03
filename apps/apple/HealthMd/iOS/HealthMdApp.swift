@@ -7,6 +7,17 @@ import WidgetKit
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // RFC-0005 P2: the worker's wake notification carries this category. Tapping it is the
+        // user-presence surface — the app foregrounds, the direct service reconnects, and the
+        // CLI's in-flight wait completes — so no further payload handling is required here.
+        UNUserNotificationCenter.current().setNotificationCategories([
+            UNNotificationCategory(
+                identifier: IPhoneDirectWakeManager.notificationCategory,
+                actions: [],
+                intentIdentifiers: [],
+                options: []
+            ),
+        ])
         return true
     }
 
@@ -125,7 +136,8 @@ struct HealthMdApp: App {
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
-    @StateObject private var directCLIService = IPhoneDirectCLIService()
+    @StateObject private var directCLIService: IPhoneDirectCLIService
+    @StateObject private var directWakeManager = IPhoneDirectWakeManager()
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
     @StateObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
@@ -151,8 +163,11 @@ struct HealthMdApp: App {
 
         let advancedSettings = AdvancedExportSettings()
         let apiExportSettings = APIExportSettings()
+        let directWakeManager = IPhoneDirectWakeManager()
         _advancedSettings = StateObject(wrappedValue: advancedSettings)
         _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
+        _directWakeManager = StateObject(wrappedValue: directWakeManager)
+        _directCLIService = StateObject(wrappedValue: IPhoneDirectCLIService(wakeManager: directWakeManager))
         _configurationProtection = StateObject(wrappedValue: ConfigurationProtectionManager())
         _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
             settings: advancedSettings,
@@ -326,6 +341,7 @@ struct HealthMdApp: App {
             .environmentObject(healthKitManager)
             .environmentObject(syncService)
             .environmentObject(directCLIService)
+            .environmentObject(directWakeManager)
             .environmentObject(externalIntegrationManager)
             .environmentObject(corpusRecoveryManager)
             .environmentObject(advancedSettings)
