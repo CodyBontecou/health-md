@@ -5,16 +5,21 @@
 //! metric identity, and no request contents; only the opaque `wakeId`, a nonce, a timestamp, the
 //! domain-separated HMAC, and this computer's display name.
 
-use std::time::Duration;
-
 use base64::Engine as _;
+#[cfg(any(test, feature = "wake-worker"))]
 use hmac::{Hmac, Mac as _};
-use serde_json::json;
+#[cfg(any(test, feature = "wake-worker"))]
 use sha2::Sha256;
+
+#[cfg(feature = "wake-worker")]
+use serde_json::json;
+#[cfg(feature = "wake-worker")]
+use std::time::Duration;
 
 /// Domain separation label for wake HMACs. Must match the worker specification exactly.
 pub const WAKE_HMAC_DOMAIN: &str = "healthmd.wake.v1";
 
+#[cfg(feature = "wake-worker")]
 const WAKE_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// The configured worker base URL, or `None` when wake requests are unconfigured.
@@ -30,6 +35,7 @@ pub(crate) fn base_url_from(value: Option<&str>) -> Option<String> {
     (!trimmed.is_empty()).then(|| trimmed.to_owned())
 }
 
+#[cfg(any(test, feature = "wake-worker"))]
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().fold(
         String::with_capacity(bytes.len() * 2),
@@ -41,6 +47,7 @@ fn hex(bytes: &[u8]) -> String {
     )
 }
 
+#[cfg(any(test, feature = "wake-worker"))]
 fn request_hmac_hex(wake_key: &[u8], nonce_hex: &str, timestamp: &str) -> Result<String, String> {
     let mut mac = Hmac::<Sha256>::new_from_slice(wake_key)
         .map_err(|error| format!("wake key rejected: {error}"))?;
@@ -97,7 +104,12 @@ pub async fn request_wake(
 }
 
 /// Without the `wake-worker` feature the nudge is a compile-time no-op that degrades to P1.
+///
+/// # Errors
+///
+/// Always returns an error explaining that worker support is not compiled in.
 #[cfg(not(feature = "wake-worker"))]
+#[allow(clippy::unused_async)]
 pub async fn request_wake(
     _base_url: &str,
     _wake_id: &str,
