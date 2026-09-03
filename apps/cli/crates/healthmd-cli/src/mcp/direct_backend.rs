@@ -42,11 +42,13 @@ struct DirectBackendConfiguration {
     port: u16,
     timeout: Duration,
     wake_window: WakeWindow,
+    wake_requests: bool,
 }
 
 impl DirectIphoneBackend {
     pub fn open(options: &ServeOptions) -> Result<Self, ServeError> {
         let wake_window = configured_wake_window(options)?;
+        let wake_requests = std::env::var("HEALTHMD_NO_WAKE").ok().as_deref() != Some("1");
         let client = Arc::new(DirectClient::open().map_err(|_| ServeError)?);
         let operation_gate = Arc::new(Mutex::new(()));
         let pairing = PairingCoordinator::new(
@@ -62,6 +64,7 @@ impl DirectIphoneBackend {
                 port: options.port,
                 timeout: Duration::from_secs(options.timeout_seconds),
                 wake_window,
+                wake_requests,
             },
             operation_gate,
             pairing,
@@ -79,13 +82,15 @@ impl DirectIphoneBackend {
         device_id: Option<Uuid>,
     ) -> Result<(), BackendError> {
         let wake_window = self.configuration.wake_window;
+        let wake_request = self.configuration.wake_requests;
         self.client
             .wait_for_active_source(
                 device_id,
                 self.configuration.port,
                 wake_window,
+                wake_request,
                 &context.cancellation,
-                |progress| {
+                |progress: healthmd_client::direct::WakeProgress| {
                     context.report_progress(ProgressUpdate {
                         progress: progress.elapsed_seconds,
                         total: Some(progress.timeout_seconds),

@@ -17,6 +17,7 @@ pub mod storage;
 pub mod trust;
 pub mod v2_job;
 pub mod v2_receiver;
+pub mod wake;
 
 #[doc(hidden)]
 pub use limits::{OutputStorageReservation, reserve_output_capacity};

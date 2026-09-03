@@ -287,6 +287,7 @@ async fn authenticate_inner<C: CredentialStore>(
         reconnect_secret,
         paired_at: existing.as_ref().map_or(now, |saved| saved.paired_at),
         last_connected_at: now,
+        wake: existing.and_then(|saved| saved.wake),
     };
     state.save_client(device.clone())?;
     let _ = remaining(deadline)?;
@@ -514,6 +515,7 @@ mod tests {
                 reconnect_secret: vec![7; 32],
                 paired_at: now,
                 last_connected_at: now,
+                wake: None,
             })
             .unwrap();
         store.save(&state).await.unwrap();

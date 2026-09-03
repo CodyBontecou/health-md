@@ -40,6 +40,22 @@ pub struct TrustedClient {
     pub paired_at: DateTime<Utc>,
     #[serde(rename = "lastConnectedAt", with = "apple_reference_date")]
     pub last_connected_at: DateTime<Utc>,
+    /// RFC-0005 P2 wake material enrolled by this paired phone. Stored next to the pairing
+    /// trust under the same peer binding so unpairing removes it atomically.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wake: Option<TrustedWakeCredential>,
+}
+
+/// Persisted per-pairing wake credential. The key exists only to build the worker HMAC;
+/// it is never reused for pairing, channel, or session authentication.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct TrustedWakeCredential {
+    #[serde(rename = "wakeID")]
+    pub wake_id: String,
+    #[serde(rename = "wakeKey", with = "data")]
+    pub wake_key: Vec<u8>,
+    #[serde(rename = "enrolledAt", with = "apple_reference_date")]
+    pub enrolled_at: DateTime<Utc>,
 }
 
 impl TrustedClient {
@@ -215,6 +231,7 @@ mod tests {
                 reconnect_secret: vec![7; 32],
                 paired_at: now,
                 last_connected_at: now,
+                wake: None,
             })
             .unwrap();
         assert!(!state.set_client_platform(device.0, PeerPlatform::Android));

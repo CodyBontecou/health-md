@@ -51,6 +51,7 @@ fn rust_matches_swift_direct_query_v3_fixture() {
         supports_canonical_extraction: true,
         transfer: TransferCapabilities::default(),
         query: Some(DirectQueryCapabilities::current()),
+        wake: None,
     };
     assert_eq!(
         serde_json::to_value(DirectMessage::Hello(Unlabeled::from(peer))).unwrap(),

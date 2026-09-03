@@ -160,6 +160,39 @@ impl Default for TransferCapabilities {
     }
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct WakeCapabilities {
+    pub supported: bool,
+}
+
+/// RFC-0005 P2 wake enrollment delivered by the phone immediately after its hello when both
+/// sides advertised wake support. `wake_key` is base64 of exactly 32 random bytes generated
+/// solely for wake HMAC verification; it is never derived from or reused for pairing, channel,
+/// or session secrets.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct WakeEnrollment {
+    #[serde(rename = "wakeID")]
+    pub wake_id: String,
+    #[serde(rename = "wakeKey")]
+    pub wake_key: String,
+}
+
+impl WakeEnrollment {
+    /// Validate the enrollment shape before anything is persisted. The identifier stays opaque;
+    /// the key must decode to exactly 32 bytes.
+    #[must_use]
+    pub fn is_valid(&self) -> bool {
+        !self.wake_id.is_empty()
+            && self.wake_id.len() <= 128
+            && !self
+                .wake_id
+                .bytes()
+                .any(|byte| !(0x20..=0x7e).contains(&byte))
+            && base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &self.wake_key)
+                .is_ok_and(|bytes| bytes.len() == 32)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PeerCapabilities {
     #[serde(rename = "protocolVersions")]
@@ -176,6 +209,8 @@ pub struct PeerCapabilities {
     pub transfer: TransferCapabilities,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query: Option<DirectQueryCapabilities>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wake: Option<WakeCapabilities>,
 }
 
 impl PeerCapabilities {
@@ -193,6 +228,7 @@ impl PeerCapabilities {
             supports_canonical_extraction: true,
             transfer: TransferCapabilities::default(),
             query: None,
+            wake: Some(WakeCapabilities { supported: true }),
         }
     }
 
@@ -359,6 +395,8 @@ pub enum DirectMessage {
     QueryResponse(Unlabeled<DirectQueryResponse>),
     #[serde(rename = "queryRejected")]
     QueryRejected(Unlabeled<DirectQueryFailure>),
+    #[serde(rename = "wakeEnrollment")]
+    WakeEnrollment(Unlabeled<WakeEnrollment>),
     #[serde(rename = "exportAccepted")]
     ExportAccepted(Unlabeled<ExportAccepted>),
     #[serde(rename = "exportProgress")]

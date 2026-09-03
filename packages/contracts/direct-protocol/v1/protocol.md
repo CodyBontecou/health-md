@@ -145,13 +145,17 @@ durable jobs, canonical extraction, and transfer capabilities `[1]`, binary fram
 intersect partition bounds, clamp the larger preferred size into the intersection, and clamp the
 minimum peer window to 1–8.
 
-## Wake enrollment (planned — RFC-0005 P2; not implemented)
+## Wake enrollment (RFC-0005 P2; CLI side implemented, phone side pending worker deployment)
 
-Status: staged design only. No current peer sends or accepts any wake message, no fixture exists,
-and implementing it requires the external consumer-notifications-worker endpoints plus a security
-review of the wake-key domain separation to land first ([RFC-0005](../../../../docs/architecture/rfc-0005-direct-cli-agent-wake.md)).
-Nothing in this section changes any v1 byte, discriminator, transcript, or fixture shipped today;
-it follows the same additive, capability-gated pattern query protocol v3 used on v1.
+Status: the portable CLI now advertises the wake capability, accepts and stores enrollments,
+rotates on re-enrollment, removes the material with the trust entry on unpair, and sends one
+best-effort worker wake request at the start of each wake window (`HEALTHMD_WAKE_WORKER_URL`;
+`--no-wake`/`HEALTHMD_NO_WAKE` opt out). No current mobile app enrolls yet — phone-side
+enrollment waits on the external worker
+([spec](../../../../docs/architecture/rfc-0005-worker-spec.md)) — so deployed behavior remains
+wait-only P1 and no fixture exists yet. This section changes no shipped v1 byte, discriminator,
+transcript, or fixture; it follows the same additive, capability-gated pattern query protocol v3
+used on v1.
 
 - Each side may add an optional `wake` object to its `PeerCapabilities` hello:
   `{ "supported": <bool> }`. Absent means unsupported. Peers that did not advertise wake support

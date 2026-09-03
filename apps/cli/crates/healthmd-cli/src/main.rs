@@ -364,6 +364,10 @@ struct WakeArgs {
     /// Seconds to wait for an unavailable paired phone to become active; 0 disables waiting.
     #[arg(long, default_value_t = DEFAULT_WAKE_TIMEOUT_SECONDS)]
     wake_timeout: u64,
+
+    /// Skip the best-effort push-notification nudge for this command (RFC-0005 P2).
+    #[arg(long)]
+    no_wake: bool,
 }
 
 #[derive(Debug, Args)]
@@ -1303,8 +1307,9 @@ async fn wait_for_wake_window(
             device,
             port,
             WakeWindow::from_seconds(options.wake_timeout),
+            !options.no_wake,
             &tokio_util::sync::CancellationToken::new(),
-            |progress| eprintln!("{}", progress.message),
+            |progress: healthmd_client::direct::WakeProgress| eprintln!("{}", progress.message),
         )
         .await
         .map_err(|error| match error {

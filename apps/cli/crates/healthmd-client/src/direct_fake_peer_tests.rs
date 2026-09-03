@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Mutex, time::Duration};
 
 use async_trait::async_trait;
+use base64::Engine as _;
 use healthmd_protocol::{
     crypto,
     models::SettingsPolicy,
@@ -184,6 +185,7 @@ fn mobile_capabilities(
         supports_canonical_extraction: true,
         transfer: healthmd_protocol::wire::TransferCapabilities::default(),
         query,
+        wake: None,
     }
 }
 
@@ -579,6 +581,175 @@ async fn fake_android_peer_pairs_v2_without_downgrading_to_v1() {
     assert_eq!(paired.device.installation_id, trust.installation_id);
 }
 
+async fn respond_with_ios_status_enrolled(
+    port: u16,
+    trust: &FakeMobileTrust,
+    app_active: bool,
+    enrollment: Option<&healthmd_protocol::wire::WakeEnrollment>,
+) {
+    let (mut channel, reconnect) =
+        connect_fake_mobile(port, 1, &trust.display_name, None, Some(trust)).await;
+    let _ = receive_cli_hello(&mut channel).await;
+    let mut capabilities = mobile_capabilities(
+        &reconnect,
+        PeerPlatform::Ios,
+        vec![1, 3],
+        Some(DirectQueryCapabilities::current()),
+    );
+    capabilities.wake =
+        enrollment.map(|_| healthmd_protocol::wire::WakeCapabilities { supported: true });
+    channel
+        .send(&DirectMessage::Hello(Unlabeled::from(capabilities)))
+        .await
+        .unwrap();
+    if let Some(enrollment) = enrollment {
+        channel
+            .send(&DirectMessage::WakeEnrollment(Unlabeled::from(
+                enrollment.clone(),
+            )))
+            .await
+            .unwrap();
+    }
+    // A rejected (malformed) enrollment makes the CLI close without a status request; only a
+    // valid exchange continues to the status round trip.
+    match channel.receive().await {
+        Ok(SecurePayload::Message(message))
+            if matches!(*message, DirectMessage::StatusRequest(_)) => {}
+        _ => return,
+    }
+    channel
+        .send(&DirectMessage::StatusResponse(Unlabeled::from(
+            IphoneStatus {
+                name: trust.display_name.clone(),
+                app_active,
+                protected_data_available: app_active,
+                export_in_progress: false,
+                can_trigger_raw_exports: app_active,
+                can_trigger_file_exports: app_active,
+                query_in_progress: Some(false),
+                can_trigger_queries: Some(app_active),
+                active_job_id: None,
+                active_query_request_id: None,
+                message: None,
+            },
+        )))
+        .await
+        .unwrap();
+}
+
+fn fake_enrollment(wake_id: &str) -> healthmd_protocol::wire::WakeEnrollment {
+    healthmd_protocol::wire::WakeEnrollment {
+        wake_id: wake_id.to_owned(),
+        wake_key: base64::engine::general_purpose::STANDARD.encode([9_u8; 32]),
+    }
+}
+
+#[tokio::test]
+async fn wake_enrollment_round_trips_rotates_and_unpair_removes_it() {
+    let temporary = TempDir::new().unwrap();
+    let client = test_client(&temporary);
+    let trust = pair_fake_ios(&client).await;
+    let device = trust.installation_id.0;
+    let probe = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .unwrap();
+    let port = probe.local_addr().unwrap().port();
+    drop(probe);
+
+    let first = fake_enrollment("wake-opaque-one");
+    let status = client.status(Some(device), port, Duration::from_secs(20));
+    let peer = respond_with_ios_status_enrolled(port, &trust, true, Some(&first));
+    let (status, ()) = tokio::join!(status, peer);
+    assert!(status.is_ok());
+    let stored = client
+        .wake_credential(device)
+        .await
+        .unwrap()
+        .expect("enrolled");
+    assert_eq!(stored.wake_id, "wake-opaque-one");
+    assert_eq!(stored.wake_key, vec![9_u8; 32]);
+
+    let second = fake_enrollment("wake-opaque-two");
+    let status = client.status(Some(device), port, Duration::from_secs(20));
+    let peer = respond_with_ios_status_enrolled(port, &trust, true, Some(&second));
+    let (status, ()) = tokio::join!(status, peer);
+    assert!(status.is_ok());
+    assert_eq!(
+        client
+            .wake_credential(device)
+            .await
+            .unwrap()
+            .unwrap()
+            .wake_id,
+        "wake-opaque-two",
+        "a later enrollment must rotate the stored material"
+    );
+
+    client.unpair(device).await.unwrap();
+    assert!(client.wake_credential(device).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn wake_enrollment_without_advertised_support_fails_closed() {
+    let temporary = TempDir::new().unwrap();
+    let client = test_client(&temporary);
+    let trust = pair_fake_ios(&client).await;
+    let device = trust.installation_id.0;
+    let probe = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .unwrap();
+    let port = probe.local_addr().unwrap().port();
+    drop(probe);
+
+    // The phone does NOT advertise wake, but sends the enrollment anyway: the CLI expects the
+    // status response next and must fail closed instead of storing anything.
+    let rogue = async {
+        let (mut channel, reconnect) =
+            connect_fake_mobile(port, 1, &trust.display_name, None, Some(&trust)).await;
+        let _ = receive_cli_hello(&mut channel).await;
+        channel
+            .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
+                &reconnect,
+                PeerPlatform::Ios,
+                vec![1, 3],
+                Some(DirectQueryCapabilities::current()),
+            ))))
+            .await
+            .unwrap();
+        channel
+            .send(&DirectMessage::WakeEnrollment(Unlabeled::from(
+                fake_enrollment("wake-rogue"),
+            )))
+            .await
+            .unwrap();
+    };
+    let status = client.status(Some(device), port, Duration::from_secs(20));
+    let (status, ()) = tokio::join!(status, rogue);
+    assert!(matches!(status, Err(ClientError::UnexpectedMessage)));
+    assert!(client.wake_credential(device).await.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn malformed_wake_enrollment_is_rejected_without_persisting() {
+    let temporary = TempDir::new().unwrap();
+    let client = test_client(&temporary);
+    let trust = pair_fake_ios(&client).await;
+    let device = trust.installation_id.0;
+    let probe = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .unwrap();
+    let port = probe.local_addr().unwrap().port();
+    drop(probe);
+
+    let mut short_key = fake_enrollment("wake-short");
+    short_key.wake_key = base64::engine::general_purpose::STANDARD.encode([1_u8; 8]);
+    let status = client.status(Some(device), port, Duration::from_secs(20));
+    let peer = respond_with_ios_status_enrolled(port, &trust, true, Some(&short_key));
+    let (status, ()) = tokio::join!(status, peer);
+    assert!(matches!(status, Err(ClientError::UnexpectedMessage)));
+    assert!(client.wake_credential(device).await.unwrap().is_none());
+}
+
 #[tokio::test]
 async fn wake_window_retries_an_inactive_peer_until_it_is_active() {
     let temporary = TempDir::new().unwrap();
@@ -595,6 +766,7 @@ async fn wake_window_retries_an_inactive_peer_until_it_is_active() {
         Some(trust.installation_id.0),
         port,
         WakeWindow::from_seconds(3),
+        false,
         &cancellation,
         |update| progress.push(update),
     );
@@ -625,6 +797,7 @@ async fn wake_window_retries_an_inactive_android_peer_until_it_is_active() {
         Some(trust.installation_id.0),
         port,
         WakeWindow::from_seconds(3),
+        false,
         &cancellation,
         |update| progress.push(update),
     );
@@ -655,6 +828,7 @@ async fn wake_window_retries_an_unreachable_peer_until_it_is_active() {
         Some(trust.installation_id.0),
         port,
         WakeWindow::from_seconds(3),
+        false,
         &cancellation,
         |update| progress.push(update),
     );
@@ -685,6 +859,7 @@ async fn wake_window_expiry_is_bounded_when_the_peer_is_unreachable() {
             Some(trust.installation_id.0),
             port,
             WakeWindow::from_seconds(1),
+            false,
             &tokio_util::sync::CancellationToken::new(),
             |_| {},
         )
@@ -710,6 +885,7 @@ async fn wake_window_deadline_covers_authenticated_status_exchange() {
                 Some(trust.installation_id.0),
                 port,
                 WakeWindow::from_seconds(1),
+                false,
                 &tokio_util::sync::CancellationToken::new(),
                 |_| {},
             )
@@ -748,6 +924,7 @@ async fn wake_window_cancellation_is_not_phone_side_cancellation() {
             Some(trust.installation_id.0),
             port,
             WakeWindow::from_seconds(3),
+            false,
             &cancellation,
             |_| {},
         )
@@ -765,6 +942,7 @@ async fn disabled_wake_window_performs_no_network_preflight() {
             None,
             0,
             WakeWindow::from_seconds(0),
+            false,
             &tokio_util::sync::CancellationToken::new(),
             |_| panic!("disabled wake must not report progress"),
         )

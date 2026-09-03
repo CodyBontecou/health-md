@@ -395,7 +395,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let device_id = connection.device.installation_id.0;
         let was_new_pairing = connection.was_new_pairing;
         let result = async {
-            let peer =
+            let (peer, wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             let (source, _) = validate_source_peer(&connection.channel, &peer)?;
             if expected_source.is_some_and(|expected| expected != source) {
@@ -419,6 +419,9 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             }
             self.remember_platform(device_id, peer.platform).await?;
             connection.device.platform = Some(peer.platform);
+            if let Some(enrollment) = wake_enrollment {
+                self.store_wake_enrollment(device_id, enrollment).await?;
+            }
             Ok(PairingResult {
                 device: connection.device,
                 source,
@@ -466,6 +469,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         device_id: Option<Uuid>,
         port: u16,
         wake_window: WakeWindow,
+        wake_request: bool,
         cancellation: &CancellationToken,
         mut on_progress: F,
     ) -> Result<(), ClientError>
@@ -476,6 +480,24 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             return Ok(());
         }
         let selected = self.selected_device_id(device_id).await?;
+        if wake_request {
+            // RFC-0005 P2: one best-effort nudge at wait start. Missing configuration, an
+            // unreachable worker, or a rejected request degrades silently to the wait-only
+            // window; the data path never depends on the worker.
+            if let (Some(base_url), Ok(Some(credential))) = (
+                crate::wake::worker_base_url(),
+                self.wake_credential(selected).await,
+            ) {
+                let label = self.display_name.clone();
+                let _ = crate::wake::request_wake(
+                    &base_url,
+                    &credential.wake_id,
+                    &credential.wake_key,
+                    &label,
+                )
+                .await;
+            }
+        }
         let source = self.selected_source(Some(selected)).await?;
         let waiting_message = match source.platform {
             Some(PeerPlatform::Android) => {
@@ -566,10 +588,14 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let mut connection = self
             .accept_compatible(listener, None, Some(selected), timeout)
             .await?;
-        let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+        let (peer, wake_enrollment) =
+            exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
         let (source, application_protocol_version) =
             validate_source_peer(&connection.channel, &peer)?;
         self.remember_platform(selected, peer.platform).await?;
+        if let Some(enrollment) = wake_enrollment {
+            self.store_wake_enrollment(selected, enrollment).await?;
+        }
 
         let (status, android_capabilities) = match source {
             SourceKind::Ios => {
@@ -676,7 +702,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let mut connection = self
             .accept_compatible(&listener, None, Some(selected), timeout)
             .await?;
-        let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+        let (peer, _wake_enrollment) =
+            exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
         let (source, _) = validate_source_peer(&connection.channel, &peer)?;
         self.remember_platform(selected, peer.platform).await?;
         if source != SourceKind::Ios
@@ -867,7 +894,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), overall_remaining)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             let (source, version) = validate_source_peer(&connection.channel, &peer)?;
             if source != SourceKind::Android || version != ANDROID_APPLICATION_PROTOCOL_VERSION {
@@ -1070,7 +1097,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             let negotiation = negotiate_transfer(
@@ -1211,7 +1238,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             let negotiation = negotiate_transfer(
@@ -1392,7 +1419,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), remaining)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             if validate_source_peer(&connection.channel, &peer)?.0 != SourceKind::Android {
                 return Err(ClientError::Authentication(
@@ -1466,7 +1493,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             connection
@@ -2145,6 +2172,52 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         self.trust_store.load(self.identity.installation_id).await
     }
 
+    /// The persisted RFC-0005 P2 wake credential for a paired device, if any. `None` means
+    /// wait-only P1 behavior.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when native trust state cannot be read.
+    pub async fn wake_credential(
+        &self,
+        device_id: Uuid,
+    ) -> Result<Option<crate::trust::TrustedWakeCredential>, ClientError> {
+        Ok(self
+            .load_trust()
+            .await?
+            .client(device_id)
+            .and_then(|client| client.wake.clone()))
+    }
+
+    /// Persist a wake enrollment from a paired phone under its existing trust binding. A later
+    /// enrollment replaces the stored material (rotation); unpairing removes it with the trust
+    /// entry.
+    async fn store_wake_enrollment(
+        &self,
+        device_id: Uuid,
+        enrollment: healthmd_protocol::wire::WakeEnrollment,
+    ) -> Result<(), ClientError> {
+        if !enrollment.is_valid() {
+            return Err(ClientError::UnexpectedMessage);
+        }
+        let wake_key = crate::wake::decode_wake_key(&enrollment.wake_key)
+            .ok_or(ClientError::UnexpectedMessage)?;
+        let _lease = acquire_trust_lease(self.layout.clone()).await?;
+        let mut state = self.load_trust().await?;
+        let now = Utc::now();
+        let client = state
+            .trusted_clients
+            .iter_mut()
+            .find(|client| client.installation_id.0 == device_id)
+            .ok_or(ClientError::DeviceNotPaired(device_id))?;
+        client.wake = Some(crate::trust::TrustedWakeCredential {
+            wake_id: enrollment.wake_id,
+            wake_key,
+            enrolled_at: now,
+        });
+        self.trust_store.save(&state).await
+    }
+
     async fn remember_platform(
         &self,
         device_id: Uuid,
@@ -2334,15 +2407,35 @@ async fn bind_listener(port: u16) -> Result<TcpListener, ClientError> {
 async fn exchange_hello(
     channel: &mut SecureChannel,
     installation_id: SwiftUuid,
-) -> Result<PeerCapabilities, ClientError> {
+) -> Result<
+    (
+        PeerCapabilities,
+        Option<healthmd_protocol::wire::WakeEnrollment>,
+    ),
+    ClientError,
+> {
     let local = PeerCapabilities::portable_cli_all_versions(installation_id);
     channel
         .send(&DirectMessage::Hello(Unlabeled::from(local)))
         .await?;
-    match receive_message(channel, Duration::from_secs(10)).await? {
-        DirectMessage::Hello(Unlabeled { value }) => Ok(value),
-        _ => Err(ClientError::UnexpectedMessage),
-    }
+    let DirectMessage::Hello(Unlabeled { value: peer }) =
+        receive_message(channel, Duration::from_secs(10)).await?
+    else {
+        return Err(ClientError::UnexpectedMessage);
+    };
+    // RFC-0005 P2: a phone that advertised wake support sends exactly one enrollment as the very
+    // next message; a phone that did not advertise must never send one, so any stray enrollment
+    // later in a stream fails closed as an unexpected message.
+    let enrollment =
+        if peer.wake == Some(healthmd_protocol::wire::WakeCapabilities { supported: true }) {
+            match receive_message(channel, Duration::from_secs(10)).await? {
+                DirectMessage::WakeEnrollment(Unlabeled { value }) => Some(value),
+                _ => return Err(ClientError::UnexpectedMessage),
+            }
+        } else {
+            None
+        };
+    Ok((peer, enrollment))
 }
 
 async fn receive_message(
