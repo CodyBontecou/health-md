@@ -1,0 +1,31 @@
+# RFC-0005 P2 wake worker — https://healthmd-wake.costream.workers.dev
+#
+# Provenance: the wake endpoints were originally specified to extend the
+# healthmd-receipt-verifier worker, whose source was lost with an old machine
+# (2026-09-03). Rather than reconstruct a production paywall/scheduling worker
+# blind, wake ships as this self-contained script. The receipt-verifier keeps
+# serving /verify-legacy*, /devices/register, and /schedules/upsert untouched.
+name = "healthmd-wake"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[vars]
+# Production for App Store/TestFlight builds (aps-environment=production).
+# Switch to api.sandbox.push.apple.com when testing against a development-signed build.
+APNS_HOST = "api.push.apple.com"
+BUNDLE_ID = "com.codybontecou.obsidianhealth"
+
+# D1 database for wake registrations, delivery counters, and replay nonces.
+# Create once with:
+#   wrangler d1 create healthmd-wake
+# then paste the database_id below and run:
+#   wrangler d1 migrations apply healthmd-wake --remote
+[[d1_databases]]
+binding = "DB"
+database_name = "healthmd-wake"
+database_id = "REPLACE_AFTER_D1_CREATE"
+
+# Secrets (set via `wrangler secret put`, never committed):
+#   APNS_AUTH_KEY — full PEM body of the .p8 APNs key
+#   APNS_KEY_ID   — 10-char Key ID matching APNS_AUTH_KEY
+#   APNS_TEAM_ID  — 10-char Apple Developer Team ID
