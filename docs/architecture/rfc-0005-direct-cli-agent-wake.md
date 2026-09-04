@@ -1,6 +1,6 @@
 # RFC-0005: Direct CLI agent wake — tap-to-unblock a locked phone
 
-- Status: **Proposed — P1 implemented and physically verified; P2 implemented with the `healthmd-wake` worker deployed 2026-09-03 (physical QA pending); P3 staged**
+- Status: **Accepted for staged rollout — P1 implemented, with basic iPhone/Android connectivity owner-confirmed and the full wake matrix pending; P2 implemented in-repo with the `healthmd-wake` worker deployed and enabled in every current-main CLI build (end-to-end notification QA pending); P3 planned**
 - Proposal date: 2026-09-02
 - Owners required for acceptance: Apple, Android, CLI, contracts, shared core, security/privacy, product/support, and the consumer notifications-worker owner
 - Related: [Cross-platform unification policy](cross-platform-unification-policy.md), [direct protocol contracts](../../packages/contracts/direct-protocol/README.md), [RFC-0004](rfc-0004-unified-health-data-v9.md)
@@ -38,7 +38,7 @@ Three independently shippable phases:
 | Phase | Scope | Infra |
 |---|---|---|
 | P1 — Wake window | Rust CLI/MCP holds a request and retries instead of failing fast | None |
-| P2 — iOS wake notification | Opt-in APNs wake via the existing consumer notifications worker; tap → foreground → P1 window completes | APNs + existing worker |
+| P2 — iOS wake notification | Opt-in APNs wake via the dedicated notification-only Worker; tap → foreground → P1 window completes | APNs + `apps/wake` |
 | P3 — Android parity | FCM high-priority wake; tap → unlock → start direct session; F-Droid degradation documented | FCM |
 
 P1 alone removes the re-run friction. P2/P3 add the notification so the user knows a request is waiting without watching the computer.
@@ -51,7 +51,7 @@ Behavior change in `apps/cli` (`healthmd-client/src/direct.rs`, MCP direct adapt
   - reuse the existing reconnect backoff (250 ms → 2 s) to re-attempt connection;
   - total window default **120 seconds**, overridable per command (`--wake-timeout <SECONDS>`, `0` disables) and for MCP via environment (`HEALTHMD_WAKE_TIMEOUT`);
   - the window is cancellable at every point; MCP cancellation requests interrupt the wait immediately (existing cancellation semantics are preserved — local interrupt ends the wait with a deterministic error, it is never confused with a terminal phone-side cancellation);
-  - emit MCP `notifications/progress` at wait start ("waiting for iPhone/Android; open Health.md or tap the notification") and every ~10 s, so agents can relay status to the user.
+  - emit MCP `notifications/progress` at wait start and every ~10 s, so agents can relay status to the user; mention a notification only when the selected device has enrolled wake material, otherwise instruct the owner to open Health.md.
 - On success: proceed exactly as if the phone had been available from the start. No behavioral difference in results, receipts, or errors.
 - On expiry: return today's deterministic `healthmd.cli_guidance` / `direct_source_unavailable` outcome, unchanged bytes, plus `wake_window_seconds` as an additive guidance field.
 - `healthmd status` output gains an additive `wake_window` object (enabled, timeout, enrollment state from P2/P3). The wake window and its state are implemented once in the CLI crates; the MCP server calls that same function and surfaces its output as an additive `wake` object in `healthmd.direct_readiness` plus the wait progress notifications. There is no parallel MCP-side wake implementation and no dedicated `healthmd_wake` tool.
@@ -60,7 +60,7 @@ Pure local change; no protocol or phone work required. Immediately useful even w
 
 ## P2 — iOS APNs wake
 
-Resolved (amended 2026-09-03, decision 4): wake endpoints ship as the dedicated `healthmd-wake` worker (`healthmd-wake.costream.workers.dev`, own D1, own APNs secret bindings) because the `healthmd-receipt-verifier` source was lost with an old machine and reconstructing a production paywall/scheduling worker blind was rejected. The receipt-verifier stays frozen and untouched. Rate limits are enforced per `wake_id` to isolate abuse. The full endpoint, verification, rate-limit, and notification contract is specified in [rfc-0005-worker-spec.md](rfc-0005-worker-spec.md).
+Resolved (amended 2026-09-03 and 2026-09-04, decisions 5–6): wake endpoints ship as the dedicated [`apps/wake`](../../apps/wake) Worker (`healthmd-wake.costream.workers.dev`, own D1, own APNs secret bindings) because the `healthmd-receipt-verifier` source was lost with an old machine and reconstructing a production paywall/scheduling worker blind was rejected. The Worker and its unsquashed history now live in the canonical monorepo; the receipt-verifier stays frozen and untouched. Rate limits are enforced per `wake_id` to isolate abuse. The full endpoint, verification, rate-limit, and notification contract is specified in [rfc-0005-worker-spec.md](rfc-0005-worker-spec.md).
 
 ### Enrollment (opt-in, from the phone)
 
@@ -125,15 +125,15 @@ Same user outcome — *"a paired computer is requesting data; tap to unblock"* �
 
 - Rust: wake-window unit/integration tests against the fake peer (connect-refused, `app_active: false`, late success, expiry, cancellation mid-wait, `--wake-timeout 0`), MCP progress/cancel behavior, credential storage round-trip for wake material, guidance-error byte compatibility on expiry.
 - Swift: enrollment control-message handling, capability gating, notification permission flow, delegate tap routing to Direct CLI Access, health-free notification copy assertions, unpair deletes wake material.
-- Worker (repo-external): HMAC verification, rate limit, dedupe, no-PII payload assertions.
+- Worker (`apps/wake`): HMAC verification, rate limit, dedupe, no-PII payload assertions, type-check, and a Wrangler dry-run bundle in component CI.
 - Android: FCM receiver posts notification (not a direct FGS start), tap starts session, `DEVICE_LOCKED` recovery via tap, F-Droid channel reports unavailable, trust-store persistence.
 - Physical QA: locked iPhone on LAN and Tailscale end-to-end (notification → tap → query completes inside the window); notification permission denied; unpair revocation; locked Android with/without active session; before-first-unlock-since-boot; force-stopped app documented limitation.
 
 ## Rollout
 
-1. P1 (Rust only) + docs/skill updates — implemented in the CLI workspace; ship in a CLI release after review and physical-device QA.
-2. Contracts (additive sections) → worker endpoints → iOS enrollment/notification → CLI wake POST; Apple release notes + CLI release.
-3. Android FCM + channel policy; Play/F-Droid release notes; capability registry updates at each phase boundary.
+1. P1 (Rust only) + docs/skill updates — shipped in alpha.6; iPhone and Android pairing/connectivity physically confirmed, with the full retained release matrix still pending.
+2. Contracts (additive sections) → worker endpoints → iOS enrollment/notification → CLI wake POST — implemented. Current `main` includes the worker client and canonical production URL in every CLI build; the next CLI release carries that default while iOS 3.3.0 completes App Store rollout and notification QA.
+3. Android FCM + channel policy — planned P3; Play/F-Droid release notes and capability registry must update at that phase boundary.
 
 ## Decisions
 
@@ -142,6 +142,7 @@ Same user outcome — *"a paired computer is requesting data; tap to unblock"* �
 3. **Worker home: extend the existing consumer worker** (2026-09-02; superseded 2026-09-03 by decision 5). Wake endpoints live on `healthmd-receipt-verifier`, reusing its APNs credentials and device-token store; abuse is isolated by per-`wake_id` rate limits rather than a separate deployment.
 4. **Notification names the requesting computer** (2026-09-02). Include the paired computer's device name when the transport can carry it; otherwise fall back to generic copy and record the reason.
 5. **Wake ships as the dedicated `healthmd-wake` worker; HMAC keyed by the verification hash** (2026-09-03). The `healthmd-receipt-verifier` source was lost with an old machine and cannot be recovered; rather than reconstruct a production paywall/scheduling worker blind, the wake endpoints ship as a self-contained script with their own D1 database and APNs secret bindings, leaving the receipt-verifier frozen. Simultaneously, the wake HMAC's key was corrected to `SHA-256(wakeKey)` (the registered verification hash): the original "raw key" construction is unverifiable from a hash-only store, and the corrected key keeps the RFC invariant that the raw key never crosses the wire to the worker. The construction is pinned cross-language in the Rust client tests and the worker's test suite.
+6. **Canonical source and default client activation** (2026-09-04). Preserve the Worker's four source commits through an unsquashed import under `apps/wake` so production source cannot be lost with a workstation. Compile the bounded worker client into every desktop `healthmd` build, use the production Worker URL by default, retain environment override and explicit opt-out, and keep every failure a silent degradation to P1. P2 remained source-feature-gated in alpha.6 and its official archives are wait-only; the next CLI release is the first to carry all-build activation.
 
 ## Open questions
 

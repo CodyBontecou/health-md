@@ -14,18 +14,18 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe CLI</strong>
-<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS en koppelt met de iPhone. Android met applicatieprotocol v2 maakt deel uit van de openbaar verpakte preview van de platformonafhankelijke Rust-client. Huidige iOS- en Android-versies gebruiken dezelfde selector 3 en dezelfde universele QR voor nieuwe platformonafhankelijke koppelingen. Release-QA met fysieke iPhones en Android-toestellen is nog niet voltooid; de opdrachten voor Linux en Windows beschrijven een expliciet ongekwalificeerde workflow.</p>
+<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS en koppelt met de iPhone. Android met applicatieprotocol v2 maakt deel uit van de openbaar verpakte preview van de platformonafhankelijke Rust-client. Huidige iOS- en Android-versies gebruiken dezelfde selector 3 en dezelfde universele QR voor nieuwe platformonafhankelijke koppelingen. De fysieke basisconnectiviteit is op beide telefoonplatforms bevestigd, maar de volledige releasematrix met exacte builds is nog niet afgerond; dit blijft daarom een expliciet ongekwalificeerde workflow.</p>
 </div>
 
-## Mobiele compatibiliteit voor 0.1.0-alpha.3
+## Mobiele compatibiliteit voor 0.1.0-alpha.6
 
-Deze zelfstandige tabel is de toepasbare matrix voor de uitdrukkelijk ongekwalificeerde preview. Er is nog geen openbare CLI/mobiele combinatie gekwalificeerd.
+Deze zelfstandige tabel is de toepasbare matrix voor de uitdrukkelijk ongekwalificeerde preview. De basisconnectiviteit met iPhone en Android is fysiek bevestigd; nog geen openbare CLI/mobiele combinatie heeft de volledige kwalificatiematrix afgerond en het bewijs bewaard.
 
 | Mobiele bron | Protocol | Exacte tag-SHA-tegenhanger / ongekwalificeerde ondergrens | Platformonafhankelijke Rust-bewerkingen | Openbare status |
 |---|---|---|---|---|
-| iPhone met export | huidige selector 3 (oude 1) / applicatie v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, onbewerkt, extractie, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
-| iPhone met queries | huidige selector 3 (oude 1) / applicatie v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus lokale MCP/query met 19 tools | Fysieke kwalificatie in afwachting |
-| Android | huidige selector 3 (oude 2) / applicatie v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, systeemeigen onbewerkt, bestanden, hervatten, annuleren | Fysieke kwalificatie in afwachting |
+| iPhone met export | huidige selector 3 (oude 1) / applicatie v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, onbewerkt, extractie, bestanden, hervatten, annuleren | Connectiviteit bevestigd; volledige kwalificatie in afwachting |
+| iPhone met queries | huidige selector 3 (oude 1) / applicatie v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus lokale MCP/query met 19 tools | Connectiviteit bevestigd; volledige kwalificatie in afwachting |
+| Android | huidige selector 3 (oude 2) / applicatie v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, systeemeigen onbewerkt, bestanden, hervatten, annuleren | Connectiviteit bevestigd; volledige kwalificatie in afwachting |
 | Getypeerde Android-MCP-query | Niet beschikbaar | Niet geïmplementeerd | Querytools vereisen iPhone v3 | Niet ondersteund |
 
 ## Ondersteuning in de directe modus
@@ -239,7 +239,7 @@ Op de iPhone toont een algemene activiteitsbanner tijdens rechtstreeks werk de v
 
 Zolang de telefoon-app op de voorgrond blijft, kan een vertrouwde rechtstreekse sessie na een tijdelijke onderbreking automatisch opnieuw verbinden. Nieuwe pogingen gebruiken oplopende vertragingen met een korte bovengrens. Dit activeert een app op de achtergrond niet en belooft daar geen toegang toe; open Health.md opnieuw voordat je hervat als de app niet meer op de voorgrond staat.
 
-Het begrensde wachtvenster van 120 seconden houdt hetzelfde verzoek open terwijl de gebruiker de telefoon ontgrendelt en Health.md opent. Pas het aan met `--wake-timeout SECONDS`; `0` schakelt het uit. MCP gebruikt `HEALTHMD_WAKE_TIMEOUT`. Deze eerste fase verzendt nog geen pushmelding en omzeilt ontgrendeling of machtigingen niet.
+Het begrensde wachtvenster van 120 seconden houdt hetzelfde verzoek open terwijl de gebruiker de telefoon ontgrendelt en Health.md opent. Pas het aan met `--wake-timeout SECONDS`; `0` schakelt het uit. MCP gebruikt `HEALTHMD_WAKE_TIMEOUT`. De gepubliceerde alpha.6-binaire bestanden wachten alleen. In latere officiële builds ontvangt een ingeschreven iPhone ook één best-effort APNs-melding via de uitsluitend voor meldingen bestemde wake-service van Health.md; Android en niet-ingeschreven iPhones blijven alleen wachten. De melding kan de aanwezigheid van de gebruiker herstellen, maar autoriseert nooit een HealthKit-uitlezing en verstuurt geen gezondheidsbereik via de Worker.
 
 ## Persistente taken hervatten en annuleren
 

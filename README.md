@@ -1,6 +1,6 @@
 # Health.md
 
-Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, and website.
+Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, notification-only wake service, practice boundary, and website.
 
 ## Agent skills
 
@@ -28,6 +28,8 @@ A skill supplies agent instructions; it does not install the `healthmd` binaries
 | [`apps/apple`](apps/apple) | iOS, iPadOS, macOS, watchOS, and widgets | Xcode / Swift |
 | [`apps/android`](apps/android) | Android app and direct protocol client | Gradle / Kotlin |
 | [`apps/cli`](apps/cli) | Portable `healthmd` CLI | Cargo / Rust |
+| [`apps/practice`](apps/practice) | Isolated synthetic clinician portal and future clinical boundary | Node.js / Cloudflare Workers |
+| [`apps/wake`](apps/wake) | Notification-only Direct CLI wake doorbell | TypeScript / Cloudflare Workers |
 | [`apps/website`](apps/website) | Product website and documentation | Node.js / Astro |
 | [`packages/contracts`](packages/contracts) | Cross-platform schemas and compatibility fixtures | Language-neutral |
 | [`packages/healthmd-core-rust`](packages/healthmd-core-rust) | Shared export core, UniFFI binding tooling, and direct protocol | Cargo / Rust |
@@ -46,6 +48,8 @@ make check-core-bindings
 make test-apple
 make test-android
 make test-cli
+make test-practice
+make test-wake
 make test-website
 ```
 
@@ -59,7 +63,7 @@ When the operating systems differ, Health.md represents that difference explicit
 
 The governing workflow and definition of done are in [`docs/architecture/cross-platform-unification-policy.md`](docs/architecture/cross-platform-unification-policy.md).
 
-The product-wide feature baseline lives in [`docs/features/feature-inventory.md`](docs/features/feature-inventory.md): every feature across Apple, Android, CLI, core, contracts, practice, and website surfaces, with source evidence, per-feature documentation status, and the gap list used to manage documentation. Update it when adding a feature. Per-capability Apple↔Android pairings and honest parity classifications live in [`docs/features/feature-parity.md`](docs/features/feature-parity.md).
+The product-wide feature baseline lives in [`docs/features/feature-inventory.md`](docs/features/feature-inventory.md): every feature across Apple, Android, CLI, core, contracts, practice, wake, and website surfaces, with source evidence, per-feature documentation status, and the gap list used to manage documentation. Update it when adding a feature. Per-capability Apple↔Android pairings and honest parity classifications live in [`docs/features/feature-parity.md`](docs/features/feature-parity.md).
 
 ## Public contracts
 
@@ -71,4 +75,4 @@ Apple v8, Android frozen v4, and Android analytical v5 remain explicit historica
 
 ## License
 
-Licensing is documented in [`LICENSES.md`](LICENSES.md). Apple, Android, CLI, and shared-core Rust source are AGPL-3.0-only; the website is MIT-licensed.
+Licensing is documented in [`LICENSES.md`](LICENSES.md). Apple, Android, CLI, Practice, wake, contracts, and shared-core Rust source are AGPL-3.0-only; the website is MIT-licensed.

@@ -74,17 +74,17 @@ class MobileQualificationTests(unittest.TestCase):
             for label, platform, device in (
                 (
                     verify_release.MOBILE_QUALIFICATION_LABELS[0],
-                    "iOS 3.2.1 (build 202608300209)",
+                    "iOS 3.3.0 (build 202609032317)",
                     "iPhone / iOS 18",
                 ),
                 (
                     verify_release.MOBILE_QUALIFICATION_LABELS[1],
-                    "iOS 3.2.1 (build 202608300209)",
+                    "iOS 3.3.0 (build 202609032317)",
                     "iPhone / iOS 18",
                 ),
                 (
                     verify_release.MOBILE_QUALIFICATION_LABELS[2],
-                    "Android 1.8.1 (versionCode 30)",
+                    "Android 1.8.2 (versionCode 31)",
                     "Pixel / Android 16",
                 ),
             )

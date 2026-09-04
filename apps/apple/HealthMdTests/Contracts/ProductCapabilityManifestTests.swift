@@ -37,6 +37,10 @@ final class ProductCapabilityManifestTests: XCTestCase {
             inventory.capabilities.first { $0.id == "automation.cancel-active-export" }?.classification,
             "shared"
         )
+        XCTAssertEqual(
+            inventory.capabilities.first { $0.id == "direct.cli_agent_push_wake" }?.classification,
+            "planned"
+        )
 
         for capability in inventory.capabilities {
             let availability = capability.platforms.apple
@@ -104,6 +108,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "direct.cli_agent_push_wake",
         "export.range-summary",
     ]
 

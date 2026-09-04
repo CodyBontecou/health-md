@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Compile the RFC-0005 P2 wake client into every macOS, Linux, and Windows CLI build, use the
+  deployed `healthmd-wake.costream.workers.dev` doorbell by default, and retain explicit local
+  opt-out plus graceful P1 fallback. The former `wake-worker` feature is now a compatibility alias,
+  not an activation gate.
+- Import the dedicated wake Worker and its unsquashed history under `apps/wake`, add component CI,
+  and keep the notification-only service separate from every health-data path.
+- Record owner-confirmed physical iPhone and Android pairing/connectivity while keeping stable
+  qualification pending until the complete exact-build evidence matrix is retained.
+- Refresh alpha.6 and exact mobile-source documentation; Windows Authenticode remains transparently
+  deferred beyond the initial release and integrity continues through the Sigstore checksum closure.
+
 ## 0.1.0-alpha.6
 
 - Add RFC-0005's shared P1 agent-wake window: query/export/extract/resume/cancel now wait up to
@@ -11,10 +24,11 @@
   self-contained script because the `healthmd-receipt-verifier` source was lost with an old
   machine and reconstructing that production worker blind was rejected; the receipt-verifier
   stays frozen and untouched. The CLI stores per-pairing wake credentials from the phone's
-  opt-in enrollment, sends one best-effort `/wake/request` nudge at wait start (feature-gated
-  `wake-worker` HTTP client; default builds keep no-remote-HTTP), and a locked-phone wait now
-  completes after the owner taps the visible notification. See the
-  `docs/architecture/rfc-0005-worker-spec.md` amendment and RFC-0005 decision 5.
+  opt-in enrollment and the source includes a feature-gated `wake-worker` HTTP client for one
+  best-effort `/wake/request` nudge. Official alpha.6 archives used the empty default feature set,
+  so they remained wait-only; feature-enabled source builds could complete after the owner tapped
+  the visible notification. See the `docs/architecture/rfc-0005-worker-spec.md` amendment and
+  RFC-0005 decision 5.
 - Key the wake request HMAC by the registered SHA-256 verification hash of the wake key so the
   worker never holds the raw key; the construction is pinned cross-language by a shared
   Rust/worker test vector.

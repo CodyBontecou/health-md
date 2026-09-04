@@ -14,6 +14,7 @@ publish = ["crates-io"]
 
 [features]
 default = []
+# Compatibility alias retained for alpha.6 source-install commands. Wake support is always built.
 wake-worker = ["healthmd-client/wake-worker"]
 streamable-http = ["healthmd-mcp/streamable-http"]
 oauth-resource-server = [

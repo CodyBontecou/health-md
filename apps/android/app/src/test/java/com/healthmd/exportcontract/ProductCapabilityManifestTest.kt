@@ -41,6 +41,7 @@ class ProductCapabilityManifestTest {
         assertEquals(
             setOf(
                 "core.shared-rust-profile-engine",
+                "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
             ),
@@ -53,6 +54,13 @@ class ProductCapabilityManifestTest {
         assertEquals(
             "shared",
             cancellationCapability.getValue("classification").jsonPrimitive.content,
+        )
+        val pushWakeCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "direct.cli_agent_push_wake"
+        }
+        assertEquals(
+            "planned",
+            pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
 
         capabilities.forEach { capability ->
@@ -125,6 +133,7 @@ class ProductCapabilityManifestTest {
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "source.private-platform-database",
+            "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",

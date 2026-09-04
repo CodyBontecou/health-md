@@ -514,35 +514,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             return Ok(());
         }
         let selected = self.selected_device_id(device_id).await?;
-        if wake_request {
-            // RFC-0005 P2: one best-effort nudge at wait start. Missing configuration, an
-            // unreachable worker, or a rejected request degrades silently to the wait-only
-            // window; the data path never depends on the worker.
-            if let (Some(base_url), Ok(Some(credential))) = (
-                crate::wake::worker_base_url(),
-                self.wake_credential(selected).await,
-            ) {
-                let label = self.display_name.clone();
-                let _ = crate::wake::request_wake(
-                    &base_url,
-                    &credential.wake_id,
-                    &credential.wake_key,
-                    &label,
-                )
-                .await;
-            }
-        }
         let source = self.selected_source(Some(selected)).await?;
-        let waiting_message = match source.platform {
-            Some(PeerPlatform::Android) => {
-                "Waiting for Android; open Health.md or tap the wake notification."
-            }
-            _ => "Waiting for iPhone; open Health.md or tap the wake notification.",
-        };
         let listener = bind_listener(port).await?;
         let bound_port = listener.local_addr().map_err(connection_error)?.port();
         let started = Instant::now();
         let deadline = started + wake_window.timeout();
+        let mut wake_attempted = !wake_request;
+        let mut wake_notification_requested = false;
         let mut backoff = WAKE_INITIAL_BACKOFF;
         let mut waiting_reported = false;
         let mut next_progress = WAKE_PROGRESS_INTERVAL;
@@ -573,6 +551,19 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 Err(error) => return Err(error),
             }
 
+            if !wake_attempted {
+                wake_attempted = true;
+                wake_notification_requested = self
+                    .request_enrolled_wake(selected, source.platform, deadline, cancellation)
+                    .await?;
+            }
+            let waiting_message = match source.platform {
+                Some(PeerPlatform::Android) => "Waiting for Android; open Health.md.",
+                _ if wake_notification_requested => {
+                    "Waiting for iPhone; open Health.md or tap its wake notification if it arrives."
+                }
+                _ => "Waiting for iPhone; open Health.md.",
+            };
             let elapsed = started.elapsed();
             if waiting_reported {
                 while elapsed >= next_progress {
@@ -610,6 +601,46 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             }
             backoff = backoff.saturating_mul(2).min(WAKE_MAXIMUM_BACKOFF);
         }
+    }
+
+    async fn request_enrolled_wake(
+        &self,
+        selected: Uuid,
+        platform: Option<PeerPlatform>,
+        deadline: Instant,
+        cancellation: &CancellationToken,
+    ) -> Result<bool, ClientError> {
+        if platform == Some(PeerPlatform::Android) {
+            return Ok(false);
+        }
+        let (Some(base_url), Ok(Some(credential))) = (
+            crate::wake::worker_base_url(),
+            self.wake_credential(selected).await,
+        ) else {
+            return Ok(false);
+        };
+
+        // Bind happens before this P2 attempt. Missing enrollment, an unreachable Worker, or a
+        // rejected request degrades silently to P1; the health-data path never depends on it.
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(ClientError::TimedOut);
+        }
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        tokio::select! {
+            biased;
+            () = cancellation.cancelled() => return Err(ClientError::WaitCancelled),
+            () = tokio::time::sleep(remaining) => return Err(ClientError::TimedOut),
+            _ = crate::wake::request_wake(
+                &base_url,
+                &credential.wake_id,
+                &credential.wake_key,
+                &self.display_name,
+            ) => {}
+        }
+        Ok(true)
     }
 
     async fn status_on_listener(

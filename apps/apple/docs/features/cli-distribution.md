@@ -102,8 +102,9 @@ Users can also copy an agent prompt from the CLI tab that asks any automation-ca
 
 ## Portable standalone install
 
-The tap carries the explicitly unqualified `0.1.0-alpha.3` preview and will carry qualified stable
-releases when available:
+The tap carries the explicitly unqualified `0.1.0-alpha.6` preview and will carry qualified stable
+releases when available. Basic iPhone and Android connectivity is physically confirmed, but the
+full exact-build release matrix remains pending:
 
 ```bash
 brew install CodyBontecou/tap/healthmd

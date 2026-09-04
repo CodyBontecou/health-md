@@ -14,18 +14,18 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Preview · portable direct CLI</strong>
-<p>The bundled Swift direct backend is available on macOS and pairs with iPhone. Android application protocol v2 is part of the publicly packaged cross-platform Rust preview. Current iOS and Android releases use the same selector-3 universal QR for new portable pairing. Physical iPhone and Android release QA remains pending, so Linux and Windows commands describe an explicitly unqualified workflow.</p>
+<p>The bundled Swift direct backend is available on macOS and pairs with iPhone. Android application protocol v2 is part of the publicly packaged cross-platform Rust preview. Current iOS and Android releases use the same selector-3 universal QR for new portable pairing. Basic physical connectivity is confirmed on both phone platforms, but the full exact-build release matrix remains pending, so this is still an explicitly unqualified workflow.</p>
 </div>
 
-## Mobile compatibility for 0.1.0-alpha.3
+## Mobile compatibility for 0.1.0-alpha.6
 
-This standalone compatibility table is the actionable matrix for the explicitly unqualified preview. No public CLI/mobile pair is qualified yet.
+This standalone compatibility table is the actionable matrix for the explicitly unqualified preview. Basic iPhone and Android connectivity is physically confirmed; no public CLI/mobile pair has completed and retained the full qualification matrix yet.
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
-| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Connectivity confirmed; full qualification pending |
+| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
 ## What direct mode supports
@@ -232,12 +232,14 @@ Android protocol v2 file jobs take their output settings from the device's saved
 
 Pairing and new work require the phone app in the foreground. Direct CLI Access does not turn the phone into a headless export server or authorize background capture.
 
-For query, export, extract, resume, and cancel, the portable CLI now keeps an unavailable request
-open for a bounded 120-second wake window. Unlock and open Health.md before it expires and the same
+For query, export, extract, resume, and cancel, the portable CLI keeps an unavailable request open
+for a bounded 120-second wake window. Unlock and open Health.md before it expires and the same
 request continues without a re-run. Use `--wake-timeout SECONDS` per command (`0` disables); MCP
 uses `HEALTHMD_WAKE_TIMEOUT` and emits health-free progress when the caller supplied a progress
-token. This is the wait-only first phase: status reports notification enrollment unavailable, and
-no APNs or FCM notification is sent yet.
+token. Published alpha.6 binaries are wait-only. In subsequent official builds, an enrolled iPhone
+also receives one best-effort APNs notification through Health.md's notification-only wake service;
+Android and unenrolled iPhones remain wait-only. The notification can restore user presence but
+never authorizes a HealthKit read or sends health scope through the Worker.
 
 On iPhone, if an export is already connected when the app moves to the background, Health.md requests finite iOS background execution time. The export may finish during that allowance. If iOS expires the allowance, the connection closes and the durable job pauses. Reopen Health.md and resume the same job.
 

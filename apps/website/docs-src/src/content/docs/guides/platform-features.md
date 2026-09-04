@@ -63,6 +63,7 @@ Some data is deliberately **not treated as equivalent** across platforms: heart-
 | System automation | ✓ Shortcuts / Siri / App Intents | — | ✓ Tasker, adb, explicit broadcast intents | — |
 | Send exports to your own HTTP(S) API endpoint | ✓ | — | ✓ with encrypted header storage | — |
 | Standalone CLI (`healthmd`) pairing | ✓ foreground direct service | ✓ bundled + standalone | ✓ 20-digit code pairing | — |
+| Direct CLI request wake | ✓ bounded wait + opt-in APNs | ✓ CLI initiator | ◐ bounded wait; FCM planned | — |
 | MCP server for AI agents | ◐ bundled through Mac; typed portable direct MCP is iPhone-only | ✓ bundled `healthmd-mcp` | — typed direct MCP unsupported | — |
 
 ## Devices and glanceable surfaces

@@ -1,12 +1,12 @@
 ---
 name: healthmd-cli-qa
-description: Test the standalone Health.md CLI, portable healthmd-mcp server, and direct iPhone path. Use for CLI/MCP QA, Rust↔Swift protocol compatibility, Manual IP/Tailscale pairing, typed query/UI/image checks, status/raw/extract/file/resume/cancel, cross-platform release gates, failure diagnosis, or physical-device plans without the Health.md macOS app.
-compatibility: Automated CLI checks require the independently locked shared-core and CLI Rust workspaces; iPhone-side checks require the Health.md app repository and Apple build tools. Live E2E requires a current iPhone build with Direct CLI Access, HealthKit/local-network permission, and a disposable destination for file tests.
+description: Test the standalone Health.md CLI, portable healthmd-mcp server, and direct mobile paths. Use for CLI/MCP QA, Rust↔Swift/Kotlin protocol compatibility, Manual IP/Tailscale pairing, typed query/UI/image checks, status/raw/extract/file/resume/cancel, wake notifications, cross-platform release gates, failure diagnosis, or physical-device plans without the Health.md macOS app.
+compatibility: Automated CLI checks require the independently locked shared-core and CLI Rust workspaces; mobile-side checks require the relevant Apple or Android build tools. Live E2E requires an exact compatible mobile build with Direct CLI Access, platform health/local-network permissions, and a disposable destination for file tests.
 ---
 
 # Standalone Health.md CLI QA
 
-Validate the Rust CLI, portable Rust MCP server, and iPhone direct service. The macOS app, loopback API, Mac destination bookmark, and legacy Swift CLI are out of scope unless explicitly requested.
+Validate the Rust CLI, portable Rust MCP server, and iPhone/Android direct services. The macOS app, loopback API, Mac destination bookmark, and legacy Swift CLI are out of scope unless explicitly requested.
 
 ## Rules
 
@@ -164,7 +164,7 @@ Verify:
 
 Pairing/new commands need foreground iPhone. An already-connected export may receive finite iOS background time; expiration must pause rather than corrupt or falsely complete.
 
-## RFC-0005 P1 wake-window matrix
+## RFC-0005 wake matrix
 
 Test unreachable, authenticated `app_active: false`, late availability, expiry, local cancellation,
 and disabled (`--wake-timeout 0`) paths on both source platforms. The default is 120 seconds with
@@ -176,9 +176,13 @@ wait immediately without becoming terminal phone-side cancellation.
 
 Wake enrollment is reported truthfully per selected device. Without enrolled wake material,
 `healthmd status`/`healthmd.direct_readiness` must report enrollment `unavailable` (mode
-`wait_only`) and no test should expect APNs or FCM; with a stored wake credential for the selected
-device they must report `available`/`enrolled` and a locked-phone wait delivers the push. Keep outer
-process timeouts longer than wake plus operation bounds.
+`wait_only`) and no test should expect APNs or FCM. Published alpha.6 binaries remain wait-only even
+if old enrollment material exists. For current source and subsequent official builds, a stored wake
+credential for the selected iPhone reports `available`/`enrolled` and a locked-phone wait attempts
+one APNs push through `apps/wake`; verify delivery and P1 fallback without asserting delivery as a
+transport guarantee. Android remains wait-only until RFC-0005 P3/FCM ships. Keep outer process
+timeouts longer than wake plus operation bounds. Run the Worker policy/HMAC/type-check/dry-run gate
+as well as Rust default/no-default/all-feature tests so packaging cannot compile wake back out.
 
 ## Live LAN E2E
 

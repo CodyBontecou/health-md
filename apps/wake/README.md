@@ -11,17 +11,18 @@ data moves only over the authenticated peer-to-peer direct channel.
 ## Provenance
 
 The wake endpoints were originally specified to extend the
-`healthmd-receipt-verifier` worker
-([decision 3, RFC-0005](https://github.com/CodyBontecou/health-md/blob/main/docs/architecture/rfc-0005-direct-cli-agent-wake.md)).
+`healthmd-receipt-verifier` worker ([decision 3, RFC-0005](../../docs/architecture/rfc-0005-direct-cli-agent-wake.md)).
 That worker's source was lost with an old machine (2026-09-03), so rather than
 reconstruct a production paywall/scheduling worker blind, wake ships as this
-self-contained script. The receipt-verifier keeps serving `/verify-legacy*`,
-`/devices/register`, and `/schedules/upsert` untouched and frozen.
+self-contained script. Its original four commits were imported unsquashed into
+`apps/wake` on 2026-09-04, making this monorepo the canonical source. The
+receipt-verifier keeps serving `/verify-legacy*`, `/devices/register`, and
+`/schedules/upsert` untouched and frozen.
 
 ## Endpoints
 
-Full contract: `docs/architecture/rfc-0005-worker-spec.md` in the health-md
-repository (with the 2026-09-03 HMAC-key amendment below).
+Full contract: [`docs/architecture/rfc-0005-worker-spec.md`](../../docs/architecture/rfc-0005-worker-spec.md)
+(with the 2026-09-03 HMAC-key amendment below).
 
 | Route | Method | Purpose |
 |---|---|---|
@@ -39,8 +40,9 @@ key never crosses the wire to the worker (RFC-0005 privacy invariant). The
 original spec text said "over the raw 32-byte key", which is unverifiable from
 a hash-only store; the amendment is pinned cross-language in:
 
-- `apps/cli/crates/healthmd-client/src/wake.rs` (Rust, `hmac_is_domain_separated_and_deterministic`)
-- `src/wake.test.ts` (this worker, "pinned wake HMAC")
+- [`apps/cli/crates/healthmd-client/src/wake.rs`](../cli/crates/healthmd-client/src/wake.rs)
+  (Rust, `hmac_is_domain_separated_and_deterministic`)
+- `src/wake.test.ts` (this Worker, "pinned wake HMAC")
 
 Shared vector: raw key `[7;32]`, nonce `"aa"`, timestamp `2026-09-03T00:00:00Z`
 → `b7575fa94db932357824b886ac6b23d17eaed58048ee346622fa2add58d2138f`.
@@ -60,8 +62,13 @@ Shared vector: raw key `[7;32]`, nonce `"aa"`, timestamp `2026-09-03T00:00:00Z`
 
 ## Deploy
 
+Deploy only committed and pushed `origin/main` source from `apps/wake`. The D1 database already
+exists; creation is a one-time disaster-recovery operation, not a normal release step.
+
 ```sh
-wrangler d1 create healthmd-wake           # paste database_id into wrangler.toml
+npm ci
+npm test
+npm run check
 wrangler d1 migrations apply healthmd-wake --remote
 wrangler secret put APNS_AUTH_KEY           # .p8 PEM body — user sets, never committed
 wrangler secret put APNS_KEY_ID
@@ -76,7 +83,9 @@ development-signed build, and back before TestFlight/App Store QA.
 ## Tests
 
 ```sh
-npm install
+npm ci
 npm test        # vitest: pinned HMAC vector, delivery policy, timestamp window,
                 # peer-label sanitization, notification copy allowlist
+npm run check
+npm exec -- wrangler deploy --dry-run --outdir .wrangler/dry-run
 ```

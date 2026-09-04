@@ -657,7 +657,7 @@
       "id": "direct.cli_agent_wake",
       "name": "Direct CLI agent wake window",
       "classification": "shared",
-      "summary": "Keep an unavailable direct query, export, resume, or cancellation request waiting for a bounded, cancellable window so opening either mobile app unblocks the same in-flight request; push-notification enrollment remains a later phase.",
+      "summary": "Keep an unavailable direct query, export, resume, or cancellation request waiting for a bounded, cancellable window so opening either mobile app unblocks the same in-flight request.",
       "profiles": [],
       "platforms": {
         "apple": {
@@ -670,6 +670,29 @@
       "evidence": [
         "docs/architecture/rfc-0005-direct-cli-agent-wake.md",
         "apps/cli/README.md"
+      ]
+    },
+    {
+      "id": "direct.cli_agent_push_wake",
+      "name": "Direct CLI agent push wake",
+      "classification": "planned",
+      "summary": "Send one authenticated, health-free, rate-limited notification for an enrolled paired device while the shared wake window holds; the tap restores user presence but never authorizes background health access.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Implement RFC-0005 P3 with FCM for Play builds, explicit P1-only degradation for F-Droid and force-stopped apps, and matching enrollment, revocation, notification, and physical-device gates."
+        }
+      },
+      "evidence": [
+        "docs/architecture/rfc-0005-direct-cli-agent-wake.md",
+        "docs/architecture/rfc-0005-worker-spec.md",
+        "apps/wake/src/wake.ts",
+        "apps/apple/HealthMd/iOS/IPhoneDirectWakeManager.swift",
+        "apps/cli/crates/healthmd-client/src/wake.rs"
       ]
     },
     {

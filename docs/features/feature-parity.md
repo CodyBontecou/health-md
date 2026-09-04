@@ -80,7 +80,9 @@
 
 | Capability | Apple doc | Android doc | Parity | Notes |
 |---|---|---|---|---|
-| Direct CLI pairing | ✅ `cli-direct-iphone.md` | ✅ `direct-cli.md` | shared | Same direct-protocol family; iOS 6-digit code / protocol v1 vs Android 20-digit code / protocol v2. iPhone serves query v3; Android does not. |
+| Direct CLI pairing | ✅ `cli-direct-iphone.md` | ✅ `direct-cli.md` | shared | New clients share selector 3's universal QR and 20-digit code while preserving legacy Apple selector 1 / Android selector 2; application v1/v2 remain distinct. iPhone serves query v3; Android does not. |
+| Direct CLI wake window | ✅ `cli-direct-iphone.md` + RFC-0005 | ✅ `direct-cli.md` + RFC-0005 | shared | The same bounded P1 wait lets opening either app unblock the in-flight request. |
+| Direct CLI push wake | ✅ `cli-direct-iphone.md` + RFC-0005 | 🟡 RFC-0005 P3 | planned | Opt-in APNs doorbell is available for enrolled iPhones; Android FCM, Play/F-Droid degradation, and physical qualification remain a concrete P3 target. |
 | Mac as destination | ✅ `mac-sync.md` | — | apple_only | Android's desktop story is the CLI (`../android-desktop-destination.md`). |
 | Manual IP / Tailscale | ✅ `manual-ip-sync.md` | 🟡 in `direct-cli.md` | shared | Connect-by-address on both. |
 | CLI-triggered export | ✅ `cli-mac-iphone-export.md` | 🟡 in `direct-cli.md` | shared | Mac app broker on Apple; CLI direct on Android. |

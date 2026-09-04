@@ -15,20 +15,21 @@ open Health.md iPhone app → HealthKit → protected spool
   → validated canonical JSON or production-generated files
 ```
 
-The CLI listens on the computer; iPhone connects to the address entered in Direct CLI Access. HealthKit reads always happen on iPhone. The CLI cannot wake iOS reliably or bypass app activity, protected-data, permission, local-network, or quota controls.
+The CLI listens on the computer; the phone connects to the address entered in Direct CLI Access. Platform health reads always happen on the phone. Published alpha.6 binaries are wait-only; subsequent official builds can send one best-effort APNs notification when the selected iPhone is enrolled, while Android remains wait-only. A notification cannot authorize health access or bypass app activity, protected-data, permission, local-network, or quota controls.
 
 Direct is the portable default. Do not add `--backend mac-app`: that adapter is reserved but unimplemented. The portable client supports Manual IP, including Tailscale addresses. Nearby is unsupported.
 
 | Mobile source | Protocol; exact tag-SHA counterpart / unqualified floor | Portable operations | Public status |
 |---|---|---|---|
-| Export-capable iPhone | 1 / v1; iOS 3.2.1 (202608300209) / 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | 1 / v1 + v3; iOS 3.2.1 (202608300209) / 3.0.3 | V1 plus 19 fixed MCP tools | Pending physical qualification |
-| Android | 2 / v2; Android 1.8.1 (30) / 1.5.4 (25) | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | 3 / v1; iOS 3.3.0 (202609032317) / 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full physical qualification pending |
+| Query-capable iPhone | 3 / v1 + v3; iOS 3.3.0 (202609032317) / 3.0.3 | V1 plus 19 fixed MCP tools | Connectivity confirmed; full physical qualification pending |
+| Android | 3 / v2; Android 1.8.2 (31) / 1.5.4 (25) | Status, native raw, files, resume, cancel | Connectivity confirmed; full physical qualification pending |
 | Android typed query | Not implemented | MCP query tools require iPhone v3 | Unsupported |
 
-No public CLI/mobile pair is qualified yet. V3 does not replace v1 pairing/exports and Android
-never downgrades to v1. Record exact mobile build IDs during QA; matching versions alone are not
-evidence.
+Basic physical iPhone and Android connectivity is confirmed, but no public CLI/mobile pair is fully
+qualified yet. Query v3 does not replace application v1 pairing/exports and Android never
+downgrades to v1. Record exact mobile build IDs during QA; matching versions alone are not full
+qualification evidence.
 
 ## Bounded commands
 
@@ -60,7 +61,7 @@ checksummed archives and installers. To build the same preview from source:
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
 cd health-md
-git checkout healthmd-cli/v0.1.0-alpha.3
+git checkout healthmd-cli/v0.1.0-alpha.6
 cd apps/cli
 cargo install --locked --path crates/healthmd-cli
 ```

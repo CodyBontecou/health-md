@@ -72,7 +72,7 @@ Require:
 - `iphone.can_trigger_exports == true` for generated files;
 - no conflicting `iphone.active_job_id`.
 
-Ignore status `destination.selected`: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy plus this device's truthful wake enrollment: `unavailable`/`wait_only` without a stored wake credential (no push is sent), `available`/`enrolled` when the paired phone enrolled wake material (a locked-phone wait then sends one best-effort push). If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
+Ignore status `destination.selected`: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy plus this device's truthful wake enrollment: `unavailable`/`wait_only` without a stored wake credential (no push is sent), `available`/`enrolled` when the paired iPhone enrolled wake material. Published alpha.6 binaries are still wait-only; in subsequent official builds an enrolled locked-phone wait sends one best-effort APNs notification. Android remains wait-only until FCM ships. If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
 
 ## Waiting for an unavailable phone
 
@@ -82,10 +82,11 @@ and re-run the command. Set `--wake-timeout SECONDS` when a different bounded wi
 `--wake-timeout 0` for explicit fail-fast behavior. Set the shell's outer `timeout` longer than the
 wake window plus the command's operation timeout.
 
-For MCP, configure `HEALTHMD_WAKE_TIMEOUT`; cancellation interrupts the wait immediately. P1 does
-not send APNs/FCM, so do not promise a notification. Wake expiry preserves
-`direct_source_unavailable` and adds `wake_window_seconds`. Neither expiry nor local cancellation
-is terminal phone-side job cancellation.
+For MCP, configure `HEALTHMD_WAKE_TIMEOUT`; cancellation interrupts the wait immediately. Only
+tell the user to expect a notification when a post-alpha.6 build reports the selected iPhone as
+`available`/`enrolled`; delivery is best effort. Otherwise ask them to open Health.md while the P1
+window waits. Wake expiry preserves `direct_source_unavailable` and adds `wake_window_seconds`.
+Neither expiry nor local cancellation is terminal phone-side job cancellation.
 
 ## Strict raw
 

@@ -1,20 +1,16 @@
-//! RFC-0005 P2 wake requests to the consumer notifications worker.
+//! RFC-0005 P2 wake requests to Health.md's dedicated notification-only Worker.
 //!
 //! Best-effort only: every failure — missing configuration, unreachable worker, rejected request —
 //! degrades silently to the P1 wait-only window. The request carries no health data, no dates, no
 //! metric identity, and no request contents; only the opaque `wakeId`, a nonce, a timestamp, the
 //! domain-separated HMAC, and this computer's display name.
 
-use base64::Engine as _;
-#[cfg(any(test, feature = "wake-worker"))]
-use hmac::{Hmac, Mac as _};
-#[cfg(any(test, feature = "wake-worker"))]
-use sha2::Sha256;
-
-#[cfg(feature = "wake-worker")]
-use serde_json::json;
-#[cfg(feature = "wake-worker")]
 use std::time::Duration;
+
+use base64::Engine as _;
+use hmac::{Hmac, Mac as _};
+use serde_json::json;
+use sha2::Sha256;
 
 /// Domain separation label for wake HMACs. Must match the worker specification exactly.
 pub const WAKE_HMAC_DOMAIN: &str = "healthmd.wake.v1";
@@ -24,19 +20,30 @@ pub const WAKE_HMAC_DOMAIN: &str = "healthmd.wake.v1";
 /// This is exactly the verification hash the phone registers with the worker, so the worker can
 /// verify wake requests without ever holding the raw key (RFC-0005 privacy invariant; the raw key
 /// never crosses the wire to the worker). Pinned cross-language in the worker's test suite.
-#[cfg(any(test, feature = "wake-worker"))]
 fn wake_hmac_key(wake_key: &[u8]) -> [u8; 32] {
     use sha2::Digest as _;
     sha2::Sha256::digest(wake_key).into()
 }
 
-#[cfg(feature = "wake-worker")]
 const WAKE_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The configured worker base URL, or `None` when wake requests are unconfigured.
+/// Production RFC-0005 P2 doorbell. It carries no health data or request contents.
+pub const DEFAULT_WAKE_WORKER_URL: &str = "https://healthmd-wake.costream.workers.dev";
+
+/// The production worker URL, optionally overridden for an explicitly configured environment.
+/// Setting `HEALTHMD_WAKE_WORKER_URL` to an empty value disables the remote nudge; callers still
+/// retain the bounded P1 wait. Normal user opt-out uses `--no-wake`/`HEALTHMD_NO_WAKE`.
 #[must_use]
 pub fn worker_base_url() -> Option<String> {
-    base_url_from(std::env::var("HEALTHMD_WAKE_WORKER_URL").ok().as_deref())
+    base_url_or_default(std::env::var("HEALTHMD_WAKE_WORKER_URL").ok().as_deref())
+}
+
+#[must_use]
+fn base_url_or_default(value: Option<&str>) -> Option<String> {
+    match value {
+        Some(url) => base_url_from(Some(url)),
+        None => Some(DEFAULT_WAKE_WORKER_URL.to_owned()),
+    }
 }
 
 #[must_use]
@@ -46,7 +53,6 @@ pub(crate) fn base_url_from(value: Option<&str>) -> Option<String> {
     (!trimmed.is_empty()).then(|| trimmed.to_owned())
 }
 
-#[cfg(any(test, feature = "wake-worker"))]
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().fold(
         String::with_capacity(bytes.len() * 2),
@@ -58,7 +64,6 @@ fn hex(bytes: &[u8]) -> String {
     )
 }
 
-#[cfg(any(test, feature = "wake-worker"))]
 fn request_hmac_hex(wake_key: &[u8], nonce_hex: &str, timestamp: &str) -> Result<String, String> {
     let mut mac = Hmac::<Sha256>::new_from_slice(&wake_hmac_key(wake_key))
         .map_err(|error| format!("wake key rejected: {error}"))?;
@@ -70,14 +75,14 @@ fn request_hmac_hex(wake_key: &[u8], nonce_hex: &str, timestamp: &str) -> Result
 
 /// Send one wake request. Errors describe why the nudge was skipped; callers degrade to P1.
 ///
-/// Compiled only with the `wake-worker` feature so the default local CLI build keeps its
-/// no-remote-HTTP guarantee.
+/// This bounded health-free client is compiled into every CLI build. It runs only when the owner
+/// opted in on iPhone, enrollment material exists for the selected device, and wake was not
+/// disabled locally.
 ///
 /// # Errors
 ///
 /// Returns an error for key, encoding, or transport failures. HTTP error statuses are reported
 /// but are equally non-fatal on the data path.
-#[cfg(feature = "wake-worker")]
 pub async fn request_wake(
     base_url: &str,
     wake_id: &str,
@@ -112,22 +117,6 @@ pub async fn request_wake(
         ));
     }
     Ok(())
-}
-
-/// Without the `wake-worker` feature the nudge is a compile-time no-op that degrades to P1.
-///
-/// # Errors
-///
-/// Always returns an error explaining that worker support is not compiled in.
-#[cfg(not(feature = "wake-worker"))]
-#[allow(clippy::unused_async)]
-pub async fn request_wake(
-    _base_url: &str,
-    _wake_id: &str,
-    _wake_key: &[u8],
-    _peer_label: &str,
-) -> Result<(), String> {
-    Err("wake worker support is not compiled into this build".to_owned())
 }
 
 /// Decode a base64 `wakeKey` enrollment payload to exactly 32 raw bytes.
@@ -190,18 +179,20 @@ mod tests {
     }
 
     #[test]
-    fn worker_base_url_is_trimmed_and_optional() {
-        assert_eq!(base_url_from(None), None);
-        assert_eq!(base_url_from(Some("")), None);
-        assert_eq!(base_url_from(Some("   ")), None);
+    fn worker_base_url_defaults_and_explicit_overrides_are_normalized() {
         assert_eq!(
-            base_url_from(Some(" https://worker.example/ ")),
+            base_url_or_default(None),
+            Some(DEFAULT_WAKE_WORKER_URL.to_owned())
+        );
+        assert_eq!(base_url_or_default(Some("")), None);
+        assert_eq!(base_url_or_default(Some("   ")), None);
+        assert_eq!(
+            base_url_or_default(Some(" https://worker.example/ ")),
             Some("https://worker.example".to_owned())
         );
     }
 
     #[tokio::test]
-    #[cfg(feature = "wake-worker")]
     async fn wake_request_carries_the_domain_separated_hmac_and_degrades_on_rejection() {
         use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 

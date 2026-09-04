@@ -3,10 +3,11 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.5` explicitly unqualified preview candidate. Deployed iOS export
+> **Status:** `0.1.0-alpha.6` is a public, explicitly unqualified preview. Deployed iOS export
 > protocol v1, Android application protocol v2, and capability-gated iPhone query protocol v3 are
-> implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. Complete
-> physical-device release QA is still required before the first qualified stable release.
+> implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. The owner has
+> physically confirmed iPhone and Android direct pairing/connectivity; the complete retained
+> release matrix is still required before the first qualified stable release.
 
 ## How it works
 
@@ -36,19 +37,22 @@ environment (`0` disables), and provide an MCP progress token to receive health-
 `notifications/progress` updates while the phone is unavailable. `healthmd status` reports the
 local `wake_window`, and `healthmd.direct_readiness` reports the same object as `wake`.
 
-This release implements RFC-0005 P1 (wait-only) on both mobile platforms, plus the CLI half of
-P2: when a paired phone has enrolled wake material (which requires the external wake worker to
-exist), the CLI sends one best-effort `/wake/request` nudge at wait start. Configure
-the worker with `HEALTHMD_WAKE_WORKER_URL` (the deployed doorbell lives at
-`https://healthmd-wake.costream.workers.dev`); opt out per command with `--no-wake` or for MCP with
-`HEALTHMD_NO_WAKE=1`. Build with the `wake-worker` Cargo feature to include the worker HTTP
-client — the default local build keeps its no-remote-HTTP guarantee and degrades to P1. The
-`wake_window`/`wake` enrollment object is reported truthfully per selected device: a stored wake
-credential reports `available`/`enrolled`, and anything else — no enrollment, nothing paired, or
-an ambiguous selection — honestly reports `unavailable`/`wait_only`, sends no notification, and
-leaves the user to notice the request and open Health.md manually. The
-wake window never performs background capture, changes pairing trust, bypasses
-protected-data/permission checks, or routes health data through a worker.
+RFC-0005 P1 (wait-only) applies to both mobile platforms. Current `main` also compiles the P2
+worker client into every macOS, Linux, and Windows CLI build and uses
+`https://healthmd-wake.costream.workers.dev` by default. A paired iPhone that opted in and enrolled
+wake material receives one best-effort `/wake/request` nudge at wait start. Override the endpoint
+only for an explicit test environment with `HEALTHMD_WAKE_WORKER_URL`; opt out per command with
+`--no-wake` or for MCP with `HEALTHMD_NO_WAKE=1`. The former `wake-worker` Cargo feature remains a
+no-op compatibility alias for alpha.6 source-install commands.
+
+The already-published alpha.6 archives predate this all-build activation and remain wait-only; only
+feature-enabled alpha.6 source builds carried P2. The next CLI release will carry the new default. Android FCM wake remains
+RFC-0005 P3 and is not implemented, so Android honestly uses P1 until that separately qualified
+phase ships. The `wake_window`/`wake` object is reported per selected device: a stored wake
+credential reports `available`/`enrolled`, while no enrollment or ambiguous selection reports
+`unavailable`/`wait_only` and sends no notification. Wake never performs background capture,
+changes pairing trust, bypasses protected-data/permission checks, or routes health data through the
+worker.
 
 ## Platform support
 
@@ -58,7 +62,7 @@ protected-data/permission checks, or routes health data through a worker.
 | iOS canonical raw export and extract | Yes | Yes | Yes |
 | Android provider-native JSON/NDJSON raw export | Yes | Yes | Yes |
 | Durable status, resume, cancellation | Yes | Yes | Yes |
-| Bounded wait-only agent wake window | Yes | Yes | Yes |
+| Bounded wake window; enrolled-iPhone APNs after alpha.6 | Yes | Yes | Yes |
 | Generated-file destination commits | Yes | Yes | Yes |
 | Manual IP / Tailscale | Yes | Yes | Yes |
 | Nearby / MultipeerConnectivity | No | No | No |
@@ -73,21 +77,22 @@ in-memory JSON validation is capped at 64 MiB.
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
-| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Connectivity confirmed; full qualification pending |
+| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
-No public CLI/mobile pair is qualified yet. Shared pairing selector 3 is independent from iPhone
-query v3; it does not replace application v1/v2, transport, exports, or transfer frames, and Android
-never downgrades its application protocol to v1. See the authoritative
+Owner-confirmed physical pairing/connectivity is complete on iPhone and Android, but no public
+CLI/mobile pair has the full retained qualification record yet. Shared pairing selector 3 is
+independent from iPhone query v3; it does not replace application v1/v2, transport, exports, or
+transfer frames, and Android never downgrades its application protocol to v1. See the authoritative
 [mobile compatibility ledger](docs/mobile-compatibility.md); every release records exact mobile
 build IDs because matching marketing versions or protocol numbers alone is insufficient.
 
 ## Installation
 
-The `0.1.0-alpha.5` workflow is configured to publish a checksummed, explicitly unqualified
-preview. After the exact GitHub prerelease and tap formula are public, install it with:
+The `0.1.0-alpha.6` workflow published a checksummed, explicitly unqualified preview. Install it
+with:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
@@ -127,7 +132,7 @@ manifest for integrity. macOS users may also use the notarized, stapled DMG. Rep
 with the complete version including any prerelease suffix:
 
 ```bash
-VERSION='0.1.0-alpha.5'
+VERSION='0.1.0-alpha.6'
 TAG="healthmd-cli/v$VERSION"
 BASE="https://github.com/CodyBontecou/health-md/releases/download/$TAG"
 curl -fLO "$BASE/healthmd-cli-installer.sh"
@@ -151,7 +156,7 @@ sh healthmd-cli-installer.sh
 ```
 
 ```powershell
-$Version = '0.1.0-alpha.5'
+$Version = '0.1.0-alpha.6'
 $Tag = "healthmd-cli/v$Version"
 $Base = "https://github.com/CodyBontecou/health-md/releases/download/$Tag"
 Invoke-WebRequest "$Base/healthmd-cli-installer.ps1" -OutFile healthmd-cli-installer.ps1

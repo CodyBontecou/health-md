@@ -20,8 +20,9 @@
 | Shared Rust core | `packages/healthmd-core-rust` | Metric registry, semantic/render engine, protocol, UniFFI |
 | Contracts | `packages/contracts` | Language-neutral public + internal contracts |
 | Practice portal (synthetic) | `apps/practice` | Production-disabled clinician-portal foundation |
+| Direct CLI wake doorbell | `apps/wake` | Notification-only Cloudflare Worker + isolated D1; no health-data path |
 | Website + public docs | `apps/website` | Astro docs site, 10 locales, blog, visualizations |
-| Cloudflare workers | `apps/apple/worker/{oauth-broker,pricing-analytics}` | OAuth broker + coarse pricing analytics |
+| Other Cloudflare workers | `apps/apple/worker/{oauth-broker,pricing-analytics}` | OAuth broker + coarse pricing analytics |
 
 ---
 
@@ -156,6 +157,8 @@
 | Direct protocol v2 (Android) | contract | 20-digit pairing, provider-native raw + generated files, fail-closed | `direct-protocol/v2/` | ✅ |
 | Query protocol v3 (iPhone) | contract | Typed query capability: coverage, series, sleep sessions, workouts, alignment, packets; cursors; page caps | `direct-protocol/v3/` | ✅ |
 | Direct CLI pairing UI | Android | Settings → Direct CLI; 20-digit code; visible data-sync foreground service; Keystore trust; resumable 7-day transfers; private spools | `presentation/directcli/DirectCliScreen.kt`, `direct-protocol/` Kotlin | ✅ android README + desktop-destination doc |
+| Direct CLI wake window | iOS, Android, CLI | Bounded cancellable P1 wait keeps the same query/export/resume/cancel request in flight while the owner opens Health.md | `healthmd-client/src/direct.rs`, RFC-0005 | ✅ CLI README + RFC-0005 |
+| Direct CLI push wake | iOS, CLI, cloud; Android planned | Opt-in health-free APNs doorbell through `apps/wake`; Android FCM is explicit P3 and Android remains wait-only | `IPhoneDirectWakeManager.swift`, `healthmd-client/src/wake.rs`, `apps/wake/` | ✅ RFC-0005 + Worker spec |
 | CLI-triggered Mac↔iPhone export | iOS, macOS | Trigger export on connected open iPhone from Mac/CLI, file mode, strict raw profile | `MacExportJobBuilder`, `SyncPayload.swift` | ✅ `cli-mac-iphone-export.md` |
 | Corpus export session & recovery | iOS, macOS | Corpus producer, progress journal, recovery manager | `IPhoneCorpusExportRecoveryManager.swift` | 🟡 |
 
@@ -237,7 +240,7 @@
 
 ## 17. Release & CI surfaces (meta)
 
-Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submit-version`, `apple-review-status`, `apple-review-state`, `apple-cancel-review-submission`, `apple-announce`), Android (`android-ci`, `android-release`, promote-production ±recover, announce, wear evidence/screenshots), CLI (`cli-ci`, `cli-release`, `cli-publish-crates`, `cli-sbom`), core (`core-rust-ci`), practice (`practice-ci`), website (`website-ci`). Distribution: App Store, Google Play (incl. Wear same listing), cargo-dist + crates.io + homebrew tap, commit-based website deploys. See root `AGENTS.md` release contract.
+Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submit-version`, `apple-review-status`, `apple-review-state`, `apple-cancel-review-submission`, `apple-announce`), Android (`android-ci`, `android-release`, promote-production ±recover, announce, wear evidence/screenshots), CLI (`cli-ci`, `cli-release`, `cli-publish-crates`, `cli-sbom`), core (`core-rust-ci`), practice (`practice-ci`), wake (`wake-ci`), website (`website-ci`). Distribution: App Store, Google Play (incl. Wear same listing), cargo-dist + crates.io + homebrew tap, commit-based website and wake-service deploys. See root `AGENTS.md` release contract.
 
 ---
 

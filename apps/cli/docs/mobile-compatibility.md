@@ -4,14 +4,20 @@ This is the authoritative mobile compatibility ledger for the portable Rust CLI.
 show wire capability; they are not a substitute for an app version/build that completed the physical
 release matrix.
 
-## `healthmd-cli` 0.1.0-alpha.5 candidate
+## `healthmd-cli` 0.1.0-alpha.6
 
 | Mobile source and feature | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Public qualification |
 |---|---|---|---|
-| iPhone status/raw/extract/generated files/resume/cancel | pairing selector 3 current (1 legacy), application v1 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
-| iPhone portable typed MCP queries | pairing selector 3 current (1 legacy), application v1 + query v3 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
-| Android status/provider-native raw/generated files/resume/cancel | pairing selector 3 current (2 legacy), application v2 | Health.md Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone status/raw/extract/generated files/resume/cancel | pairing selector 3 current (1 legacy), application v1 | Health.md iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone portable typed MCP queries | pairing selector 3 current (1 legacy), application v1 + query v3 | Health.md iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| Android status/provider-native raw/generated files/resume/cancel | pairing selector 3 current (2 legacy), application v2 | Health.md Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | **Pending; no public CLI/mobile pair qualified yet** |
 | Android typed MCP queries | N/A | Not implemented | Unsupported |
+
+The owner has physically confirmed that alpha.6 pairs and connects to both iPhone and Android. That
+connectivity smoke is recorded here without promoting it into a complete release qualification:
+the retained record still needs exact device/OS identity, LAN and Tailscale results, the full
+operation matrix, and its evidence digest before any row may use the machine-checked `Qualified`
+shape below.
 
 The exact counterparts above are the mobile versions present at the CLI tag SHA. The lower floors
 identify source versions that implement the protocol, but are not qualification claims or proof
@@ -38,8 +44,11 @@ store build has a later version/build, update this ledger and release notes befo
 ## Compatibility rules
 
 - RFC-0005 P1 is a host-side wait-only wake window shared by iOS and Android. It changes no pairing,
-  application-protocol, query, or transfer bytes. APNs/FCM notification enrollment is not available
-  in this phase; opening Health.md manually unblocks the same in-flight request.
+  application-protocol, query, or transfer bytes. P2 adds opt-in APNs enrollment for iPhone; current
+  `main` compiles the health-free worker nudge into every desktop CLI build and the next release will
+  carry that default. Published alpha.6 archives remain P1-only because P2 was source-feature-gated.
+  Android FCM remains the
+  explicit P3 target, so opening Health.md manually unblocks Android in the meantime.
 - Shared pairing selector 3 is independent from iPhone query v3. It adds one 20-digit iOS/Android QR/code without changing application v1/v2 or encrypted transport.
 - Legacy Apple selector 1 and Android selector 2 remain byte-compatible. Android may retry high-entropy selector 2 for an older CLI and never downgrades its application protocol to v1.
 - An old v1-only iPhone remains usable for supported v1 operations; typed query tools report

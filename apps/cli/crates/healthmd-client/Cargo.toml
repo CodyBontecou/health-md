@@ -13,9 +13,9 @@ publish = ["crates-io"]
 
 [features]
 default = []
-# RFC-0005 P2 worker wake requests. Optional so the default local CLI build keeps its
-# no-remote-HTTP guarantee; every failure degrades to the wait-only P1 window either way.
-wake-worker = ["dep:reqwest"]
+# Compatibility alias retained for alpha.6 source-install commands. Wake requests are now
+# compiled into every healthmd-client build; every failure still degrades to the P1 window.
+wake-worker = []
 
 [dependencies]
 async-trait.workspace = true
@@ -24,7 +24,7 @@ cap-fs-ext.workspace = true
 cap-std.workspace = true
 chrono.workspace = true
 hmac.workspace = true
-reqwest = { workspace = true, optional = true }
+reqwest.workspace = true
 chrono-tz.workspace = true
 directories.workspace = true
 dunce.workspace = true

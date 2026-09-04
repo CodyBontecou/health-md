@@ -153,10 +153,11 @@ Expiry retains the public `direct_source_unavailable` outcome with additive
 terminal source cancellation. Emit `notifications/progress` only for a valid caller progress token,
 at wait start and about every 10 seconds, with no operation, metric, date, or payload detail.
 
-P2 shipped: the dedicated `healthmd-wake` worker is deployed and the CLI stores wake credentials
-and sends the best-effort nudge (feature-gated `wake-worker` HTTP client; default builds keep
-no-remote-HTTP). P3 Android/FCM remains pending: do not promise an Android push, and never alter
-any direct protocol bytes for wake.
+P2 shipped: the dedicated `apps/wake` Worker is deployed and the CLI stores wake credentials and
+sends the best-effort nudge from every build, defaulting to the production Worker URL. Preserve
+`--no-wake`/`HEALTHMD_NO_WAKE=1` as the explicit opt-out and silent P1 fallback; the legacy
+`wake-worker` Cargo feature is a no-op compatibility alias only. P3 Android/FCM remains pending: do
+not promise an Android push, and never alter any direct protocol bytes for wake.
 
 ### Raw/export extraction
 

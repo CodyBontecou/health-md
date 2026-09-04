@@ -14,18 +14,18 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 <div class="availability preview">
 <strong>Anteprima · CLI diretta multipiattaforma</strong>
-<p>Il backend diretto Swift incluso è disponibile su macOS e si abbina all’iPhone. Android con protocollo applicativo v2 fa parte dell’anteprima pubblicamente distribuita del client Rust multipiattaforma. Le versioni attuali di iOS e Android usano lo stesso selettore 3 e lo stesso QR universale per i nuovi abbinamenti portatili. I test di rilascio su iPhone e Android fisici restano in attesa; i comandi per Linux e Windows descrivono un flusso di lavoro esplicitamente non qualificato.</p>
+<p>Il backend diretto Swift incluso è disponibile su macOS e si abbina all’iPhone. Android con protocollo applicativo v2 fa parte dell’anteprima pubblicamente distribuita del client Rust multipiattaforma. Le versioni attuali di iOS e Android usano lo stesso selettore 3 e lo stesso QR universale per i nuovi abbinamenti portatili. La connettività fisica di base è confermata su entrambe le piattaforme mobili, ma la matrice di rilascio completa con build esatte resta in attesa; il flusso di lavoro rimane quindi esplicitamente non qualificato.</p>
 </div>
 
-## Compatibilità mobile per 0.1.0-alpha.3
+## Compatibilità mobile per 0.1.0-alpha.6
 
-Questa tabella autonoma è la matrice operativa dell’anteprima esplicitamente non qualificata. Nessuna coppia pubblica CLI/dispositivo mobile è ancora qualificata.
+Questa tabella autonoma è la matrice operativa dell’anteprima esplicitamente non qualificata. La connettività di base con iPhone e Android è stata confermata fisicamente; nessuna coppia pubblica CLI/dispositivo mobile ha ancora completato e conservato l’intera matrice di qualificazione.
 
 | Sorgente mobile | Protocollo | Controparte tag-SHA esatta / soglia non qualificata | Operazioni Rust portatili | Stato pubblico |
 |---|---|---|---|---|
-| iPhone con esportazione | selettore 3 attuale (1 precedente) / applicazione v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Stato, dati grezzi, estrazione, file, ripresa, annullamento | Qualificazione fisica in sospeso |
-| iPhone con query | selettore 3 attuale (1 precedente) / applicazione v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 più MCP/query locale con 19 strumenti | Qualificazione fisica in sospeso |
-| Android | selettore 3 attuale (2 precedente) / applicazione v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Stato, dati nativi, file, ripresa, annullamento | Qualificazione fisica in sospeso |
+| iPhone con esportazione | selettore 3 attuale (1 precedente) / applicazione v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Stato, dati grezzi, estrazione, file, ripresa, annullamento | Connettività confermata; qualificazione completa in sospeso |
+| iPhone con query | selettore 3 attuale (1 precedente) / applicazione v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 più MCP/query locale con 19 strumenti | Connettività confermata; qualificazione completa in sospeso |
+| Android | selettore 3 attuale (2 precedente) / applicazione v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Stato, dati nativi, file, ripresa, annullamento | Connettività confermata; qualificazione completa in sospeso |
 | Query MCP tipizzata Android | Non disponibile | Non implementata | Gli strumenti richiedono iPhone v3 | Non supportata |
 
 ## Funzioni supportate dalla modalità diretta
@@ -239,7 +239,7 @@ Sull’iPhone, un banner generale durante le operazioni dirette mostra la fase d
 
 Finché l’app del telefono resta in primo piano, una sessione diretta attendibile può riconnettersi automaticamente dopo un’interruzione temporanea. I tentativi usano ritardi crescenti fino a un breve valore massimo. Questo non riattiva né garantisce l’accesso a un’app in background; riapri Health.md prima di riprendere se l’app non è più in primo piano.
 
-La finestra di attesa limitata di 120 secondi mantiene aperta la stessa richiesta mentre la persona sblocca il telefono e apre Health.md. Puoi configurarla con `--wake-timeout SECONDS`; `0` la disattiva. MCP usa `HEALTHMD_WAKE_TIMEOUT`. Questa prima fase non invia ancora notifiche push e non aggira lo sblocco o le autorizzazioni.
+La finestra di attesa limitata di 120 secondi mantiene aperta la stessa richiesta mentre la persona sblocca il telefono e apre Health.md. Puoi configurarla con `--wake-timeout SECONDS`; `0` la disattiva. MCP usa `HEALTHMD_WAKE_TIMEOUT`. I binari alpha.6 pubblicati si limitano all’attesa. Nelle build ufficiali successive, un iPhone registrato riceve anche un’unica notifica APNs best effort tramite il servizio di riattivazione di Health.md riservato alle notifiche; Android e gli iPhone non registrati restano in sola attesa. La notifica può ripristinare la presenza della persona, ma non autorizza mai una lettura HealthKit né invia l’ambito sanitario attraverso il Worker.
 
 ## Ripresa e annullamento delle attività persistenti
 

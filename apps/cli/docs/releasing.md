@@ -4,7 +4,7 @@
 
 - Apple silicon and Intel macOS signed archives plus notarized, stapled DMGs
 - ARM64 and x86-64 Linux archives
-- Authenticode-signed x86-64 Windows archives
+- x86-64 Windows archives (Authenticode after the signing ledger is qualified; signed-checksum integrity initially)
 - POSIX shell and PowerShell
 - Homebrew/Linuxbrew formulae
 
@@ -22,10 +22,11 @@ manifests have been accepted. crates.io publication is a separate staged process
    `HOMEBREW_TAP_DEPLOY_KEY` Actions secret in `health-md`.
 4. Protect the `cli-release` GitHub environment with required reviewers. Approval is the final evidence gate after exact-candidate CI, native archive smoke tests, checksums, and SBOMs have passed.
 5. Protect the `crates-io` environment and restrict its deployment branch policy to `main`. Configure crates.io Trusted Publishing for all five crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
-6. Create a protected `cli-signing` environment and configure the Apple and Azure identities in
-   the next section. Signing is mandatory on release tags; missing or invalid credentials leave the
-   release as a draft. Pull requests continue to build and smoke unsigned candidates without access
-   to signing credentials.
+6. Create a protected `cli-signing` environment and configure the Apple identity in the next
+   section. Add the Azure identity before changing the Windows signing ledger to `qualified`.
+   Ledger-required signing is mandatory on release tags; missing or invalid required credentials
+   leave the release as a draft. Pull requests continue to build and smoke unsigned candidates
+   without access to signing credentials.
 
 The project tap is explicitly preview-capable before the first qualified stable release, so dist
 publishes SemVer prerelease formulae as well as stable formulae. Preview tags may retain pending
@@ -89,8 +90,9 @@ selected profile. Add a federated credential for the GitHub environment subject
 secret. Protect `cli-signing` with required reviewers and restrict it to
 `healthmd-cli/v*` tags. Windows Authenticode may be deferred: while the ledger records
 `pending_external_certificate_provisioning` with a null subject, tags are permitted and the Windows
-archive/installer publish unsigned with checksum-closure integrity only. Before the first release
-whose Windows artifacts must be signed, commit the exact public certificate subject as
+archive/installer publish unsigned with checksum-closure integrity only. Windows Authenticode is explicitly outside the initial CLI release criteria; the pending ledger
+state and signed checksum closure are the accepted initial Windows posture. Before the first later
+release whose Windows artifacts must be signed, commit the exact public certificate subject as
 `windows.publisher_subject` in `release-identities.json`, set its status to `qualified`, and make
 `CLI_WINDOWS_SIGNER_SUBJECT` match exactly; a qualified subject must never regress to pending.
 Native signing jobs compare the committed ledger with the certificate.
@@ -114,7 +116,7 @@ keyless Sigstore identity and publishes `sha256.sum.sigstore.json`. Verify a dow
 with the exact tag identity before trusting its checksums:
 
 ```bash
-tag='healthmd-cli/v0.1.0-alpha.5'
+tag='healthmd-cli/v0.1.0-alpha.6'
 cosign verify-blob \
   --bundle sha256.sum.sigstore.json \
   --certificate-identity "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/$tag" \
@@ -175,11 +177,13 @@ dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
 
-Distribution builds intentionally use the empty default feature set: shipped binaries expose the
-19-tool complete local stdio/direct-iPhone MCP entry and the separately authorized 13-tool
-`serve-read-only` stdio entry, but not `serve-http` or OAuth. The optional direct-backed HTTP
-transport is source-build-only and is never added to release archives implicitly. Health.md has no
-synchronized remote health-data corpus command.
+Distribution builds use the default local-first feature set: shipped binaries expose the 19-tool
+complete local stdio/direct-iPhone MCP entry, the separately authorized 13-tool `serve-read-only`
+stdio entry, and the bounded health-free P2 wake HTTPS client on every desktop target. They do not
+include `serve-http` or OAuth. The direct-backed MCP HTTP transport is source-build-only and is
+never added to release archives implicitly. Health.md has no synchronized remote health-data corpus
+command. Release qualification must verify the production wake URL remains the default and the
+`wake-worker` Cargo feature remains only a compatibility alias rather than an activation gate.
 
 Review generated artifacts and checksums under `apps/cli/target/distrib`, and review the
 [mobile compatibility ledger](mobile-compatibility.md). The first qualified stable release remains
@@ -359,5 +363,6 @@ Linux before committing the formula idempotently to `CodyBontecou/homebrew-tap`.
 If the formula is wrong, revert its tap commit or publish a reviewed correction; never mutate the
 release archives. User recovery is `brew update`, `brew upgrade healthmd`, or `brew uninstall
 healthmd` followed by a verified reinstall. Remove the tap only when intended with `brew untap
-CodyBontecou/tap`. Homebrew is not a Windows recovery path; use the exact versioned signed ZIP or
-PowerShell installer there. Record the tap commit and install/upgrade results in release evidence.
+CodyBontecou/tap`. Homebrew is not a Windows recovery path; use the exact versioned,
+checksum-verified ZIP or PowerShell installer there, and require Authenticode only after the ledger
+is qualified. Record the tap commit and install/upgrade results in release evidence.

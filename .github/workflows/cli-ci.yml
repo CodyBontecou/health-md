@@ -73,8 +73,12 @@ jobs:
           set -euo pipefail
           cargo fmt --all --check
           default_tree="$(cargo tree -p healthmd-cli --edges normal --no-default-features)"
-          if grep -E '(axum|reqwest|jsonwebtoken) v[0-9]' <<<"$default_tree"; then
-            echo 'default local CLI unexpectedly includes remote HTTP/OAuth dependencies' >&2
+          if grep -E '(axum|jsonwebtoken) v[0-9]' <<<"$default_tree"; then
+            echo 'default local CLI unexpectedly includes MCP HTTP/OAuth dependencies' >&2
+            exit 1
+          fi
+          if ! grep -E 'reqwest v[0-9]' <<<"$default_tree"; then
+            echo 'default local CLI must include the bounded RFC-0005 wake client' >&2
             exit 1
           fi
           cargo test -p healthmd-cli --all-targets --no-default-features \

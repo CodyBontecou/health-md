@@ -4,12 +4,13 @@
 
 Implementation began on 2026-07-24. The existing `CodyBontecou/health-md` repository remains canonical. Apple, CLI, Android, and website histories have been imported on `chore/monorepo-foundation`; deployment and old-repository cutover remain pending.
 
-The monorepo contains five independently built product components:
+The monorepo contains six independently built product/service components:
 
 - Apple apps under `apps/apple`
 - Android app under `apps/android`
 - Rust CLI under `apps/cli`
 - Practice clinical portal and future service boundary under `apps/practice` (synthetic-only; not released)
+- Direct CLI notification-only wake Worker under `apps/wake`
 - Website under `apps/website`
 
 Shared implementation and contracts are separate from those product workspaces:
@@ -35,11 +36,11 @@ The governing cross-platform workflow is [Apple and Android unification policy](
 
 The Apple project is moved with `git mv`, preserving the existing canonical history. Other default branches are imported from temporary clones using `git filter-repo --to-subdirectory-filter`. Imported commit hashes change so historical paths live at their final monorepo locations; commit maps are retained under `docs/migration/commit-maps` and original repositories remain available for old permalinks.
 
-Source repositories are not force-pushed or rewritten. After validation and cutover, they can be made read-only with a pointer to this repository.
+Source repositories are not force-pushed or rewritten. After validation and cutover, they can be made read-only with a pointer to this repository. The later local `healthmd-wake` repository had no remote; its four commits were imported unsquashed under `apps/wake`, so their original hashes remain reachable and this monorepo is now their canonical remote.
 
 ## Build organization
 
-The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata. Practice is independently locked and must not share runtime, storage, analytics, or deployment configuration with the static website or existing non-PHI Workers; see [ADR-0003](adr-0003-practice-clinical-boundary.md).
+The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata. Practice is independently locked and must not share runtime, storage, analytics, or deployment configuration with the static website or existing non-PHI Workers; see [ADR-0003](adr-0003-practice-clinical-boundary.md). The independently locked `apps/wake` Worker owns only RFC-0005 notification registration, replay/rate-limit state, and APNs delivery; it is never a health-data path.
 
 `apps/cli` and `packages/healthmd-core-rust` are independent Cargo workspaces. Each keeps its own `Cargo.lock` and `target` directory; aggregate commands invoke them separately rather than creating a repository-wide Cargo workspace. The CLI consumes the shared `healthmd-protocol` crate by path during development and by exact crates.io version when packaged.
 
@@ -57,7 +58,7 @@ Component release workflows use non-overlapping tag patterns:
 - CLI: `healthmd-cli/v*`
 - Android: `android/v*`
 
-Website production deploys are commit-based. Non-Apple releases must not become or depend on the repository-wide latest release.
+Website and wake-service production deploys are commit-based. Wake deployments must use committed, pushed `origin/main` source and remain independent from CLI artifact publication. Non-Apple releases must not become or depend on the repository-wide latest release.
 
 ## Migration gates
 

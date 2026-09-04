@@ -76,8 +76,8 @@ A visible data-sync notification ("Waiting for Health.md CLI" → transfer progr
 
 The portable CLI's RFC-0005 P1 wake window keeps an unavailable export/resume/cancel request open
 for 120 seconds while the user opens this screen and restarts the direct session. It is host-only,
-uses no new protocol bytes, and can be disabled with `--wake-timeout 0`. FCM enrollment is not
-available in P1, so no new wake notification is sent; the existing foreground-service notification
-is unchanged.
+uses no new protocol bytes, and can be disabled with `--wake-timeout 0`. The deployed P2 APNs
+doorbell is Apple-only. Android FCM enrollment remains the explicit RFC-0005 P3 target, so Android
+sends no new wake notification yet; the existing foreground-service notification is unchanged.
 
 New pairing uses shared selector 3 and its domain-separated 20-digit transcript (`packages/contracts/direct-protocol/pairing-v3/`). Selector 2 remains as a high-entropy fallback for older CLIs; trusted reconnect keeps selector 2. The strict QR parser accepts only the exact in-app handoff, canonical private-LAN/Tailscale IPv4, a valid port, and exactly 20 ASCII digits. The session uses authenticated encryption with Android Keystore-backed trust, a `dataSync` foreground service (`FOREGROUND_SERVICE_DATA_SYNC`), private no-backup spools, partitioned resumable seven-day jobs, and exact artifact checksums (application protocol v2: `direct-protocol/` Kotlin + `packages/contracts/direct-protocol/v2/`). Failure states map to user copy (`CONNECTION_FAILED`, `SESSION_TIMEOUT`, `QUOTA_EXHAUSTED`, `DEVICE_LOCKED`, …). Destination strategy and topology: [Android desktop destination strategy](../android-desktop-destination.md).

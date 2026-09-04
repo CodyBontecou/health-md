@@ -2,12 +2,14 @@
 
 ## Required pull-request gates
 
-Every pull request runs the component CI workflows and reports five stable final contexts suitable for branch protection:
+Every pull request runs the component CI workflows and reports seven stable final contexts suitable for branch protection:
 
 - `Apple CI / Apple CI`
 - `Android CI / Android CI`
 - `CLI CI / CLI CI`
+- `Core Rust CI / Core Rust CI`
 - `Practice CI / Practice CI`
+- `Wake CI / Wake CI`
 - `Website CI / Website CI`
 
 The final jobs fail unless every job in their component workflow succeeds. Main-branch push triggers remain path-aware, so unaffected components are not rebuilt after merge.
@@ -124,6 +126,18 @@ Profile Signer role; it does not use a client secret. Pull requests
 never receive signing credentials and produce unsigned smoke candidates only. A missing signing
 input, rejected notarization, absent timestamp, checksum mismatch, stale/extra draft asset, or
 credential-upgrade failure leaves the release in draft state.
+
+## Direct CLI wake Worker
+
+`.github/workflows/wake-ci.yml` owns the `apps/wake` source gate. It installs the component's locked
+Node dependencies, runs the cross-language-pinned HMAC and notification policy tests, type-checks
+the Worker, and builds a Wrangler dry-run bundle without credentials or deployment. Main pushes are
+path-scoped; pull requests always report the stable `Wake CI / Wake CI` context.
+
+The live Worker remains an independently deployed, notification-only service with its own D1 and
+APNs secrets. Deployment is not coupled to CLI artifact publication and must use committed, pushed
+`origin/main` source under `apps/wake`; see its component README and AGENTS file. No workflow in this
+repository routes health data through the Worker.
 
 ## Release steps
 
