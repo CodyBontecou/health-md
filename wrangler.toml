@@ -10,9 +10,9 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
 [vars]
-# QA phase: development-signed builds use the sandbox APNs environment.
-# Flip back to api.push.apple.com before any TestFlight/App Store build.
-APNS_HOST = "api.sandbox.push.apple.com"
+# Production for App Store/TestFlight builds using aps-environment=production.
+# Use api.sandbox.push.apple.com only when testing against a development-signed build.
+APNS_HOST = "api.push.apple.com"
 BUNDLE_ID = "com.codybontecou.obsidianhealth"
 
 # D1 database for wake registrations, delivery counters, and replay nonces.
