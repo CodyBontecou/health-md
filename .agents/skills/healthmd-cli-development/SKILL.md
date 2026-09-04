@@ -73,7 +73,7 @@ Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do 
 - Preserve explicit device and port. Never switch peer, port, backend, or transport silently.
 - Peer/install binding, dates, destination, settings, request fingerprint, manifests, partition chain, and committed frontier are immutable across resume.
 - Timeout, Ctrl-C, process death, disconnect, background expiry, or local wake-wait cancellation never means phone-side cancellation. Only mobile acknowledgement is terminal.
-- RFC-0005 P1 keeps unavailable query/export/resume/cancel requests in one shared 120-second wake window (`--wake-timeout`; MCP `HEALTHMD_WAKE_TIMEOUT`) with 250 ms to 2 s retries. It emits only health-free progress. P1 has no APNs/FCM enrollment and must report that notification state as unavailable.
+- RFC-0005 keeps unavailable query/export/resume/cancel requests in one shared 120-second wake window (`--wake-timeout`; MCP `HEALTHMD_WAKE_TIMEOUT`) with 250 ms to 2 s retries. It emits only health-free progress. Wake enrollment is reported truthfully per selected device from the stored wake credential: `unavailable`/`wait_only` when absent, `available`/`enrolled` when the paired phone enrolled.
 - Strict raw/extract validate the complete disk spool before exposure. Incomplete extract emits no values without `--allow-partial`.
 - File mode requires an existing absolute destination, production iPhone exporters, bounded transfer, and restart-safe overwrite/append/Markdown merge receipts.
 - Protocol v1 destination text is opaque on iPhone. The receiving host validates and binds an existing native absolute non-symlink directory before sending; file mode works on macOS, Linux, and Windows.
@@ -153,8 +153,10 @@ Expiry retains the public `direct_source_unavailable` outcome with additive
 terminal source cancellation. Emit `notifications/progress` only for a valid caller progress token,
 at wait start and about every 10 seconds, with no operation, metric, date, or payload detail.
 
-Until P2/P3 lands with reviewed contracts and worker endpoints, do not create or persist wake
-credentials, promise a push notification, or alter any direct protocol bytes.
+P2 shipped: the dedicated `healthmd-wake` worker is deployed and the CLI stores wake credentials
+and sends the best-effort nudge (feature-gated `wake-worker` HTTP client; default builds keep
+no-remote-HTTP). P3 Android/FCM remains pending: do not promise an Android push, and never alter
+any direct protocol bytes for wake.
 
 ### Raw/export extraction
 

@@ -174,9 +174,11 @@ additive `wake_window_seconds`. MCP calls with a progress token emit health-free
 `notifications/progress` at wait start and about every 10 seconds; cancellation interrupts the
 wait immediately without becoming terminal phone-side cancellation.
 
-P1 is wait-only. `healthmd status`/`healthmd.direct_readiness` must report enrollment unavailable,
-and no test should expect APNs or FCM. Keep outer process timeouts longer than wake plus operation
-bounds.
+Wake enrollment is reported truthfully per selected device. Without enrolled wake material,
+`healthmd status`/`healthmd.direct_readiness` must report enrollment `unavailable` (mode
+`wait_only`) and no test should expect APNs or FCM; with a stored wake credential for the selected
+device they must report `available`/`enrolled` and a locked-phone wait delivers the push. Keep outer
+process timeouts longer than wake plus operation bounds.
 
 ## Live LAN E2E
 

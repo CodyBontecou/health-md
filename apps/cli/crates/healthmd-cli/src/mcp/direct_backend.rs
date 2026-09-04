@@ -113,6 +113,14 @@ impl DirectIphoneBackend {
         }
         Ok(())
     }
+
+    /// The shared wake-window object with enrollment reported truthfully for the configured
+    /// device selection. Derives from the same client implementation the CLI reports.
+    async fn wake_status_value(&self) -> Value {
+        self.client
+            .wake_status_value(self.configuration.device_id, self.configuration.wake_window)
+            .await
+    }
 }
 
 #[async_trait]
@@ -130,6 +138,7 @@ impl HealthDataBackend for DirectIphoneBackend {
 
     async fn readiness(&self, _context: &CallContext) -> Result<Value, BackendError> {
         let _gate = self.operation_gate.lock().await;
+        let wake = self.wake_status_value().await;
         self.client
             .status(
                 self.configuration.device_id,
@@ -137,7 +146,7 @@ impl HealthDataBackend for DirectIphoneBackend {
                 self.configuration.timeout,
             )
             .await
-            .map(|result| status_value(&result, self.configuration.wake_window))
+            .map(|result| status_value(&result, &wake))
             .map_err(|error| backend_error(&error, None))
     }
 
@@ -157,7 +166,7 @@ impl HealthDataBackend for DirectIphoneBackend {
                 "ready": false,
                 "message": message,
                 "next_tool": next_tool,
-                "wake": self.configuration.wake_window.status_value()
+                "wake": self.wake_status_value().await
             }));
         }
         self.readiness(context).await
@@ -396,7 +405,7 @@ fn wake_backend_error(error: &ClientError, wake_window: WakeWindow) -> BackendEr
     }
 }
 
-fn status_value(result: &StatusResult, wake_window: WakeWindow) -> Value {
+fn status_value(result: &StatusResult, wake: &Value) -> Value {
     let query = result.peer_capabilities.query.as_ref();
     match &result.status {
         SourceStatus::Ios(source) => {
@@ -425,7 +434,7 @@ fn status_value(result: &StatusResult, wake_window: WakeWindow) -> Value {
                 "active_job_id": source.active_job_id,
                 "active_query_request_id": source.active_query_request_id,
                 "query_capabilities": query,
-                "wake": wake_window.status_value()
+                "wake": wake.clone()
             })
         }
         SourceStatus::Android(_) => json!({
@@ -436,7 +445,7 @@ fn status_value(result: &StatusResult, wake_window: WakeWindow) -> Value {
             "message": "This paired source does not support the direct iPhone query protocol.",
             "application_protocol_version": result.application_protocol_version,
             "port": result.port,
-            "wake": wake_window.status_value()
+            "wake": wake.clone()
         }),
     }
 }
@@ -634,6 +643,7 @@ fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use healthmd_client::direct::WakeEnrollment;
 
     #[test]
     fn explicit_mcp_wake_override_is_bounded_and_can_disable_waiting() {
@@ -645,11 +655,16 @@ mod tests {
         };
         let disabled = configured_wake_window(&options).unwrap();
         assert!(!disabled.enabled());
-        assert_eq!(
-            disabled.status_value()["enrollment"]["state"],
-            "unavailable"
-        );
-        assert_eq!(disabled.status_value()["enrollment"]["mode"], "wait_only");
+        // Enrollment is the per-device credential truth, reported independently of the window:
+        // a stored wake credential is enrolled even while the wait itself is disabled.
+        let wait_only = disabled.status_value(WakeEnrollment::WaitOnly);
+        assert_eq!(wait_only["enabled"], false);
+        assert_eq!(wait_only["enrollment"]["state"], "unavailable");
+        assert_eq!(wait_only["enrollment"]["mode"], "wait_only");
+        let enrolled = disabled.status_value(WakeEnrollment::Enrolled);
+        assert_eq!(enrolled["enabled"], false);
+        assert_eq!(enrolled["enrollment"]["state"], "available");
+        assert_eq!(enrolled["enrollment"]["mode"], "enrolled");
 
         let invalid = ServeOptions {
             wake_timeout_seconds: Some(MAXIMUM_WAKE_TIMEOUT_SECONDS + 1),

@@ -113,8 +113,10 @@ Never attach raw output to an issue or CI log.
    reconnect behavior. With Health.md suspended, start a query using the default wake window, open
    the app before 120 seconds, and require that the original command completes without a re-run.
    Repeat with `--wake-timeout 0`, expiry, and Ctrl-C; local interruption must not report or persist
-   phone-side cancellation. P1 has no APNs enrollment, so require status to report wait-only wake
-   with enrollment unavailable and do not expect a notification.
+   phone-side cancellation. Wake enrollment is reported truthfully per selected device: without
+   enrolled wake material, status reports wait-only wake with enrollment `unavailable` and sends no
+   push; when the paired phone has enrolled (opt-in setting + worker registration), the same status
+   reports `available`/`enrolled` and a locked-phone wait delivers the tap-to-continue notification.
 5. Verify silent channel death self-heals without a manual in-app disconnect: keep Health.md
    foreground and connected, put the Mac to sleep (or toggle airplane mode on the phone) for at
    least 30 seconds, then run `healthmd status` on the Mac after waking it. The iPhone must
@@ -161,7 +163,7 @@ NO_COLOR=1 TERM=dumb timeout 200 healthmd extract --category Sleep --yesterday \
   --wake-timeout 60 --output /tmp/healthmd-sleep.json </dev/null
 
 # expiry keeps the public error plus the additive window field
-NO_COLOR=1 TERM=dumb timeout 200 healthmd status </dev/null   # wake_window.enrollment.state == unavailable
+NO_COLOR=1 TERM=dumb timeout 200 healthmd status </dev/null   # wake_window.enrollment reflects this device's stored wake credential
 ```
 
 - Expiry of query/export/extract/resume must print `direct_source_unavailable` with

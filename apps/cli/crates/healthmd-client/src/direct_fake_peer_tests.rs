@@ -668,6 +668,13 @@ async fn wake_enrollment_round_trips_rotates_and_unpair_removes_it() {
         .expect("enrolled");
     assert_eq!(stored.wake_id, "wake-opaque-one");
     assert_eq!(stored.wake_key, vec![9_u8; 32]);
+    let enrolled = client
+        .wake_status_value(Some(device), WakeWindow::default())
+        .await;
+    assert_eq!(enrolled["enabled"], true);
+    assert_eq!(enrolled["timeout_seconds"], 120);
+    assert_eq!(enrolled["enrollment"]["state"], "available");
+    assert_eq!(enrolled["enrollment"]["mode"], "enrolled");
 
     let second = fake_enrollment("wake-opaque-two");
     let status = client.status(Some(device), port, Duration::from_secs(20));
@@ -687,6 +694,48 @@ async fn wake_enrollment_round_trips_rotates_and_unpair_removes_it() {
 
     client.unpair(device).await.unwrap();
     assert!(client.wake_credential(device).await.unwrap().is_none());
+    let wait_only = client
+        .wake_status_value(Some(device), WakeWindow::default())
+        .await;
+    assert_eq!(wait_only["enrollment"]["state"], "unavailable");
+    assert_eq!(wait_only["enrollment"]["mode"], "wait_only");
+}
+
+#[tokio::test]
+async fn wake_status_reports_enrollment_per_device() {
+    let temporary = TempDir::new().unwrap();
+    let client = test_client(&temporary);
+    let enrolled_trust = pair_fake_ios(&client).await;
+    let enrolled_device = enrolled_trust.installation_id.0;
+    let plain_trust = pair_fake_ios(&client).await;
+    let plain_device = plain_trust.installation_id.0;
+    let probe = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+        .await
+        .unwrap();
+    let port = probe.local_addr().unwrap().port();
+    drop(probe);
+
+    let status = client.status(Some(enrolled_device), port, Duration::from_secs(20));
+    let enrollment = fake_enrollment("wake-per-device");
+    let peer = respond_with_ios_status_enrolled(port, &enrolled_trust, true, Some(&enrollment));
+    let (status, ()) = tokio::join!(status, peer);
+    assert!(status.is_ok());
+
+    // Only the device that enrolled reports push wake; the second paired device honestly
+    // reports wait-only, and an ambiguous no-selection also cannot claim enrollment.
+    let enrolled = client
+        .wake_status_value(Some(enrolled_device), WakeWindow::default())
+        .await;
+    assert_eq!(enrolled["enrollment"]["state"], "available");
+    assert_eq!(enrolled["enrollment"]["mode"], "enrolled");
+    let wait_only = client
+        .wake_status_value(Some(plain_device), WakeWindow::default())
+        .await;
+    assert_eq!(wait_only["enrollment"]["state"], "unavailable");
+    assert_eq!(wait_only["enrollment"]["mode"], "wait_only");
+    let ambiguous = client.wake_status_value(None, WakeWindow::default()).await;
+    assert_eq!(ambiguous["enrollment"]["state"], "unavailable");
+    assert_eq!(ambiguous["enrollment"]["mode"], "wait_only");
 }
 
 #[tokio::test]

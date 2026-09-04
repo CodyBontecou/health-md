@@ -42,9 +42,11 @@ exist), the CLI sends one best-effort `/wake/request` nudge at wait start. Confi
 the worker with `HEALTHMD_WAKE_WORKER_URL` (the deployed doorbell lives at
 `https://healthmd-wake.costream.workers.dev`); opt out per command with `--no-wake` or for MCP with
 `HEALTHMD_NO_WAKE=1`. Build with the `wake-worker` Cargo feature to include the worker HTTP
-client — the default local build keeps its no-remote-HTTP guarantee and degrades to P1. Until a
-phone enrolls (opt-in setting + worker registration), the enrollment state stays `unavailable`,
-no notification is sent, and the user must notice the request and open Health.md manually. The
+client — the default local build keeps its no-remote-HTTP guarantee and degrades to P1. The
+`wake_window`/`wake` enrollment object is reported truthfully per selected device: a stored wake
+credential reports `available`/`enrolled`, and anything else — no enrollment, nothing paired, or
+an ambiguous selection — honestly reports `unavailable`/`wait_only`, sends no notification, and
+leaves the user to notice the request and open Health.md manually. The
 wake window never performs background capture, changes pairing trust, bypasses
 protected-data/permission checks, or routes health data through a worker.
 

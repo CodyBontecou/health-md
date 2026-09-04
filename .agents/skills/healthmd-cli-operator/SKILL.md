@@ -72,7 +72,7 @@ Require:
 - `iphone.can_trigger_exports == true` for generated files;
 - no conflicting `iphone.active_job_id`.
 
-Ignore status `destination.selected`: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy; P1 uses `enrollment.state: unavailable` and sends no push. If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
+Ignore status `destination.selected`: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy plus this device's truthful wake enrollment: `unavailable`/`wait_only` without a stored wake credential (no push is sent), `available`/`enrolled` when the paired phone enrolled wake material (a locked-phone wait then sends one best-effort push). If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
 
 ## Waiting for an unavailable phone
 

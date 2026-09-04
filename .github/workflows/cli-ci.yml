@@ -305,7 +305,10 @@ jobs:
                   assert isinstance(doctor.get("next_tool"), str), doctor
                   assert doctor["next_tool"] == "healthmd_pairing_start", doctor
               if "wake" in doctor:
-                  # RFC-0005 P1: wait-only wake window with enrollment honestly unavailable.
+                  # RFC-0005: enrollment is reported truthfully per selected device. This smoke
+                  # runs against a fresh state with nothing paired and no stored wake credential,
+                  # so the honest report is wait-only. (Enrolled devices report
+                  # {"mode": "enrolled", "state": "available"}; pinned in the Rust unit tests.)
                   assert doctor["wake"]["enrollment"] == {
                       "mode": "wait_only", "state": "unavailable",
                   }, doctor

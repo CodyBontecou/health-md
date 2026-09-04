@@ -1413,7 +1413,7 @@ async fn direct_status(
             "display_name": Value::Null
         },
         "active_export": Value::Null,
-        "wake_window": WakeWindow::default().status_value(),
+        "wake_window": client.wake_status_value(device, WakeWindow::default()).await,
         "direct_cli": {
             "paired": true,
             "transport": "manual-ip",

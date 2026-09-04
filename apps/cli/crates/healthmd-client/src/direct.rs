@@ -50,6 +50,37 @@ pub struct WakeWindow {
     timeout: Duration,
 }
 
+/// The RFC-0005 wake enrollment truth for one selected paired device.
+///
+/// [`WakeEnrollment::Enrolled`] means a stored wake credential exists for the selected device, so
+/// a wait can fire the best-effort push nudge. [`WakeEnrollment::WaitOnly`] is the honest report
+/// when no credential exists (or no single device is selected): waits degrade to P1 wait-only.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WakeEnrollment {
+    /// A stored wake credential exists for the selected device (P2 push wake can fire).
+    Enrolled,
+    /// No stored credential exists for the selected device; waits stay wait-only (P1).
+    WaitOnly,
+}
+
+impl WakeEnrollment {
+    #[must_use]
+    pub const fn state(self) -> &'static str {
+        match self {
+            Self::Enrolled => "available",
+            Self::WaitOnly => "unavailable",
+        }
+    }
+
+    #[must_use]
+    pub const fn mode(self) -> &'static str {
+        match self {
+            Self::Enrolled => "enrolled",
+            Self::WaitOnly => "wait_only",
+        }
+    }
+}
+
 impl WakeWindow {
     #[must_use]
     pub const fn from_seconds(timeout_seconds: u64) -> Self {
@@ -73,14 +104,17 @@ impl WakeWindow {
         !self.timeout.is_zero()
     }
 
+    /// Serialize the shared wake-window status object with the enrollment truth for the
+    /// selected device. This is the single implementation behind both the CLI `wake_window`
+    /// object and the MCP `wake` object (RFC-0005 decision 2).
     #[must_use]
-    pub fn status_value(self) -> serde_json::Value {
+    pub fn status_value(self, enrollment: WakeEnrollment) -> serde_json::Value {
         serde_json::json!({
             "enabled": self.enabled(),
             "timeout_seconds": self.timeout_seconds(),
             "enrollment": {
-                "state": "unavailable",
-                "mode": "wait_only"
+                "state": enrollment.state(),
+                "mode": enrollment.mode()
             }
         })
     }
@@ -2187,6 +2221,28 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             .await?
             .client(device_id)
             .and_then(|client| client.wake.clone()))
+    }
+
+    /// The shared wake-window status object with enrollment reported truthfully per device.
+    ///
+    /// The selected device is resolved exactly as the wake wait resolves it, and a stored wake
+    /// credential for that device reports [`WakeEnrollment::Enrolled`]. Without a resolvable
+    /// selection or a stored credential — including nothing paired at all — the honest report is
+    /// [`WakeEnrollment::WaitOnly`], matching what the wake wait would actually do.
+    pub async fn wake_status_value(
+        &self,
+        requested: Option<Uuid>,
+        window: WakeWindow,
+    ) -> serde_json::Value {
+        let enrolled = match self.selected_device_id(requested).await {
+            Ok(device) => matches!(self.wake_credential(device).await, Ok(Some(_))),
+            Err(_) => false,
+        };
+        window.status_value(if enrolled {
+            WakeEnrollment::Enrolled
+        } else {
+            WakeEnrollment::WaitOnly
+        })
     }
 
     /// Persist a wake enrollment from a paired phone under its existing trust binding. A later
