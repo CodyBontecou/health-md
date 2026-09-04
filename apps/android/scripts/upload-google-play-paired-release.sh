@@ -102,7 +102,7 @@ commit_response_received=true
 set +e
 curl --fail-with-body --max-time 30 -sS \
   -X POST "${auth[@]}" -H 'Content-Type: application/json' \
-  "$api/edits/$edit_id:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
+  "$api/edits/$edit_id:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
   --data '' -o "$work/commit-response.json"
 commit_exit_code=$?
 set -e
