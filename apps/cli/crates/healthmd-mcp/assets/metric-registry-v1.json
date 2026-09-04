@@ -46,6 +46,7 @@
       "apple.typed-whoop-provider-section",
       "direct-cli.shared-qr-pairing",
       "direct.cli_agent_wake",
+      "direct.cli_agent_push_wake",
       "core.shared-rust-metric-registry"
     ]
   },
@@ -279,6 +280,7 @@
     "source.private-platform-database",
     "direct-cli.shared-qr-pairing",
     "direct.cli_agent_wake",
+    "direct.cli_agent_push_wake",
     "setup.share-portable-configuration",
     "core.shared-rust-metric-registry",
     "core.shared-rust-profile-engine"
