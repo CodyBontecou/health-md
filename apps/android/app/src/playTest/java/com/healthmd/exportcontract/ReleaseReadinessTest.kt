@@ -25,8 +25,8 @@ class ReleaseReadinessTest {
     fun appVersion_isPreparedForDirectCliQrPairingRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 36"))
-        assertTrue(buildGradle.contains("versionName = \"1.8.7\""))
+        assertTrue(buildGradle.contains("versionCode = 37"))
+        assertTrue(buildGradle.contains("versionName = \"1.8.8\""))
     }
 
     @Test
@@ -41,7 +41,7 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.8.7"))
+            assertTrue(releaseNotes.contains("v1.8.8"))
             assertTrue(releaseNotes.contains("QR"))
             assertTrue(releaseNotes.contains("reconnect"))
             assertTrue(releaseNotes.contains("120 seconds"))
@@ -62,7 +62,7 @@ class ReleaseReadinessTest {
         val blockerReport = readRepoFile("scripts/report-wear-release-blockers.sh")
 
         assertTrue(uploadScript.contains("PHONE_PLAY_TRACK:-qa"))
-        assertTrue(uploadScript.contains("WEAR_PLAY_TRACK:-wear:qa2"))
+        assertTrue(uploadScript.contains("WEAR_PLAY_TRACK:-wear:internal"))
         assertTrue(uploadScript.contains("app-play-release.aab"))
         assertTrue(uploadScript.contains("wear-release.aab"))
         assertTrue(!uploadScript.contains("wear-app.png"))
@@ -83,7 +83,7 @@ class ReleaseReadinessTest {
         assertTrue(signerCapture.contains("refusing to overwrite"))
         assertTrue(signerCapture.contains("verify-google-play-generated-apk-evidence.sh"))
         assertTrue(releaseWorkflow.contains("./scripts/upload-google-play-paired-release.sh"))
-        assertTrue(releaseWorkflow.contains("wear:qa2"))
+        assertTrue(releaseWorkflow.contains("wear:internal"))
         assertTrue(releaseWorkflow.contains("GITHUB_REF_NAME^{commit}"))
         assertTrue(releaseWorkflow.contains("qa-upload-receipt.json"))
         assertTrue(screenshotWorkflow.contains("environment: google-play-qa"))

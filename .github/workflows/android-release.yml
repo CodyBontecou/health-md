@@ -229,7 +229,7 @@ jobs:
               schemaVersion:1, repository:$repository, workflow:$workflow, event:$event,
               runId:$runId, runAttempt:$runAttempt, tag:$tag, headSha:$sha, tagPeeledSha:$peeled,
               versionName:$version, phoneVersionCode:$phoneCode, wearVersionCode:$wearCode,
-              phoneTrack:"qa", wearTrack:"wear:qa2", releaseStatus:"completed",
+              phoneTrack:"qa", wearTrack:"wear:internal", releaseStatus:"completed",
               phoneAabSha256:$phoneAab, wearAabSha256:$wearAab,
               uploadPrepared:true, preparedAtUtc:$preparedAt
             }' >"$RUNNER_TEMP/qa-upload-receipt.json"
@@ -257,11 +257,11 @@ jobs:
 
       - name: Upload phone/Wear bundles to their form-factor tracks in one Play edit
         env:
-          CONFIRM_PLAY_PAIRED_UPLOAD: com.healthmd.android:qa:wear:qa2:${{ steps.version.outputs.version_code }}:${{ steps.version.outputs.wear_version_code }}
+          CONFIRM_PLAY_PAIRED_UPLOAD: com.healthmd.android:qa:wear:internal:${{ steps.version.outputs.version_code }}:${{ steps.version.outputs.wear_version_code }}
           PHONE_VERSION_CODE: ${{ steps.version.outputs.version_code }}
           WEAR_VERSION_CODE: ${{ steps.version.outputs.wear_version_code }}
           PHONE_PLAY_TRACK: qa
-          WEAR_PLAY_TRACK: wear:qa2
+          WEAR_PLAY_TRACK: wear:internal
           PLAY_RELEASE_STATUS: completed
         run: ./scripts/upload-google-play-paired-release.sh
 
@@ -286,6 +286,6 @@ jobs:
             echo "- Version: $VERSION"
             echo "- Version code: $VERSION_CODE"
             echo "- Wear version code: $WEAR_VERSION_CODE"
-            echo "- Tracks: qa (phone) + wear:qa2 (Wear), same listing/edit"
+            echo "- Tracks: qa (phone) + wear:internal (Wear), same listing/edit"
             echo "- Binary destination: Google Play only"
           } >> "$GITHUB_STEP_SUMMARY"

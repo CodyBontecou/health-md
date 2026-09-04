@@ -162,7 +162,7 @@ jobs:
             .workflow == ".github/workflows/android-release.yml" and .event == "push" and
             .runId == $run and .tag == $tag and .headSha == $sha and .tagPeeledSha == $sha and
             .versionName == $version and .phoneVersionCode == $phone and .wearVersionCode == $wear and
-            .phoneTrack == "qa" and .wearTrack == "wear:qa2" and .releaseStatus == "completed" and
+            .phoneTrack == "qa" and .wearTrack == "wear:internal" and .releaseStatus == "completed" and
             .phoneAabSha256 == $phoneSha and .wearAabSha256 == $wearSha and .uploadPrepared == true
           ' "$receipt" >/dev/null
           run_attempt=$(jq -er .runAttempt "$receipt")
@@ -423,7 +423,7 @@ jobs:
           curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
             -H "Authorization: Bearer $token" "$api/qa/releases" -o "$root/google-play-qa-current.json"
           curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-            -H "Authorization: Bearer $token" "$api/wear:qa2/releases" -o "$root/google-play-wear-qa-current.json"
+            -H "Authorization: Bearer $token" "$api/wear:internal/releases" -o "$root/google-play-wear-qa-current.json"
           jq -e --argjson code "$PHONE_VERSION_CODE" '
             any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
           ' "$root/google-play-qa-current.json" >/dev/null

@@ -34,7 +34,7 @@ token=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS -X 
   --data-urlencode "assertion=$unsigned.$signature" | jq -er .access_token)
 
 work=$(mktemp -d); trap 'rm -f "$private_key"; rm -rf "$work"' EXIT
-for track in qa beta production wear:qa2 wear:beta wear:production; do
+for track in qa beta production wear:internal wear:beta wear:production; do
   curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
     -H "Authorization: Bearer $token" \
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$package/tracks/$track/releases" \

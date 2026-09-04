@@ -102,7 +102,7 @@ Report whether the current evidence-video URL resolves. Do not submit the declar
 
 Release pages are inspection-only here. Never upload an AAB, create/edit a release, change a testing or production track, promote an artifact, change rollout, or submit review from the browser.
 
-The only supported AAB upload is `.github/workflows/android-release.yml`, which requires an exact annotated/main-reachable SHA and uploads phone/Wear together to `qa`/`wear:qa2`. The only supported production mutation is `.github/workflows/android-promote-production.yml`, which verifies sealed evidence before credentials and moves both exact codes to `production`/`wear:production` in one edit. Recovery is non-committing rather than API-read-only: its protected workflow may create and delete a temporary edit solely to inspect screenshots, but it cannot send a track `PUT` or commit an edit. Browser operators do not run that workflow. Report current release state and stop.
+The only supported AAB upload is `.github/workflows/android-release.yml`, which requires an exact annotated/main-reachable SHA and uploads phone/Wear together to `qa`/`wear:internal`. The only supported production mutation is `.github/workflows/android-promote-production.yml`, which verifies sealed evidence before credentials and moves both exact codes to `production`/`wear:production` in one edit. Recovery is non-committing rather than API-read-only: its protected workflow may create and delete a temporary edit solely to inspect screenshots, but it cannot send a track `PUT` or commit an edit. Browser operators do not run that workflow. Report current release state and stop.
 
 ### Working order
 

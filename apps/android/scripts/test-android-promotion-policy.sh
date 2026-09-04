@@ -9,9 +9,9 @@ source "$(dirname "$0")/google-play-paired-policy.sh"
 
 phone=29
 wear=1000029
-play_assert_distinct_tracks qa wear:qa2 || fail 'valid form-factor tracks rejected'
+play_assert_distinct_tracks qa wear:internal || fail 'valid form-factor tracks rejected'
 if play_assert_distinct_tracks qa production >/dev/null 2>&1; then fail 'non-Wear destination accepted'; fi
-if play_assert_distinct_tracks wear:qa2 wear:production >/dev/null 2>&1; then fail 'Wear phone source accepted'; fi
+if play_assert_distinct_tracks wear:internal wear:production >/dev/null 2>&1; then fail 'Wear phone source accepted'; fi
 
 play_release_payload "$phone" completed >"$tmp/release.json"
 jq -e --arg code "$phone" '.releases == [{versionCodes:[$code],status:"completed"}]' \
@@ -36,7 +36,7 @@ cat >"$tmp/qa.json" <<'JSON'
 {"track":"qa","releases":[{"name":"old","status":"completed","versionCodes":["28"]},{"name":"phone","status":"completed","versionCodes":["29"],"userFraction":0.5,"countryTargeting":{"countries":["US"]}}]}
 JSON
 cat >"$tmp/wear-qa.json" <<'JSON'
-{"track":"wear:qa2","releases":[{"name":"wear","status":"completed","versionCodes":["1000029"],"inAppUpdatePriority":5}]}
+{"track":"wear:internal","releases":[{"name":"wear","status":"completed","versionCodes":["1000029"],"inAppUpdatePriority":5}]}
 JSON
 play_promotion_payload "$tmp/qa.json" production "$phone" "$tmp/phone-payload.json"
 play_promotion_payload "$tmp/wear-qa.json" wear:production "$wear" "$tmp/wear-payload.json"

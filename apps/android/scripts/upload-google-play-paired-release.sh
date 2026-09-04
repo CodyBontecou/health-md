@@ -7,7 +7,7 @@ source ./scripts/google-play-paired-policy.sh
 key=${PLAY_CONSOLE_KEY_PATH:-}
 package=${PLAY_PACKAGE_NAME:-com.healthmd.android}
 phone_track=${PHONE_PLAY_TRACK:-qa}
-wear_track=${WEAR_PLAY_TRACK:-wear:qa2}
+wear_track=${WEAR_PLAY_TRACK:-wear:internal}
 release_status=${PLAY_RELEASE_STATUS:-completed}
 phone_code=${PHONE_VERSION_CODE:-}
 wear_code=${WEAR_VERSION_CODE:-}

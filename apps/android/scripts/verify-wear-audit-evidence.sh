@@ -28,7 +28,7 @@ for evidence in \
   'Pixel/Samsung paired/OEM evidence is missing, inconsistent, unbound, or fails state validation' \
   'verified remote x86_64 Wear CI receipt missing or invalid' \
   'required protected GitHub Wear release environments' \
-  'Play exact qa/wear:qa2 pair' \
+  'Play exact qa/wear:internal pair' \
   'Play production exact paired promotion remains unproven' \
   'Play-generated APK signer identity receipt missing or invalid' \
   'Wear screenshot release-binding evidence missing or invalid' \

@@ -2,11 +2,11 @@
 
 ## Release ownership
 
-Phone and Wear releases are a single versioned product pair. Gradle Play Publisher has been removed from both application modules; do not reintroduce it or upload, promote, or replace Play metadata with ad hoc Gradle/Fastlane commands. Module-level publishers cannot enforce the required `qa`/`wear:qa2` and `production`/`wear:production` pairing, protected reviewer inputs, exact-SHA evidence, or one-edit production promotion.
+Phone and Wear releases are a single versioned product pair. Gradle Play Publisher has been removed from both application modules; do not reintroduce it or upload, promote, or replace Play metadata with ad hoc Gradle/Fastlane commands. Module-level publishers cannot enforce the required `qa`/`wear:internal` and `production`/`wear:production` pairing, protected reviewer inputs, exact-SHA evidence, or one-edit production promotion.
 
 The only supported mutation paths are:
 
-- `.github/workflows/android-release.yml` — builds the exact annotated `android/v<version>` source and uploads the signed phone/Wear pair in one edit to `qa` and `wear:qa2` using the protected `google-play-qa` environment.
+- `.github/workflows/android-release.yml` — builds the exact annotated `android/v<version>` source and uploads the signed phone/Wear pair in one edit to `qa` and `wear:internal` using the protected `google-play-qa` environment.
 - `.github/workflows/android-wear-screenshots.yml` — the only supported Wear screenshot mutation. From the exact annotated release tag it downloads an exact-attempt protected submission, verifies Play-generated APK and physical capture evidence, and invokes `scripts/sync-google-play-wear-screenshots.sh` with the reviewer-protected QA account. Never invoke the implementation script with a local mutation credential.
 - `.github/workflows/android-promote-production.yml` — verifies sealed evidence before credentials, then promotes both exact codes and submits both tracks for review in one edit using `google-play-production`.
 - `.github/workflows/android-promote-production-recover.yml` — non-committing recovery for a proven post-commit receipt-retention failure, bound to the exact original promotion run ID and attempt. It requires the protected production credential and temporarily creates, reads, and deletes an edit to inspect the committed screenshot set, but it never sends a track `PUT` or commits an edit.
@@ -77,7 +77,7 @@ Both commands are diagnostic. They cannot turn emulator, substitute-signed, or s
 1. Commit and independently review the complete source on a SHA reachable from `origin/main`.
 2. Create the annotated `android/v<version>` tag at that exact SHA.
 3. Require successful exact-SHA push CI and retain its independently re-queried receipt.
-4. Authorize `android-release.yml` to upload the exact signed phone/Wear pair to `qa`/`wear:qa2`.
+4. Authorize `android-release.yml` to upload the exact signed phone/Wear pair to `qa`/`wear:internal`.
 5. Download and verify Play-generated base-master APKs and the Play App Signing identity.
 6. Complete closed-track, Pixel/Samsung, accessibility, privacy, offline, screenshot, and battery protocols.
 7. Submit the reviewed exact-release Wear screenshot evidence through `android-wear-evidence-submit.yml`, then dispatch `android-wear-screenshots.yml` from the exact release tag with that submission run ID and attempt. Retain its protected attempt-qualified receipt.

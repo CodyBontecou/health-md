@@ -250,7 +250,7 @@ jobs:
               runId:$runId, runAttempt:$runAttempt, evidenceRunId:$evidenceRunId,
               evidenceRunAttempt:$evidenceRunAttempt, releaseSha:$sha, versionName:$version,
               phoneVersionCode:$phone, wearVersionCode:$wear,
-              sourceTracks:["qa","wear:qa2"], destinationTracks:["production","wear:production"],
+              sourceTracks:["qa","wear:internal"], destinationTracks:["production","wear:production"],
               wearAppScreenshotSha256:$appScreenshot, wearTileScreenshotSha256:$tileScreenshot,
               promotionPrepared:true, preparedAtUtc:$preparedAt
             }' >"$root/intent.json"
@@ -379,7 +379,7 @@ jobs:
           production="$RUNNER_TEMP/google-play-production-before.json"
           wear_production="$RUNNER_TEMP/google-play-wear-production-before.json"
           query_track qa "$internal"
-          query_track wear:qa2 "$wear_internal"
+          query_track wear:internal "$wear_internal"
           query_track production "$production"
           query_track wear:production "$wear_production"
 
@@ -400,7 +400,7 @@ jobs:
           fi
 
           if ! has_code "$internal" "$VERSION_CODE" || ! has_code "$wear_internal" "$WEAR_VERSION_CODE"; then
-            echo "::error::Phone $VERSION_CODE and Wear $WEAR_VERSION_CODE must be active on qa and wear:qa2"
+            echo "::error::Phone $VERSION_CODE and Wear $WEAR_VERSION_CODE must be active on qa and wear:internal"
             exit 1
           fi
           echo "already_production=false" >> "$GITHUB_OUTPUT"
@@ -416,7 +416,7 @@ jobs:
           set -euo pipefail
           # shellcheck source=apps/android/scripts/google-play-paired-policy.sh
           source scripts/google-play-paired-policy.sh
-          play_assert_distinct_tracks qa wear:qa2
+          play_assert_distinct_tracks qa wear:internal
           edit_response=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
             -X POST \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -450,7 +450,7 @@ jobs:
               --data-binary "@$payload_file" >/dev/null
           }
           promote_track qa production "$VERSION_CODE"
-          promote_track wear:qa2 wear:production "$WEAR_VERSION_CODE"
+          promote_track wear:internal wear:production "$WEAR_VERSION_CODE"
           # Commit is non-idempotent. Issue it once, then reconcile exact track state if the HTTP
           # response is lost after Play accepts the edit; never retry the commit POST itself.
           commit_response_received=true
@@ -623,7 +623,7 @@ jobs:
               schemaVersion:1, repository:$repository, workflow:$workflow,
               runId:$runId, runAttempt:$runAttempt, releaseSha:$sha, versionName:$version,
               phoneVersionCode:$phone, wearVersionCode:$wear,
-              sourceTracks:["qa","wear:qa2"], destinationTracks:["production","wear:production"],
+              sourceTracks:["qa","wear:internal"], destinationTracks:["production","wear:production"],
               promotionEditId:$edit, commitResponseReceived:($commitResponse == "true"),
               pairedEditCommitted:true, productionPairVerified:true, reviewLifecycleVerified:true,
               wearAppScreenshotSha256:$appScreenshot, wearTileScreenshotSha256:$tileScreenshot,
@@ -682,7 +682,7 @@ jobs:
             echo "- Version: $VERSION"
             echo "- Phone version code: $VERSION_CODE"
             echo "- Wear version code: $WEAR_VERSION_CODE"
-            echo "- Source tracks: qa + wear:qa2"
+            echo "- Source tracks: qa + wear:internal"
             echo "- Destination tracks: production + wear:production"
             echo "- Already on production: ${ALREADY_PRODUCTION:-unknown}"
             echo "- Promotion step: ${PROMOTE_OUTCOME:-skipped}"

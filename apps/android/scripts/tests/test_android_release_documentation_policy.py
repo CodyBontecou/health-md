@@ -103,7 +103,7 @@ class AndroidReleaseDocumentationPolicyTest(unittest.TestCase):
             text = (ROOT / relative).read_text()
             with self.subTest(document=relative):
                 self.assertIn("qa", text)
-                self.assertIn("wear:qa2", text)
+                self.assertIn("wear:internal", text)
                 self.assertIn("production", text)
                 self.assertIn("wear:production", text)
                 self.assertIn("android-release.yml", text)

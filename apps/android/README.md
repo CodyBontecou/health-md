@@ -295,7 +295,7 @@ The same names may be supplied as environment variables. Release builds require 
 
 ### Google Play release
 
-Phone, Wear, and listing-image publication is owned by protected workflows, not local Gradle, Fastlane, or script mutation commands. `.github/workflows/android-release.yml` uploads the exact annotated-tag pair atomically to `qa`/`wear:qa2`; `.github/workflows/android-wear-screenshots.yml` later verifies an exact-attempt protected physical-capture submission before replacing the two Wear images with the QA-only account; `.github/workflows/android-promote-production.yml` promotes both codes in one evidence-gated edit to `production`/`wear:production` with a separate account. Local tools may build and validate both AABs without publication:
+Phone, Wear, and listing-image publication is owned by protected workflows, not local Gradle, Fastlane, or script mutation commands. `.github/workflows/android-release.yml` uploads the exact annotated-tag pair atomically to `qa`/`wear:internal`; `.github/workflows/android-wear-screenshots.yml` later verifies an exact-attempt protected physical-capture submission before replacing the two Wear images with the QA-only account; `.github/workflows/android-promote-production.yml` promotes both codes in one evidence-gated edit to `production`/`wear:production` with a separate account. Local tools may build and validate both AABs without publication:
 
 ```bash
 ./gradlew :app:bundlePlayRelease :wear:bundleRelease
