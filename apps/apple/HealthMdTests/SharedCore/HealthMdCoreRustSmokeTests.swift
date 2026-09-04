@@ -9,7 +9,7 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
     func testBuildInfoReportsIndependentInternalVersions() throws {
         let info = try service.buildInfo()
 
-        XCTAssertEqual(info.crateVersion, "0.1.0-alpha.5")
+        XCTAssertEqual(info.crateVersion, "0.1.0-alpha.6")
         XCTAssertFalse(info.coreSourceRevision.isEmpty)
         XCTAssertEqual(info.registrySha256.count, 64)
         XCTAssertEqual(info.coreApiVersion, 4)
