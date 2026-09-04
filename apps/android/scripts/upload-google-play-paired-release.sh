@@ -74,6 +74,31 @@ upload_bundle() {
 upload_bundle "$phone_aab" "$phone_code"
 upload_bundle "$wear_aab" "$wear_code"
 
+# A Wear form-factor track only persists on Play when its creating commit also carries a
+# real release: an empty track created ahead of the release is silently discarded. Create
+# the track inside this edit (same commit as the release) when it does not exist yet.
+ensure_form_factor_track() {
+  local track=$1 encoded form_factor
+  encoded=${track//:/%3A}
+  if curl -fsS --max-time 30 -sS "${auth[@]}" \
+      "$api/edits/$edit_id/tracks/$encoded" >/dev/null 2>&1; then
+    return 0
+  fi
+  case "$track" in
+    wear:*) form_factor=WEAR ;;
+    *) form_factor=DEFAULT ;;
+  esac
+  create_response=$(curl -sS --max-time 30 -w '\n%{http_code}' \
+    -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+    -d "{\"track\":\"$track\",\"formFactor\":\"$form_factor\",\"type\":\"CLOSED_TESTING\"}" \
+    "$api/edits/$edit_id/tracks")
+  create_http=$(printf '%s' "$create_response" | tail -n 1)
+  if [[ "$create_http" != "200" && "$create_http" != "409" ]]; then
+    fail "could not create form-factor track $track: $create_response"
+  fi
+}
+ensure_form_factor_track "$wear_track"
+
 release_payload() { play_release_payload "$1" "$release_status"; }
 update_track() {
   local track=$1 code=$2 encoded response
