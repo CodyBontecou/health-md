@@ -1,9 +1,8 @@
-Health.md 3.2.1 makes scheduled exports and folder changes more dependable.
+Health.md 3.3.0 adds wake notifications for Direct CLI Access, one shared pairing code, and a clearer Sync tab.
+
+Added
+• Wake requests: turn on “Allow paired computers to send wake requests” under Sync → Direct CLI Access, and a waiting healthmd CLI command can send one visible notification to your iPhone while its wake window holds — tap it and the command completes. Everything is opt-in, and your health data never touches the notifications worker.
+• Direct CLI QR and manual pairing now use the same high-entropy 20-digit code as Android; six-digit pairing remains only as a legacy CLI fallback.
 
 Improved
-• Schedule Export History now keeps the exact export profile and destination used by each run, including retries.
-• Choosing or replacing an iPhone export folder now activates it only after access is saved successfully.
-
-Fixed
-• Restarting the app no longer restores an older profile destination after a new local, iCloud Drive, or Dropbox folder was selected.
-• If access to a replacement folder is denied, Health.md keeps the previous valid destination instead of disconnecting it.
+• The Sync tab now separates Mac Destination and CLI setup with a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first.

@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.3.0",
+            items: [
+                .list(
+                    title: "Wake requests and a clearer Sync tab",
+                    rows: [
+                        .init(
+                            symbolSystemName: "bell.badge.fill",
+                            title: "Wake requests for Direct CLI Access",
+                            description: "Turn on “Allow paired computers to send wake requests” under Sync → Direct CLI Access to let a waiting CLI command send one visible notification while its wake window holds — tap it and the command completes. Everything is opt-in, and your health data never touches the notifications worker."
+                        ),
+                        .init(
+                            symbolSystemName: "qrcode",
+                            title: "One pairing code everywhere",
+                            description: "Direct CLI QR and manual pairing now use the same 20-digit code as Android, with the six-digit code kept only as a legacy CLI fallback."
+                        ),
+                        .init(
+                            symbolSystemName: "sidebar.leading",
+                            title: "A clearer Sync tab",
+                            description: "Mac Destination and CLI setup are now separated by a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.2.1",
             items: [
                 .list(
