@@ -40,10 +40,10 @@ chrono.workspace = true
 clap.workspace = true
 directories.workspace = true
 fs2.workspace = true
-healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.5" }
-healthmd-mcp = { path = "../healthmd-mcp", version = "=0.1.0-alpha.5" }
-healthmd-operations = { path = "../healthmd-operations", version = "=0.1.0-alpha.5" }
-healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.5" }
+healthmd-client = { path = "../healthmd-client", version = "=0.1.0-alpha.6" }
+healthmd-mcp = { path = "../healthmd-mcp", version = "=0.1.0-alpha.6" }
+healthmd-operations = { path = "../healthmd-operations", version = "=0.1.0-alpha.6" }
+healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.6" }
 if-addrs.workspace = true
 png.workspace = true
 qrcode.workspace = true

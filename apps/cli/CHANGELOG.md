@@ -1,17 +1,40 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.6
 
 - Add RFC-0005's shared P1 agent-wake window: query/export/extract/resume/cancel now wait up to
   120 seconds for an unavailable paired phone, retry with bounded backoff, support
   `--wake-timeout`/`HEALTHMD_WAKE_TIMEOUT` and immediate local cancellation, report one shared
-  readiness object, and emit health-free MCP progress notifications. APNs/FCM enrollment remains
-  unavailable in this wait-only phase.
+  readiness object, and emit health-free MCP progress notifications.
+- Activate RFC-0005 P2: the wake doorbell ships as the dedicated `healthmd-wake` worker
+  (`healthmd-wake.costream.workers.dev`, own D1 and APNs secret bindings) deployed as a
+  self-contained script because the `healthmd-receipt-verifier` source was lost with an old
+  machine and reconstructing that production worker blind was rejected; the receipt-verifier
+  stays frozen and untouched. The CLI stores per-pairing wake credentials from the phone's
+  opt-in enrollment, sends one best-effort `/wake/request` nudge at wait start (feature-gated
+  `wake-worker` HTTP client; default builds keep no-remote-HTTP), and a locked-phone wait now
+  completes after the owner taps the visible notification. See the
+  `docs/architecture/rfc-0005-worker-spec.md` amendment and RFC-0005 decision 5.
+- Key the wake request HMAC by the registered SHA-256 verification hash of the wake key so the
+  worker never holds the raw key; the construction is pinned cross-language by a shared
+  Rust/worker test vector.
+- Report wake enrollment truthfully per selected device in the shared `wake_window`/`wake`
+  readiness object: a stored wake credential reports `available`/`enrolled`, and an absent
+  credential, unpaired state, or ambiguous selection honestly reports
+  `unavailable`/`wait_only` (single implementation for CLI and MCP; RFC-0005 decision 2).
+- Pin `tinyvec` to `>=1.8, <1.13` as a Rust 1.85 MSRV guard (1.13 uses `alloc::vec`, a Rust 1.87
+  API, without declaring `rust-version`); drop the pin once tinyvec declares `rust-version` or
+  the workspace MSRV moves past 1.87.
 - Unify new iOS and Android Direct CLI onboarding around one 20-digit selector-3 pairing code and universal in-app QR, while preserving byte-exact Apple selector 1, Android selector 2, and trusted reconnect compatibility.
 - Shorten protected CLI releases without weakening qualification: reuse exact-SHA main CI with
   immutable-tag recovery for missing/cancelled runs, build platform candidates in parallel, prepare
   the Apple shared-core XCFramework once, recover GitHub draft read-after-create lag in place, and
   provide a reviewer-driven watcher for prompt signing/publication approvals.
+- Publish this as an explicitly unqualified preview through the checksummed GitHub release,
+  Homebrew/Linuxbrew tap, and coordinated crates.io packages while stable qualification remains
+  pending.
+- Windows artifacts remain Authenticode-unsigned while the release identity ledger records pending
+  external certificate provisioning; verify them through the Sigstore-signed checksum closure.
 
 ## 0.1.0-alpha.5
 

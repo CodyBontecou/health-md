@@ -451,7 +451,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "healthmd-core"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 dependencies = [
  "base64",
  "chrono",
@@ -467,7 +467,7 @@ dependencies = [
 
 [[package]]
 name = "healthmd-core-uniffi"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 dependencies = [
  "base64",
  "healthmd-core",
@@ -480,7 +480,7 @@ dependencies = [
 
 [[package]]
 name = "healthmd-protocol"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 dependencies = [
  "base64",
  "chacha20poly1305",
@@ -1394,7 +1394,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0-alpha.5"
+version = "0.1.0-alpha.6"
 dependencies = [
  "uniffi",
 ]

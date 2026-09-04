@@ -14,7 +14,7 @@ publish = ["crates-io"]
 [dependencies]
 async-trait.workspace = true
 chrono.workspace = true
-healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.5" }
+healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.6" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
