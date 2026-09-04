@@ -27,6 +27,11 @@ cap-std = "4.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 chrono-tz = "0.10"
 clap = { version = "4.5", features = ["derive"] }
+# MSRV guard: tinyvec 1.13+ uses `alloc::vec` (Rust 1.87+) without declaring a
+# rust-version, so fresh dependency resolutions (crate packaging) break the
+# 1.85 MSRV. Pin below 1.13 next to unicode-normalization (its consumer) until
+# upstream declares rust-version or the MSRV moves. Remove this pin then.
+tinyvec = { version = ">=1.8, <1.13", default-features = false }
 directories = "6.0"
 dunce = "1.0"
 file-id = "0.2.3"

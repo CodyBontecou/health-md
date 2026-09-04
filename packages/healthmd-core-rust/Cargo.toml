@@ -37,6 +37,11 @@ thiserror = "2.0"
 # UniFFI's default `cargo-metadata` feature exceeds the runtime crates' Rust 1.85 MSRV.
 # The xtask enables only `cli`, which supports library-mode binding generation without it.
 uniffi = { version = "=0.32.0", default-features = false }
+# MSRV guard: tinyvec 1.13+ uses `alloc::vec` (Rust 1.87+) without declaring a
+# rust-version, so fresh dependency resolutions (crate packaging) break the
+# 1.85 MSRV. Pin below 1.13 next to unicode-normalization (its consumer) until
+# upstream declares rust-version or the MSRV moves. Remove this pin then.
+tinyvec = { version = ">=1.8, <1.13", default-features = false }
 unicode-normalization = "0.1"
 unicode-casefold = "0.2"
 uuid = { version = "1.16", features = ["serde", "v4"] }

@@ -20,6 +20,8 @@ sha2.workspace = true
 thiserror.workspace = true
 unicode-casefold.workspace = true
 unicode-normalization.workspace = true
+# MSRV guard for the tinyvec 1.13 `alloc::vec` breakage; see the workspace root.
+tinyvec.workspace = true
 
 [lints]
 workspace = true
