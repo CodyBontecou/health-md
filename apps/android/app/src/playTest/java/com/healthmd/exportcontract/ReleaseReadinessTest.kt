@@ -25,8 +25,8 @@ class ReleaseReadinessTest {
     fun appVersion_isPreparedForDirectCliQrPairingRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 34"))
-        assertTrue(buildGradle.contains("versionName = \"1.8.5\""))
+        assertTrue(buildGradle.contains("versionCode = 35"))
+        assertTrue(buildGradle.contains("versionName = \"1.8.6\""))
     }
 
     @Test
@@ -41,7 +41,7 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.8.5"))
+            assertTrue(releaseNotes.contains("v1.8.6"))
             assertTrue(releaseNotes.contains("QR"))
             assertTrue(releaseNotes.contains("reconnect"))
             assertTrue(releaseNotes.contains("120 seconds"))
