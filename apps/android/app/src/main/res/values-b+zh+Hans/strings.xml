@@ -494,9 +494,9 @@
     <string name="release_notes_settings_hint">您可以从“设置”中调整导出格式、自定义 Markdown 和指标。</string>
     <string name="release_notes_open_settings">打开设置</string>
     <string name="release_notes_got_it">知道了</string>
-    <string name="release_notes_highlight_feedback">自动化操作现在能够更可靠地运行所选的导出配置。</string>
-    <string name="release_notes_highlight_export_parity">步数总计会在请求的日期范围内使用准确的本地日历日。</string>
-    <string name="release_notes_highlight_templates">Play Billing 断开连接后，购买和恢复操作会自动恢复。</string>
+    <string name="release_notes_highlight_feedback">Direct CLI 会话在桌面短暂断开后会自动重新连接，因此导出能够可靠完成。</string>
+    <string name="release_notes_highlight_export_parity">桌面唤醒窗口命令最多等待 120 秒，供您打开应用并连接，不使用任何推送通知。</string>
+    <string name="release_notes_highlight_templates">通过地址、端口和 20 位配对码手动配对仍然可用，旧版 CLI 同样支持。</string>
     <string name="release_notes_highlight_workouts">包含适用于手机和 Wear OS 的可靠性与兼容性修复。</string>
     <string name="notification_channel_scheduled_exports_name">计划导出</string>
     <string name="notification_channel_scheduled_exports_description">计划的健康导出完成或失败时的通知</string>
@@ -733,7 +733,7 @@
     <string name="disabled">已禁用</string>
 
     <!-- Direct CLI、API 导出、提供商、历史记录和导出预览 -->
-    <string name="release_notes_highlight_widgets">计划导出历史记录现在会保留每次运行和重试实际使用的导出配置和目标位置。</string>
+    <string name="release_notes_highlight_widgets">在 Direct CLI 界面扫描二维码，即可与 Health.md 桌面 CLI 配对。</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">加密的桌面导出</string>
     <string name="direct_cli_intro_body">CLI 在您的电脑上监听。Health.md 会直接连接并发送导出，无需云端中转。</string>

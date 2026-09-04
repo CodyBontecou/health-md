@@ -525,9 +525,9 @@
     <string name="release_notes_settings_hint">ਤੁਸੀਂ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਨਿਰਯਾਤ ਫਾਰਮੈਟ, ਕਸਟਮ Markdown ਅਤੇ ਮੈਟ੍ਰਿਕਸ ਨੂੰ ਵਿਵਸਥਿਤ ਕਰ ਸਕਦੇ ਹੋ।</string>
     <string name="release_notes_open_settings">ਸੈਟਿੰਗਾਂ ਖੋਲ੍ਹੋ</string>
     <string name="release_notes_got_it">ਸਮਝ ਲਿਆ</string>
-    <string name="release_notes_highlight_feedback">ਆਟੋਮੇਸ਼ਨ ਕਾਰਵਾਈਆਂ ਹੁਣ ਚੁਣੇ ਹੋਏ ਨਿਰਯਾਤ ਪ੍ਰੋਫਾਈਲ ਨੂੰ ਹੋਰ ਭਰੋਸੇਯੋਗ ਢੰਗ ਨਾਲ ਚਲਾਉਂਦੀਆਂ ਹਨ।</string>
-    <string name="release_notes_highlight_export_parity">ਕਦਮਾਂ ਦੇ ਕੁੱਲ ਮੰਗੀਆਂ ਮਿਤੀ ਰੇਂਜਾਂ ਵਿੱਚ ਸਹੀ ਸਥਾਨਕ ਕੈਲੰਡਰ ਦਿਨਾਂ ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹਨ।</string>
-    <string name="release_notes_highlight_templates">Play Billing ਦਾ ਕਨੈਕਸ਼ਨ ਟੁੱਟਣ ਤੋਂ ਬਾਅਦ ਖਰੀਦਾਂ ਅਤੇ ਰੀਸਟੋਰ ਆਪਣੇ ਆਪ ਮੁੜ ਚੱਲਦੇ ਹਨ।</string>
+    <string name="release_notes_highlight_feedback">ਡੈਸਕਟਾਪ ਦੇ ਛੋਟੇ ਕੁਨੈਕਸ਼ਨ ਟੁੱਟਣ ਤੋਂ ਬਾਅਦ Direct CLI ਸੈਸ਼ਨ ਆਪਣੇ ਆਪ ਦੁਬਾਰਾ ਜੁੜ ਜਾਂਦੇ ਹਨ, ਇਸ ਲਈ ਨਿਰਯਾਤ ਭਰੋਸੇਯੋਗ ਢੰਗ ਨਾਲ ਪੂਰੇ ਹੁੰਦੇ ਹਨ।</string>
+    <string name="release_notes_highlight_export_parity">ਡੈਸਕਟਾਪ ਦੀਆਂ ਵੇਕ ਵਿੰਡੋ ਕਮਾਂਡਾਂ ਤੁਹਾਡੇ ਐਪ ਖੋਲ੍ਹ ਕੇ ਜੁੜਨ ਤੱਕ 120 ਸਕਿੰਟ ਉਡੀਕ ਕਰਦੀਆਂ ਹਨ, ਬਿਨਾਂ ਕਿਸੇ ਪੁਸ਼ ਨੋਟੀਫਿਕੇਸ਼ਨ ਤੋਂ।</string>
+    <string name="release_notes_highlight_templates">ਐਡਰੈਸ, ਪੋਰਟ ਅਤੇ 20-ਅੰਕਾਂ ਵਾਲੇ ਕੋਡ ਨਾਲ ਦਸਤੀ ਪੇਅਰਿੰਗ ਹਾਲੇ ਵੀ ਕੰਮ ਕਰਦੀ ਹੈ, ਪੁਰਾਣੀਆਂ CLI ਵਰਜਨਾਂ ਨਾਲ ਵੀ।</string>
     <string name="release_notes_highlight_workouts">ਫੋਨ ਅਤੇ Wear OS ਲਈ ਭਰੋਸੇਯੋਗਤਾ ਅਤੇ ਅਨੁਕੂਲਤਾ ਸੁਧਾਰ ਸ਼ਾਮਲ ਹਨ।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
@@ -784,7 +784,7 @@
     <string name="disabled">ਬੰਦ</string>
 
     <!-- Canonical localization additions -->
-    <string name="release_notes_highlight_widgets">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਹੁਣ ਹਰ ਚਲਾਉਣ ਅਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਲਈ ਵਰਤੇ ਗਏ ਸਹੀ ਪ੍ਰੋਫਾਈਲ ਅਤੇ ਮੰਜ਼ਿਲ ਨੂੰ ਸੰਭਾਲਦਾ ਹੈ।</string>
+    <string name="release_notes_highlight_widgets">Direct CLI ਸਕਰੀਨ ਵਿੱਚ ਇਸਦਾ QR ਕੋਡ ਸਕੈਨ ਕਰਕੇ Health.md ਡੈਸਕਟਾਪ CLI ਨਾਲ ਜੋੜੋ।</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">ਇੰਕ੍ਰਿਪਟਡ ਡੈਸਕਟੌਪ ਨਿਰਯਾਤ</string>
     <string name="direct_cli_intro_body">CLI ਤੁਹਾਡੇ ਕੰਪਿਊਟਰ ਉੱਤੇ ਕਨੈਕਸ਼ਨ ਦੀ ਉਡੀਕ ਕਰਦਾ ਹੈ। Health.md ਸਿੱਧਾ ਜੁੜ ਕੇ ਕਿਸੇ ਕਲਾਊਡ ਰੀਲੇ ਤੋਂ ਬਿਨਾਂ ਨਿਰਯਾਤ ਭੇਜਦਾ ਹੈ।</string>

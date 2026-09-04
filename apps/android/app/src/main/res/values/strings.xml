@@ -547,10 +547,10 @@
     <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
     <string name="release_notes_open_settings">Open Settings</string>
     <string name="release_notes_got_it">Got it</string>
-    <string name="release_notes_highlight_widgets">Scheduled export history keeps the exact profile and destination used by each run and retry.</string>
-    <string name="release_notes_highlight_feedback">Automation actions now run the selected export profile more reliably.</string>
-    <string name="release_notes_highlight_export_parity">Step totals use exact local calendar days across requested date ranges.</string>
-    <string name="release_notes_highlight_templates">Purchases and restores recover automatically after Play Billing disconnects.</string>
+    <string name="release_notes_highlight_widgets">Pair with the Health.md desktop CLI by scanning its QR code in the Direct CLI screen.</string>
+    <string name="release_notes_highlight_feedback">Direct CLI sessions reconnect automatically after brief desktop disconnects, so exports finish reliably.</string>
+    <string name="release_notes_highlight_export_parity">Desktop wake-window commands wait up to 120 seconds for you to open the app and connect — no push notifications involved.</string>
+    <string name="release_notes_highlight_templates">Manual pairing still works with the computer address, port, and 20-digit code, including older CLI versions.</string>
     <string name="release_notes_highlight_workouts">Includes reliability and compatibility fixes for phone and Wear OS.</string>
 
     <!-- Notifications -->

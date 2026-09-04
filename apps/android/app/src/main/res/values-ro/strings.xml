@@ -639,9 +639,9 @@
     <string name="release_notes_settings_hint">Puteți ajusta formatele de export, formatul Markdown personalizat și metricile din Setări.</string>
     <string name="release_notes_open_settings">Deschideți Setările</string>
     <string name="release_notes_got_it">Am înțeles</string>
-    <string name="release_notes_highlight_feedback">Acțiunile de automatizare rulează acum mai fiabil profilul de export selectat.</string>
-    <string name="release_notes_highlight_export_parity">Totalurile de pași folosesc zile calendaristice locale exacte în intervalele de date solicitate.</string>
-    <string name="release_notes_highlight_templates">Achizițiile și restaurările se recuperează automat după deconectarea Play Billing.</string>
+    <string name="release_notes_highlight_feedback">Sesiunile CLI direct se reconectează automat după deconectări scurte ale desktopului, astfel încât exporturile se finalizează fiabil.</string>
+    <string name="release_notes_highlight_export_parity">Comenzile cu fereastră de activare de pe desktop așteaptă până la 120 de secunde să deschizi aplicația și să te conectezi, fără notificări push.</string>
+    <string name="release_notes_highlight_templates">Asocierea manuală cu adresă, port și cod din 20 de cifre funcționează în continuare, inclusiv cu versiuni CLI mai vechi.</string>
     <string name="release_notes_highlight_workouts">Include remedieri de fiabilitate și compatibilitate pentru telefon și Wear OS.</string>
     <string name="export_notification_background_permission_required">Exporturile programate necesită acces în fundal la Health Connect. Deschideți Health.md &gt; Programare pentru a-l activa.</string>
     <string name="paywall_unlock_button_price">Deblocați pentru %s</string>
@@ -823,7 +823,7 @@
     <string name="enabled">Activat</string>
     <string name="disabled">Dezactivat</string>
     <!-- Direct CLI, API, provider, history, scheduling, widget, and accessibility additions. -->
-    <string name="release_notes_highlight_widgets">Istoricul exporturilor programate păstrează acum profilul și destinația exacte folosite la fiecare rulare și reîncercare.</string>
+    <string name="release_notes_highlight_widgets">Asociază CLI-ul desktop Health.md scanând codul QR al acestuia direct din ecranul CLI direct.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Exporturi desktop criptate</string>
     <string name="direct_cli_intro_body">CLI-ul ascultă pe computer. Health.md se conectează direct și trimite exportul fără un serviciu intermediar în cloud.</string>

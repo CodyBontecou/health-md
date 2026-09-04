@@ -525,9 +525,9 @@
     <string name="release_notes_settings_hint">आप सेटिंग्स में निर्यात प्रारूप, कस्टम Markdown और मेट्रिक्स को समायोजित कर सकते हैं।</string>
     <string name="release_notes_open_settings">सेटिंग्स खोलें</string>
     <string name="release_notes_got_it">समझ गया</string>
-    <string name="release_notes_highlight_feedback">ऑटोमेशन कार्रवाइयाँ अब चुनी हुई निर्यात प्रोफ़ाइल को अधिक भरोसेमंद ढंग से चलाती हैं।</string>
-    <string name="release_notes_highlight_export_parity">कदमों के कुल अनुरोधित तारीख़ सीमाओं में सटीक स्थानीय कैलेंडर दिनों का उपयोग करते हैं।</string>
-    <string name="release_notes_highlight_templates">Play Billing का कनेक्शन टूटने के बाद खरीद और रीस्टोर अपने आप फिर काम करने लगते हैं।</string>
+    <string name="release_notes_highlight_feedback">डेस्कटॉप के छोटे कनेक्शन टूटने के बाद Direct CLI सेशन अपने आप फिर जुड़ जाते हैं, इसलिए निर्यात भरोसेमंद ढंग से पूरे होते हैं।</string>
+    <string name="release_notes_highlight_export_parity">डेस्कटॉप की वेक विंडो कमांड आपके ऐप खोलकर कनेक्ट होने तक 120 सेकंड तक प्रतीक्षा करती हैं, बिना किसी पुश नोटिफिकेशन के।</string>
+    <string name="release_notes_highlight_templates">पता, पोर्ट और 20-अंकों वाले कोड से मैनुअल पेयरिंग अब भी काम करती है, पुराने CLI वर्शन के साथ भी।</string>
     <string name="release_notes_highlight_workouts">फ़ोन और Wear OS के लिए विश्वसनीयता और अनुकूलता सुधार शामिल हैं।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">निर्धारित निर्यात</string>
@@ -784,7 +784,7 @@
     <string name="disabled">अक्षम</string>
 
     <!-- Canonical localization additions -->
-    <string name="release_notes_highlight_widgets">शेड्यूल किए गए निर्यात का इतिहास अब हर रन और दोबारा प्रयास में इस्तेमाल की गई सटीक प्रोफ़ाइल और गंतव्य को बनाए रखता है।</string>
+    <string name="release_notes_highlight_widgets">Direct CLI स्क्रीन में इसका QR कोड स्कैन करके Health.md डेस्कटॉप CLI से जोड़ें।</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">एन्क्रिप्टेड डेस्कटॉप निर्यात</string>
     <string name="direct_cli_intro_body">CLI आपके कंप्यूटर पर कनेक्शन की प्रतीक्षा करता है। Health.md सीधे कनेक्ट होकर बिना किसी क्लाउड रिले के निर्यात भेजता है।</string>

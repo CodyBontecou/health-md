@@ -525,9 +525,9 @@
     <string name="release_notes_settings_hint">সেটিংস থেকে রপ্তানি ফরম্যাট, কাস্টম Markdown ও মেট্রিক সামঞ্জস্য করতে পারবেন।</string>
     <string name="release_notes_open_settings">সেটিংস খুলুন</string>
     <string name="release_notes_got_it">বুঝেছি</string>
-    <string name="release_notes_highlight_feedback">অটোমেশন অ্যাকশন এখন নির্বাচিত রপ্তানি প্রোফাইল আরও নির্ভরযোগ্যভাবে চালায়।</string>
-    <string name="release_notes_highlight_export_parity">পদক্ষেপের মোট সংখ্যা অনুরোধ করা তারিখসীমায় সঠিক স্থানীয় ক্যালেন্ডার দিন ব্যবহার করে।</string>
-    <string name="release_notes_highlight_templates">Play Billing সংযোগ বিচ্ছিন্ন হলে ক্রয় ও পুনরুদ্ধার স্বয়ংক্রিয়ভাবে আবার কাজ করে।</string>
+    <string name="release_notes_highlight_feedback">ডেস্কটপ সংযোগ সংক্ষিপ্তভাবে বিচ্ছিন্ন হলে Direct CLI সেশন স্বয়ংক্রিয়ভাবে পুনরায় সংযুক্ত হয়, তাই রপ্তানি নির্ভরযোগ্যভাবে সম্পন্ন হয়।</string>
+    <string name="release_notes_highlight_export_parity">ডেস্কটপের ওয়েক উইন্ডো কমান্ড আপনার অ্যাপ খুলে সংযোগ করার জন্য ১২০ সেকেন্ড পর্যন্ত অপেক্ষা করে, কোনো পুশ নোটিফিকেশন ছাড়াই।</string>
+    <string name="release_notes_highlight_templates">ঠিকানা, পোর্ট এবং ২০-সংখ্যার কোড দিয়ে ম্যানুয়াল জুড়ি এখনও কাজ করে, পুরোনো CLI সংস্করণেও।</string>
     <string name="release_notes_highlight_workouts">ফোন ও Wear OS-এর নির্ভরযোগ্যতা এবং সামঞ্জস্যের সংশোধন অন্তর্ভুক্ত।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">নির্ধারিত রপ্তানি</string>
@@ -784,7 +784,7 @@
     <string name="disabled">অক্ষম</string>
 
     <!-- Canonical localization additions -->
-    <string name="release_notes_highlight_widgets">নির্ধারিত রপ্তানির ইতিহাস এখন প্রতিটি চালানো ও পুনরায় চেষ্টায় ব্যবহৃত সঠিক প্রোফাইল এবং গন্তব্য সংরক্ষণ করে।</string>
+    <string name="release_notes_highlight_widgets">Direct CLI স্ক্রিন থেকে সরাসরি তার QR কোড স্ক্যান করে Health.md ডেস্কটপ CLI-এর সাথে জুড়ুন।</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">এনক্রিপ্টেড ডেস্কটপ এক্সপোর্ট</string>
     <string name="direct_cli_intro_body">CLI আপনার কম্পিউটারে সংযোগের অপেক্ষায় থাকে। Health.md সরাসরি সংযোগ করে এবং কোনো ক্লাউড রিলে ছাড়াই রপ্তানি পাঠায়।</string>

@@ -672,9 +672,9 @@
     <string name="release_notes_settings_hint">يمكنك ضبط صيغ التصدير وقالب Markdown المخصص والمقاييس من الإعدادات.</string>
     <string name="release_notes_open_settings">افتح الإعدادات</string>
     <string name="release_notes_got_it">حسنًا</string>
-    <string name="release_notes_highlight_feedback">تشغّل إجراءات الأتمتة الآن ملف تعريف التصدير المحدد بموثوقية أكبر.</string>
-    <string name="release_notes_highlight_export_parity">تستخدم إجماليات الخطوات أيام التقويم المحلية الدقيقة ضمن النطاقات الزمنية المطلوبة.</string>
-    <string name="release_notes_highlight_templates">تتعافى عمليات الشراء والاستعادة تلقائيًا بعد انقطاع Play Billing.</string>
+    <string name="release_notes_highlight_feedback">تعيد جلسات Direct CLI الاتصال تلقائيًا بعد انقطاعات قصيرة لسطح المكتب، فتكتمل عمليات التصدير بموثوقية.</string>
+    <string name="release_notes_highlight_export_parity">تنتظر أوامر نافذة الاستيقاظ من سطح المكتب حتى 120 ثانية لتفتح التطبيق وتتصل، دون أي إشعارات فورية.</string>
+    <string name="release_notes_highlight_templates">لا يزال الربط اليدوي عبر العنوان والمنفذ والرمز المكوّن من 20 رقمًا يعمل، بما في ذلك مع إصدارات CLI الأقدم.</string>
     <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق على الهاتف وWear OS.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
     <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
@@ -863,7 +863,7 @@
     <string name="disabled">معطّل</string>
 
     <!-- Canonical localization additions -->
-    <string name="release_notes_highlight_widgets">يحتفظ سجل عمليات التصدير المجدولة الآن بملف تعريف التصدير والوجهة المحددين المستخدمين في كل تشغيل وإعادة محاولة.</string>
+    <string name="release_notes_highlight_widgets">اربط CLI سطح المكتب Health.md بمسح رمز الاستجابة السريعة الخاص به مباشرةً من شاشة Direct CLI.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">عمليات تصدير سطح المكتب المشفّرة</string>
     <string name="direct_cli_intro_body">ينتظر CLI الاتصالات على جهاز الكمبيوتر لديك. يتصل Health.md به مباشرةً ويرسل التصدير من دون وسيط سحابي.</string>

@@ -639,9 +639,9 @@
     <string name="release_notes_settings_hint">Vous pouvez régler les formats d\'exportation, le Markdown personnalisé et les métriques dans les paramètres.</string>
     <string name="release_notes_open_settings">Ouvrir les paramètres</string>
     <string name="release_notes_got_it">J\'ai compris</string>
-    <string name="release_notes_highlight_feedback">Les actions d’automatisation exécutent désormais le profil d’export sélectionné de façon plus fiable.</string>
-    <string name="release_notes_highlight_export_parity">Le total des pas utilise les jours calendaires locaux exacts dans les plages de dates demandées.</string>
-    <string name="release_notes_highlight_templates">Les achats et restaurations reprennent automatiquement après une déconnexion de Play Billing.</string>
+    <string name="release_notes_highlight_feedback">Les sessions CLI direct se reconnectent automatiquement après de brèves déconnexions du bureau ; les exports se terminent donc de façon fiable.</string>
+    <string name="release_notes_highlight_export_parity">Les commandes à fenêtre d’éveil du bureau patientent jusqu’à 120 secondes pendant que vous ouvrez l’app et vous connectez, sans notifications push.</string>
+    <string name="release_notes_highlight_templates">Le jumelage manuel avec l’adresse, le port et le code à 20 chiffres fonctionne toujours, y compris avec les anciennes versions du CLI.</string>
     <string name="release_notes_highlight_workouts">Inclut des correctifs de fiabilité et de compatibilité pour le téléphone et Wear OS.</string>
     <string name="export_notification_background_permission_required">Les exportations planifiées nécessitent un accès en arrière-plan à Health Connect. Ouvrez Health.md &gt; Planification pour l\'activer.</string>
     <string name="paywall_unlock_button_price">Déverrouiller pour %s</string>
@@ -823,7 +823,7 @@
     <string name="enabled">Activé</string>
     <string name="disabled">Désactivé</string>
     <!-- Direct CLI, API, provider, history, scheduling, widget, and accessibility additions. -->
-    <string name="release_notes_highlight_widgets">L’historique des exports planifiés conserve désormais le profil et la destination exacts de chaque exécution et nouvelle tentative.</string>
+    <string name="release_notes_highlight_widgets">Jumellez le CLI de bureau Health.md en scannant son code QR directement dans l’écran CLI direct.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Exportations de bureau chiffrées</string>
     <string name="direct_cli_intro_body">La CLI est en écoute sur votre ordinateur. Health.md se connecte directement et envoie l\'exportation sans relais dans le cloud.</string>

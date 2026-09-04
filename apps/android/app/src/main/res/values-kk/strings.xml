@@ -505,9 +505,9 @@
     <string name="release_notes_settings_hint">Экспорт пішімдерін, арнаулы Markdown үлгісін және көрсеткіштерді «Параметрлер» бөлімінде реттеуге болады.</string>
     <string name="release_notes_open_settings">Параметрлерді ашу</string>
     <string name="release_notes_got_it">Түсіндім</string>
-    <string name="release_notes_highlight_feedback">Автоматтандыру әрекеттері енді таңдалған экспорт профилін сенімдірек іске қосады.</string>
-    <string name="release_notes_highlight_export_parity">Қадамдар жиынтығы сұралған күн аралықтарында нақты жергілікті күнтізбелік күндерді пайдаланады.</string>
-    <string name="release_notes_highlight_templates">Play Billing байланысы үзілгеннен кейін сатып алу мен қалпына келтіру автоматты түрде жалғасады.</string>
+    <string name="release_notes_highlight_feedback">Десктоптың қысқа үзілістерінен кейін Direct CLI сессиялары автоматты түрде қайта қосылады, сондықтан экспорттар сенімді аяқталады.</string>
+    <string name="release_notes_highlight_export_parity">Десктоптың ояну терезесі командалары қосымшаны ашып, қосылуыңызды 120 секундқа дейін күтеді, push-хабарламаларсыз.</string>
+    <string name="release_notes_highlight_templates">Мекенжай, порт және 20 таңбалы код арқылы қолмен жұптау әлі жұмыс істейді, ескі CLI нұсқаларымен де.</string>
     <string name="release_notes_highlight_workouts">Телефон мен Wear OS үшін сенімділік және үйлесімділік түзетулері қамтылған.</string>
     <string name="notification_channel_scheduled_exports_name">Жоспарланған экспорттар</string>
     <string name="notification_channel_scheduled_exports_description">Жоспарланған денсаулық экспорттары аяқталғанда немесе сәтсіз болғанда көрсетілетін хабарландырулар</string>
@@ -746,7 +746,7 @@
     <string name="disabled">Өшірулі</string>
 
     <!-- Direct CLI, API export, providers, billing, history, and accessibility -->
-    <string name="release_notes_highlight_widgets">Жоспарланған экспорт тарихы енді әр іске қосу мен қайталау кезінде пайдаланылған нақты профиль мен мақсатты сақтайды.</string>
+    <string name="release_notes_highlight_widgets">Direct CLI экранында оның QR кодын сканерлеп, Health.md десктоп CLI-мен жұптаңыз.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Компьютерге шифрланған экспорттар</string>
     <string name="direct_cli_intro_body">CLI компьютеріңізде қосылымды күтеді. Health.md тікелей қосылып, экспортты бұлттық делдалсыз жібереді.</string>

@@ -639,9 +639,9 @@
     <string name="release_notes_settings_hint">Você pode ajustar os formatos de exportação, o Markdown personalizado e as métricas em Configurações.</string>
     <string name="release_notes_open_settings">Abrir Configurações</string>
     <string name="release_notes_got_it">Entendi</string>
-    <string name="release_notes_highlight_feedback">As ações de automação agora executam o perfil de exportação selecionado com mais confiabilidade.</string>
-    <string name="release_notes_highlight_export_parity">Os totais de passos usam dias exatos do calendário local nos intervalos de datas solicitados.</string>
-    <string name="release_notes_highlight_templates">Compras e restaurações se recuperam automaticamente após desconexões do Play Billing.</string>
+    <string name="release_notes_highlight_feedback">As sessões de CLI direto reconectam automaticamente após quedas breves do desktop, então as exportações terminam de forma confiável.</string>
+    <string name="release_notes_highlight_export_parity">Os comandos de janela de ativação do desktop esperam até 120 segundos você abrir o app e conectar, sem notificações push.</string>
+    <string name="release_notes_highlight_templates">O pareamento manual com endereço, porta e código de 20 dígitos continua funcionando, inclusive com versões mais antigas da CLI.</string>
     <string name="release_notes_highlight_workouts">Inclui correções de confiabilidade e compatibilidade para telefone e Wear OS.</string>
     <string name="export_notification_background_permission_required">As exportações agendadas precisam de acesso em segundo plano do Health Connect. Abra Health.md &gt; Agendamento para ativá-lo.</string>
     <string name="paywall_unlock_button_price">Desbloquear por %s</string>
@@ -823,7 +823,7 @@
     <string name="enabled">Ativado</string>
     <string name="disabled">Desativado</string>
     <!-- Direct CLI, API, provider, history, scheduling, widget, and accessibility additions. -->
-    <string name="release_notes_highlight_widgets">O histórico de exportações agendadas agora mantém o perfil e o destino exatos usados em cada execução e nova tentativa.</string>
+    <string name="release_notes_highlight_widgets">Pare o CLI de desktop do Health.md escaneando o código QR dele direto na tela do CLI direto.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Exportações de desktop criptografadas</string>
     <string name="direct_cli_intro_body">A CLI escuta em seu computador. Health.md se conecta diretamente e envia a exportação sem retransmissão na nuvem.</string>

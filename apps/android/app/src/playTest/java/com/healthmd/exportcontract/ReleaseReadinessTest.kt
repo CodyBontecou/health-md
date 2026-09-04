@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isPreparedForScheduledExportReliabilityRelease() {
+    fun appVersion_isPreparedForDirectCliQrPairingRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 30"))
-        assertTrue(buildGradle.contains("versionName = \"1.8.1\""))
+        assertTrue(buildGradle.contains("versionCode = 31"))
+        assertTrue(buildGradle.contains("versionName = \"1.8.2\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeScheduledExportReliabilityRelease() {
+    fun playStoreReleaseNotes_describeDirectCliQrPairingRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -41,11 +41,11 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.8.1"))
-            assertTrue(releaseNotes.contains("scheduled export"))
-            assertTrue(releaseNotes.contains("retry"))
-            assertTrue(releaseNotes.contains("Health Connect"))
-            assertTrue(releaseNotes.contains("Play Billing"))
+            assertTrue(releaseNotes.contains("v1.8.2"))
+            assertTrue(releaseNotes.contains("QR"))
+            assertTrue(releaseNotes.contains("reconnect"))
+            assertTrue(releaseNotes.contains("120 seconds"))
+            assertTrue(releaseNotes.contains("no push notifications"))
             assertTrue(releaseNotes.contains("Wear OS"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }

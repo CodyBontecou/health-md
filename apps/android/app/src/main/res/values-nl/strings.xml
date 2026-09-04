@@ -628,9 +628,9 @@
     <string name="release_notes_settings_hint">Je kunt exportindelingen, aangepaste Markdown en metingen aanpassen via Instellingen.</string>
     <string name="release_notes_open_settings">Instellingen openen</string>
     <string name="release_notes_got_it">Begrepen</string>
-    <string name="release_notes_highlight_feedback">Automatiseringsacties voeren het geselecteerde exportprofiel nu betrouwbaarder uit.</string>
-    <string name="release_notes_highlight_export_parity">Stappentotalen gebruiken exacte lokale kalenderdagen binnen de aangevraagde datumbereiken.</string>
-    <string name="release_notes_highlight_templates">Aankopen en herstelacties worden automatisch hervat nadat Play Billing de verbinding verliest.</string>
+    <string name="release_notes_highlight_feedback">Direct CLI-sessies maken automatisch opnieuw verbinding na korte desktoponderbrekingen, zodat exports betrouwbaar voltooid worden.</string>
+    <string name="release_notes_highlight_export_parity">Wake-window-opdrachten op de desktop wachten tot 120 seconden tot je de app opent en verbindt, zonder pushmeldingen.</string>
+    <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>
     <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor telefoon en Wear OS.</string>
     <string name="export_notification_background_permission_required">Geplande exports hebben achtergrondtoegang voor Health Connect nodig. Open Health.md &gt; Planning om dit in te schakelen.</string>
     <string name="paywall_unlock_button_price">Ontgrendel voor %s</string>
@@ -810,7 +810,7 @@
     <string name="enabled">Ingeschakeld</string>
     <string name="disabled">Uitgeschakeld</string>
     <!-- Direct CLI, API, provider, history, scheduling, widget, and accessibility additions. -->
-    <string name="release_notes_highlight_widgets">De geschiedenis van geplande exports bewaart nu het exacte profiel en de bestemming van elke uitvoering en nieuwe poging.</string>
+    <string name="release_notes_highlight_widgets">Koppel de Health.md-desktop-CLI door de QR-code rechtstreeks in het Direct CLI-scherm te scannen.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Versleutelde desktop-exports</string>
     <string name="direct_cli_intro_body">De CLI luistert op je computer. Health.md maakt rechtstreeks verbinding en verzendt de export zonder tussenstation in de cloud.</string>

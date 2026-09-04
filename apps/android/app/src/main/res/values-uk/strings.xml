@@ -650,9 +650,9 @@
     <string name="release_notes_settings_hint">Ви можете налаштувати формати експорту, власний Markdown і показники в налаштуваннях.</string>
     <string name="release_notes_open_settings">Відкрийте налаштування</string>
     <string name="release_notes_got_it">Зрозуміло</string>
-    <string name="release_notes_highlight_feedback">Дії автоматизації тепер надійніше запускають вибраний профіль експорту.</string>
-    <string name="release_notes_highlight_export_parity">Підсумки кроків використовують точні локальні календарні дні в запитаних діапазонах дат.</string>
-    <string name="release_notes_highlight_templates">Покупки й відновлення автоматично поновлюються після відключення Play Billing.</string>
+    <string name="release_notes_highlight_feedback">Сесії Direct CLI автоматично перепід\'єднуються після коротких розривів зв\'язку з комп\'ютером, тому експорти надійно завершуються.</string>
+    <string name="release_notes_highlight_export_parity">Команди вікна пробудження на комп\'ютері чекають до 120 секунд, поки ви відкриєте застосунок і під\'єднаєтесь, — без push-сповіщень.</string>
+    <string name="release_notes_highlight_templates">Ручне з\'єднання за адресою, портом і 20-значним кодом досі працює, зокрема зі старішими версіями CLI.</string>
     <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для телефона й Wear OS.</string>
     <string name="export_notification_background_permission_required">Для запланованого експорту потрібен фоновий доступ Health Connect. Відкрийте Health.md &gt; Розклад, щоб увімкнути його.</string>
     <string name="paywall_unlock_button_price">Розблокувати за %s</string>
@@ -837,7 +837,7 @@
     <string name="disabled">Вимкнено</string>
 
     <!-- Direct CLI, API export, providers, billing, history, and accessibility -->
-    <string name="release_notes_highlight_widgets">Історія запланованого експорту тепер зберігає точні профіль і призначення для кожного запуску та повтору.</string>
+    <string name="release_notes_highlight_widgets">З\'єднайте настільний CLI Health.md, відсканувавши його QR-код прямо на екрані Direct CLI.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Зашифрований експорт на комп’ютер</string>
     <string name="direct_cli_intro_body">CLI очікує підключення на вашому комп’ютері. Health.md підключається безпосередньо й передає експорт без хмарного посередника.</string>
