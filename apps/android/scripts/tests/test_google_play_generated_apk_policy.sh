@@ -90,7 +90,7 @@ grep -q 'availability only' "$(dirname "$report")/check-wear-adb-pair-readiness.
 if grep -Fq 'block "$readiness"' "$report"; then
   fail 'current ADB presence is still treated as completion evidence'
 fi
-grep -q 'Play exact qa/wear:qa pair is currently observable' "$report" \
+grep -q 'Play exact qa/wear:qa2 pair is currently observable' "$report" \
   || fail 'diagnostic blocker report lost the exact live QA track gate'
 grep -q 'signer-bound retained base-master APK evidence remains the completion gate' "$report" \
   || fail 'generated inventory counts are still mislabeled as completion proof'

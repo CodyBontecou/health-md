@@ -173,7 +173,7 @@ jq -e --arg sha "$expected_sha" --arg version "$expected_version" \
   .schemaVersion == 1 and .workflow == ".github/workflows/android-release.yml" and
   .event == "push" and .tag == $tag and .headSha == $sha and .tagPeeledSha == $sha and
   .versionName == $version and .phoneVersionCode == $phone and .wearVersionCode == $wear and
-  .phoneTrack == "qa" and .wearTrack == "wear:qa" and .releaseStatus == "completed" and
+  .phoneTrack == "qa" and .wearTrack == "wear:qa2" and .releaseStatus == "completed" and
   .phoneAabSha256 == $phoneSha and .wearAabSha256 == $wearSha and .uploadPrepared == true
 ' "$qa_receipt" >/dev/null || fail 'QA upload receipt is SHA/version/AAB mismatched'
 jq -e --arg sha "$expected_sha" --argjson run "$qa_upload_run" --argjson attempt "$qa_upload_attempt" '

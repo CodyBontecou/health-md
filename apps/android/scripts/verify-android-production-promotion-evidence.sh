@@ -45,7 +45,7 @@ jq -e --arg sha "$expected_sha" --arg version "$expected_version" \
   (.repository | type == "string" and length > 0) and (.runId | type == "number" and . > 0) and
   (.runAttempt | type == "number" and . > 0) and .releaseSha == $sha and .versionName == $version and
   .phoneVersionCode == $phone and .wearVersionCode == $wear and
-  .sourceTracks == ["qa","wear:qa"] and
+  .sourceTracks == ["qa","wear:qa2"] and
   .destinationTracks == ["production","wear:production"] and
   (.promotionEditId | type == "string" and length > 0) and
   (.commitResponseReceived | type == "boolean") and
@@ -67,7 +67,7 @@ has_edit_code() {
 }
 
 has_active "$root/google-play-qa.json" "$expected_phone" || fail 'phone code absent from QA precondition'
-has_active "$root/google-play-wear-qa.json" "$expected_wear" || fail 'Wear code absent from wear:qa precondition'
+has_active "$root/google-play-wear-qa.json" "$expected_wear" || fail 'Wear code absent from wear:qa2 precondition'
 if has_active "$root/google-play-production-before.json" "$expected_phone"; then
   fail 'phone code was already on production before the paired edit'
 fi

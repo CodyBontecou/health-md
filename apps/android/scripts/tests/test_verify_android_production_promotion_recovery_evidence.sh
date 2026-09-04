@@ -9,7 +9,7 @@ tile=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 jq -n --arg sha "$sha" --arg app "$app" --arg tile "$tile" '{
   schemaVersion:1,repository:"owner/repo",workflow:".github/workflows/android-promote-production.yml",
   runId:123,runAttempt:1,evidenceRunId:88,evidenceRunAttempt:3,releaseSha:$sha,versionName:"1.8.0",
-  phoneVersionCode:29,wearVersionCode:1000029,sourceTracks:["qa","wear:qa"],
+  phoneVersionCode:29,wearVersionCode:1000029,sourceTracks:["qa","wear:qa2"],
   destinationTracks:["production","wear:production"],wearAppScreenshotSha256:$app,
   wearTileScreenshotSha256:$tile,promotionPrepared:true,preparedAtUtc:"2026-08-14T00:00:00Z"
 }' >"$root/intent.json"

@@ -40,7 +40,7 @@ jq -e --arg sha "$expected_sha" --arg version "$expected_version" \
   (.evidenceRunAttempt | type == "number" and . > 0) and
   .releaseSha == $sha and .versionName == $version and
   .phoneVersionCode == $phone and .wearVersionCode == $wear and
-  .sourceTracks == ["qa","wear:qa"] and .destinationTracks == ["production","wear:production"] and
+  .sourceTracks == ["qa","wear:qa2"] and .destinationTracks == ["production","wear:production"] and
   .wearAppScreenshotSha256 == $app and .wearTileScreenshotSha256 == $tile and
   .promotionPrepared == true
 ' "$intent" >/dev/null || fail 'immutable promotion intent differs'

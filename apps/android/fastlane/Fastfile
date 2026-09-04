@@ -13,7 +13,7 @@ platform :android do
     sh("python3 ./scripts/validate-wear-play-assets.py")
   end
 
-  # Wear OS uses dedicated form-factor tracks (`wear:qa`, `wear:beta`,
+  # Wear OS uses dedicated form-factor tracks (`wear:qa2`, `wear:beta`,
   # `wear:production`). Supply accepts only one track per invocation, so paired publication is
   # intentionally owned by scripts/upload-google-play-paired-release.sh rather than Fastlane.
 end

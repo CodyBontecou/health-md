@@ -4,7 +4,7 @@ The former interactive Gradle Play Publisher OAuth flow is retired, and the publ
 
 An interactive developer token cannot provide the required separation between:
 
-- QA-only `qa`/`wear:qa` upload authority,
+- QA-only `qa`/`wear:qa2` upload authority,
 - production-only `production`/`wear:production` mutation authority,
 - read-only release monitoring,
 - protected environment review and independently bound release evidence.
@@ -25,7 +25,7 @@ Do not print token contents while checking cleanup.
 
 Use protected, least-privilege service accounts:
 
-- `google-play-qa` environment: upload key plus a Play account restricted to `qa` and `wear:qa`.
+- `google-play-qa` environment: upload key plus a Play account restricted to `qa` and `wear:qa2`.
 - `google-play-production` environment: production-capable account used only after sealed evidence verification and environment approval.
 - `google-play-announce` environment: dedicated app-level read-only account.
 - Optional local readiness inspection: a separate app-level read-only account passed through `PLAY_CONSOLE_KEY_PATH`.

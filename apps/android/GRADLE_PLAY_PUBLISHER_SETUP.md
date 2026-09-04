@@ -29,7 +29,7 @@ WEAR_REQUIRE_SIGNING_ATTESTATION=true \
 
 Use three separate trust domains:
 
-- `google-play-qa`: existing upload key and a service account restricted to `qa` and `wear:qa`.
+- `google-play-qa`: existing upload key and a service account restricted to `qa` and `wear:qa2`.
 - `google-play-production`: production-capable service account, protected release/evidence identities, Play App Signing certificate, and evidence HMAC key.
 - `google-play-announce`: app-level read-only service account only.
 
@@ -47,7 +47,7 @@ PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/health-md-read-only.json" \
 ## Canonical publication flow
 
 1. An annotated `android/v<version>` tag must peel to the exact requested SHA and be reachable from `origin/main`.
-2. `.github/workflows/android-release.yml` builds/signs both AABs, retains an immutable pre-mutation intent, and uploads phone to `qa` plus Wear to `wear:qa` in one Play edit.
+2. `.github/workflows/android-release.yml` builds/signs both AABs, retains an immutable pre-mutation intent, and uploads phone to `qa` plus Wear to `wear:qa2` in one Play edit.
 3. Play-generated base-master APKs, signer identity, closed-track behavior, physical QA, screenshots, and battery evidence are captured and independently reviewed.
 4. `.github/workflows/android-wear-screenshots.yml` verifies an exact-attempt protected submission and commits only the two approved Wear images with the QA-only account.
 5. Protected ingest verifies the exact QA and screenshot workflow attempts, safe evidence archive, exact-SHA push CI, and protected reviewer identities before sealing the bundle.

@@ -7,7 +7,7 @@ source ./scripts/google-play-paired-policy.sh
 key=${PLAY_CONSOLE_KEY_PATH:-}
 package=${PLAY_PACKAGE_NAME:-com.healthmd.android}
 phone_track=${PHONE_PLAY_TRACK:-qa}
-wear_track=${WEAR_PLAY_TRACK:-wear:qa}
+wear_track=${WEAR_PLAY_TRACK:-wear:qa2}
 release_status=${PLAY_RELEASE_STATUS:-completed}
 phone_code=${PHONE_VERSION_CODE:-}
 wear_code=${WEAR_VERSION_CODE:-}
@@ -90,6 +90,20 @@ update_track() {
 update_track "$phone_track" "$phone_code"
 update_track "$wear_track" "$wear_code"
 
+# Fail closed on Play validation errors before the non-idempotent commit. edits.validate
+# is side-effect free: it reports exactly what a commit would reject (track/artifact kind
+# mismatches, target-API policy floors, listing problems) without consuming the edit.
+validation_response=$(curl -sS --max-time 30 -w '\n%{http_code}' "${auth[@]}" \
+  -X POST -H 'Content-Type: application/json' -d '' \
+  "$api/edits/$edit_id:validate")
+validation_http=$(printf '%s' "$validation_response" | tail -n 1)
+validation_body=$(printf '%s' "$validation_response" | sed '$d')
+validation_errors=$(printf '%s' "$validation_body" \
+  | jq -r '(.error.message // .errorMessage // empty)' 2>/dev/null || true)
+if [[ "$validation_http" != "200" || -n "$validation_errors" ]]; then
+  fail "Play rejected the paired edit at validation: $validation_errors${validation_body:+ ($validation_body)}"
+fi
+
 # Exact-release Wear screenshots cannot exist until Play has generated and signed an installable
 # APK from this upload. Do not create a circular gate or replace listing assets here. After closed-
 # track installation and physical capture, the separately confirmed screenshot-sync transaction
@@ -107,6 +121,8 @@ curl --fail-with-body --max-time 30 -sS \
 commit_exit_code=$?
 set -e
 if [[ $commit_exit_code -eq 22 ]]; then
+  # Surface the definite HTTP rejection body; the commit is non-idempotent, so no retry.
+  jq -r '.error.message // .errorMessage // "(no body)"' "$work/commit-response.json" >&2 2>/dev/null || true
   fail 'paired Play commit received a definite HTTP rejection; reconciliation is forbidden'
 elif [[ $commit_exit_code -ne 0 ]]; then
   commit_response_received=false

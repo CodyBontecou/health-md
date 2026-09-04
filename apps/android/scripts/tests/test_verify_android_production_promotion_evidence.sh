@@ -23,7 +23,7 @@ jq -n --arg sha "$sha" --arg app "$app" --arg tile "$tile" '{
   schemaVersion:1, repository:"owner/repo", workflow:".github/workflows/android-promote-production.yml",
   runId:123, runAttempt:1, releaseSha:$sha, versionName:"1.8.0",
   phoneVersionCode:29, wearVersionCode:1000029,
-  sourceTracks:["qa","wear:qa"], destinationTracks:["production","wear:production"],
+  sourceTracks:["qa","wear:qa2"], destinationTracks:["production","wear:production"],
   promotionEditId:"edit-1", commitResponseReceived:true,
   pairedEditCommitted:true, productionPairVerified:true,
   reviewLifecycleVerified:true, wearAppScreenshotSha256:$app, wearTileScreenshotSha256:$tile,

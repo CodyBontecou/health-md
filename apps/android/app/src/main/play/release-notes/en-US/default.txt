@@ -1,4 +1,4 @@
-v1.8.3 — Easier, more reliable desktop exports
+v1.8.4 — Easier, more reliable desktop exports
 
 • Pair with the Health.md desktop CLI by scanning its QR code; manual address and 20-digit code entry still work.
 • Direct CLI sessions reconnect automatically after brief desktop disconnects, so exports finish instead of stalling.
