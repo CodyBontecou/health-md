@@ -43,6 +43,11 @@ Three independently shippable phases:
 
 P1 alone removes the re-run friction. P2/P3 add the notification so the user knows a request is waiting without watching the computer.
 
+The `direct.cli_agent_push_wake` capability addition refreshes the internal shared metric-registry
+identity and its registry-bound synthetic fixtures. It does **not** change Apple export schema v8,
+Android frozen v4 or analytical v5, direct application protocols v1/v2, query protocol v3, secure
+framing, or pairing selectors/transcripts.
+
 ## P1 — CLI/MCP wake window (shared, both platforms)
 
 Behavior change in `apps/cli` (`healthmd-client/src/direct.rs`, MCP direct adapter in `healthmd-cli/src/mcp`):

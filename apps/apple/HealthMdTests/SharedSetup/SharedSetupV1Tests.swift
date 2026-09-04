@@ -687,7 +687,7 @@ final class SharedSetupV1Tests: XCTestCase {
     private func fixtureRegistry() -> SharedSetupMetricRegistry {
         SharedSetupMetricRegistry(
             version: 1,
-            sha256: "d5adddab745bdfc72edebbf9f2a640055f0c4134841296b2c691eba9b03355cf",
+            sha256: "4597c2f197c25e6e6a0ec1976e3b5de930edffa2ca61fd4779d47b465075bae2",
             semanticToApple: [
                 "active_energy": "active_energy",
                 "blood_pressure_systolic": "blood_pressure_systolic",
