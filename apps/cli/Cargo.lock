@@ -1061,6 +1061,7 @@ dependencies = [
  "sysinfo",
  "tempfile",
  "thiserror",
+ "tinyvec",
  "tokio",
  "tokio-util",
  "unicode-casefold",

@@ -460,6 +460,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror",
+ "tinyvec",
  "unicode-casefold",
  "unicode-normalization",
 ]
