@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Extend the shared stdio store-parity kit (`tests/agent_data_stdio.rs`) with the object-store
+  backing as a third endpoint: all ten end-to-end scenarios now run unchanged against the
+  directory store, the imported SQLite database, AND the read-only S3-compatible object store,
+  served by an embedded synthetic loopback S3 double (corpus objects under `exports/`, fixed
+  synthetic credentials, `SigV4` verification of every request, only list/head/get traffic,
+  fixed `LastModified` values, loopback ports 48411–48493, and a fresh external index per
+  endpoint). The catalog, record/artifact ids, chunk math, and cursor rules proved identical
+  across backings; the one per-endpoint divergence is the documented misplaced-grant asymmetry,
+  now asserted by the kit: local backings refuse grants inside their private backing, while a
+  grant-shaped bucket object is ignored content that never loads and never refuses.
 - Add the self-hosted reference ingestion gateway: `healthmd data ingest-serve --database`
   serves Agent Data ingestion protocol v1 on loopback HTTP/1.1 (`POST /v1/ingest`, one
   manifest line + exact artifact bytes, `application/x-healthmd-agent-data-ingest`, exact

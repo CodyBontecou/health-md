@@ -176,9 +176,12 @@ serving grant always comes from the local `--grant` path.
 Version 4 (`aws4_request`, service `s3`, `x-amz-content-sha256: UNSIGNED-PAYLOAD`, region `auto`)
 against the frozen S3 subset; the implementation is unit-tested against the RFC 4231 HMAC vectors
 and the published AWS `SigV4` GET-object known answer. Real R2/S3 endpoints are not exercised in
-this repository's loop: compatibility is by specification through that subset, proven against the
-synthetic loopback double in `tests/agent_data_object.rs` (which `SigV4`-verifies every request and
-asserts only list/head/get methods are ever sent). This build carries no TLS socket layer, so
+this repository's loop: compatibility is by specification through that subset, proven against
+the synthetic loopback double in `tests/agent_data_object.rs` (which `SigV4`-verifies every request
+and asserts only list/head/get methods are ever sent) and, through its own embedded double, by
+the shared store-parity kit in `tests/agent_data_stdio.rs`, which runs the same ten end-to-end
+scenarios unchanged against all three backings — directory, database, and object store.
+This build carries no TLS socket layer, so
 `https://` endpoints validate per the URL policy and then fail health-free at transport with a
 stable error stating that boundary; only loopback `http://` endpoints can be reached today. Wiring
 TLS egress for production R2 endpoints is deliberately deferred to a later cycle rather than
