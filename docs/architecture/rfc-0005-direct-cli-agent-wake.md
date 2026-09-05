@@ -137,7 +137,7 @@ Same user outcome — *"a paired computer is requesting data; tap to unblock"* �
 ## Rollout
 
 1. P1 (Rust only) + docs/skill updates — shipped in alpha.6; iPhone and Android pairing/connectivity physically confirmed, with the full retained release matrix still pending.
-2. Contracts (additive sections) → worker endpoints → iOS enrollment/notification → CLI wake POST — implemented. Current `main` includes the worker client and canonical production URL in every CLI build; the next CLI release carries that default while iOS 3.3.0 completes App Store rollout and notification QA.
+2. Contracts (additive sections) → worker endpoints → iOS enrollment/notification → CLI wake POST — implemented. Current `main` includes the worker client and canonical production URL in every CLI build; the next CLI release carries that default. iOS 3.3.0 is `READY_FOR_SALE`; end-to-end notification QA remains pending.
 3. Android FCM + channel policy — planned P3; Play/F-Droid release notes and capability registry must update at that phase boundary.
 
 ## Decisions
