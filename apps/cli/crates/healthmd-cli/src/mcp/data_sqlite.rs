@@ -37,7 +37,11 @@ use super::data_backend::{
 };
 
 /// `PRAGMA user_version` of the current Agent Data `SQLite` schema.
-pub(super) const DATABASE_SCHEMA_VERSION: u32 = 1;
+///
+/// Version 2 added the additive `ingested_partitions` table (ingestion protocol v1
+/// owner-date partition bookkeeping). Databases at version 1 stay readable and are
+/// upgraded in place by the next read-write open.
+pub(super) const DATABASE_SCHEMA_VERSION: u32 = 2;
 /// File-type identity so an unrelated `SQLite` database is never mistaken for a store.
 const DATABASE_APPLICATION_ID: i32 = 0x484D_4441; // "HMDA"
 const DATABASE_BUSY_TIMEOUT_MS: u64 = 5_000;
@@ -430,7 +434,6 @@ fn insert_artifact(
     artifact: &ArtifactEntry,
     records: &[RecordEntry],
 ) -> Result<(), DataStoreOpenError> {
-    let imported_at = Utc::now().to_rfc3339();
     let bytes = std::fs::read(source_path).map_err(|_| {
         DataStoreOpenError::new("the export artifact changed during the Agent Data import")
     })?;
@@ -442,6 +445,24 @@ fn insert_artifact(
     let transaction = connection
         .transaction()
         .map_err(|_| DataStoreOpenError::new("the Agent Data import could not be completed"))?;
+    insert_parsed_artifact(&transaction, &bytes, artifact, records)?;
+    transaction
+        .commit()
+        .map_err(|_| DataStoreOpenError::new("the Agent Data import could not be completed"))
+}
+
+/// Insert verified artifact bytes and their indexing metadata inside an open transaction.
+///
+/// Shared by directory import and single-upload ingestion so both promotion paths write
+/// byte-identical rows. Never deletes or rewrites stored payloads; advances the store
+/// content revision exactly once per new artifact.
+pub(super) fn insert_parsed_artifact(
+    transaction: &rusqlite::Transaction<'_>,
+    bytes: &[u8],
+    artifact: &ArtifactEntry,
+    records: &[RecordEntry],
+) -> Result<(), DataStoreOpenError> {
+    let imported_at = Utc::now().to_rfc3339();
     let failure = || DataStoreOpenError::new("the Agent Data import could not be completed");
     transaction
         .execute(
@@ -515,10 +536,8 @@ fn insert_artifact(
             )
             .map_err(|_| failure())?;
     }
-    advance_content_revision(&transaction, &artifact.artifact_id)?;
-    transaction
-        .commit()
-        .map_err(|_| DataStoreOpenError::new("the Agent Data import could not be completed"))
+    advance_content_revision(transaction, &artifact.artifact_id)?;
+    Ok(())
 }
 
 /// Record that `relative_path` now resolves to `artifact_id`, appending supersession
@@ -613,7 +632,7 @@ fn hex(bytes: impl AsRef<[u8]>) -> String {
     value
 }
 
-fn migrate(connection: &mut Connection) -> Result<(), DataStoreOpenError> {
+pub(super) fn migrate(connection: &mut Connection) -> Result<(), DataStoreOpenError> {
     let application_id = connection
         .query_row("PRAGMA application_id", [], |row| row.get::<_, i64>(0))
         .map_err(|_| DataStoreOpenError::new("the file is not a usable SQLite database"))?;
@@ -640,6 +659,9 @@ fn migrate(connection: &mut Connection) -> Result<(), DataStoreOpenError> {
         .map_err(|_| DataStoreOpenError::new("the Agent Data database could not be initialized"))?;
     transaction
         .execute_batch(SCHEMA_V1)
+        .map_err(|_| DataStoreOpenError::new("the Agent Data database could not be initialized"))?;
+    transaction
+        .execute_batch(SCHEMA_V2)
         .map_err(|_| DataStoreOpenError::new("the Agent Data database could not be initialized"))?;
     if store_meta(&transaction, "store_id").is_err() {
         transaction
@@ -670,7 +692,7 @@ fn migrate(connection: &mut Connection) -> Result<(), DataStoreOpenError> {
     transaction
         .execute_batch(
             "PRAGMA application_id = 0x484D4441; \
-             PRAGMA user_version = 1;",
+             PRAGMA user_version = 2;",
         )
         .map_err(|_| DataStoreOpenError::new("the Agent Data database could not be initialized"))?;
     transaction
@@ -755,6 +777,19 @@ CREATE TABLE IF NOT EXISTS imports (
     invalid_count INTEGER NOT NULL DEFAULT 0
 );";
 
+/// Additive schema version 2: owner-date partition bookkeeping for ingestion protocol v1.
+/// Applied on top of [`SCHEMA_V1`] without touching any version-1 table or row.
+const SCHEMA_V2: &str = "CREATE TABLE IF NOT EXISTS ingested_partitions (
+    ingest_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+    revision_id TEXT NOT NULL UNIQUE REFERENCES artifacts(artifact_id),
+    owner_date TEXT NOT NULL,
+    completeness TEXT NOT NULL CHECK (completeness IN ('complete', 'partial')),
+    covered_owner_dates TEXT,
+    byte_count INTEGER NOT NULL,
+    accepted_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ingested_partitions_partition ON ingested_partitions(owner_date);";
+
 fn open_read_only(path: &Path) -> Result<Connection, DataStoreOpenError> {
     let connection = Connection::open_with_flags(
         path,
@@ -767,7 +802,7 @@ fn open_read_only(path: &Path) -> Result<Connection, DataStoreOpenError> {
     Ok(connection)
 }
 
-fn open_read_write(path: &Path) -> Result<Connection, DataStoreOpenError> {
+pub(super) fn open_read_write(path: &Path) -> Result<Connection, DataStoreOpenError> {
     let connection = Connection::open(path)
         .map_err(|_| DataStoreOpenError::new("the Agent Data database could not be created"))?;
     connection
@@ -1706,7 +1741,10 @@ mod tests {
         assert_eq!(doctor["source_kind"], "database");
         assert_eq!(doctor["database"]["sha_mismatch_count"], 1);
         assert_eq!(doctor["database"]["checked_artifact_count"], 1);
-        assert_eq!(doctor["database"]["schema_version"], 1);
+        assert_eq!(
+            doctor["database"]["schema_version"],
+            i64::from(DATABASE_SCHEMA_VERSION)
+        );
         assert_eq!(doctor["database"]["non_destructive"], true);
     }
 
@@ -1941,7 +1979,11 @@ mod tests {
             )
             .map(|value| usize::try_from(value).unwrap_or(0))
             .unwrap();
-        assert_eq!(tables, 8);
+        assert_eq!(tables, 9);
+        let partitions: i64 = connection
+            .query_row("SELECT COUNT(*) FROM ingested_partitions", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(partitions, 0, "directory import must not create partition rows");
     }
 
     #[tokio::test]
