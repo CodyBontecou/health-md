@@ -8,11 +8,14 @@
 //! observed behavior of the shipped binary; opaque identifiers (record/artifact SHA-256 digests)
 //! are discovered through the surface and cross-checked for consistency rather than predicted.
 //!
-//! Store-parity kit: the corpus builder and every scenario helper are parameterized by
-//! [`StoreEndpoint`], which currently emits the directory store's `--directory/--grant/--index`
-//! argv. When the `SQLite` store lands, add its argv (`--database ...`) to [`StoreEndpoint`] and
-//! re-run these scenarios unchanged against it; the planned Cloudflare store follows the same
-//! seam. Keep new scenarios parameterized by endpoint, never by global state.
+//! Store-parity kit: the corpus builder and every scenario run unchanged against BOTH local
+//! store backings through [`StoreEndpoint`]: the v1 directory store
+//! (`--directory/--grant/--index`) and the Health.md-owned `SQLite` database, whose endpoints
+//! [`StoreEndpoint::database`] populates by driving the real `healthmd data import` binary over
+//! the corpus before the first spawn and then serves with `--database/--grant`. Per-store
+//! expectations are provided by the endpoint itself (receipt `source_kind`, the misplaced-grant
+//! refusal reason); everything else is store-neutral. The planned Cloudflare store follows the
+//! same seam. Keep new scenarios parameterized by endpoint, never by global state.
 //!
 //! Harness facts (observed, frozen): the server speaks one JSON document per `\n`-terminated
 //! line, echoes the negotiated MCP protocol version, ignores notifications, rejects duplicate
@@ -73,6 +76,7 @@ impl Corpus {
             .expect("malformed candidate");
         std::fs::create_dir(root.path().join("grants")).expect("grant directory");
         std::fs::create_dir(root.path().join("indexes")).expect("index directory");
+        std::fs::create_dir(root.path().join("databases")).expect("database directory");
         Self { root }
     }
 
@@ -166,19 +170,37 @@ impl Corpus {
         )
     }
 
-    /// One store endpoint configuration for the parity kit. Today this is the directory store;
-    /// later stores add their own argv here and reuse the same scenarios.
+    /// One directory-store endpoint for the parity kit, with a fresh external index path.
     fn endpoint(&self, grant: &std::path::Path) -> StoreEndpoint {
         let sequence = INDEX_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-        StoreEndpoint {
-            directory: self.exports(),
-            grant: grant.to_path_buf(),
-            index: self
-                .root
+        StoreEndpoint::directory(
+            self.exports(),
+            grant.to_path_buf(),
+            self.root
                 .path()
                 .join("indexes")
                 .join(format!("index-{sequence}.json")),
-        }
+        )
+    }
+
+    /// One `SQLite`-store endpoint for the parity kit, backed by a fresh database populated
+    /// from this corpus by the real `healthmd data import` binary.
+    fn database_endpoint(&self, grant: &std::path::Path) -> StoreEndpoint {
+        let sequence = INDEX_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        StoreEndpoint::database(
+            self.root
+                .path()
+                .join("databases")
+                .join(format!("store-{sequence}.sqlite")),
+            &self.exports(),
+            grant.to_path_buf(),
+        )
+    }
+
+    /// Every store the parity kit proves, in a fixed order (directory first, then the
+    /// Health.md-owned database); each scenario iterates this list unchanged.
+    fn endpoints(&self, grant: &std::path::Path) -> Vec<StoreEndpoint> {
+        vec![self.endpoint(grant), self.database_endpoint(grant)]
     }
 }
 
@@ -344,34 +366,135 @@ const BROKEN_JSON: &str = r#"{"schema":"healthmd.health_data","schema_version":8
 // Store endpoint and stdio JSON-RPC client
 // ---------------------------------------------------------------------------
 
-/// Configuration for one Agent Data store under test. The directory store is the v1 shape; later
-/// stores (`SQLite` `--database`, Cloudflare) extend this with their own connection arguments so the
-/// same scenario functions re-run unchanged.
+/// One Agent Data store backing under test. The directory store is the v1 shape; the
+/// Health.md-owned `SQLite` database is populated by `healthmd data import` and owns its index
+/// internally. Later stores (Cloudflare) extend this enum and reuse the same scenarios.
+#[derive(Clone, Debug)]
+enum StoreBacking {
+    Directory { directory: PathBuf, index: PathBuf },
+    Database { database: PathBuf },
+}
+
+/// One configured store endpoint: a backing plus the serving grant. Scenarios never inspect
+/// the backing directly; they ask the endpoint for its argv and its per-store expectations.
 #[derive(Clone, Debug)]
 struct StoreEndpoint {
-    directory: PathBuf,
+    backing: StoreBacking,
     grant: PathBuf,
-    index: PathBuf,
 }
 
 impl StoreEndpoint {
+    /// Directory-store endpoint, served with `--directory … --grant … --index …`.
+    fn directory(directory: PathBuf, grant: PathBuf, index: PathBuf) -> Self {
+        Self {
+            backing: StoreBacking::Directory { directory, index },
+            grant,
+        }
+    }
+
+    /// Database-store endpoint: populates `database` from `exports` by driving the real
+    /// `healthmd data import` binary before the endpoint can ever serve, then serves it with
+    /// `--database … --grant …` (the database store owns its index internally).
+    fn database(database: PathBuf, exports: &std::path::Path, grant: PathBuf) -> Self {
+        import_corpus_into_database(&database, exports);
+        Self {
+            backing: StoreBacking::Database { database },
+            grant,
+        }
+    }
+
+    /// The same store under a different serving grant: scenarios re-authorize the identical
+    /// corpus through grants bound to it.
+    fn with_grant(&self, grant: &std::path::Path) -> Self {
+        let mut endpoint = self.clone();
+        endpoint.grant = grant.to_path_buf();
+        endpoint
+    }
+
+    /// The receipt `source_kind` this store must report for every query response.
+    fn expected_source_kind(&self) -> &'static str {
+        match &self.backing {
+            StoreBacking::Directory { .. } => "directory",
+            StoreBacking::Database { .. } => "database",
+        }
+    }
+
+    /// A grant deliberately stored inside the store's private backing, together with the
+    /// refusal reason `serve-data` must print for it.
+    fn misplaced_grant(&self) -> (PathBuf, &'static str) {
+        match &self.backing {
+            StoreBacking::Directory { directory, .. } => (
+                directory.join("inside-grant.json"),
+                "outside the export directory",
+            ),
+            StoreBacking::Database { database } => {
+                (database.clone(), "outside the Agent Data database")
+            }
+        }
+    }
+
+    /// The `mcp serve-data` argv for this store under `grant`.
+    fn argv_with_grant(&self, grant: &std::path::Path) -> Vec<String> {
+        let grant = grant.to_string_lossy().into_owned();
+        let mut argv = vec!["mcp".to_owned(), "serve-data".to_owned()];
+        match &self.backing {
+            StoreBacking::Directory { directory, index } => {
+                argv.push("--directory".to_owned());
+                argv.push(directory.to_string_lossy().into_owned());
+                argv.push("--grant".to_owned());
+                argv.push(grant);
+                argv.push("--index".to_owned());
+                argv.push(index.to_string_lossy().into_owned());
+            }
+            StoreBacking::Database { database } => {
+                argv.push("--database".to_owned());
+                argv.push(database.to_string_lossy().into_owned());
+                argv.push("--grant".to_owned());
+                argv.push(grant);
+            }
+        }
+        argv
+    }
+
     fn argv(&self) -> Vec<String> {
-        vec![
-            "mcp".to_owned(),
-            "serve-data".to_owned(),
-            "--directory".to_owned(),
-            self.directory.to_string_lossy().into_owned(),
-            "--grant".to_owned(),
-            self.grant.to_string_lossy().into_owned(),
-            "--index".to_owned(),
-            self.index.to_string_lossy().into_owned(),
-        ]
+        self.argv_with_grant(&self.grant)
     }
 
     /// Spawn the shipped binary with piped stdio and perform the initialize handshake.
     fn serve(&self) -> StdioMcpServer {
         StdioMcpServer::spawn(&self.argv())
     }
+}
+
+/// Populate a `SQLite` store exactly as an operator would — by driving the real binary — and
+/// verify the honest ingest report for this corpus: six supported-extension candidates are
+/// scanned (unsupported files like `notes.txt` are never scanned at all), five artifacts are
+/// imported carrying eight records, and the one malformed candidate (`broken.json`) is counted
+/// invalid without failing the import.
+fn import_corpus_into_database(database: &std::path::Path, exports: &std::path::Path) {
+    let output = Command::new(env!("CARGO_BIN_EXE_healthmd"))
+        .args(["data", "import", "--database"])
+        .arg(database)
+        .args(["--directory"])
+        .arg(exports)
+        .stdin(Stdio::null())
+        .output()
+        .expect("healthmd data import should launch");
+    assert!(
+        output.status.success(),
+        "data import should succeed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).expect("import report JSON");
+    assert_eq!(report["schema"], json!("healthmd.agent_data_import"));
+    assert_eq!(report["status"], json!("success"));
+    assert_eq!(report["scanned_file_count"], json!(6));
+    assert_eq!(report["imported_artifact_count"], json!(5));
+    assert_eq!(report["duplicate_artifact_count"], json!(0));
+    assert_eq!(report["ignored_file_count"], json!(0));
+    assert_eq!(report["invalid_file_count"], json!(1));
+    assert_eq!(report["artifact_count"], json!(5));
+    assert_eq!(report["record_count"], json!(8));
 }
 
 #[derive(Debug)]
@@ -785,285 +908,293 @@ fn sha256_hex(bytes: &[u8]) -> String {
 #[test]
 fn initialize_performs_the_handshake_and_exposes_only_the_five_data_tools() {
     let corpus = Corpus::build();
-    let endpoint = corpus.endpoint(&corpus.grant_bulk());
-    let mut server = endpoint.serve();
+    for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
+        let mut server = endpoint.serve();
 
-    let initialize = server.request_with_id(
-        7_777,
-        "initialize",
-        json!({"protocolVersion": PROTOCOL_VERSION, "capabilities": {}}),
-    );
-    assert_eq!(initialize["jsonrpc"], json!("2.0"));
-    assert_eq!(initialize["id"], json!(7_777));
-    let instructions = initialize["result"]["instructions"]
-        .as_str()
-        .expect("instructions");
-    assert!(instructions.contains("healthmd_data_catalog"));
-    assert!(!instructions.contains("pair"), "{instructions}");
-    assert!(!instructions.contains("healthmd_export"), "{instructions}");
-
-    // The initialized notification produces no response; the next request still answers.
-    let tools = server.request("tools/list", json!({}));
-    let tools = tools["result"]["tools"].as_array().expect("tools");
-    let names: Vec<&str> = tools
-        .iter()
-        .map(|tool| tool["name"].as_str().expect("tool name"))
-        .collect();
-    assert_eq!(
-        names,
-        [
-            "healthmd_data_catalog",
-            "healthmd_data_records",
-            "healthmd_data_record_read",
-            "healthmd_data_artifacts",
-            "healthmd_data_artifact_read",
-        ]
-    );
-    for tool in tools {
-        assert_eq!(
-            tool.pointer("/annotations/readOnlyHint"),
-            Some(&json!(true))
+        let initialize = server.request_with_id(
+            7_777,
+            "initialize",
+            json!({"protocolVersion": PROTOCOL_VERSION, "capabilities": {}}),
         );
-        assert!(tool["inputSchema"].is_object(), "fixed tool schemas");
+        assert_eq!(initialize["jsonrpc"], json!("2.0"));
+        assert_eq!(initialize["id"], json!(7_777));
+        let instructions = initialize["result"]["instructions"]
+            .as_str()
+            .expect("instructions");
+        assert!(instructions.contains("healthmd_data_catalog"));
+        assert!(!instructions.contains("pair"), "{instructions}");
+        assert!(!instructions.contains("healthmd_export"), "{instructions}");
+
+        // The initialized notification produces no response; the next request still answers.
+        let tools = server.request("tools/list", json!({}));
+        let tools = tools["result"]["tools"].as_array().expect("tools");
+        let names: Vec<&str> = tools
+            .iter()
+            .map(|tool| tool["name"].as_str().expect("tool name"))
+            .collect();
+        assert_eq!(
+            names,
+            [
+                "healthmd_data_catalog",
+                "healthmd_data_records",
+                "healthmd_data_record_read",
+                "healthmd_data_artifacts",
+                "healthmd_data_artifact_read",
+            ]
+        );
+        for tool in tools {
+            assert_eq!(
+                tool.pointer("/annotations/readOnlyHint"),
+                Some(&json!(true))
+            );
+            assert!(tool["inputSchema"].is_object(), "fixed tool schemas");
+        }
+
+        // Non-data tools are absent by name, including readiness and diagnostics.
+        for name in [
+            "healthmd_status",
+            "healthmd_doctor",
+            "healthmd_capabilities",
+            "healthmd_query",
+            "healthmd_pairing_start",
+            "healthmd_export_files",
+        ] {
+            server
+                .call(name, json!({}))
+                .expect_rpc_error(-32_602, "Unknown tool");
+        }
+
+        // Request identifiers are never reused within one session.
+        let ping = server.request_with_id(9_001, "ping", json!({}));
+        assert!(ping["result"].as_object().is_some());
+        let duplicate = server.request_with_id(9_001, "ping", json!({}));
+        assert_eq!(duplicate.pointer("/error/code"), Some(&json!(-32_600)));
+        assert_eq!(
+            duplicate.pointer("/error/message"),
+            Some(&json!("Duplicate request identifier"))
+        );
+
+        // Unsupported protocol versions are refused at the handshake.
+        let mut rejected = endpoint.serve();
+        let response = rejected.request(
+            "initialize",
+            json!({"protocolVersion": "1999-01-01", "capabilities": {}}),
+        );
+        assert_eq!(response.pointer("/error/code"), Some(&json!(-32_602)));
+        assert_eq!(
+            response.pointer("/error/message"),
+            Some(&json!("Unsupported MCP protocol version"))
+        );
     }
-
-    // Non-data tools are absent by name, including readiness and diagnostics.
-    for name in [
-        "healthmd_status",
-        "healthmd_doctor",
-        "healthmd_capabilities",
-        "healthmd_query",
-        "healthmd_pairing_start",
-        "healthmd_export_files",
-    ] {
-        server
-            .call(name, json!({}))
-            .expect_rpc_error(-32_602, "Unknown tool");
-    }
-
-    // Request identifiers are never reused within one session.
-    let ping = server.request_with_id(9_001, "ping", json!({}));
-    assert!(ping["result"].as_object().is_some());
-    let duplicate = server.request_with_id(9_001, "ping", json!({}));
-    assert_eq!(duplicate.pointer("/error/code"), Some(&json!(-32_600)));
-    assert_eq!(
-        duplicate.pointer("/error/message"),
-        Some(&json!("Duplicate request identifier"))
-    );
-
-    // Unsupported protocol versions are refused at the handshake.
-    let mut rejected = endpoint.serve();
-    let response = rejected.request(
-        "initialize",
-        json!({"protocolVersion": "1999-01-01", "capabilities": {}}),
-    );
-    assert_eq!(response.pointer("/error/code"), Some(&json!(-32_602)));
-    assert_eq!(
-        response.pointer("/error/message"),
-        Some(&json!("Unsupported MCP protocol version"))
-    );
 }
 
 #[test]
 fn catalog_reports_exact_metric_identities_sources_layers_and_coverage() {
     let corpus = Corpus::build();
-    let mut server = corpus.endpoint(&corpus.grant_bulk()).serve();
+    for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
+        let mut server = endpoint.serve();
 
-    let catalog = server.call("healthmd_data_catalog", json!({"page": default_page()}));
-    let payload = catalog.expect_success("healthmd_data_catalog");
-    assert_eq!(payload["schema"], json!("healthmd.agent_query_response"));
-    assert_eq!(payload["schema_version"], json!(1));
-    assert_eq!(payload["operation"], json!("catalog"));
-    assert_eq!(payload["next_cursor"], Value::Null);
-    // Receipt hygiene: factual provenance only, exact key sets, no trend/interpretation family.
-    assert_eq!(
-        object_keys(&payload),
-        [
-            "items",
-            "next_cursor",
-            "operation",
-            "receipt",
-            "schema",
-            "schema_version"
-        ]
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
-    );
-    assert_eq!(payload["receipt"]["source_kind"], json!("directory"));
-    assert_eq!(payload["receipt"]["policy_enforced"], json!(true));
-    assert_eq!(payload["receipt"]["returned_items"], json!(8));
-    assert_eq!(
-        object_keys(&payload["receipt"]),
-        [
-            "index_revision",
-            "policy_enforced",
-            "returned_items",
-            "source_kind"
-        ]
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
-    );
-    let revision = payload["receipt"]["index_revision"]
-        .as_str()
-        .expect("index revision");
-    assert_eq!(revision.len(), 64, "index revision is a hex SHA-256 digest");
+        let catalog = server.call("healthmd_data_catalog", json!({"page": default_page()}));
+        let payload = catalog.expect_success("healthmd_data_catalog");
+        assert_eq!(payload["schema"], json!("healthmd.agent_query_response"));
+        assert_eq!(payload["schema_version"], json!(1));
+        assert_eq!(payload["operation"], json!("catalog"));
+        assert_eq!(payload["next_cursor"], Value::Null);
+        // Receipt hygiene: factual provenance only, exact key sets, no trend/interpretation family.
+        assert_eq!(
+            object_keys(&payload),
+            [
+                "items",
+                "next_cursor",
+                "operation",
+                "receipt",
+                "schema",
+                "schema_version"
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
+        );
+        assert_eq!(
+            payload["receipt"]["source_kind"],
+            json!(endpoint.expected_source_kind())
+        );
+        assert_eq!(payload["receipt"]["policy_enforced"], json!(true));
+        assert_eq!(payload["receipt"]["returned_items"], json!(8));
+        assert_eq!(
+            object_keys(&payload["receipt"]),
+            [
+                "index_revision",
+                "policy_enforced",
+                "returned_items",
+                "source_kind"
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
+        );
+        let revision = payload["receipt"]["index_revision"]
+            .as_str()
+            .expect("index revision");
+        assert_eq!(revision.len(), 64, "index revision is a hex SHA-256 digest");
 
-    let items = payload["items"].as_array().expect("catalog items");
-    assert_eq!(items, &expected_bulk_catalog());
+        let items = payload["items"].as_array().expect("catalog items");
+        assert_eq!(items, &expected_bulk_catalog());
+    }
 }
 
 #[test]
 #[allow(clippy::too_many_lines)]
 fn records_are_bounded_paginated_and_detail_level_separated() {
     let corpus = Corpus::build();
-    let mut server = corpus.endpoint(&corpus.grant_bulk()).serve();
+    for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
+        let mut server = endpoint.serve();
 
-    // Common layer: exactly the three scalar daily fields, in deterministic record order
-    // (owner date, then metric identity).
-    let common = all_record_items(&mut server, "common");
-    assert_eq!(common.len(), 3);
-    assert_record_item(
-        &common[0],
-        json!(["healthmd.health_data#/activity/steps"]),
-        "healthmd.health_data",
-        "common",
-        Some("2026-03-15"),
-        None,
-        None,
-        "complete",
-        "healthmd.health_data",
-        8,
-        json!({"type": "json_pointer", "pointer": "/activity/steps"}),
-        &json!(12_345),
-    );
-    assert_record_item(
-        &common[1],
-        json!(["healthmd.health_data#/sleep/asleep_minutes"]),
-        "healthmd.health_data",
-        "common",
-        Some("2026-03-15"),
-        None,
-        None,
-        "complete",
-        "healthmd.health_data",
-        8,
-        json!({"type": "json_pointer", "pointer": "/sleep/asleep_minutes"}),
-        &json!(480),
-    );
-    assert_record_item(
-        &common[2],
-        json!(["healthmd.health_data#/records/0/heart/restingHeartRate"]),
-        "healthmd.health_data",
-        "common",
-        Some("2026-03-16"),
-        None,
-        None,
-        "complete",
-        "healthmd.health_data",
-        8,
-        json!({"type": "json_pointer", "pointer": "/records/0/heart/restingHeartRate"}),
-        &json!(58),
-    );
-
-    // Lossless layer: five records across three artifacts, paginated with a page bound of two.
-    let mut pages = Vec::new();
-    let mut cursor: Option<String> = None;
-    loop {
-        let response = server.call(
-            "healthmd_data_records",
-            records_arguments("lossless", page(2, 262_144, cursor.as_deref())),
+        // Common layer: exactly the three scalar daily fields, in deterministic record order
+        // (owner date, then metric identity).
+        let common = all_record_items(&mut server, "common");
+        assert_eq!(common.len(), 3);
+        assert_record_item(
+            &common[0],
+            json!(["healthmd.health_data#/activity/steps"]),
+            "healthmd.health_data",
+            "common",
+            Some("2026-03-15"),
+            None,
+            None,
+            "complete",
+            "healthmd.health_data",
+            8,
+            json!({"type": "json_pointer", "pointer": "/activity/steps"}),
+            &json!(12_345),
         );
-        let payload = response.expect_success("healthmd_data_records");
-        let items = payload["items"].as_array().expect("lossless items");
-        assert!(items.len() <= 2, "page bounds must be honored: {items:?}");
-        assert_eq!(payload["receipt"]["returned_items"], json!(items.len()));
-        cursor = payload["next_cursor"].as_str().map(str::to_owned);
-        pages.push(payload);
-        if cursor.is_none() {
-            break;
-        }
-    }
-    assert_eq!(pages.len(), 3, "five lossless records page by two");
-    let first = pages[0]["items"].as_array().expect("first page");
-    let second = pages[1]["items"].as_array().expect("second page");
-    let third = pages[2]["items"].as_array().expect("third page");
-    // Deterministic order: the owner-date-less snapshot record sorts first, then 2026-03-15
-    // instants (HealthKit before raw snapshot by metric identity), then the 2026-03-16 change.
-    assert_eq!(
-        first[0]["metric_ids"],
-        json!(["healthmd.raw-snapshot#wire:heart_rate_samples"])
-    );
-    assert_eq!(
-        first[0]["locator"],
-        json!({"type": "ndjson_line", "line": 3})
-    );
-    assert_eq!(first[0]["owner_date"], Value::Null);
-    assert_eq!(
-        first[1]["metric_ids"],
-        json!(["healthmd.healthkit_records#metric:heart_rate_avg"])
-    );
-    assert_eq!(
-        first[1]["value"],
-        heart_rate_avg_record(),
-        "lossless values are the complete source records"
-    );
-    assert_eq!(
-        second[0]["metric_ids"],
-        json!(["healthmd.raw-snapshot#wire:steps"])
-    );
-    assert_eq!(
-        second[1]["metric_ids"],
-        json!([
-            "healthmd.healthkit_records#metric:heart_rate_avg",
-            "healthmd.healthkit_records#metric:heart_rate_min"
-        ])
-    );
-    assert_eq!(
-        third[0]["metric_ids"],
-        json!(["healthmd.raw-changes#wire:steps"])
-    );
+        assert_record_item(
+            &common[1],
+            json!(["healthmd.health_data#/sleep/asleep_minutes"]),
+            "healthmd.health_data",
+            "common",
+            Some("2026-03-15"),
+            None,
+            None,
+            "complete",
+            "healthmd.health_data",
+            8,
+            json!({"type": "json_pointer", "pointer": "/sleep/asleep_minutes"}),
+            &json!(480),
+        );
+        assert_record_item(
+            &common[2],
+            json!(["healthmd.health_data#/records/0/heart/restingHeartRate"]),
+            "healthmd.health_data",
+            "common",
+            Some("2026-03-16"),
+            None,
+            None,
+            "complete",
+            "healthmd.health_data",
+            8,
+            json!({"type": "json_pointer", "pointer": "/records/0/heart/restingHeartRate"}),
+            &json!(58),
+        );
 
-    let mut record_ids: BTreeSet<&str> = BTreeSet::new();
-    for page in &pages {
-        for item in page["items"].as_array().expect("items") {
-            record_ids.insert(item["record_id"].as_str().expect("record_id"));
+        // Lossless layer: five records across three artifacts, paginated with a page bound of two.
+        let mut pages = Vec::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let response = server.call(
+                "healthmd_data_records",
+                records_arguments("lossless", page(2, 262_144, cursor.as_deref())),
+            );
+            let payload = response.expect_success("healthmd_data_records");
+            let items = payload["items"].as_array().expect("lossless items");
+            assert!(items.len() <= 2, "page bounds must be honored: {items:?}");
+            assert_eq!(payload["receipt"]["returned_items"], json!(items.len()));
+            cursor = payload["next_cursor"].as_str().map(str::to_owned);
+            pages.push(payload);
+            if cursor.is_none() {
+                break;
+            }
         }
-    }
-    assert_eq!(
-        record_ids.len(),
-        5,
-        "pagination yields each record exactly once"
-    );
+        assert_eq!(pages.len(), 3, "five lossless records page by two");
+        let first = pages[0]["items"].as_array().expect("first page");
+        let second = pages[1]["items"].as_array().expect("second page");
+        let third = pages[2]["items"].as_array().expect("third page");
+        // Deterministic order: the owner-date-less snapshot record sorts first, then 2026-03-15
+        // instants (HealthKit before raw snapshot by metric identity), then the 2026-03-16 change.
+        assert_eq!(
+            first[0]["metric_ids"],
+            json!(["healthmd.raw-snapshot#wire:heart_rate_samples"])
+        );
+        assert_eq!(
+            first[0]["locator"],
+            json!({"type": "ndjson_line", "line": 3})
+        );
+        assert_eq!(first[0]["owner_date"], Value::Null);
+        assert_eq!(
+            first[1]["metric_ids"],
+            json!(["healthmd.healthkit_records#metric:heart_rate_avg"])
+        );
+        assert_eq!(
+            first[1]["value"],
+            heart_rate_avg_record(),
+            "lossless values are the complete source records"
+        );
+        assert_eq!(
+            second[0]["metric_ids"],
+            json!(["healthmd.raw-snapshot#wire:steps"])
+        );
+        assert_eq!(
+            second[1]["metric_ids"],
+            json!([
+                "healthmd.healthkit_records#metric:heart_rate_avg",
+                "healthmd.healthkit_records#metric:heart_rate_min"
+            ])
+        );
+        assert_eq!(
+            third[0]["metric_ids"],
+            json!(["healthmd.raw-changes#wire:steps"])
+        );
 
-    // The all_pages traversal wraps identical pages in the bounded aggregate envelope.
-    let aggregate = server.call(
-        "healthmd_data_records",
-        json!({
-            "metrics": {"type": "all_available"},
-            "detail_level": "lossless",
-            "page": page(2, 262_144, None),
-            "all_pages": true
-        }),
-    );
-    let aggregate = aggregate.expect_success("healthmd_data_records");
-    assert_eq!(aggregate["schema"], json!("healthmd.mcp_query_pages"));
-    assert_eq!(
-        object_keys(&aggregate),
-        ["pages", "receipt", "schema", "schema_version"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect()
-    );
-    assert_eq!(aggregate["receipt"]["page_count"], json!(3));
-    assert_eq!(aggregate["receipt"]["item_count"], json!(5));
-    assert_eq!(aggregate["receipt"]["traversal_complete"], json!(true));
-    assert_eq!(
-        aggregate["pages"].as_array().map(Vec::len),
-        Some(3),
-        "aggregate carries the same page payloads"
-    );
+        let mut record_ids: BTreeSet<&str> = BTreeSet::new();
+        for page in &pages {
+            for item in page["items"].as_array().expect("items") {
+                record_ids.insert(item["record_id"].as_str().expect("record_id"));
+            }
+        }
+        assert_eq!(
+            record_ids.len(),
+            5,
+            "pagination yields each record exactly once"
+        );
+
+        // The all_pages traversal wraps identical pages in the bounded aggregate envelope.
+        let aggregate = server.call(
+            "healthmd_data_records",
+            json!({
+                "metrics": {"type": "all_available"},
+                "detail_level": "lossless",
+                "page": page(2, 262_144, None),
+                "all_pages": true
+            }),
+        );
+        let aggregate = aggregate.expect_success("healthmd_data_records");
+        assert_eq!(aggregate["schema"], json!("healthmd.mcp_query_pages"));
+        assert_eq!(
+            object_keys(&aggregate),
+            ["pages", "receipt", "schema", "schema_version"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect()
+        );
+        assert_eq!(aggregate["receipt"]["page_count"], json!(3));
+        assert_eq!(aggregate["receipt"]["item_count"], json!(5));
+        assert_eq!(aggregate["receipt"]["traversal_complete"], json!(true));
+        assert_eq!(
+            aggregate["pages"].as_array().map(Vec::len),
+            Some(3),
+            "aggregate carries the same page payloads"
+        );
+    }
 }
 
 #[test]
@@ -1071,84 +1202,86 @@ fn grant_intersection_hides_ungranted_metrics_and_multi_attributed_records() {
     let corpus = Corpus::build();
 
     // Narrow grant: only the steps pointer is granted; nothing else is catalog- or record-visible.
-    let mut narrow = corpus.endpoint(&corpus.grant_steps_only()).serve();
-    let catalog = narrow.call("healthmd_data_catalog", json!({"page": default_page()}));
-    let payload = catalog.expect_success("healthmd_data_catalog");
-    assert_eq!(
-        payload["items"],
-        json!([catalog_item(
-            "healthmd.health_data#/activity/steps",
-            "healthmd.health_data",
-            "common",
-            1,
-            Some("2026-03-15"),
-            Some("2026-03-15"),
-            None,
-            None,
-        )]),
-        "ungranted metrics are absent from the catalog"
-    );
-    let records = all_record_items(&mut narrow, "common");
-    assert_eq!(records.len(), 1);
-    assert_eq!(records[0]["value"], json!(12_345));
-    assert_eq!(records[0]["locator"]["pointer"], json!("/activity/steps"));
+    for reference in corpus.endpoints(&corpus.grant_steps_only()) {
+        let mut narrow = reference.serve();
+        let catalog = narrow.call("healthmd_data_catalog", json!({"page": default_page()}));
+        let payload = catalog.expect_success("healthmd_data_catalog");
+        assert_eq!(
+            payload["items"],
+            json!([catalog_item(
+                "healthmd.health_data#/activity/steps",
+                "healthmd.health_data",
+                "common",
+                1,
+                Some("2026-03-15"),
+                Some("2026-03-15"),
+                None,
+                None,
+            )]),
+            "ungranted metrics are absent from the catalog"
+        );
+        let records = all_record_items(&mut narrow, "common");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0]["value"], json!(12_345));
+        assert_eq!(records[0]["locator"]["pointer"], json!("/activity/steps"));
 
-    // Partial multi-metric attribution: the record carries two metric identities, and the grant
-    // permits only one — so the record disappears from BOTH catalog and records.
-    let mut partial = corpus
-        .endpoint(&corpus.grant_one_of_two_attributions())
-        .serve();
-    let catalog = partial.call("healthmd_data_catalog", json!({"page": default_page()}));
-    let payload = catalog.expect_success("healthmd_data_catalog");
-    assert_eq!(
-        payload["items"],
-        json!([catalog_item(
-            "healthmd.healthkit_records#metric:heart_rate_avg",
-            "healthmd.healthkit_records",
-            "lossless",
-            1,
-            Some("2026-03-15"),
-            Some("2026-03-15"),
-            Some("2026-03-15T12:00:00Z"),
-            Some("2026-03-15T12:00:00Z"),
-        )]),
-        "the multi-attributed record must not contribute to the heart_rate_avg count"
-    );
-    let records = all_record_items(&mut partial, "lossless");
-    assert_eq!(records.len(), 1);
-    assert_eq!(
-        records[0]["locator"]["pointer"],
-        json!("/healthkit_record_archive/records/0"),
-        "only the single-attribution record is visible"
-    );
+        // Partial multi-metric attribution: the record carries two metric identities, and the grant
+        // permits only one — so the record disappears from BOTH catalog and records.
+        let mut partial = reference
+            .with_grant(&corpus.grant_one_of_two_attributions())
+            .serve();
+        let catalog = partial.call("healthmd_data_catalog", json!({"page": default_page()}));
+        let payload = catalog.expect_success("healthmd_data_catalog");
+        assert_eq!(
+            payload["items"],
+            json!([catalog_item(
+                "healthmd.healthkit_records#metric:heart_rate_avg",
+                "healthmd.healthkit_records",
+                "lossless",
+                1,
+                Some("2026-03-15"),
+                Some("2026-03-15"),
+                Some("2026-03-15T12:00:00Z"),
+                Some("2026-03-15T12:00:00Z"),
+            )]),
+            "the multi-attributed record must not contribute to the heart_rate_avg count"
+        );
+        let records = all_record_items(&mut partial, "lossless");
+        assert_eq!(records.len(), 1);
+        assert_eq!(
+            records[0]["locator"]["pointer"],
+            json!("/healthkit_record_archive/records/0"),
+            "only the single-attribution record is visible"
+        );
 
-    // Record reads are re-authorized per request against the serving grant.
-    let mut bulk = corpus.endpoint(&corpus.grant_bulk()).serve();
-    let lossless = all_record_items(&mut bulk, "lossless");
-    let multi = lossless
-        .iter()
-        .find(|item| item["metric_ids"].as_array().map(Vec::len) == Some(2))
-        .expect("multi-attributed record under the bulk grant");
-    let multi_id = multi["record_id"].as_str().expect("record_id").to_owned();
-    partial
-        .call(
+        // Record reads are re-authorized per request against the serving grant.
+        let mut bulk = reference.with_grant(&corpus.grant_bulk()).serve();
+        let lossless = all_record_items(&mut bulk, "lossless");
+        let multi = lossless
+            .iter()
+            .find(|item| item["metric_ids"].as_array().map(Vec::len) == Some(2))
+            .expect("multi-attributed record under the bulk grant");
+        let multi_id = multi["record_id"].as_str().expect("record_id").to_owned();
+        partial
+            .call(
+                "healthmd_data_record_read",
+                json!({"record_id": multi_id, "page": default_page()}),
+            )
+            .expect_payload_error(
+                "healthmd_data_record_read",
+                "healthmd_agent_record_unavailable",
+            );
+
+        // Unknown but well-formed identifiers are also unavailable, never an internal error.
+        bulk.call(
             "healthmd_data_record_read",
-            json!({"record_id": multi_id, "page": default_page()}),
+            json!({"record_id": "0".repeat(64), "page": default_page()}),
         )
         .expect_payload_error(
             "healthmd_data_record_read",
             "healthmd_agent_record_unavailable",
         );
-
-    // Unknown but well-formed identifiers are also unavailable, never an internal error.
-    bulk.call(
-        "healthmd_data_record_read",
-        json!({"record_id": "0".repeat(64), "page": default_page()}),
-    )
-    .expect_payload_error(
-        "healthmd_data_record_read",
-        "healthmd_agent_record_unavailable",
-    );
+    }
 }
 
 #[test]
@@ -1158,158 +1291,160 @@ fn instant_and_owner_date_gates_are_independent() {
     // Exact instant gate [12:00:00Z, 12:00:02Z): keeps the two overlapping instants, drops the
     // out-of-window records AND every record without a parseable instant (including all three
     // common daily scalars and the timestamp-less raw sample record).
-    let mut instant = corpus.endpoint(&corpus.grant_exact_instant()).serve();
-    let catalog = instant.call("healthmd_data_catalog", json!({"page": default_page()}));
-    let payload = catalog.expect_success("healthmd_data_catalog");
-    assert_eq!(
-        payload["items"],
-        json!([
-            catalog_item(
-                "healthmd.healthkit_records#metric:heart_rate_avg",
-                "healthmd.healthkit_records",
-                "lossless",
-                1,
-                Some("2026-03-15"),
-                Some("2026-03-15"),
-                Some("2026-03-15T12:00:00Z"),
-                Some("2026-03-15T12:00:00Z"),
-            ),
-            catalog_item(
-                "healthmd.raw-snapshot#wire:steps",
-                "healthmd.raw-snapshot",
-                "lossless",
-                1,
-                Some("2026-03-15"),
-                Some("2026-03-15"),
-                Some("2026-03-15T12:00:00Z"),
-                Some("2026-03-15T12:00:00Z"),
-            ),
-        ]),
-        "the instant gate excludes instant-less records from the catalog itself"
-    );
-    let records = all_record_items(&mut instant, "lossless");
-    assert_eq!(records.len(), 2);
-    assert_eq!(records[0]["start_time"], json!("2026-03-15T12:00:00Z"));
-    assert_eq!(records[1]["start_time"], json!("2026-03-15T12:00:00Z"));
-    assert_eq!(
-        records[1]["locator"],
-        json!({"type": "ndjson_line", "line": 2})
-    );
+    for reference in corpus.endpoints(&corpus.grant_exact_instant()) {
+        let mut instant = reference.serve();
+        let catalog = instant.call("healthmd_data_catalog", json!({"page": default_page()}));
+        let payload = catalog.expect_success("healthmd_data_catalog");
+        assert_eq!(
+            payload["items"],
+            json!([
+                catalog_item(
+                    "healthmd.healthkit_records#metric:heart_rate_avg",
+                    "healthmd.healthkit_records",
+                    "lossless",
+                    1,
+                    Some("2026-03-15"),
+                    Some("2026-03-15"),
+                    Some("2026-03-15T12:00:00Z"),
+                    Some("2026-03-15T12:00:00Z"),
+                ),
+                catalog_item(
+                    "healthmd.raw-snapshot#wire:steps",
+                    "healthmd.raw-snapshot",
+                    "lossless",
+                    1,
+                    Some("2026-03-15"),
+                    Some("2026-03-15"),
+                    Some("2026-03-15T12:00:00Z"),
+                    Some("2026-03-15T12:00:00Z"),
+                ),
+            ]),
+            "the instant gate excludes instant-less records from the catalog itself"
+        );
+        let records = all_record_items(&mut instant, "lossless");
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0]["start_time"], json!("2026-03-15T12:00:00Z"));
+        assert_eq!(records[1]["start_time"], json!("2026-03-15T12:00:00Z"));
+        assert_eq!(
+            records[1]["locator"],
+            json!({"type": "ndjson_line", "line": 2})
+        );
 
-    // Owner-date gate (2026-03-15, times unrestricted): daily scalars carry no instants yet are
-    // admitted by their owner date; the 2026-03-16 envelope record is excluded.
-    let mut dated = corpus.endpoint(&corpus.grant_exact_date()).serve();
-    let catalog = dated.call("healthmd_data_catalog", json!({"page": default_page()}));
-    let payload = catalog.expect_success("healthmd_data_catalog");
-    let metric_ids: Vec<&str> = payload["items"]
-        .as_array()
-        .expect("catalog items")
-        .iter()
-        .map(|item| item["metric_id"].as_str().expect("metric_id"))
-        .collect();
-    assert_eq!(
-        metric_ids,
-        [
-            "healthmd.health_data#/activity/steps",
-            "healthmd.health_data#/sleep/asleep_minutes",
-        ]
-    );
-    let records = all_record_items(&mut dated, "common");
-    assert_eq!(records.len(), 2);
-    assert!(
-        records.iter().all(|item| {
+        // Owner-date gate (2026-03-15, times unrestricted): daily scalars carry no instants yet are
+        // admitted by their owner date; the 2026-03-16 envelope record is excluded.
+        let mut dated = reference.with_grant(&corpus.grant_exact_date()).serve();
+        let catalog = dated.call("healthmd_data_catalog", json!({"page": default_page()}));
+        let payload = catalog.expect_success("healthmd_data_catalog");
+        let metric_ids: Vec<&str> = payload["items"]
+            .as_array()
+            .expect("catalog items")
+            .iter()
+            .map(|item| item["metric_id"].as_str().expect("metric_id"))
+            .collect();
+        assert_eq!(
+            metric_ids,
+            [
+                "healthmd.health_data#/activity/steps",
+                "healthmd.health_data#/sleep/asleep_minutes",
+            ]
+        );
+        let records = all_record_items(&mut dated, "common");
+        assert_eq!(records.len(), 2);
+        assert!(records.iter().all(|item| {
             item["start_time"].is_null() && item["owner_date"] == json!("2026-03-15")
-        })
-    );
+        }));
+    }
 }
 
 #[test]
 fn record_read_chunks_oversized_records_with_exact_reassembly() {
     let corpus = Corpus::build();
-    let mut server = corpus.endpoint(&corpus.grant_bulk()).serve();
+    for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
+        let mut server = endpoint.serve();
 
-    // Discover the oversized multi-metric record through the records tool.
-    let lossless = all_record_items(&mut server, "lossless");
-    let multi = lossless
-        .iter()
-        .find(|item| item["metric_ids"].as_array().map(Vec::len) == Some(2))
-        .expect("multi-attributed record");
-    let record_id = multi["record_id"].as_str().expect("record_id").to_owned();
-    let expected_value = heart_rate_multi_record();
-    let expected_bytes = serde_json::to_vec(&expected_value).expect("compact value bytes");
-    let sha = sha256_hex(&expected_bytes);
+        // Discover the oversized multi-metric record through the records tool.
+        let lossless = all_record_items(&mut server, "lossless");
+        let multi = lossless
+            .iter()
+            .find(|item| item["metric_ids"].as_array().map(Vec::len) == Some(2))
+            .expect("multi-attributed record");
+        let record_id = multi["record_id"].as_str().expect("record_id").to_owned();
+        let expected_value = heart_rate_multi_record();
+        let expected_bytes = serde_json::to_vec(&expected_value).expect("compact value bytes");
+        let sha = sha256_hex(&expected_bytes);
 
-    // max_bytes 8192 leaves ((8192 - 2048) / 4) * 3 = 4608 raw bytes per chunk.
-    let first = server.call(
-        "healthmd_data_record_read",
-        json!({"record_id": record_id, "page": page(1, 8_192, None)}),
-    );
-    let first = first.expect_success("healthmd_data_record_read");
-    assert_eq!(first["operation"], json!("record_read"));
-    let item = &first["items"][0];
-    assert_eq!(
-        object_keys(item),
-        [
-            "byte_count",
-            "complete",
-            "data",
-            "encoding",
-            "media_type",
-            "offset",
-            "record_id",
-            "sha256",
-            "total_byte_count",
-            "type",
-        ]
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
-    );
-    assert_eq!(item["type"], json!("record_chunk"));
-    assert_eq!(item["record_id"], json!(record_id));
-    assert_eq!(item["offset"], json!(0));
-    assert_eq!(item["byte_count"], json!(4_608));
-    assert_eq!(item["total_byte_count"], json!(expected_bytes.len()));
-    assert_eq!(item["complete"], json!(false));
-    assert_eq!(item["media_type"], json!("application/json"));
-    assert_eq!(item["encoding"], json!("base64"));
-    assert_eq!(item["sha256"], json!(sha));
-    let continuation = first["next_cursor"].as_str().expect("continuation cursor");
-
-    let second = server.call(
-        "healthmd_data_record_read",
-        json!({"record_id": record_id, "page": page(1, 8_192, Some(continuation))}),
-    );
-    let second = second.expect_success("healthmd_data_record_read");
-    let tail = &second["items"][0];
-    assert_eq!(tail["offset"], json!(4_608));
-    assert_eq!(tail["byte_count"], json!(expected_bytes.len() - 4_608));
-    assert_eq!(tail["complete"], json!(true));
-    assert_eq!(second["next_cursor"], Value::Null);
-
-    let head_bytes = URL_SAFE_NO_PAD
-        .decode(first["items"][0]["data"].as_str().expect("base64url data"))
-        .expect("chunk one decodes");
-    let tail_bytes = URL_SAFE_NO_PAD
-        .decode(tail["data"].as_str().expect("base64url data"))
-        .expect("chunk two decodes");
-    let mut reassembled = head_bytes;
-    reassembled.extend_from_slice(&tail_bytes);
-    assert_eq!(reassembled, expected_bytes, "exact chunk reassembly");
-
-    // Page and cursor misuse is rejected before any bytes are returned.
-    server
-        .call(
+        // max_bytes 8192 leaves ((8192 - 2048) / 4) * 3 = 4608 raw bytes per chunk.
+        let first = server.call(
             "healthmd_data_record_read",
-            json!({"record_id": record_id, "page": page(1, CHUNK_OVERHEAD_BYTES, None)}),
-        )
-        .expect_payload_error("healthmd_data_record_read", "healthmd_agent_page_too_small");
-    server
-        .call(
+            json!({"record_id": record_id, "page": page(1, 8_192, None)}),
+        );
+        let first = first.expect_success("healthmd_data_record_read");
+        assert_eq!(first["operation"], json!("record_read"));
+        let item = &first["items"][0];
+        assert_eq!(
+            object_keys(item),
+            [
+                "byte_count",
+                "complete",
+                "data",
+                "encoding",
+                "media_type",
+                "offset",
+                "record_id",
+                "sha256",
+                "total_byte_count",
+                "type",
+            ]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
+        );
+        assert_eq!(item["type"], json!("record_chunk"));
+        assert_eq!(item["record_id"], json!(record_id));
+        assert_eq!(item["offset"], json!(0));
+        assert_eq!(item["byte_count"], json!(4_608));
+        assert_eq!(item["total_byte_count"], json!(expected_bytes.len()));
+        assert_eq!(item["complete"], json!(false));
+        assert_eq!(item["media_type"], json!("application/json"));
+        assert_eq!(item["encoding"], json!("base64"));
+        assert_eq!(item["sha256"], json!(sha));
+        let continuation = first["next_cursor"].as_str().expect("continuation cursor");
+
+        let second = server.call(
             "healthmd_data_record_read",
-            json!({"record_id": record_id, "page": page(1, 8_192, Some("garbage"))}),
-        )
-        .expect_payload_error("healthmd_data_record_read", "healthmd_agent_cursor_invalid");
+            json!({"record_id": record_id, "page": page(1, 8_192, Some(continuation))}),
+        );
+        let second = second.expect_success("healthmd_data_record_read");
+        let tail = &second["items"][0];
+        assert_eq!(tail["offset"], json!(4_608));
+        assert_eq!(tail["byte_count"], json!(expected_bytes.len() - 4_608));
+        assert_eq!(tail["complete"], json!(true));
+        assert_eq!(second["next_cursor"], Value::Null);
+
+        let head_bytes = URL_SAFE_NO_PAD
+            .decode(first["items"][0]["data"].as_str().expect("base64url data"))
+            .expect("chunk one decodes");
+        let tail_bytes = URL_SAFE_NO_PAD
+            .decode(tail["data"].as_str().expect("base64url data"))
+            .expect("chunk two decodes");
+        let mut reassembled = head_bytes;
+        reassembled.extend_from_slice(&tail_bytes);
+        assert_eq!(reassembled, expected_bytes, "exact chunk reassembly");
+
+        // Page and cursor misuse is rejected before any bytes are returned.
+        server
+            .call(
+                "healthmd_data_record_read",
+                json!({"record_id": record_id, "page": page(1, CHUNK_OVERHEAD_BYTES, None)}),
+            )
+            .expect_payload_error("healthmd_data_record_read", "healthmd_agent_page_too_small");
+        server
+            .call(
+                "healthmd_data_record_read",
+                json!({"record_id": record_id, "page": page(1, 8_192, Some("garbage"))}),
+            )
+            .expect_payload_error("healthmd_data_record_read", "healthmd_agent_cursor_invalid");
+    }
 }
 
 #[test]
@@ -1318,322 +1453,328 @@ fn artifacts_listing_and_reads_require_the_bulk_download_grant() {
     let corpus = Corpus::build();
 
     // Under a record-scoped grant the listing is empty (not an error) and reads are denied.
-    let mut narrow = corpus.endpoint(&corpus.grant_steps_only()).serve();
-    let listing = narrow.call("healthmd_data_artifacts", json!({"page": default_page()}));
-    let payload = listing.expect_success("healthmd_data_artifacts");
-    assert_eq!(payload["operation"], json!("artifacts"));
-    assert_eq!(payload["items"], json!([]));
-    assert_eq!(payload["receipt"]["returned_items"], json!(0));
-    narrow
-        .call(
+    for reference in corpus.endpoints(&corpus.grant_steps_only()) {
+        let mut narrow = reference.serve();
+        let listing = narrow.call("healthmd_data_artifacts", json!({"page": default_page()}));
+        let payload = listing.expect_success("healthmd_data_artifacts");
+        assert_eq!(payload["operation"], json!("artifacts"));
+        assert_eq!(payload["items"], json!([]));
+        assert_eq!(payload["receipt"]["returned_items"], json!(0));
+        narrow
+            .call(
+                "healthmd_data_artifact_read",
+                json!({"artifact_id": "0".repeat(64), "page": default_page()}),
+            )
+            .expect_payload_error(
+                "healthmd_data_artifact_read",
+                "healthmd_agent_bulk_download_denied",
+            );
+
+        // Under the unrestricted bulk grant every valid corpus artifact is listed with exact
+        // provenance; notes.txt (unsupported) and broken.json (malformed) contribute nothing.
+        let mut bulk = reference.with_grant(&corpus.grant_bulk()).serve();
+        let listing = bulk.call("healthmd_data_artifacts", json!({"page": default_page()}));
+        let payload = listing.expect_success("healthmd_data_artifacts");
+        let items = payload["items"].as_array().expect("artifact items");
+        assert_eq!(items.len(), 5);
+        assert_eq!(
+            items
+                .iter()
+                .map(|item| item["record_count"].as_u64().unwrap())
+                .sum::<u64>(),
+            8,
+            "the eight corpus records are spread across exactly five artifacts"
+        );
+        assert!(
+            items
+                .iter()
+                .all(|item| item["capture_status"] == json!("complete"))
+        );
+
+        let bare_bytes = serde_json::to_vec(&bare_daily()).expect("bare bytes");
+        let api_bytes = serde_json::to_vec(&api_export()).expect("api bytes");
+        let lossless_bytes = serde_json::to_vec(&lossless_daily()).expect("lossless bytes");
+        let snapshot_bytes = snapshot_ndjson_bytes();
+        let changes_bytes = serde_json::to_vec(&raw_changes()).expect("changes bytes");
+
+        let artifact_with = |schema: &str| {
+            items
+                .iter()
+                .find(|item| {
+                    item["schemas"]
+                        .as_array()
+                        .is_some_and(|schemas| schemas.iter().any(|s| s["schema"] == json!(schema)))
+                })
+                .unwrap_or_else(|| panic!("artifact with schema {schema}"))
+                .clone()
+        };
+        let bare = artifact_with("healthmd.health_data");
+        let api = artifact_with("healthmd.api_export");
+        let lossless = artifact_with("healthmd.healthkit_records");
+        let snapshot = artifact_with("healthmd.raw-snapshot");
+        let changes = artifact_with("healthmd.raw-changes");
+
+        assert_eq!(bare["media_type"], json!("application/json"));
+        assert_eq!(bare["physical_format"], json!("json"));
+        assert_eq!(bare["detail_levels"], json!(["common"]));
+        assert_eq!(bare["record_count"], json!(1));
+        assert_eq!(bare["byte_count"], json!(bare_bytes.len()));
+        assert_eq!(
+            api["schemas"],
+            json!([
+                {"schema": "healthmd.api_export", "schema_version": 2},
+                {"schema": "healthmd.health_data", "schema_version": 8},
+            ])
+        );
+        assert_eq!(api["record_count"], json!(1));
+        assert_eq!(api["byte_count"], json!(api_bytes.len()));
+        assert_eq!(lossless["detail_levels"], json!(["common", "lossless"]));
+        assert_eq!(lossless["record_count"], json!(3));
+        assert_eq!(lossless["byte_count"], json!(lossless_bytes.len()));
+        assert_eq!(snapshot["media_type"], json!("application/x-ndjson"));
+        assert_eq!(snapshot["physical_format"], json!("ndjson"));
+        assert_eq!(snapshot["detail_levels"], json!(["lossless"]));
+        assert_eq!(snapshot["record_count"], json!(2));
+        assert_eq!(snapshot["byte_count"], json!(snapshot_bytes.len()));
+        assert_eq!(changes["record_count"], json!(1));
+        assert_eq!(changes["byte_count"], json!(changes_bytes.len()));
+
+        // artifact_id is the SHA-256 of the stored bytes: the directory never rewrites artifacts.
+        let snapshot_id = snapshot["artifact_id"].as_str().expect("artifact_id");
+        assert_eq!(snapshot_id, sha256_hex(&snapshot_bytes));
+        assert_eq!(lossless["artifact_id"], json!(sha256_hex(&lossless_bytes)));
+
+        // Multi-chunk exact-byte read of the largest artifact: max_bytes 4096 bounds each chunk to
+        // ((4096 - 2048) / 4) * 3 = 1536 raw bytes.
+        let lossless_id = lossless["artifact_id"]
+            .as_str()
+            .expect("artifact_id")
+            .to_owned();
+        let mut offset = 0_usize;
+        let mut reassembled = Vec::new();
+        let mut cursor: Option<String> = None;
+        let mut chunk_count = 0_usize;
+        loop {
+            let response = bulk.call(
+                "healthmd_data_artifact_read",
+                json!({"artifact_id": lossless_id, "page": page(1, 4_096, cursor.as_deref())}),
+            );
+            let payload = response.expect_success("healthmd_data_artifact_read");
+            assert_eq!(payload["operation"], json!("artifact_read"));
+            let item = &payload["items"][0];
+            assert_eq!(item["type"], json!("artifact_chunk"));
+            assert_eq!(item["artifact_id"], json!(lossless_id));
+            assert_eq!(item["offset"], json!(offset));
+            assert_eq!(item["total_byte_count"], json!(lossless_bytes.len()));
+            assert_eq!(item["media_type"], json!("application/json"));
+            assert_eq!(item["encoding"], json!("base64"));
+            assert_eq!(
+                item["sha256"],
+                json!(lossless_id),
+                "sha-256 echoes the artifact id"
+            );
+            let complete = item["complete"].as_bool().expect("complete");
+            let chunk = URL_SAFE_NO_PAD
+                .decode(item["data"].as_str().expect("base64url data"))
+                .expect("chunk decodes");
+            assert_eq!(
+                chunk.len(),
+                usize::try_from(item["byte_count"].as_u64().expect("byte_count"))
+                    .expect("byte_count")
+            );
+            offset += chunk.len();
+            reassembled.extend_from_slice(&chunk);
+            chunk_count += 1;
+            cursor = payload["next_cursor"].as_str().map(str::to_owned);
+            if complete {
+                assert_eq!(cursor, None, "the final chunk has no continuation");
+                break;
+            }
+            assert!(cursor.is_some(), "incomplete chunks continue");
+        }
+        assert_eq!(
+            chunk_count,
+            lossless_bytes.len().div_ceil(1_536),
+            "chunk payload bounds derive from max_bytes"
+        );
+        assert_eq!(
+            reassembled, lossless_bytes,
+            "exact artifact byte reassembly"
+        );
+
+        // A small artifact completes in a single chunk.
+        let single = bulk.call(
+            "healthmd_data_artifact_read",
+            json!({"artifact_id": snapshot_id, "page": page(1, 4_096, None)}),
+        );
+        let item = &single.expect_success("healthmd_data_artifact_read")["items"][0];
+        assert_eq!(item["offset"], json!(0));
+        assert_eq!(item["byte_count"], json!(snapshot_bytes.len()));
+        assert_eq!(item["complete"], json!(true));
+        let decoded = URL_SAFE_NO_PAD
+            .decode(item["data"].as_str().expect("base64url data"))
+            .expect("chunk decodes");
+        assert_eq!(decoded, snapshot_bytes);
+
+        // Unknown but well-formed artifact identifiers are unavailable under a valid bulk grant.
+        bulk.call(
             "healthmd_data_artifact_read",
             json!({"artifact_id": "0".repeat(64), "page": default_page()}),
         )
         .expect_payload_error(
             "healthmd_data_artifact_read",
-            "healthmd_agent_bulk_download_denied",
+            "healthmd_agent_artifact_unavailable",
         );
-
-    // Under the unrestricted bulk grant every valid corpus artifact is listed with exact
-    // provenance; notes.txt (unsupported) and broken.json (malformed) contribute nothing.
-    let mut bulk = corpus.endpoint(&corpus.grant_bulk()).serve();
-    let listing = bulk.call("healthmd_data_artifacts", json!({"page": default_page()}));
-    let payload = listing.expect_success("healthmd_data_artifacts");
-    let items = payload["items"].as_array().expect("artifact items");
-    assert_eq!(items.len(), 5);
-    assert_eq!(
-        items
-            .iter()
-            .map(|item| item["record_count"].as_u64().unwrap())
-            .sum::<u64>(),
-        8,
-        "the eight corpus records are spread across exactly five artifacts"
-    );
-    assert!(
-        items
-            .iter()
-            .all(|item| item["capture_status"] == json!("complete"))
-    );
-
-    let bare_bytes = serde_json::to_vec(&bare_daily()).expect("bare bytes");
-    let api_bytes = serde_json::to_vec(&api_export()).expect("api bytes");
-    let lossless_bytes = serde_json::to_vec(&lossless_daily()).expect("lossless bytes");
-    let snapshot_bytes = snapshot_ndjson_bytes();
-    let changes_bytes = serde_json::to_vec(&raw_changes()).expect("changes bytes");
-
-    let artifact_with = |schema: &str| {
-        items
-            .iter()
-            .find(|item| {
-                item["schemas"]
-                    .as_array()
-                    .is_some_and(|schemas| schemas.iter().any(|s| s["schema"] == json!(schema)))
-            })
-            .unwrap_or_else(|| panic!("artifact with schema {schema}"))
-            .clone()
-    };
-    let bare = artifact_with("healthmd.health_data");
-    let api = artifact_with("healthmd.api_export");
-    let lossless = artifact_with("healthmd.healthkit_records");
-    let snapshot = artifact_with("healthmd.raw-snapshot");
-    let changes = artifact_with("healthmd.raw-changes");
-
-    assert_eq!(bare["media_type"], json!("application/json"));
-    assert_eq!(bare["physical_format"], json!("json"));
-    assert_eq!(bare["detail_levels"], json!(["common"]));
-    assert_eq!(bare["record_count"], json!(1));
-    assert_eq!(bare["byte_count"], json!(bare_bytes.len()));
-    assert_eq!(
-        api["schemas"],
-        json!([
-            {"schema": "healthmd.api_export", "schema_version": 2},
-            {"schema": "healthmd.health_data", "schema_version": 8},
-        ])
-    );
-    assert_eq!(api["record_count"], json!(1));
-    assert_eq!(api["byte_count"], json!(api_bytes.len()));
-    assert_eq!(lossless["detail_levels"], json!(["common", "lossless"]));
-    assert_eq!(lossless["record_count"], json!(3));
-    assert_eq!(lossless["byte_count"], json!(lossless_bytes.len()));
-    assert_eq!(snapshot["media_type"], json!("application/x-ndjson"));
-    assert_eq!(snapshot["physical_format"], json!("ndjson"));
-    assert_eq!(snapshot["detail_levels"], json!(["lossless"]));
-    assert_eq!(snapshot["record_count"], json!(2));
-    assert_eq!(snapshot["byte_count"], json!(snapshot_bytes.len()));
-    assert_eq!(changes["record_count"], json!(1));
-    assert_eq!(changes["byte_count"], json!(changes_bytes.len()));
-
-    // artifact_id is the SHA-256 of the stored bytes: the directory never rewrites artifacts.
-    let snapshot_id = snapshot["artifact_id"].as_str().expect("artifact_id");
-    assert_eq!(snapshot_id, sha256_hex(&snapshot_bytes));
-    assert_eq!(lossless["artifact_id"], json!(sha256_hex(&lossless_bytes)));
-
-    // Multi-chunk exact-byte read of the largest artifact: max_bytes 4096 bounds each chunk to
-    // ((4096 - 2048) / 4) * 3 = 1536 raw bytes.
-    let lossless_id = lossless["artifact_id"]
-        .as_str()
-        .expect("artifact_id")
-        .to_owned();
-    let mut offset = 0_usize;
-    let mut reassembled = Vec::new();
-    let mut cursor: Option<String> = None;
-    let mut chunk_count = 0_usize;
-    loop {
-        let response = bulk.call(
-            "healthmd_data_artifact_read",
-            json!({"artifact_id": lossless_id, "page": page(1, 4_096, cursor.as_deref())}),
-        );
-        let payload = response.expect_success("healthmd_data_artifact_read");
-        assert_eq!(payload["operation"], json!("artifact_read"));
-        let item = &payload["items"][0];
-        assert_eq!(item["type"], json!("artifact_chunk"));
-        assert_eq!(item["artifact_id"], json!(lossless_id));
-        assert_eq!(item["offset"], json!(offset));
-        assert_eq!(item["total_byte_count"], json!(lossless_bytes.len()));
-        assert_eq!(item["media_type"], json!("application/json"));
-        assert_eq!(item["encoding"], json!("base64"));
-        assert_eq!(
-            item["sha256"],
-            json!(lossless_id),
-            "sha-256 echoes the artifact id"
-        );
-        let complete = item["complete"].as_bool().expect("complete");
-        let chunk = URL_SAFE_NO_PAD
-            .decode(item["data"].as_str().expect("base64url data"))
-            .expect("chunk decodes");
-        assert_eq!(
-            chunk.len(),
-            usize::try_from(item["byte_count"].as_u64().expect("byte_count")).expect("byte_count")
-        );
-        offset += chunk.len();
-        reassembled.extend_from_slice(&chunk);
-        chunk_count += 1;
-        cursor = payload["next_cursor"].as_str().map(str::to_owned);
-        if complete {
-            assert_eq!(cursor, None, "the final chunk has no continuation");
-            break;
-        }
-        assert!(cursor.is_some(), "incomplete chunks continue");
     }
-    assert_eq!(
-        chunk_count,
-        lossless_bytes.len().div_ceil(1_536),
-        "chunk payload bounds derive from max_bytes"
-    );
-    assert_eq!(
-        reassembled, lossless_bytes,
-        "exact artifact byte reassembly"
-    );
-
-    // A small artifact completes in a single chunk.
-    let single = bulk.call(
-        "healthmd_data_artifact_read",
-        json!({"artifact_id": snapshot_id, "page": page(1, 4_096, None)}),
-    );
-    let item = &single.expect_success("healthmd_data_artifact_read")["items"][0];
-    assert_eq!(item["offset"], json!(0));
-    assert_eq!(item["byte_count"], json!(snapshot_bytes.len()));
-    assert_eq!(item["complete"], json!(true));
-    let decoded = URL_SAFE_NO_PAD
-        .decode(item["data"].as_str().expect("base64url data"))
-        .expect("chunk decodes");
-    assert_eq!(decoded, snapshot_bytes);
-
-    // Unknown but well-formed artifact identifiers are unavailable under a valid bulk grant.
-    bulk.call(
-        "healthmd_data_artifact_read",
-        json!({"artifact_id": "0".repeat(64), "page": default_page()}),
-    )
-    .expect_payload_error(
-        "healthmd_data_artifact_read",
-        "healthmd_agent_artifact_unavailable",
-    );
 }
 
 #[test]
 fn cursors_are_query_bound_and_store_instance_bound() {
     let corpus = Corpus::build();
-    let endpoint = corpus.endpoint(&corpus.grant_bulk());
-    let mut first = endpoint.serve();
+    for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
+        let mut first = endpoint.serve();
 
-    let response = first.call(
-        "healthmd_data_records",
-        records_arguments("lossless", page(1, 262_144, None)),
-    );
-    let payload = response.expect_success("healthmd_data_records");
-    assert_eq!(payload["receipt"]["returned_items"], json!(1));
-    let cursor = payload["next_cursor"]
-        .as_str()
-        .expect("a bounded first page continues")
-        .to_owned();
-
-    // The same cursor replayed against a fresh store instance on the same corpus is rejected:
-    // cursors are signed with per-instance state.
-    let mut second = endpoint.serve();
-    second
-        .call(
+        let response = first.call(
             "healthmd_data_records",
-            records_arguments("lossless", page(1, 262_144, Some(&cursor))),
-        )
-        .expect_payload_error("healthmd_data_records", "healthmd_agent_cursor_invalid");
+            records_arguments("lossless", page(1, 262_144, None)),
+        );
+        let payload = response.expect_success("healthmd_data_records");
+        assert_eq!(payload["receipt"]["returned_items"], json!(1));
+        let cursor = payload["next_cursor"]
+            .as_str()
+            .expect("a bounded first page continues")
+            .to_owned();
 
-    // The same cursor under a different query fingerprint is stale, even on its own instance.
-    first
-        .call(
-            "healthmd_data_records",
-            records_arguments("lossless", page(2, 262_144, Some(&cursor))),
-        )
-        .expect_payload_error("healthmd_data_records", "healthmd_agent_cursor_stale");
+        // The same cursor replayed against a fresh store instance on the same corpus is rejected:
+        // cursors are signed with per-instance state.
+        let mut second = endpoint.serve();
+        second
+            .call(
+                "healthmd_data_records",
+                records_arguments("lossless", page(1, 262_144, Some(&cursor))),
+            )
+            .expect_payload_error("healthmd_data_records", "healthmd_agent_cursor_invalid");
 
-    // Structurally invalid cursors never reach the store.
-    first
-        .call(
-            "healthmd_data_records",
-            records_arguments("lossless", page(1, 262_144, Some("garbage"))),
-        )
-        .expect_payload_error("healthmd_data_records", "healthmd_agent_cursor_invalid");
+        // The same cursor under a different query fingerprint is stale, even on its own instance.
+        first
+            .call(
+                "healthmd_data_records",
+                records_arguments("lossless", page(2, 262_144, Some(&cursor))),
+            )
+            .expect_payload_error("healthmd_data_records", "healthmd_agent_cursor_stale");
 
-    // Invalid page bounds are rejected as invalid tool arguments at the JSON-RPC layer.
-    first
-        .call(
-            "healthmd_data_catalog",
-            json!({"page": page(0, 262_144, None)}),
-        )
-        .expect_rpc_error(-32_602, "Invalid tool arguments");
-    first
-        .call("healthmd_data_catalog", json!({"page": page(1, 0, None)}))
-        .expect_rpc_error(-32_602, "Invalid tool arguments");
-    first
-        .call(
-            "healthmd_data_catalog",
-            json!({"metrics": {"type": "all_available"}, "page": default_page()}),
-        )
-        .expect_rpc_error(-32_602, "Invalid tool arguments");
+        // Structurally invalid cursors never reach the store.
+        first
+            .call(
+                "healthmd_data_records",
+                records_arguments("lossless", page(1, 262_144, Some("garbage"))),
+            )
+            .expect_payload_error("healthmd_data_records", "healthmd_agent_cursor_invalid");
+
+        // Invalid page bounds are rejected as invalid tool arguments at the JSON-RPC layer.
+        first
+            .call(
+                "healthmd_data_catalog",
+                json!({"page": page(0, 262_144, None)}),
+            )
+            .expect_rpc_error(-32_602, "Invalid tool arguments");
+        first
+            .call("healthmd_data_catalog", json!({"page": page(1, 0, None)}))
+            .expect_rpc_error(-32_602, "Invalid tool arguments");
+        first
+            .call(
+                "healthmd_data_catalog",
+                json!({"metrics": {"type": "all_available"}, "page": default_page()}),
+            )
+            .expect_rpc_error(-32_602, "Invalid tool arguments");
+    }
 }
 
 #[test]
 fn unsupported_and_malformed_corpus_files_are_never_queryable() {
     let corpus = Corpus::build();
-    let mut server = corpus.endpoint(&corpus.grant_bulk()).serve();
+    for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
+        let mut server = endpoint.serve();
 
-    // With every selection unrestricted, the catalog still contains exactly the eight identities
-    // produced by the five recognized artifacts: notes.txt and broken.json contribute nothing.
-    let catalog = server.call("healthmd_data_catalog", json!({"page": default_page()}));
-    let payload = catalog.expect_success("healthmd_data_catalog");
-    let discovered: BTreeSet<String> = payload["items"]
-        .as_array()
-        .expect("catalog items")
-        .iter()
-        .map(|item| item["metric_id"].as_str().expect("metric_id").to_owned())
-        .collect();
-    let expected: BTreeSet<String> = expected_bulk_catalog()
-        .into_iter()
-        .map(|item| item["metric_id"].as_str().expect("metric_id").to_owned())
-        .collect();
-    assert_eq!(discovered, expected);
+        // With every selection unrestricted, the catalog still contains exactly the eight identities
+        // produced by the five recognized artifacts: notes.txt and broken.json contribute nothing.
+        let catalog = server.call("healthmd_data_catalog", json!({"page": default_page()}));
+        let payload = catalog.expect_success("healthmd_data_catalog");
+        let discovered: BTreeSet<String> = payload["items"]
+            .as_array()
+            .expect("catalog items")
+            .iter()
+            .map(|item| item["metric_id"].as_str().expect("metric_id").to_owned())
+            .collect();
+        let expected: BTreeSet<String> = expected_bulk_catalog()
+            .into_iter()
+            .map(|item| item["metric_id"].as_str().expect("metric_id").to_owned())
+            .collect();
+        assert_eq!(discovered, expected);
 
-    // Full traversal of both detail levels yields exactly the eight indexed records.
-    let mut record_ids = BTreeSet::new();
-    for detail_level in ["common", "lossless"] {
-        let aggregate = server.call(
-            "healthmd_data_records",
-            json!({
-                "metrics": {"type": "all_available"},
-                "detail_level": detail_level,
-                "page": page(3, 262_144, None),
-                "all_pages": true
-            }),
-        );
-        let aggregate = aggregate.expect_success("healthmd_data_records");
-        for page in aggregate["pages"].as_array().expect("pages") {
-            for item in page["items"].as_array().expect("items") {
-                record_ids.insert(item["record_id"].as_str().expect("record_id").to_owned());
+        // Full traversal of both detail levels yields exactly the eight indexed records.
+        let mut record_ids = BTreeSet::new();
+        for detail_level in ["common", "lossless"] {
+            let aggregate = server.call(
+                "healthmd_data_records",
+                json!({
+                    "metrics": {"type": "all_available"},
+                    "detail_level": detail_level,
+                    "page": page(3, 262_144, None),
+                    "all_pages": true
+                }),
+            );
+            let aggregate = aggregate.expect_success("healthmd_data_records");
+            for page in aggregate["pages"].as_array().expect("pages") {
+                for item in page["items"].as_array().expect("items") {
+                    record_ids.insert(item["record_id"].as_str().expect("record_id").to_owned());
+                }
             }
         }
-    }
-    assert_eq!(record_ids.len(), 8);
+        assert_eq!(record_ids.len(), 8);
 
-    // Malformed-file diagnostics live in `doctor`, which this data-only surface deliberately
-    // omits (asserted by the fixed-surface test); the artifacts test asserts the five-artifact,
-    // eight-record accounting that excludes the ignored and invalid files.
+        // Malformed-file diagnostics live in `doctor`, which this data-only surface deliberately
+        // omits (asserted by the fixed-surface test); the artifacts test asserts the five-artifact,
+        // eight-record accounting that excludes the ignored and invalid files.
+    }
 }
 
 #[test]
-fn serve_data_rejects_a_grant_inside_the_export_directory() {
+fn serve_data_rejects_a_grant_inside_the_store_backing() {
     let corpus = Corpus::build();
-    let inside = corpus.exports().join("inside-grant.json");
-    write_json(
-        &inside,
-        &grant(
-            all_available(),
-            all_available(),
-            all_available(),
-            all_available(),
-            json!(["common", "lossless"]),
-            true,
-        ),
-    );
-    let output = Command::new(env!("CARGO_BIN_EXE_healthmd"))
-        .args(["mcp", "serve-data", "--directory"])
-        .arg(corpus.exports())
-        .arg("--grant")
-        .arg(&inside)
-        .arg("--index")
-        .arg(corpus.root.path().join("indexes").join("rejected.json"))
-        .stdin(Stdio::null())
-        .output()
-        .expect("healthmd should launch");
-    assert!(
-        !output.status.success(),
-        "a grant inside the export directory must be refused"
-    );
-    assert!(
-        output.stdout.is_empty(),
-        "no machine-readable payload on refusal"
-    );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("outside the export directory"),
-        "stderr should explain the boundary: {stderr}"
-    );
+    for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
+        // Each store refuses a grant stored inside its own private backing before serving any
+        // data: the directory store rejects export-directory grants, the database store a
+        // grant that is the database file itself.
+        let (misplaced, reason) = endpoint.misplaced_grant();
+        write_json(
+            &misplaced,
+            &grant(
+                all_available(),
+                all_available(),
+                all_available(),
+                all_available(),
+                json!(["common", "lossless"]),
+                true,
+            ),
+        );
+        let output = Command::new(env!("CARGO_BIN_EXE_healthmd"))
+            .args(endpoint.argv_with_grant(&misplaced))
+            .stdin(Stdio::null())
+            .output()
+            .expect("healthmd should launch");
+        assert!(
+            !output.status.success(),
+            "a grant inside the store's private backing must be refused"
+        );
+        assert!(
+            output.stdout.is_empty(),
+            "no machine-readable payload on refusal"
+        );
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            stderr.contains(reason),
+            "stderr should explain the boundary: {stderr}"
+        );
+    }
 }
