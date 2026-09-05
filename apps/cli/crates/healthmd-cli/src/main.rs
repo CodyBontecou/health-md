@@ -850,6 +850,12 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
         command: Some(McpCommand::ServeData(options)),
     }) = &cli.command
     {
+        if options.object_store_url.is_none()
+            && (options.bucket.is_some() || options.prefix.is_some())
+        {
+            eprintln!("healthmd: --bucket and --prefix apply only to --object-store-url backing");
+            return ExitCode::from(2);
+        }
         let backing = match (
             options.directory.clone(),
             options.database.clone(),
@@ -3219,6 +3225,24 @@ mod tests {
                 "/tmp/grant.json",
                 "--index",
                 "/tmp/index.json"
+            ])
+            .is_ok()
+        );
+
+        // Parse succeeds; the dispatcher rejects --bucket/--prefix alongside a
+        // non-object-store backing at runtime with a health-free message (covered
+        // end-to-end in tests/agent_data_object.rs).
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--directory",
+                "/tmp/exports",
+                "--bucket",
+                "healthmd-test",
+                "--grant",
+                "/tmp/grant.json"
             ])
             .is_ok()
         );
