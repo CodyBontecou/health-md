@@ -118,6 +118,35 @@ reports the schema version, a SQLite `quick_check` result, and supersession coun
 Import is storage-side only: grants are not consulted during import and apply only when the
 database is served.
 
+## Transports
+
+`stdio` is the default transport and stays byte-identical: one JSON-RPC 2.0 document per
+`\n`-terminated line on standard input/output, exactly as MCP hosts configure it today.
+
+Builds that compile the shared Streamable HTTP transport (the `streamable-http` feature; the
+`oauth-resource-server` feature implies it) can serve the *identical* five-tool catalog, grant
+enforcement, response contracts, and session handling over Streamable HTTP on a loopback
+listener — the same transport the direct `mcp serve-http` surface uses:
+
+```bash
+healthmd mcp serve-data \
+  --serve-transport streamable-http \
+  --bind 127.0.0.1:8787 \
+  --directory /absolute/path/to/healthmd-exports \
+  --grant /absolute/private/path/agent-data-grant.json
+```
+
+`--serve-transport` selects `stdio` (default) or `streamable-http`; the flag is named
+`--serve-transport` because the root `--transport` option selects the direct mobile connection
+(`manual-ip`/`nearby`) and applies globally to every subcommand. `--bind` (default
+`127.0.0.1:8787`), `--allowed-host`, and `--allowed-origin` carry the same names, defaults, and
+validation as the direct HTTP surface. The listener binds loopback only, accepts loopback Host
+values by default, and rejects any browser `Origin` until explicitly allowlisted; a hosted
+deployment terminates TLS in a co-resident reverse proxy instead of exposing this listener.
+`--directory`/`--database` exclusivity and grant validation are unchanged by the transport
+choice, the store opens only after the listener policy validates, and no fallback exists
+between the data and direct surfaces over either transport.
+
 ## Read model
 
 The server recognizes these existing artifacts without rewriting them:
