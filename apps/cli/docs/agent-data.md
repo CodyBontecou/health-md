@@ -6,9 +6,11 @@ HealthKit or Health Connect queries, interpret health values, or write to the so
 
 Two local backing stores implement the same storage-neutral `ArtifactStore` boundary with
 identical grant, query, response, and MCP operation contracts: an export directory and a
-Health.md-owned SQLite database. A hosted Cloudflare implementation can use the same grant,
-query, response, and MCP operation contracts; upload/synchronization, accounts, OAuth, retention,
-and marketplace packaging are not implemented by these commands.
+Health.md-owned SQLite database. A third read-only backing serves a BYO S3-compatible
+(Cloudflare R2) object store bucket prefix laid out like an export directory. A hosted
+Cloudflare implementation can use the same grant, query, response, and MCP operation
+contracts; upload/synchronization, accounts, OAuth, retention, and marketplace packaging are
+not implemented by these commands.
 
 ## Start the server
 
@@ -44,8 +46,8 @@ healthmd mcp serve-data \
 ```
 
 An MCP host configuration uses the installed `healthmd` executable with these arguments (substitute
-`"--database", "/absolute/private/path/agent-data.sqlite"` for the directory arguments to serve
-an imported SQLite database):
+`"--database", "/absolute/private/path/agent-data.sqlite"` to serve an imported SQLite database,
+or `"--object-store-url", "https://…", "--bucket", "name"` to serve an object store prefix):
 
 ```json
 {
@@ -117,6 +119,70 @@ reports the schema version, a SQLite `quick_check` result, and supersession coun
 
 Import is storage-side only: grants are not consulted during import and apply only when the
 database is served.
+
+## Object store backing
+
+The third backing is a read-only, S3-compatible object store (Cloudflare R2): a bucket prefix
+you populated yourself with Health.md exports, laid out like an export directory — artifact
+files under their own file names. The bucket is never written: the store issues only
+`ListObjectsV2`, `HEAD` object, and `GET` object requests (path-style addressing), so there is
+no upload, delete, or write path anywhere in the client. Response receipts report the backing
+class `object_store`; the query, authorization, and response contracts are otherwise identical
+to the directory and database stores.
+
+```bash
+healthmd mcp serve-data \
+  --object-store-url https://accountid.r2.cloudflarestorage.com \
+  --bucket healthmd-exports \
+  --prefix exports/ \
+  --grant /absolute/path/to/agent-data-grant.json
+```
+
+`--object-store-url`, `--directory`, and `--database` are mutually exclusive and exactly one is
+required; `--bucket` is required with `--object-store-url` and `--prefix` optionally selects the
+bucket subtree (`exports` and `exports/` both normalize to `exports/`; omit it to serve the whole
+bucket). The optional rebuildable `--index` path applies to this backing exactly as it does to the
+directory store, with the same private default location; the database store remains the only one
+that owns its index internally.
+
+**Credentials policy.** Credentials are read only from the environment —
+`HEALTHMD_OBJECT_STORE_ACCESS_KEY_ID` and `HEALTHMD_OBJECT_STORE_SECRET_ACCESS_KEY` — and never
+accepted as flags, so secret material cannot appear in `argv` or process listings. Missing or
+empty variables fail at open with a stable health-free error before any request is sent; no
+credential material ever appears in an error, log, receipt, or diagnostic.
+
+**URL policy.** `https://` is required for non-loopback hosts. `http://` is accepted only for
+loopback hosts (`127.0.0.1`, `localhost`, `[::1]`) as the local-testing affordance; any other
+plaintext endpoint is refused at open.
+
+**Layout, bounds, and lifecycle.** The listing under the prefix mirrors a directory scan:
+supported artifacts are the same recognized JSON/NDJSON export shapes, unsupported extensions are
+skipped, malformed candidates are counted in `doctor` diagnostics without becoming queryable,
+and the rebuildable external index is refreshed by re-listing on every query with cursors bound
+to the index revision (a changed bucket invalidates old cursors with `healthmd_agent_cursor_stale`).
+Objects are bounded to 64 MiB per whole-object read — larger objects are counted invalid rather
+than fetched, a deliberate divergence from the directory store, which bounds only JSON artifacts
+at that size because every object read is a network fetch held in memory. Verified artifact bytes
+are cached per store instance (bounded), so chunked whole-artifact reads fetch each artifact once;
+remote mutation between queries is caught by the re-list fingerprint.
+
+**Grant asymmetry.** The grant gates everything and is a local absolute JSON file exactly as for
+the other backings — but it cannot be stored "outside" a remote bucket, so there is no
+containment rule like the directory store's. A grant-shaped object inside the bucket is ordinary
+unrecognized content (counted as ignored, zero records) and is never loaded as a grant; the
+serving grant always comes from the local `--grant` path.
+
+**Authentication and compatibility.** Requests are signed with hand-written AWS Signature
+Version 4 (`aws4_request`, service `s3`, `x-amz-content-sha256: UNSIGNED-PAYLOAD`, region `auto`)
+against the frozen S3 subset; the implementation is unit-tested against the RFC 4231 HMAC vectors
+and the published AWS `SigV4` GET-object known answer. Real R2/S3 endpoints are not exercised in
+this repository's loop: compatibility is by specification through that subset, proven against the
+synthetic loopback double in `tests/agent_data_object.rs` (which `SigV4`-verifies every request and
+asserts only list/head/get methods are ever sent). This build carries no TLS socket layer, so
+`https://` endpoints validate per the URL policy and then fail health-free at transport with a
+stable error stating that boundary; only loopback `http://` endpoints can be reached today. Wiring
+TLS egress for production R2 endpoints is deliberately deferred to a later cycle rather than
+approximated.
 
 ## Local ingestion (protocol v1)
 
@@ -207,9 +273,9 @@ healthmd mcp serve-data \
 validation as the direct HTTP surface. The listener binds loopback only, accepts loopback Host
 values by default, and rejects any browser `Origin` until explicitly allowlisted; a hosted
 deployment terminates TLS in a co-resident reverse proxy instead of exposing this listener.
-`--directory`/`--database` exclusivity and grant validation are unchanged by the transport
-choice, the store opens only after the listener policy validates, and no fallback exists
-between the data and direct surfaces over either transport.
+`--directory`/`--database`/`--object-store-url` exclusivity and grant validation are unchanged
+by the transport choice, the store opens only after the listener policy validates, and no
+fallback exists between the data and direct surfaces over either transport.
 
 ## Read model
 
