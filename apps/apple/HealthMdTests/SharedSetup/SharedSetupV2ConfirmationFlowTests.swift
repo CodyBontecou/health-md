@@ -10,9 +10,14 @@ import XCTest
 /// weakening the fail-closed execution gate.
 @MainActor
 final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
-    // Match the repository's retention workaround for nested ObservableObject
-    // settings on older simulator runtimes.
+    // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
+    // back-deployed task path on older simulator runtimes (CI's iOS 26.2
+    // simulator) where nested store release aborts; retain for the process
+    // lifetime. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
+    // STATIC RETENTION JUSTIFICATION: same deinit-crash workaround as above
+    // for the nested ObservableObject instances the real-coordinator test
+    // constructs (ExportProfileCoordinator + VaultManager).
     private static var retainedInstances: [AnyObject] = []
 
     private var defaults: UserDefaults!
