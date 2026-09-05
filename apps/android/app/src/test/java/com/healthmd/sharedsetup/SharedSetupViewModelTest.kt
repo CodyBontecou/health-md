@@ -73,7 +73,8 @@ class SharedSetupViewModelTest {
             )
         )
         every { preview.review } returns review
-        coEvery { service.preview(any()) } returns Result.success(preview)
+        coEvery { service.previewVersioned(any()) } returns
+            Result.success(SharedSetupVersionedPreview.V1(preview))
         coEvery { service.pendingEndpoint() } returns "https://setup.invalid/health"
         every { coordinator.imports } returns imports
 
@@ -85,7 +86,7 @@ class SharedSetupViewModelTest {
         advanceUntilIdle()
 
         assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Success::class.java)
-        coVerify(exactly = 1) { service.preview(any()) }
+        coVerify(exactly = 1) { service.previewVersioned(any()) }
         assertThat(imports.value?.id).isEqualTo(9)
     }
 
@@ -102,12 +103,12 @@ class SharedSetupViewModelTest {
         val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
         val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
         every { coordinator.imports } returns imports
-        coEvery { service.preview(match { it.contentEquals(restoredBytes) }) } coAnswers {
+        coEvery { service.previewVersioned(match { it.contentEquals(restoredBytes) }) } coAnswers {
             restoredStarted.complete(Unit)
-            Result.success(releaseRestored.await())
+            Result.success(SharedSetupVersionedPreview.V1(releaseRestored.await()))
         }
-        coEvery { service.preview(match { it.contentEquals(newerBytes) }) } returns
-            Result.success(newerPreview)
+        coEvery { service.previewVersioned(match { it.contentEquals(newerBytes) }) } returns
+            Result.success(SharedSetupVersionedPreview.V1(newerPreview))
         val viewModel = SharedSetupViewModel(
             service,
             store,
@@ -130,6 +131,89 @@ class SharedSetupViewModelTest {
         advanceUntilIdle()
         assertThat((viewModel.state.value as SharedSetupUiState.Review).preview)
             .isSameInstanceAs(newerPreview)
+    }
+
+    @Test
+    fun `v2 plan and apply receipt survive recreation without becoming a v1 review`() = runTest {
+        val bytes = byteArrayOf(7, 8, 9)
+        val firstProfile = mockk<SharedSetupV2ProfileImportPlan>()
+        val secondProfile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { firstProfile.bundleId } returns "profile-001"
+        every { secondProfile.bundleId } returns "profile-002"
+        every { plan.profiles } returns listOf(firstProfile, secondProfile)
+        val versioned = SharedSetupVersionedPreview.V2(plan)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns Result.success(versioned)
+        val callback = SharedSetupV2ApplyCallback { Result.success(Unit) }
+        coEvery {
+            service.applyV2(
+                plan,
+                listOf("profile-002"),
+                SharedSetupV2ApplyMode.REPLACE,
+                callback,
+            )
+        } returns Result.success(
+            SharedSetupV2ApplyResult(
+                selectedBundleIds = listOf("profile-002"),
+                mode = SharedSetupV2ApplyMode.REPLACE,
+            ),
+        )
+
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 1, bytes = bytes)
+        advanceUntilIdle()
+
+        assertThat(viewModel.versionedPreview.value).isEqualTo(versioned)
+        assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Error::class.java)
+        assertThat(viewModel.state.value).isNotInstanceOf(SharedSetupUiState.Review::class.java)
+
+        viewModel.applyV2(
+            selectedBundleIds = listOf("profile-002"),
+            mode = SharedSetupV2ApplyMode.REPLACE,
+            callback = callback,
+        )
+        advanceUntilIdle()
+        assertThat(viewModel.v2TransactionState.value)
+            .isInstanceOf(SharedSetupV2TransactionState.Applied::class.java)
+        assertThat(savedState.get<String>("sharedSetup.restorablePhase")).isEqualTo("v2_success")
+
+        val recreated = SharedSetupViewModel(service, store, coordinator, savedState)
+        advanceUntilIdle()
+        assertThat(recreated.versionedPreview.value).isEqualTo(versioned)
+        val restored = recreated.v2TransactionState.value as SharedSetupV2TransactionState.Applied
+        assertThat(restored.result.selectedBundleIds).containsExactly("profile-002")
+        assertThat(restored.result.mode).isEqualTo(SharedSetupV2ApplyMode.REPLACE)
+    }
+
+    @Test
+    fun `oversized saved state bytes are discarded before versioned preview`() = runTest {
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>()
+        every { coordinator.imports } returns MutableStateFlow(null)
+        val savedState = SavedStateHandle(
+            mapOf(
+                "sharedSetup.restorableDocumentBytes" to
+                    ByteArray(SHARED_SETUP_V2_MAX_BYTES + 1),
+                "sharedSetup.restorablePhase" to "v2_review",
+            ),
+        )
+
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState)
+        advanceUntilIdle()
+
+        assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Error::class.java)
+        assertThat((viewModel.state.value as SharedSetupUiState.Error).message).contains("4 MiB")
+        assertThat(savedState.get<ByteArray>("sharedSetup.restorableDocumentBytes")).isNull()
+        coVerify(exactly = 0) { service.previewVersioned(any()) }
     }
 
     @Test

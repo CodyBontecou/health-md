@@ -84,7 +84,9 @@ class SharedSetupV2Codec(
         )
         validateGenericBounds(canonical)?.let { throw IllegalArgumentException(it) }
         scanSecurity(canonical)?.let { throw IllegalArgumentException(it) }
-        val encoded = canonical.toString().encodeToByteArray()
+        // V2 canonical bytes include exactly one trailing LF. Include that byte in the public
+        // 4 MiB writer bound rather than validating the compact JSON and appending afterward.
+        val encoded = (canonical.toString() + "\n").encodeToByteArray()
         require(encoded.size <= SHARED_SETUP_V2_MAX_BYTES) { "Shared setup exceeds 4 MiB." }
         return encoded
     }

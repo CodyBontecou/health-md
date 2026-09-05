@@ -4,7 +4,15 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportRequestHeader
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.scheduler.ScheduledProfileEntryStore
+import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.IndividualTrackingSettings
+import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -14,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.io.File
+import java.time.ZoneId
 
 class SharedSetupServiceTest {
     @Test
@@ -364,6 +373,152 @@ class SharedSetupServiceTest {
         coVerify(exactly = 0) { repository.confirmSharedSetupEndpoint(any(), any(), any()) }
     }
 
+    @Test
+    fun `versioned v2 preview is a zero-write import plan and is never coerced into v1`() = runTest {
+        val repository = mockk<SettingsRepository>(relaxed = true)
+        val service = SharedSetupService(
+            repository,
+            mockk<ExportScheduler>(relaxed = true),
+            InMemoryCredentialStore(null, mutableListOf()),
+            FixtureRegistry,
+        )
+        val bytes = v2FixtureFile().readBytes()
+
+        val versioned = service.previewVersioned(bytes).getOrThrow()
+        val legacy = service.preview(bytes)
+
+        assertThat(versioned).isInstanceOf(SharedSetupVersionedPreview.V2::class.java)
+        assertThat((versioned as SharedSetupVersionedPreview.V2).plan.profiles).hasSize(2)
+        assertThat(legacy.isFailure).isTrue()
+        assertThat(legacy.exceptionOrNull()?.message).contains("multi-profile")
+        coVerify(exactly = 0) { repository.getExportSettings() }
+        coVerify(exactly = 0) { repository.updateExportSettings(any()) }
+        coVerify(exactly = 0) { repository.applySharedSetupTransaction(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `explicit v2 writer maps export context then emits canonical LF bytes`() = runTest {
+        val repository = mockk<SettingsRepository>(relaxed = true)
+        val service = SharedSetupService(
+            repository,
+            mockk<ExportScheduler>(relaxed = true),
+            InMemoryCredentialStore(null, mutableListOf()),
+            FixtureRegistry,
+        )
+        val defaults = ExportSettings.newInstallDefaults().copy(
+            metricSelection = MetricSelectionState(emptySet()),
+            individualTracking = IndividualTrackingSettings(),
+        )
+        val snapshot = AndroidExportSettingsSnapshot.capture(defaults, pin = null, zone = ZoneId.of("UTC"))
+        val profile = ExportProfile(
+            id = "123e4567-e89b-42d3-a456-426614174099",
+            name = "Portable",
+            settingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot),
+            target = ExportTarget.DEVICE_FOLDER,
+            folderUri = "content://local-only/not-exported",
+            folderDisplayName = "Local only",
+            createdAtEpochMillis = 1,
+            updatedAtEpochMillis = 2,
+        )
+        val profileRepository = mockk<ExportProfileRepository>()
+        val scheduleStore = mockk<ScheduledProfileEntryStore>()
+        coEvery { profileRepository.getProfiles() } returns listOf(profile)
+        coEvery { profileRepository.getActiveProfileId() } returns profile.id
+        coEvery { scheduleStore.getEntries() } returns emptyList()
+        var extensionLoads = 0
+        val source = RepositorySharedSetupV2ExportSource(
+            profileRepository = profileRepository,
+            scheduledProfileEntryStore = scheduleStore,
+            appVersion = "1.2.3-test",
+            preservedAppleExtensions = {
+                extensionLoads += 1
+                emptyMap()
+            },
+        )
+
+        val bytes = service.exportV2Bytes(source)
+
+        assertThat(extensionLoads).isEqualTo(1)
+        coVerify(exactly = 1) { profileRepository.getProfiles() }
+        coVerify(exactly = 1) { profileRepository.getActiveProfileId() }
+        coVerify(exactly = 1) { scheduleStore.getEntries() }
+        assertThat(bytes.last()).isEqualTo('\n'.code.toByte())
+        assertThat(bytes[bytes.lastIndex - 1]).isNotEqualTo('\n'.code.toByte())
+        val decoded = SharedSetupV2Codec(FixtureRegistry).decode(bytes)
+        assertThat(decoded).isInstanceOf(SharedSetupVersionedDecodeResult.Valid::class.java)
+        assertThat(bytes.decodeToString()).doesNotContain(profile.id)
+        assertThat(bytes.decodeToString()).doesNotContain("content://")
+    }
+
+    @Test
+    fun `v2 apply validates plan normalizes selection and delegates explicit Undo`() = runTest {
+        val repository = mockk<SettingsRepository>(relaxed = true)
+        val service = SharedSetupService(
+            repository,
+            mockk<ExportScheduler>(relaxed = true),
+            InMemoryCredentialStore(null, mutableListOf()),
+            FixtureRegistry,
+        )
+        val preview = service.previewVersioned(v2FixtureFile().readBytes()).getOrThrow()
+            as SharedSetupVersionedPreview.V2
+        var appliedRequest: SharedSetupV2ApplyRequest? = null
+        val callback = SharedSetupV2ApplyCallback { request ->
+            appliedRequest = request
+            Result.success(Unit)
+        }
+
+        val applied = service.applyV2(
+            plan = preview.plan,
+            selectedBundleIds = listOf("profile-002", "profile-001"),
+            mode = SharedSetupV2ApplyMode.ADD,
+            callback = callback,
+        ).getOrThrow()
+
+        assertThat(applied.selectedBundleIds).containsExactly("profile-001", "profile-002").inOrder()
+        assertThat(appliedRequest?.selectedBundleIds)
+            .containsExactly("profile-001", "profile-002").inOrder()
+        assertThat(applied.canUndo).isTrue()
+
+        var invalidCallbackCalls = 0
+        val invalidCallback = SharedSetupV2ApplyCallback {
+            invalidCallbackCalls += 1
+            Result.success(Unit)
+        }
+        val invalid = service.applyV2(
+            plan = preview.plan.copy(activeProfile = "profile-999"),
+            selectedBundleIds = listOf("profile-001"),
+            mode = SharedSetupV2ApplyMode.REPLACE,
+            callback = invalidCallback,
+        )
+        assertThat(invalid.isFailure).isTrue()
+        listOf(
+            emptyList(),
+            listOf("profile-001", "profile-001"),
+            listOf("profile-999"),
+        ).forEach { invalidSelection ->
+            assertThat(
+                service.applyV2(
+                    plan = preview.plan,
+                    selectedBundleIds = invalidSelection,
+                    mode = SharedSetupV2ApplyMode.REPLACE,
+                    callback = invalidCallback,
+                ).isFailure,
+            ).isTrue()
+        }
+        assertThat(invalidCallbackCalls).isEqualTo(0)
+
+        var undoCalls = 0
+        val undone = service.undoV2(
+            SharedSetupV2UndoCallback {
+                undoCalls += 1
+                Result.success(Unit)
+            },
+        ).getOrThrow()
+        assertThat(undone.didUndo).isTrue()
+        assertThat(undoCalls).isEqualTo(1)
+        coVerify(exactly = 0) { repository.applySharedSetupTransaction(any(), any(), any(), any()) }
+    }
+
     /** Secure store whose save and clear operations silently retain the prior value. */
     private class RetainingCredentialStore(
         val authorization: String?,
@@ -402,12 +557,20 @@ class SharedSetupServiceTest {
         }.toMap()
     }
 
-    private fun fixtureFile(): File {
+    private fun fixtureFile(): File = contractFile(
+        "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
+    )
+
+    private fun v2FixtureFile(): File = contractFile(
+        "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
+    )
+
+    private fun contractFile(path: String): File {
         var directory = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
         while (true) {
-            val candidate = File(directory, "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json")
+            val candidate = File(directory, path)
             if (candidate.isFile) return candidate
-            directory = directory.parentFile ?: error("Could not locate shared-setup fixture")
+            directory = directory.parentFile ?: error("Could not locate $path")
         }
     }
 

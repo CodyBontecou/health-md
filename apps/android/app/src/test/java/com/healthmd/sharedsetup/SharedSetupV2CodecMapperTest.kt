@@ -125,6 +125,8 @@ class SharedSetupV2CodecMapperTest {
         assertTrue("heart_rate_avg" in document.metricAliases.map { it.semanticId })
 
         val encoded = codec.encode(document)
+        assertTrue(encoded.last() == '\n'.code.toByte())
+        assertFalse(encoded.dropLast(1).last() == '\n'.code.toByte())
         val second = mapper.export(
             profiles = fixture.profiles,
             activeProfileId = fixture.profiles[1].id,
@@ -239,6 +241,24 @@ class SharedSetupV2CodecMapperTest {
         ).encoded()
         assertTrue(oversizedV1.size > SHARED_SETUP_MAX_BYTES)
         assertTrue(codec.decode(oversizedV1) is SharedSetupVersionedDecodeResult.Invalid)
+
+        val exactV1 = ByteArray(SHARED_SETUP_MAX_BYTES) { ' '.code.toByte() }.also {
+            v1Bytes.copyInto(it)
+        }
+        val overflowV1 = ByteArray(SHARED_SETUP_MAX_BYTES + 1) { ' '.code.toByte() }.also {
+            v1Bytes.copyInto(it)
+        }
+        assertTrue(codec.decode(exactV1) is SharedSetupVersionedDecodeResult.Valid)
+        assertTrue(codec.decode(overflowV1) is SharedSetupVersionedDecodeResult.Invalid)
+        var tooDeepForV1: JsonElement = JsonPrimitive(true)
+        repeat(SharedSetupV2Codec.MAX_JSON_DEPTH - 2) {
+            tooDeepForV1 = JsonObject(mapOf("next" to tooDeepForV1))
+        }
+        val deepV1 = JsonObject(
+            oversizedV1Root + ("future_optional" to tooDeepForV1),
+        ).encoded()
+        assertTrue(deepV1.size <= SHARED_SETUP_MAX_BYTES)
+        assertTrue(codec.decode(deepV1) is SharedSetupVersionedDecodeResult.Invalid)
 
         val boundedUnknown = JsonObject(
             root + (
@@ -474,12 +494,16 @@ class SharedSetupV2CodecMapperTest {
             val fixture = requireNotNull(contractFileOrNull(path)) {
                 "Canonical Shared Setup v2 fixture is missing: $path"
             }
-            val decoded = codec.decode(fixture.readBytes())
+            val fixtureBytes = fixture.readBytes()
+            val decoded = codec.decode(fixtureBytes)
             assertTrue("Canonical fixture failed to decode: $fixture", decoded is SharedSetupVersionedDecodeResult.Valid)
+            val valid = decoded as SharedSetupVersionedDecodeResult.Valid
             assertTrue(
                 "Canonical fixture was not v2: $fixture",
-                (decoded as SharedSetupVersionedDecodeResult.Valid).document is SharedSetupDecodedDocument.V2,
+                valid.document is SharedSetupDecodedDocument.V2,
             )
+            val document = (valid.document as SharedSetupDecodedDocument.V2).document
+            assertArrayEquals(fixtureBytes, codec.encode(document))
         }
         assertTrue(codec.decode(codec.encode(mappedFixture().document)) is SharedSetupVersionedDecodeResult.Valid)
     }
