@@ -1,7 +1,7 @@
 //! Agent Data ingestion protocol v1 — the local Rust half.
 //!
 //! Implements the settled ingestion semantics of
-//! `packages/contracts/agent-data/v1/contract.md` against the SQLite store:
+//! `packages/contracts/agent-data/v1/contract.md` against the `SQLite` store:
 //! strict upload-manifest validation mirroring `agent-data-ingest.schema.json`
 //! (unknown-field rejection, bounds, formats), artifact-byte integrity
 //! verification, health-free receipts exactly matching
@@ -323,7 +323,7 @@ impl Rejection {
     }
 }
 
-/// Ingest one manifest-described artifact upload into the SQLite store.
+/// Ingest one manifest-described artifact upload into the `SQLite` store.
 ///
 /// Rejected uploads are protocol outcomes and are returned as receipts; only
 /// an unusable store or invalid argument paths surface as errors, because no
@@ -352,7 +352,7 @@ pub(super) fn ingest_upload(
     let mut connection = data_sqlite::open_read_write(&database)?;
     data_sqlite::migrate(&mut connection)?;
 
-    let Some(manifest) = read_manifest(manifest_path)? else {
+    let Some(manifest) = read_manifest(manifest_path) else {
         // An unreadable, oversized, or schema-invalid manifest is unidentifiable:
         // reject without a partition view, exactly like the contract fixture.
         return Ok(rejected_receipt(Rejection::ManifestIncomplete, None));
@@ -407,20 +407,16 @@ enum ArtifactRead {
 
 /// Read the manifest document, treating every unreadable or invalid form as an
 /// unidentifiable (structurally incomplete) manifest.
-fn read_manifest(path: &Path) -> Result<Option<IngestManifest>, DataStoreOpenError> {
+fn read_manifest(path: &Path) -> Option<IngestManifest> {
     let Ok(metadata) = std::fs::metadata(path) else {
-        return Ok(None);
+        return None;
     };
     if !metadata.is_file() || metadata.len() > MAXIMUM_MANIFEST_BYTES {
-        return Ok(None);
+        return None;
     }
-    match std::fs::read(path) {
-        Ok(bytes) => match serde_json::from_slice::<Value>(&bytes) {
-            Ok(value) => Ok(IngestManifest::from_value(value).ok()),
-            Err(_) => Ok(None),
-        },
-        Err(_) => Ok(None),
-    }
+    let bytes = std::fs::read(path).ok()?;
+    let value = serde_json::from_slice::<Value>(&bytes).ok()?;
+    IngestManifest::from_value(value).ok()
 }
 
 /// Read the exact artifact bytes, mapping genuine local I/O failures to
@@ -749,7 +745,7 @@ mod tests {
         std::fs::write(path, contents).expect("file write");
     }
 
-    fn manifest_with_overrides(completeness: Value, overrides: &[(&str, Value)]) -> Value {
+    fn manifest_with_overrides(completeness: &Value, overrides: &[(&str, Value)]) -> Value {
         let bytes = DAY_BYTES.as_bytes();
         let mut value = json!({
             "schema": "healthmd.agent_data_ingest",
@@ -763,7 +759,7 @@ mod tests {
             "media_type": "application/json",
             "byte_count": bytes.len(),
             "sha256": sha256_hex(bytes),
-            "completeness": completeness
+            "completeness": completeness.clone()
         });
         for (key, replacement) in overrides {
             value
@@ -774,7 +770,7 @@ mod tests {
         value
     }
 
-    fn manifest_for(contents: &str, completeness: Value) -> Value {
+    fn manifest_for(contents: &str, completeness: &Value) -> Value {
         let mut value = manifest_with_overrides(completeness, &[]);
         let object = value.as_object_mut().expect("manifest object");
         object.insert("sha256".into(), json!(sha256_hex(contents.as_bytes())));
@@ -792,7 +788,7 @@ mod tests {
 
     fn ingest_into(
         temporary: &TempDir,
-        manifest: Value,
+        manifest: &Value,
         artifact_contents: &str,
     ) -> Result<Value, DataStoreOpenError> {
         let database = temporary.path().join("agent-data.sqlite");
@@ -811,21 +807,21 @@ mod tests {
 
     #[test]
     fn manifest_validation_accepts_every_documented_shape() {
-        assert!(IngestManifest::from_value(manifest_for(DAY_BYTES, complete())).is_ok());
+        assert!(IngestManifest::from_value(manifest_for(DAY_BYTES, &complete())).is_ok());
         assert!(
             IngestManifest::from_value(manifest_for(
                 DAY_BYTES,
-                json!({
+                &json!({
                     "type": "partial", "finalized": true,
                     "covered_owner_dates": ["2026-03-15", "2026-03-16"]
                 })
             ))
             .is_ok()
         );
-        let raw = manifest_with_overrides(complete(), &[("artifact_kind", json!("raw_snapshot"))]);
+        let raw = manifest_with_overrides(&complete(), &[("artifact_kind", json!("raw_snapshot"))]);
         assert!(IngestManifest::from_value(raw).is_ok());
         let android = manifest_with_overrides(
-            partial(),
+            &partial(),
             &[
                 ("platform", json!("android")),
                 ("physical_format", json!("ndjson")),
@@ -838,52 +834,52 @@ mod tests {
     #[test]
     fn manifest_validation_rejects_every_undocumented_shape() {
         let rejections = [
-            manifest_with_overrides(complete(), &[("schema", json!("healthmd.other"))]),
-            manifest_with_overrides(complete(), &[("schema_version", json!(2))]),
-            manifest_with_overrides(complete(), &[("schema_version", json!("1"))]),
-            manifest_with_overrides(complete(), &[("extra", json!(null))]),
-            manifest_with_overrides(complete(), &[("artifact_kind", json!("embedded_records"))]),
-            manifest_with_overrides(complete(), &[("platform", json!("watchos"))]),
-            manifest_with_overrides(complete(), &[("physical_format", json!("xml"))]),
-            manifest_with_overrides(complete(), &[("artifact_schema", json!(""))]),
-            manifest_with_overrides(complete(), &[("artifact_schema", json!("x".repeat(129)))]),
-            manifest_with_overrides(complete(), &[("artifact_schema_version", json!(0))]),
-            manifest_with_overrides(complete(), &[("media_type", json!(""))]),
-            manifest_with_overrides(complete(), &[("media_type", json!("x".repeat(129)))]),
-            manifest_with_overrides(complete(), &[("owner_date", json!("2026-3-15"))]),
-            manifest_with_overrides(complete(), &[("owner_date", json!("2026-02-30"))]),
-            manifest_with_overrides(complete(), &[("owner_date", json!("not-a-date"))]),
-            manifest_with_overrides(complete(), &[("byte_count", json!(0))]),
-            manifest_with_overrides(complete(), &[("byte_count", json!(67_108_865))]),
-            manifest_with_overrides(complete(), &[("sha256", json!("A".repeat(64)))]),
-            manifest_with_overrides(complete(), &[("sha256", json!("abc"))]),
-            manifest_with_overrides(complete(), &[("sha256", json!("z".repeat(64)))]),
+            manifest_with_overrides(&complete(), &[("schema", json!("healthmd.other"))]),
+            manifest_with_overrides(&complete(), &[("schema_version", json!(2))]),
+            manifest_with_overrides(&complete(), &[("schema_version", json!("1"))]),
+            manifest_with_overrides(&complete(), &[("extra", json!(null))]),
+            manifest_with_overrides(&complete(), &[("artifact_kind", json!("embedded_records"))]),
+            manifest_with_overrides(&complete(), &[("platform", json!("watchos"))]),
+            manifest_with_overrides(&complete(), &[("physical_format", json!("xml"))]),
+            manifest_with_overrides(&complete(), &[("artifact_schema", json!(""))]),
+            manifest_with_overrides(&complete(), &[("artifact_schema", json!("x".repeat(129)))]),
+            manifest_with_overrides(&complete(), &[("artifact_schema_version", json!(0))]),
+            manifest_with_overrides(&complete(), &[("media_type", json!(""))]),
+            manifest_with_overrides(&complete(), &[("media_type", json!("x".repeat(129)))]),
+            manifest_with_overrides(&complete(), &[("owner_date", json!("2026-3-15"))]),
+            manifest_with_overrides(&complete(), &[("owner_date", json!("2026-02-30"))]),
+            manifest_with_overrides(&complete(), &[("owner_date", json!("not-a-date"))]),
+            manifest_with_overrides(&complete(), &[("byte_count", json!(0))]),
+            manifest_with_overrides(&complete(), &[("byte_count", json!(67_108_865))]),
+            manifest_with_overrides(&complete(), &[("sha256", json!("A".repeat(64)))]),
+            manifest_with_overrides(&complete(), &[("sha256", json!("abc"))]),
+            manifest_with_overrides(&complete(), &[("sha256", json!("z".repeat(64)))]),
             manifest_with_overrides(
-                json!({"type": "partial", "finalized": false, "covered_owner_dates": ["2026-03-15"]}),
+                &json!({"type": "partial", "finalized": false, "covered_owner_dates": ["2026-03-15"]}),
                 &[],
             ),
             manifest_with_overrides(
-                json!({"type": "partial", "finalized": true, "covered_owner_dates": []}),
+                &json!({"type": "partial", "finalized": true, "covered_owner_dates": []}),
                 &[],
             ),
             manifest_with_overrides(
-                json!({"type": "partial", "finalized": true,
+                &json!({"type": "partial", "finalized": true,
                     "covered_owner_dates": ["2026-03-15", "2026-03-15"]}),
                 &[],
             ),
             manifest_with_overrides(
-                json!({"type": "partial", "finalized": true, "covered_owner_dates": ["bad-date"]}),
+                &json!({"type": "partial", "finalized": true, "covered_owner_dates": ["bad-date"]}),
                 &[],
             ),
             manifest_with_overrides(
-                json!({"type": "partial", "finalized": true,
+                &json!({"type": "partial", "finalized": true,
                     "covered_owner_dates": ["2026-03-15"], "extra": 1}),
                 &[],
             ),
-            manifest_with_overrides(json!({"type": "complete", "covered_owner_dates": []}), &[]),
+            manifest_with_overrides(&json!({"type": "complete", "covered_owner_dates": []}), &[]),
             json!({"type": "complete"}),
-            manifest_with_overrides(partial(), &[("artifact_kind", json!("raw_snapshot"))]),
-            manifest_with_overrides(partial(), &[("artifact_kind", json!("raw_changes"))]),
+            manifest_with_overrides(&partial(), &[("artifact_kind", json!("raw_snapshot"))]),
+            manifest_with_overrides(&partial(), &[("artifact_kind", json!("raw_changes"))]),
         ];
         for (index, rejected) in rejections.iter().enumerate() {
             assert!(
@@ -892,7 +888,7 @@ mod tests {
             );
         }
         let too_many_dates = manifest_with_overrides(
-            json!({
+            &json!({
                 "type": "partial",
                 "finalized": true,
                 "covered_owner_dates": (0..401)
@@ -907,7 +903,7 @@ mod tests {
     #[test]
     fn accepted_receipt_matches_the_response_grammar_exactly() {
         let temporary = temporary();
-        let receipt = ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
+        let receipt = ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES)
             .expect("ingest should accept");
         assert_eq!(receipt["outcome"], "accepted");
         assert_eq!(
@@ -948,17 +944,17 @@ mod tests {
     #[test]
     fn rejected_receipts_carry_only_the_documented_grammar() {
         let temporary = temporary();
-        ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
+        ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES)
             .expect("first ingest accepts");
         let day_digest = sha256_hex(DAY_BYTES.as_bytes());
 
         // truncated: the declared byte count disagrees with the artifact file.
-        let mut truncated = manifest_for(DAY_BYTES, complete());
+        let mut truncated = manifest_for(DAY_BYTES, &complete());
         truncated
             .as_object_mut()
             .unwrap()
             .insert("byte_count".into(), json!(DAY_BYTES.len() + 1));
-        let receipt = ingest_into(&temporary, truncated, DAY_BYTES).expect("receipt");
+        let receipt = ingest_into(&temporary, &truncated, DAY_BYTES).expect("receipt");
         assert_eq!(receipt["outcome"], "rejected");
         assert_eq!(receipt["rejection"], json!({"code": "truncated"}));
         assert_eq!(
@@ -983,12 +979,12 @@ mod tests {
             &day_digest[..63],
             if day_digest.ends_with('0') { '1' } else { '0' }
         );
-        let mut checksum = manifest_for(DAY_BYTES, complete());
+        let mut checksum = manifest_for(DAY_BYTES, &complete());
         checksum
             .as_object_mut()
             .unwrap()
             .insert("sha256".into(), json!(wrong));
-        let receipt = ingest_into(&temporary, checksum, DAY_BYTES).expect("receipt");
+        let receipt = ingest_into(&temporary, &checksum, DAY_BYTES).expect("receipt");
         assert_eq!(receipt["outcome"], "rejected");
         assert_eq!(receipt["rejection"], json!({"code": "checksum_invalid"}));
 
@@ -1010,7 +1006,7 @@ mod tests {
         let manifest_path = temporary.path().join("manifest.json");
         write_file(
             &manifest_path,
-            &serde_json::to_string(&manifest_for(DAY_BYTES, complete())).unwrap(),
+            &serde_json::to_string(&manifest_for(DAY_BYTES, &complete())).unwrap(),
         );
         let receipt = ingest_upload(&database, &manifest_path, &directory).expect("receipt");
         assert_eq!(receipt["rejection"], json!({"code": "transient"}));
@@ -1019,16 +1015,16 @@ mod tests {
     #[test]
     fn rejection_of_an_unknown_partition_omits_the_partition_view() {
         let temporary = temporary();
-        let mut other_partition = manifest_for(DAY_BYTES, complete());
+        let mut other_partition = manifest_for(DAY_BYTES, &complete());
         other_partition
             .as_object_mut()
             .unwrap()
             .insert("owner_date".into(), json!("2027-01-01"));
         // Keep the digest consistent so only the partition differs.
-        let receipt = ingest_into(&temporary, other_partition, DAY_BYTES).expect("accepts");
+        let receipt = ingest_into(&temporary, &other_partition, DAY_BYTES).expect("accepts");
         assert_eq!(receipt["partition"]["owner_date"], "2027-01-01");
 
-        let mut rejected_manifest = manifest_for(DAY_BYTES, complete());
+        let mut rejected_manifest = manifest_for(DAY_BYTES, &complete());
         rejected_manifest
             .as_object_mut()
             .unwrap()
@@ -1037,7 +1033,7 @@ mod tests {
             .as_object_mut()
             .unwrap()
             .insert("sha256".into(), json!(sha256_hex(b"mismatched")));
-        let receipt = ingest_into(&temporary, rejected_manifest, DAY_BYTES).expect("receipt");
+        let receipt = ingest_into(&temporary, &rejected_manifest, DAY_BYTES).expect("receipt");
         assert_eq!(receipt["rejection"], json!({"code": "checksum_invalid"}));
         assert!(
             receipt.get("partition").is_none(),
@@ -1048,9 +1044,9 @@ mod tests {
     #[test]
     fn idempotent_reingest_returns_a_stable_receipt_without_duplicate_rows() {
         let temporary = temporary();
-        let first = ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
+        let first = ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES)
             .expect("first ingest accepts");
-        let second = ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
+        let second = ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES)
             .expect("reingest accepts");
         assert_eq!(
             serde_json::to_string(&first).unwrap(),
@@ -1069,7 +1065,7 @@ mod tests {
         assert_eq!((artifacts, partitions), (1, 1));
         let revision = data_sqlite::read_content_revision(&connection).unwrap();
         drop(connection);
-        ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES).unwrap();
+        ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES).unwrap();
         let connection = Connection::open(temporary.path().join("agent-data.sqlite")).unwrap();
         assert_eq!(
             data_sqlite::read_content_revision(&connection).unwrap(),
@@ -1081,7 +1077,7 @@ mod tests {
     #[test]
     fn partial_is_authoritative_until_a_complete_revision_arrives() {
         let temporary = temporary();
-        let receipt = ingest_into(&temporary, manifest_for(DAY_BYTES, partial()), DAY_BYTES)
+        let receipt = ingest_into(&temporary, &manifest_for(DAY_BYTES, &partial()), DAY_BYTES)
             .expect("partial accepts");
         assert_eq!(receipt["outcome"], "accepted");
         assert_eq!(
@@ -1097,7 +1093,7 @@ mod tests {
 
         // Identical bytes restated as complete upgrade the recorded revision.
         let complete_receipt =
-            ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
+            ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES)
                 .expect("complete accepts");
         assert_eq!(
             complete_receipt["partition"]["complete_revision_present"],
@@ -1130,8 +1126,12 @@ mod tests {
 
         // A later partial for the same partition must not shadow a complete revision.
         let other_day = DAY_BYTES.replacen("12345", "54321", 1);
-        let later = ingest_into(&temporary, manifest_for(&other_day, partial()), &other_day)
-            .expect("later partial accepts");
+        let later = ingest_into(
+            &temporary,
+            &manifest_for(&other_day, &partial()),
+            &other_day,
+        )
+        .expect("later partial accepts");
         assert_eq!(
             later["partition"]["authoritative"]["completeness"],
             json!({"type": "complete"}),
@@ -1158,12 +1158,12 @@ mod tests {
     #[test]
     fn supersession_bookkeeping_records_authoritative_flips_without_deletion() {
         let temporary = temporary();
-        ingest_into(&temporary, manifest_for(DAY_BYTES, partial()), DAY_BYTES)
+        ingest_into(&temporary, &manifest_for(DAY_BYTES, &partial()), DAY_BYTES)
             .expect("partial accepts");
         let complete_day = DAY_BYTES.replacen("12345", "54321", 1);
         let receipt = ingest_into(
             &temporary,
-            manifest_for(&complete_day, complete()),
+            &manifest_for(&complete_day, &complete()),
             &complete_day,
         )
         .expect("complete accepts");
@@ -1206,7 +1206,7 @@ mod tests {
         let artifact_path = temporary.path().join("upload.json");
         write_file(
             &manifest_path,
-            &serde_json::to_string(&manifest_for(DAY_BYTES, complete())).unwrap(),
+            &serde_json::to_string(&manifest_for(DAY_BYTES, &complete())).unwrap(),
         );
         write_file(&artifact_path, DAY_BYTES);
         let receipt = ingest_upload(&database, &manifest_path, &artifact_path).expect("accepts");
@@ -1236,7 +1236,7 @@ mod tests {
     fn unrecognized_content_is_stored_with_manifest_metadata_and_no_fabricated_records() {
         let temporary = temporary();
         let opaque = "not-a-recognized-healthmd-artifact-but-exact-bytes";
-        let receipt = ingest_into(&temporary, manifest_for(opaque, complete()), opaque)
+        let receipt = ingest_into(&temporary, &manifest_for(opaque, &complete()), opaque)
             .expect("integrity-verified upload accepts");
         assert_eq!(receipt["outcome"], "accepted");
         let connection = Connection::open(temporary.path().join("agent-data.sqlite")).unwrap();
@@ -1304,12 +1304,12 @@ mod tests {
     fn a_version_one_database_is_upgraded_in_place_and_stays_readable() {
         let temporary = temporary();
         let database = temporary.path().join("agent-data.sqlite");
-        ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES).expect("accepts");
+        ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES).expect("accepts");
         {
             let connection = Connection::open(&database).unwrap();
             connection.execute("PRAGMA user_version = 1", []).unwrap();
         }
-        let receipt = ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
+        let receipt = ingest_into(&temporary, &manifest_for(DAY_BYTES, &complete()), DAY_BYTES)
             .expect("upgrade-and-reingest accepts");
         assert_eq!(receipt["outcome"], "accepted");
         let connection = Connection::open(&database).unwrap();

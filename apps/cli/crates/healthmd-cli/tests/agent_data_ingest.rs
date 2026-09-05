@@ -1,6 +1,6 @@
 //! End-to-end coverage for the local Agent Data ingestion protocol v1 half:
 //! the public `healthmd data ingest` command driving the real binary against
-//! the SQLite store, using only synthetic artifacts. Receipts are asserted
+//! the `SQLite` store, using only synthetic artifacts. Receipts are asserted
 //! against the grammar of the versioned contract fixtures in
 //! `packages/contracts/agent-data/v1/fixtures/`.
 
@@ -49,7 +49,7 @@ impl Layout {
 
     fn grant(&self) -> PathBuf {
         let path = self.root.path().join("grant.json");
-        std::fs::write(&path, &serde_json::to_string(&grant()).expect("grant JSON"))
+        std::fs::write(&path, serde_json::to_string(&grant()).expect("grant JSON"))
             .expect("grant write");
         path
     }
@@ -68,7 +68,7 @@ fn grant() -> Value {
     })
 }
 
-fn manifest(contents_sha256: &str, byte_count: usize, completeness: Value) -> String {
+fn manifest(contents_sha256: &str, byte_count: usize, completeness: &Value) -> String {
     serde_json::to_string(&json!({
         "schema": "healthmd.agent_data_ingest",
         "schema_version": 1,
@@ -81,7 +81,7 @@ fn manifest(contents_sha256: &str, byte_count: usize, completeness: Value) -> St
         "media_type": "application/json",
         "byte_count": byte_count,
         "sha256": contents_sha256,
-        "completeness": completeness
+        "completeness": completeness.clone()
     }))
     .expect("manifest JSON")
 }
@@ -90,7 +90,7 @@ fn complete_manifest_for(contents: &str) -> String {
     manifest(
         &digest(contents),
         contents.len(),
-        json!({"type": "complete"}),
+        &json!({"type": "complete"}),
     )
 }
 
@@ -98,7 +98,7 @@ fn partial_manifest_for(contents: &str) -> String {
     manifest(
         &digest(contents),
         contents.len(),
-        json!({"type": "partial", "finalized": true, "covered_owner_dates": ["2026-03-15"]}),
+        &json!({"type": "partial", "finalized": true, "covered_owner_dates": ["2026-03-15"]}),
     )
 }
 
@@ -219,7 +219,7 @@ impl StdioSession {
         assert_eq!(response["jsonrpc"], "2.0", "initialize should succeed");
     }
 
-    fn call(&mut self, id: i64, tool: &str, arguments: Value) -> Value {
+    fn call(&mut self, id: i64, tool: &str, arguments: &Value) -> Value {
         self.request(&json!({
             "jsonrpc": "2.0",
             "id": id,
@@ -237,7 +237,7 @@ impl Drop for StdioSession {
 }
 
 fn listed_artifact_count(session: &mut StdioSession, id: i64) -> usize {
-    let response = session.call(id, "healthmd_data_artifacts", json!({}));
+    let response = session.call(id, "healthmd_data_artifacts", &json!({}));
     let text = response
         .pointer("/result/content/0/text")
         .and_then(Value::as_str)
@@ -354,7 +354,7 @@ fn accepted_partial_is_authoritative_until_shadowed_by_a_complete_revision() {
     let later_manifest = manifest(
         &digest_of(&later_partial),
         later_partial.len(),
-        json!({"type": "partial", "finalized": true, "covered_owner_dates": ["2026-03-15"]}),
+        &json!({"type": "partial", "finalized": true, "covered_owner_dates": ["2026-03-15"]}),
     );
     let receipt = json_output(&ingest(&layout, &later_manifest, &later_artifact));
     assert_eq!(receipt["outcome"], "accepted");
