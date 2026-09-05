@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import XCTest
 @testable import HealthMd
@@ -576,6 +577,460 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
         XCTAssertTrue(try storedBlockedIDs().isEmpty)
     }
 
+    // MARK: - In-flow endpoint add/bind when no saved row matches
+
+    func testInFlowURLConfirmationCreatesRowAndCompletesVerifiedRebind() throws {
+        let exportProfiles = makeRetainedExportProfileCoordinator()
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        let adapter = SharedSetupV2CoordinatorAdapter.production(
+            service,
+            exportProfiles: { exportProfiles },
+            connectedMacState: { nil }
+        )
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        XCTAssertTrue(coordinator.isV2APIEndpointRebindAvailable)
+        XCTAssertTrue(coordinator.isV2ImportedAPIEndpointAddAvailable)
+
+        // No saved row matches, so the review offers the in-flow URL
+        // confirmation against the exact plan-retained URL.
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+        XCTAssertNil(coordinator.matchingV2LocalAPIEndpointID(
+            forImportedURLString: identity.validatedURLString
+        ))
+
+        let rowID = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.contains(rowID))
+        XCTAssertNil(coordinator.errorMessage)
+
+        // The row exists through the editor's exact upsert path: the exact
+        // imported URL, an identity-derived honest name, no credential yet.
+        let row = try XCTUnwrap(exportProfiles.destinationStore.apiEndpoint(id: rowID))
+        XCTAssertEqual(row.endpointURLString, identity.validatedURLString)
+        XCTAssertEqual(row.name, identity.displayHint)
+        XCTAssertNil(exportProfiles.destinationStore.token(for: rowID))
+
+        // The created row resolves through the conservative identity matcher.
+        XCTAssertEqual(
+            coordinator.matchingV2LocalAPIEndpointID(
+                forImportedURLString: identity.validatedURLString
+            ),
+            rowID
+        )
+        XCTAssertTrue(SharedSetupV2EndpointIdentity.localRowURL(
+            row.endpointURLString,
+            matchesImportedURLString: identity.validatedURLString
+        ))
+
+        // Completing the existing credential flow runs the verified rebind
+        // and clears the block.
+        XCTAssertTrue(try coordinator.confirmV2APIEndpointRebind(
+            profileID: review.id,
+            endpointID: rowID,
+            credential: "fresh-token-123"
+        ))
+        XCTAssertFalse(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+        XCTAssertTrue(coordinator.v2ReboundProfileIDs.contains(review.id))
+        XCTAssertEqual(
+            exportProfiles.profileStore.profile(id: review.id)?.apiEndpointID,
+            rowID
+        )
+        XCTAssertEqual(exportProfiles.destinationStore.token(for: rowID), "fresh-token-123")
+        XCTAssertTrue(try storedBlockedIDs().isEmpty)
+    }
+
+    func testInFlowRowCreationBindsNoDestinationUntilVerifiedRebind() throws {
+        let exportProfiles = makeRetainedExportProfileCoordinator()
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        let adapter = SharedSetupV2CoordinatorAdapter.production(
+            service,
+            exportProfiles: { exportProfiles },
+            connectedMacState: { nil }
+        )
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+        let rowID = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+
+        // Snapshot semantics: a created row alone binds no destination,
+        // stores no credential, and never clears the blocked identity.
+        XCTAssertTrue(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+        XCTAssertNil(exportProfiles.profileStore.profile(id: review.id)?.apiEndpointID)
+        XCTAssertNil(exportProfiles.destinationStore.token(for: rowID))
+        XCTAssertFalse(coordinator.v2ReboundProfileIDs.contains(review.id))
+        XCTAssertFalse(try storedBlockedIDs().isEmpty)
+    }
+
+    func testUserNeverConfirmsURLLeavesNoRowAndKeepsBlock() throws {
+        let exportProfiles = makeRetainedExportProfileCoordinator()
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        let adapter = SharedSetupV2CoordinatorAdapter.production(
+            service,
+            exportProfiles: { exportProfiles },
+            connectedMacState: { nil }
+        )
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        XCTAssertTrue(coordinator.isV2ImportedAPIEndpointAddAvailable)
+
+        // The user never confirms the URL: no row is created, nothing is
+        // bound, and the blocked identity stays exactly as it was.
+        XCTAssertTrue(exportProfiles.destinationStore.apiEndpoints.isEmpty)
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.isEmpty)
+        XCTAssertTrue(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+        XCTAssertNotNil(coordinator.importedV2APIEndpoint(for: review))
+    }
+
+    func testAbsentUpsertClosureKeepsHonestDeadEnd() throws {
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        var adapter = SharedSetupV2CoordinatorAdapter.production(service)
+        let spy = ConfirmationSpy()
+        adapter.localAPIEndpointID = { _ in nil }
+        adapter.confirmAPIEndpointRebind = { profileID, endpointID, credential in
+            spy.confirmCalls.append(ConfirmationSpy.ConfirmCall(
+                profileID: profileID,
+                endpointID: endpointID,
+                credential: credential
+            ))
+            return true
+        }
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        // The cycle-4 closure set keeps the credential path available while
+        // the in-flow add stays honestly unavailable (dead-end copy).
+        XCTAssertTrue(coordinator.isV2APIEndpointRebindAvailable)
+        XCTAssertFalse(coordinator.isV2ImportedAPIEndpointAddAvailable)
+
+        XCTAssertThrowsError(
+            try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+        ) { error in
+            XCTAssertEqual(
+                error as? SharedSetupV2CoordinatorError,
+                .transactionUnavailable
+            )
+        }
+        XCTAssertTrue(spy.confirmCalls.isEmpty)
+        XCTAssertTrue(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.isEmpty)
+    }
+
+    func testIdentityMismatchAfterUpsertFailsClosed() throws {
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        var adapter = SharedSetupV2CoordinatorAdapter.production(service)
+        let spy = ConfirmationSpy()
+        var upsertCalls: [(name: String, url: String)] = []
+        adapter.upsertAPIEndpointForImportedURL = { name, urlString in
+            upsertCalls.append((name: name, url: urlString))
+            // A row id the conservative matcher will not resolve to.
+            return spy.endpointID
+        }
+        adapter.localAPIEndpointID = { _ in nil }
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+
+        XCTAssertThrowsError(
+            try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+        ) { error in
+            XCTAssertEqual(
+                error as? SharedSetupV2ExecutionGateError,
+                .persistenceVerificationFailed
+            )
+        }
+        XCTAssertEqual(upsertCalls.count, 1)
+        XCTAssertEqual(upsertCalls.first?.name, identity.displayHint)
+        XCTAssertEqual(upsertCalls.first?.url, identity.validatedURLString)
+        XCTAssertTrue(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.isEmpty)
+        XCTAssertFalse(coordinator.v2ReboundProfileIDs.contains(review.id))
+        XCTAssertNotNil(coordinator.errorMessage)
+    }
+
+    func testUpsertReusedCaseInsensitiveRowCanonicalizesToConfirmedIdentity() throws {
+        let exportProfiles = makeRetainedExportProfileCoordinator()
+        // Pre-existing row whose raw URL differs from the imported identity
+        // only by path case: the conservative matcher rejects it (paths
+        // compare exactly), but the editor upsert resolves rows
+        // case-insensitively by raw URL string and canonicalizes the reused
+        // row to the user-confirmed imported URL — so the upserted row IS the
+        // resolved match in one honest step: same row, exact confirmed URL.
+        let preexistingID = try XCTUnwrap(exportProfiles.importAPIEndpointSelection(
+            name: "Personal archive",
+            endpointURLString: "https://setup.invalid:8443/SYNTHETIC/apple-archive",
+            bearerToken: nil
+        ))
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        let adapter = SharedSetupV2CoordinatorAdapter.production(
+            service,
+            exportProfiles: { exportProfiles },
+            connectedMacState: { nil }
+        )
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+        XCTAssertNil(coordinator.matchingV2LocalAPIEndpointID(
+            forImportedURLString: identity.validatedURLString
+        ))
+
+        // One explicit confirm reuses the case-variant row and canonicalizes
+        // it to the exact user-confirmed URL; no second row is created.
+        let rowID = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+        XCTAssertEqual(rowID, preexistingID)
+        XCTAssertEqual(exportProfiles.destinationStore.apiEndpoints.count, 1)
+        let row = try XCTUnwrap(exportProfiles.destinationStore.apiEndpoints.first)
+        XCTAssertEqual(row.endpointURLString, identity.validatedURLString)
+        XCTAssertEqual(row.name, identity.displayHint)
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.contains(rowID))
+
+        // The block still clears only through the verified credential rebind.
+        XCTAssertTrue(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+        XCTAssertTrue(try coordinator.confirmV2APIEndpointRebind(
+            profileID: review.id,
+            endpointID: rowID,
+            credential: "fresh-token"
+        ))
+        XCTAssertFalse(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+    }
+
+    func testInFlowConfirmationRequiresRetainedIdentity() throws {
+        let exportProfiles = makeRetainedExportProfileCoordinator()
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        let adapter = SharedSetupV2CoordinatorAdapter.production(
+            service,
+            exportProfiles: { exportProfiles },
+            connectedMacState: { nil }
+        )
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        XCTAssertTrue(coordinator.isV2ImportedAPIEndpointAddAvailable)
+
+        // Finish drops the plan: the flow stops trusting a retained identity
+        // and never creates a row from a remembered URL.
+        coordinator.finish()
+        XCTAssertThrowsError(
+            try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+        ) { error in
+            XCTAssertEqual(
+                error as? SharedSetupV2CoordinatorError,
+                .importedEndpointUnavailable
+            )
+        }
+        XCTAssertTrue(exportProfiles.destinationStore.apiEndpoints.isEmpty)
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.isEmpty)
+    }
+
+    func testCredentialBoundsStillEnforcedAfterInFlowRowCreation() throws {
+        let exportProfiles = makeRetainedExportProfileCoordinator()
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        let adapter = SharedSetupV2CoordinatorAdapter.production(
+            service,
+            exportProfiles: { exportProfiles },
+            connectedMacState: { nil }
+        )
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+        let rowID = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+
+        // The existing credential bounds guard the new row exactly as they
+        // guard a pre-existing match; nothing invalid reaches the store.
+        let invalidCredentials = [
+            "",
+            "   ",
+            "bad\nline",
+            "bad\u{01}line",
+            String(repeating: "a", count: 8_193)
+        ]
+        for credential in invalidCredentials {
+            XCTAssertThrowsError(
+                try coordinator.confirmV2APIEndpointRebind(
+                    profileID: review.id,
+                    endpointID: rowID,
+                    credential: credential
+                )
+            ) { error in
+                XCTAssertEqual(
+                    error as? SharedSetupV2CoordinatorError,
+                    .invalidCredential
+                )
+            }
+            XCTAssertNil(exportProfiles.destinationStore.token(for: rowID))
+        }
+        XCTAssertTrue(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+
+        // The exact boundary still succeeds through the verified path.
+        let boundary = String(repeating: "a", count: 8_192)
+        XCTAssertTrue(try coordinator.confirmV2APIEndpointRebind(
+            profileID: review.id,
+            endpointID: rowID,
+            credential: boundary
+        ))
+        XCTAssertEqual(exportProfiles.destinationStore.token(for: rowID), boundary)
+        XCTAssertNil(coordinator.errorMessage)
+        XCTAssertEqual(
+            identity.validatedURLString,
+            "https://setup.invalid:8443/synthetic/apple-archive"
+        )
+    }
+
+    func testInFlowConfirmAnnouncesAndResetsAcrossFinish() throws {
+        let exportProfiles = makeRetainedExportProfileCoordinator()
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        let adapter = SharedSetupV2CoordinatorAdapter.production(
+            service,
+            exportProfiles: { exportProfiles },
+            connectedMacState: { nil }
+        )
+        let announcements = AnnouncementRecorder()
+        let coordinator = makeCoordinator(
+            adapter: adapter,
+            announcer: { announcements.values.append($0) }
+        )
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+
+        _ = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+        // applyV2 announced first; the in-flow add announces second.
+        XCTAssertEqual(announcements.values.count, 2)
+        XCTAssertTrue(announcements.values.last?.contains("API endpoint added") == true)
+        XCTAssertEqual(
+            announcements.values.first,
+            "Shared Setup profiles applied. Complete local destination setup before exporting."
+        )
+
+        // Finish resets the in-flow row bookkeeping along with the flow.
+        coordinator.finish()
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.isEmpty)
+        XCTAssertTrue(coordinator.v2ReboundProfileIDs.isEmpty)
+    }
+
+    // MARK: - Live connected-Mac state re-render
+
+    func testConnectedMacChangeSignalReRendersAndRefreshesFacts() throws {
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        var adapter = SharedSetupV2CoordinatorAdapter.production(service)
+        let subject = PassthroughSubject<Void, Never>()
+        var macState = SharedSetupV2ConnectedMacState(
+            hasSavedManualIPPairing: false,
+            savedManualIPMacName: nil,
+            isLiveConnectionActive: false,
+            liveConnectedPeerName: nil
+        )
+        adapter.connectedMacState = { macState }
+        adapter.connectedMacStateChanges = { subject.eraseToAnyPublisher() }
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        XCTAssertEqual(coordinator.v2ConnectedMacStateRevision, 0)
+        XCTAssertEqual(
+            coordinator.v2ConnectedMacState?.liveConnectionCaption,
+            "No Mac connection active right now"
+        )
+
+        // Facts change while the review sheet stays presented: the change
+        // signal bumps the revision so the rows re-render and re-read the
+        // authoritative closure snapshot.
+        macState = SharedSetupV2ConnectedMacState(
+            hasSavedManualIPPairing: true,
+            savedManualIPMacName: "Studio Mac",
+            isLiveConnectionActive: true,
+            liveConnectedPeerName: "iPhone of Cody"
+        )
+        subject.send()
+        XCTAssertEqual(coordinator.v2ConnectedMacStateRevision, 1)
+        XCTAssertEqual(
+            coordinator.v2ConnectedMacState?.savedPairingCaption,
+            "Saved Manual IP pairing: Studio Mac"
+        )
+        XCTAssertEqual(
+            coordinator.v2ConnectedMacState?.liveConnectionCaption,
+            "Mac connection active (iPhone of Cody)"
+        )
+
+        subject.send()
+        XCTAssertEqual(coordinator.v2ConnectedMacStateRevision, 2)
+
+        // Without a signal producer, revisions never move — the cycle-4
+        // render-time snapshot semantics stay observable.
+        let quiet = makeCoordinator(adapter: SharedSetupV2CoordinatorAdapter.production(service))
+        XCTAssertEqual(quiet.v2ConnectedMacStateRevision, 0)
+    }
+
+    func testProductionConnectedMacFactChangesFireOnlyOnDisplayedFacts() throws {
+        // The production signal derives purely from the shared sync service's
+        // published facts the review rows display — no transport work.
+        let syncService = SyncService()
+        Self.retainedInstances.append(syncService)
+        let signalCount = SignalCounter()
+        let cancellable = SharedSetupV2CoordinatorAdapter
+            .connectedMacFactChanges(syncService: syncService)
+            .sink { _ in signalCount.value += 1 }
+
+        withExtendedLifetime(cancellable) {
+            // No initial replay of current values fires a signal.
+            XCTAssertEqual(signalCount.value, 0)
+
+            syncService.connectionState = .connecting
+            XCTAssertEqual(signalCount.value, 1)
+            syncService.connectionState = .connected
+            XCTAssertEqual(signalCount.value, 2)
+            syncService.connectedPeerName = "Test Mac"
+            XCTAssertEqual(signalCount.value, 3)
+
+            // Unrelated published sync-service state never re-renders the
+            // review rows.
+            syncService.lastError = "unrelated"
+            syncService.discoveredPeers = []
+            XCTAssertEqual(signalCount.value, 3)
+        }
+
+        let snapshot = SharedSetupV2ConnectedMacState(syncService: syncService)
+        XCTAssertEqual(snapshot.liveConnectionCaption, "Mac connection active (Test Mac)")
+    }
+
     // MARK: - Helpers
 
     private final class ConfirmationSpy {
@@ -589,6 +1044,43 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
         var matchQueries: [String] = []
         var nextError: Error?
         let endpointID = UUID()
+    }
+
+    /// Reference box so @Sendable closures can record announcements.
+    private final class AnnouncementRecorder {
+        var values: [String] = []
+    }
+
+    /// Reference box so Combine sinks can count main-thread signals.
+    private final class SignalCounter {
+        var value = 0
+    }
+
+    /// The real production export-profile coordinator over this test's
+    /// isolated suite — the exact editor path, retained for the process
+    /// lifetime per the sanitizer-gate lifecycle audit.
+    private func makeRetainedExportProfileCoordinator() -> ExportProfileCoordinator {
+        let keychain = FakeKeychainStore()
+        let vaultManager = VaultManager(
+            defaults: SystemUserDefaults(defaults: defaults),
+            bookmarkResolver: PathMappingBookmarkResolver(),
+            identityProbe: FakeVaultFolderIdentityProbe()
+        )
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let exportProfiles = ExportProfileCoordinator(
+            profileStore: ExportProfileStore(userDefaults: defaults),
+            destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
+            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
+            settings: settings,
+            vaultManager: vaultManager,
+            apiExportSettings: APIExportSettings(userDefaults: defaults, keychain: keychain),
+            initialTarget: .localIPhoneFolder,
+            sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults)
+        )
+        Self.retainedInstances.append(exportProfiles)
+        Self.retainedInstances.append(vaultManager)
+        return exportProfiles
     }
 
     private func makeService(
@@ -611,7 +1103,8 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     }
 
     private func makeCoordinator(
-        adapter: SharedSetupV2CoordinatorAdapter?
+        adapter: SharedSetupV2CoordinatorAdapter?,
+        announcer: @escaping @MainActor @Sendable (String) -> Void = { _ in }
     ) -> SharedSetupCoordinator {
         SharedSetupCoordinator(
             settings: AdvancedExportSettings(userDefaults: defaults),
@@ -626,7 +1119,7 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
             ),
             userDefaults: defaults,
             registry: fixtureRegistry(),
-            accessibilityAnnouncer: { _ in },
+            accessibilityAnnouncer: announcer,
             v2Adapter: adapter
         )
     }
