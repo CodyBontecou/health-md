@@ -1032,8 +1032,7 @@ enum SharedSetupV2Validation {
               aliases.allSatisfy({ alias in
                   isIdentifier(alias.semanticID) &&
                       (alias.appleSelectionID.map(isIdentifier) ?? true) &&
-                      (alias.androidSelectionID.map(isIdentifier) ?? true) &&
-                      (alias.appleSelectionID != nil || alias.androidSelectionID != nil)
+                      (alias.androidSelectionID.map(isIdentifier) ?? true)
               }) else {
             throw SharedSetupV2Error.invalid(
                 "The metric alias ledger must be the sorted exact union of every profile meaning."

@@ -708,12 +708,6 @@ class SharedSetupV2ProfileTransaction private constructor(
         val source = profile.scheduleIntent?.source ?: return null
         if (profile.source.destination.kind !in setOf("device_folder", "api_endpoint")) return null
         if (source.lookbackDays !in 1..30) return null
-        if (
-            plan.source.createdBy.platform == "apple" &&
-            profile.source.platformExtensions.apple?.schedule?.todayRefreshRequested == true
-        ) {
-            return null
-        }
         return ScheduledProfileEntry(
             profileId = nativeProfileId,
             isEnabled = false,

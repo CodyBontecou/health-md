@@ -271,6 +271,11 @@ class SharedSetupV2TransactionScenariosTest {
                 )
             preferences[SharedSetupV2ProfilePersistence.profileStateKey] =
                 requireNotNull(SharedSetupV2ProfilePersistence.encodeProfileState(sidecar))
+            // A full scenario re-seed must also reset the v2 transaction keys: a prior apply in
+            // this test leaves blocked IDs and a one-shot Undo snapshot that would otherwise
+            // fail the transaction's stored-state validation fail-closed.
+            preferences.remove(SharedSetupV2ProfilePersistence.blockedProfileIdsKey)
+            preferences.remove(SharedSetupV2ProfilePersistence.undoKey)
             val environment = scenario.jsonObject("local_environment")
             preferences[destinationMarkerKey] = environment.string("destination_store_marker")
             preferences[secureMarkerKey] = environment.string("secure_store_marker")
