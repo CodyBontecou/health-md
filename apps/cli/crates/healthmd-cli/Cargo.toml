@@ -16,6 +16,11 @@ publish = ["crates-io"]
 default = []
 # Compatibility alias retained for alpha.6 source-install commands. Wake support is always built.
 wake-worker = ["healthmd-client/wake-worker"]
+# TLS egress for the object-store backing (`https://` S3/R2 endpoints). Off by default so
+# default builds keep the stable `https object-store transport is not available` boundary and
+# stay dependency-lean; the crate set is already locked in this workspace via
+# `healthmd-client`'s reqwest/rustls stack, so enabling this only adds dependency edges.
+object-store-tls = ["dep:tokio-rustls", "dep:rustls", "dep:webpki-roots"]
 streamable-http = ["healthmd-mcp/streamable-http"]
 oauth-resource-server = [
     "streamable-http",
@@ -58,6 +63,22 @@ sha2.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
+# TLS stack for the object-store backing, gated behind `object-store-tls`. Versions match the
+# already-locked workspace resolution (via healthmd-client's reqwest); `default-features = false`
+# with the ring provider keeps aws-lc-rs out of the graph. tokio-rustls features forward to
+# rustls; rustls enables the PEM reader and TLS 1.2 fallback support it needs.
+tokio-rustls = { version = "0.26", default-features = false, features = [
+    "logging",
+    "ring",
+    "tls12",
+], optional = true }
+rustls = { version = "0.23", default-features = false, features = [
+    "logging",
+    "ring",
+    "std",
+    "tls12",
+], optional = true }
+webpki-roots = { version = "1.0", optional = true }
 toml_edit.workspace = true
 url = { workspace = true, optional = true }
 uuid.workspace = true

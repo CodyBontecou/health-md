@@ -14,15 +14,20 @@
 //! addressing is path-style (`https://host/bucket/key`).
 //!
 //! Credentials are environment-only and never accepted as flags, so no secret material can
-//! appear in `argv`, process listings, error text, logs, or receipts. This build's transport
-//! speaks HTTP/1.1 over TCP for loopback endpoints (the documented local-testing affordance);
-//! `https://` endpoints validate per the URL policy and fail health-free at transport time
-//! until a TLS socket layer is wired in a later cycle.
+//! appear in `argv`, process listings, error text, logs, or receipts. The transport speaks the
+//! same hand-written HTTP/1.1 framing over TCP for loopback `http://` endpoints (the documented
+//! local-testing affordance) and, in builds that enable the non-default `object-store-tls`
+//! cargo feature, over `rustls`/`tokio-rustls` TLS for `https://` endpoints. TLS trust is the
+//! Mozilla `webpki-roots` root set plus an optional additional PEM CA certificate named by the
+//! absolute path in `HEALTHMD_OBJECT_STORE_CA_CERT` (environment-only, like the credentials);
+//! certificate verification is never disabled in any build or configuration. Default builds
+//! carry no TLS layer: `https://` endpoints validate per the URL policy and fail health-free
+//! at transport with the stable not-available error.
 
 use std::{
     collections::{BTreeSet, HashMap},
     fmt, fs,
-    io::{Read as _, Write as _},
+    io::Write as _,
     net::{TcpStream, ToSocketAddrs as _},
     path::{Path, PathBuf},
     sync::Arc,
@@ -51,6 +56,12 @@ use super::data_backend::{
 const OBJECT_STORE_REGION: &str = "auto";
 const ENV_ACCESS_KEY_ID: &str = "HEALTHMD_OBJECT_STORE_ACCESS_KEY_ID";
 const ENV_SECRET_ACCESS_KEY: &str = "HEALTHMD_OBJECT_STORE_SECRET_ACCESS_KEY";
+/// Optional additional PEM CA certificate (absolute path) trusted for object-store TLS
+/// egress in `object-store-tls` builds: the self-hosted-PKI affordance and the test trust
+/// anchor. Environment-only, like the access-key variables; never argv, never disabling
+/// verification.
+#[cfg(feature = "object-store-tls")]
+const ENV_CA_CERT: &str = "HEALTHMD_OBJECT_STORE_CA_CERT";
 const SIGV4_ALGORITHM: &str = "AWS4-HMAC-SHA256";
 const SIGV4_SERVICE: &str = "s3";
 const SIGV4_TERMINATOR: &str = "aws4_request";
@@ -385,13 +396,243 @@ fn signed_request_text(
 }
 
 // ---------------------------------------------------------------------------
+// TLS egress (feature `object-store-tls`)
+// ---------------------------------------------------------------------------
+
+/// Per-store TLS parameters for `https://` endpoints (feature `object-store-tls`). Assembled
+/// once at open — before any network I/O — so an unusable trust configuration fails health-
+/// free at open with a stable error.
+#[cfg(feature = "object-store-tls")]
+struct TlsParameters {
+    config: Arc<rustls::ClientConfig>,
+    server_name: rustls::pki_types::ServerName<'static>,
+}
+
+/// Validate the `HEALTHMD_OBJECT_STORE_CA_CERT` value: when set it must name an absolute
+/// path. Relative (or empty) values fail closed before any network I/O.
+///
+/// # Errors
+///
+/// Returns a stable health-free error for a non-absolute path value.
+#[cfg(feature = "object-store-tls")]
+fn validated_ca_certificate_path(
+    value: Option<String>,
+) -> Result<Option<PathBuf>, DataStoreOpenError> {
+    match value {
+        None => Ok(None),
+        Some(path) if Path::new(&path).is_absolute() => Ok(Some(PathBuf::from(path))),
+        Some(_) => Err(DataStoreOpenError::new(
+            "the object store CA certificate path must be absolute",
+        )),
+    }
+}
+
+/// Load every PEM certificate in `path`. Unreadable files (missing, permissions, a
+/// directory) and files without at least one parseable certificate fail closed before any
+/// network I/O; neither the path nor any certificate material appears in the error.
+///
+/// # Errors
+///
+/// Returns a stable health-free error naming the failure class only.
+#[cfg(feature = "object-store-tls")]
+fn load_ca_certificates(
+    path: &Path,
+) -> Result<Vec<rustls::pki_types::CertificateDer<'static>>, DataStoreOpenError> {
+    let text = fs::read_to_string(path).map_err(|_| {
+        DataStoreOpenError::new("the object store CA certificate could not be read")
+    })?;
+    let invalid = || DataStoreOpenError::new("the object store CA certificate is not valid PEM");
+    let certificates = <rustls::pki_types::CertificateDer<'static> as rustls::pki_types::pem::PemObject>::pem_slice_iter(text.as_bytes())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| invalid())?;
+    if certificates.is_empty() {
+        return Err(invalid());
+    }
+    Ok(certificates)
+}
+
+/// Assemble the TLS trust and connection parameters for one `https://` endpoint: the
+/// `webpki-roots` Mozilla root set plus the optional `HEALTHMD_OBJECT_STORE_CA_CERT`
+/// certificate, and the TLS server name derived from the endpoint host (SNI for DNS names,
+/// IP verification for literal addresses). Certificate verification is never disabled; there
+/// is no insecure mode in any configuration.
+///
+/// # Errors
+///
+/// Returns a stable health-free error when the optional CA configuration is unusable (before
+/// any network I/O) or the endpoint host cannot name a TLS server.
+#[cfg(feature = "object-store-tls")]
+fn object_store_tls_parameters(
+    endpoint: &EndpointUrl,
+) -> Result<TlsParameters, DataStoreOpenError> {
+    let mut roots = rustls::RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+    };
+    let value = std::env::var(ENV_CA_CERT).ok();
+    if let Some(path) = validated_ca_certificate_path(value)? {
+        for certificate in load_ca_certificates(&path)? {
+            roots.add(certificate).map_err(|_| {
+                DataStoreOpenError::new("the object store CA certificate is not valid PEM")
+            })?;
+        }
+    }
+    let config = rustls::ClientConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .map_err(|_| DataStoreOpenError::new("the object store TLS client could not be initialized"))?
+    .with_root_certificates(roots)
+    .with_no_client_auth();
+    let server_name = object_store_server_name(&endpoint.connect_host).ok_or_else(|| {
+        DataStoreOpenError::new("the object store TLS client could not be initialized")
+    })?;
+    Ok(TlsParameters {
+        config: Arc::new(config),
+        server_name,
+    })
+}
+
+/// The TLS server name for one endpoint host: an IP literal verifies by IP SAN and carries no
+/// SNI; a DNS host carries SNI. Hosts that can name neither (for example an empty label)
+/// yield `None` and fail closed at open.
+#[cfg(feature = "object-store-tls")]
+fn object_store_server_name(host: &str) -> Option<rustls::pki_types::ServerName<'static>> {
+    rustls::pki_types::ServerName::try_from(host.to_owned()).ok()
+}
+
+/// Run one TLS socket operation on the ambient tokio runtime. The object store executes its
+/// whole request/response exchange from blocking contexts (the serving runtime's main task
+/// or `spawn_blocking` threads), so `block_in_place` bridges without stalling a worker.
+/// A missing ambient runtime is an honest transport failure: the MCP server always has one.
+#[cfg(feature = "object-store-tls")]
+fn tls_block_on<F>(future: F) -> Result<F::Output, ObjectStoreError>
+where
+    F: std::future::Future,
+{
+    let handle = tokio::runtime::Handle::try_current().map_err(|_| ObjectStoreError::Transport)?;
+    Ok(tokio::task::block_in_place(move || handle.block_on(future)))
+}
+
+/// A blocking `Read`/`Write` view over one `tokio-rustls` client connection. Every socket
+/// operation runs under the store's I/O timeout; failures surface as ordinary I/O errors and
+/// map to the existing transport seams in [`S3Client::perform`].
+#[cfg(feature = "object-store-tls")]
+struct TlsBlockingStream {
+    stream: tokio_rustls::client::TlsStream<tokio::net::TcpStream>,
+}
+
+#[cfg(feature = "object-store-tls")]
+impl TlsBlockingStream {
+    /// Resolve, connect, and handshake one TLS connection. DNS/TCP failures are transport
+    /// failures (identical to the plain path); TLS-layer failures — refusal, timeout, or an
+    /// untrusted certificate — are [`ObjectStoreError::TlsHandshake`].
+    fn connect(
+        parameters: &TlsParameters,
+        endpoint: &EndpointUrl,
+    ) -> Result<Self, ObjectStoreError> {
+        let address = (endpoint.connect_host.as_str(), endpoint.connect_port)
+            .to_socket_addrs()
+            .map_err(|_| ObjectStoreError::Transport)?
+            .map(|address| TcpStream::connect_timeout(&address, CONNECT_TIMEOUT))
+            .find_map(Result::ok)
+            .ok_or(ObjectStoreError::Transport)?;
+        address
+            .set_nonblocking(true)
+            .map_err(|_| ObjectStoreError::Transport)?;
+        let tcp =
+            tokio::net::TcpStream::from_std(address).map_err(|_| ObjectStoreError::Transport)?;
+        let connector = tokio_rustls::TlsConnector::from(Arc::clone(&parameters.config));
+        let server_name = parameters.server_name.clone();
+        let stream = tls_block_on(async move {
+            tokio::time::timeout(CONNECT_TIMEOUT, connector.connect(server_name, tcp))
+                .await
+                .map_err(|_| {
+                    std::io::Error::new(std::io::ErrorKind::TimedOut, "the TLS handshake timed out")
+                })?
+        })
+        .map_err(|_| ObjectStoreError::TlsHandshake)?
+        .map_err(|_| ObjectStoreError::TlsHandshake)?;
+        Ok(Self { stream })
+    }
+
+    fn read_some(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        use tokio::io::AsyncReadExt as _;
+        tls_block_on(async { tokio::time::timeout(IO_TIMEOUT, self.stream.read(buffer)).await })
+            .map_err(|_| std::io::Error::other("the TLS operation could not run"))?
+            .map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::TimedOut, "the TLS read timed out")
+            })?
+    }
+
+    fn write_some(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        use tokio::io::AsyncWriteExt as _;
+        tls_block_on(async { tokio::time::timeout(IO_TIMEOUT, self.stream.write(buffer)).await })
+            .map_err(|_| std::io::Error::other("the TLS operation could not run"))?
+            .map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::TimedOut, "the TLS write timed out")
+            })?
+    }
+
+    fn flush_tls(&mut self) -> std::io::Result<()> {
+        use tokio::io::AsyncWriteExt as _;
+        tls_block_on(async { tokio::time::timeout(IO_TIMEOUT, self.stream.flush()).await })
+            .map_err(|_| std::io::Error::other("the TLS operation could not run"))?
+            .map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::TimedOut, "the TLS flush timed out")
+            })?
+    }
+}
+
+/// The object-store transport socket: blocking HTTP/1.1 over TCP for `http://` loopback
+/// endpoints, or over TLS for `https://` endpoints in `object-store-tls` builds. The plain
+/// path keeps its historical socket timeouts; the TLS path bounds every operation by the
+/// same `IO_TIMEOUT` inside [`TlsBlockingStream`].
+enum ObjectStoreStream {
+    Plain(TcpStream),
+    #[cfg(feature = "object-store-tls")]
+    Tls(Box<TlsBlockingStream>),
+}
+
+impl std::io::Read for ObjectStoreStream {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            Self::Plain(stream) => stream.read(buffer),
+            #[cfg(feature = "object-store-tls")]
+            Self::Tls(stream) => stream.read_some(buffer),
+        }
+    }
+}
+
+impl std::io::Write for ObjectStoreStream {
+    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Self::Plain(stream) => stream.write(buffer),
+            #[cfg(feature = "object-store-tls")]
+            Self::Tls(stream) => stream.write_some(buffer),
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Self::Plain(stream) => stream.flush(),
+            #[cfg(feature = "object-store-tls")]
+            Self::Tls(stream) => stream.flush_tls(),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Minimal HTTP/1.1 transport and the frozen S3 subset
 // ---------------------------------------------------------------------------
 
 #[derive(Clone, Copy, Debug)]
 enum ObjectStoreError {
-    /// `https://` egress: this build carries no TLS socket layer.
+    /// `https://` egress in a build without the TLS socket layer (`object-store-tls` off).
     TlsUnavailable,
+    /// TLS-layer failure in an `object-store-tls` build: handshake refusal, timeout, or an
+    /// untrusted certificate. An unusable CA file is rejected at open instead.
+    #[cfg(feature = "object-store-tls")]
+    TlsHandshake,
     /// Connect, read, write, or timeout failure.
     Transport,
     /// `401`/`403` from the endpoint.
@@ -426,6 +667,9 @@ struct S3Client {
     bucket: String,
     prefix: String,
     credentials: ObjectStoreCredentials,
+    /// TLS parameters, present exactly for `https://` endpoints (feature builds).
+    #[cfg(feature = "object-store-tls")]
+    tls: Option<Arc<TlsParameters>>,
 }
 
 impl S3Client {
@@ -449,6 +693,7 @@ impl S3Client {
         path_and_query: &str,
         range: Option<&str>,
     ) -> Result<S3HttpResponse, ObjectStoreError> {
+        #[cfg(not(feature = "object-store-tls"))]
         if self.endpoint.scheme == ObjectStoreScheme::Https {
             return Err(ObjectStoreError::TlsUnavailable);
         }
@@ -465,12 +710,19 @@ impl S3Client {
             OBJECT_STORE_REGION,
         );
         let mut stream = self.connect()?;
-        stream
-            .set_write_timeout(Some(IO_TIMEOUT))
-            .map_err(|_| ObjectStoreError::Transport)?;
-        stream
-            .set_read_timeout(Some(IO_TIMEOUT))
-            .map_err(|_| ObjectStoreError::Transport)?;
+        match &stream {
+            ObjectStoreStream::Plain(stream) => {
+                stream
+                    .set_write_timeout(Some(IO_TIMEOUT))
+                    .map_err(|_| ObjectStoreError::Transport)?;
+                stream
+                    .set_read_timeout(Some(IO_TIMEOUT))
+                    .map_err(|_| ObjectStoreError::Transport)?;
+            }
+            // TLS operations are individually bounded by `IO_TIMEOUT` in `TlsBlockingStream`.
+            #[cfg(feature = "object-store-tls")]
+            ObjectStoreStream::Tls(_) => {}
+        }
         stream
             .write_all(request.as_bytes())
             .map_err(|_| ObjectStoreError::Transport)?;
@@ -478,16 +730,28 @@ impl S3Client {
         read_response(&mut stream, method == "HEAD")
     }
 
-    fn connect(&self) -> Result<TcpStream, ObjectStoreError> {
-        (
-            self.endpoint.connect_host.as_str(),
-            self.endpoint.connect_port,
-        )
-            .to_socket_addrs()
-            .map_err(|_| ObjectStoreError::Transport)?
-            .map(|address| TcpStream::connect_timeout(&address, CONNECT_TIMEOUT))
-            .find_map(Result::ok)
-            .ok_or(ObjectStoreError::Transport)
+    fn connect(&self) -> Result<ObjectStoreStream, ObjectStoreError> {
+        #[cfg(feature = "object-store-tls")]
+        if self.endpoint.scheme == ObjectStoreScheme::Https {
+            // Fail closed when TLS parameters were not assembled at open (defensive only:
+            // open always assembles them before the first request).
+            let Some(tls) = self.tls.as_ref() else {
+                return Err(ObjectStoreError::TlsUnavailable);
+            };
+            return TlsBlockingStream::connect(tls, &self.endpoint)
+                .map(|stream| ObjectStoreStream::Tls(Box::new(stream)));
+        }
+        Ok(ObjectStoreStream::Plain(
+            (
+                self.endpoint.connect_host.as_str(),
+                self.endpoint.connect_port,
+            )
+                .to_socket_addrs()
+                .map_err(|_| ObjectStoreError::Transport)?
+                .map(|address| TcpStream::connect_timeout(&address, CONNECT_TIMEOUT))
+                .find_map(Result::ok)
+                .ok_or(ObjectStoreError::Transport)?,
+        ))
     }
 
     /// One `ListObjectsV2` page under the configured prefix.
@@ -569,9 +833,10 @@ fn map_status(status: u16) -> Result<(), ObjectStoreError> {
 }
 
 /// Read and parse one complete HTTP/1.1 response: `Content-Length` framing, chunked transfer
-/// decoding, or connection-close framing; `HEAD` responses carry no body.
-fn read_response(
-    stream: &mut TcpStream,
+/// decoding, or connection-close framing; `HEAD` responses carry no body. Generic over the
+/// socket so the plain-TCP and TLS transports share this exact framing code.
+fn read_response<S: std::io::Read>(
+    stream: &mut S,
     head_only: bool,
 ) -> Result<S3HttpResponse, ObjectStoreError> {
     let mut raw = Vec::new();
@@ -950,6 +1215,10 @@ fn object_open_error(error: ObjectStoreError) -> DataStoreOpenError {
         ObjectStoreError::TlsUnavailable => DataStoreOpenError::new(
             "the https object-store transport is not available in this build; use a loopback http endpoint for local testing",
         ),
+        #[cfg(feature = "object-store-tls")]
+        ObjectStoreError::TlsHandshake => {
+            DataStoreOpenError::new("the object store TLS connection failed")
+        }
         ObjectStoreError::Transport => {
             DataStoreOpenError::new("the object store endpoint could not be reached")
         }
@@ -1025,6 +1294,14 @@ impl ObjectStoreArtifactStore {
         let bucket = validated_bucket_name(bucket)?;
         let prefix = normalized_prefix(prefix.as_deref())?;
         let credentials = ObjectStoreCredentials::from_environment()?;
+        // TLS trust is assembled before any network I/O so an unusable CA configuration fails
+        // health-free at open, never mid-egress. Only `https://` endpoints need parameters.
+        #[cfg(feature = "object-store-tls")]
+        let tls = if endpoint.scheme == ObjectStoreScheme::Https {
+            Some(Arc::new(object_store_tls_parameters(&endpoint)?))
+        } else {
+            None
+        };
 
         // The local grant gates everything; the store is just bytes. Unlike the directory
         // store there is no containment rule against the remote backing, and a grant-shaped
@@ -1042,6 +1319,8 @@ impl ObjectStoreArtifactStore {
             bucket: bucket.clone(),
             prefix: prefix.clone(),
             credentials,
+            #[cfg(feature = "object-store-tls")]
+            tls,
         };
         let root_binding = object_store_binding(&client);
         let index_path = match index {
@@ -1729,5 +2008,130 @@ mod tests {
             .collect();
         assert_eq!(paths, ["day.json", "sub/night.ndjson"]);
         assert_eq!(candidates[0].key, "exports/day.json");
+    }
+
+    // TLS egress units (feature `object-store-tls`): the CA path/PEM policy and the server
+    // name canonicalization are pure functions; the transport seams they feed are proven
+    // end-to-end against the TLS loopback double in tests/agent_data_object_tls.rs.
+    #[cfg(feature = "object-store-tls")]
+    mod tls {
+        use super::*;
+
+        fn fixture(name: &str) -> PathBuf {
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/fixtures")
+                .join(name)
+        }
+
+        fn error_text<T>(result: Result<T, DataStoreOpenError>) -> String {
+            result.err().expect("must fail").to_string()
+        }
+
+        #[test]
+        fn ca_path_policy_accepts_unset_and_absolute_only() {
+            assert_eq!(validated_ca_certificate_path(None).expect("unset"), None);
+            let absolute = "/absolute/path/ca.pem".to_owned();
+            assert_eq!(
+                validated_ca_certificate_path(Some(absolute.clone())).expect("absolute"),
+                Some(PathBuf::from(absolute))
+            );
+            for value in [
+                "relative/ca.pem".to_owned(),
+                String::new(),
+                "ca.pem".to_owned(),
+            ] {
+                assert_eq!(
+                    error_text(validated_ca_certificate_path(Some(value.clone()))),
+                    "the object store CA certificate path must be absolute",
+                    "value {value:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn ca_certificate_loading_reads_the_synthetic_fixture() {
+            let certificates =
+                load_ca_certificates(&fixture("object-store-tls-ca.pem")).expect("fixture");
+            assert_eq!(certificates.len(), 1, "the committed synthetic CA");
+        }
+
+        #[test]
+        fn ca_certificate_loading_fails_closed_for_unusable_files() {
+            let root = tempfile::tempdir().expect("tempdir");
+            let garbage = root.path().join("garbage.pem");
+            std::fs::write(&garbage, b"this is not PEM").expect("write garbage");
+            let empty = root.path().join("empty.pem");
+            std::fs::write(&empty, b"").expect("write empty");
+            let not_a_certificate = root.path().join("key.pem");
+            std::fs::write(
+                &not_a_certificate,
+                b"-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n",
+            )
+            .expect("write key-only pem");
+            let directory = root.path().join("directory.pem");
+            std::fs::create_dir(&directory).expect("mkdir");
+
+            for path in [root.path().join("missing.pem"), directory] {
+                assert_eq!(
+                    error_text(load_ca_certificates(&path)),
+                    "the object store CA certificate could not be read",
+                    "path {path:?}"
+                );
+            }
+            for path in [garbage, empty, not_a_certificate] {
+                assert_eq!(
+                    error_text(load_ca_certificates(&path)),
+                    "the object store CA certificate is not valid PEM",
+                    "path {path:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn tls_server_name_canonicalizes_ips_dns_and_rejects_garbage() {
+            use rustls::pki_types::ServerName;
+            assert!(matches!(
+                object_store_server_name("127.0.0.1"),
+                Some(ServerName::IpAddress(_))
+            ));
+            assert!(matches!(
+                object_store_server_name("localhost"),
+                Some(ServerName::DnsName(_))
+            ));
+            assert!(object_store_server_name("not a host").is_none());
+        }
+
+        #[test]
+        fn root_store_assembly_appends_the_optional_ca_to_the_webpki_roots() {
+            let mut roots = rustls::RootCertStore {
+                roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+            };
+            let webpki_count = roots.len();
+            assert!(webpki_count > 0, "the Mozilla root set is non-empty");
+            let certificate =
+                load_ca_certificates(&fixture("object-store-tls-ca.pem")).expect("fixture");
+            for certificate in certificate {
+                roots
+                    .add(certificate)
+                    .expect("the synthetic CA is a trust anchor");
+            }
+            assert_eq!(roots.len(), webpki_count + 1);
+        }
+
+        #[test]
+        fn client_config_assembles_over_the_ring_provider() {
+            let roots = rustls::RootCertStore {
+                roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+            };
+            let config = rustls::ClientConfig::builder_with_provider(Arc::new(
+                rustls::crypto::ring::default_provider(),
+            ))
+            .with_safe_default_protocol_versions()
+            .expect("safe versions")
+            .with_root_certificates(roots)
+            .with_no_client_auth();
+            // The transport speaks plain HTTP/1.1: no ALPN protocols are offered.
+            assert!(config.alpn_protocols.is_empty());
+        }
     }
 }

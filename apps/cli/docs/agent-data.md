@@ -177,12 +177,23 @@ Version 4 (`aws4_request`, service `s3`, `x-amz-content-sha256: UNSIGNED-PAYLOAD
 against the frozen S3 subset; the implementation is unit-tested against the RFC 4231 HMAC vectors
 and the published AWS `SigV4` GET-object known answer. Real R2/S3 endpoints are not exercised in
 this repository's loop: compatibility is by specification through that subset, proven against the
-synthetic loopback double in `tests/agent_data_object.rs` (which `SigV4`-verifies every request and
-asserts only list/head/get methods are ever sent). This build carries no TLS socket layer, so
-`https://` endpoints validate per the URL policy and then fail health-free at transport with a
-stable error stating that boundary; only loopback `http://` endpoints can be reached today. Wiring
-TLS egress for production R2 endpoints is deliberately deferred to a later cycle rather than
-approximated.
+synthetic loopback doubles in `tests/agent_data_object.rs` and (over TLS)
+`tests/agent_data_object_tls.rs` (each `SigV4`-verifies every request and asserts only
+list/head/get methods are ever sent); no real endpoint, account, or TLS authority is contacted
+anywhere in this repository's tests.
+
+**TLS egress (feature-gated).** `https://` egress for real R2/S3 endpoints is carried by the
+non-default `object-store-tls` cargo feature: build with
+`cargo build --features object-store-tls` (or `--all-features`) to speak the same hand-written
+HTTP/1.1 + SigV4 subset over `rustls`/`tokio-rustls` TLS. Trust is the Mozilla `webpki-roots`
+root set plus, optionally, one additional PEM CA certificate named by the absolute path in the
+`HEALTHMD_OBJECT_STORE_CA_CERT` environment variable (environment-only like the access-key
+variables; relative, unreadable, or invalid-PEM values fail health-free at open before any
+network I/O). Certificate verification is never disabled in any build or configuration — there
+is no insecure mode. Default builds keep the dependency-lean boundary: `https://` endpoints
+still validate per the URL policy and fail health-free at transport with the stable
+`the https object-store transport is not available in this build` error, while loopback
+`http://` endpoints work in every build.
 
 ## Local ingestion (protocol v1)
 
