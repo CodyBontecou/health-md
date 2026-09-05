@@ -395,6 +395,7 @@
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CoordinatorIOTests.swift",
     "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionAdapterTests.swift",
     "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionScenariosTests.swift",
+    "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ConfirmationFlowTests.swift",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2CodecMapperTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupAndroidProfileFieldCoverageTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt",
