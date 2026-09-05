@@ -4,6 +4,11 @@
 #   - workflow_dispatch with a draft GitHub Release's v* tag (canonical submission path)
 #   - publishing a GitHub Release with a v* tag (legacy fallback)
 #
+# Gate: before any build or submission, the exact release SHA (the tag's commit,
+# or the branch head for branch-mode runs) must pass the full Apple CI suite via
+# the reusable apple-ci.yml workflow. Store submissions never run on an
+# unqualified commit.
+#
 # Effects on a tagged release run:
 #   1. Build, sign, notarize Developer ID + App Store builds
 #   2. Upload the App Store pkg to ASC and submit for review (MAC_OS platform)
@@ -64,8 +69,56 @@ env:
   ASC_APP_ID: ${{ secrets.HEALTHMD_ASC_APP_ID }}
 
 jobs:
+  resolve-release-sha:
+    name: Resolve release SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # The release job builds the tag's commit, but workflow_dispatch runs on a
+      # branch head whose SHA can differ from the tag. Qualify the exact commit
+      # that will be archived, not the dispatch ref.
+      - name: Resolve exact release commit
+        id: resolve
+        run: |
+          set -euo pipefail
+          TAG=""
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [[ -n "${{ github.event.inputs.release_tag || '' }}" ]]; then
+            TAG="${{ github.event.inputs.release_tag }}"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          if [[ -n "$TAG" ]]; then
+            SHA="$(git rev-parse -q --verify "${TAG}^{commit}")"
+            if [[ -z "$SHA" ]]; then
+              echo "::error::Release tag '$TAG' not found in this repository"
+              exit 1
+            fi
+          else
+            # Branch-mode manual run: qualify the exact head being built.
+            SHA="$GITHUB_SHA"
+          fi
+          echo "Qualifying $SHA${TAG:+ (tag $TAG)}"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+  qualify:
+    name: Qualify exact Apple release SHA
+    needs: resolve-release-sha
+    uses: ./.github/workflows/apple-ci.yml
+    with:
+      release_sha: ${{ needs.resolve-release-sha.outputs.sha }}
+
   release:
     name: Build & Release
+    needs: qualify
     if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.login != 'github-actions[bot]') }}
     # Keep releases available when the optional self-hosted Mac is offline. The
     # Apple CI suite qualifies this same hosted image and its Xcode toolchain.
