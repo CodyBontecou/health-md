@@ -53,6 +53,7 @@ final class ExportProfileCoordinator: ObservableObject {
     private let vaultManager: VaultManager
     private let apiExportSettings: APIExportSettings
     private let now: () -> Date
+    private let sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate
     private var flushCancellable: AnyCancellable?
 
     /// Debounce window for flushing edits back into the active profile.
@@ -67,7 +68,8 @@ final class ExportProfileCoordinator: ObservableObject {
         vaultManager: VaultManager,
         apiExportSettings: APIExportSettings,
         initialTarget: ExportTargetSelection,
-        now: @escaping () -> Date = { Date() }
+        now: @escaping () -> Date = { Date() },
+        sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate? = nil
     ) {
         self.profileStore = profileStore
         self.destinationStore = destinationStore
@@ -76,6 +78,8 @@ final class ExportProfileCoordinator: ObservableObject {
         self.vaultManager = vaultManager
         self.apiExportSettings = apiExportSettings
         self.now = now
+        self.sharedSetupV2ExecutionGate = sharedSetupV2ExecutionGate
+            ?? SharedSetupV2ExecutionGate()
 
         bootstrapIfNeeded(initialTarget: initialTarget)
 
@@ -146,15 +150,21 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Switches the active profile: flushes outgoing edits, applies the new
     /// snapshot to the shared settings object, adopts its destination
     /// bindings, and publishes its target.
-    func activate(profileID: UUID) {
+    @discardableResult
+    func activate(profileID: UUID) -> Bool {
         activate(profileID: profileID, adoptVault: true)
     }
 
-    private func activate(profileID: UUID, adoptVault: Bool) {
-        flushEdits()
-
-        guard profileStore.activate(id: profileID),
-              let profile = profileStore.profile(id: profileID) else { return }
+    @discardableResult
+    private func activate(
+        profileID: UUID,
+        adoptVault: Bool,
+        flushOutgoing: Bool = true
+    ) -> Bool {
+        if flushOutgoing { flushEdits() }
+        guard !sharedSetupV2ExecutionGate.isExecutionBlocked(profileID: profileID),
+              profileStore.activate(id: profileID),
+              let profile = profileStore.profile(id: profileID) else { return false }
 
         settings.apply(snapshot: profile.settings)
         activeProfileName = profile.name
@@ -165,6 +175,18 @@ final class ExportProfileCoordinator: ObservableObject {
             adoptVaultDestination(for: profile)
         }
         adoptAPIEndpoint(for: profile)
+        return true
+    }
+
+    func isProfileExecutionBlocked(_ profileID: UUID) -> Bool {
+        sharedSetupV2ExecutionGate.isExecutionBlocked(profileID: profileID)
+    }
+
+    var isActiveProfileExecutionBlocked: Bool {
+        guard let activeID = profileStore.activeProfileID else {
+            return profileStore.hasProfiles
+        }
+        return isProfileExecutionBlocked(activeID)
     }
 
     private func adoptVaultDestination(for profile: ExportProfile) {
@@ -197,7 +219,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// authority and timezone provenance.
     func flushEdits() {
         flushCancellable = nil
-        guard let activeID = profileStore.activeProfileID else { return }
+        guard let activeID = profileStore.activeProfileID,
+              !isProfileExecutionBlocked(activeID) else { return }
         profileStore.updateSettings(
             id: activeID,
             settings: ExportSettingsSnapshot.from(settings)
@@ -209,7 +232,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Called by containers when the user changes the export target control
     /// while a profile is active.
     func userSelectedTarget(_ target: ExportTargetSelection) {
-        guard let activeID = profileStore.activeProfileID else { return }
+        guard let activeID = profileStore.activeProfileID,
+              !isProfileExecutionBlocked(activeID) else { return }
         profileStore.updateTarget(id: activeID, target: target)
         activeTarget = target
     }
@@ -239,7 +263,76 @@ final class ExportProfileCoordinator: ObservableObject {
             bookmarkData: persisted.bookmarkData,
             identity: persisted.identity
         )
-        profileStore.setFolderBinding(profileID: activeID, destinationID: destination.id)
+        if isProfileExecutionBlocked(activeID) {
+            try? confirmFolderRebind(profileID: activeID, destinationID: destination.id)
+        } else {
+            profileStore.setFolderBinding(profileID: activeID, destinationID: destination.id)
+        }
+    }
+
+    /// Explicit local folder confirmation. Merely editing, opening, or
+    /// renaming a profile never reaches this API.
+    func confirmFolderRebind(profileID: UUID, destinationID: UUID) throws {
+        guard destinationStore.vault(id: destinationID) != nil,
+              profileStore.profile(id: profileID)?.target == .localIPhoneFolder,
+              profileStore.setFolderBinding(
+                profileID: profileID,
+                destinationID: destinationID
+              ),
+              profileStore.profile(id: profileID)?.folderVaultID == destinationID else {
+            throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
+        }
+        try sharedSetupV2ExecutionGate.confirmRebind(
+            profileID: profileID,
+            confirmation: .deviceFolder(destinationID: destinationID)
+        )
+        if profileStore.activeProfileID == profileID {
+            _ = activate(profileID: profileID, adoptVault: true, flushOutgoing: false)
+        }
+    }
+
+    /// API URLs alone are insufficient. The caller must finish a local
+    /// credential-confirmation flow and pass that explicit result here.
+    func confirmAPIEndpointRebind(
+        profileID: UUID,
+        endpointID: UUID,
+        credentialsConfirmed: Bool
+    ) throws {
+        guard credentialsConfirmed,
+              destinationStore.apiEndpoint(id: endpointID) != nil,
+              profileStore.updateTarget(id: profileID, target: .apiEndpoint),
+              profileStore.setAPIEndpointBinding(profileID: profileID, endpointID: endpointID),
+              profileStore.profile(id: profileID)?.apiEndpointID == endpointID else {
+            throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
+        }
+        try sharedSetupV2ExecutionGate.confirmRebind(
+            profileID: profileID,
+            confirmation: .apiEndpoint(
+                endpointID: endpointID,
+                credentialsConfirmed: true
+            )
+        )
+        if profileStore.activeProfileID == profileID {
+            _ = activate(profileID: profileID, adoptVault: false, flushOutgoing: false)
+        }
+    }
+
+    /// Connected Mac intent requires an explicit local pairing/rebind hook.
+    func confirmConnectedMacRebind(
+        profileID: UUID,
+        pairingConfirmed: Bool
+    ) throws {
+        guard pairingConfirmed,
+              profileStore.updateTarget(id: profileID, target: .connectedMac) else {
+            throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
+        }
+        try sharedSetupV2ExecutionGate.confirmRebind(
+            profileID: profileID,
+            confirmation: .connectedMac(pairingConfirmed: true)
+        )
+        if profileStore.activeProfileID == profileID {
+            _ = activate(profileID: profileID, adoptVault: false, flushOutgoing: false)
+        }
     }
 
     /// Imports a freshly picked folder into the shared destination store for
@@ -295,7 +388,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Called when API endpoint settings change while a profile is active.
     /// Upserts the endpoint and binds it to the active profile.
     func apiEndpointDidChange() {
-        guard let activeID = profileStore.activeProfileID else { return }
+        guard let activeID = profileStore.activeProfileID,
+              !isProfileExecutionBlocked(activeID) else { return }
 
         let trimmedURL = apiExportSettings.endpointURLString
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -324,7 +418,8 @@ final class ExportProfileCoordinator: ObservableObject {
         settings newSettings: ExportSettingsSnapshot? = nil
     ) -> ExportProfile? {
         flushEdits()
-        guard let source = profileStore.activeProfile else { return nil }
+        guard let source = profileStore.activeProfile,
+              !isProfileExecutionBlocked(source.id) else { return nil }
         let created = profileStore.add(
             name: name,
             settings: newSettings ?? ExportSettingsSnapshot.from(settings),
@@ -392,7 +487,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// state and destinations, then activates it.
     @discardableResult
     func addProfileDuplicatingActive() -> ExportProfile? {
-        guard let source = profileStore.activeProfile else { return nil }
+        guard let source = profileStore.activeProfile,
+              !isProfileExecutionBlocked(source.id) else { return nil }
         let copy = profileStore.add(
             name: source.name,
             settings: ExportSettingsSnapshot.from(settings),
@@ -409,7 +505,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// it later adopts its destinations like any other switch.
     @discardableResult
     func duplicateProfile(id: UUID) -> ExportProfile? {
-        profileStore.duplicate(id: id)
+        guard !isProfileExecutionBlocked(id) else { return nil }
+        return profileStore.duplicate(id: id)
     }
 
     /// Deletes a profile (forbidden for the last remaining profile by the
@@ -463,7 +560,8 @@ final class ExportProfileCoordinator: ObservableObject {
         _ = profileStore.updateSettings(id: id, settings: newSettings)
 
         guard let updated = profileStore.profile(id: id) else { return nil }
-        guard id == profileStore.activeProfileID else { return updated }
+        guard id == profileStore.activeProfileID,
+              !isProfileExecutionBlocked(id) else { return updated }
 
         // Active-profile sync: live settings, published identity, and the
         // bound destinations must match what the editor just saved. No
@@ -472,10 +570,10 @@ final class ExportProfileCoordinator: ObservableObject {
         settings.apply(snapshot: newSettings)
         activeProfileName = updated.name
         activeTarget = updated.target
-        if let folderVaultID {
+        if folderVaultID != nil {
             adoptVaultDestination(for: updated)
         }
-        if let apiEndpointID {
+        if apiEndpointID != nil {
             adoptAPIEndpoint(for: updated)
         }
         return updated

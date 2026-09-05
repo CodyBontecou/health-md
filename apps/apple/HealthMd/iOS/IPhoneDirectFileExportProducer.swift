@@ -14,6 +14,7 @@ enum IPhoneDirectFileProducerError: LocalizedError {
     case unexpectedResponse
     case healthKitNotAuthorized
     case exportLimitReached
+    case profileRequiresRebind
     /// A direct request referenced an export profile that no longer exists.
     /// Fails closed: no fallback to live settings ever runs.
     case profileNotFound(profileID: String, name: String?)
@@ -21,6 +22,8 @@ enum IPhoneDirectFileProducerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidRequest(let message): return message
+        case .profileRequiresRebind:
+            return SharedSetupV2ExecutionGate.blockedExecutionMessage
         case .profileNotFound(let profileID, let name):
             return "No export profile matches \(name ?? profileID). Open Health.md to review profiles."
         case .requestChanged: return "A durable direct file job with this ID changed."
@@ -110,6 +113,7 @@ final class IPhoneDirectFileExportProducer {
         if cancelledJobIDs.contains(request.jobID) {
             throw IPhoneDirectFileProducerError.cancelled
         }
+        try enforceBlockedProfileGate(for: request)
         let journal: IPhoneDirectFileJournal
         if let persisted = try? loadJournal(jobID: request.jobID) {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
@@ -1287,7 +1291,31 @@ final class IPhoneDirectFileExportProducer {
                 name: reference.name
             )
         }
+        guard !SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profile.id) else {
+            throw IPhoneDirectFileProducerError.profileRequiresRebind
+        }
         return profile.settings.makeAdvancedExportSettings()
+    }
+
+    /// Check every invocation, including durable resumes, before any journal,
+    /// HealthKit, or destination work. Name-only references are resolved only
+    /// to decide the gate and retain the existing not-found behavior later.
+    private func enforceBlockedProfileGate(for request: DirectExportRequest) throws {
+        guard request.settingsPolicy == .profile,
+              let reference = request.profileReference else { return }
+        let store = ExportProfileStore()
+        let profile: ExportProfile?
+        if let profileID = UUID(uuidString: reference.profileID) {
+            profile = store.profile(id: profileID)
+        } else if let name = reference.name {
+            profile = store.profile(named: name)
+        } else {
+            profile = nil
+        }
+        guard let profile else { return }
+        guard !SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profile.id) else {
+            throw IPhoneDirectFileProducerError.profileRequiresRebind
+        }
     }
 
     private func makeInternalRequest(

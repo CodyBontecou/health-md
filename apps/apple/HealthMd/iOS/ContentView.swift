@@ -985,7 +985,14 @@ struct ContentView: View {
 
     private func exportData() {
         // Persist any in-flight profile edits before freezing the request.
-        profileCoordinator?.flushEdits()
+        let profiles = ensureProfileCoordinator()
+        profiles.flushEdits()
+        guard !profiles.isActiveProfileExecutionBlocked else {
+            presentExportConfigurationError(
+                SharedSetupV2ExecutionGate.blockedExecutionMessage
+            )
+            return
+        }
 
         // Durable work outlives this view and even the app process. Repeated
         // taps should focus that immutable export, not create a competing job.

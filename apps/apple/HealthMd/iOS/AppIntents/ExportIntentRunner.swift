@@ -17,6 +17,9 @@ enum ExportIntentRunner {
         case failure(reason: String)
         /// A profile parameter referenced a name that no longer exists.
         case profileNotFound(name: String)
+        /// A v2-imported profile has no locally confirmed destination yet, or
+        /// profile mode has no valid active row. Never falls back to live state.
+        case profileRequiresRebind
     }
 
     /// Resolution of an intent's optional profile parameter (phase 4,
@@ -28,6 +31,7 @@ enum ExportIntentRunner {
         case profile(ExportProfile)
         case legacySettings
         case notFound(String)
+        case unavailable
     }
 
     static func resolveProfile(
@@ -41,7 +45,7 @@ enum ExportIntentRunner {
             if let active = profileStore.activeProfile {
                 return .profile(active)
             }
-            return .legacySettings
+            return .unavailable
         }
 
         if let named = profileStore.profile(named: rawName) {
@@ -74,6 +78,9 @@ enum ExportIntentRunner {
         /// profile's destinations when restoring.
         var adoptProfileDestinations: (ExportProfile?) -> Void = { _ in }
         var restoreActiveProfileDestinations: () -> Void = { }
+        var isProfileExecutionBlocked: (UUID) -> Bool = { profileID in
+            SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profileID)
+        }
         var exportDatesBackground: ([Date], AdvancedExportSettings) async -> ExportOrchestrator.ExportResult
         var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?, String?) -> Void
         var recordExportUse: () -> Void
@@ -226,9 +233,14 @@ enum ExportIntentRunner {
         case .legacySettings:
             runProfile = nil
         case .profile(let profile):
+            guard !dependencies.isProfileExecutionBlocked(profile.id) else {
+                return .profileRequiresRebind
+            }
             runProfile = profile
         case .notFound(let name):
             return .profileNotFound(name: name)
+        case .unavailable:
+            return .profileRequiresRebind
         }
         if let runProfile {
             dependencies.adoptProfileDestinations(runProfile)
@@ -461,6 +473,8 @@ enum ExportIntentRunner {
             return "Export cancelled."
         case .profileNotFound(let name):
             return "No export profile named \(name) was found. Open Health.md to review your profiles."
+        case .profileRequiresRebind:
+            return SharedSetupV2ExecutionGate.blockedExecutionMessage
         case .noVault:
             return "No vault selected. Open Health.md and choose a vault first."
         case .destinationChanged:

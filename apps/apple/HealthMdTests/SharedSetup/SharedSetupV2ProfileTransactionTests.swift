@@ -1,0 +1,546 @@
+import Foundation
+import XCTest
+@testable import HealthMd
+
+@MainActor
+final class SharedSetupV2ProfileTransactionTests: XCTestCase {
+    // Match the repository's retention workaround for nested ObservableObject
+    // settings on older simulator runtimes.
+    private static var retainedSettings: [AdvancedExportSettings] = []
+
+    private var defaults: UserDefaults!
+    private var suiteName: String!
+
+    override func setUp() {
+        super.setUp()
+        suiteName = "SharedSetupV2ProfileTransactionTests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    override func tearDown() {
+        if let suiteName {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        defaults = nil
+        suiteName = nil
+        super.tearDown()
+    }
+
+    func testAddNormalizesSelectionMaterializesExactFreshProfilesAndKeepsSchedulesInert() throws {
+        let existingID = uuid(1)
+        let existingScheduleID = uuid(2)
+        let existing = ExportProfile(
+            id: existingID,
+            name: "Detailed Time-Series",
+            settings: nativeSnapshot(filename: "existing-{date}"),
+            target: .apiEndpoint,
+            folderVaultID: uuid(90),
+            apiEndpointID: uuid(91),
+            createdAt: fixedDate(2024, 1, 1),
+            updatedAt: fixedDate(2024, 1, 2),
+            isMigrationDefault: true
+        )
+        let existingSchedule = ScheduledExportEntry(
+            id: existingScheduleID,
+            profileID: existingID,
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 5,
+            lastExportDate: fixedDate(2024, 2, 1),
+            enabledAt: fixedDate(2024, 1, 1)
+        )
+        seed(profiles: [existing], active: existingID, schedules: [existingSchedule])
+
+        let importedIDs = [uuid(101), uuid(102)]
+        let scheduleIDs = [uuid(201), uuid(202)]
+        let transaction = makeTransaction(
+            profileIDs: importedIDs,
+            scheduleIDs: scheduleIDs
+        )
+        let result = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-004", "profile-002"],
+            mode: .add
+        )
+
+        let profiles = try storedProfiles()
+        XCTAssertEqual(profiles.map(\.id), [existingID] + importedIDs)
+        XCTAssertEqual(
+            profiles.map(\.name),
+            ["Detailed Time-Series", "Detailed Time-Series 2", "Lossless"]
+        )
+        XCTAssertEqual(result.importedProfileIDs, importedIDs)
+        XCTAssertEqual(result.activeProfileID, existingID)
+        XCTAssertEqual(storedActiveID(), existingID)
+        XCTAssertTrue(transaction.canUndo)
+
+        let detailed = profiles[1]
+        XCTAssertEqual(detailed.target, .connectedMac)
+        XCTAssertNil(detailed.folderVaultID)
+        XCTAssertNil(detailed.apiEndpointID)
+        XCTAssertNil(detailed.settings.healthSubfolder)
+        XCTAssertNil(detailed.settings.appleExportEnginePin)
+        XCTAssertTrue(detailed.settings.appleExportEngineAuthorityIsFrozen)
+        XCTAssertNil(detailed.settings.calendarTimeZoneIdentifier)
+        XCTAssertEqual(detailed.settings.compatibilityDetail, .selectedTimeSeries)
+        XCTAssertEqual(detailed.settings.healthKitSourceArchivePolicy, .none)
+        XCTAssertEqual(detailed.settings.metricSelection.enabledMetricIDs, ["heart_rate_avg", "sleep_core"])
+        XCTAssertEqual(detailed.settings.metricSelection.enabledCategoryIDs, [])
+
+        let lossless = profiles[2]
+        XCTAssertEqual(lossless.settings.compatibilityDetail, .selectedTimeSeries)
+        XCTAssertEqual(lossless.settings.healthKitSourceArchivePolicy, .canonicalV1)
+        XCTAssertTrue(lossless.settings.generateRangeSummary)
+        XCTAssertNil(lossless.folderVaultID)
+        XCTAssertNil(lossless.apiEndpointID)
+
+        let schedules = try storedSchedules()
+        XCTAssertEqual(schedules.map(\.id), [existingScheduleID] + scheduleIDs)
+        XCTAssertTrue(schedules[0].isEnabled, "Add preserves the existing row exactly")
+        XCTAssertEqual(schedules.dropFirst().map(\.profileID), importedIDs)
+        for schedule in schedules.dropFirst() {
+            XCTAssertFalse(schedule.isEnabled)
+            XCTAssertNil(schedule.enabledAt)
+            XCTAssertNil(schedule.lastExportDate)
+            XCTAssertNil(schedule.lastTodayRefreshDate)
+        }
+        XCTAssertEqual(schedules[1].frequency, .daily)
+        XCTAssertEqual(schedules[1].todayRefreshIntervalHours, 6)
+        XCTAssertEqual(schedules[2].frequency, .custom)
+        XCTAssertEqual(schedules[2].customInterval, 2)
+        XCTAssertEqual(schedules[2].customUnit, .month)
+
+        let sidecar = try storedSidecar()
+        XCTAssertEqual(sidecar.version, 1)
+        XCTAssertEqual(sidecar.profiles.map(\.profileID), importedIDs)
+        XCTAssertEqual(
+            sidecar.profiles.map(\.sourceBundleID),
+            ["profile-002", "profile-004"]
+        )
+        XCTAssertEqual(sidecar.profiles.map(\.unsupportedSemanticIDs), [[], []])
+        XCTAssertEqual(sidecar.profiles[0].sourceProfile.destination.kind, .connectedMac)
+        XCTAssertEqual(sidecar.profiles[1].sourceProfile.schedule?.activationRequested, true)
+        XCTAssertLessThanOrEqual(
+            try XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey)).count,
+            SharedSetupV2ProfileTransaction.maximumProfileStateBytes
+        )
+        XCTAssertEqual(try storedBlockedIDs(), importedIDs)
+    }
+
+    func testReplaceUsesSelectedOnlySourceActiveFallbackAndUndoRestoresExactFiveKeyStateOnce() throws {
+        let oldID = uuid(10)
+        let oldScheduleID = uuid(11)
+        let oldProfile = ExportProfile(
+            id: oldID,
+            name: "Old",
+            settings: nativeSnapshot(filename: "old-{date}"),
+            target: .localIPhoneFolder,
+            createdAt: fixedDate(2023, 1, 1),
+            updatedAt: fixedDate(2023, 1, 2)
+        )
+        let oldSchedule = ScheduledExportEntry(
+            id: oldScheduleID,
+            profileID: oldID,
+            isEnabled: true,
+            lastExportDate: fixedDate(2023, 2, 1)
+        )
+        let document = try appleDocument()
+        let oldSidecar = SharedSetupV2AppleProfileState(profiles: [
+            .init(
+                profileID: oldID,
+                sourceBundleID: document.profiles[0].bundleID,
+                sourceProfile: document.profiles[0],
+                unsupportedSemanticIDs: []
+            )
+        ])
+        seed(
+            profiles: [oldProfile],
+            active: oldID,
+            schedules: [oldSchedule],
+            sidecar: oldSidecar,
+            blocked: [oldID]
+        )
+        let prior = fiveKeyState()
+
+        let importedIDs = [uuid(111), uuid(112)]
+        let transaction = makeTransaction(
+            profileIDs: importedIDs,
+            scheduleIDs: [uuid(211)]
+        )
+        let result = try transaction.apply(
+            SharedSetupV2Mapper.preview(document, registry: fixtureRegistry()),
+            selectedBundleIDs: ["profile-003", "profile-001"],
+            mode: .replace
+        )
+
+        XCTAssertEqual(try storedProfiles().map(\.id), importedIDs)
+        XCTAssertEqual(try storedProfiles().map(\.name), ["Summary", "Archive Only"])
+        XCTAssertEqual(result.activeProfileID, importedIDs[0], "source active was not selected")
+        XCTAssertEqual(storedActiveID(), importedIDs[0])
+        XCTAssertEqual(try storedSchedules().map(\.profileID), [importedIDs[1]])
+        XCTAssertEqual(try storedBlockedIDs(), importedIDs)
+        XCTAssertNotEqual(fiveKeyState(), prior)
+        XCTAssertTrue(transaction.canUndo)
+
+        _ = try transaction.undo()
+
+        XCTAssertEqual(fiveKeyState(), prior, "Undo restores exact prior bytes and absence")
+        XCTAssertFalse(transaction.canUndo)
+        XCTAssertThrowsError(try transaction.undo()) { error in
+            XCTAssertEqual(error as? SharedSetupV2TransactionError, .noUndoSnapshot)
+        }
+    }
+
+    func testSelectionFailuresAndFailedVerifiedApplyPerformNoMutationAndPreservePreviousUndo() throws {
+        let oldID = uuid(20)
+        seed(
+            profiles: [ExportProfile(
+                id: oldID,
+                name: "Old",
+                settings: nativeSnapshot(filename: "old-{date}"),
+                target: .localIPhoneFolder
+            )],
+            active: oldID,
+            schedules: []
+        )
+        let plan = try applePlan()
+        let baseline = defaults.dictionaryRepresentation() as NSDictionary
+        let normal = makeTransaction(profileIDs: [uuid(121)], scheduleIDs: [])
+
+        for selection in [[], ["profile-001", "profile-001"], ["profile-999"]] {
+            XCTAssertThrowsError(try normal.apply(
+                plan,
+                selectedBundleIDs: selection,
+                mode: .replace
+            ))
+            XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, baseline)
+        }
+
+        let previousUndo = Data("previous-v2-undo".utf8)
+        defaults.set(previousUndo, forKey: SharedSetupV2ProfileTransaction.undoKey)
+        let beforeFailedApply = defaults.dictionaryRepresentation() as NSDictionary
+        let failing = makeTransaction(
+            profileIDs: [uuid(122)],
+            scheduleIDs: [],
+            verificationOverride: { false }
+        )
+
+        XCTAssertThrowsError(try failing.apply(
+            plan,
+            selectedBundleIDs: ["profile-001"],
+            mode: .replace
+        )) { error in
+            XCTAssertEqual(
+                error as? SharedSetupV2TransactionError,
+                .persistenceVerificationFailed
+            )
+        }
+        XCTAssertEqual(
+            defaults.dictionaryRepresentation() as NSDictionary,
+            beforeFailedApply,
+            "verified rollback restores every value, including the prior Undo bytes"
+        )
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey),
+            previousUndo
+        )
+    }
+
+    func testGateRequiresTypedLocalConfirmationKeepsCloudBlockedAndFailsClosedOnCorruption() throws {
+        var document = try appleDocument()
+        document.profiles[3].destination = .init(kind: .cloud, apiEndpoint: nil)
+        let plan = SharedSetupV2Mapper.preview(document, registry: fixtureRegistry())
+        let importedIDs = [uuid(131), uuid(132), uuid(133), uuid(134)]
+        let transaction = makeTransaction(
+            profileIDs: importedIDs,
+            scheduleIDs: [uuid(231), uuid(232), uuid(233)]
+        )
+        _ = try transaction.apply(
+            plan,
+            selectedBundleIDs: document.profiles.map(\.bundleID),
+            mode: .replace
+        )
+        let gate = SharedSetupV2ExecutionGate(userDefaults: defaults)
+        XCTAssertTrue(importedIDs.allSatisfy { gate.isExecutionBlocked(profileID: $0) })
+
+        XCTAssertThrowsError(try gate.confirmRebind(
+            profileID: importedIDs[0],
+            confirmation: .apiEndpoint(endpointID: uuid(300), credentialsConfirmed: true)
+        ))
+        XCTAssertTrue(gate.isExecutionBlocked(profileID: importedIDs[0]))
+        XCTAssertTrue(try gate.confirmRebind(
+            profileID: importedIDs[0],
+            confirmation: .deviceFolder(destinationID: uuid(301))
+        ))
+        XCTAssertFalse(gate.isExecutionBlocked(profileID: importedIDs[0]))
+
+        XCTAssertThrowsError(try gate.confirmRebind(
+            profileID: importedIDs[1],
+            confirmation: .connectedMac(pairingConfirmed: false)
+        ))
+        XCTAssertTrue(try gate.confirmRebind(
+            profileID: importedIDs[1],
+            confirmation: .connectedMac(pairingConfirmed: true)
+        ))
+
+        XCTAssertThrowsError(try gate.confirmRebind(
+            profileID: importedIDs[2],
+            confirmation: .apiEndpoint(endpointID: uuid(302), credentialsConfirmed: false)
+        ))
+        XCTAssertTrue(try gate.confirmRebind(
+            profileID: importedIDs[2],
+            confirmation: .apiEndpoint(endpointID: uuid(302), credentialsConfirmed: true)
+        ))
+
+        XCTAssertThrowsError(try gate.confirmRebind(
+            profileID: importedIDs[3],
+            confirmation: .deviceFolder(destinationID: uuid(303))
+        )) { error in
+            XCTAssertEqual(error as? SharedSetupV2ExecutionGateError, .cloudUnsupported)
+        }
+        XCTAssertTrue(gate.isExecutionBlocked(profileID: importedIDs[3]))
+        XCTAssertEqual(try storedBlockedIDs(), [importedIDs[3]])
+        XCTAssertEqual(try storedSidecar().profiles.count, 4, "rebind never discards retained intent")
+
+        defaults.set(
+            Data("not-json".utf8),
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        XCTAssertTrue(gate.isExecutionBlocked(profileID: uuid(999)))
+        XCTAssertThrowsError(try gate.requireExecutionAllowed(profileID: uuid(999)))
+    }
+
+    #if os(iOS)
+    func testAppIntentBlockedProfileStopsBeforeDestinationOrExportWork() async throws {
+        let store = ExportProfileStore(userDefaults: defaults)
+        let profile = store.add(
+            name: "Imported",
+            settings: nativeSnapshot(filename: "imported-{date}"),
+            target: .localIPhoneFolder
+        )
+        var events: [String] = []
+        let dependencies = ExportIntentRunner.Dependencies(
+            refreshPurchaseStatus: { events.append("purchase") },
+            canExport: { true },
+            trackExportBlockedByQuota: {},
+            hasVaultAccess: {
+                events.append("vault")
+                return true
+            },
+            requiresVaultReselection: { false },
+            refreshVaultAccess: { events.append("refresh") },
+            withVaultAccess: { operation in await operation() },
+            targetLabel: { "test" },
+            makeSettings: { AdvancedExportSettings() },
+            profileStore: store,
+            isProfileExecutionBlocked: { $0 == profile.id },
+            exportDatesBackground: { _, _ in
+                events.append("export")
+                return ExportOrchestrator.ExportResult(
+                    successCount: 1,
+                    totalCount: 1,
+                    failedDateDetails: []
+                )
+            },
+            recordResult: { _, _, _, _, _, _ in },
+            recordExportUse: {},
+            trackExportSucceeded: { _ in },
+            updateScheduleLastExport: {},
+            pendingExportStore: InMemoryPendingExportStore(),
+            exportNotificationScheduler: InspectableExportNotificationScheduler(),
+            now: Date.init,
+            calendar: .current
+        )
+
+        let outcome = await ExportIntentRunner.run(
+            dates: [Date()],
+            profileName: "Imported",
+            dependencies: dependencies
+        )
+
+        guard case .profileRequiresRebind = outcome else {
+            return XCTFail("Expected blocked profile outcome, got \(outcome)")
+        }
+        XCTAssertEqual(events, [])
+        XCTAssertEqual(
+            ExportIntentRunner.dialog(for: outcome),
+            SharedSetupV2ExecutionGate.blockedExecutionMessage
+        )
+    }
+    #endif
+
+    // MARK: - Helpers
+
+    private func makeTransaction(
+        profileIDs: [UUID],
+        scheduleIDs: [UUID],
+        verificationOverride: (() -> Bool)? = nil
+    ) -> SharedSetupV2ProfileTransaction {
+        var profileIterator = profileIDs.makeIterator()
+        var scheduleIterator = scheduleIDs.makeIterator()
+        return SharedSetupV2ProfileTransaction(
+            userDefaults: defaults,
+            now: { self.fixedDate(2026, 9, 4) },
+            calendar: utcCalendar(),
+            makeProfileID: { profileIterator.next() ?? self.uuid(8_001) },
+            makeScheduleID: { scheduleIterator.next() ?? self.uuid(8_002) },
+            verificationOverride: verificationOverride
+        )
+    }
+
+    private func applePlan() throws -> SharedSetupV2ImportPlan {
+        SharedSetupV2Mapper.preview(try appleDocument(), registry: fixtureRegistry())
+    }
+
+    private func appleDocument() throws -> SharedSetupV2 {
+        try SharedSetupV2Codec.decode(Data(contentsOf: try fixtureURL()))
+    }
+
+    private func fixtureRegistry() -> SharedSetupMetricRegistry {
+        SharedSetupMetricRegistry(
+            version: 1,
+            sha256: "4597c2f197c25e6e6a0ec1976e3b5de930edffa2ca61fd4779d47b465075bae2",
+            semanticToApple: [
+                "active_energy": "active_energy",
+                "blood_pressure_systolic": "blood_pressure_systolic",
+                "heart_rate_avg": "heart_rate_avg",
+                "hrv": "hrv",
+                "sleep_core": "sleep_core",
+                "steps": "steps"
+            ],
+            semanticToAndroid: [
+                "active_energy": "active_calories",
+                "blood_pressure_systolic": "bp_systolic",
+                "heart_rate_avg": "avg_hr",
+                "sleep_core": "sleep_light",
+                "steps": "steps"
+            ],
+            equivalence: [
+                "active_energy": .mappedAlias,
+                "blood_pressure_systolic": .mappedAlias,
+                "heart_rate_avg": .mappedAlias,
+                "hrv": .platformExactOrUnavailable,
+                "sleep_core": .mappedAlias,
+                "steps": .platformExactOrUnavailable
+            ]
+        )
+    }
+
+    private func nativeSnapshot(filename: String) -> ExportSettingsSnapshot {
+        let name = "SharedSetupV2ProfileTransactionTests.Settings.\(UUID().uuidString)"
+        let settingsDefaults = UserDefaults(suiteName: name)!
+        settingsDefaults.removePersistentDomain(forName: name)
+        let settings = AdvancedExportSettings(userDefaults: settingsDefaults)
+        settings.filenameFormat = filename
+        Self.retainedSettings.append(settings)
+        return ExportSettingsSnapshot.from(settings)
+    }
+
+    private func seed(
+        profiles: [ExportProfile],
+        active: UUID?,
+        schedules: [ScheduledExportEntry],
+        sidecar: SharedSetupV2AppleProfileState? = nil,
+        blocked: [UUID]? = nil
+    ) {
+        let encoder = JSONEncoder()
+        defaults.set(
+            try! encoder.encode(profiles),
+            forKey: SharedSetupV2ProfileTransaction.profileListKey
+        )
+        if let active {
+            defaults.set(
+                active.uuidString,
+                forKey: SharedSetupV2ProfileTransaction.activeProfileIDKey
+            )
+        }
+        defaults.set(
+            try! encoder.encode(schedules),
+            forKey: SharedSetupV2ProfileTransaction.scheduledEntriesKey
+        )
+        if let sidecar {
+            defaults.set(
+                try! encoder.encode(sidecar),
+                forKey: SharedSetupV2ProfileTransaction.profileStateKey
+            )
+        }
+        if let blocked {
+            defaults.set(
+                try! SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs(blocked),
+                forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+            )
+        }
+    }
+
+    private func storedProfiles() throws -> [ExportProfile] {
+        try JSONDecoder().decode(
+            [ExportProfile].self,
+            from: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.profileListKey))
+        )
+    }
+
+    private func storedSchedules() throws -> [ScheduledExportEntry] {
+        try JSONDecoder().decode(
+            [ScheduledExportEntry].self,
+            from: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.scheduledEntriesKey))
+        )
+    }
+
+    private func storedSidecar() throws -> SharedSetupV2AppleProfileState {
+        try SharedSetupV2ProfileTransaction.decodeProfileState(
+            XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey))
+        )
+    }
+
+    private func storedBlockedIDs() throws -> [UUID] {
+        try SharedSetupV2ProfileTransaction.decodeBlockedProfileIDs(
+            XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
+        )
+    }
+
+    private func storedActiveID() -> UUID? {
+        defaults.string(forKey: SharedSetupV2ProfileTransaction.activeProfileIDKey)
+            .flatMap(UUID.init(uuidString:))
+    }
+
+    private func fiveKeyState() -> NSDictionary {
+        let keys = [
+            SharedSetupV2ProfileTransaction.profileListKey,
+            SharedSetupV2ProfileTransaction.activeProfileIDKey,
+            SharedSetupV2ProfileTransaction.scheduledEntriesKey,
+            SharedSetupV2ProfileTransaction.profileStateKey,
+            SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        ]
+        return defaults.dictionaryRepresentation().filter { keys.contains($0.key) } as NSDictionary
+    }
+
+    private func fixtureURL() throws -> URL {
+        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while directory.path != "/" {
+            let candidate = directory.appendingPathComponent(
+                "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json"
+            )
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+            directory.deleteLastPathComponent()
+        }
+        throw XCTSkip("Could not locate the Shared Setup v2 Apple fixture")
+    }
+
+    private func uuid(_ value: Int) -> UUID {
+        UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", value))!
+    }
+
+    private func fixedDate(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        utcCalendar().date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
+    private func utcCalendar() -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }
+}
