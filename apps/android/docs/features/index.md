@@ -43,7 +43,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Automation | [API endpoint export](./api-endpoint-export.md) | Send the `healthmd.api_export` envelope to your HTTP(S) endpoint with encrypted auth. | Draft | Medium | `data/export/API*`, [`api-endpoint-export`](../api-endpoint-export.md) |
 | Devices | [Direct CLI](./direct-cli.md) | Pair with the standalone `healthmd` CLI over LAN or Tailscale for computer-side exports. | Draft | Medium | `presentation/directcli/`, [`android-desktop-destination`](../android-desktop-destination.md) |
 | Devices | [Home-screen widgets](./widgets.md) | Glance widgets: Health Summary, Activity, Heart Range, Sleep. | Existing | Medium | `widget/` |
-| Devices | Wear OS companion | Tiles and complications; phone stays authoritative. | Runbook only | Low | [`wear-os-implementation.md`](./wear-os-implementation.md) |
+| Devices | [Wear OS companion](./wear-os.md) | Tiles and complications; phone stays authoritative. | Needs QA (unreleased) | Low | [`wear-os.md`](./wear-os.md) + runbook [`wear-os-implementation.md`](./wear-os-implementation.md) |
 | Reports | [Clinician report](./clinician-report.md) | Turn a date range into one accessible PDF to share with a clinician. | Draft | Medium | `presentation/clinicianreport/` |
 | Purchase | [Lifetime unlock](./lifetime-unlock.md) | 10 free manual export actions; one-time lifetime unlock, no subscription. | Draft | Medium | `presentation/paywall/`, `data/billing/` |
 | Privacy | [Local-first privacy](./privacy-local-first.md) | No Health.md health-data cloud; every destination is user-directed. | Draft | High | README privacy sections, private spools |

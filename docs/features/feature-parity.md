@@ -87,7 +87,7 @@
 | Manual IP / Tailscale | ✅ `manual-ip-sync.md` | 🟡 in `direct-cli.md` | shared | Connect-by-address on both. |
 | CLI-triggered export | ✅ `cli-mac-iphone-export.md` | 🟡 in `direct-cli.md` | shared | Mac app broker on Apple; CLI direct on Android. |
 | Home-screen widgets | ✅ `widgets.md` | ✅ `widgets.md` | shared | Four families each; Android substitutes Steps for Stand Hours (no HC Stand Hours) and excludes lock-screen measurement widgets (no Apple-style redaction). |
-| Watch/wearable | ✅ `watch-app.md` (app + 10 widgets) | 🔧 `wear-os-implementation.md` runbook (tiles + 10 complications) | platform-distinct | watchOS app+widgets vs Wear OS tiles/complications; both phone/watch-authoritative or phone-only sensing. Android docs are a runbook, not a feature page. |
+| Watch/wearable | ✅ `watch-app.md` (app + 10 widgets) | ✅ `wear-os.md` (+ runbook `wear-os-implementation.md`) (tiles + 10 complications) | platform-distinct | watchOS app+widgets vs Wear OS tiles/complications; both phone/watch-authoritative or phone-only sensing. Android page is `needs QA` pending the release gates in its completion audit. |
 | Export progress Live Activity | 🟡 in `scheduled-exports.md`/`widgets.md` | — | apple_only | No Android equivalent (foreground service notification instead — 🟡 in `direct-cli.md`). |
 | Agent/MCP local surfaces | ✅ `agent-local-api.md`, `local-mcp.md`, encrypted store/executor pages | — | apple_only | Loopback agent API and MCP hosting live on the Mac app; CLI/MCP client itself is cross-platform (see CLI inventory rows). |
 
@@ -104,7 +104,7 @@
 
 1. **Android Share My Setup page** — closed 2026-09-05: dedicated page added at `apps/android/docs/features/share-my-setup.md` (status `needs QA`, matching the pre-canonical contract on both platforms).
 2. **Android date-time-units page** — capability exists (`DateFormatPreference`, `unitPreference`); currently folded into format pages. Either fold deliberately into `markdown-export.md`/format content or split a page.
-3. **Android Wear OS feature page** — only a runbook + website guide exist; no user-facing page in the Android tree.
+3. **Android Wear OS feature page** — closed 2026-09-05: dedicated page added at `apps/android/docs/features/wear-os.md` (status `needs QA`; the companion is implemented and emulator-verified but unreleased per its completion audit). Runbook `wear-os-implementation.md` and website `guides/wear-os` remain as maintainer/public companions.
 4. **Android roll-up summaries** — page intentionally absent until the v9 writer ships (`planned`); do not document ahead of the capability.
 5. **Zip export** — Apple-only toggle today; revisit if Android adds zip writing.
 

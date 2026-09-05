@@ -171,8 +171,8 @@
 | Watch app | watchOS | Watch dashboard from health snapshot | `HealthMdWatch/WatchDashboardView.swift` | ✅ `apps/apple/docs/features/watch-app.md` |
 | Watch widgets | watchOS | DailyActivity, Recovery, Steps, MoveEnergy, ExerciseMinutes, StandHours, Sleep, RestingHeartRate, HRV, BloodOxygen | `HealthMdWatchWidgets/WatchHealthWidgets.swift` | ✅ within `watch-app.md` |
 | Android home-screen widgets | Android | Glance: Health Summary, Activity, Heart Range, Sleep; 14-day no-backup snapshot; 7-day charts; permission-revocation pulse; no lock-screen measurement widgets | `widget/` package | ✅ `docs/features/widgets.md` |
-| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os-implementation.md` + website `guides/wear-os` (canonical EN, translations pending) |
-| Wear OS complications | Wear | 10 metric complications (activity, recovery, steps, move, exercise, sleep, RHR, avg HR, HRV, SpO2) | `wear/.../surface/HealthComplications.kt` | ✅ wear docs |
+| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os.md` + runbook `wear-os-implementation.md` + website `guides/wear-os` (canonical EN, translations pending) |
+| Wear OS complications | Wear | 10 metric complications (activity, recovery, steps, move, exercise, sleep, RHR, avg HR, HRV, SpO2) | `wear/.../surface/HealthComplications.kt` | ✅ `wear-os.md` |
 | Wear data layer sync | Wear, Android | Phone-authoritative aggregate transport, diagnostics provider, invalidation | `wear/.../sync/`, `wearable-contract/` | ✅ |
 
 ## 11. Third-party integrations & providers
