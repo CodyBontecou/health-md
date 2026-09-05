@@ -210,7 +210,11 @@ object AgentDataIngestManifestBuilder {
         captureDay: LocalDate,
         physicalFormat: String,
         bytes: ByteArray,
-        mediaType: String,
+        mediaType: String = if (physicalFormat == AgentDataIngestManifest.PHYSICAL_FORMAT_JSON) {
+            MEDIA_TYPE_JSON
+        } else {
+            MEDIA_TYPE_NDJSON
+        },
     ): AgentDataIngestManifest = manifest(
         artifactKind = ArtifactKind.RAW_SNAPSHOT,
         artifactSchema = RAW_SNAPSHOT_SCHEMA,
