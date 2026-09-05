@@ -770,6 +770,8 @@ private class InMemoryAPIExportCredentialStore : APIExportCredentialStore {
         authorization = null
     }
 
+    override suspend fun hasAuthorization(): Boolean = authorization != null
+
     override suspend fun requestHeaders(): List<APIExportRequestHeader> {
         if (failReads) error("secure store unavailable")
         return requestHeadersRaw
