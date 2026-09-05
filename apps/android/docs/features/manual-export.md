@@ -36,7 +36,7 @@ Manual export writes your Health Connect data for a chosen date range to the sel
 
 1. Choose your date range.
 2. Enable Markdown, Obsidian Bases, JSON, and/or CSV.
-3. Adjust filename format, subfolder, folder organization, metadata, grouping, emoji headers, and units as needed.
+3. Adjust filename format, subfolder, folder organization, metadata, grouping, emoji headers, and units as needed — date, time, and unit details in [Date, time, and unit preferences](./date-time-units.md).
 4. Tap **Export** and watch the progress dialog; when it finishes, use **Open folder**, **Open with Files**, or **Open with Obsidian** to jump to the result.
 
 ## Example output

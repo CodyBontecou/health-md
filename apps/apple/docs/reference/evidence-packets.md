@@ -121,7 +121,7 @@ The projector:
 
 Input array order does not affect context ordering, evidence IDs, canonical bytes, or the source digest. The projection contains observations and source limitations only; it does not diagnose, recommend, infer causation, or label a change better or worse.
 
-This projector and compact contract are disposable indexing/derived-view protocols over canonical `healthmd.health_data`; they are not an independent health-data source. The daily export schema remains version **7**, and source objects should be obtained through canonical scoped extraction.
+This projector and compact contract are disposable indexing/derived-view protocols over canonical `healthmd.health_data`; they are not an independent health-data source. The daily export schema remains version **8**, and source objects should be obtained through canonical scoped extraction.
 
 ## Evidence locators
 

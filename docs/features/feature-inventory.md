@@ -141,8 +141,8 @@
 | `healthmd mcp schema` | CLI | Offline fixed tool JSON-Schema catalog | main.rs | ✅ |
 | MCP tool catalog (19 tools) | CLI, macOS | status/doctor/capabilities/metrics; metric_chart (PNG/HTML), sleep_sessions, training_alignment, workouts, coverage, compare_periods, training_evidence; query, evidence_packet; pairing_start/status; export_files + job status/resume/cancel | `healthmd-operations/src/registry.rs`, assets | ✅ reference/generated/automation |
 | Evidence packets / query manifests | macOS, CLI, iOS | `healthmd.evidence_packet` v1, `healthmd.query_request/response/error` v1 paged typed queries | `Shared/Query/*`, `docs/reference/evidence-packets.md` | ✅ `apps/apple/docs/features/evidence-packets.md` (indexed in `apps/apple/docs/features/index.md` Automation rows) |
-| Encrypted query-context store | macOS | AES-256-GCM per-day encrypted local context, Keychain device key | `EncryptedHealthContextStore.swift` | ✅ page exists but missing from features index |
-| Bounded encrypted query executor | macOS | Bounded-memory paged execution over encrypted context | `EncryptedHealthContextQueryExecutor.swift` | ✅ page exists but missing from features index |
+| Encrypted query-context store | macOS | AES-256-GCM per-day encrypted local context, Keychain device key | `EncryptedHealthContextStore.swift` | ✅ `encrypted-query-context-store.md` (indexed) |
+| Bounded encrypted query executor | macOS | Bounded-memory paged execution over encrypted context | `EncryptedHealthContextQueryExecutor.swift` | ✅ `bounded-encrypted-query-executor.md` (indexed) |
 | Bundled CLI distribution | macOS | `healthmd` + `healthmd-mcp` bundled in Mac app; Install for Terminal; Codex/Claude connect; agent skill install | `HealthMdCLI/`, `MacCLIView.swift`, `scripts/healthmd` | ✅ `cli-distribution.md` |
 | Credential helper + OS keychain | CLI | OS credential store integration, credential-helper protocol, supervision probe | `credentials.rs` | 🔧 internal |
 | Remote MCP relay profile | CLI | `RemoteReadOnly` surface profile for remote relay identity | `healthmd-operations/src/model.rs` | 🟡 remote-mcp.md |
@@ -224,7 +224,7 @@
 |---|---|---|---|---|
 | Discord / email feedback / GitHub issues | iOS, macOS | Support section + FeedbackHelper | `SettingsTabView.supportSection` | ✅ `community-feedback.md` |
 | Feature video series roadmap | iOS docs | 14-episode roadmap tied to feature pages | `docs/features/video-series.md` | ✅ |
-| Website public docs | website | 28 doc pages incl. 10 locales (de, es, fr, it, ja, ko, nl, pt-br, zh-hans + en), guides, reference, blog, visualizations, llms.txt | `apps/website/docs-src/src/content/docs/` | ✅ |
+| Website public docs | website | 32 authored doc pages incl. 10 locales (de, es, fr, it, ja, ko, nl, pt-br, zh-hans + en) — every guide authored in all 10 locales; plus canonical-English reference, blog, visualizations, llms.txt | `apps/website/docs-src/src/content/docs/` | ✅ |
 | Release-notes notelet media | iOS | Short in-app release videos/images | `iOS/Resources/ReleaseNotes/` | 🔧 |
 
 ## 16. Shared foundations
@@ -247,7 +247,7 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-- None remaining. (Website follow-up: translate `guides/raw-snapshots` and `guides/wear-os` into the 9 non-English locales and promote them from canonical-English fallback to authored guides. Android follow-up: editorial pass — screenshots, on-device verification, and public-site selection for the 26 new `apps/android/docs/features/` pages drafted 2026-08-22.)
+- None remaining. (Website follow-up closed 2026-09-05: `guides/raw-snapshots`, `guides/wear-os`, `guides/connect-agent`, and `guides/platform-features` are translated into the 9 non-English locales and promoted from canonical-English fallback to authored guides — every guide is authored in all 10 locales. Android follow-up: editorial pass — screenshots, on-device verification, and public-site selection for the 26 new `apps/android/docs/features/` pages drafted 2026-08-22.)
 
 (Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed; six minor Apple surfaces folded into existing pages — configuration protection → `manual-export.md`, zip export → `multi-format-export.md`, exported Markdown viewer → `export-preview.md`, permission guidance → `healthkit-permissions.md`, progress banners → `scheduled-exports.md`, Mac menu-bar popup → `mac-sync.md`; Wear OS and Raw API Snapshot public website guides published as canonical-English fallback pages under `guides/` with sidebar entries in all 10 locale labels, verified by i18n:check, website tests, and a full site build.)
 
