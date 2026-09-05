@@ -2,9 +2,11 @@ mod data_backend;
 mod data_sqlite;
 mod direct_backend;
 mod ingest;
+mod ingest_http;
 
 pub use data_backend::{DataServeOptions, DataStoreOpenError, DirectoryArtifactStore};
 pub use data_sqlite::SqliteArtifactStore;
+pub use ingest_http::{IngestServeError, IngestServeOptions, serve_ingest_gateway};
 
 #[cfg(feature = "streamable-http")]
 pub use healthmd_mcp::transport::streamable_http::{HttpServerError, HttpServerOptions};

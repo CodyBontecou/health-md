@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Add the self-hosted reference ingestion gateway: `healthmd data ingest-serve --database`
+  serves Agent Data ingestion protocol v1 on loopback HTTP/1.1 (`POST /v1/ingest`, one
+  manifest line + exact artifact bytes, `application/x-healthmd-agent-data-ingest`, exact
+  `Content-Length`, `Connection: close`) fronting the same SQLite validation and promotion path
+  as `data ingest`, with byte-identical receipts over HTTP 200, health-free transport errors
+  (413/405/404/415/400/403), a receipt-less close for abandoned bodies, and the same loopback
+  `--bind` (default `127.0.0.1:8791`)/`--allowed-host`/`--allowed-origin` policy as the data HTTP
+  surface, validated before the store opens. One documented surface divergence: an unfinalized
+  partial upload is the retryable `transient` class for the gateway (detected before strict
+  validation) while local `data ingest` keeps `manifest_incomplete`; `record_count` stays strictly
+  informational.
+
 - Add the local Rust half of Agent Data ingestion protocol v1: `healthmd data ingest --database
   --manifest --artifact` validates one manifest-described upload (strict `agent-data-ingest` v1
   grammar, SHA-256 integrity) and promotes accepted bytes atomically into owner-date partitions of

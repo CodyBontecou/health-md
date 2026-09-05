@@ -156,8 +156,72 @@ genuine transient I/O conditions: the artifact file cannot be read as bytes at d
 missing at dispatch, is a directory or special file, or its read fails). The gateway-side reading —
 where an unfinalized, not-yet-complete upload is the transient class — does not apply locally
 because an unfinalized partial manifest already fails the strict manifest grammar and is rejected
-as `manifest_incomplete`. The HTTPS transport mapping (network, timeout, and retry semantics) is
-deliberately left open for the gateway cycle; the four contract codes themselves are stable.
+as `manifest_incomplete`. The gateway transport mapping below documents the one deliberate
+divergence; the four contract codes themselves are stable.
+
+### Self-hosted ingestion gateway (protocol v1 reference)
+
+`healthmd data ingest-serve` is the self-hosted reference gateway for the ingestion protocol's
+HTTPS transport mapping: a loopback HTTP/1.1 listener fronting the same `SQLite` ingestion
+machinery as `data ingest`. The hosted/Cloudflare gateway of a later cycle mirrors this surface.
+
+```bash
+healthmd data ingest-serve \
+  --database /absolute/private/path/agent-data.sqlite
+```
+
+`--bind` (default `127.0.0.1:8791`), `--allowed-host`, and `--allowed-origin` carry the same names
+and validation as the data HTTP surface: the listener binds loopback only, accepts loopback
+`Host` values by default (non-loopback hosts are rejected until allowlisted), and rejects any
+browser `Origin` until explicitly allowlisted — all validated before the database is opened or
+created, and per request before any request logic runs. The reference serves plain HTTP on
+loopback; a hosted deployment terminates TLS in a co-resident reverse proxy in front of this
+listener and never exposes it directly.
+
+Framing: one `POST /v1/ingest` request per upload. The body is exactly one `\n`-terminated
+`healthmd.agent_data_ingest` v1 manifest line followed immediately by the artifact bytes, with
+`Content-Type: application/x-healthmd-agent-data-ingest` and an exact `Content-Length`
+(chunked transfer encoding is rejected in v1). HTTP/1.1 with `Connection: close` per request —
+no keep-alive in the reference. Bodies are bounded to the 64 MiB artifact bound plus 64 KiB of
+framing.
+
+Every validated outcome answers `HTTP 200` with the same `healthmd.agent_ingest_response` v1
+receipt `data ingest` prints; rejections are protocol outcomes, never HTTP error statuses.
+Transport-level failures answer health-free, path-free code+message JSON: an over-bound body →
+`413`, a wrong method → `405`, an unknown path → `404`, a wrong or missing media type → `415`, a
+malformed request (including chunked encoding) → `400`, and an unconfigured `Host` or `Origin` →
+`403` with no body.
+
+The frozen outcome mapping (the normative text lands in
+[`packages/contracts/agent-data/v1/contract.md`](../../../packages/contracts/agent-data/v1/contract.md)):
+
+| Upload shape | Outcome |
+| --- | --- |
+| Connection closes before the full `Content-Length` body arrives | the server simply closes with NO receipt — the phone-side retryable class |
+| Artifact bytes shorter (or longer) than `byte_count` | `truncated` receipt |
+| Bytes SHA-256 ≠ manifest digest | `checksum_invalid` receipt |
+| Manifest unparseable / schema-invalid / unknown fields / grammar violations, except the unfinalized-partial shape | `manifest_incomplete` receipt |
+| Completeness is `partial` and `finalized` is not `true` | `transient` receipt (the gateway reading, detected before strict validation) |
+| Any other server-side read/dispatch failure | `transient` receipt |
+
+**Documented surface divergence.** An unfinalized partial upload is the retryable `transient`
+class for the gateway — the reading of an upload still in progress on the phone — detected before
+strict manifest validation, while local `data ingest` keeps its cycle-2 classification
+(`manifest_incomplete`) because the strict manifest grammar still rejects the shape. This is the
+only divergence between the two surfaces: manifest validation, integrity verification, atomic
+idempotent promotion, and receipts are shared byte-for-byte. `record_count` stays strictly
+informational over the gateway as well: a declared count disagreeing with the stored bytes is
+still accepted.
+
+Retry guidance: treat `transient` receipts and receipt-less connection closes as retryable with
+bounded backoff — an identical manifest+bytes re-upload is idempotent and returns a byte-identical
+receipt — and do not re-send after `truncated` or `checksum_invalid` without new bytes. The
+gateway opens (or creates) and migrates the same `SQLite` store at startup and fronts the same
+per-request validation and promotion path; verified bytes are spooled to a private temporary
+file during promotion so recognition is byte-identical with `data import`, and the store stays
+servable with `serve-data --database`. The concurrency model is a std thread-per-connection
+accept loop with one `Connection: close` request per connection — deliberately minimal for the
+reference; hosted deployment, accounts, OAuth, and TLS termination are later cycles.
 
 Promotion into the SQLite store is a single atomic transaction reusing the import machinery:
 exact artifact bytes plus indexing metadata are inserted once per SHA-256 identity, so re-ingesting
@@ -180,8 +244,9 @@ revision's completeness; it never downgrades. Authority flips are recorded as su
 bookkeeping (`ingest-partition:<owner_date>` observations) and, like directory supersessions,
 never delete anything: retention stays user-controlled and deferred.
 
-The phone-to-gateway HTTPS transport, accounts, and hosted gateway stores are not implemented by
-this command; they remain later cycles per the contract.
+The hosted gateway store, accounts, and the public HTTPS endpoint remain later cycles per the
+contract; `data ingest-serve` above is the self-hosted reference realization of the transport
+mapping.
 ## Transports
 
 `stdio` is the default transport and stays byte-identical: one JSON-RPC 2.0 document per
