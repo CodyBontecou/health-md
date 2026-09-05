@@ -12,7 +12,7 @@ use std::{
 };
 
 use chrono::{Duration as ChronoDuration, Local, SecondsFormat, Timelike as _, Utc};
-use clap::{Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
+use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
 use healthmd_cli::{
     mcp, onboarding,
     pairing::{LocalAddress, local_ipv4_addresses, pairing_link, preferred_pairing_address},
@@ -135,10 +135,42 @@ enum Command {
     Cancel(JobArgs),
     /// Pair and manage direct mobile trust.
     Direct(DirectArgs),
+    /// Import recognized export artifacts into a Health.md-owned local store.
+    Data(DataArgs),
     /// Serve Health.md's fixed Model Context Protocol surface.
     Mcp(McpArgs),
     /// Configure a supported local AI host and pair the iPhone when needed.
     Setup(SetupArgs),
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "DISCOVERY:\n  Run `healthmd data` without a subcommand to list local Agent Data store commands.\n  No file is read or written in discovery mode."
+)]
+struct DataArgs {
+    #[command(subcommand)]
+    command: Option<DataCommand>,
+}
+
+#[derive(Debug, Subcommand)]
+enum DataCommand {
+    /// Ingest recognized export artifacts into a Health.md-owned SQLite Agent Data database.
+    Import(DataImportArgs),
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd data import --database /absolute/private/agent-data.sqlite --directory /absolute/path/to/healthmd-exports\n\nThe import is idempotent and non-destructive: identical artifact bytes are never duplicated\nand no stored payload is deleted. Superseded artifacts stay recorded for user-controlled\nretention. Serve the database afterwards with `healthmd mcp serve-data --database ...`."
+)]
+struct DataImportArgs {
+    /// Absolute path of the SQLite Agent Data database to create or extend. Must live outside
+    /// the import directory.
+    #[arg(long)]
+    database: PathBuf,
+
+    /// Absolute directory of immutable Health.md JSON or NDJSON exports to ingest.
+    #[arg(long)]
+    directory: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -186,16 +218,27 @@ struct McpServeArgs {
 }
 
 #[derive(Debug, Args)]
+#[command(group(
+    ArgGroup::new("data_backing")
+        .required(true)
+        .multiple(false)
+        .args(&["directory", "database"]),
+))]
 struct McpServeDataArgs {
     /// Existing absolute directory containing immutable Health.md JSON or NDJSON exports.
     #[arg(long)]
-    directory: PathBuf,
+    directory: Option<PathBuf>,
 
-    /// Absolute path to a version-1 Agent Data grant JSON file outside the export directory.
+    /// Existing absolute SQLite Agent Data database created with `healthmd data import`.
+    #[arg(long)]
+    database: Option<PathBuf>,
+
+    /// Absolute path to a version-1 Agent Data grant JSON file outside the backing store.
     #[arg(long)]
     grant: PathBuf,
 
     /// Optional absolute path for the rebuildable private index, outside the export directory.
+    /// Applies only to `--directory` backing; enforced with `--database` in the dispatcher.
     #[arg(long)]
     index: Option<PathBuf>,
 }
@@ -709,12 +752,33 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
         command: Some(McpCommand::ServeData(options)),
     }) = &cli.command
     {
-        let result = mcp::serve_data(mcp::DataServeOptions {
-            directory: options.directory.clone(),
-            grant: options.grant.clone(),
-            index: options.index.clone(),
-        })
-        .await;
+        let backing = match (
+            options.directory.clone(),
+            options.database.clone(),
+        ) {
+            (Some(directory), None) => mcp::DataServeOptions::Directory {
+                directory,
+                grant: options.grant.clone(),
+                index: options.index.clone(),
+            },
+            (None, Some(database)) if options.index.is_none() => mcp::DataServeOptions::Database {
+                database,
+                grant: options.grant.clone(),
+            },
+            (None, Some(_)) => {
+                eprintln!(
+                    "healthmd: --index applies only to --directory backing; the database store owns its index internally"
+                );
+                return ExitCode::from(2);
+            }
+            _ => {
+                eprintln!(
+                    "healthmd: mcp serve-data requires exactly one of --directory or --database"
+                );
+                return ExitCode::from(2);
+            }
+        };
+        let result = mcp::serve_data(backing).await;
         if let Err(error) = result {
             eprintln!("healthmd: {error}");
             return ExitCode::from(1);
@@ -864,6 +928,11 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         Command::Direct(DirectArgs {
             command: Some(DirectCommand::ResetTrust { confirm }),
         }) => direct_reset_trust(confirm).await.map(CommandSuccess::json),
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Import(options)),
+        }) if backend == Backend::Direct => data_import(options)
+            .await
+            .map(CommandSuccess::json),
         Command::Setup(SetupArgs {
             command: Some(SetupCommand::Codex(options)),
         }) if backend == Backend::Direct => setup_codex(options, device, port)
@@ -929,6 +998,7 @@ fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
         Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume(backend)),
         Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel(backend)),
         Command::Direct(DirectArgs { command: None }) => Some(guidance::group(backend, "direct")),
+        Command::Data(DataArgs { command: None }) => Some(guidance::group(backend, "data")),
         Command::Direct(DirectArgs {
             command: Some(DirectCommand::Unpair { device_id: None }),
         }) => Some(guidance::unpair(backend)),
@@ -968,6 +1038,16 @@ fn mcp_schema(options: &McpSchemaArgs) -> Result<Value, CommandError> {
         message: "The requested fixed MCP tool is unavailable. Run `healthmd mcp schema` (or `healthmd mcp schema --data`) to list the supported tools."
             .into(),
     })
+}
+
+async fn data_import(options: DataImportArgs) -> Result<Value, CommandError> {
+    mcp::import_data(options.database, options.directory)
+        .await
+        .map_err(|error| CommandError {
+            backend: "data",
+            code: "data_import_failed",
+            message: error.to_string(),
+        })
 }
 
 fn validate_platform_options(cli: &Cli) -> Result<(), CommandError> {
@@ -2496,6 +2576,10 @@ const fn command_name(command: &Command) -> &'static str {
             command: Some(DirectCommand::ResetTrust { .. }),
         }) => "direct reset-trust",
         Command::Direct(DirectArgs { command: None }) => "direct",
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Import(_)),
+        }) => "data import",
+        Command::Data(DataArgs { command: None }) => "data",
         Command::Mcp(McpArgs {
             command: Some(McpCommand::Serve(_)),
         }) => "mcp serve",
@@ -2900,8 +2984,75 @@ mod tests {
         else {
             panic!("expected data MCP serve command");
         };
-        assert_eq!(options.directory, PathBuf::from("/tmp/healthmd-exports"));
+        assert_eq!(options.directory.as_deref(), Some(Path::new("/tmp/healthmd-exports")));
+        assert_eq!(options.database, None);
         assert_eq!(options.grant, PathBuf::from("/tmp/healthmd-grant.json"));
+        assert_eq!(options.index.as_deref(), Some(Path::new("/tmp/healthmd-index.json")));
+
+        let database = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-data",
+            "--database",
+            "/tmp/healthmd-agent-data.sqlite",
+            "--grant",
+            "/tmp/healthmd-grant.json",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(options)),
+        }) = database.command
+        else {
+            panic!("expected database MCP serve command");
+        };
+        assert_eq!(options.directory, None);
+        assert_eq!(
+            options.database.as_deref(),
+            Some(Path::new("/tmp/healthmd-agent-data.sqlite"))
+        );
+
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--database",
+                "/tmp/db.sqlite",
+                "--directory",
+                "/tmp/exports",
+                "--grant",
+                "/tmp/grant.json"
+            ])
+            .is_err(),
+            "--database and --directory must be mutually exclusive"
+        );
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--grant",
+                "/tmp/grant.json"
+            ])
+            .is_err(),
+            "exactly one backing store argument is required"
+        );
+        // Parse succeeds; the dispatcher rejects --index with --database at runtime with a
+        // health-free message (covered end-to-end in tests/agent_data_sqlite.rs).
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--database",
+                "/tmp/db.sqlite",
+                "--grant",
+                "/tmp/grant.json",
+                "--index",
+                "/tmp/index.json"
+            ])
+            .is_ok()
+        );
 
         let schema = Cli::try_parse_from([
             "healthmd",
@@ -2919,6 +3070,36 @@ mod tests {
         };
         assert!(options.data);
         assert_eq!(options.tool.as_deref(), Some("healthmd_data_catalog"));
+    }
+
+    #[test]
+    fn data_import_command_parses() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "data",
+            "import",
+            "--database",
+            "/tmp/healthmd-agent-data.sqlite",
+            "--directory",
+            "/tmp/healthmd-exports",
+        ])
+        .unwrap();
+        let Command::Data(DataArgs {
+            command: Some(DataCommand::Import(options)),
+        }) = parsed.command
+        else {
+            panic!("expected data import command");
+        };
+        assert_eq!(
+            options.database,
+            PathBuf::from("/tmp/healthmd-agent-data.sqlite")
+        );
+        assert_eq!(options.directory, PathBuf::from("/tmp/healthmd-exports"));
+
+        let discovery = Cli::try_parse_from(["healthmd", "data"]).unwrap();
+        let Command::Data(DataArgs { command: None }) = discovery.command else {
+            panic!("expected data discovery command");
+        };
     }
 
     #[cfg(not(feature = "streamable-http"))]
