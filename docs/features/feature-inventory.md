@@ -140,7 +140,7 @@
 | `healthmd mcp serve-http` | CLI | Loopback Streamable HTTP with Host/Origin allowlists + optional OAuth resource server (JWT/JWKS) | `transport/streamable_http.rs`, `auth/jwt.rs` | ✅ `remote-mcp.md` |
 | `healthmd mcp schema` | CLI | Offline fixed tool JSON-Schema catalog | main.rs | ✅ |
 | MCP tool catalog (19 tools) | CLI, macOS | status/doctor/capabilities/metrics; metric_chart (PNG/HTML), sleep_sessions, training_alignment, workouts, coverage, compare_periods, training_evidence; query, evidence_packet; pairing_start/status; export_files + job status/resume/cancel | `healthmd-operations/src/registry.rs`, assets | ✅ reference/generated/automation |
-| Evidence packets / query manifests | macOS, CLI, iOS | `healthmd.evidence_packet` v1, `healthmd.query_request/response/error` v1 paged typed queries | `Shared/Query/*`, `docs/reference/evidence-packets.md` | 🟡 reference docs only (not in features index) |
+| Evidence packets / query manifests | macOS, CLI, iOS | `healthmd.evidence_packet` v1, `healthmd.query_request/response/error` v1 paged typed queries | `Shared/Query/*`, `docs/reference/evidence-packets.md` | ✅ `apps/apple/docs/features/evidence-packets.md` (indexed in `apps/apple/docs/features/index.md` Automation rows) |
 | Encrypted query-context store | macOS | AES-256-GCM per-day encrypted local context, Keychain device key | `EncryptedHealthContextStore.swift` | ✅ page exists but missing from features index |
 | Bounded encrypted query executor | macOS | Bounded-memory paged execution over encrypted context | `EncryptedHealthContextQueryExecutor.swift` | ✅ page exists but missing from features index |
 | Bundled CLI distribution | macOS | `healthmd` + `healthmd-mcp` bundled in Mac app; Install for Terminal; Codex/Claude connect; agent skill install | `HealthMdCLI/`, `MacCLIView.swift`, `scripts/healthmd` | ✅ `cli-distribution.md` |
@@ -253,7 +253,7 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 
 ### C. Docs-only / weakly-mapped surfaces
 - None fully orphaned. `bounded-encrypted-query-executor.md` and `encrypted-query-context-store.md` have thin user-facing UI (Mac settings maintenance buttons) and read as contract docs — consider moving to `docs/reference/` or reframing.
-- Query manifests / evidence packets have reference docs but no feature-page framing.
+- Query manifests / evidence packets: feature-page framing closed 2026-09-05 — dedicated page `apps/apple/docs/features/evidence-packets.md` drafted and indexed (§8 row flipped ✅).
 
 ### D. Cross-platform parity flags (from `product-capabilities.json` + ledgers)
 - Range/rollup summaries: Apple available, Android planned (v9).

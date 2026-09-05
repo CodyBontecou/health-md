@@ -89,7 +89,7 @@
 | Home-screen widgets | ✅ `widgets.md` | ✅ `widgets.md` | shared | Four families each; Android substitutes Steps for Stand Hours (no HC Stand Hours) and excludes lock-screen measurement widgets (no Apple-style redaction). |
 | Watch/wearable | ✅ `watch-app.md` (app + 10 widgets) | ✅ `wear-os.md` (+ runbook `wear-os-implementation.md`) (tiles + 10 complications) | platform-distinct | watchOS app+widgets vs Wear OS tiles/complications; both phone/watch-authoritative or phone-only sensing. Android page is `needs QA` pending the release gates in its completion audit. |
 | Export progress Live Activity | 🟡 in `scheduled-exports.md`/`widgets.md` | — | apple_only | No Android equivalent (foreground service notification instead — 🟡 in `direct-cli.md`). |
-| Agent/MCP local surfaces | ✅ `agent-local-api.md`, `local-mcp.md`, encrypted store/executor pages | — | apple_only | Loopback agent API and MCP hosting live on the Mac app; CLI/MCP client itself is cross-platform (see CLI inventory rows). |
+| Agent/MCP local surfaces | ✅ `agent-local-api.md`, `local-mcp.md`, `evidence-packets.md`, encrypted store/executor pages | — | apple_only | Loopback agent API and MCP hosting live on the Mac app; CLI/MCP client itself is cross-platform (see CLI inventory rows). |
 
 ## Reports, purchase, privacy
 
