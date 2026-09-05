@@ -208,8 +208,8 @@ enum McpCommand {
     Serve(McpServeArgs),
     /// Serve only readiness and typed-query tools over local stdio, without pairing or exports.
     ServeReadOnly(McpServeArgs),
-    /// Serve authorized records from a read-only local Health.md export directory.
-    ServeData(McpServeDataArgs),
+    /// Serve authorized records from a read-only local Agent Data store backing.
+    ServeData(Box<McpServeDataArgs>),
     /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
     #[cfg(feature = "streamable-http")]
     ServeHttp(Box<McpServeHttpArgs>),
