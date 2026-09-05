@@ -22,8 +22,17 @@ sealed interface SharedSetupUiState {
     data class Idle(val pendingEndpoint: String? = null) : SharedSetupUiState
     data object Loading : SharedSetupUiState
     data class Review(val preview: SharedSetupPreview) : SharedSetupUiState
+    /** Real v2 multi-profile review state; v2 is never flattened into the v1 review model. */
+    data class ReviewV2(val plan: SharedSetupV2ImportPlan) : SharedSetupUiState
     data class Success(val result: SharedSetupApplyResult, val pendingEndpoint: String?) : SharedSetupUiState
     data class Error(val message: String) : SharedSetupUiState
+}
+
+/** Honest per-profile folder-rebind progress for the v2 review screen. */
+sealed interface SharedSetupV2RebindState {
+    data object Idle : SharedSetupV2RebindState
+    data object Rebinding : SharedSetupV2RebindState
+    data class Failed(val message: String) : SharedSetupV2RebindState
 }
 
 @HiltViewModel
@@ -32,6 +41,7 @@ class SharedSetupViewModel @Inject constructor(
     private val documentStore: SharedSetupDocumentStore,
     private val coordinator: SharedSetupCoordinator,
     private val savedStateHandle: SavedStateHandle,
+    private val v2Production: SharedSetupV2ProductionTransaction,
 ) : ViewModel() {
     companion object {
         private const val PENDING_SHARE_ARTIFACT_ID = "sharedSetup.pendingShareArtifactID"
@@ -44,8 +54,6 @@ class SharedSetupViewModel @Inject constructor(
         private const val PHASE_SUCCESS = "success"
         private const val PHASE_V2_REVIEW = "v2_review"
         private const val PHASE_V2_SUCCESS = "v2_success"
-        private const val V2_DEFERRED_UI_MESSAGE =
-            "Shared Setup v2 is ready for multi-profile selection, but Add/Replace is not enabled in this screen yet."
     }
 
     private val shareLaunchMutex = Mutex()
@@ -59,6 +67,17 @@ class SharedSetupViewModel @Inject constructor(
         MutableStateFlow<SharedSetupV2TransactionState>(SharedSetupV2TransactionState.Idle)
     val v2TransactionState: StateFlow<SharedSetupV2TransactionState> =
         mutableV2TransactionState.asStateFlow()
+
+    /** Blocked imported profiles after an apply; null when not loaded or unreadable. */
+    private val mutableV2BlockedProfiles =
+        MutableStateFlow<List<SharedSetupV2BlockedImportedProfile>?>(null)
+    val v2BlockedProfiles: StateFlow<List<SharedSetupV2BlockedImportedProfile>?> =
+        mutableV2BlockedProfiles.asStateFlow()
+
+    private val mutableV2RebindState =
+        MutableStateFlow<SharedSetupV2RebindState>(SharedSetupV2RebindState.Idle)
+    val v2RebindState: StateFlow<SharedSetupV2RebindState> =
+        mutableV2RebindState.asStateFlow()
 
     init {
         val restoredBytes = savedStateHandle.get<ByteArray>(RESTORABLE_DOCUMENT_BYTES)
@@ -101,6 +120,20 @@ class SharedSetupViewModel @Inject constructor(
                     } else {
                         preview(requireNotNull(bytes), requestID)
                     }
+                }
+            }
+        }
+        viewModelScope.launch {
+            v2TransactionState.collect { state ->
+                when (state) {
+                    is SharedSetupV2TransactionState.Applied -> refreshBlockedImportedProfiles()
+                    is SharedSetupV2TransactionState.Undone,
+                    SharedSetupV2TransactionState.Idle,
+                    -> {
+                        mutableV2BlockedProfiles.value = null
+                        mutableV2RebindState.value = SharedSetupV2RebindState.Idle
+                    }
+                    else -> Unit
                 }
             }
         }
@@ -255,6 +288,11 @@ class SharedSetupViewModel @Inject constructor(
         }
     }
 
+    /** Production v2 apply through the injected transaction adapter. */
+    fun applyV2(selectedBundleIds: List<String>, mode: SharedSetupV2ApplyMode) {
+        applyV2(selectedBundleIds, mode, v2Production)
+    }
+
     /** Explicit v2 one-shot Undo seam; no default production callback exists in this lane. */
     fun undoV2(callback: SharedSetupV2UndoCallback) {
         viewModelScope.launch {
@@ -263,6 +301,10 @@ class SharedSetupViewModel @Inject constructor(
                 .onSuccess { result ->
                     clearRestorableImport()
                     mutableV2TransactionState.value = SharedSetupV2TransactionState.Undone(result)
+                    if (mutableState.value is SharedSetupUiState.ReviewV2) {
+                        // Keep the v2 review screen so the honest undone result stays visible.
+                        return@onSuccess
+                    }
                     mutableState.value = SharedSetupUiState.Idle()
                     refreshPendingEndpointIfIdle(force = true)
                 }
@@ -270,6 +312,55 @@ class SharedSetupViewModel @Inject constructor(
                     mutableV2TransactionState.value =
                         SharedSetupV2TransactionState.Error(it.safeMessage())
                 }
+        }
+    }
+
+    /** Production v2 one-shot Undo through the injected transaction adapter. */
+    fun undoV2() {
+        undoV2(v2Production)
+    }
+
+    /** Returns to selection after a failed apply/undo without discarding the reviewed plan. */
+    fun resetV2TransactionState() {
+        mutableV2TransactionState.value = SharedSetupV2TransactionState.Idle
+    }
+
+    /**
+     * Explicit local folder rebind for one blocked imported profile using the existing
+     * blocked-state/rebind-clearing APIs in the production adapter. Refreshes blocked
+     * visibility honestly whether or not the rebind cleared the block.
+     */
+    fun rebindBlockedProfileFolder(profileId: String, uri: Uri, displayName: String?) {
+        viewModelScope.launch {
+            mutableV2RebindState.value = SharedSetupV2RebindState.Rebinding
+            runCatching { v2Production.rebindBlockedFolder(profileId, uri.toString(), displayName) }
+                .onSuccess { rebound ->
+                    if (rebound) {
+                        mutableV2RebindState.value = SharedSetupV2RebindState.Idle
+                    } else {
+                        mutableV2RebindState.value = SharedSetupV2RebindState.Failed(
+                            "The selected folder did not clear this profile’s pending destination state.",
+                        )
+                    }
+                    refreshBlockedImportedProfiles()
+                }
+                .onFailure {
+                    mutableV2RebindState.value = SharedSetupV2RebindState.Failed(it.safeMessage())
+                    refreshBlockedImportedProfiles()
+                }
+        }
+    }
+
+    fun dismissRebindFailure() {
+        mutableV2RebindState.value = SharedSetupV2RebindState.Idle
+    }
+
+    private fun refreshBlockedImportedProfiles() {
+        viewModelScope.launch {
+            // Null keeps the generic pending-destination notice when the sidecar is unreadable.
+            mutableV2BlockedProfiles.value = runCatching {
+                v2Production.blockedImportedProfiles()
+            }.getOrNull()
         }
     }
 
@@ -302,6 +393,8 @@ class SharedSetupViewModel @Inject constructor(
         previewRequestIDs.incrementAndGet()
         clearRestorableImport()
         mutableV2TransactionState.value = SharedSetupV2TransactionState.Idle
+        mutableV2BlockedProfiles.value = null
+        mutableV2RebindState.value = SharedSetupV2RebindState.Idle
         mutableState.value = SharedSetupUiState.Idle()
         refreshPendingEndpointIfIdle(force = true)
     }
@@ -383,9 +476,9 @@ class SharedSetupViewModel @Inject constructor(
                 } else {
                     SharedSetupV2TransactionState.Idle
                 }
-                // The existing screen is intentionally v1-only. Expose the typed plan through
-                // versionedPreview without pretending that one v2 profile represents the bundle.
-                mutableState.value = SharedSetupUiState.Error(V2_DEFERRED_UI_MESSAGE)
+                // The typed plan drives the real multi-profile selection screen; v2 is never
+                // flattened into the single-profile v1 review.
+                mutableState.value = SharedSetupUiState.ReviewV2(preview.plan)
             }
         }
     }
@@ -412,8 +505,7 @@ class SharedSetupViewModel @Inject constructor(
                 mutableV2TransactionState.value = SharedSetupV2TransactionState.Idle
                 mutableState.value = when (preview) {
                     is SharedSetupVersionedPreview.V1 -> SharedSetupUiState.Review(preview.preview)
-                    is SharedSetupVersionedPreview.V2 ->
-                        SharedSetupUiState.Error(V2_DEFERRED_UI_MESSAGE)
+                    is SharedSetupVersionedPreview.V2 -> SharedSetupUiState.ReviewV2(preview.plan)
                 }
             }
             .onFailure {
