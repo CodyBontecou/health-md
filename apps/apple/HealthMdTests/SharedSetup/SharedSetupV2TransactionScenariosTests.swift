@@ -145,36 +145,8 @@ final class SharedSetupV2TransactionScenariosTests: XCTestCase {
         return try SharedSetupV2Codec.decode(data)
     }
 
-    private func scenarioPlan(document: SharedSetupV2? = nil) throws -> SharedSetupV2ImportPlan {
-        SharedSetupV2Mapper.preview(try document ?? scenarioDocument(), registry: scenarioRegistry())
-    }
-
-    /// DIAGNOSTIC ONLY (not conformance-green): Apple's production validator currently
-    /// rejects the frozen scenario source document because its `future.recovery_score`
-    /// metric-alias row is unavailable on BOTH platforms (`platform_distinct` with two
-    /// null selection IDs), which the authoritative shared validator accepts. The frozen
-    /// scenario tests above stay red against that mismatch. This probe adjusts exactly
-    /// that one alias field so the transaction-level scenario semantics can still be
-    /// exercised and reported on Apple; per-profile source DTOs are untouched, so the
-    /// frozen expected sidecar rows remain byte-comparable.
-    private func diagnosticScenarioDocument() throws -> SharedSetupV2 {
-        let frozen = try dict("source_document")
-        let mutable = try JSONSerialization.jsonObject(
-            with: try JSONSerialization.data(withJSONObject: frozen),
-            options: [.mutableContainers]
-        )
-        let root = try XCTUnwrap(mutable as? NSMutableDictionary)
-        let aliases = try XCTUnwrap(root["metric_aliases"] as? NSMutableArray)
-        var adjusted = 0
-        for case let row as NSMutableDictionary in aliases {
-            if (row["semantic_id"] as? String) == "future.recovery_score" {
-                row["android_selection_id"] = "future_recovery_score"
-                adjusted += 1
-            }
-        }
-        XCTAssertEqual(adjusted, 1, "exactly the both-null alias row is adjusted")
-        let data = try JSONSerialization.data(withJSONObject: root)
-        return try SharedSetupV2Codec.decode(data)
+    private func scenarioPlan() throws -> SharedSetupV2ImportPlan {
+        SharedSetupV2Mapper.preview(try scenarioDocument(), registry: scenarioRegistry())
     }
 
     // MARK: - Scenario-driven seeding of the existing native state
@@ -351,17 +323,14 @@ final class SharedSetupV2TransactionScenariosTests: XCTestCase {
         )
     }
 
-    private func assertBlockedAndSidecarMatchExpectedState(
-        _ stateName: String,
-        document: SharedSetupV2? = nil
-    ) throws {
+    private func assertBlockedAndSidecarMatchExpectedState(_ stateName: String) throws {
         let state = try dict("expected_\(stateName)")
         let expectedBlocked = try XCTUnwrap(state["blocked_profile_ids"] as? [String])
             .map(nativeID(of:))
         XCTAssertEqual(try storedBlockedIDs(), expectedBlocked)
         XCTAssertNotNil(defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey))
 
-        let sourceDocument = try document ?? scenarioDocument()
+        let sourceDocument = try scenarioDocument()
         let expectedRows = try expectedSidecarRows(in: state)
         let sidecar = try storedSidecar()
         XCTAssertEqual(sidecar.version, 1)
@@ -585,107 +554,6 @@ final class SharedSetupV2TransactionScenariosTests: XCTestCase {
 
         for selection: [String] in [[], ["profile-001", "profile-001"], ["profile-999"], [" "]] {
             XCTAssertThrowsError(try transaction.apply(
-                plan,
-                selectedBundleIDs: selection,
-                mode: .add
-            ))
-            XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, baseline)
-        }
-    }
-
-    /// DIAGNOSTIC ONLY: mirrors the frozen scenario's Add/Replace/rollback/Undo phases
-    /// against the alias-adjusted document described at `diagnosticScenarioDocument()`.
-    /// Expected states, sentinels, and assertions are the frozen fixture's own.
-    func testDiagnosticFrozenScenarioExpectedStatesUnderAppleAdjustedAliasLedger() throws {
-        try requireSentinelMappingMatchesFixture()
-        let document = try diagnosticScenarioDocument()
-        let plan = try scenarioPlan(document: document)
-
-        // Add phase.
-        try seedExistingState()
-        let addResult = try scenarioTransaction().apply(
-            plan,
-            selectedBundleIDs: try strings("caller_selection"),
-            mode: .add
-        )
-        XCTAssertEqual(addResult.importedProfileIDs, [Self.uuid(101), Self.uuid(103)])
-        XCTAssertEqual(addResult.activeProfileID, Self.uuid(2))
-        XCTAssertEqual(try storedSchedules().first, try existingSchedules().first)
-        try assertProfilesMatchExpectedState("add_state")
-        try assertBlockedAndSidecarMatchExpectedState("add_state", document: document)
-        try assertImportedScheduleRowsMatchExpectedState("add_state")
-        try assertLocalEnvironmentUnchanged()
-
-        // The frozen source intent for profile-001 is daily 08:00, weekday 3, lookback 2,
-        // anchored 2025-01-01, with Apple today refresh requested at 6-hour intervals.
-        // Import must keep it disabled while materializing the exact configuration.
-        let imported = try XCTUnwrap(
-            try storedSchedules().first { $0.profileID == Self.uuid(101) }
-        )
-        XCTAssertFalse(imported.isEnabled)
-        XCTAssertEqual(imported.id, Self.uuid(201))
-        XCTAssertEqual(imported.frequency, .daily)
-        XCTAssertEqual(imported.customUnit, .day)
-        XCTAssertEqual(imported.preferredHour, 8)
-        XCTAssertEqual(imported.preferredMinute, 0)
-        XCTAssertEqual(imported.weekday, 3)
-        XCTAssertEqual(imported.lookbackDays, 2)
-        XCTAssertTrue(imported.todayRefreshEnabled)
-        XCTAssertEqual(imported.todayRefreshIntervalHours, 6)
-
-        // Replace phase.
-        try seedExistingState()
-        _ = try scenarioTransaction().apply(
-            plan,
-            selectedBundleIDs: try strings("caller_selection"),
-            mode: .replace
-        )
-        try assertProfilesMatchExpectedState("replace_state")
-        try assertBlockedAndSidecarMatchExpectedState("replace_state", document: document)
-        try assertImportedScheduleRowsMatchExpectedState("replace_state")
-
-        // Verified-rollback phase.
-        try seedExistingState()
-        let priorUndo = Data("previous-v2-undo".utf8)
-        defaults.set(priorUndo, forKey: SharedSetupV2ProfileTransaction.undoKey)
-        let before = fiveKeyState()
-        XCTAssertThrowsError(try scenarioTransaction(verificationOverride: { false }).apply(
-            plan,
-            selectedBundleIDs: try strings("caller_selection"),
-            mode: .add
-        )) { error in
-            XCTAssertEqual(error as? SharedSetupV2TransactionError, .persistenceVerificationFailed)
-        }
-        XCTAssertEqual(fiveKeyState(), before)
-        XCTAssertEqual(
-            defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey),
-            priorUndo
-        )
-        try assertExistingAggregateRestored()
-
-        // One-shot Undo phase.
-        try seedExistingState()
-        let prior = fiveKeyState()
-        let transaction = scenarioTransaction()
-        _ = try transaction.apply(
-            plan,
-            selectedBundleIDs: try strings("caller_selection"),
-            mode: .add
-        )
-        XCTAssertTrue(transaction.canUndo)
-        _ = try transaction.undo()
-        XCTAssertEqual(fiveKeyState(), prior)
-        XCTAssertFalse(transaction.canUndo)
-        XCTAssertThrowsError(try transaction.undo()) { error in
-            XCTAssertEqual(error as? SharedSetupV2TransactionError, .noUndoSnapshot)
-        }
-        try assertExistingAggregateRestored()
-
-        // Invalid selections never write.
-        try seedExistingState()
-        let baseline = defaults.dictionaryRepresentation() as NSDictionary
-        for selection: [String] in [[], ["profile-001", "profile-001"], ["profile-999"], [" "]] {
-            XCTAssertThrowsError(try scenarioTransaction().apply(
                 plan,
                 selectedBundleIDs: selection,
                 mode: .add
