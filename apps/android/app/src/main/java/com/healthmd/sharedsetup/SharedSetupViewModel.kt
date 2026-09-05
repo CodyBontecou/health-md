@@ -38,6 +38,9 @@ sealed interface SharedSetupV2RebindState {
     data object Idle : SharedSetupV2RebindState
     data object Rebinding : SharedSetupV2RebindState
 
+    /** A blocked imported profile's retained API endpoint URL is being confirmed and bound. */
+    data object ConfirmingApiEndpoint : SharedSetupV2RebindState
+
     /** A freshly entered API credential is being verified against a blocked profile. */
     data object ConfirmingApiCredential : SharedSetupV2RebindState
 
@@ -369,16 +372,54 @@ class SharedSetupViewModel @Inject constructor(
     }
 
     /**
+     * In-flow confirmation of the imported API endpoint URL for one blocked imported profile
+     * (v2 review), mirroring the Apple twin's explicit-imported-URL confirmation: the URL the
+     * user confirmed is exactly what the v2 import retained in its bounded sidecar — this
+     * flow never derives, guesses, or accepts a different URL. The trusted repository hook
+     * binds it through the editor-path seam (`apiEndpointUrl` binding plus the re-scoped
+     * settings-snapshot fingerprint identity) in one DataStore edit. The pending-destination
+     * block is NOT cleared here: the existing verified-credential confirmation remains the
+     * single clearing gate, and the binding deliberately persists exactly as an editor detour
+     * would have left it. Fail-closed: a refused binding writes nothing and keeps the block;
+     * failure surfaces honestly.
+     */
+    fun confirmBlockedApiEndpoint(profileId: String) {
+        viewModelScope.launch {
+            mutableV2RebindState.value = SharedSetupV2RebindState.ConfirmingApiEndpoint
+            runCatching {
+                profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(profileId)
+            }
+                .onSuccess { bound ->
+                    mutableV2RebindState.value = if (bound) {
+                        SharedSetupV2RebindState.Idle
+                    } else {
+                        SharedSetupV2RebindState.Failed(
+                            "The imported endpoint URL could not be confirmed for this " +
+                                "profile. It may already be bound to a different endpoint or no " +
+                                "longer match an API import; rebind it in the profile editor " +
+                                "instead.",
+                        )
+                    }
+                    refreshBlockedImportedProfiles()
+                }
+                .onFailure {
+                    mutableV2RebindState.value = SharedSetupV2RebindState.Failed(it.safeMessage())
+                    refreshBlockedImportedProfiles()
+                }
+        }
+    }
+
+    /**
      * In-flow API-credential confirmation for one blocked imported profile (v2 review). The
      * freshly entered credential is persisted through the exact storage seam the v1 pending-
      * endpoint flow uses (`APIExportCredentialStore` behind `confirmPendingEndpoint`): prior
      * secure-store state is captured first and the store is fail-closed when unreadable, then
      * authorization and custom request headers are cleared so no foreign credential can attach
      * to the imported endpoint, the normalized credential is written and verified, and only then
-     * does the trusted repository hook run. When the hook does not clear the block — for example
-     * the profile's endpoint was never locally bound in the editor — the prior secure-store
-     * state is restored (or cleared, fail-closed) and the failure is surfaced honestly; the
-     * block always stays until a verified confirmation clears it.
+     * does the trusted repository hook run. When the hook does not clear the block — for
+     * example the endpoint URL was never confirmed (in-flow or in the profile editor) — the
+     * prior secure-store state is restored (or cleared, fail-closed) and the failure is surfaced
+     * honestly; the block always stays until a verified confirmation clears it.
      */
     fun confirmBlockedApiCredential(profileId: String, authorization: String) {
         viewModelScope.launch {
@@ -390,8 +431,9 @@ class SharedSetupViewModel @Inject constructor(
                     } else {
                         SharedSetupV2RebindState.Failed(
                             "The credential did not clear this profile’s pending destination " +
-                                "state. Confirm the profile’s API endpoint in the profile editor " +
-                                "first, then enter the credential again.",
+                                "state. Confirm the imported endpoint URL for this profile " +
+                                "first, or rebind its API endpoint in the profile editor, then " +
+                                "enter the credential again.",
                         )
                     }
                     refreshBlockedImportedProfiles()

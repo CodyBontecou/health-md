@@ -164,6 +164,7 @@ fun SharedSetupScreen(
                     onApply = viewModel::applyV2,
                     onUndo = viewModel::undoV2,
                     onRebindFolder = viewModel::rebindBlockedProfileFolder,
+                    onConfirmApiEndpoint = viewModel::confirmBlockedApiEndpoint,
                     onConfirmApiCredential = viewModel::confirmBlockedApiCredential,
                     onConfirmMacPairing = viewModel::confirmBlockedMacPairing,
                     onResetTransaction = viewModel::resetV2TransactionState,
@@ -268,6 +269,7 @@ private fun SharedSetupV2Review(
     onApply: (List<String>, SharedSetupV2ApplyMode) -> Unit,
     onUndo: () -> Unit,
     onRebindFolder: (String, Uri, String?) -> Unit,
+    onConfirmApiEndpoint: (String) -> Unit,
     onConfirmApiCredential: (String, String) -> Unit,
     onConfirmMacPairing: (String) -> Unit,
     onResetTransaction: () -> Unit,
@@ -289,6 +291,7 @@ private fun SharedSetupV2Review(
             blockedProfiles = blockedProfiles,
             rebindState = rebindState,
             onRebindFolder = onRebindFolder,
+            onConfirmApiEndpoint = onConfirmApiEndpoint,
             onConfirmApiCredential = onConfirmApiCredential,
             onConfirmMacPairing = onConfirmMacPairing,
             onDismissRebindFailure = onDismissRebindFailure,
@@ -540,6 +543,7 @@ private fun SharedSetupV2Applied(
     blockedProfiles: List<SharedSetupV2BlockedImportedProfile>?,
     rebindState: SharedSetupV2RebindState,
     onRebindFolder: (String, Uri, String?) -> Unit,
+    onConfirmApiEndpoint: (String) -> Unit,
     onConfirmApiCredential: (String, String) -> Unit,
     onConfirmMacPairing: (String) -> Unit,
     onDismissRebindFailure: () -> Unit,
@@ -590,6 +594,7 @@ private fun SharedSetupV2Applied(
     )
     if (
         rebindState == SharedSetupV2RebindState.Rebinding ||
+        rebindState == SharedSetupV2RebindState.ConfirmingApiEndpoint ||
         rebindState == SharedSetupV2RebindState.ConfirmingApiCredential ||
         rebindState == SharedSetupV2RebindState.ConfirmingMacPairing
     ) {
@@ -620,8 +625,10 @@ private fun SharedSetupV2Applied(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.shared_setup_v2_rebind_folder)) }
-                "api_endpoint" -> BlockedApiCredentialConfirmation(
-                    onConfirm = { authorization ->
+                "api_endpoint" -> BlockedApiEndpointRebind(
+                    blocked = blocked,
+                    onConfirmEndpoint = { onConfirmApiEndpoint(blocked.profileId) },
+                    onConfirmCredential = { authorization ->
                         onConfirmApiCredential(blocked.profileId, authorization)
                     },
                 )
@@ -654,6 +661,98 @@ private fun SharedSetupV2Applied(
     Button(onClick = onFinishSetup, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.shared_setup_finish))
     }
+}
+
+/**
+ * In-flow endpoint rebind for one blocked API-endpoint imported profile (v2 review). While the
+ * destination is unbound and the sidecar retains the imported endpoint URL, the row offers an
+ * explicit confirmation of exactly that URL (mirroring the Apple twin's semantics — the app
+ * never guesses or edits the identity); once a local binding exists (in-flow confirmation or
+ * profile editor), the row offers the verified credential entry instead. When the imported
+ * identity was not retained, the row stays honestly blocked and points at the editor.
+ */
+@Composable
+private fun BlockedApiEndpointRebind(
+    blocked: SharedSetupV2BlockedImportedProfile,
+    onConfirmEndpoint: () -> Unit,
+    onConfirmCredential: (String) -> Unit,
+) {
+    val importedUrl = blocked.importedApiEndpointUrl
+    var urlConfirmOpen by remember { mutableStateOf(false) }
+    when {
+        blocked.boundApiEndpointUrl != null -> BlockedApiCredentialConfirmation(onConfirm = onConfirmCredential)
+        importedUrl != null -> {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(
+                    stringResource(R.string.shared_setup_v2_rebind_api_url_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textSecondary,
+                )
+                Text(
+                    importedUrl,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textPrimary,
+                )
+                OutlinedButton(
+                    onClick = { urlConfirmOpen = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.shared_setup_v2_rebind_api_url_action)) }
+            }
+        }
+        else -> Text(
+            stringResource(R.string.shared_setup_v2_rebind_api_unretained),
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textSecondary,
+        )
+    }
+    if (urlConfirmOpen && importedUrl != null) {
+        BlockedApiEndpointUrlConfirmation(
+            url = importedUrl,
+            onConfirm = {
+                urlConfirmOpen = false
+                onConfirmEndpoint()
+            },
+            onDismiss = { urlConfirmOpen = false },
+        )
+    }
+}
+
+/**
+ * Explicit confirmation dialog for one imported API endpoint URL (Apple twin precedent: the
+ * confirmed URL is exactly what the v2 import retained — shown verbatim, never editable).
+ * Confirming binds the endpoint locally through the editor-path seam; canceling keeps the
+ * profile blocked and writes nothing.
+ */
+@Composable
+private fun BlockedApiEndpointUrlConfirmation(
+    url: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.shared_setup_v2_rebind_api_url_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(stringResource(R.string.shared_setup_v2_rebind_api_url_body))
+                Text(
+                    url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textPrimary,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.shared_setup_v2_rebind_api_url_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.shared_setup_cancel))
+            }
+        },
+    )
 }
 
 /**

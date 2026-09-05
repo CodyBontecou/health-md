@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportProfile
@@ -362,6 +363,87 @@ class ExportProfileRepository @Inject constructor(
             }
         }
         return activated
+    }
+
+    /**
+     * Separate trusted hook for the in-flow endpoint-URL confirmation of one blocked imported
+     * profile (Shared Setup v2 review), mirroring the Apple twin's explicit-imported-URL
+     * confirmation. The bound URL is derived exclusively from the bounded sidecar's retained
+     * `api_endpoint` hint — never from caller input — and is bound through the same editor-path
+     * semantics the profile editor produces (see [applyEditorUpdate] and
+     * `ExportProfilesViewModel.endpointBinding`): the profile's [ExportProfile.apiEndpointUrl]
+     * plus its frozen settings snapshot re-scoped to [ExportTarget.API_ENDPOINT] so that
+     * `apiEndpointIdentitySha256` is the [APIExportEndpoint.fingerprint] of exactly that URL.
+     * Every frozen output choice and the frozen engine pin are preserved; only the destination
+     * fields change. An API-scoped snapshot's operation profile is always the frozen v4
+     * profile (`expectedScheduledExportProfile` semantics), so the re-scope pins it.
+     *
+     * This hook NEVER clears the pending-destination block:
+     * [clearSharedSetupV2BlockAfterApiCredentialConfirmation] remains the single clearing
+     * authority — its unchanged fingerprint verification is what a later verified credential
+     * must satisfy. The binding deliberately persists even when no credential is ever
+     * confirmed (exactly the state an editor detour would have produced), so no profile-store
+     * rollback path exists here; the credential hook alone decides when the block clears.
+     *
+     * Fail-closed (returns false, writes nothing) when the id is not blocked, the profile is
+     * unknown or no longer targets [ExportTarget.API_ENDPOINT], the sidecar row is missing or
+     * not exactly `api_endpoint`, the retained URL does not normalize, the profile is already
+     * bound to a different local endpoint (an explicit editor choice is never overwritten),
+     * or the frozen snapshot cannot be decoded or validly re-scoped. Idempotent: returns true
+     * without rewriting when the exact binding already exists.
+     */
+    suspend fun bindSharedSetupV2ApiEndpointAfterConfirmation(id: String): Boolean {
+        var bound = false
+        dataStore.edit { prefs ->
+            val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            if (id !in blocked) return@edit
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val index = existing.indexOfFirst { it.id == id }
+            if (index < 0) return@edit
+            val profile = existing[index]
+            if (profile.target != ExportTarget.API_ENDPOINT) return@edit
+            val endpoint = SharedSetupV2ProfilePersistence.retainedApiEndpointUrl(
+                prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+                id,
+            ) ?: return@edit
+            val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
+                ?: return@edit
+            val identity = APIExportEndpoint.fingerprint(endpoint)
+            if (profile.apiEndpointUrl != null && profile.apiEndpointUrl != endpoint) {
+                // An explicit local binding to another endpoint is never overwritten in-flow.
+                return@edit
+            }
+            if (
+                profile.apiEndpointUrl == endpoint &&
+                snapshot.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
+                snapshot.apiEndpointIdentitySha256 == identity
+            ) {
+                // Already exactly bound (prior in-flow confirmation or editor save of the
+                // imported URL): confirm without rewriting anything.
+                bound = true
+                return@edit
+            }
+            val reboundSnapshot = snapshot.copy(
+                exportTarget = ExportTarget.API_ENDPOINT,
+                scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                exportProfile = AndroidExportProfile.android_frozen_v4,
+                apiEndpointIdentitySha256 = identity,
+            )
+            val encodedSnapshot = runCatching {
+                AndroidExportSettingsSnapshotCodec.encodeCanonical(reboundSnapshot)
+            }.getOrNull() ?: return@edit
+            val updated = profile.copy(
+                apiEndpointUrl = endpoint,
+                settingsSnapshotJson = encodedSnapshot,
+                updatedAtEpochMillis = System.currentTimeMillis(),
+            )
+            prefs[Keys.PROFILES] = json.encodeToString(
+                listSerializer,
+                existing.toMutableList().apply { set(index, updated) },
+            )
+            bound = true
+        }
+        return bound
     }
 
     /**

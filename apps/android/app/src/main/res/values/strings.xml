@@ -1438,6 +1438,12 @@
     <string name="shared_setup_v2_blocked_notice">Imported profiles stay inactive — no export, schedule, automation, or destination access — until you rebind their destination locally.</string>
     <string name="shared_setup_v2_blocked_state">Waiting for a local destination rebind</string>
     <string name="shared_setup_v2_rebind_folder">Choose Folder</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">Imported endpoint URL awaiting local confirmation:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Confirm Endpoint URL</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Confirm imported endpoint</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Bind this profile to the API endpoint the shared setup retained. The URL shown is exactly what the import retained — it is never changed or guessed here. The profile stays inactive until a verified credential confirms it.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Confirm and Bind Endpoint</string>
+    <string name="shared_setup_v2_rebind_api_unretained">This profile’s imported endpoint identity is not retained, so it cannot be confirmed here. Rebind the endpoint in the profile editor.</string>
     <string name="shared_setup_v2_rebind_api_title">Confirm API endpoint credential</string>
     <string name="shared_setup_v2_rebind_api_hint">Enter a fresh credential for this profile’s imported API endpoint. Existing authorization and custom headers are never inherited; the profile stays inactive unless the credential is verified against its locally confirmed endpoint.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Confirm Credential and Unblock</string>

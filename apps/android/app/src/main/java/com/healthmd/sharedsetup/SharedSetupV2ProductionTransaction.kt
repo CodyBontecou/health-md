@@ -2,6 +2,7 @@ package com.healthmd.sharedsetup
 
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.model.ExportTarget
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -10,6 +11,18 @@ data class SharedSetupV2BlockedImportedProfile(
     val profileId: String,
     val name: String,
     val sourceDestinationKind: String,
+    /**
+     * The imported API endpoint URL retained by the v2 import, already normalized — exactly
+     * what an in-flow endpoint confirmation would bind and show. Null unless the sidecar
+     * retains an exact `api_endpoint` hint (fail closed, never guessed).
+     */
+    val importedApiEndpointUrl: String? = null,
+    /**
+     * The profile's current local endpoint binding (editor save or prior in-flow endpoint
+     * confirmation). Null while the destination is still unbound, in which case the review
+     * row offers the explicit in-flow URL confirmation instead of credential entry.
+     */
+    val boundApiEndpointUrl: String? = null,
 )
 
 /**
@@ -72,7 +85,8 @@ class SharedSetupV2ProductionTransaction @Inject constructor(
     suspend fun blockedImportedProfiles(): List<SharedSetupV2BlockedImportedProfile> {
         val blocked = transaction.blockedProfileIds()
         if (blocked.isEmpty()) return emptyList()
-        val sidecarRows = transaction.storedProfileState().getOrThrow()?.profiles.orEmpty()
+        val sidecarState = transaction.storedProfileState().getOrThrow()
+        val sidecarRows = sidecarState?.profiles.orEmpty()
         return profileRepository.getProfiles()
             .filter { it.id in blocked }
             .map { profile ->
@@ -85,6 +99,12 @@ class SharedSetupV2ProductionTransaction @Inject constructor(
                         ?.destination
                         ?.kind
                         ?: "unknown",
+                    importedApiEndpointUrl = SharedSetupV2ProfilePersistence.retainedApiEndpointUrl(
+                        sidecarState,
+                        profile.id,
+                    ),
+                    boundApiEndpointUrl = profile.apiEndpointUrl
+                        ?.takeIf { profile.target == ExportTarget.API_ENDPOINT },
                 )
             }
     }

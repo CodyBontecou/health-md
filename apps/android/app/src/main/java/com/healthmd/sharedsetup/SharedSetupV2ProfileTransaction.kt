@@ -11,6 +11,7 @@ import com.healthmd.data.scheduler.ScheduledProfileDateWindow
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.BulletStyle
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.CustomFrontmatterField
@@ -38,6 +39,7 @@ import com.healthmd.domain.model.WriteMode
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.rawexport.RawSnapshotScope
+import java.net.URI
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
@@ -211,6 +213,36 @@ internal object SharedSetupV2ProfilePersistence {
                 ?.destination
                 ?.kind
         }.getOrNull()
+
+    /**
+     * The imported API endpoint URL retained in the bounded sidecar for one profile, normalized
+     * through the same [APIExportEndpoint] gate the profile editor uses. The sidecar endpoint
+     * hint is descriptive-only (queries never travel in it), so the reconstruction is exactly
+     * the retained scheme, effective port, and path — never a derived or guessed identity.
+     * Null for any non-API row, absent row, or unnormalizable reconstruction (fail closed).
+     */
+    fun retainedApiEndpointUrl(raw: String?, profileId: String): String? = runCatching {
+        retainedApiEndpointUrl(decodeProfileStateOrNull(raw), profileId)
+    }.getOrNull()
+
+    /** Typed-state variant of [retainedApiEndpointUrl] for callers holding decoded state. */
+    fun retainedApiEndpointUrl(
+        state: SharedSetupV2StoredProfileState?,
+        profileId: String,
+    ): String? = runCatching {
+        val endpoint = state
+            ?.profiles
+            ?.singleOrNull { it.profileId == profileId }
+            ?.sourceProfile
+            ?.destination
+            ?.takeIf { it.kind == "api_endpoint" }
+            ?.apiEndpoint
+            ?: return null
+        APIExportEndpoint.normalizedOrNull(
+            URI(endpoint.scheme, null, endpoint.host, endpoint.port ?: -1, endpoint.path, null, null)
+                .toASCIIString(),
+        )
+    }.getOrNull()
 
     private fun validateProfileState(state: SharedSetupV2StoredProfileState) {
         require(state.version == SHARED_SETUP_V2_PROFILE_STATE_VERSION)
