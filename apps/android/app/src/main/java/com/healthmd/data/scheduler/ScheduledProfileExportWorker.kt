@@ -12,6 +12,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.healthmd.HealthMdApplication
 import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
@@ -158,6 +159,19 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             Timber.w("Profile occurrence profile missing, disabling entry profileId=%s", profileId)
             entryStore.update(profileId) { it.copy(isEnabled = false) }
             return Result.success()
+        }
+        val blocked = runCatchingCancellable {
+            profileRepository.isSharedSetupV2Blocked(profileId)
+        }.getOrElse {
+            // An unreadable gate must never turn into permission to execute.
+            Timber.e(it, "Could not verify imported profile execution gate")
+            true
+        }
+        if (blocked) {
+            entryStore.update(profileId) { it.copy(isEnabled = false) }
+            return Result.failure(
+                workDataOf(OUTPUT_PROFILE_ERROR to PROFILE_REBIND_REQUIRED),
+            )
         }
 
         val nowMillis = System.currentTimeMillis()
@@ -540,6 +554,8 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
     companion object {
         const val INPUT_PROFILE_ID = "profile_id"
+        const val OUTPUT_PROFILE_ERROR = "profile_error"
+        const val PROFILE_REBIND_REQUIRED = "profile_rebind_required"
         const val MAX_WORKER_ATTEMPTS = 3
         private const val NOTIFICATION_REQUEST_CODE = 6_100
     }

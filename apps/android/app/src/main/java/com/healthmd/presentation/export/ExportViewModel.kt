@@ -11,7 +11,7 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.scheduler.ExportScheduler
-import com.healthmd.data.settings.ExportProfileCoordinator
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.distribution.DistributionPolicy
@@ -25,12 +25,13 @@ import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.domain.review.ReviewPromptResult
 import com.healthmd.domain.review.ReviewPrompter
+import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.rawexport.RawSnapshotScope
 import com.healthmd.rawexport.withInteractiveRouteConsent
-import com.healthmd.presentation.common.HealthConnectActionError
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
 import com.healthmd.util.runCatchingCancellable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -46,6 +47,10 @@ enum class APIConfigurationIssue {
     INVALID_ENDPOINT,
     INVALID_HEADERS,
     SECURE_SAVE_FAILED,
+}
+
+enum class ExportProfileExecutionIssue {
+    DESTINATION_REBIND_REQUIRED,
 }
 
 private enum class ReviewRequestState {
@@ -91,6 +96,7 @@ data class ExportUiState(
     val apiRequestHeadersConfigured: Boolean = false,
     val apiConfigurationError: APIConfigurationIssue? = null,
     val selectedHealthProviderId: String = "health_connect",
+    val profileExecutionIssue: ExportProfileExecutionIssue? = null,
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -147,6 +153,7 @@ class ExportViewModel @Inject constructor(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
+    private val exportProfileRepository: ExportProfileRepository,
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
     private val reviewPrompter: ReviewPrompter,
@@ -445,10 +452,42 @@ class ExportViewModel @Inject constructor(
         dismissJob?.cancel()
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, lastResult = null, preview = null, exportedFolderUri = null) }
+            _uiState.update {
+                it.copy(
+                    isExporting = true,
+                    lastResult = null,
+                    preview = null,
+                    exportedFolderUri = null,
+                    profileExecutionIssue = null,
+                )
+            }
 
             val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
+            if (activeProfileRequiresRebind()) {
+                val failedDates = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    listOf(_uiState.value.startDate)
+                } else {
+                    dates
+                }
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        lastResult = ExportResult(
+                            successCount = 0,
+                            totalCount = failedDates.size,
+                            failedDateDetails = failedDates.map { date ->
+                                FailedDateDetail(date, ExportFailureReason.UNKNOWN)
+                            },
+                            target = settings.exportTarget,
+                            exportMode = settings.exportMode,
+                        ),
+                        profileExecutionIssue =
+                            ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED,
+                    )
+                }
+                return@launch
+            }
 
             val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                 _uiState.update {
@@ -563,6 +602,7 @@ class ExportViewModel @Inject constructor(
                     isExporting = false,
                     lastResult = presentationResult,
                     exportedFolderUri = if (presentationResult.artifactCount > 0) folderUri else null,
+                    profileExecutionIssue = null,
                 )
             }
 
@@ -600,11 +640,21 @@ class ExportViewModel @Inject constructor(
                     preview = null,
                     lastResult = null,
                     exportedFolderUri = null,
+                    profileExecutionIssue = null,
                 )
             }
 
             try {
                 val settings = settingsRepository.getExportSettings()
+                if (activeProfileRequiresRebind()) {
+                    _uiState.update {
+                        it.copy(
+                            profileExecutionIssue =
+                                ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED,
+                        )
+                    }
+                    return@launch
+                }
                 val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
                 val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                     _uiState.update {
@@ -674,8 +724,20 @@ class ExportViewModel @Inject constructor(
 
     fun dismissResult() {
         dismissJob?.cancel()
-        _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+        _uiState.update {
+            it.copy(
+                lastResult = null,
+                exportedFolderUri = null,
+                profileExecutionIssue = null,
+            )
+        }
     }
+
+    private suspend fun activeProfileRequiresRebind(): Boolean =
+        runCatchingCancellable {
+            exportProfileRepository.activeSharedSetupV2ExecutionAccess() ==
+                SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        }.getOrDefault(true)
 
     fun cancelExport() {
         val state = _uiState.value

@@ -13,6 +13,7 @@ import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.health.HealthProviderDiagnosticsReporter
 import com.healthmd.data.health.providers.HealthProviderCatalog
 import com.healthmd.data.health.providers.HealthProviderConnectionManager
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.distribution.DistributionPolicy
@@ -38,6 +39,8 @@ import com.healthmd.domain.review.ReviewPrompter
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.presentation.settings.SettingsViewModel
 import com.healthmd.rawexport.ExportMode
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -149,6 +152,37 @@ class ExportViewModelTest {
         assertThat(historyRepository.entries).hasSize(1)
         assertThat(historyRepository.entries.single().successCount).isEqualTo(7)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(7)
+    }
+
+    @Test
+    fun blockedImportedActiveProfileCannotPreviewOrExportUsingLiveSettings() = runTest {
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val profileRepository = mockk<ExportProfileRepository>()
+        coEvery { profileRepository.activeSharedSetupV2ExecutionAccess() } returns
+            SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            exportHistoryRepository = historyRepository,
+            exportProfileRepository = profileRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.buildPreview()
+        advanceUntilIdle()
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.profileExecutionIssue)
+            .isEqualTo(ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED)
+        assertThat(viewModel.uiState.value.preview).isNull()
+        assertThat(viewModel.uiState.value.lastResult?.isFailure).isTrue()
+        assertThat(healthRepository.fetchCalls).isEqualTo(0)
+        assertThat(exportRepository.previewCalls).isEqualTo(0)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
+        assertThat(historyRepository.entries).isEmpty()
     }
 
     @Test
@@ -571,10 +605,16 @@ class ExportViewModelTest {
         collector.cancel()
     }
 
+    private fun allowedProfileRepository() = mockk<ExportProfileRepository> {
+        coEvery { activeSharedSetupV2ExecutionAccess() } returns
+            SharedSetupV2ProfileExecutionAccess.Allowed
+    }
+
     private fun createViewModel(
         healthRepository: HealthRepository,
         exportRepository: ExportRepository = FakeExportRepository(),
         settingsRepository: SettingsRepository = FakeSettingsRepository(),
+        exportProfileRepository: ExportProfileRepository = allowedProfileRepository(),
         entitlementRepository: EntitlementRepository = FakeBillingRepository(),
         exportHistoryRepository: ExportHistoryRepository = FakeExportHistoryRepository(),
         apiEndpointExportRunner: APIEndpointExportRunner? = null,
@@ -587,6 +627,7 @@ class ExportViewModelTest {
             healthRepository = healthRepository,
             exportRepository = exportRepository,
             settingsRepository = settingsRepository,
+            exportProfileRepository = exportProfileRepository,
             entitlementRepository = entitlementRepository,
             distributionPolicy = DistributionPolicy.play(),
             reviewPrompter = FakeReviewPrompter(),

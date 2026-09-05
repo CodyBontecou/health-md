@@ -3,15 +3,19 @@ package com.healthmd.sharedsetup
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.mutablePreferencesOf
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportProfile
+import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.IndividualTrackingSettings
@@ -21,11 +25,17 @@ import io.mockk.mockk
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.ArrayDeque
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -146,6 +156,23 @@ class SharedSetupV2ProfileTransactionTest {
     }
 
     @Test
+    fun `Add with no valid native active chooses selected source active`() = runTest {
+        seed(
+            profiles = listOf(nativeProfile(EXISTING_ONE_ID, "Existing")),
+            activeProfileId = "missing-active",
+            schedules = emptyList(),
+        )
+        val result = transaction(GENERATED_ONE_ID, GENERATED_TWO_ID).apply(
+            plan = importPlan(),
+            selectedBundleIds = listOf("profile-001", "profile-002"),
+            mode = SharedSetupV2ProfileImportMode.ADD,
+        ).getOrThrow()
+
+        assertThat(result.activeProfileId).isEqualTo(GENERATED_TWO_ID)
+        assertThat(storedActiveId()).isEqualTo(GENERATED_TWO_ID)
+    }
+
+    @Test
     fun `replace keeps selected source order chooses first when source active omitted and drops old schedules`() = runTest {
         seed(
             profiles = listOf(nativeProfile(EXISTING_ONE_ID, "Before")),
@@ -180,6 +207,121 @@ class SharedSetupV2ProfileTransactionTest {
     }
 
     @Test
+    fun `Add enforces the native profile cap before writing any key`() = runTest {
+        val profiles = (1..ExportProfileRules.MAX_PROFILES).map { index ->
+            nativeProfile(
+                id = "10000000-0000-4000-8000-${index.toString().padStart(12, '0')}",
+                name = "Existing $index",
+            )
+        }
+        seed(profiles, profiles.first().id, emptyList())
+        dataStore.edit { it[SharedSetupV2ProfilePersistence.undoKey] = "prior-undo" }
+        val before = snapshotBytes()
+
+        val error = transaction(GENERATED_ONE_ID).apply(
+            importPlan(),
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.ADD,
+        ).exceptionOrNull() as SharedSetupV2ProfileTransactionException
+
+        assertThat(error.reason)
+            .isEqualTo(SharedSetupV2ProfileTransactionFailure.PROFILE_LIMIT_EXCEEDED)
+        assertThat(snapshotBytes()).isEqualTo(before)
+    }
+
+    @Test
+    fun `oversized preservation sidecar fails closed before mutation`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        dataStore.edit {
+            it[SharedSetupV2ProfilePersistence.profileStateKey] =
+                "x".repeat(4 * 1024 * 1024 + 1)
+            it[SharedSetupV2ProfilePersistence.undoKey] = "prior-undo"
+        }
+        val before = snapshotBytes()
+
+        val error = transaction(GENERATED_ONE_ID).apply(
+            importPlan(),
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).exceptionOrNull() as SharedSetupV2ProfileTransactionException
+
+        assertThat(error.reason)
+            .isEqualTo(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
+        assertThat(snapshotBytes()).isEqualTo(before)
+    }
+
+    @Test
+    fun `previous logical state over eight MiB cannot become Undo and no key changes`() = runTest {
+        val oversizedProfile = nativeProfile(EXISTING_ONE_ID, "Before").copy(
+            settingsSnapshotJson = "x".repeat(SHARED_SETUP_V2_UNDO_MAX_BYTES),
+        )
+        seed(listOf(oversizedProfile), EXISTING_ONE_ID, emptyList())
+        dataStore.edit { it[SharedSetupV2ProfilePersistence.undoKey] = "prior-undo" }
+        val before = snapshotBytes()
+
+        val error = transaction(GENERATED_ONE_ID).apply(
+            importPlan(),
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).exceptionOrNull() as SharedSetupV2ProfileTransactionException
+
+        assertThat(error.reason)
+            .isEqualTo(SharedSetupV2ProfileTransactionFailure.UNDO_LIMIT_EXCEEDED)
+        assertThat(snapshotBytes()).isEqualTo(before)
+    }
+
+    @Test
+    fun `candidate preservation sidecar over four MiB fails before mutation`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        val source = importPlan().profiles.first().source
+        fun sidecar(customText: String) = SharedSetupV2StoredProfileState(
+            profiles = listOf(
+                SharedSetupV2StoredProfileStateRow(
+                    profileId = EXISTING_ONE_ID,
+                    sourceBundleId = source.bundleId,
+                    sourceProfile = source.copy(
+                        presentation = source.presentation.copy(
+                            markdown = source.presentation.markdown.copy(
+                                style = "custom",
+                                customText = customText,
+                            ),
+                        ),
+                    ),
+                    unsupportedSemanticIds = emptyList(),
+                ),
+            ),
+        )
+        val emptyBytes = checkNotNull(
+            SharedSetupV2ProfilePersistence.encodeProfileState(sidecar("")),
+        ).encodeToByteArray().size
+        val retainedRaw = checkNotNull(
+            SharedSetupV2ProfilePersistence.encodeProfileState(
+                sidecar(
+                    "x".repeat(
+                        SHARED_SETUP_V2_PROFILE_STATE_MAX_BYTES - emptyBytes - 16,
+                    ),
+                ),
+            ),
+        )
+        dataStore.edit {
+            it[SharedSetupV2ProfilePersistence.profileStateKey] = retainedRaw
+            it[SharedSetupV2ProfilePersistence.blockedProfileIdsKey] = setOf(EXISTING_ONE_ID)
+            it[SharedSetupV2ProfilePersistence.undoKey] = "prior-undo"
+        }
+        val before = snapshotBytes()
+
+        val error = transaction(GENERATED_ONE_ID).apply(
+            importPlan(),
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.ADD,
+        ).exceptionOrNull() as SharedSetupV2ProfileTransactionException
+
+        assertThat(error.reason)
+            .isEqualTo(SharedSetupV2ProfileTransactionFailure.SIDECAR_LIMIT_EXCEEDED)
+        assertThat(snapshotBytes()).isEqualTo(before)
+    }
+
+    @Test
     fun `unsupported schedule remains sidecar only`() = runTest {
         val original = importPlan()
         val first = original.source.profiles[0]
@@ -201,6 +343,124 @@ class SharedSetupV2ProfileTransactionTest {
         assertThat(storedSchedules()).isEmpty()
         assertThat(transaction.storedProfileState().getOrThrow()!!.profiles.single().sourceProfile.schedule)
             .isEqualTo(source.profiles[0].schedule)
+    }
+
+    @Test
+    fun `central gate clears only for explicit exact folder or credential-confirmed API rebind`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        val transaction = transaction(GENERATED_ONE_ID, GENERATED_TWO_ID)
+        transaction.apply(
+            importPlan(),
+            listOf("profile-001", "profile-002"),
+            SharedSetupV2ProfileImportMode.ADD,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isTrue()
+        assertThat(repository.activeSharedSetupV2ExecutionAccess())
+            .isEqualTo(SharedSetupV2ProfileExecutionAccess.Allowed)
+        assertThat(repository.activate(GENERATED_ONE_ID)).isFalse()
+        assertThat(storedActiveId()).isEqualTo(EXISTING_ONE_ID)
+
+        val importedSource = checkNotNull(repository.profileById(GENERATED_ONE_ID))
+        val duplicate = repository.add(
+            name = importedSource.name,
+            settingsSnapshotJson = importedSource.settingsSnapshotJson,
+            target = importedSource.target,
+            apiEndpointUrl = importedSource.apiEndpointUrl,
+            folderUri = importedSource.folderUri,
+            folderDisplayName = importedSource.folderDisplayName,
+            derivedFromProfileId = importedSource.id,
+        )
+        assertThat(repository.isSharedSetupV2Blocked(duplicate.id)).isTrue()
+        assertThat(repository.activate(duplicate.id)).isFalse()
+        assertThat(transaction.storedProfileState().getOrThrow()!!.profiles.map { it.profileId })
+            .containsExactly(GENERATED_ONE_ID, GENERATED_TWO_ID, duplicate.id)
+            .inOrder()
+
+        assertThat(
+            repository.bindFolder(
+                GENERATED_ONE_ID,
+                "content://local.provider/tree/health",
+                "Local Health",
+            ),
+        ).isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isFalse()
+        assertThat(repository.activeSharedSetupV2ExecutionAccess())
+            .isEqualTo(SharedSetupV2ProfileExecutionAccess.Allowed)
+        assertThat(repository.activate(GENERATED_ONE_ID)).isTrue()
+
+        val endpoint = "https://local.invalid/confirmed"
+        val apiSnapshot = AndroidExportSettingsSnapshot.capture(
+            baseSettings().copy(
+                exportTarget = ExportTarget.API_ENDPOINT,
+                scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = endpoint,
+            ),
+            pin = null,
+            zone = ZoneId.of("UTC"),
+        )
+        assertThat(
+            repository.applyEditorUpdate(
+                id = GENERATED_TWO_ID,
+                rawName = "Daily 2 2",
+                settingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(apiSnapshot),
+                target = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = endpoint,
+                folderUri = null,
+                folderDisplayName = null,
+            ),
+        ).isNotNull()
+        // URL/editor persistence alone is deliberately insufficient.
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isTrue()
+        assertThat(repository.activate(GENERATED_TWO_ID)).isFalse()
+
+        assertThat(
+            repository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(GENERATED_TWO_ID),
+        ).isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isFalse()
+        assertThat(repository.activate(GENERATED_TWO_ID)).isTrue()
+    }
+
+    @Test
+    fun `folder selection cannot reinterpret connected Mac intent or clear its block`() = runTest {
+        val original = importPlan()
+        val connectedSource = original.source.copy(
+            profiles = original.source.profiles.mapIndexed { index, profile ->
+                if (index == 0) {
+                    profile.copy(
+                        destination = SharedSetupV2Destination(
+                            kind = "connected_mac",
+                            apiEndpoint = null,
+                        ),
+                    )
+                } else {
+                    profile
+                }
+            },
+        )
+        val plan = SharedSetupV2Mapper(EmptyRegistry).planImport(connectedSource)
+        val transaction = transaction(GENERATED_ONE_ID)
+        transaction.apply(
+            plan,
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+
+        assertThat(
+            repository.bindFolder(
+                GENERATED_ONE_ID,
+                "content://local.provider/tree/health",
+                "Local Health",
+            ),
+        ).isTrue()
+
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isTrue()
+        assertThat(repository.activeSharedSetupV2ExecutionAccess())
+            .isEqualTo(SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired)
+        assertThat(repository.activate(GENERATED_ONE_ID)).isFalse()
     }
 
     @Test
@@ -236,6 +496,108 @@ class SharedSetupV2ProfileTransactionTest {
         ).exceptionOrNull() as SharedSetupV2ProfileTransactionException
         assertThat(staleError.reason).isEqualTo(SharedSetupV2ProfileTransactionFailure.INVALID_PLAN)
         assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+    }
+
+    @Test
+    fun `post-commit verification failure compare-and-set rolls back all keys and prior Undo`() = runTest {
+        val previousProfiles = listOf(nativeProfile(EXISTING_ONE_ID, "Before"))
+        seed(previousProfiles, EXISTING_ONE_ID, emptyList())
+        dataStore.edit { it[SharedSetupV2ProfilePersistence.undoKey] = "prior-undo" }
+        val faulting = OneReadVerificationFaultDataStore(dataStore)
+        val transaction = transactionWithStore(faulting, GENERATED_ONE_ID)
+
+        val error = transaction.apply(
+            importPlan(),
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).exceptionOrNull() as SharedSetupV2ProfileTransactionException
+
+        assertThat(error.reason)
+            .isEqualTo(SharedSetupV2ProfileTransactionFailure.COMMIT_VERIFICATION_FAILED)
+        assertThat(storedProfiles()).isEqualTo(previousProfiles)
+        assertThat(storedActiveId()).isEqualTo(EXISTING_ONE_ID)
+        assertThat(storedSchedules()).isEmpty()
+        assertThat(storedBlockedIds()).isEmpty()
+        assertThat(dataStore.data.first()[SharedSetupV2ProfilePersistence.profileStateKey]).isNull()
+        assertThat(dataStore.data.first()[SharedSetupV2ProfilePersistence.undoKey])
+            .isEqualTo("prior-undo")
+    }
+
+    @Test
+    fun `concurrent post-commit change makes rollback fail explicitly without overwriting it`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        val concurrentlyMutating = ConcurrentMutationAfterCommitDataStore(dataStore)
+        val transaction = transactionWithStore(concurrentlyMutating, GENERATED_ONE_ID)
+
+        val error = transaction.apply(
+            importPlan(),
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).exceptionOrNull() as SharedSetupV2ProfileTransactionException
+
+        assertThat(error.reason)
+            .isEqualTo(SharedSetupV2ProfileTransactionFailure.ROLLBACK_NOT_VERIFIED)
+        assertThat(storedActiveId()).isEqualTo(CONCURRENT_ACTIVE_ID)
+        assertThat(storedProfiles().map { it.id }).containsExactly(GENERATED_ONE_ID)
+    }
+
+    @Test
+    fun `apply finishes its one-edit commit and verification after caller cancellation`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        val commitStarted = CompletableDeferred<Unit>()
+        val releaseCommit = CompletableDeferred<Unit>()
+        val blocking = BlockingAfterCommitDataStore(dataStore, commitStarted, releaseCommit)
+        val transaction = transactionWithStore(blocking, GENERATED_ONE_ID)
+        var outcome: Result<SharedSetupV2ProfileApplyResult>? = null
+        val apply = launch {
+            outcome = transaction.apply(
+                importPlan(),
+                listOf("profile-001"),
+                SharedSetupV2ProfileImportMode.REPLACE,
+            )
+        }
+        commitStarted.await()
+
+        apply.cancel()
+        releaseCommit.complete(Unit)
+        apply.join()
+
+        assertThat(outcome?.isSuccess).isTrue()
+        assertThat(storedProfiles().map { it.id }).containsExactly(GENERATED_ONE_ID)
+        assertThat(storedBlockedIds()).containsExactly(GENERATED_ONE_ID)
+        assertThat(dataStore.data.first()[SharedSetupV2ProfilePersistence.undoKey]).isNotNull()
+    }
+
+    @Test
+    fun `undo completes restoration and one-shot removal after caller cancellation`() = runTest {
+        val previous = listOf(nativeProfile(EXISTING_ONE_ID, "Before"))
+        seed(previous, EXISTING_ONE_ID, emptyList())
+        val restoreStarted = CompletableDeferred<Unit>()
+        val releaseRestore = CompletableDeferred<Unit>()
+        val blocking = BlockingAfterCommitDataStore(
+            delegate = dataStore,
+            commitStarted = restoreStarted,
+            releaseCommit = releaseRestore,
+            blockedUpdateNumber = 2,
+        )
+        val transaction = transactionWithStore(blocking, GENERATED_ONE_ID)
+        transaction.apply(
+            importPlan(),
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).getOrThrow()
+        var outcome: Result<Unit>? = null
+        val undo = launch { outcome = transaction.undo() }
+        restoreStarted.await()
+
+        undo.cancel()
+        releaseRestore.complete(Unit)
+        undo.join()
+
+        assertThat(outcome?.isSuccess).isTrue()
+        assertThat(storedProfiles()).isEqualTo(previous)
+        assertThat(storedActiveId()).isEqualTo(EXISTING_ONE_ID)
+        assertThat(dataStore.data.first()[SharedSetupV2ProfilePersistence.undoKey]).isNull()
     }
 
     @Test
@@ -356,10 +718,16 @@ class SharedSetupV2ProfileTransactionTest {
         )
     }
 
-    private fun transaction(vararg ids: String): SharedSetupV2ProfileTransaction {
+    private fun transaction(vararg ids: String): SharedSetupV2ProfileTransaction =
+        transactionWithStore(dataStore, *ids)
+
+    private fun transactionWithStore(
+        store: DataStore<Preferences>,
+        vararg ids: String,
+    ): SharedSetupV2ProfileTransaction {
         val queue = ArrayDeque(ids.toList())
         return SharedSetupV2ProfileTransaction(
-            dataStore = dataStore,
+            dataStore = store,
             registry = EmptyRegistry,
             nativeId = { queue.removeFirst() },
             nowEpochMillis = { NOW },
@@ -408,11 +776,79 @@ class SharedSetupV2ProfileTransactionTest {
         )
     }
 
+    private suspend fun snapshotBytes(): Map<Preferences.Key<*>, Any> =
+        dataStore.data.first().asMap()
+
     private suspend fun storedActiveId(): String? =
         dataStore.data.first()[SharedSetupV2ProfilePersistence.activeProfileIdKey]
 
     private suspend fun storedBlockedIds(): Set<String> =
         dataStore.data.first()[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+
+    private class OneReadVerificationFaultDataStore(
+        private val delegate: DataStore<Preferences>,
+    ) : DataStore<Preferences> {
+        private val updates = AtomicInteger(0)
+        private val faultNextRead = AtomicBoolean(false)
+
+        override val data: Flow<Preferences> = delegate.data.map { preferences ->
+            if (faultNextRead.compareAndSet(true, false)) {
+                preferences.mutableCopy().apply {
+                    this[SharedSetupV2ProfilePersistence.activeProfileIdKey] =
+                        "verification-corrupt"
+                }
+            } else {
+                preferences
+            }
+        }
+
+        override suspend fun updateData(
+            transform: suspend (t: Preferences) -> Preferences,
+        ): Preferences = delegate.updateData(transform).also {
+            if (updates.incrementAndGet() == 1) faultNextRead.set(true)
+        }
+    }
+
+    private class ConcurrentMutationAfterCommitDataStore(
+        private val delegate: DataStore<Preferences>,
+    ) : DataStore<Preferences> {
+        private val updates = AtomicInteger(0)
+        override val data: Flow<Preferences> = delegate.data
+
+        override suspend fun updateData(
+            transform: suspend (t: Preferences) -> Preferences,
+        ): Preferences {
+            val result = delegate.updateData(transform)
+            if (updates.incrementAndGet() == 1) {
+                delegate.updateData { preferences ->
+                    preferences.mutableCopy().apply {
+                        this[SharedSetupV2ProfilePersistence.activeProfileIdKey] =
+                            CONCURRENT_ACTIVE_ID
+                    }
+                }
+            }
+            return result
+        }
+    }
+
+    private class BlockingAfterCommitDataStore(
+        private val delegate: DataStore<Preferences>,
+        private val commitStarted: CompletableDeferred<Unit>,
+        private val releaseCommit: CompletableDeferred<Unit>,
+        private val blockedUpdateNumber: Int = 1,
+    ) : DataStore<Preferences> {
+        private val updates = AtomicInteger(0)
+        override val data: Flow<Preferences> = delegate.data
+
+        override suspend fun updateData(
+            transform: suspend (t: Preferences) -> Preferences,
+        ): Preferences = delegate.updateData(transform).also {
+            if (updates.incrementAndGet() == blockedUpdateNumber) {
+                commitStarted.complete(Unit)
+                releaseCommit.await()
+            }
+        }
+    }
 
     private object EmptyRegistry : SharedSetupMetricRegistry {
         override val version: Int = 1
@@ -429,5 +865,13 @@ class SharedSetupV2ProfileTransactionTest {
         const val SOURCE_TWO_ID = "20000000-0000-4000-8000-000000000002"
         const val GENERATED_ONE_ID = "30000000-0000-4000-8000-000000000001"
         const val GENERATED_TWO_ID = "30000000-0000-4000-8000-000000000002"
+        const val CONCURRENT_ACTIVE_ID = "concurrent-change"
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun Preferences.mutableCopy(): MutablePreferences = mutablePreferencesOf().also { copy ->
+    asMap().forEach { (key, value) ->
+        copy[key as Preferences.Key<Any>] = value
     }
 }

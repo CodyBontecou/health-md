@@ -30,7 +30,9 @@ import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -140,10 +142,21 @@ class AutomationReceiver : BroadcastReceiver() {
     ): ProfileRunScope {
         val reference = profileReference?.trim().orEmpty()
         if (reference.isEmpty()) {
+            val activeAccess = try {
+                exportProfileRepository.activeSharedSetupV2ExecutionAccess()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+            }
+            if (activeAccess == SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired) {
+                throw AutomationProfileRebindRequired()
+            }
             val profiles = exportProfileRepository.getProfiles()
             if (profiles.isEmpty()) return ProfileRunScope(null, null)
             val active = exportProfileRepository.getActiveProfile()
                 ?: return ProfileRunScope(null, null)
+            requireProfileExecutable(active)
             return ProfileRunScope(resolveProfileSettings(active), active)
         }
         return when (
@@ -152,12 +165,25 @@ class AutomationReceiver : BroadcastReceiver() {
                 reference = reference,
             )
         ) {
-            is ExportProfileResolution.Resolved ->
+            is ExportProfileResolution.Resolved -> {
+                requireProfileExecutable(resolution.profile)
                 ProfileRunScope(resolveProfileSettings(resolution.profile), resolution.profile)
+            }
             is ExportProfileResolution.NotFound ->
                 throw AutomationProfileNotFound(reference)
             ExportProfileResolution.LegacySettings -> ProfileRunScope(null, null)
         }
+    }
+
+    private suspend fun requireProfileExecutable(profile: ExportProfile) {
+        val blocked = try {
+            exportProfileRepository.isSharedSetupV2Blocked(profile.id)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            true
+        }
+        if (blocked) throw AutomationProfileRebindRequired()
     }
 
     /** Restores the profile's frozen snapshot onto current settings, or null when undecodable. */
@@ -184,6 +210,14 @@ class AutomationReceiver : BroadcastReceiver() {
                 failedDateDetails = emptyList(),
             )
             publishExportResult(result, "$PROTOCOL_PROFILE_NOT_FOUND:$profileReference")
+            return
+        } catch (_: AutomationProfileRebindRequired) {
+            val result = ExportResult(
+                successCount = 0,
+                totalCount = dates.size,
+                failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN) },
+            )
+            publishExportResult(result, PROTOCOL_PROFILE_REBIND_REQUIRED)
             return
         }
         val profile = profileSettingsAndName.profile
@@ -434,6 +468,9 @@ class AutomationReceiver : BroadcastReceiver() {
     /** Thrown when an explicit profile reference does not resolve; never falls back. */
     private class AutomationProfileNotFound(val reference: String) : Exception(reference)
 
+    /** Non-secret blocked-profile signal; no profile or destination text enters the error. */
+    private class AutomationProfileRebindRequired : Exception()
+
     companion object {
         const val ACTION_EXPORT_YESTERDAY = "com.healthmd.android.action.EXPORT_YESTERDAY"
         const val ACTION_EXPORT_LAST_DAYS = "com.healthmd.android.action.EXPORT_LAST_DAYS"
@@ -471,5 +508,6 @@ class AutomationReceiver : BroadcastReceiver() {
         private const val PROTOCOL_EXPORT_CANCELLED = "Export cancelled"
         private const val PROTOCOL_PROFILE_NOT_FOUND = "profile_not_found"
         private const val PROTOCOL_PROFILE_SNAPSHOT_INVALID = "profile_snapshot_invalid"
+        private const val PROTOCOL_PROFILE_REBIND_REQUIRED = "profile_rebind_required"
     }
 }
