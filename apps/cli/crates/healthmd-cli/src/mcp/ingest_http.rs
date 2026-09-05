@@ -151,6 +151,16 @@ pub async fn serve_ingest_gateway(options: IngestServeOptions) -> Result<(), Ing
                     let state = Arc::clone(&state);
                     std::thread::spawn(move || handle_connection(stream, &state));
                 }
+                // Transient accept failures — a peer resetting before the accept
+                // completes, or a signal-interrupted accept — must not take the
+                // gateway down; skip them and keep serving. Only a listener that
+                // is genuinely unusable stops the server.
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::ConnectionAborted
+                        || error.kind() == std::io::ErrorKind::Interrupted =>
+                {
+                    continue;
+                }
                 Err(_) => return Err(IngestServeError::Listener),
             }
         }
