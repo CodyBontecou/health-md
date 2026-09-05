@@ -724,7 +724,6 @@
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupScreen.kt",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransaction.kt",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransaction.kt",
-        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2TransactionScenariosTest.kt",
         "docs/qa/shared-setup-v2.md"
       ]
