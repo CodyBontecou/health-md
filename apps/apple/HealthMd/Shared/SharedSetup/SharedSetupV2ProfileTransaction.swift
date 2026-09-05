@@ -720,6 +720,98 @@ final class SharedSetupV2ProfileTransaction {
         )
     }
 
+    /// Compacts the Shared Setup v2 Apple sidecar after a native profile was
+    /// deleted: drops the profile's retained-intent row, drops its blocked-set
+    /// entry when present, and removes the `profileState` key entirely once no
+    /// rows remain (and the blocked-set key once no ids remain). This mirrors
+    /// Android's delete-path compaction (`ExportProfileRepository.delete`),
+    /// which performs the same filtering inside its atomic edit.
+    ///
+    /// The rewrite targets the canonical live state `decodeState` already
+    /// derives — it excludes the deleted id and any older stale rows for
+    /// already-deleted profiles — so the persisted bytes afterwards satisfy
+    /// the same invariants every `apply` write produces. References are
+    /// detected against the raw persisted bytes because the live view has
+    /// already filtered them by design.
+    ///
+    /// Follows this type's verified-write discipline: encode → write → verify
+    /// by read; a failed verification restores the prior bytes and verifies
+    /// the restore. Returns true when a key was rewritten and false when
+    /// nothing references the id (clean no-op). Throws when the persisted
+    /// aggregate is unreadable, when the id still names a live native profile
+    /// (misuse — compaction must run after the native deletion succeeded), or
+    /// when the verified write or rollback cannot be verified.
+    ///
+    /// Undo honesty: compaction never touches the one-shot Undo snapshot. Its
+    /// contract is restoring the exact prior five-key state, so a snapshot
+    /// taken before a deletion legitimately still contains the deleted
+    /// profile's sidecar bytes; restoring them is the snapshot's truth, not a
+    /// compaction leak, and the next import replaces the snapshot wholesale.
+    @discardableResult
+    func compactAfterProfileDeletion(profileID: UUID) throws -> Bool {
+        let prior = try readState()
+
+        let priorProfileIDs = Set(prior.profiles.map(\.id))
+        guard !priorProfileIDs.contains(profileID) else {
+            throw SharedSetupV2TransactionError.invalidSelection(
+                "Shared Setup v2 compaction must run after the native profile is deleted."
+            )
+        }
+
+        let rawSidecar = try prior.raw.profileState.map { try decodeRawProfileState($0) }
+        let rawBlocked = try prior.raw.blockedProfileIDs.map(Self.decodeBlockedProfileIDs)
+        let rowReferencesID = rawSidecar?.profiles.contains { $0.profileID == profileID } ?? false
+        let blockedReferencesID = rawBlocked?.contains(profileID) ?? false
+        guard rowReferencesID || blockedReferencesID else { return false }
+
+        let sidecar = SharedSetupV2AppleProfileState(profiles: prior.sidecar.profiles)
+        try Self.validate(sidecar, profileIDs: priorProfileIDs)
+
+        let profileStateData: Data?
+        if sidecar.profiles.isEmpty {
+            profileStateData = nil
+        } else {
+            let data = try encoder().encode(sidecar)
+            guard data.count <= Self.maximumProfileStateBytes else {
+                throw SharedSetupV2TransactionError.sidecarTooLarge
+            }
+            profileStateData = data
+        }
+        let blockedData = try prior.blockedProfileIDs.isEmpty
+            ? nil
+            : Self.encodeBlockedProfileIDs(prior.blockedProfileIDs)
+
+        let priorProfileState = prior.raw.profileState
+        let priorBlockedData = prior.raw.blockedProfileIDs
+        restoreRawData(profileStateData, forKey: Self.profileStateKey)
+        restoreRawData(blockedData, forKey: Self.blockedProfileIDsKey)
+        _ = userDefaults.synchronize()
+        guard verificationOverride?() ?? true,
+              rawDataOrNil(forKey: Self.profileStateKey) == profileStateData,
+              rawDataOrNil(forKey: Self.blockedProfileIDsKey) == blockedData else {
+            restoreRawData(priorProfileState, forKey: Self.profileStateKey)
+            restoreRawData(priorBlockedData, forKey: Self.blockedProfileIDsKey)
+            _ = userDefaults.synchronize()
+            guard rawDataOrNil(forKey: Self.profileStateKey) == priorProfileState,
+                  rawDataOrNil(forKey: Self.blockedProfileIDsKey) == priorBlockedData else {
+                throw SharedSetupV2TransactionError.rollbackVerificationFailed
+            }
+            throw SharedSetupV2TransactionError.persistenceVerificationFailed
+        }
+        return true
+    }
+
+    private func decodeRawProfileState(_ data: Data) throws -> SharedSetupV2AppleProfileState {
+        guard data.count <= Self.maximumProfileStateBytes else {
+            throw SharedSetupV2TransactionError.sidecarTooLarge
+        }
+        do {
+            return try decoder().decode(SharedSetupV2AppleProfileState.self, from: data)
+        } catch {
+            throw SharedSetupV2TransactionError.invalidPersistedState
+        }
+    }
+
     private struct DecodedState {
         var raw: RawState
         var profiles: [ExportProfile]

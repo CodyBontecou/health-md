@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import os
 
 /// Connects export profiles to the live export surface.
 ///
@@ -54,7 +55,13 @@ final class ExportProfileCoordinator: ObservableObject {
     private let apiExportSettings: APIExportSettings
     private let now: () -> Date
     private let sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate
+    private let sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction
     private var flushCancellable: AnyCancellable?
+
+    private static let logger = Logger(
+        subsystem: "com.codybontecou.healthmd",
+        category: "ExportProfileCoordinator"
+    )
 
     /// Debounce window for flushing edits back into the active profile.
     /// Profile switches and teardown call `flushEdits()` immediately.
@@ -69,7 +76,8 @@ final class ExportProfileCoordinator: ObservableObject {
         apiExportSettings: APIExportSettings,
         initialTarget: ExportTargetSelection,
         now: @escaping () -> Date = { Date() },
-        sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate? = nil
+        sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate? = nil,
+        sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction? = nil
     ) {
         self.profileStore = profileStore
         self.destinationStore = destinationStore
@@ -80,6 +88,8 @@ final class ExportProfileCoordinator: ObservableObject {
         self.now = now
         self.sharedSetupV2ExecutionGate = sharedSetupV2ExecutionGate
             ?? SharedSetupV2ExecutionGate()
+        self.sharedSetupV2ProfileTransaction = sharedSetupV2ProfileTransaction
+            ?? SharedSetupV2ProfileTransaction()
 
         bootstrapIfNeeded(initialTarget: initialTarget)
 
@@ -534,14 +544,44 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Deletes a profile (forbidden for the last remaining profile by the
     /// store) and activates the first remaining profile. The profile's
     /// scheduled entry is removed so no orphaned automation survives the
-    /// profile. Returns false when deletion was refused.
+    /// profile, and the Shared Setup v2 sidecar is compacted so no stale
+    /// retained-intent row or blocked-set entry outlives the profile.
+    /// Returns false when deletion was refused.
     @discardableResult
     func deleteProfile(id: UUID) -> Bool {
         guard profileStore.delete(id: id) else { return false }
         _ = scheduledEntryStore.delete(profileID: id)
+        compactSharedSetupV2Sidecar(afterDeleting: id)
         guard let next = profileStore.profiles.first else { return true }
         activate(profileID: next.id)
         return true
+    }
+
+    /// Chosen failure semantics for sidecar compaction on deletion: the
+    /// deletion stands and a compaction failure leaves stale-but-inert
+    /// sidecar state, logged for observability. Apple's native profile store,
+    /// scheduled-entry store, and Shared Setup v2 keys are separate stores,
+    /// so the cross-store atomicity Android gets from its single DataStore
+    /// edit (`ExportProfileRepository.delete`) is not achievable here, and
+    /// the native deletion has already succeeded by the time compaction
+    /// runs — reporting the whole delete as failed would lie about state.
+    /// The stale state is inert by construction:
+    /// - `SharedSetupV2ProfileTransaction` read paths already treat rows and
+    ///   blocked ids whose profile no longer exists as deleted state.
+    /// - Native profile ids are freshly generated UUIDs, so a stale blocked
+    ///   id can never be inherited by a future profile.
+    /// - The next successful deletion retries compaction against the same
+    ///   keys, so the bounded store still converges on hygiene.
+    private func compactSharedSetupV2Sidecar(afterDeleting profileID: UUID) {
+        do {
+            _ = try sharedSetupV2ProfileTransaction.compactAfterProfileDeletion(
+                profileID: profileID
+            )
+        } catch {
+            Self.logger.error(
+                "Shared Setup v2 sidecar compaction failed after profile deletion: \(String(describing: error), privacy: .public)"
+            )
+        }
     }
 
     @discardableResult

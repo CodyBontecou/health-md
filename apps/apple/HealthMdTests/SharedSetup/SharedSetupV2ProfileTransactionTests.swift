@@ -313,6 +313,240 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         )
     }
 
+    func testCompactAfterProfileDeletionRemovesRowAndBlockedEntryAndKeepsRemainingRows() throws {
+        let importedIDs = [uuid(161), uuid(162)]
+        let transaction = makeTransaction(profileIDs: importedIDs, scheduleIDs: [uuid(261)])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003", "profile-001"],
+            mode: .replace
+        )
+        // Simulate the native stores' deletion of the second imported profile:
+        // the profile row and its scheduled entry disappear from their keys
+        // while the sidecar keys still hold the stale references.
+        let deletedID = importedIDs[1]
+        let remaining = try storedProfiles().filter { $0.id != deletedID }
+        seed(
+            profiles: remaining,
+            active: remaining.first?.id,
+            schedules: try storedSchedules().filter { $0.profileID != deletedID }
+        )
+        let priorUndoData = defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey)
+
+        XCTAssertTrue(try transaction.compactAfterProfileDeletion(profileID: deletedID))
+
+        XCTAssertEqual(try storedSidecar().profiles.map(\.profileID), [importedIDs[0]])
+        XCTAssertEqual(try storedBlockedIDs(), [importedIDs[0]])
+        XCTAssertNotNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.profileStateKey))
+        XCTAssertNotNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey),
+            priorUndoData,
+            "compaction never touches the one-shot Undo snapshot"
+        )
+
+        // Idempotent: nothing references the id anymore, so a second pass is
+        // a clean no-op that rewrites no key.
+        let compactedState = fiveKeyState()
+        XCTAssertFalse(try transaction.compactAfterProfileDeletion(profileID: deletedID))
+        XCTAssertEqual(fiveKeyState(), compactedState)
+    }
+
+    func testCompactAfterProfileDeletionRemovesBothKeysWhenNoRowsRemain() throws {
+        let importedID = uuid(171)
+        let transaction = makeTransaction(profileIDs: [importedID], scheduleIDs: [])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003"],
+            mode: .replace
+        )
+        XCTAssertNotNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.profileStateKey))
+        XCTAssertNotNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
+        seed(profiles: [], active: nil, schedules: [])
+
+        XCTAssertTrue(try transaction.compactAfterProfileDeletion(profileID: importedID))
+
+        XCTAssertNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.profileStateKey))
+        XCTAssertNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
+    }
+
+    func testCompactAfterProfileDeletionDropsLegacyStaleRowsInSamePass() throws {
+        // A sidecar row (and blocked id) for a profile deleted by an older
+        // build is inert but still occupies the bounded store. Compacting an
+        // unrelated deletion rewrites the canonical live state, so the legacy
+        // bytes are dropped in the same pass.
+        let importedIDs = [uuid(181), uuid(182)]
+        let transaction = makeTransaction(profileIDs: importedIDs, scheduleIDs: [])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003", "profile-001"],
+            mode: .replace
+        )
+        let legacyID = uuid(183)
+        let legacyRow = SharedSetupV2AppleProfileState.Profile(
+            profileID: legacyID,
+            sourceBundleID: "profile-002",
+            sourceProfile: try appleDocument().profiles[1],
+            unsupportedSemanticIDs: []
+        )
+        var rawSidecar = try storedSidecar()
+        rawSidecar.profiles.insert(legacyRow, at: 0)
+        defaults.set(
+            try JSONEncoder().encode(rawSidecar),
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        defaults.set(
+            try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs(
+                [legacyID] + storedBlockedIDsUnwrapped()
+            ),
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        let deletedID = importedIDs[1]
+        seed(
+            profiles: try storedProfiles().filter { $0.id != deletedID },
+            active: importedIDs[0],
+            schedules: []
+        )
+
+        XCTAssertTrue(try transaction.compactAfterProfileDeletion(profileID: deletedID))
+
+        XCTAssertEqual(try storedSidecar().profiles.map(\.profileID), [importedIDs[0]])
+        XCTAssertEqual(try storedBlockedIDs(), [importedIDs[0]])
+    }
+
+    func testCompactAfterProfileDeletionIsCleanNoOpForUnreferencedID() throws {
+        let transaction = makeTransaction(profileIDs: [uuid(191)], scheduleIDs: [])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003"],
+            mode: .replace
+        )
+        let before = fiveKeyState()
+
+        XCTAssertFalse(try transaction.compactAfterProfileDeletion(profileID: uuid(999)))
+
+        XCTAssertEqual(fiveKeyState(), before)
+    }
+
+    func testCompactAfterProfileDeletionVerificationFailureRestoresPriorBytesAndUndoStaysExact() throws {
+        let importedIDs = [uuid(201), uuid(202)]
+        let normal = makeTransaction(profileIDs: importedIDs, scheduleIDs: [])
+        _ = try normal.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003", "profile-001"],
+            mode: .replace
+        )
+        let deletedID = importedIDs[1]
+        seed(
+            profiles: try storedProfiles().filter { $0.id != deletedID },
+            active: importedIDs[0],
+            schedules: []
+        )
+        let priorState = fiveKeyState()
+        let priorUndoData = defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey)
+        let failing = makeTransaction(
+            profileIDs: [],
+            scheduleIDs: [],
+            verificationOverride: { false }
+        )
+
+        XCTAssertThrowsError(try failing.compactAfterProfileDeletion(profileID: deletedID)) { error in
+            XCTAssertEqual(
+                error as? SharedSetupV2TransactionError,
+                .persistenceVerificationFailed
+            )
+        }
+
+        XCTAssertEqual(
+            fiveKeyState(),
+            priorState,
+            "failed verified compaction restores the exact prior bytes and absence"
+        )
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey),
+            priorUndoData
+        )
+    }
+
+    func testCompactAfterProfileDeletionRefusesLiveProfileWithoutMutation() throws {
+        let importedIDs = [uuid(211), uuid(212)]
+        let transaction = makeTransaction(profileIDs: importedIDs, scheduleIDs: [])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003", "profile-001"],
+            mode: .replace
+        )
+        let before = fiveKeyState()
+
+        XCTAssertThrowsError(
+            try transaction.compactAfterProfileDeletion(profileID: importedIDs[0])
+        ) { error in
+            guard case .invalidSelection = error as? SharedSetupV2TransactionError else {
+                return XCTFail("Expected invalidSelection misuse refusal, got \(error)")
+            }
+        }
+
+        XCTAssertEqual(fiveKeyState(), before)
+    }
+
+    func testCompactAfterProfileDeletionLeavesUndoSnapshotRestorableToExactPriorState() throws {
+        // Undo honesty end-to-end: an Undo snapshot taken before a deletion
+        // still contains the deleted profile's sidecar bytes, and undoing
+        // restores that exact prior five-key state — the snapshot's truth —
+        // even after compaction removed the same bytes from the live keys.
+        let oldID = uuid(220)
+        let oldSidecar = SharedSetupV2AppleProfileState(profiles: [
+            .init(
+                profileID: oldID,
+                sourceBundleID: "profile-002",
+                sourceProfile: try appleDocument().profiles[1],
+                unsupportedSemanticIDs: []
+            )
+        ])
+        seed(
+            profiles: [ExportProfile(
+                id: oldID,
+                name: "Old",
+                settings: nativeSnapshot(filename: "old-{date}"),
+                target: .localIPhoneFolder
+            )],
+            active: oldID,
+            schedules: [],
+            sidecar: oldSidecar,
+            blocked: [oldID]
+        )
+        let preImportState = fiveKeyState()
+        let importedID = uuid(221)
+        let transaction = makeTransaction(profileIDs: [importedID], scheduleIDs: [])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003"],
+            mode: .add
+        )
+        XCTAssertTrue(transaction.canUndo)
+
+        // Native deletion of the pre-existing profile, then compaction: its
+        // sidecar row and blocked entry leave the live keys.
+        seed(
+            profiles: try storedProfiles().filter { $0.id != oldID },
+            active: importedID,
+            schedules: []
+        )
+        XCTAssertTrue(try transaction.compactAfterProfileDeletion(profileID: oldID))
+        XCTAssertEqual(try storedSidecar().profiles.map(\.profileID), [importedID])
+        XCTAssertEqual(try storedBlockedIDs(), [importedID])
+
+        let undoResult = try transaction.undo()
+
+        XCTAssertEqual(undoResult.restoredProfileIDs, [oldID])
+        XCTAssertEqual(
+            fiveKeyState(),
+            preImportState,
+            "undo restores the exact pre-import bytes, including the deleted profile's sidecar row"
+        )
+        XCTAssertFalse(transaction.canUndo)
+    }
+
     func testGateRequiresTypedLocalConfirmationKeepsCloudBlockedAndFailsClosedOnCorruption() throws {
         var document = try appleDocument()
         document.profiles[3].destination = .init(kind: .cloud, apiEndpoint: nil)
@@ -725,6 +959,10 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         try SharedSetupV2ProfileTransaction.decodeBlockedProfileIDs(
             XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
         )
+    }
+
+    private func storedBlockedIDsUnwrapped() -> [UUID] {
+        (try? storedBlockedIDs()) ?? []
     }
 
     private func storedActiveID() -> UUID? {
