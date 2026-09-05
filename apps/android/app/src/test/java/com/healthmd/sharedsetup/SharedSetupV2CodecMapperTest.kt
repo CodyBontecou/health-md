@@ -467,19 +467,20 @@ class SharedSetupV2CodecMapperTest {
     @Test
     fun `eventual canonical v2 fixture paths decode when contract fixtures are present`() {
         val paths = listOf(
-            "packages/contracts/shared-setup/v2/fixtures/shared-setup-v2.json",
+            "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json",
             "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
         )
-        val present = paths.map(::contractFileOrNull).filterNotNull()
-        present.forEach { fixture ->
-            val decoded = SharedSetupV2Codec().decode(fixture.readBytes())
+        paths.forEach { path ->
+            val fixture = requireNotNull(contractFileOrNull(path)) {
+                "Canonical Shared Setup v2 fixture is missing: $path"
+            }
+            val decoded = codec.decode(fixture.readBytes())
             assertTrue("Canonical fixture failed to decode: $fixture", decoded is SharedSetupVersionedDecodeResult.Valid)
             assertTrue(
                 "Canonical fixture was not v2: $fixture",
                 (decoded as SharedSetupVersionedDecodeResult.Valid).document is SharedSetupDecodedDocument.V2,
             )
         }
-        // Keep the integration path executable before the parallel contract lane is merged.
         assertTrue(codec.decode(codec.encode(mappedFixture().document)) is SharedSetupVersionedDecodeResult.Valid)
     }
 
