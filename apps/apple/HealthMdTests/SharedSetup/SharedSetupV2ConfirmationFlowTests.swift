@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import HealthMd
 
+#if os(iOS)
 /// Cycle-4 in-flow confirmation coverage for Shared Setup v2: the blocked
 /// API-endpoint import can be unblocked inside the review flow only through
 /// the injected verified path with a fresh local credential, blocked
@@ -701,3 +702,4 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
         return calendar
     }
 }
+#endif
