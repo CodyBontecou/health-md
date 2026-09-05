@@ -31,8 +31,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// Optional stderr capture for the spawned gateways: set INGEST_GATEWAY_STDERR_LOG=1 to
-/// write each gateway's stderr to /tmp/ingest-gw-<port>.log (loopback diagnosis on a
+/// Optional stderr capture for the spawned gateways: set `INGEST_GATEWAY_STDERR_LOG=1` to
+/// write each gateway's stderr to `/tmp/ingest-gw-<port>.log` (loopback diagnosis on a
 /// shared machine; empty files mean the gateway never reported an error).
 fn gateway_stderr_log(port: u16) -> Stdio {
     if std::env::var_os("INGEST_GATEWAY_STDERR_LOG").is_some() {
@@ -41,8 +41,7 @@ fn gateway_stderr_log(port: u16) -> Stdio {
             .write(true)
             .truncate(true)
             .open(format!("/tmp/ingest-gw-{port}.log"))
-            .map(Stdio::from)
-            .unwrap_or_else(|_| Stdio::null())
+            .map_or_else(|_| Stdio::null(), Stdio::from)
     } else {
         Stdio::null()
     }
@@ -56,7 +55,8 @@ fn gateway_stderr_log(port: u16) -> Stdio {
 /// concurrency; every receipt and error assertion is unchanged.
 fn gateway_suite_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    LOCK.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 use serde_json::{Value, json};

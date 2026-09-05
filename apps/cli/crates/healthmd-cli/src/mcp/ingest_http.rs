@@ -159,7 +159,7 @@ pub async fn serve_ingest_gateway(options: IngestServeOptions) -> Result<(), Ing
                     if error.kind() == std::io::ErrorKind::ConnectionAborted
                         || error.kind() == std::io::ErrorKind::Interrupted =>
                 {
-                    continue;
+                    // Nothing to do: fall through to the next `incoming()` item.
                 }
                 Err(_) => return Err(IngestServeError::Listener),
             }

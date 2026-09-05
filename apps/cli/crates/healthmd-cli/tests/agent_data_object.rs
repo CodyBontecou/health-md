@@ -1392,6 +1392,7 @@ fn object_store_never_issues_writes_and_restarts_are_idempotent() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn object_store_parse_errors_reject_conflicting_and_incomplete_backing() {
     let corpus = Corpus::build();
     let grant = corpus.grant_bulk();
