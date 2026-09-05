@@ -1,4 +1,7 @@
+mod data_backend;
 mod direct_backend;
+
+pub use data_backend::{DataServeOptions, DataStoreOpenError, DirectoryArtifactStore};
 
 #[cfg(feature = "streamable-http")]
 pub use healthmd_mcp::transport::streamable_http::{HttpServerError, HttpServerOptions};
@@ -113,6 +116,15 @@ pub fn tool_catalog(tool_name: Option<&str>) -> Result<Value, String> {
     healthmd_mcp::tool_catalog(healthmd_mcp::SurfaceProfile::LocalDirect, tool_name)
 }
 
+/// Return the fixed read-only Agent Data tool catalog without opening a data store.
+///
+/// # Errors
+///
+/// Returns a stable message when `tool_name` is not part of the Agent Data surface.
+pub fn data_tool_catalog(tool_name: Option<&str>) -> Result<Value, String> {
+    healthmd_mcp::tool_catalog(healthmd_mcp::SurfaceProfile::DataReadOnly, tool_name)
+}
+
 /// Execute one canonical typed query without an MCP transport envelope.
 ///
 /// CLI and MCP adapters both normalize through the shared operation registry and traverse pages
@@ -181,6 +193,7 @@ async fn execute_query_invocation(
 enum StdioSurface {
     LocalDirect,
     ReadOnly,
+    Data,
 }
 
 impl StdioSurface {
@@ -188,13 +201,14 @@ impl StdioSurface {
         match self {
             Self::LocalDirect => healthmd_mcp::SurfaceProfile::LocalDirect,
             Self::ReadOnly => healthmd_mcp::SurfaceProfile::LocalReadOnly,
+            Self::Data => healthmd_mcp::SurfaceProfile::DataReadOnly,
         }
     }
 
     fn caller(self) -> healthmd_mcp::CallerIdentity {
         match self {
             Self::LocalDirect => healthmd_mcp::CallerIdentity::local(),
-            Self::ReadOnly => healthmd_mcp::CallerIdentity::local_read_only(),
+            Self::ReadOnly | Self::Data => healthmd_mcp::CallerIdentity::local_read_only(),
         }
     }
 }
@@ -239,11 +253,31 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
     serve_stdio(options, StdioSurface::ReadOnly).await
 }
 
-#[allow(clippy::too_many_lines)]
+/// Serve a data-only MCP surface over stdio from an explicitly configured export directory.
+///
+/// This server never opens mobile pairing state and never modifies source artifacts. Its grant is
+/// enforced inside the artifact-store backend before records are returned.
+///
+/// # Errors
+///
+/// Returns [`DataStoreOpenError`] when the directory, grant, or external index is invalid.
+pub async fn serve_data(options: DataServeOptions) -> Result<(), DataStoreOpenError> {
+    let store = DirectoryArtifactStore::open(options)?;
+    let backend = healthmd_operations::ArtifactStoreBackend::new(Arc::new(store));
+    let dispatcher = stdio_dispatcher(Arc::new(backend), StdioSurface::Data);
+    serve_dispatcher(dispatcher).await;
+    Ok(())
+}
+
 async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(), ServeError> {
     let backend = direct_backend::DirectIphoneBackend::open(&options)?;
     let dispatcher = stdio_dispatcher(Arc::new(backend), surface);
+    serve_dispatcher(dispatcher).await;
+    Ok(())
+}
 
+#[allow(clippy::too_many_lines)]
+async fn serve_dispatcher(dispatcher: Arc<healthmd_mcp::JsonRpcSession>) {
     let (line_sender, mut line_receiver) = mpsc::channel::<Vec<u8>>(32);
     std::thread::spawn(move || {
         let stdin = std::io::stdin();
@@ -396,7 +430,6 @@ async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(),
             }
         }
     }
-    Ok(())
 }
 
 /// Serve the read-only vendor-neutral MCP surface over Streamable HTTP on loopback.
@@ -635,6 +668,50 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn data_stdio_dispatcher_exposes_only_the_data_contract() {
+        let dispatcher = stdio_dispatcher(Arc::new(FixtureBackend::default()), StdioSurface::Data);
+        let initialize = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let initialize: Value = serde_json::from_str(&initialize).unwrap();
+        let instructions = initialize["result"]["instructions"].as_str().unwrap();
+        assert!(instructions.contains("healthmd_data_catalog"));
+        assert!(instructions.contains("does not interpret"));
+        assert!(!instructions.contains("pair"));
+
+        let tools = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let tools: Value = serde_json::from_str(&tools).unwrap();
+        let tools = tools["result"]["tools"].as_array().unwrap();
+        assert_eq!(tools.len(), 5);
+        assert!(tools.iter().all(|tool| {
+            tool["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("healthmd_data_"))
+                && tool.pointer("/annotations/readOnlyHint") == Some(&json!(true))
+        }));
+
+        let hidden = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"healthmd_status","arguments":{}}}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let hidden: Value = serde_json::from_str(&hidden).unwrap();
+        assert_eq!(hidden.pointer("/error/code"), Some(&json!(-32_602)));
+    }
+
+    #[tokio::test]
     async fn every_query_operation_has_cli_and_mcp_canonical_parity() {
         let backend = Arc::new(FixtureBackend::default());
         let dates = json!({"type": "all_available"});
@@ -726,5 +803,9 @@ mod tests {
             Some(2)
         );
         assert!(tool_catalog(Some("healthmd_not_a_tool")).is_err());
+
+        let data = data_tool_catalog(None).expect("Agent Data schema");
+        assert_eq!(data["tools"].as_array().map(Vec::len), Some(5));
+        assert!(data_tool_catalog(Some("healthmd_status")).is_err());
     }
 }

@@ -252,3 +252,139 @@ pub trait HealthDataBackend: Send + Sync {
         .with_job_id(job_id))
     }
 }
+
+/// A read-only store of immutable Health.md export artifacts.
+///
+/// Implementations may use a local directory, a Health.md-owned database, or hosted object
+/// storage. The public query and grant contracts remain transport- and storage-neutral.
+#[async_trait]
+pub trait ArtifactStore: Send + Sync {
+    fn capabilities(&self) -> BackendCapabilities;
+
+    async fn readiness(&self, context: &CallContext) -> Result<Value, BackendError>;
+
+    async fn doctor(&self, context: &CallContext) -> Result<Value, BackendError>;
+
+    async fn query_page(
+        &self,
+        context: &CallContext,
+        request: crate::AgentDataQueryRequest,
+    ) -> Result<Value, BackendError>;
+}
+
+/// Adapts an [`ArtifactStore`] to the existing CLI/MCP backend seam.
+pub struct ArtifactStoreBackend {
+    store: std::sync::Arc<dyn ArtifactStore>,
+}
+
+impl ArtifactStoreBackend {
+    #[must_use]
+    pub fn new(store: std::sync::Arc<dyn ArtifactStore>) -> Self {
+        Self { store }
+    }
+}
+
+#[async_trait]
+impl HealthDataBackend for ArtifactStoreBackend {
+    fn capabilities(&self) -> BackendCapabilities {
+        self.store.capabilities()
+    }
+
+    async fn readiness(&self, context: &CallContext) -> Result<Value, BackendError> {
+        self.store.readiness(context).await
+    }
+
+    async fn doctor(&self, context: &CallContext) -> Result<Value, BackendError> {
+        self.store.doctor(context).await
+    }
+
+    async fn query_page(
+        &self,
+        context: &CallContext,
+        request: QueryPageRequest,
+    ) -> Result<Value, BackendError> {
+        let query = crate::AgentDataQueryRequest::from_value(request.query).map_err(|_| {
+            BackendError::new(
+                "healthmd_agent_query_invalid",
+                "The Agent Data query did not match the supported contract.",
+            )
+        })?;
+        let expected_detail = match &query.operation {
+            crate::AgentDataOperation::Records { detail_level, .. } => Some(match detail_level {
+                crate::AgentDataDetailLevel::Common => QueryDetailLevel::Summary,
+                crate::AgentDataDetailLevel::Lossless => QueryDetailLevel::Lossless,
+            }),
+            _ => None,
+        };
+        if expected_detail.is_some_and(|value| value != request.detail_level) {
+            return Err(BackendError::new(
+                "healthmd_agent_query_invalid",
+                "The Agent Data query detail level was inconsistent.",
+            ));
+        }
+        self.store.query_page(context, query).await
+    }
+}
+
+#[cfg(test)]
+mod artifact_store_tests {
+    use std::sync::Arc;
+
+    use serde_json::json;
+
+    use super::*;
+
+    struct RejectingStore;
+
+    #[async_trait]
+    impl ArtifactStore for RejectingStore {
+        fn capabilities(&self) -> BackendCapabilities {
+            BackendCapabilities {
+                source_kind: "artifact_store".to_owned(),
+                transport: "test".to_owned(),
+                supports_queries: true,
+                supports_local_file_exports: false,
+                requires_foreground_source: false,
+                instructions: String::new(),
+            }
+        }
+
+        async fn readiness(&self, _context: &CallContext) -> Result<Value, BackendError> {
+            Ok(json!({"ready": true}))
+        }
+
+        async fn doctor(&self, _context: &CallContext) -> Result<Value, BackendError> {
+            Ok(json!({"ready": true}))
+        }
+
+        async fn query_page(
+            &self,
+            _context: &CallContext,
+            _request: crate::AgentDataQueryRequest,
+        ) -> Result<Value, BackendError> {
+            Err(BackendError::new("test", "test"))
+        }
+    }
+
+    #[tokio::test]
+    async fn adapter_rejects_non_agent_queries_before_store_dispatch() {
+        let backend = ArtifactStoreBackend::new(Arc::new(RejectingStore));
+        let context = CallContext {
+            caller: CallerIdentity::local_read_only(),
+            cancellation: CancellationToken::new(),
+            session_id: None,
+            progress: None,
+        };
+        let error = backend
+            .query_page(
+                &context,
+                QueryPageRequest {
+                    query: json!({"schema": "healthmd.query_request"}),
+                    detail_level: QueryDetailLevel::Summary,
+                },
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, "healthmd_agent_query_invalid");
+    }
+}

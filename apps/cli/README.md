@@ -419,6 +419,23 @@ discovery, and typed-query tools; all six pairing/export-job tools are absent an
 rejected. It starts no MCP HTTP listener, requires no OAuth or tunnel, and uses no Health.md or
 third-party cloud service. The iPhone must already be paired and remain foreground for each query.
 
+For an agent that should read already-exported data without keeping the phone online, use the
+separate Agent Data surface:
+
+```bash
+healthmd mcp schema --data
+healthmd mcp serve-data \
+  --directory /absolute/path/to/healthmd-exports \
+  --grant /absolute/private/path/agent-data-grant.json
+```
+
+This five-tool surface indexes existing Apple and Android JSON/NDJSON export contracts without
+changing them. One explicit grant filters every catalog and read by metric, source, owner date,
+instant, and common/lossless layer. The export directory is read-only; the rebuildable index and
+grant live outside it. Whole-artifact bytes are available only under an explicit unrestricted bulk
+grant. See [Agent Data store](docs/agent-data.md) for the grant shape, supported artifacts, MCP host
+configuration, and exact trust boundary.
+
 A complete local desktop MCP client can onboard without opening a separate terminal. Call
 `healthmd_pairing_start`, render the returned `image/png`, and ask the user to open Health.md's
 **Sync → Direct CLI Access → Scan Pairing QR** screen and scan it. Health.md starts pairing
@@ -463,7 +480,7 @@ dispatch. Omit all OAuth flags only for loopback development; unauthenticated mo
 non-loopback Host or Origin, so it cannot be exposed through a public reverse proxy. Partial OAuth
 configuration fails closed.
 
-Health.md does not provide a synchronized remote health-data corpus. The optional HTTP mode remains
+The direct-backed HTTP mode does not provide a synchronized remote health-data corpus. It remains
 a live relay to the paired foreground iPhone: it has no synchronization API, health-data database,
 retention store, or server-side fallback. ChatGPT, Claude, Codex, IDEs, and custom MCP clients are
 distribution targets rather than special server modes. See [Remote MCP architecture](docs/remote-mcp.md)
@@ -477,6 +494,7 @@ contacting iPhone:
 healthmd mcp schema healthmd_sleep_sessions
 healthmd mcp schema healthmd_metric_chart
 healthmd mcp schema # all fixed tools
+healthmd mcp schema --data # five data-only tools
 ```
 
 For a seven-night sleep question, call `healthmd_sleep_sessions` directly with concrete inclusive

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add the first data-only Agent Data vertical slice: versioned metric/source/date/time grants,
+  storage-neutral read-only operations, a verified external index for existing Apple/Android JSON
+  and NDJSON exports, and the separate five-tool `healthmd mcp serve-data` stdio surface. Direct
+  phone behavior and frozen export schemas remain unchanged; hosted sync and service packaging are
+  intentionally deferred.
 - Compile the RFC-0005 P2 wake client into every macOS, Linux, and Windows CLI build, use the
   deployed `healthmd-wake.costream.workers.dev` doorbell by default, and retain explicit local
   opt-out plus graceful P1 fallback. The former `wake-worker` feature is now a compatibility alias,

@@ -61,8 +61,8 @@ const WELCOME_TEXT: &str = concat!(
     name = "healthmd",
     version,
     about = "Portable command-line access to Health.md",
-    long_about = "Request health exports from an open, paired iOS or Android device running Health.md. Source health reads always occur on the mobile device.",
-    after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  Inspect sleep arguments locally with `healthmd query healthmd_sleep_sessions`, then\n  rerun it with `--arguments <JSON>`. `healthmd extract` remains a different canonical\n  projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect arguments and examples without contacting iPhone; add --json for full schemas:\n    healthmd query healthmd_sleep_sessions\n    healthmd query healthmd_metric_chart\n    healthmd mcp schema                # fixed operation catalog"
+    long_about = "Request health exports from an open, paired iOS or Android device running Health.md, or expose an explicitly configured local export store through a data-only MCP surface.",
+    after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  Inspect sleep arguments locally with `healthmd query healthmd_sleep_sessions`, then\n  rerun it with `--arguments <JSON>`. `healthmd extract` remains a different canonical\n  projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect arguments and examples without contacting iPhone; add --json for full schemas:\n    healthmd query healthmd_sleep_sessions\n    healthmd query healthmd_metric_chart\n    healthmd mcp schema                # direct-operation catalog\n    healthmd mcp schema --data         # data-only artifact-store catalog"
 )]
 struct Cli {
     /// Execution backend. `direct` is the portable mobile connection; `mac-app` is reserved.
@@ -156,6 +156,8 @@ enum McpCommand {
     Serve(McpServeArgs),
     /// Serve only readiness and typed-query tools over local stdio, without pairing or exports.
     ServeReadOnly(McpServeArgs),
+    /// Serve authorized records from a read-only local Health.md export directory.
+    ServeData(McpServeDataArgs),
     /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
     #[cfg(feature = "streamable-http")]
     ServeHttp(Box<McpServeHttpArgs>),
@@ -165,11 +167,15 @@ enum McpCommand {
 
 #[derive(Debug, Args)]
 #[command(
-    after_help = "EXAMPLES:\n  healthmd mcp schema healthmd_sleep_sessions\n  healthmd mcp schema healthmd_metric_chart\n  healthmd mcp schema    # complete fixed tool catalog"
+    after_help = "EXAMPLES:\n  healthmd mcp schema healthmd_sleep_sessions\n  healthmd mcp schema healthmd_metric_chart\n  healthmd mcp schema --data healthmd_data_catalog\n  healthmd mcp schema    # complete direct tool catalog\n  healthmd mcp schema --data    # complete Agent Data catalog"
 )]
 struct McpSchemaArgs {
     /// Fixed MCP tool name. Omit to print the complete catalog.
     tool: Option<String>,
+
+    /// Inspect the separate data-only artifact-store surface.
+    #[arg(long)]
+    data: bool,
 }
 
 #[derive(Debug, Args)]
@@ -177,6 +183,21 @@ struct McpServeArgs {
     /// Default timeout for readiness and query operations.
     #[arg(long, default_value_t = 1_200)]
     timeout_seconds: u64,
+}
+
+#[derive(Debug, Args)]
+struct McpServeDataArgs {
+    /// Existing absolute directory containing immutable Health.md JSON or NDJSON exports.
+    #[arg(long)]
+    directory: PathBuf,
+
+    /// Absolute path to a version-1 Agent Data grant JSON file outside the export directory.
+    #[arg(long)]
+    grant: PathBuf,
+
+    /// Optional absolute path for the rebuildable private index, outside the export directory.
+    #[arg(long)]
+    index: Option<PathBuf>,
 }
 
 #[cfg(feature = "streamable-http")]
@@ -684,6 +705,22 @@ fn requested_output_mode(arguments: &[std::ffi::OsString]) -> output::OutputMode
 
 #[allow(clippy::too_many_lines)]
 async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
+    if let Command::Mcp(McpArgs {
+        command: Some(McpCommand::ServeData(options)),
+    }) = &cli.command
+    {
+        let result = mcp::serve_data(mcp::DataServeOptions {
+            directory: options.directory.clone(),
+            grant: options.grant.clone(),
+            index: options.index.clone(),
+        })
+        .await;
+        if let Err(error) = result {
+            eprintln!("healthmd: {error}");
+            return ExitCode::from(1);
+        }
+        return ExitCode::SUCCESS;
+    }
     let stdio_mcp = match &cli.command {
         Command::Mcp(McpArgs {
             command: Some(McpCommand::Serve(options)),
@@ -920,10 +957,15 @@ fn extract_scope_is_present(options: &SelectionArgs) -> bool {
 }
 
 fn mcp_schema(options: &McpSchemaArgs) -> Result<Value, CommandError> {
-    mcp::tool_catalog(options.tool.as_deref()).map_err(|_| CommandError {
-        backend: "direct",
+    let catalog = if options.data {
+        mcp::data_tool_catalog(options.tool.as_deref())
+    } else {
+        mcp::tool_catalog(options.tool.as_deref())
+    };
+    catalog.map_err(|_| CommandError {
+        backend: if options.data { "data" } else { "direct" },
         code: "invalid_request",
-        message: "The requested fixed MCP tool is unavailable. Run `healthmd mcp schema` to list every supported tool."
+        message: "The requested fixed MCP tool is unavailable. Run `healthmd mcp schema` (or `healthmd mcp schema --data`) to list the supported tools."
             .into(),
     })
 }
@@ -2460,6 +2502,9 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Mcp(McpArgs {
             command: Some(McpCommand::ServeReadOnly(_)),
         }) => "mcp serve-read-only",
+        Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(_)),
+        }) => "mcp serve-data",
         #[cfg(feature = "streamable-http")]
         Command::Mcp(McpArgs {
             command: Some(McpCommand::ServeHttp(_)),
@@ -2814,6 +2859,7 @@ mod tests {
             panic!("expected MCP schema command");
         };
         assert_eq!(options.tool.as_deref(), Some("healthmd_sleep_sessions"));
+        assert!(!options.data);
 
         let setup = Cli::try_parse_from([
             "healthmd",
@@ -2832,6 +2878,47 @@ mod tests {
         };
         assert!(options.skip_pairing);
         assert_eq!(options.pairing_timeout, 240);
+    }
+
+    #[test]
+    fn data_mcp_commands_parse() {
+        let data = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-data",
+            "--directory",
+            "/tmp/healthmd-exports",
+            "--grant",
+            "/tmp/healthmd-grant.json",
+            "--index",
+            "/tmp/healthmd-index.json",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(options)),
+        }) = data.command
+        else {
+            panic!("expected data MCP serve command");
+        };
+        assert_eq!(options.directory, PathBuf::from("/tmp/healthmd-exports"));
+        assert_eq!(options.grant, PathBuf::from("/tmp/healthmd-grant.json"));
+
+        let schema = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "schema",
+            "--data",
+            "healthmd_data_catalog",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::Schema(options)),
+        }) = schema.command
+        else {
+            panic!("expected Agent Data MCP schema command");
+        };
+        assert!(options.data);
+        assert_eq!(options.tool.as_deref(), Some("healthmd_data_catalog"));
     }
 
     #[cfg(not(feature = "streamable-http"))]

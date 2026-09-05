@@ -396,7 +396,9 @@ pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
             let mut commands = vec![
                 json!({"command": "healthmd mcp serve", "description": "Serve the complete local MCP surface over stdio."}),
                 json!({"command": "healthmd mcp serve-read-only", "description": "Serve only readiness and query tools over stdio."}),
+                json!({"command": "healthmd mcp serve-data --directory <ABSOLUTE_DIRECTORY> --grant <ABSOLUTE_GRANT_JSON>", "description": "Serve the separate data-only surface from immutable local exports."}),
                 json!({"command": "healthmd mcp schema", "description": "Print the fixed operation catalog without contacting a device."}),
+                json!({"command": "healthmd mcp schema --data", "description": "Print the fixed Agent Data operation catalog without opening a store."}),
             ];
             #[cfg(feature = "streamable-http")]
             commands.push(json!({"command": "healthmd mcp serve-http", "description": "Serve the experimental read-only loopback Streamable HTTP profile."}));
@@ -803,8 +805,13 @@ fn accepted_arguments(path: &str) -> Value {
         ],
         "direct unpair" => &["[DEVICE_UUID]"],
         "direct reset-trust" => &["--confirm"],
-        "mcp schema" => &["[TOOL]"],
+        "mcp schema" => &["[--data]", "[TOOL]"],
         "mcp serve" | "mcp serve-read-only" => &["--timeout-seconds <SECONDS>"],
+        "mcp serve-data" => &[
+            "--directory <ABSOLUTE_DIRECTORY>",
+            "--grant <ABSOLUTE_GRANT_JSON>",
+            "[--index <ABSOLUTE_INDEX_JSON>]",
+        ],
         "setup codex" => &["--skip-pairing", "--pairing-timeout <SECONDS>"],
         _ => &[],
     };
@@ -925,6 +932,7 @@ fn command_path(arguments: &[OsString]) -> &'static str {
             .find_map(|value| match *value {
                 "serve" => Some("mcp serve"),
                 "serve-read-only" => Some("mcp serve-read-only"),
+                "serve-data" => Some("mcp serve-data"),
                 #[cfg(feature = "streamable-http")]
                 "serve-http" => Some("mcp serve-http"),
                 "schema" => Some("mcp schema"),

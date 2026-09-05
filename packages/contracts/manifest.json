@@ -27,6 +27,52 @@
   ],
   "contracts": [
     {
+      "id": "healthmd.agent_data",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Read-only metric, source, date/time, detail-layer, and bulk grants plus storage-neutral agent query and response contracts.",
+      "specification": "packages/contracts/agent-data/v1/contract.md",
+      "authorities": [
+        "packages/contracts/agent-data/v1/contract.md",
+        "packages/contracts/agent-data/v1/agent-data-grant.schema.json",
+        "packages/contracts/agent-data/v1/agent-data-query.schema.json",
+        "packages/contracts/agent-data/v1/agent-query-response.schema.json"
+      ],
+      "implementations": [
+        "apps/cli/crates/healthmd-operations/src/data.rs",
+        "apps/cli/crates/healthmd-operations/src/backend.rs",
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-cli/src/mcp/data_backend.rs"
+      ],
+      "consumers": [
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/crates/healthmd-cli/src/mcp/mod.rs"
+      ],
+      "documentation": [
+        "apps/cli/docs/agent-data.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/grant-explicit.json",
+          "sha256": "540e4160004c60ceb1dd253f5d2671319613e2880e89d3302a55367881f9a7c2",
+          "provenance": "Reviewed synthetic one-store explicit steps grant with no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/query-records.json",
+          "sha256": "d7bd601c3e1d0fadd19ac3698afec342564811101beb827754d3a8ec3b3ad504",
+          "provenance": "Reviewed synthetic bounded common-record request using the schema-qualified v1 metric identity.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/response-records.json",
+          "sha256": "8c73eaa25d7cfc43b559d4af1609e66b4741be5fab083c70d96f52ae34232e0d",
+          "provenance": "Reviewed synthetic policy-enforced response with placeholder hashes and no production health or identity data.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
       "id": "healthmd.direct.ios",
       "version": 1,
       "status": "canonical",

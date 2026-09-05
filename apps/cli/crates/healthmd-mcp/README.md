@@ -6,7 +6,8 @@ This crate adapts the transport-neutral `healthmd-operations` registry and appli
 tools, resources, results, stdio, and HTTP. It does not own operation normalization, mobile pairing,
 native credentials, HealthKit, Health Connect, local destination access, or health-data storage.
 
-- `HealthMdApplication` is shared by complete local, local read-only, and remote read-only surfaces.
+- `HealthMdApplication` is shared by complete local, local read-only, remote read-only, and
+  separate data-only surfaces.
 - `HealthMdSession` keeps negotiated client capabilities isolated per MCP session.
 - The optional `streamable-http` feature exposes standard MCP Streamable HTTP.
 - The optional `oauth-resource-server` feature adds RFC 9728 metadata and bounded JWT/JWKS
@@ -21,3 +22,8 @@ stdio profile needs no HTTP, OAuth, tunnel, or cloud service. Pairing execution 
 exports remain in `healthmd-cli`; only its complete local stdio adapter may expose those guarded MCP
 operations, while local read-only, HTTP, and OAuth profiles cannot discover or invoke them. See the
 repository's [Remote MCP architecture](https://github.com/CodyBontecou/health-md/blob/main/apps/cli/docs/remote-mcp.md).
+
+The `DataReadOnly` profile exposes five fixed `healthmd_data_*` operations backed by the shared
+`ArtifactStore` contract. It contains no direct-device, pairing, export, interpretation, or MCP Apps
+UI operations. The first local implementation is documented in the repository's
+[Agent Data store](https://github.com/CodyBontecou/health-md/blob/main/apps/cli/docs/agent-data.md).
