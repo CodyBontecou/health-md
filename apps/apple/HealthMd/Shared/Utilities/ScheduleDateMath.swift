@@ -103,22 +103,23 @@ enum ScheduleDateMath {
         // Determine the start of the catch-up range
         let startDate: Date
         if let lastExport = schedule.lastExportDate {
-            // Last export ran on `lastExport` and exported data for the day before.
-            // So the next data day to export is `lastExportDay` itself (the day the export ran).
+            // A completed-day run on `lastExportDay` exported data through the
+            // prior day, so the next unexported data day is `lastExportDay`
+            // itself (the day the export ran). Catch-up therefore starts at
+            // `lastExportDay`, not the day after it — otherwise the run day's
+            // data is never exported and the following occurrence is skipped
+            // as "nothing to catch up" (user report 2026-09-05: daily profile
+            // schedules skipped every other day while manual exports worked).
             let lastExportDay = calendar.startOfDay(for: lastExport)
 
-            // If we already exported yesterday's data (lastExportDay >= yesterday),
-            // there's nothing to catch up.
-            if lastExportDay >= yesterday {
+            // A run later today (or a projection from the future) already
+            // covered yesterday's data: nothing to catch up.
+            if lastExportDay > yesterday {
                 return []
             }
 
-            // Start from the day after lastExportDay, bounded by the lookback window
-            if let dayAfter = calendar.date(byAdding: .day, value: 1, to: lastExportDay) {
-                startDate = max(dayAfter, oldestDate)
-            } else {
-                startDate = oldestDate
-            }
+            // Start from the last run day, bounded by the lookback window
+            startDate = max(lastExportDay, oldestDate)
         } else {
             startDate = oldestDate
         }

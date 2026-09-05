@@ -288,14 +288,29 @@ final class ScheduleDateMathTests: XCTestCase {
         XCTAssertEqual(comps.day, 14)
     }
 
-    func testCatchUpDates_daily_lastExportYesterday_returnsEmpty() {
+    func testCatchUpDates_daily_lastExportYesterday_returnsYesterdayDataDay() {
+        // A run yesterday at 09:00 exported the day before yesterday. Today's
+        // occurrence must still export yesterday's data day.
         let yesterday = date(2026, 3, 14, 9, 0)
         let schedule = ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8, lastExportDate: yesterday)
         let now = date(2026, 3, 15, 10, 0)
 
         let dates = ScheduleDateMath.catchUpDatesNeeded(schedule: schedule, now: now, calendar: Self.cal)
 
-        XCTAssertTrue(dates.isEmpty, "Yesterday already exported — nothing to catch up")
+        XCTAssertEqual(dates.count, 1, "Yesterday's data day is still unexported")
+        XCTAssertEqual(Self.cal.component(.day, from: dates[0]), 14)
+    }
+
+    func testCatchUpDates_daily_lastExportToday_returnsEmpty() {
+        // Today's 08:00 run already exported yesterday's data; a later
+        // same-day wake-up has nothing to catch up.
+        let today = date(2026, 3, 15, 8, 0)
+        let schedule = ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8, lastExportDate: today)
+        let now = date(2026, 3, 15, 10, 0)
+
+        let dates = ScheduleDateMath.catchUpDatesNeeded(schedule: schedule, now: now, calendar: Self.cal)
+
+        XCTAssertTrue(dates.isEmpty, "Today's run already covered yesterday's data")
     }
 
     func testCatchUpDates_daily_missedDays_clippedToYesterday() {
@@ -332,9 +347,11 @@ final class ScheduleDateMathTests: XCTestCase {
 
         let dates = ScheduleDateMath.catchUpDatesNeeded(schedule: schedule, now: now, calendar: Self.cal)
 
-        // lastExportDay = Mar 10, dayAfter = Mar 11. oldestDate = Mar 8.
-        // max(Mar 11, Mar 8) = Mar 11. Range: Mar 11..Mar 14 = 4 dates
-        XCTAssertTrue(dates.count >= 2, "Weekly catch-up should return multiple missed dates")
+        // The Mar 10 run exported through Mar 9, so catch-up starts at Mar 10
+        // (the run day) and runs through yesterday (Mar 14): 5 dates.
+        XCTAssertEqual(dates.count, 5)
+        XCTAssertEqual(Self.cal.component(.day, from: dates.first!), 10)
+        XCTAssertEqual(Self.cal.component(.day, from: dates.last!), 14)
     }
 
     func testCatchUpDates_weekly_boundedBySeven() {

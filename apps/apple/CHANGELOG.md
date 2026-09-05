@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Daily scheduled exports driven by an export profile no longer skip the day after every successful run. Catch-up date math treated the run day itself as already exported ("nothing to catch up"), so a daily 8:00 schedule ran only every other day and the run day's data was never exported by the schedule; users had to export those days manually. Catch-up now starts at the run day — matching the legacy schedule and macOS paths — so each occurrence exports the prior day's data (user report 2026-09-05).
+
 ## [3.3.0] - 2026-09-03
 
 ### Added

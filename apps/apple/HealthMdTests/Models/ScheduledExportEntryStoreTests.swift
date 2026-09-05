@@ -234,6 +234,36 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
         XCTAssertFalse(due.contains { $0.profileID == disabledProfile })
     }
 
+    func testDueOccurrencesDailyEntryStaysDueTheDayAfterARun() {
+        // Regression (user report 2026-09-05): a completed-day run on Aug 9
+        // exported Aug 8's data. The Aug 10 occurrence must still be due and
+        // export Aug 9 — previously catch-up started after the run day, so
+        // the schedule skipped every other day reporting "nothing to export"
+        // and the run day's data was never exported.
+        let store = makeStore()
+        let profileID = UUID()
+        store.upsert(
+            makeEntry(profileID: profileID) {
+                $0.frequency = .daily
+                $0.preferredHour = 8
+                $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+                $0.lastExportDate = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+            }
+        )
+
+        let due = store.dueOccurrences(now: fixedNow, calendar: calendar)
+
+        let occurrence = due.first {
+            $0.profileID == profileID && $0.kind == .completedDay
+        }
+        XCTAssertNotNil(occurrence, "Day-after occurrence must remain due")
+        XCTAssertEqual(
+            occurrence?.exportDates,
+            [makeDate(year: 2026, month: 8, day: 9)],
+            "The run day's data day is the next unexported day"
+        )
+    }
+
     func testDueOccurrencesIncludePerEntryTodayRefresh() {
         let store = makeStore()
         let profileID = UUID()
