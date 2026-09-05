@@ -352,11 +352,13 @@
     },
     {
       "id": "healthmd.shared_setup",
-      "version": 1,
+      "version": 2,
       "status": "deferred",
-      "summary": "Implemented bounded Apple/Android portable setup profile pending required physical-device interoperability and accessibility QA before canonicalization.",
-      "specification": "packages/contracts/shared-setup/v1/contract.md",
+      "summary": "Bounded named-profile Apple/Android portable setup bundle with exact v2 platform extensions; canonicalization remains deferred pending native transactions, physical-device interoperability, and accessibility QA.",
+      "specification": "packages/contracts/shared-setup/v2/contract.md",
       "authorities": [
+        "packages/contracts/shared-setup/v2/contract.md",
+        "packages/contracts/shared-setup/v2/shared-setup.schema.json",
         "packages/contracts/shared-setup/v1/contract.md",
         "packages/contracts/shared-setup/v1/shared-setup.schema.json"
       ],
@@ -379,17 +381,47 @@
       "documentation": [
         "packages/contracts/README.md"
       ],
+      "historical_readable_compatibility": {
+        "version": 1,
+        "authorities": [
+          "packages/contracts/shared-setup/v1/contract.md",
+          "packages/contracts/shared-setup/v1/shared-setup.schema.json"
+        ],
+        "consumers": [
+          "packages/contracts/validate.py",
+          "packages/contracts/test_validate_shared_setup.py",
+          "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
+          "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt",
+          "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupServiceTest.kt"
+        ],
+        "fixtures": [
+          "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
+          "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json"
+        ]
+      },
       "fixtures": [
+        {
+          "path": "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json",
+          "sha256": "51c4151a040f487cc1f1b1fff1fa9cd0dc7891babf1395d5e1c5ade58e7807c0",
+          "provenance": "Reviewed one-line synthetic Apple-origin named-profile bundle covering Summary, Detailed Time-Series, archive-only, and Lossless policy pairs plus inert destination/schedule intent; contains no health records, user/account/device identity, native IDs, credentials, grants, pairings, or runtime state.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
+          "sha256": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
+          "provenance": "Reviewed one-line synthetic Android-origin named-profile bundle covering compatibility and platform-distinct raw-snapshot modes, complete legacy data-type filters, and inert destination/schedule intent; contains no health records, user/account/device identity, native IDs, credentials, grants, pairings, or runtime state.",
+          "mirrors": []
+        },
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
           "sha256": "4101ba35c58ed25af60ff8b540ed03e6e230153748fef52bbd70dece9b68f751",
-          "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "provenance": "Historical readable v1 fixture preserved byte-for-byte: reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android preserves as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
           "sha256": "817e30ce6c3e1c7d2a74502608b7bc0cb203058b7aa5de1c3c9bef7c6c27ede5",
-          "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "provenance": "Historical readable v1 fixture preserved byte-for-byte: reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         }
       ]

@@ -27,8 +27,13 @@ PRODUCT_CAPABILITIES_SCHEMA_VERSION = 1
 METRIC_REGISTRY_SCHEMA = "healthmd.metric_registry"
 METRIC_REGISTRY_SCHEMA_VERSION = 1
 SHARED_SETUP_SCHEMA = "healthmd.shared_setup"
-SHARED_SETUP_SCHEMA_VERSION = 1
-SHARED_SETUP_MAX_BYTES = 262_144
+SHARED_SETUP_V1_SCHEMA_VERSION = 1
+SHARED_SETUP_V2_SCHEMA_VERSION = 2
+SHARED_SETUP_V1_MAX_BYTES = 262_144
+SHARED_SETUP_V2_MAX_BYTES = 4_194_304
+# Kept as the historical v1 public constant for existing focused tests/readers.
+SHARED_SETUP_SCHEMA_VERSION = SHARED_SETUP_V1_SCHEMA_VERSION
+SHARED_SETUP_MAX_BYTES = SHARED_SETUP_V1_MAX_BYTES
 REGISTRY_PROFILE_TO_PUBLIC = {
     "apple_health_data_v8": "apple-v8",
     "android_frozen_v4": "android-frozen-v4",
@@ -1542,7 +1547,7 @@ def validate_unified_health_data_fixture(root: Path, path: Path) -> None:
         fail(f"{context}: Android primary data must not be relabeled as SDNN")
 
 
-def validate_shared_setup_fixture(root: Path, path: Path) -> None:
+def _validate_shared_setup_v1_fixture(root: Path, path: Path) -> None:
     context = "healthmd.shared_setup v1 fixture"
     fixture_bytes = path.read_bytes()
     if len(fixture_bytes) > SHARED_SETUP_MAX_BYTES:
@@ -1626,7 +1631,8 @@ def validate_shared_setup_fixture(root: Path, path: Path) -> None:
     def reject_sensitive(value: Any, value_context: str) -> None:
         if isinstance(value, dict):
             for key, child in value.items():
-                normalized = re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
+                snake_key = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+                normalized = re.sub(r"[^a-z0-9]+", "_", snake_key.lower()).strip("_")
                 safe_disclosure_fields = {"credentials_required", "header_level"}
                 if normalized not in safe_disclosure_fields and (
                     normalized in forbidden_exact
@@ -1784,6 +1790,514 @@ def validate_shared_setup_fixture(root: Path, path: Path) -> None:
         portable_target = "api_endpoint" if apple_schedule["desired_target"] == "api_endpoint" else "device_folder"
         if not cadence_matches or schedule["desired_target"] != portable_target:
             fail(f"{context}: portable and Apple schedule representations contradict each other")
+
+
+def _decode_shared_setup_json(fixture_bytes: bytes, context: str) -> Any:
+    try:
+        text = fixture_bytes.decode("utf-8")
+        return json.loads(
+            text,
+            parse_constant=lambda value: fail(
+                f"{context}: non-finite JSON number {value!r} is forbidden"
+            ),
+        )
+    except (UnicodeDecodeError, ValueError, RecursionError) as error:
+        fail(f"{context}: invalid bounded UTF-8 JSON: {error}")
+
+
+def _validate_shared_setup_generic_bounds(
+    payload: Any,
+    context: str,
+    *,
+    max_depth: int,
+    max_container_items: int,
+    max_key_scalars: int,
+    max_string_scalars: int,
+    max_nodes: int,
+) -> None:
+    node_count = 0
+
+    def scalar_count(value: str, value_context: str) -> int:
+        if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+            fail(f"{value_context}: invalid Unicode surrogate is forbidden")
+        return len(value)
+
+    def visit(value: Any, value_context: str, depth: int) -> None:
+        nonlocal node_count
+        node_count += 1
+        if node_count > max_nodes:
+            fail(f"{context}: JSON node count exceeds {max_nodes}")
+        if depth > max_depth:
+            fail(f"{value_context}: JSON nesting exceeds {max_depth} levels")
+        if isinstance(value, dict):
+            if len(value) > max_container_items:
+                fail(f"{value_context}: object exceeds {max_container_items} members")
+            for key, child in value.items():
+                if scalar_count(key, value_context) > max_key_scalars:
+                    fail(
+                        f"{value_context}: object key exceeds {max_key_scalars} Unicode scalars"
+                    )
+                visit(child, f"{value_context}.{key}", depth + 1)
+        elif isinstance(value, list):
+            if len(value) > max_container_items:
+                fail(f"{value_context}: array exceeds {max_container_items} items")
+            for index, child in enumerate(value):
+                visit(child, f"{value_context}[{index}]", depth + 1)
+        elif isinstance(value, str):
+            if scalar_count(value, value_context) > max_string_scalars:
+                fail(
+                    f"{value_context}: string exceeds {max_string_scalars} Unicode scalars"
+                )
+        elif isinstance(value, float) and not math.isfinite(value):
+            fail(f"{value_context}: non-finite JSON number is forbidden")
+
+    visit(payload, context, 0)
+
+
+def _shared_setup_schema(root: Path, version: int, context: str) -> dict[str, Any]:
+    schema_path = repository_path(
+        root,
+        f"packages/contracts/shared-setup/v{version}/shared-setup.schema.json",
+        f"{context}.schema",
+    )
+    schema = load_json(schema_path, f"{context}.schema")
+    if (
+        not isinstance(schema, dict)
+        or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+        or schema.get("properties", {}).get("schema_version", {}).get("const") != version
+    ):
+        fail(f"{context}: schema metadata is invalid")
+    return schema
+
+
+def _validate_shared_setup_writer_allowlist(
+    payload: Any,
+    schema: dict[str, Any],
+    context: str,
+) -> None:
+    def resolve(reference: str, value_context: str) -> dict[str, Any]:
+        if not reference.startswith("#/"):
+            fail(f"{value_context}: writer schema reference must be local")
+        value: Any = schema
+        for raw_part in reference[2:].split("/"):
+            part = raw_part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(value, dict) or part not in value:
+                fail(f"{value_context}: unresolved writer schema reference {reference}")
+            value = value[part]
+        if not isinstance(value, dict):
+            fail(f"{value_context}: writer schema reference is not an object")
+        return value
+
+    def choose_one_of(value: Any, branches: Any, value_context: str) -> dict[str, Any]:
+        if not isinstance(branches, list):
+            fail(f"{value_context}: writer oneOf must be an array")
+        if value is None:
+            matches = [branch for branch in branches if branch.get("type") == "null"]
+        else:
+            matches = [branch for branch in branches if branch.get("type") != "null"]
+        if len(matches) != 1 or not isinstance(matches[0], dict):
+            fail(f"{value_context}: writer schema has ambiguous oneOf allowlist")
+        return matches[0]
+
+    def visit(value: Any, candidate: dict[str, Any], value_context: str) -> None:
+        if "$ref" in candidate:
+            reference = candidate["$ref"]
+            if not isinstance(reference, str):
+                fail(f"{value_context}: writer schema reference must be a string")
+            visit(value, resolve(reference, value_context), value_context)
+            return
+        if "oneOf" in candidate:
+            visit(value, choose_one_of(value, candidate["oneOf"], value_context), value_context)
+            return
+        if isinstance(value, dict):
+            properties = candidate.get("properties", {})
+            if not isinstance(properties, dict):
+                fail(f"{value_context}: writer schema properties must be an object")
+            additional = candidate.get("additionalProperties", True)
+            for key, child in value.items():
+                if key in properties:
+                    visit(child, properties[key], f"{value_context}.{key}")
+                elif isinstance(additional, dict):
+                    visit(child, additional, f"{value_context}.{key}")
+                else:
+                    fail(f"{value_context}: writer field {key!r} is not allowlisted")
+        elif isinstance(value, list):
+            items = candidate.get("items")
+            if isinstance(items, dict):
+                for index, child in enumerate(value):
+                    visit(child, items, f"{value_context}[{index}]")
+
+    visit(payload, schema, context)
+
+
+def _reject_sensitive_shared_setup_v2(payload: Any, context: str) -> None:
+    forbidden_exact = {
+        "id", "uuid", "native_id", "native_profile_id", "profile_id",
+        "destination_id", "endpoint_id", "schedule_entry_id", "pairing_id",
+        "authorization", "authorization_header", "authorization_header_value",
+        "credential", "credentials", "token", "access_token", "refresh_token",
+        "password", "secret", "cookie", "headers", "request_headers", "oauth",
+        "bookmark", "security_scoped_bookmark", "saf_uri", "content_uri",
+        "folder_uri", "folder_grant", "native_path", "root_path", "folder_path",
+        "destination_path", "device_id", "installation_id", "user_id", "account_id",
+        "permissions", "health_permissions", "purchase", "purchases", "entitlement",
+        "onboarding", "history", "export_history", "created_at", "updated_at",
+        "modified_at", "enabled_at", "last_run", "last_export_date", "last_success",
+        "last_today_refresh_date", "retry", "retries", "pending_work",
+        "pending_requests", "operation_id", "destination_fingerprint", "fingerprint",
+        "engine_pin", "engine_authority", "worker_id", "alarm_id", "schedule_enabled",
+        "is_enabled", "timezone", "time_zone", "zone_id", "health_records",
+        "health_data", "source_data", "records", "samples", "measurements",
+        "analytics", "email", "api_key", "raw_persistence_snapshot", "session_id",
+        "first_name", "last_name", "full_name", "include_granular_data",
+        "desired_target", "rollups", "weekly_rollup", "monthly_rollup", "yearly_rollup",
+        "calendar_timezone", "calendar_time_zone", "migration_marker", "folder_display_name",
+        "timestamp",
+    }
+    forbidden_fragments = (
+        "credential", "password", "token", "secret", "authorization", "header", "bookmark",
+        "saf_uri", "content_uri", "folder_grant", "permission", "purchase",
+        "entitlement", "history", "device_id", "device_identifier", "installation_id",
+        "installation_identifier", "account_id", "account_identifier", "user_id",
+        "user_identifier", "native_profile", "native_id", "profile_id", "profile_uuid",
+        "destination_id", "destination_uuid", "endpoint_id", "endpoint_uuid", "folder_id",
+        "folder_uuid", "schedule_entry", "health_record", "health_data", "source_data",
+        "analytics", "api_key",
+        "raw_persistence", "session_id", "pending_", "operation_id",
+        "destination_fingerprint", "engine_pin", "engine_authority", "pairing",
+        "runtime_", "time_zone", "timezone", "migration", "folder_display",
+        "endpoint_url", "api_url", "worker_", "alarm_", "progress", "last_",
+        "weekly_rollup", "monthly_rollup", "yearly_rollup",
+    )
+
+    def visit(value: Any, value_context: str, path: tuple[str, ...]) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                snake_key = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+                normalized = re.sub(r"[^a-z0-9]+", "_", snake_key.lower()).strip("_")
+                raw_snapshot_option = (
+                    normalized == "raw_snapshot"
+                    and len(path) >= 3
+                    and path[-3:] == ("platform_extensions", "android", "export")
+                )
+                schedule_enabled = normalized == "enabled" and "schedule" in path
+                runtime_suffix = normalized.endswith(("_timestamp", "_millis", "_at"))
+                safe_disclosure_fields = {"credentials_required", "header_level"}
+                if normalized == "raw_snapshot" and not raw_snapshot_option:
+                    fail(f"{value_context}: raw snapshot payload/snapshot field is forbidden")
+                if schedule_enabled or runtime_suffix or (
+                    normalized not in safe_disclosure_fields
+                    and (
+                        normalized in forbidden_exact
+                        or any(fragment in normalized for fragment in forbidden_fragments)
+                    )
+                ):
+                    fail(f"{value_context}: forbidden sensitive/runtime field {key!r}")
+                visit(child, f"{value_context}.{key}", path + (normalized,))
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{value_context}[{index}]", path + ("[]",))
+        elif isinstance(value, str):
+            lowered = value.lower()
+            if lowered.startswith(("content://", "file://")):
+                fail(f"{value_context}: device-bound URI is forbidden")
+            if (
+                "authorization:" in lowered
+                or re.search(r"\b(?:bearer|basic)\s+[a-z0-9]", lowered)
+                or "-----begin private key-----" in lowered
+            ):
+                fail(f"{value_context}: authorization material is forbidden")
+
+    visit(payload, context, ())
+
+
+def _validate_shared_setup_v2_relative(
+    value: str,
+    field: str,
+    context: str,
+    *,
+    allow_segments: bool,
+) -> None:
+    decoded = value
+    for _ in range(3):
+        next_value = unquote(decoded)
+        if next_value == decoded:
+            break
+        decoded = next_value
+    if any(ord(character) < 32 for character in decoded):
+        fail(f"{context}.{field}: control characters are forbidden")
+    if (
+        decoded.startswith(("/", "\\"))
+        or "\\" in decoded
+        or "%" in value
+        or "//" in decoded
+        or "://" in decoded
+        or re.match(r"^[A-Za-z]:", decoded)
+    ):
+        fail(f"{context}.{field}: path/template must be relative")
+    parts = decoded.split("/")
+    if any(part in {".", ".."} for part in parts) or (
+        decoded and any(not part for part in parts)
+    ):
+        fail(f"{context}.{field}: empty or traversal components are forbidden")
+    if not allow_segments and len(parts) != 1:
+        fail(f"{context}.{field}: filename template must be one segment")
+
+
+def _validate_shared_setup_v2_endpoint(
+    endpoint: dict[str, Any],
+    endpoint_context: str,
+    context: str,
+) -> None:
+    if endpoint["scheme"] != "https" or endpoint["credentials_required"] is not True:
+        fail(f"{endpoint_context}: endpoint must be inert HTTPS requiring local credentials")
+    combined = f"{endpoint['host']}{endpoint['path']}"
+    for _ in range(3):
+        next_value = unquote(combined)
+        if next_value == combined:
+            break
+        combined = next_value
+    if any(character in combined for character in ("@", "%", "?", "#")):
+        fail(f"{endpoint_context}: endpoint userinfo/escape/query/fragment is forbidden")
+    if endpoint["path"].startswith("//"):
+        fail(f"{endpoint_context}: endpoint network-path form is forbidden")
+    if endpoint["host"].lower() != "setup.invalid":
+        fail(f"{context}: canonical synthetic fixtures must use the reserved setup.invalid host")
+
+
+def _validate_shared_setup_v2_registry(
+    root: Path,
+    payload: dict[str, Any],
+    referenced_ids: set[str],
+    context: str,
+) -> None:
+    registry_path = repository_path(
+        root,
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        f"{context}.registry",
+    )
+    registry = load_json(registry_path, f"{context}.registry")
+    identity = payload["metric_registry"]
+    if identity["schema"] != METRIC_REGISTRY_SCHEMA or identity["registry_version"] != 1:
+        fail(f"{context}: metric registry identity must be healthmd.metric_registry v1")
+    source_registry_matches = identity["registry_sha256"] == hashlib.sha256(
+        registry_path.read_bytes()
+    ).hexdigest()
+    registry_metrics = {metric["semantic_id"]: metric for metric in registry["metrics"]}
+    unknown_ids = sorted(referenced_ids - set(registry_metrics))
+    if unknown_ids and source_registry_matches:
+        fail(f"{context}: unknown canonical semantic metric IDs {unknown_ids}")
+
+    aliases = payload["metric_aliases"]
+    alias_ids = [alias["semantic_id"] for alias in aliases]
+    if alias_ids != sorted(alias_ids) or len(alias_ids) != len(set(alias_ids)):
+        fail(f"{context}: root metric alias ledger must be unique and semantic-ID sorted")
+    if set(alias_ids) != referenced_ids:
+        fail(
+            f"{context}: root metric alias ledger must exactly cover enabled and individual-entry IDs"
+        )
+    for index, alias in enumerate(aliases):
+        alias_context = f"{context}.metric_aliases[{index}]"
+        registry_metric = registry_metrics.get(alias["semantic_id"])
+        if registry_metric is None:
+            if source_registry_matches:
+                fail(f"{alias_context}: semantic ID is missing from the pinned registry")
+            continue
+        if source_registry_matches:
+            if alias["equivalence"] != registry_metric["equivalence"]:
+                fail(f"{alias_context}: equivalence differs from registry evidence")
+            for platform in ("apple", "android"):
+                binding = registry_metric[platform]
+                expected = binding["selection_id"] if binding["status"] == "backed" else None
+                if alias[f"{platform}_selection_id"] != expected:
+                    fail(
+                        f"{alias_context}: {platform} selection ID differs from registry evidence"
+                    )
+
+
+def _validate_shared_setup_v2_payload(root: Path, payload: dict[str, Any], context: str) -> None:
+    schema = _shared_setup_schema(root, SHARED_SETUP_V2_SCHEMA_VERSION, context)
+    validate_json_schema_subset(payload, schema, context)
+    _reject_sensitive_shared_setup_v2(payload, context)
+
+    profiles = payload["profiles"]
+    expected_ids = [f"profile-{index:03d}" for index in range(1, len(profiles) + 1)]
+    actual_ids = [profile["bundle_id"] for profile in profiles]
+    if actual_ids != expected_ids:
+        fail(f"{context}: profile bundle IDs must be exact sequential store-order references")
+    if payload["active_profile"] not in set(actual_ids):
+        fail(f"{context}: active_profile must reference one bundle-local profile ID")
+
+    folded_names: set[str] = set()
+    referenced_ids: set[str] = set()
+    origin = payload["created_by"]["platform"]
+
+    for index, profile in enumerate(profiles):
+        profile_context = f"{context}.profiles[{index}]"
+        name = profile["name"]
+        if name != name.strip():
+            fail(f"{profile_context}.name: profile name must already be trimmed")
+        folded_name = name.casefold()
+        if folded_name in folded_names:
+            fail(f"{context}: profile names must be case-insensitively unique")
+        folded_names.add(folded_name)
+
+        formats = profile["export"]["formats"]
+        if formats != sorted(formats):
+            fail(f"{profile_context}.export.formats: formats must be lexicographically sorted")
+        metrics = profile["metrics"]
+        if "categories" in metrics or "enabled_categories" in metrics:
+            fail(f"{profile_context}.metrics: categories must not be selection authority")
+        enabled_ids = metrics["enabled_ids"]
+        if enabled_ids != sorted(enabled_ids):
+            fail(f"{profile_context}.metrics.enabled_ids: semantic IDs must be sorted")
+        referenced_ids.update(enabled_ids)
+        individual_metrics = profile["individual_entries"]["metrics"]
+        referenced_ids.update(individual_metrics)
+
+        extensions = profile["platform_extensions"]
+        if extensions[origin] is None:
+            fail(f"{profile_context}: writer must include its own typed v2 extension")
+        for platform in ("apple", "android"):
+            extension = extensions[platform]
+            if extension is not None and extension["extension_version"] != 2:
+                fail(f"{profile_context}: present extensions must have extension_version 2")
+
+        path_fields = [
+            (profile["export"]["folder_template"], "export.folder_template", True),
+            (profile["export"]["filename_template"], "export.filename_template", False),
+            (profile["individual_entries"]["entries_folder"], "individual_entries.entries_folder", True),
+            (profile["individual_entries"]["filename_template"], "individual_entries.filename_template", False),
+            (profile["daily_notes"]["folder"], "daily_notes.folder", True),
+            (profile["daily_notes"]["filename_template"], "daily_notes.filename_template", False),
+        ]
+        android_extension = extensions["android"]
+        if android_extension is not None:
+            path_fields.append(
+                (android_extension["export"]["subfolder"], "platform_extensions.android.export.subfolder", True)
+            )
+        for metric_id, metric_config in individual_metrics.items():
+            custom_folder = metric_config["custom_folder"]
+            if custom_folder is not None:
+                path_fields.append(
+                    (custom_folder, f"individual_entries.metrics.{metric_id}.custom_folder", True)
+                )
+        for value, field, allow_segments in path_fields:
+            _validate_shared_setup_v2_relative(
+                value,
+                field,
+                profile_context,
+                allow_segments=allow_segments,
+            )
+
+        destination = profile["destination"]
+        endpoint = destination["api_endpoint"]
+        if destination["kind"] != "api_endpoint" and endpoint is not None:
+            fail(f"{profile_context}.destination: endpoint is valid only for api_endpoint kind")
+        if endpoint is not None:
+            _validate_shared_setup_v2_endpoint(
+                endpoint,
+                f"{profile_context}.destination.api_endpoint",
+                context,
+            )
+
+        schedule = profile["schedule"]
+        apple_extension = extensions["apple"]
+        if apple_extension is not None:
+            apple_schedule = apple_extension["schedule"]
+            if (schedule is None) != (apple_schedule is None):
+                fail(f"{profile_context}: common and Apple schedule presence contradict")
+            if schedule is not None and apple_schedule is not None:
+                cadence = schedule["cadence"]
+                frequency = apple_schedule["frequency"]
+                cadence_matches = (
+                    (frequency == "daily" and cadence["value"] == 1 and cadence["unit"] == "days")
+                    or (
+                        frequency == "weekly"
+                        and cadence["value"] == 1
+                        and cadence["unit"] == "weeks"
+                    )
+                    or (
+                        frequency == "custom"
+                        and cadence["unit"] == apple_schedule["custom_unit"]
+                    )
+                )
+                if not cadence_matches:
+                    fail(f"{profile_context}: common and Apple cadence representations contradict")
+
+    _validate_shared_setup_v2_registry(root, payload, referenced_ids, context)
+
+
+def validate_shared_setup_fixture(
+    root: Path,
+    path: Path,
+    *,
+    enforce_writer_allowlist: bool = False,
+) -> None:
+    try:
+        with path.open("rb") as stream:
+            fixture_bytes = stream.read(SHARED_SETUP_V2_MAX_BYTES + 1)
+    except OSError as error:
+        fail(f"healthmd.shared_setup fixture: cannot read input: {error}")
+    if len(fixture_bytes) > SHARED_SETUP_V2_MAX_BYTES:
+        fail(
+            f"healthmd.shared_setup fixture: input exceeds "
+            f"{SHARED_SETUP_V2_MAX_BYTES} encoded bytes"
+        )
+    payload = _decode_shared_setup_json(fixture_bytes, "healthmd.shared_setup fixture")
+    if not isinstance(payload, dict):
+        fail("healthmd.shared_setup fixture: root must be a JSON object")
+    if payload.get("schema") != SHARED_SETUP_SCHEMA:
+        fail("healthmd.shared_setup fixture: exact schema discriminator is required")
+    version = payload.get("schema_version")
+    if type(version) is not int or version not in {
+        SHARED_SETUP_V1_SCHEMA_VERSION,
+        SHARED_SETUP_V2_SCHEMA_VERSION,
+    }:
+        fail("healthmd.shared_setup fixture: schema_version must be integer 1 or 2")
+
+    if version == SHARED_SETUP_V1_SCHEMA_VERSION:
+        if len(fixture_bytes) > SHARED_SETUP_V1_MAX_BYTES:
+            fail(
+                f"healthmd.shared_setup v1 fixture: fixture exceeds "
+                f"{SHARED_SETUP_V1_MAX_BYTES} encoded bytes"
+            )
+        _validate_shared_setup_generic_bounds(
+            payload,
+            "healthmd.shared_setup v1 fixture",
+            max_depth=16,
+            max_container_items=256,
+            max_key_scalars=256,
+            max_string_scalars=65_536,
+            max_nodes=16_384,
+        )
+        _validate_shared_setup_v1_fixture(root, path)
+    else:
+        context = "healthmd.shared_setup v2 fixture"
+        _validate_shared_setup_generic_bounds(
+            payload,
+            context,
+            max_depth=20,
+            max_container_items=512,
+            max_key_scalars=65_536,
+            max_string_scalars=65_536,
+            max_nodes=262_144,
+        )
+        if fixture_bytes != canonical_json(payload) + b"\n":
+            fail(f"{context}: fixture must be canonical sorted compact JSON with one newline")
+        _validate_shared_setup_v2_payload(root, payload, context)
+
+    if enforce_writer_allowlist:
+        schema = _shared_setup_schema(root, version, f"healthmd.shared_setup v{version} fixture")
+        _validate_shared_setup_writer_allowlist(
+            payload,
+            schema,
+            f"healthmd.shared_setup v{version} writer",
+        )
+
+
+def validate_shared_setup_writer_fixture(root: Path, path: Path) -> None:
+    validate_shared_setup_fixture(root, path, enforce_writer_allowlist=True)
 
 
 def validate_provider_sections_fixture(root: Path, path: Path) -> None:
@@ -2759,7 +3273,7 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             elif identifier == "healthmd.provider_sections":
                 validate_provider_sections_fixture(root, fixture_path)
             elif identifier == SHARED_SETUP_SCHEMA:
-                validate_shared_setup_fixture(root, fixture_path)
+                validate_shared_setup_writer_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
             elif identifier == "healthmd.rollup_summary":
