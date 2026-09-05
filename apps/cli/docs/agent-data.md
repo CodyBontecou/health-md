@@ -180,8 +180,8 @@ this repository's loop: compatibility is by specification through that subset, p
 the synthetic loopback double in `tests/agent_data_object.rs` (which `SigV4`-verifies every request
 and asserts only list/head/get methods are ever sent) and, through its own embedded double, by
 the shared store-parity kit in `tests/agent_data_stdio.rs`, which runs the same ten end-to-end
-scenarios unchanged against all three backings — directory, database, and object store. No real endpoint, account, or TLS authority is contacted anywhere in this
-repository's tests.
+scenarios unchanged against all three backings — directory, database, and object store.
+No real endpoint, account, or TLS authority is contacted anywhere in this repository's tests.
 
 **TLS egress (feature-gated).** `https://` egress for real R2/S3 endpoints is carried by the
 non-default `object-store-tls` cargo feature: build with
@@ -195,7 +195,6 @@ is no insecure mode. Default builds keep the dependency-lean boundary: `https://
 still validate per the URL policy and fail health-free at transport with the stable
 `the https object-store transport is not available in this build` error, while loopback
 `http://` endpoints work in every build.
-agent-data/c4-parity
 
 ## Local ingestion (protocol v1)
 

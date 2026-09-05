@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Complete the agent-facing `healthmd mcp serve-data` guidance surface: parse errors now list the
+  full honest argument set (the three exclusive backings `--directory` | `--database` |
+  `--object-store-url` with its dispatch-required `--bucket`, `[--prefix]`, the required
+  `--grant`, `[--index]`, and `[--serve-transport]`) instead of only the directory-backing
+  subset, the single `healthmd mcp` listing entry covers every backing, and serve-data parse
+  errors embed a reference document that examples the directory, SQLite database, and
+  read-only object store backings. Streamable HTTP transport options
+  (`--serve-transport streamable-http`, `--bind`, `--allowed-host`, `--allowed-origin`) are
+  advertised only by builds that compile the `streamable-http` feature, mirroring what the
+  shipped binary accepts at parse time.
+
 - Extend the shared stdio store-parity kit (`tests/agent_data_stdio.rs`) with the object-store
   backing as a third endpoint: all ten end-to-end scenarios now run unchanged against the
   directory store, the imported SQLite database, AND the read-only S3-compatible object store,
@@ -25,7 +36,6 @@
   TLS against a synthetic self-signed loopback double (SigV4 verified over the TLS channel,
   GET/HEAD-only), untrusted-certificate refusal, and CA-file policy failures before any
   connection; no real R2/S3/Cloudflare endpoint is contacted by this repository's tests.
-agent-data/c4-parity
 - Add the self-hosted reference ingestion gateway: `healthmd data ingest-serve --database`
   serves Agent Data ingestion protocol v1 on loopback HTTP/1.1 (`POST /v1/ingest`, one
   manifest line + exact artifact bytes, `application/x-healthmd-agent-data-ingest`, exact
