@@ -96,9 +96,6 @@ final class IPhoneDirectFileExportProducer {
             jobPerformanceSpan.finish(outcome: jobPerformanceOutcome)
         }
         #endif
-        externalIntegrations?.beginExportAction()
-        var externalExportSucceeded = false
-        defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
         guard request.protocolVersion == HealthMdDirectProtocol.currentVersion,
               request.createdAt <= Date().addingTimeInterval(5 * 60),
               request.createdAt.addingTimeInterval(HealthMdDirectProtocol.jobLifetime) > Date(),
@@ -114,6 +111,11 @@ final class IPhoneDirectFileExportProducer {
             throw IPhoneDirectFileProducerError.cancelled
         }
         try enforceBlockedProfileGate(for: request)
+        // The profile gate must run before even beginning an external-provider
+        // export action; a blocked durable resume performs no health-data work.
+        externalIntegrations?.beginExportAction()
+        var externalExportSucceeded = false
+        defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
         let journal: IPhoneDirectFileJournal
         if let persisted = try? loadJournal(jobID: request.jobID) {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
@@ -1298,22 +1300,38 @@ final class IPhoneDirectFileExportProducer {
     }
 
     /// Check every invocation, including durable resumes, before any journal,
-    /// HealthKit, or destination work. Name-only references are resolved only
-    /// to decide the gate and retain the existing not-found behavior later.
+    /// HealthKit, destination, or external-provider work. Name-only references
+    /// are resolved only to decide the gate and retain the existing not-found
+    /// behavior later.
     private func enforceBlockedProfileGate(for request: DirectExportRequest) throws {
+        try Self.enforceBlockedProfileGate(
+            for: request,
+            profileStore: ExportProfileStore(),
+            isBlocked: { profileID in
+                SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profileID)
+            }
+        )
+    }
+
+    /// Internal seam keeps the pre-journal direct gate hermetic in tests while
+    /// the production wrapper always resolves from the standard profile store.
+    static func enforceBlockedProfileGate(
+        for request: DirectExportRequest,
+        profileStore: ExportProfileStore,
+        isBlocked: (UUID) -> Bool
+    ) throws {
         guard request.settingsPolicy == .profile,
               let reference = request.profileReference else { return }
-        let store = ExportProfileStore()
         let profile: ExportProfile?
         if let profileID = UUID(uuidString: reference.profileID) {
-            profile = store.profile(id: profileID)
+            profile = profileStore.profile(id: profileID)
         } else if let name = reference.name {
-            profile = store.profile(named: name)
+            profile = profileStore.profile(named: name)
         } else {
             profile = nil
         }
         guard let profile else { return }
-        guard !SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profile.id) else {
+        guard !isBlocked(profile.id) else {
             throw IPhoneDirectFileProducerError.profileRequiresRebind
         }
     }

@@ -274,7 +274,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// renaming a profile never reaches this API.
     func confirmFolderRebind(profileID: UUID, destinationID: UUID) throws {
         guard destinationStore.vault(id: destinationID) != nil,
-              profileStore.profile(id: profileID)?.target == .localIPhoneFolder,
+              let prior = profileStore.profile(id: profileID),
+              prior.target == .localIPhoneFolder,
               profileStore.setFolderBinding(
                 profileID: profileID,
                 destinationID: destinationID
@@ -282,10 +283,20 @@ final class ExportProfileCoordinator: ObservableObject {
               profileStore.profile(id: profileID)?.folderVaultID == destinationID else {
             throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
         }
-        try sharedSetupV2ExecutionGate.confirmRebind(
-            profileID: profileID,
-            confirmation: .deviceFolder(destinationID: destinationID)
-        )
+        do {
+            try sharedSetupV2ExecutionGate.confirmRebind(
+                profileID: profileID,
+                confirmation: .deviceFolder(destinationID: destinationID)
+            )
+        } catch {
+            guard profileStore.setFolderBinding(
+                profileID: profileID,
+                destinationID: prior.folderVaultID
+            ), profileStore.profile(id: profileID)?.folderVaultID == prior.folderVaultID else {
+                throw SharedSetupV2ExecutionGateError.persistenceVerificationFailed
+            }
+            throw error
+        }
         if profileStore.activeProfileID == profileID {
             _ = activate(profileID: profileID, adoptVault: true, flushOutgoing: false)
         }
@@ -300,18 +311,29 @@ final class ExportProfileCoordinator: ObservableObject {
     ) throws {
         guard credentialsConfirmed,
               destinationStore.apiEndpoint(id: endpointID) != nil,
-              profileStore.updateTarget(id: profileID, target: .apiEndpoint),
+              let prior = profileStore.profile(id: profileID),
+              prior.target == .apiEndpoint,
               profileStore.setAPIEndpointBinding(profileID: profileID, endpointID: endpointID),
               profileStore.profile(id: profileID)?.apiEndpointID == endpointID else {
             throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
         }
-        try sharedSetupV2ExecutionGate.confirmRebind(
-            profileID: profileID,
-            confirmation: .apiEndpoint(
-                endpointID: endpointID,
-                credentialsConfirmed: true
+        do {
+            try sharedSetupV2ExecutionGate.confirmRebind(
+                profileID: profileID,
+                confirmation: .apiEndpoint(
+                    endpointID: endpointID,
+                    credentialsConfirmed: true
+                )
             )
-        )
+        } catch {
+            guard profileStore.setAPIEndpointBinding(
+                profileID: profileID,
+                endpointID: prior.apiEndpointID
+            ), profileStore.profile(id: profileID)?.apiEndpointID == prior.apiEndpointID else {
+                throw SharedSetupV2ExecutionGateError.persistenceVerificationFailed
+            }
+            throw error
+        }
         if profileStore.activeProfileID == profileID {
             _ = activate(profileID: profileID, adoptVault: false, flushOutgoing: false)
         }
@@ -323,7 +345,7 @@ final class ExportProfileCoordinator: ObservableObject {
         pairingConfirmed: Bool
     ) throws {
         guard pairingConfirmed,
-              profileStore.updateTarget(id: profileID, target: .connectedMac) else {
+              profileStore.profile(id: profileID)?.target == .connectedMac else {
             throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
         }
         try sharedSetupV2ExecutionGate.confirmRebind(

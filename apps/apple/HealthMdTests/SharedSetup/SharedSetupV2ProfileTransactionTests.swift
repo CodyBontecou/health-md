@@ -1,12 +1,16 @@
 import Foundation
 import XCTest
 @testable import HealthMd
+#if os(iOS)
+import HealthMdConnectionCore
+#endif
 
 @MainActor
 final class SharedSetupV2ProfileTransactionTests: XCTestCase {
     // Match the repository's retention workaround for nested ObservableObject
     // settings on older simulator runtimes.
     private static var retainedSettings: [AdvancedExportSettings] = []
+    private static var retainedInstances: [AnyObject] = []
 
     private var defaults: UserDefaults!
     private var suiteName: String!
@@ -311,7 +315,124 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         XCTAssertThrowsError(try gate.requireExecutionAllowed(profileID: uuid(999)))
     }
 
+    func testCoordinatorBlocksActivationAndDuplicationUntilExplicitFolderRebind() throws {
+        let profileID = uuid(141)
+        let transaction = makeTransaction(profileIDs: [profileID], scheduleIDs: [])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-001"],
+            mode: .replace
+        )
+
+        let liveSettings = AdvancedExportSettings(userDefaults: defaults)
+        liveSettings.filenameFormat = "live-before-rebind-{date}"
+        Self.retainedSettings.append(liveSettings)
+        let dependencies = coordinatorDependencies(settings: liveSettings)
+        let coordinator = dependencies.coordinator
+        let gate = SharedSetupV2ExecutionGate(userDefaults: defaults)
+
+        XCTAssertNil(coordinator.activeProfileName)
+        XCTAssertFalse(coordinator.activate(profileID: profileID))
+        XCTAssertEqual(liveSettings.filenameFormat, "live-before-rebind-{date}")
+        XCTAssertEqual(coordinator.renameProfile(id: profileID, to: "Renamed Import"), "Renamed Import")
+        XCTAssertNil(coordinator.duplicateProfile(id: profileID))
+        XCTAssertTrue(gate.isExecutionBlocked(profileID: profileID))
+
+        let destination = coordinator.destinationStore.upsertVault(
+            name: "Imported",
+            standardizedPath: "/Users/x/Imported",
+            bookmarkData: Data("fake-bookmark-Imported".utf8)
+        )
+        try coordinator.confirmFolderRebind(
+            profileID: profileID,
+            destinationID: destination.id
+        )
+
+        XCTAssertFalse(gate.isExecutionBlocked(profileID: profileID))
+        XCTAssertEqual(
+            coordinator.profileStore.profile(id: profileID)?.folderVaultID,
+            destination.id
+        )
+        XCTAssertEqual(coordinator.activeProfileName, "Renamed Import")
+        XCTAssertEqual(
+            liveSettings.filenameFormat,
+            coordinator.profileStore.profile(id: profileID)?.settings.filenameFormat
+        )
+    }
+
+    func testCoordinatorRollsBackAPIBindingWhenGateVerificationFails() throws {
+        let profileID = uuid(151)
+        let transaction = makeTransaction(profileIDs: [profileID], scheduleIDs: [])
+        _ = try transaction.apply(
+            try applePlan(),
+            selectedBundleIDs: ["profile-003"],
+            mode: .replace
+        )
+
+        let failingGate = SharedSetupV2ExecutionGate(
+            userDefaults: defaults,
+            verificationOverride: { false }
+        )
+        let dependencies = coordinatorDependencies(executionGate: failingGate)
+        let coordinator = dependencies.coordinator
+        let endpoint = coordinator.destinationStore.upsertAPIEndpoint(
+            name: "Local",
+            endpointURLString: "https://local.example.test/upload",
+            bearerToken: "local-credential"
+        )
+
+        XCTAssertThrowsError(try coordinator.confirmAPIEndpointRebind(
+            profileID: profileID,
+            endpointID: endpoint.id,
+            credentialsConfirmed: true
+        )) { error in
+            XCTAssertEqual(
+                error as? SharedSetupV2ExecutionGateError,
+                .persistenceVerificationFailed
+            )
+        }
+        XCTAssertNil(coordinator.profileStore.profile(id: profileID)?.apiEndpointID)
+        XCTAssertTrue(failingGate.isExecutionBlocked(profileID: profileID))
+    }
+
     #if os(iOS)
+    func testDirectProfileGateRejectsBlockedReferenceBeforeProducerWork() throws {
+        let store = ExportProfileStore(userDefaults: defaults)
+        let profile = store.add(
+            name: "Direct Import",
+            settings: nativeSnapshot(filename: "direct-{date}"),
+            target: .connectedMac
+        )
+        defaults.set(
+            try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs([profile.id]),
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        let request = DirectExportRequest(
+            jobID: uuid(401),
+            createdAt: Date(),
+            dateSelection: .exact(start: "2026-09-01", end: "2026-09-01"),
+            settingsPolicy: .profile,
+            profileReference: DirectProfileReference(
+                profileID: profile.id.uuidString,
+                name: profile.name
+            ),
+            responseMode: .writeFiles,
+            destination: DirectExportDestination(rootPath: "Health.md")
+        )
+        let gate = SharedSetupV2ExecutionGate(userDefaults: defaults)
+
+        XCTAssertThrowsError(try IPhoneDirectFileExportProducer.enforceBlockedProfileGate(
+            for: request,
+            profileStore: store,
+            isBlocked: gate.isExecutionBlocked
+        )) { error in
+            guard let producerError = error as? IPhoneDirectFileProducerError,
+                  case .profileRequiresRebind = producerError else {
+                return XCTFail("Expected profileRequiresRebind, got \(error)")
+            }
+        }
+    }
+
     func testAppIntentBlockedProfileStopsBeforeDestinationOrExportWork() async throws {
         let store = ExportProfileStore(userDefaults: defaults)
         let profile = store.add(
@@ -371,6 +492,45 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
     #endif
 
     // MARK: - Helpers
+
+    private func coordinatorDependencies(
+        settings: AdvancedExportSettings? = nil,
+        executionGate: SharedSetupV2ExecutionGate? = nil
+    ) -> (
+        coordinator: ExportProfileCoordinator,
+        vaultManager: VaultManager,
+        resolver: PathMappingBookmarkResolver
+    ) {
+        let keychain = FakeKeychainStore()
+        let resolver = PathMappingBookmarkResolver()
+        let vaultManager = VaultManager(
+            defaults: SystemUserDefaults(defaults: defaults),
+            bookmarkResolver: resolver,
+            identityProbe: FakeVaultFolderIdentityProbe()
+        )
+        let resolvedSettings = settings ?? AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(resolvedSettings)
+        let coordinator = ExportProfileCoordinator(
+            profileStore: ExportProfileStore(userDefaults: defaults),
+            destinationStore: ProfileDestinationStore(
+                userDefaults: defaults,
+                keychain: keychain
+            ),
+            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
+            settings: resolvedSettings,
+            vaultManager: vaultManager,
+            apiExportSettings: APIExportSettings(
+                userDefaults: defaults,
+                keychain: keychain
+            ),
+            initialTarget: .localIPhoneFolder,
+            sharedSetupV2ExecutionGate: executionGate
+                ?? SharedSetupV2ExecutionGate(userDefaults: defaults)
+        )
+        Self.retainedInstances.append(coordinator)
+        Self.retainedInstances.append(vaultManager)
+        return (coordinator, vaultManager, resolver)
+    }
 
     private func makeTransaction(
         profileIDs: [UUID],
