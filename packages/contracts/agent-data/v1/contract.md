@@ -78,9 +78,10 @@ outside this contract.
 phone-to-gateway upload surface. One ingestion protocol serves managed cloud, convenient
 bring-your-own, private bring-your-own, and self-hosted gateways. The phone uploads exact
 existing Health.md artifacts; the gateway validates and stores them unchanged. V1 defines no
-third-party schemas, no producer-side transformation, and no transport; the HTTPS transport and
-gateway implementation are later cycles. Promotion in gateway stores does not change the
-append-safe, non-promoting behavior of local V1 directory readers.
+third-party schemas and no producer-side transformation; the HTTPS transport mapping is defined
+below in [HTTPS transport (gateways)](#https-transport-gateways), while gateway implementation
+— managed cloud, accounts, and retention — remains later cycles. Promotion in gateway stores
+does not change the append-safe, non-promoting behavior of local V1 directory readers.
 
 An upload is one artifact described by one manifest, `agent-data-ingest.schema.json`, carrying:
 
@@ -135,3 +136,53 @@ bytes, identical to the `artifact_id` the read model reports.
 V1 ingestion implements promotion and health-free receipts only. Gateways must not delete,
 purge, or rewrite stored revisions, and V1 makes no retention decisions; retention policy is not
 yet user-confirmed and remains deferred to a later contract version.
+
+### HTTPS transport (gateways)
+
+One artifact per request: the phone sends `POST` to the gateway's ingest endpoint with the
+request body framed as one `\n`-terminated JSON document — the `healthmd.agent_data_ingest` v1
+manifest — followed immediately by exactly the manifest's `byte_count` artifact bytes. The
+request carries `Content-Type: application/x-healthmd-agent-data-ingest` and a required
+`Content-Length`. V1 defines no content encoding or compression, no multipart, and no chunked
+upload sessions; artifacts are already bounded to 64 MiB. Gateways reject with a
+transport-level health-free error any body larger than 64 MiB + 64 KiB (manifest line plus
+overhead allowance). Requests with the wrong method, path, or content type receive health-free
+transport errors, and no receipt is produced for a transport-rejected request.
+
+Outcomes map onto exactly the four v1 rejection codes; no new codes exist:
+
+- The connection closes before the full `Content-Length` body arrives: no receipt. The phone
+  treats this as retryable — the client-side transient class.
+- A complete request whose artifact bytes are shorter than the manifest's `byte_count`: receipt
+  `truncated`.
+- Artifact bytes whose SHA-256 differs from the manifest digest: receipt `checksum_invalid`.
+- A manifest that is unparseable JSON, schema-invalid, contains unknown fields, or violates
+  the strict grammar (dates, digests, bounds, raw kinds not complete, and so on): receipt
+  `manifest_incomplete` — except the unfinalized-partial case below.
+- A manifest whose completeness is `partial` and not `finalized`: receipt `transient` at
+  gateways. An unfinalized, not-yet-complete upload is the retryable class, so gateways detect
+  this shape before schema validation. The schema itself stays v1-frozen — `finalized` remains
+  `const: true` for partials — so the local CLI keeps classifying the same bytes as
+  `manifest_incomplete`. This surface divergence is intentional, and the four codes are
+  unchanged.
+- Any other server-side failure reading or dispatching the request: receipt `transient`.
+
+Every validated outcome — accepted or rejected — is an HTTP success response carrying the
+`healthmd.agent_ingest_response` v1 document, mirroring the local CLI's
+exit-0-for-any-valid-receipt semantics. Rejections are protocol outcomes, not HTTP errors.
+Receipts stay health-free: no health values, no account identity, no paths.
+
+Re-uploading an identical manifest and bytes produces a byte-identical receipt (SHA-256
+identity), matching local semantics. The phone retries transport failures and `transient`
+outcomes with backoff; it never auto-retries `truncated`, `checksum_invalid`, or
+`manifest_incomplete` — those are fix-and-re-upload outcomes.
+
+`record_count` remains informational on this surface. A declared count that disagrees with the
+uploaded bytes must not reject the upload, alter its classification, or map onto any of the
+four codes; gateway cross-checks are deferred beyond v1. The
+`ingest-request-count-mismatch.json` fixture pins this rule.
+
+The reference self-hosted gateway binds loopback by default, validates Host/Origin like the
+data HTTP surface, and expects TLS to be terminated by a co-resident reverse proxy in hosted
+deployments — the same posture as the Streamable HTTP data surface. Managed-cloud gateway
+hosting, accounts, and OAuth remain outside v1 (deferred).
