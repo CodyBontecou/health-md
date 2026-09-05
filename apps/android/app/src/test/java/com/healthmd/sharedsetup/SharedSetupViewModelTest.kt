@@ -1,6 +1,7 @@
 package com.healthmd.sharedsetup
 
 import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.export.MainDispatcherRule
@@ -22,6 +23,9 @@ class SharedSetupViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private fun productionAdapter(): SharedSetupV2ProductionTransaction =
+        mockk(relaxed = true)
+
     @Test
     fun `failed artifact creation clears reservation and schedules orphan cleanup`() = runTest {
         val service = mockk<SharedSetupService>()
@@ -37,7 +41,7 @@ class SharedSetupViewModelTest {
             if (attemptedIDs.size == 1) error("synthetic creation failure")
             SharedSetupShare(Intent(Intent.ACTION_SEND), artifactID)
         }
-        val viewModel = SharedSetupViewModel(service, store, coordinator, SavedStateHandle())
+        val viewModel = SharedSetupViewModel(service, store, coordinator, SavedStateHandle(), productionAdapter())
         advanceUntilIdle()
 
         assertThat(viewModel.shareIntent().isFailure).isTrue()
@@ -78,7 +82,7 @@ class SharedSetupViewModelTest {
         coEvery { service.pendingEndpoint() } returns "https://setup.invalid/health"
         every { coordinator.imports } returns imports
 
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState)
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
         advanceUntilIdle()
         assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Success::class.java)
 
@@ -119,6 +123,7 @@ class SharedSetupViewModelTest {
                     "sharedSetup.restorablePhase" to "review",
                 ),
             ),
+            productionAdapter(),
         )
         restoredStarted.await()
 
@@ -166,14 +171,15 @@ class SharedSetupViewModelTest {
             ),
         )
 
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState)
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
         advanceUntilIdle()
         imports.value = PendingSharedSetupImport(id = 1, bytes = bytes)
         advanceUntilIdle()
 
         assertThat(viewModel.versionedPreview.value).isEqualTo(versioned)
-        assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Error::class.java)
+        assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.ReviewV2::class.java)
         assertThat(viewModel.state.value).isNotInstanceOf(SharedSetupUiState.Review::class.java)
+        assertThat(viewModel.state.value).isNotInstanceOf(SharedSetupUiState.Error::class.java)
 
         viewModel.applyV2(
             selectedBundleIds = listOf("profile-002"),
@@ -185,9 +191,10 @@ class SharedSetupViewModelTest {
             .isInstanceOf(SharedSetupV2TransactionState.Applied::class.java)
         assertThat(savedState.get<String>("sharedSetup.restorablePhase")).isEqualTo("v2_success")
 
-        val recreated = SharedSetupViewModel(service, store, coordinator, savedState)
+        val recreated = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
         advanceUntilIdle()
         assertThat(recreated.versionedPreview.value).isEqualTo(versioned)
+        assertThat(recreated.state.value).isInstanceOf(SharedSetupUiState.ReviewV2::class.java)
         val restored = recreated.v2TransactionState.value as SharedSetupV2TransactionState.Applied
         assertThat(restored.result.selectedBundleIds).containsExactly("profile-002")
         assertThat(restored.result.mode).isEqualTo(SharedSetupV2ApplyMode.REPLACE)
@@ -207,7 +214,7 @@ class SharedSetupViewModelTest {
             ),
         )
 
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState)
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
         advanceUntilIdle()
 
         assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Error::class.java)
@@ -230,13 +237,13 @@ class SharedSetupViewModelTest {
             SharedSetupShare(Intent(Intent.ACTION_SEND), secondArg())
         }
 
-        val firstViewModel = SharedSetupViewModel(service, store, coordinator, savedState)
+        val firstViewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
         advanceUntilIdle()
         val firstID = requireNotNull(firstViewModel.shareIntent().getOrNull()?.artifactID)
         assertThat(firstViewModel.shareIntent().exceptionOrNull()?.message).contains("already open")
         verify(exactly = 1) { store.shareIntent(any(), firstID) }
 
-        val recreatedViewModel = SharedSetupViewModel(service, store, coordinator, savedState)
+        val recreatedViewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
         advanceUntilIdle()
         assertThat(recreatedViewModel.shareIntent().exceptionOrNull()?.message).contains("already open")
         recreatedViewModel.completeShareArtifactHandoff()
@@ -248,5 +255,160 @@ class SharedSetupViewModelTest {
         recreatedViewModel.cancelPendingShareArtifact()
         advanceUntilIdle()
         coVerify(exactly = 1) { store.discardShareArtifact(secondID) }
+    }
+
+    @Test
+    fun `production apply passes the injected adapter through the service seam`() = runTest {
+        val bytes = byteArrayOf(1, 3, 5)
+        val firstProfile = mockk<SharedSetupV2ProfileImportPlan>()
+        val secondProfile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { firstProfile.bundleId } returns "profile-001"
+        every { secondProfile.bundleId } returns "profile-002"
+        every { plan.profiles } returns listOf(firstProfile, secondProfile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(
+                plan,
+                listOf("profile-002", "profile-001"),
+                SharedSetupV2ApplyMode.REPLACE,
+                production,
+            )
+        } returns Result.success(
+            SharedSetupV2ApplyResult(
+                selectedBundleIds = listOf("profile-001", "profile-002"),
+                mode = SharedSetupV2ApplyMode.REPLACE,
+            ),
+        )
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 4, bytes = bytes)
+        advanceUntilIdle()
+
+        viewModel.applyV2(
+            selectedBundleIds = listOf("profile-002", "profile-001"),
+            mode = SharedSetupV2ApplyMode.REPLACE,
+        )
+        advanceUntilIdle()
+
+        val applied = viewModel.v2TransactionState.value as SharedSetupV2TransactionState.Applied
+        assertThat(applied.result.selectedBundleIds)
+            .containsExactly("profile-001", "profile-002")
+            .inOrder()
+        assertThat(savedState.get<String>("sharedSetup.restorablePhase")).isEqualTo("v2_success")
+        assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.ReviewV2::class.java)
+        coVerify(exactly = 1) { production.blockedImportedProfiles() }
+    }
+
+    @Test
+    fun `production undo keeps the v2 screen with an honest undone result and clears blocked visibility`() = runTest {
+        val bytes = byteArrayOf(2, 4, 6)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        coEvery { service.undoV2(production) } returns
+            Result.success(SharedSetupV2UndoResult(didUndo = true))
+        coEvery { production.blockedImportedProfiles() } returns listOf(
+            SharedSetupV2BlockedImportedProfile(
+                profileId = "30000000-0000-4000-8000-000000000001",
+                name = "Daily",
+                sourceDestinationKind = "device_folder",
+            ),
+        )
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 5, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+        assertThat(viewModel.v2BlockedProfiles.value).hasSize(1)
+
+        viewModel.undoV2()
+        advanceUntilIdle()
+
+        assertThat(viewModel.v2TransactionState.value)
+            .isInstanceOf(SharedSetupV2TransactionState.Undone::class.java)
+        assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.ReviewV2::class.java)
+        assertThat(viewModel.versionedPreview.value).isNull()
+        assertThat(viewModel.v2BlockedProfiles.value).isNull()
+        assertThat(savedState.get<String>("sharedSetup.restorablePhase")).isNull()
+    }
+
+    @Test
+    fun `blocked imported profiles surface after apply and rebind failures stay honest`() = runTest {
+        val bytes = byteArrayOf(9)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000001"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        coEvery { production.blockedImportedProfiles() } returns listOf(
+            SharedSetupV2BlockedImportedProfile(blockedId, "Daily", "api_endpoint"),
+        )
+        val rebindUri = mockk<Uri>()
+        every { rebindUri.toString() } returns "content://synthetic/tree"
+        coEvery {
+            production.rebindBlockedFolder(blockedId, "content://synthetic/tree", "Docs")
+        } returns false
+        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 6, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        val blocked = requireNotNull(viewModel.v2BlockedProfiles.value)
+        assertThat(blocked.single().name).isEqualTo("Daily")
+        assertThat(blocked.single().sourceDestinationKind).isEqualTo("api_endpoint")
+
+        viewModel.rebindBlockedProfileFolder(blockedId, rebindUri, "Docs")
+        advanceUntilIdle()
+
+        val failed = viewModel.v2RebindState.value as SharedSetupV2RebindState.Failed
+        assertThat(failed.message).isNotEmpty()
+        assertThat(viewModel.v2BlockedProfiles.value).hasSize(1)
+
+        viewModel.dismissRebindFailure()
+        assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
     }
 }
