@@ -11,8 +11,10 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
@@ -558,6 +560,182 @@ class SharedSetupV2ProfileTransactionTest {
             .isFalse()
         assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isTrue()
         assertThat(repository.activate(GENERATED_ONE_ID)).isFalse()
+    }
+
+    @Test
+    fun `in-flow endpoint confirmation binds the imported url and identity then the credential hook clears`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        val transaction = transaction(GENERATED_ONE_ID, GENERATED_TWO_ID)
+        transaction.apply(
+            importPlan(),
+            listOf("profile-001", "profile-002"),
+            SharedSetupV2ProfileImportMode.ADD,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+        val beforeKeys = snapshotBytes()
+
+        // Cancel-equivalent refusal paths first: unknown id and the device-folder import bind nothing.
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation("missing")).isFalse()
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_ONE_ID)).isFalse()
+        assertThat(snapshotBytes()).isEqualTo(beforeKeys)
+
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isTrue()
+
+        val profile = checkNotNull(repository.profileById(GENERATED_TWO_ID))
+        assertThat(profile.apiEndpointUrl).isEqualTo("https://setup.invalid/import")
+        assertThat(profile.target).isEqualTo(ExportTarget.API_ENDPOINT)
+        val snapshot = checkNotNull(
+            AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson),
+        )
+        assertThat(snapshot.scheduledExportTarget).isEqualTo(ExportTarget.API_ENDPOINT)
+        assertThat(snapshot.exportTarget).isEqualTo(ExportTarget.API_ENDPOINT)
+        assertThat(snapshot.exportProfile).isEqualTo(AndroidExportProfile.android_frozen_v4)
+        assertThat(snapshot.apiEndpointIdentitySha256)
+            .isEqualTo(APIExportEndpoint.fingerprint("https://setup.invalid/import"))
+        // Every frozen output choice survives the destination re-scope untouched.
+        assertThat(snapshot.exportFormats).containsExactly(ExportFormat.MARKDOWN)
+
+        // The binding alone never clears the block; the device-folder import is unaffected.
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isTrue()
+        assertThat(repository.activate(GENERATED_TWO_ID)).isFalse()
+
+        // The exact verified credential confirmation remains the single clearing gate.
+        assertThat(
+            repository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(GENERATED_TWO_ID),
+        ).isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isFalse()
+        assertThat(repository.activate(GENERATED_TWO_ID)).isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isTrue()
+
+        // A second endpoint confirmation is idempotent: no rewrite, still false-or-true honestly.
+        val afterClear = snapshotBytes()
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isFalse()
+        assertThat(snapshotBytes()).isEqualTo(afterClear)
+    }
+
+    @Test
+    fun `endpoint confirmation is idempotent without rewriting an existing exact binding`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        val transaction = transaction(GENERATED_ONE_ID, GENERATED_TWO_ID)
+        transaction.apply(
+            importPlan(),
+            listOf("profile-001", "profile-002"),
+            SharedSetupV2ProfileImportMode.ADD,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isTrue()
+        val afterFirst = snapshotBytes()
+
+        // Still blocked, so a re-confirmation runs and confirms the identical binding byte-for-byte.
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isTrue()
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isTrue()
+        assertThat(snapshotBytes()).isEqualTo(afterFirst)
+    }
+
+    @Test
+    fun `endpoint confirmation never overwrites a different editor binding and the fingerprint gate rejects mismatches`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
+        val transaction = transaction(GENERATED_ONE_ID, GENERATED_TWO_ID)
+        transaction.apply(
+            importPlan(),
+            listOf("profile-001", "profile-002"),
+            SharedSetupV2ProfileImportMode.ADD,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+
+        // An explicit editor binding to another endpoint is authoritative; in-flow never overwrites it.
+        val imported = checkNotNull(repository.profileById(GENERATED_TWO_ID))
+        assertThat(
+            repository.applyEditorUpdate(
+                id = GENERATED_TWO_ID,
+                rawName = imported.name,
+                settingsSnapshotJson = imported.settingsSnapshotJson,
+                target = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://local.invalid/editor-choice",
+                folderUri = null,
+                folderDisplayName = null,
+            ),
+        ).isNotNull()
+        val afterEditor = snapshotBytes()
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isFalse()
+        assertThat(snapshotBytes()).isEqualTo(afterEditor)
+
+        // A hand-bound URL whose snapshot identity does not match its endpoint is never cleared.
+        val profilesBefore = storedProfiles()
+        dataStore.edit { preferences ->
+            val rewritten = profilesBefore.map { row ->
+                if (row.id == GENERATED_TWO_ID) {
+                    row.copy(apiEndpointUrl = "https://mismatched.invalid/wrong")
+                } else {
+                    row
+                }
+            }
+            preferences[SharedSetupV2ProfilePersistence.profilesKey] =
+                SharedSetupV2ProfilePersistence.json.encodeToString(
+                    SharedSetupV2ProfilePersistence.profileListSerializer,
+                    rewritten,
+                )
+        }
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isFalse()
+        assertThat(
+            repository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(GENERATED_TWO_ID),
+        ).isFalse()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isTrue()
+    }
+
+    @Test
+    fun `endpoint confirmation keeps connected mac cloud and unreadable stores fail closed`() = runTest {
+        val original = importPlan()
+        val retargetedSource = original.source.copy(
+            profiles = original.source.profiles.mapIndexed { index, profile ->
+                when (index) {
+                    0 -> profile.copy(
+                        destination = SharedSetupV2Destination(
+                            kind = "connected_mac",
+                            apiEndpoint = null,
+                        ),
+                    )
+                    1 -> profile.copy(
+                        destination = SharedSetupV2Destination(
+                            kind = "cloud",
+                            apiEndpoint = null,
+                        ),
+                    )
+                    else -> profile
+                }
+            },
+        )
+        val plan = SharedSetupV2Mapper(EmptyRegistry).planImport(retargetedSource)
+        val transaction = transaction(GENERATED_ONE_ID, GENERATED_TWO_ID)
+        transaction.apply(
+            plan,
+            listOf("profile-001", "profile-002"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+        val beforeKeys = snapshotBytes()
+
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_ONE_ID)).isFalse()
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isFalse()
+        assertThat(
+            repository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(GENERATED_ONE_ID),
+        ).isFalse()
+        assertThat(
+            repository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(GENERATED_TWO_ID),
+        ).isFalse()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isTrue()
+        assertThat(snapshotBytes()).isEqualTo(beforeKeys)
+
+        // An unreadable profile store refuses the binding with every other key untouched.
+        dataStore.edit { preferences ->
+            preferences[SharedSetupV2ProfilePersistence.profilesKey] = "{not-json"
+        }
+        val corruptKeys = snapshotBytes()
+        assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_ONE_ID)).isFalse()
+        assertThat(snapshotBytes()).isEqualTo(corruptKeys)
     }
 
     @Test

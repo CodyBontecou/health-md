@@ -190,6 +190,40 @@ class SharedSetupV2ProductionTransactionTest {
     }
 
     @Test
+    fun `blocked rows carry the imported and bound endpoint urls for in-flow confirmation`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Daily")), EXISTING_ONE_ID)
+        adapter.apply(
+            SharedSetupV2ApplyRequest(
+                plan = importPlan(),
+                selectedBundleIds = listOf("profile-001", "profile-002"),
+                mode = SharedSetupV2ApplyMode.ADD,
+            ),
+        ).getOrThrow()
+
+        val before = adapter.blockedImportedProfiles()
+        val folderRow = before.single { it.profileId == GENERATED_ONE_ID }
+        val apiRow = before.single { it.profileId == GENERATED_TWO_ID }
+        // The device-folder import retains no endpoint identity and binds nothing.
+        assertThat(folderRow.importedApiEndpointUrl).isNull()
+        assertThat(folderRow.boundApiEndpointUrl).isNull()
+        // The API import surfaces exactly the retained URL and no local binding yet.
+        assertThat(apiRow.importedApiEndpointUrl).isEqualTo("https://setup.invalid/import")
+        assertThat(apiRow.boundApiEndpointUrl).isNull()
+
+        assertThat(
+            profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID),
+        ).isTrue()
+
+        val after = adapter.blockedImportedProfiles()
+        assertThat(after.map { it.profileId })
+            .containsExactly(GENERATED_ONE_ID, GENERATED_TWO_ID)
+            .inOrder()
+        val boundRow = after.single { it.profileId == GENERATED_TWO_ID }
+        assertThat(boundRow.importedApiEndpointUrl).isEqualTo("https://setup.invalid/import")
+        assertThat(boundRow.boundApiEndpointUrl).isEqualTo("https://setup.invalid/import")
+    }
+
+    @Test
     fun `folder rebind clears a non active device folder import through the repository`() = runTest {
         seed(listOf(nativeProfile(EXISTING_ONE_ID, "Daily")), EXISTING_ONE_ID)
         adapter.apply(

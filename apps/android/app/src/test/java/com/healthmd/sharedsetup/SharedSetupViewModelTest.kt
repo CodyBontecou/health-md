@@ -642,6 +642,262 @@ class SharedSetupViewModelTest {
     }
 
     @Test
+    fun `endpoint url confirmation binds through the trusted hook and refreshes blocked visibility`() = runTest {
+        val bytes = byteArrayOf(21)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000011"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        val importedUrl = "https://setup.invalid/import"
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(
+                SharedSetupV2BlockedImportedProfile(
+                    blockedId, "Daily", "api_endpoint", importedApiEndpointUrl = importedUrl,
+                ),
+            ),
+            listOf(
+                SharedSetupV2BlockedImportedProfile(
+                    blockedId,
+                    "Daily",
+                    "api_endpoint",
+                    importedApiEndpointUrl = importedUrl,
+                    boundApiEndpointUrl = importedUrl,
+                ),
+            ),
+        )
+        val bindStarted = CompletableDeferred<Unit>()
+        val releaseBind = CompletableDeferred<Boolean>()
+        coEvery {
+            profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(blockedId)
+        } coAnswers {
+            bindStarted.complete(Unit)
+            releaseBind.await()
+        }
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 21, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+        assertThat(viewModel.v2BlockedProfiles.value).hasSize(1)
+
+        viewModel.confirmBlockedApiEndpoint(blockedId)
+        bindStarted.await()
+        assertThat(viewModel.v2RebindState.value)
+            .isEqualTo(SharedSetupV2RebindState.ConfirmingApiEndpoint)
+
+        releaseBind.complete(true)
+        advanceUntilIdle()
+
+        assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+        val refreshed = requireNotNull(viewModel.v2BlockedProfiles.value)
+        assertThat(refreshed.single().boundApiEndpointUrl).isEqualTo(importedUrl)
+        assertThat(refreshed.single().importedApiEndpointUrl).isEqualTo(importedUrl)
+        coVerify(exactly = 1) {
+            profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(blockedId)
+        }
+    }
+
+    @Test
+    fun `endpoint url confirmation refusal keeps the block and writes nothing`() = runTest {
+        val bytes = byteArrayOf(22)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000012"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        val blockedRow = SharedSetupV2BlockedImportedProfile(
+            blockedId,
+            "Daily",
+            "api_endpoint",
+            importedApiEndpointUrl = "https://setup.invalid/import",
+        )
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(blockedRow),
+            listOf(blockedRow),
+        )
+        coEvery {
+            profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(blockedId)
+        } returns false
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 22, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        viewModel.confirmBlockedApiEndpoint(blockedId)
+        advanceUntilIdle()
+
+        val failed = viewModel.v2RebindState.value as SharedSetupV2RebindState.Failed
+        assertThat(failed.message).contains("profile editor")
+        assertThat(viewModel.v2BlockedProfiles.value).hasSize(1)
+        assertThat(viewModel.v2BlockedProfiles.value?.single()?.boundApiEndpointUrl).isNull()
+    }
+
+    @Test
+    fun `endpoint confirmation then credential confirmation clears the block end to end`() = runTest {
+        val bytes = byteArrayOf(23)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000013"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        val importedUrl = "https://setup.invalid/import"
+        val unboundRow = SharedSetupV2BlockedImportedProfile(
+            blockedId, "Daily", "api_endpoint", importedApiEndpointUrl = importedUrl,
+        )
+        val boundRow = unboundRow.copy(boundApiEndpointUrl = importedUrl)
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(unboundRow),
+            listOf(boundRow),
+            emptyList(),
+        )
+        coEvery {
+            profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(blockedId)
+        } returns true
+        coEvery {
+            profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(blockedId)
+        } returns true
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 23, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        // Step 1: the user explicitly confirms the retained imported URL; the block stays.
+        viewModel.confirmBlockedApiEndpoint(blockedId)
+        advanceUntilIdle()
+        assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+        assertThat(viewModel.v2BlockedProfiles.value?.single()?.boundApiEndpointUrl)
+            .isEqualTo(importedUrl)
+
+        // Step 2: the existing verified credential write plus unchanged hook clears the block.
+        viewModel.confirmBlockedApiCredential(blockedId, "fresh-token")
+        advanceUntilIdle()
+
+        assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+        assertThat(credentialStore.authorization).isEqualTo("Bearer fresh-token")
+        assertThat(viewModel.v2BlockedProfiles.value).isEmpty()
+        coVerify(exactly = 1) {
+            profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(blockedId)
+            profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(blockedId)
+        }
+    }
+
+    @Test
+    fun `credential failure after a confirmed endpoint binding keeps the block and binding persists`() = runTest {
+        val bytes = byteArrayOf(24)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000014"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        val importedUrl = "https://setup.invalid/import"
+        val unboundRow = SharedSetupV2BlockedImportedProfile(
+            blockedId, "Daily", "api_endpoint", importedApiEndpointUrl = importedUrl,
+        )
+        val boundRow = unboundRow.copy(boundApiEndpointUrl = importedUrl)
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(unboundRow),
+            listOf(boundRow),
+            listOf(boundRow),
+        )
+        coEvery {
+            profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(blockedId)
+        } returns true
+        credentialStore.authorization = "Bearer prior"
+        coEvery {
+            profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(blockedId)
+        } returns false
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 24, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        viewModel.confirmBlockedApiEndpoint(blockedId)
+        advanceUntilIdle()
+        assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+
+        viewModel.confirmBlockedApiCredential(blockedId, "fresh-token")
+        advanceUntilIdle()
+
+        // Fail closed: the block stays and the unconfirmed credential never remains attached;
+        // the explicitly confirmed URL binding persists (documented decision), exactly the
+        // state an editor detour would have produced.
+        val failed = viewModel.v2RebindState.value as SharedSetupV2RebindState.Failed
+        assertThat(failed.message).contains("profile editor")
+        assertThat(credentialStore.authorization).isEqualTo("Bearer prior")
+        val blocked = requireNotNull(viewModel.v2BlockedProfiles.value)
+        assertThat(blocked).hasSize(1)
+        assertThat(blocked.single().boundApiEndpointUrl).isEqualTo(importedUrl)
+    }
+
+    @Test
     fun `mac pairing confirmation clears an attested connected-mac profile`() = runTest {
         val bytes = byteArrayOf(15)
         val profile = mockk<SharedSetupV2ProfileImportPlan>()
