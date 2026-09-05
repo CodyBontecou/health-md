@@ -36,7 +36,9 @@
         "packages/contracts/agent-data/v1/contract.md",
         "packages/contracts/agent-data/v1/agent-data-grant.schema.json",
         "packages/contracts/agent-data/v1/agent-data-query.schema.json",
-        "packages/contracts/agent-data/v1/agent-query-response.schema.json"
+        "packages/contracts/agent-data/v1/agent-query-response.schema.json",
+        "packages/contracts/agent-data/v1/agent-data-ingest.schema.json",
+        "packages/contracts/agent-data/v1/agent-ingest-response.schema.json"
       ],
       "implementations": [
         "apps/cli/crates/healthmd-operations/src/data.rs",
@@ -68,6 +70,54 @@
           "path": "packages/contracts/agent-data/v1/fixtures/response-records.json",
           "sha256": "8c73eaa25d7cfc43b559d4af1609e66b4741be5fab083c70d96f52ae34232e0d",
           "provenance": "Reviewed synthetic policy-enforced response with placeholder hashes and no production health or identity data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-accepted-complete.json",
+          "sha256": "59897729864f4ca28862432e439a48061f8f16cb2267f95087f571bb03ecb5a2",
+          "provenance": "Reviewed synthetic ingest receipt for an accepted complete upload whose promotion leaves an older partial shadowing nothing; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-accepted-partial.json",
+          "sha256": "03fd0f1e6678eecab4e583a888b818883adbff20b38df49f287a1221d0eed25a",
+          "provenance": "Reviewed synthetic ingest receipt for an accepted finalized partial with explicit covered dates authoritative only because no complete revision exists; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-rejected-checksum-invalid.json",
+          "sha256": "ddb0ebe0f8168641679e189f7f3680683ce5f18d99565d4c3894f997b595d30a",
+          "provenance": "Reviewed synthetic health-free checksum-invalid rejection receipt with the authoritative partition view unchanged; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-rejected-manifest-incomplete.json",
+          "sha256": "3b7931a00a449f0cfcefe81167578898caba035f6411a35078fbc82ce538ded5",
+          "provenance": "Reviewed synthetic health-free manifest-incomplete rejection receipt with no partition identity derivable; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-request-complete.json",
+          "sha256": "5f8bd401961ec2ab798e3d0fff640f0ddcf66e4d2bd4e50445483ab8dfdcdb6c",
+          "provenance": "Reviewed synthetic ingest request manifest for an Apple complete health-data daily upload declaring optional informational record_count; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-request-partial.json",
+          "sha256": "f00b613dce96a748483a760c4663a977f06368ca92db7173fedc1e9d845ee0ce",
+          "provenance": "Reviewed synthetic ingest request manifest for an Android finalized partial health-data daily upload with explicit covered owner date and record_count omitted; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-request-raw-complete.json",
+          "sha256": "6cbf8b7e5d6338906a473afc26b3a99d694dce84c1189210e84e1c2d9fa6c73d",
+          "provenance": "Reviewed synthetic ingest request manifest for an Android complete NDJSON raw snapshot upload proving raw kinds must be complete; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/agent-data/v1/fixtures/ingest-request-count-mismatch.json",
+          "sha256": "5644b1af9471dad14d36a9b683e54aaa49a7024afb3771872633778a78b0a9c7",
+          "provenance": "Reviewed synthetic ingest request manifest for an Apple complete health-data daily upload whose informational record_count deliberately disagrees with byte_count, proving counts never reject or reclassify; placeholder hashes, no production health data, account identity, credential, token, or device identifier.",
           "mirrors": []
         }
       ]
