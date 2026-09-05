@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Add feature-gated TLS egress for the Agent Data object-store backing: builds with
+  `--features object-store-tls` speak the same hand-written HTTP/1.1 + SigV4 S3 subset over
+  `rustls`/`tokio-rustls` TLS for `https://` endpoints (loopback or remote), while default builds
+  keep the dependency-lean stable `https object-store transport is not available` boundary and
+  the untouched loopback `http://` path. TLS trust is the Mozilla `webpki-roots` root set plus
+  an optional additional PEM CA certificate via the absolute path in
+  `HEALTHMD_OBJECT_STORE_CA_CERT` (environment-only; relative/unreadable/invalid-PEM values fail
+  health-free at open before any network I/O); certificate verification is never disabled in any
+  build or configuration. The new `tests/agent_data_object_tls.rs` proves the full contract over
+  TLS against a synthetic self-signed loopback double (SigV4 verified over the TLS channel,
+  GET/HEAD-only), untrusted-certificate refusal, and CA-file policy failures before any
+  connection; no real R2/S3/Cloudflare endpoint is contacted by this repository's tests.
+
 - Add the self-hosted reference ingestion gateway: `healthmd data ingest-serve --database`
   serves Agent Data ingestion protocol v1 on loopback HTTP/1.1 (`POST /v1/ingest`, one
   manifest line + exact artifact bytes, `application/x-healthmd-agent-data-ingest`, exact
