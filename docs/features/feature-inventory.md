@@ -81,7 +81,7 @@
 | Folder organization | iOS, macOS, Android | Date-based subfolders `{year}/{month}`, `{year}/{quarter}`; Android folder-by-type | `AdvancedExportSettings`, `VaultManager` | ✅ `folder-organization.md` |
 | Frontmatter customization | iOS, macOS, Android | Rename metric fields, snake/camelCase, static + placeholder fields | `FrontmatterCustomizationView` | ✅ `frontmatter-customization.md` |
 | Markdown template choice | iOS, macOS, Android | Compact/standard/detailed/custom templates | `MarkdownTemplateView`, `MarkdownExporter` | ✅ `markdown-template-customization.md` |
-| Date/time/unit preferences | iOS, macOS, Android | Date style, time style, metric/imperial | `FormatPreferences`, `FormatCustomizationView` | ✅ `date-time-units.md` |
+| Date/time/unit preferences | iOS, macOS, Android | Date style, time style, metric/imperial | `FormatPreferences`, `FormatCustomizationView` | ✅ `date-time-units.md` (both trees) |
 | Write modes | iOS, macOS, Android | Overwrite / append / update-merge | `WriteMode`, `MarkdownMerger` | ✅ `write-modes.md` |
 | Emoji headers / grouping options | macOS (+iOS) | Section grouping, emoji headers, folder-by-type | `MacSettingsView` Format tab | 🟡 mac settings coverage |
 | Configuration protection | iOS | "Prevent Accidental Changes" lock for config edits | `SettingsTabView.configurationProtectionSection` | 🟡 within `manual-export.md` |

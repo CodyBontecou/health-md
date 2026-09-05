@@ -31,6 +31,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Formatting | [Filename templates](./filename-templates.md) | `{date}`, `{year}`, `{month}`, `{weekday}` placeholders in filenames. | Draft | Medium | `domain/model/` path templates, `data/storage/` |
 | Formatting | [Folder organization](./folder-organization.md) | Date-based subfolders like `{year}/{month}` under your destination. | Draft | Medium | same |
 | Formatting | [Frontmatter customization](./frontmatter-customization.md) | Rename metric fields, choose casing, add static and placeholder fields. | Draft | Medium | `presentation/settings/FrontmatterCustomizationScreen.kt` |
+| Formatting | [Date, time, and unit preferences](./date-time-units.md) | Date style, 12/24-hour time, and Metric/Imperial units across every export format. | Draft | Medium | `domain/model/FormatPreferences.kt`, `presentation/settings/FormatCustomizationScreen.kt` |
 | Formatting | [Write modes](./write-modes.md) | Overwrite, append, or merge when a file already exists. | Draft | Medium | `data/export/MarkdownMerger.kt` |
 | Obsidian | [Daily note injection](./daily-note-injection.md) | Merge health sections into existing Obsidian daily notes. | Draft | High | `data/export/DailyNoteInjector.kt`, `DailyNoteInjectionScreen.kt` |
 | Advanced data | [Individual entry tracking](./individual-entry-tracking.md) | Timestamped per-record files: workouts, sleep stages, vitals. | Draft | High | `data/export/IndividualEntryExporter.kt` |

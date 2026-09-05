@@ -55,7 +55,7 @@
 | Filename templates | ✅ `filename-templates.md` | ✅ `filename-templates.md` | shared | Same placeholder vocabulary. |
 | Folder organization | ✅ `folder-organization.md` | ✅ `folder-organization.md` | shared | `{year}/{month}`, `{year}/{quarter}`. |
 | Frontmatter customization | ✅ `frontmatter-customization.md` | ✅ `frontmatter-customization.md` | shared | |
-| Date/time/unit preferences | ✅ `date-time-units.md` | 🟡 in format pages (`DateFormatPreference`, `unitPreference`) | shared | Android lacks a standalone page; covered inside format customization content. |
+| Date/time/unit preferences | ✅ `date-time-units.md` | ✅ `date-time-units.md` | shared | Same picker surface (7 date styles, 12/24-hour time, Metric/Imperial); Android JSON stays frozen v4/analytical v5 with canonical numerics while Apple documents the v8 time-context and structured-unit contract. |
 | Markdown template customization | ✅ `markdown-template-customization.md` | 🟡 in `markdown-export.md` | shared | |
 | Write modes | ✅ `write-modes.md` | ✅ `write-modes.md` | shared | Overwrite / append / update-merge. |
 | Daily note injection | ✅ `daily-note-injection.md` | ✅ `daily-note-injection.md` | shared | |
@@ -103,7 +103,7 @@
 ## Documentation gaps surfaced by this table
 
 1. **Android Share My Setup page** — closed 2026-09-05: dedicated page added at `apps/android/docs/features/share-my-setup.md` (status `needs QA`, matching the pre-canonical contract on both platforms).
-2. **Android date-time-units page** — capability exists (`DateFormatPreference`, `unitPreference`); currently folded into format pages. Either fold deliberately into `markdown-export.md`/format content or split a page.
+2. **Android date-time-units page** — closed 2026-09-05: split into a dedicated page at `apps/android/docs/features/date-time-units.md` (status `draft`) after the source survey found a rich dedicated surface (`FormatCustomizationScreen` with 7 date, 4 time, and 2 unit options feeding Markdown/Bases/JSON/CSV plus shared-setup wire mapping); the previous fold into format pages was implicit, not deliberate.
 3. **Android Wear OS feature page** — closed 2026-09-05: dedicated page added at `apps/android/docs/features/wear-os.md` (status `needs QA`; the companion is implemented and emulator-verified but unreleased per its completion audit). Runbook `wear-os-implementation.md` and website `guides/wear-os` remain as maintainer/public companions.
 4. **Android roll-up summaries** — page intentionally absent until the v9 writer ships (`planned`); do not document ahead of the capability.
 5. **Zip export** — Apple-only toggle today; revisit if Android adds zip writing.
