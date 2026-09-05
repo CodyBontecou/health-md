@@ -156,6 +156,8 @@ struct DataArgs {
 enum DataCommand {
     /// Ingest recognized export artifacts into a Health.md-owned `SQLite` Agent Data database.
     Import(DataImportArgs),
+    /// Validate and store one manifest-described artifact upload (ingestion protocol v1).
+    Ingest(DataIngestArgs),
 }
 
 #[derive(Debug, Args)]
@@ -171,6 +173,24 @@ struct DataImportArgs {
     /// Absolute directory of immutable Health.md JSON or NDJSON exports to ingest.
     #[arg(long)]
     directory: PathBuf,
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd data ingest --database /absolute/private/agent-data.sqlite --manifest /absolute/upload/manifest.json --artifact /absolute/upload/day.json\n\nOne upload is one artifact described by one agent-data-ingest v1 manifest. The command prints\nthe health-free agent_ingest_response v1 receipt and exits 0 whenever the protocol completed,\neven for the four stable rejection codes (truncated, transient, checksum_invalid,\nmanifest_incomplete); inspect the outcome field. Promotion is atomic, idempotent by SHA-256,\nand never deletes stored revisions. A partial revision never displaces a complete one."
+)]
+struct DataIngestArgs {
+    /// Absolute path of the `SQLite` Agent Data database to create or extend.
+    #[arg(long)]
+    database: PathBuf,
+
+    /// Absolute path of an `agent-data-ingest` v1 manifest JSON file describing the upload.
+    #[arg(long)]
+    manifest: PathBuf,
+
+    /// Absolute path of the exact artifact bytes referenced by the manifest.
+    #[arg(long)]
+    artifact: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -928,6 +948,9 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         Command::Data(DataArgs {
             command: Some(DataCommand::Import(options)),
         }) if backend == Backend::Direct => data_import(options).await.map(CommandSuccess::json),
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Ingest(options)),
+        }) if backend == Backend::Direct => data_ingest(options).await.map(CommandSuccess::json),
         Command::Setup(SetupArgs {
             command: Some(SetupCommand::Codex(options)),
         }) if backend == Backend::Direct => setup_codex(options, device, port)
@@ -1041,6 +1064,16 @@ async fn data_import(options: DataImportArgs) -> Result<Value, CommandError> {
         .map_err(|error| CommandError {
             backend: "data",
             code: "data_import_failed",
+            message: error.to_string(),
+        })
+}
+
+async fn data_ingest(options: DataIngestArgs) -> Result<Value, CommandError> {
+    mcp::ingest_data(options.database, options.manifest, options.artifact)
+        .await
+        .map_err(|error| CommandError {
+            backend: "data",
+            code: "data_ingest_failed",
             message: error.to_string(),
         })
 }
@@ -2574,6 +2607,9 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Data(DataArgs {
             command: Some(DataCommand::Import(_)),
         }) => "data import",
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Ingest(_)),
+        }) => "data ingest",
         Command::Data(DataArgs { command: None }) => "data",
         Command::Mcp(McpArgs {
             command: Some(McpCommand::Serve(_)),
@@ -3102,6 +3138,34 @@ mod tests {
         let Command::Data(DataArgs { command: None }) = discovery.command else {
             panic!("expected data discovery command");
         };
+    }
+
+    #[test]
+    fn data_ingest_command_parses() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "data",
+            "ingest",
+            "--database",
+            "/tmp/healthmd-agent-data.sqlite",
+            "--manifest",
+            "/tmp/upload/manifest.json",
+            "--artifact",
+            "/tmp/upload/day.json",
+        ])
+        .unwrap();
+        let Command::Data(DataArgs {
+            command: Some(DataCommand::Ingest(options)),
+        }) = parsed.command
+        else {
+            panic!("expected data ingest command");
+        };
+        assert_eq!(
+            options.database,
+            PathBuf::from("/tmp/healthmd-agent-data.sqlite")
+        );
+        assert_eq!(options.manifest, PathBuf::from("/tmp/upload/manifest.json"));
+        assert_eq!(options.artifact, PathBuf::from("/tmp/upload/day.json"));
     }
 
     #[cfg(not(feature = "streamable-http"))]

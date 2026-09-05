@@ -1981,9 +1981,14 @@ mod tests {
             .unwrap();
         assert_eq!(tables, 9);
         let partitions: i64 = connection
-            .query_row("SELECT COUNT(*) FROM ingested_partitions", [], |row| row.get(0))
+            .query_row("SELECT COUNT(*) FROM ingested_partitions", [], |row| {
+                row.get(0)
+            })
             .unwrap();
-        assert_eq!(partitions, 0, "directory import must not create partition rows");
+        assert_eq!(
+            partitions, 0,
+            "directory import must not create partition rows"
+        );
     }
 
     #[tokio::test]

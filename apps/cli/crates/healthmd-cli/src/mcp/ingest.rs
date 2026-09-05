@@ -80,7 +80,9 @@ impl Completeness {
     fn to_json(&self) -> Value {
         match self {
             Self::Complete => json!({"type": "complete"}),
-            Self::Partial { covered_owner_dates } => json!({
+            Self::Partial {
+                covered_owner_dates,
+            } => json!({
                 "type": "partial",
                 "finalized": true,
                 "covered_owner_dates": covered_owner_dates
@@ -165,7 +167,7 @@ impl IngestManifest {
     fn from_value(value: Value) -> Result<Self, ()> {
         // serde's internally tagged enums cannot reject unknown variant fields,
         // so the completeness grammar is enforced on the raw object as well.
-        enforce_completeness_grammar(value.get("completeness")) ?;
+        enforce_completeness_grammar(value.get("completeness"))?;
         let wire: ManifestWire = serde_json::from_value(value).map_err(|_| ())?;
         if wire.schema != INGEST_MANIFEST_SCHEMA || wire.schema_version != INGEST_SCHEMA_VERSION {
             return Err(());
@@ -336,6 +338,7 @@ pub(super) fn ingest_upload(
     manifest_path: &Path,
     artifact_path: &Path,
 ) -> Result<Value, DataStoreOpenError> {
+    let database = validated_ingest_database_path(database, manifest_path, artifact_path)?;
     if !manifest_path.is_absolute() {
         return Err(DataStoreOpenError::new(
             "the Agent Data manifest path must be absolute",
@@ -346,7 +349,6 @@ pub(super) fn ingest_upload(
             "the Agent Data artifact path must be absolute",
         ));
     }
-    let database = validated_ingest_database_path(database, manifest_path, artifact_path)?;
     let mut connection = data_sqlite::open_read_write(&database)?;
     data_sqlite::migrate(&mut connection)?;
 
@@ -441,8 +443,9 @@ fn read_artifact_bytes(path: &Path, declared_byte_count: u64) -> ArtifactRead {
     }
 }
 
-/// Validate the database path: absolute, creatable parent, non-symlink file,
-/// and stored apart from the upload files themselves.
+/// Validate the database path first (mirroring `data import`), then the upload
+/// paths: absolute, creatable parent, non-symlink file, and stored apart from
+/// the upload files themselves.
 fn validated_ingest_database_path(
     database: &Path,
     manifest: &Path,
@@ -572,7 +575,10 @@ fn promote(
 /// SHA-256 identity), so promotion and import stay byte-identity compatible.
 /// Otherwise the row carries the manifest-declared identity with zero record
 /// rows — never a fabricated index.
-fn indexed_entry(manifest: &IngestManifest, artifact_path: &Path) -> (ArtifactEntry, Vec<RecordEntry>) {
+fn indexed_entry(
+    manifest: &IngestManifest,
+    artifact_path: &Path,
+) -> (ArtifactEntry, Vec<RecordEntry>) {
     let source = SourceFile {
         path: artifact_path.to_path_buf(),
         relative_path: format!("ingest/{}", manifest.sha256),
@@ -798,12 +804,7 @@ mod tests {
     }
 
     fn sorted_keys(value: &Value) -> Vec<String> {
-        let mut keys: Vec<String> = value
-            .as_object()
-            .expect("object")
-            .keys()
-            .cloned()
-            .collect();
+        let mut keys: Vec<String> = value.as_object().expect("object").keys().cloned().collect();
         keys.sort();
         keys
     }
@@ -811,11 +812,16 @@ mod tests {
     #[test]
     fn manifest_validation_accepts_every_documented_shape() {
         assert!(IngestManifest::from_value(manifest_for(DAY_BYTES, complete())).is_ok());
-        assert!(IngestManifest::from_value(manifest_for(DAY_BYTES, json!({
-            "type": "partial", "finalized": true,
-            "covered_owner_dates": ["2026-03-15", "2026-03-16"]
-        })))
-        .is_ok());
+        assert!(
+            IngestManifest::from_value(manifest_for(
+                DAY_BYTES,
+                json!({
+                    "type": "partial", "finalized": true,
+                    "covered_owner_dates": ["2026-03-15", "2026-03-16"]
+                })
+            ))
+            .is_ok()
+        );
         let raw = manifest_with_overrides(complete(), &[("artifact_kind", json!("raw_snapshot"))]);
         assert!(IngestManifest::from_value(raw).is_ok());
         let android = manifest_with_overrides(
@@ -957,13 +963,26 @@ mod tests {
         assert_eq!(receipt["rejection"], json!({"code": "truncated"}));
         assert_eq!(
             sorted_keys(&receipt),
-            ["outcome", "partition", "rejection", "schema", "schema_version"]
+            [
+                "outcome",
+                "partition",
+                "rejection",
+                "schema",
+                "schema_version"
+            ]
         );
         // The rejection carries the current partition view of the manifest's partition.
-        assert_eq!(receipt["partition"]["authoritative"]["revision_id"], day_digest);
+        assert_eq!(
+            receipt["partition"]["authoritative"]["revision_id"],
+            day_digest
+        );
 
         // checksum_invalid: correct length, wrong digest.
-        let wrong = format!("{}{}", &day_digest[..63], if day_digest.ends_with('0') { '1' } else { '0' });
+        let wrong = format!(
+            "{}{}",
+            &day_digest[..63],
+            if day_digest.ends_with('0') { '1' } else { '0' }
+        );
         let mut checksum = manifest_for(DAY_BYTES, complete());
         checksum
             .as_object_mut()
@@ -1072,16 +1091,22 @@ mod tests {
         assert_eq!(receipt["partition"]["complete_revision_present"], false);
         assert_eq!(receipt["partition"]["partial_revision_present"], true);
         assert_eq!(
-            receipt["partition"]["authoritative"]["completeness"]["type"],
-            "partial",
+            receipt["partition"]["authoritative"]["completeness"]["type"], "partial",
             "partial coverage is never concealed while it is authoritative"
         );
 
         // Identical bytes restated as complete upgrade the recorded revision.
-        let complete_receipt = ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
-            .expect("complete accepts");
-        assert_eq!(complete_receipt["partition"]["complete_revision_present"], true);
-        assert_eq!(complete_receipt["partition"]["partial_revision_present"], false);
+        let complete_receipt =
+            ingest_into(&temporary, manifest_for(DAY_BYTES, complete()), DAY_BYTES)
+                .expect("complete accepts");
+        assert_eq!(
+            complete_receipt["partition"]["complete_revision_present"],
+            true
+        );
+        assert_eq!(
+            complete_receipt["partition"]["partial_revision_present"],
+            false
+        );
         assert_eq!(
             complete_receipt["partition"]["authoritative"]["completeness"],
             json!({"type": "complete"}),
@@ -1098,7 +1123,10 @@ mod tests {
             )
             .unwrap();
         assert_eq!((artifacts, partitions), (1, 1), "same bytes, one revision");
-        assert_eq!(supersessions, 0, "a same-revision upgrade is not a supersession");
+        assert_eq!(
+            supersessions, 0,
+            "a same-revision upgrade is not a supersession"
+        );
 
         // A later partial for the same partition must not shadow a complete revision.
         let other_day = DAY_BYTES.replacen("12345", "54321", 1);
@@ -1171,10 +1199,8 @@ mod tests {
         write_file(&exports.join("day.json"), DAY_BYTES);
         let database = temporary.path().join("store.sqlite");
         data_sqlite::import_data(&database, &exports).expect("import");
-        let revision_after_import = data_sqlite::read_content_revision(
-            &Connection::open(&database).unwrap(),
-        )
-        .unwrap();
+        let revision_after_import =
+            data_sqlite::read_content_revision(&Connection::open(&database).unwrap()).unwrap();
 
         let manifest_path = temporary.path().join("manifest.json");
         let artifact_path = temporary.path().join("upload.json");
@@ -1224,7 +1250,10 @@ mod tests {
             )
             .unwrap();
         assert_eq!(records, 0, "no fabricated record index");
-        assert_eq!(schemas, 1, "the manifest-declared schema identity is stored");
+        assert_eq!(
+            schemas, 1,
+            "the manifest-declared schema identity is stored"
+        );
         assert_eq!(detail_levels, 0, "no fabricated detail levels");
         let payload: String = connection
             .query_row(
@@ -1289,7 +1318,9 @@ mod tests {
             .unwrap();
         assert_eq!(version, i64::from(data_sqlite::DATABASE_SCHEMA_VERSION));
         let partitions: i64 = connection
-            .query_row("SELECT COUNT(*) FROM ingested_partitions", [], |row| row.get(0))
+            .query_row("SELECT COUNT(*) FROM ingested_partitions", [], |row| {
+                row.get(0)
+            })
             .unwrap();
         assert_eq!(partitions, 1, "rows survive the version round-trip");
     }

@@ -407,6 +407,13 @@ pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
                 commands,
             )
         }
+        "data" => (
+            "Manage the local Health.md Agent Data store.",
+            vec![
+                json!({"command": "healthmd data import --database <ABSOLUTE_SQLITE_FILE> --directory <ABSOLUTE_EXPORTS_DIRECTORY>", "description": "Ingest every recognized export artifact in a directory into the SQLite store."}),
+                json!({"command": "healthmd data ingest --database <ABSOLUTE_SQLITE_FILE> --manifest <ABSOLUTE_MANIFEST_JSON> --artifact <ABSOLUTE_ARTIFACT_FILE>", "description": "Validate and store one manifest-described artifact upload under ingestion protocol v1."}),
+            ],
+        ),
         "setup" => (
             "Configure a supported local AI host.",
             vec![json!({
@@ -556,7 +563,7 @@ pub(super) fn command_error(error: &CommandError, context: &ErrorContext) -> Val
             "cancel" => Some(cancel(context.backend)),
             "direct unpair" => Some(unpair(context.backend)),
             "direct reset-trust" => Some(reset_trust(context.backend)),
-            "direct" | "mcp" | "setup" => Some(group(context.backend, context.command)),
+            "direct" | "mcp" | "setup" | "data" => Some(group(context.backend, context.command)),
             _ => None,
         };
         if let (Some(object), Some(reference)) = (payload.as_object_mut(), reference) {
@@ -617,7 +624,7 @@ fn command_reference(backend: &'static str, path: &'static str) -> Value {
         "cancel" => cancel(backend),
         "direct unpair" => unpair(backend),
         "direct reset-trust" => reset_trust(backend),
-        "direct" | "mcp" | "setup" => group(backend, path),
+        "direct" | "mcp" | "setup" | "data" => group(backend, path),
         _ => Value::Null,
     }
 }
@@ -687,6 +694,11 @@ fn recovery_actions(code: &str, command: &str) -> Vec<Value> {
             json!({"command_template": "healthmd extract [SAME SCOPE] --allow-partial", "description": "Emit only the explicitly retained partial data when that is acceptable."}),
             help(),
         ],
+        "data_import_failed" | "data_ingest_failed" => vec![
+            json!({"action": "Verify that every path is absolute and points at the intended store and upload files; rejected upload receipts are protocol outcomes, not failures."}),
+            json!({"command": "healthmd data", "description": "List the local Agent Data store commands."}),
+            help(),
+        ],
         "invalid_direct_file_receipt" | "invalid_direct_response" => vec![
             json!({"action": "Do not consume, append, merge, or manually repair the rejected result."}),
             json!({"command_template": "healthmd status --job <JOB_UUID>", "description": "Inspect durable state and resume only when the exact job remains resumable."}),
@@ -743,7 +755,7 @@ fn root_commands() -> Vec<Value> {
 fn available_commands(path: &'static str) -> Value {
     match path {
         "" => Value::Array(root_commands()),
-        "direct" | "mcp" | "setup" => group("direct", path)
+        "direct" | "mcp" | "setup" | "data" => group("direct", path)
             .get("available_commands")
             .cloned()
             .unwrap_or(Value::Null),
@@ -811,6 +823,15 @@ fn accepted_arguments(path: &str) -> Value {
             "--directory <ABSOLUTE_DIRECTORY>",
             "--grant <ABSOLUTE_GRANT_JSON>",
             "[--index <ABSOLUTE_INDEX_JSON>]",
+        ],
+        "data import" => &[
+            "--database <ABSOLUTE_SQLITE_FILE>",
+            "--directory <ABSOLUTE_EXPORTS_DIRECTORY>",
+        ],
+        "data ingest" => &[
+            "--database <ABSOLUTE_SQLITE_FILE>",
+            "--manifest <ABSOLUTE_MANIFEST_JSON>",
+            "--artifact <ABSOLUTE_ARTIFACT_FILE>",
         ],
         "setup codex" => &["--skip-pairing", "--pairing-timeout <SECONDS>"],
         _ => &[],
@@ -920,7 +941,11 @@ fn command_path(arguments: &[OsString]) -> &'static str {
     match command {
         "data" => values[index + 1..]
             .iter()
-            .find_map(|value| (*value == "import").then_some("data import"))
+            .find_map(|value| match *value {
+                "import" => Some("data import"),
+                "ingest" => Some("data ingest"),
+                _ => None,
+            })
             .unwrap_or("data"),
         "direct" => values[index + 1..]
             .iter()
