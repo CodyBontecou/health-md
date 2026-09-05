@@ -176,11 +176,12 @@ serving grant always comes from the local `--grant` path.
 Version 4 (`aws4_request`, service `s3`, `x-amz-content-sha256: UNSIGNED-PAYLOAD`, region `auto`)
 against the frozen S3 subset; the implementation is unit-tested against the RFC 4231 HMAC vectors
 and the published AWS `SigV4` GET-object known answer. Real R2/S3 endpoints are not exercised in
-this repository's loop: compatibility is by specification through that subset, proven against the
-synthetic loopback doubles in `tests/agent_data_object.rs` and (over TLS)
-`tests/agent_data_object_tls.rs` (each `SigV4`-verifies every request and asserts only
-list/head/get methods are ever sent); no real endpoint, account, or TLS authority is contacted
-anywhere in this repository's tests.
+this repository's loop: compatibility is by specification through that subset, proven against
+the synthetic loopback double in `tests/agent_data_object.rs` (which `SigV4`-verifies every request
+and asserts only list/head/get methods are ever sent) and, through its own embedded double, by
+the shared store-parity kit in `tests/agent_data_stdio.rs`, which runs the same ten end-to-end
+scenarios unchanged against all three backings — directory, database, and object store. No real endpoint, account, or TLS authority is contacted anywhere in this
+repository's tests.
 
 **TLS egress (feature-gated).** `https://` egress for real R2/S3 endpoints is carried by the
 non-default `object-store-tls` cargo feature: build with
@@ -194,6 +195,7 @@ is no insecure mode. Default builds keep the dependency-lean boundary: `https://
 still validate per the URL policy and fail health-free at transport with the stable
 `the https object-store transport is not available in this build` error, while loopback
 `http://` endpoints work in every build.
+agent-data/c4-parity
 
 ## Local ingestion (protocol v1)
 
