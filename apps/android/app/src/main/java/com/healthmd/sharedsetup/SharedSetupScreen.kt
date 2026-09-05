@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -163,6 +164,8 @@ fun SharedSetupScreen(
                     onApply = viewModel::applyV2,
                     onUndo = viewModel::undoV2,
                     onRebindFolder = viewModel::rebindBlockedProfileFolder,
+                    onConfirmApiCredential = viewModel::confirmBlockedApiCredential,
+                    onConfirmMacPairing = viewModel::confirmBlockedMacPairing,
                     onResetTransaction = viewModel::resetV2TransactionState,
                     onDismissRebindFailure = viewModel::dismissRebindFailure,
                     onCancel = viewModel::dismiss,
@@ -265,6 +268,8 @@ private fun SharedSetupV2Review(
     onApply: (List<String>, SharedSetupV2ApplyMode) -> Unit,
     onUndo: () -> Unit,
     onRebindFolder: (String, Uri, String?) -> Unit,
+    onConfirmApiCredential: (String, String) -> Unit,
+    onConfirmMacPairing: (String) -> Unit,
     onResetTransaction: () -> Unit,
     onDismissRebindFailure: () -> Unit,
     onCancel: () -> Unit,
@@ -284,6 +289,8 @@ private fun SharedSetupV2Review(
             blockedProfiles = blockedProfiles,
             rebindState = rebindState,
             onRebindFolder = onRebindFolder,
+            onConfirmApiCredential = onConfirmApiCredential,
+            onConfirmMacPairing = onConfirmMacPairing,
             onDismissRebindFailure = onDismissRebindFailure,
             onUndo = onUndo,
             onFinishSetup = onFinishSetup,
@@ -533,12 +540,15 @@ private fun SharedSetupV2Applied(
     blockedProfiles: List<SharedSetupV2BlockedImportedProfile>?,
     rebindState: SharedSetupV2RebindState,
     onRebindFolder: (String, Uri, String?) -> Unit,
+    onConfirmApiCredential: (String, String) -> Unit,
+    onConfirmMacPairing: (String) -> Unit,
     onDismissRebindFailure: () -> Unit,
     onUndo: () -> Unit,
     onFinishSetup: () -> Unit,
 ) {
     val context = LocalContext.current
     var rebindTargetId by remember { mutableStateOf<String?>(null) }
+    var macConfirmTargetId by remember { mutableStateOf<String?>(null) }
     val folderPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri ->
@@ -578,7 +588,11 @@ private fun SharedSetupV2Applied(
         style = MaterialTheme.typography.bodySmall,
         color = AppColors.textSecondary,
     )
-    if (rebindState == SharedSetupV2RebindState.Rebinding) {
+    if (
+        rebindState == SharedSetupV2RebindState.Rebinding ||
+        rebindState == SharedSetupV2RebindState.ConfirmingApiCredential ||
+        rebindState == SharedSetupV2RebindState.ConfirmingMacPairing
+    ) {
         Text(
             stringResource(R.string.shared_setup_v2_rebinding),
             color = AppColors.textMuted,
@@ -606,18 +620,31 @@ private fun SharedSetupV2Applied(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.shared_setup_v2_rebind_folder)) }
-                "api_endpoint" -> Text(
-                    stringResource(R.string.shared_setup_v2_rebind_api_unavailable),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textSecondary,
+                "api_endpoint" -> BlockedApiCredentialConfirmation(
+                    onConfirm = { authorization ->
+                        onConfirmApiCredential(blocked.profileId, authorization)
+                    },
                 )
+                "connected_mac" -> OutlinedButton(
+                    onClick = { macConfirmTargetId = blocked.profileId },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.shared_setup_v2_rebind_mac_confirm)) }
                 else -> Text(
-                    stringResource(R.string.shared_setup_v2_rebind_mac_unavailable),
+                    stringResource(R.string.shared_setup_v2_rebind_cloud_unavailable),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary,
                 )
             }
         }
+    }
+    macConfirmTargetId?.let { targetId ->
+        BlockedMacPairingConfirmation(
+            onConfirm = {
+                macConfirmTargetId = null
+                onConfirmMacPairing(targetId)
+            },
+            onDismiss = { macConfirmTargetId = null },
+        )
     }
     if (result.canUndo) {
         OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) {
@@ -627,6 +654,71 @@ private fun SharedSetupV2Applied(
     Button(onClick = onFinishSetup, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.shared_setup_finish))
     }
+}
+
+/**
+ * In-flow credential entry for one blocked API-endpoint imported profile (v2 review). Mirrors
+ * the v1 [PendingEndpointConfirmation] precedent: a password-masked authorization field whose
+ * value is handed to the ViewModel's verified persistence seam — never stored in the UI layer.
+ */
+@Composable
+private fun BlockedApiCredentialConfirmation(onConfirm: (String) -> Unit) {
+    var authorization by remember { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        Text(
+            stringResource(R.string.shared_setup_v2_rebind_api_title),
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            stringResource(R.string.shared_setup_v2_rebind_api_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textSecondary,
+        )
+        OutlinedTextField(
+            value = authorization,
+            onValueChange = { authorization = it },
+            label = { Text(stringResource(R.string.shared_setup_authorization_label)) },
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = { onConfirm(authorization) },
+            enabled = authorization.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.shared_setup_v2_rebind_api_confirm)) }
+    }
+}
+
+/**
+ * Attestation-only connected-Mac pairing confirmation for one blocked imported profile. There
+ * is no credential to enter: confirming attests that this Android device is currently paired
+ * with the Mac that produced the imported profile (Apple's "Mac Is Paired — Rebind"
+ * precedent), and only that explicit attestation can clear the block. Cloud destinations are
+ * deliberately not offered here — they stay blocked on Android.
+ */
+@Composable
+private fun BlockedMacPairingConfirmation(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.shared_setup_v2_rebind_mac_title)) },
+        text = {
+            Text(stringResource(R.string.shared_setup_v2_rebind_mac_body))
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.shared_setup_v2_rebind_mac_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.shared_setup_cancel))
+            }
+        },
+    )
 }
 
 @Composable

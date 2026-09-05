@@ -4,6 +4,11 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.APIExportAuthorization
+import com.healthmd.data.export.APIExportAuthorizationValidationResult
+import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.APIExportRequestHeader
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.export.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -26,6 +31,25 @@ class SharedSetupViewModelTest {
     private fun productionAdapter(): SharedSetupV2ProductionTransaction =
         mockk(relaxed = true)
 
+    private val profileRepository = mockk<ExportProfileRepository>()
+    private val credentialStore = InMemoryAPIExportCredentialStore()
+
+    private fun newViewModel(
+        service: SharedSetupService,
+        store: SharedSetupDocumentStore,
+        coordinator: SharedSetupCoordinator,
+        savedState: SavedStateHandle,
+        production: SharedSetupV2ProductionTransaction = productionAdapter(),
+    ): SharedSetupViewModel = SharedSetupViewModel(
+        service,
+        store,
+        coordinator,
+        savedState,
+        production,
+        profileRepository,
+        credentialStore,
+    )
+
     @Test
     fun `failed artifact creation clears reservation and schedules orphan cleanup`() = runTest {
         val service = mockk<SharedSetupService>()
@@ -41,7 +65,7 @@ class SharedSetupViewModelTest {
             if (attemptedIDs.size == 1) error("synthetic creation failure")
             SharedSetupShare(Intent(Intent.ACTION_SEND), artifactID)
         }
-        val viewModel = SharedSetupViewModel(service, store, coordinator, SavedStateHandle(), productionAdapter())
+        val viewModel = newViewModel(service, store, coordinator, SavedStateHandle())
         advanceUntilIdle()
 
         assertThat(viewModel.shareIntent().isFailure).isTrue()
@@ -82,7 +106,7 @@ class SharedSetupViewModelTest {
         coEvery { service.pendingEndpoint() } returns "https://setup.invalid/health"
         every { coordinator.imports } returns imports
 
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
+        val viewModel = newViewModel(service, store, coordinator, savedState)
         advanceUntilIdle()
         assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Success::class.java)
 
@@ -113,7 +137,7 @@ class SharedSetupViewModelTest {
         }
         coEvery { service.previewVersioned(match { it.contentEquals(newerBytes) }) } returns
             Result.success(SharedSetupVersionedPreview.V1(newerPreview))
-        val viewModel = SharedSetupViewModel(
+        val viewModel = newViewModel(
             service,
             store,
             coordinator,
@@ -123,7 +147,6 @@ class SharedSetupViewModelTest {
                     "sharedSetup.restorablePhase" to "review",
                 ),
             ),
-            productionAdapter(),
         )
         restoredStarted.await()
 
@@ -171,7 +194,7 @@ class SharedSetupViewModelTest {
             ),
         )
 
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
+        val viewModel = newViewModel(service, store, coordinator, savedState)
         advanceUntilIdle()
         imports.value = PendingSharedSetupImport(id = 1, bytes = bytes)
         advanceUntilIdle()
@@ -191,7 +214,7 @@ class SharedSetupViewModelTest {
             .isInstanceOf(SharedSetupV2TransactionState.Applied::class.java)
         assertThat(savedState.get<String>("sharedSetup.restorablePhase")).isEqualTo("v2_success")
 
-        val recreated = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
+        val recreated = newViewModel(service, store, coordinator, savedState)
         advanceUntilIdle()
         assertThat(recreated.versionedPreview.value).isEqualTo(versioned)
         assertThat(recreated.state.value).isInstanceOf(SharedSetupUiState.ReviewV2::class.java)
@@ -214,7 +237,7 @@ class SharedSetupViewModelTest {
             ),
         )
 
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
+        val viewModel = newViewModel(service, store, coordinator, savedState)
         advanceUntilIdle()
 
         assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Error::class.java)
@@ -237,13 +260,13 @@ class SharedSetupViewModelTest {
             SharedSetupShare(Intent(Intent.ACTION_SEND), secondArg())
         }
 
-        val firstViewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
+        val firstViewModel = newViewModel(service, store, coordinator, savedState)
         advanceUntilIdle()
         val firstID = requireNotNull(firstViewModel.shareIntent().getOrNull()?.artifactID)
         assertThat(firstViewModel.shareIntent().exceptionOrNull()?.message).contains("already open")
         verify(exactly = 1) { store.shareIntent(any(), firstID) }
 
-        val recreatedViewModel = SharedSetupViewModel(service, store, coordinator, savedState, productionAdapter())
+        val recreatedViewModel = newViewModel(service, store, coordinator, savedState)
         advanceUntilIdle()
         assertThat(recreatedViewModel.shareIntent().exceptionOrNull()?.message).contains("already open")
         recreatedViewModel.completeShareArtifactHandoff()
@@ -289,7 +312,7 @@ class SharedSetupViewModelTest {
                 mode = SharedSetupV2ApplyMode.REPLACE,
             ),
         )
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, production)
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
         advanceUntilIdle()
         imports.value = PendingSharedSetupImport(id = 4, bytes = bytes)
         advanceUntilIdle()
@@ -340,7 +363,7 @@ class SharedSetupViewModelTest {
                 sourceDestinationKind = "device_folder",
             ),
         )
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, production)
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
         advanceUntilIdle()
         imports.value = PendingSharedSetupImport(id = 5, bytes = bytes)
         advanceUntilIdle()
@@ -390,7 +413,7 @@ class SharedSetupViewModelTest {
         coEvery {
             production.rebindBlockedFolder(blockedId, "content://synthetic/tree", "Docs")
         } returns false
-        val viewModel = SharedSetupViewModel(service, store, coordinator, savedState, production)
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
         advanceUntilIdle()
         imports.value = PendingSharedSetupImport(id = 6, bytes = bytes)
         advanceUntilIdle()
@@ -410,5 +433,364 @@ class SharedSetupViewModelTest {
 
         viewModel.dismissRebindFailure()
         assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+    }
+
+    @Test
+    fun `api credential confirmation clears a blocked imported profile through the verified credential seam`() = runTest {
+        val bytes = byteArrayOf(11)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000001"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(SharedSetupV2BlockedImportedProfile(blockedId, "Daily", "api_endpoint")),
+            emptyList(),
+            emptyList(),
+        )
+        credentialStore.authorization = "Bearer prior"
+        credentialStore.saveRequestHeaders("X-Custom: prior")
+        val confirmStarted = CompletableDeferred<Unit>()
+        val releaseConfirm = CompletableDeferred<Boolean>()
+        coEvery {
+            profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(blockedId)
+        } coAnswers {
+            confirmStarted.complete(Unit)
+            releaseConfirm.await()
+        }
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 7, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+        assertThat(viewModel.v2BlockedProfiles.value).hasSize(1)
+
+        viewModel.confirmBlockedApiCredential(blockedId, "fresh-token")
+        confirmStarted.await()
+        assertThat(viewModel.v2RebindState.value)
+            .isEqualTo(SharedSetupV2RebindState.ConfirmingApiCredential)
+
+        releaseConfirm.complete(true)
+        advanceUntilIdle()
+
+        assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+        assertThat(credentialStore.authorization).isEqualTo("Bearer fresh-token")
+        assertThat(credentialStore.requestHeaders()).isEmpty()
+        assertThat(viewModel.v2BlockedProfiles.value).isEmpty()
+        coVerify(exactly = 1) {
+            profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(blockedId)
+        }
+    }
+
+    @Test
+    fun `api credential confirmation failure restores the prior credential and keeps the block`() = runTest {
+        val bytes = byteArrayOf(12)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000002"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(SharedSetupV2BlockedImportedProfile(blockedId, "Daily", "api_endpoint")),
+            listOf(SharedSetupV2BlockedImportedProfile(blockedId, "Daily", "api_endpoint")),
+        )
+        credentialStore.authorization = "Bearer prior"
+        credentialStore.saveRequestHeaders("X-Custom: prior")
+        coEvery {
+            profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(blockedId)
+        } returns false
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 8, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        viewModel.confirmBlockedApiCredential(blockedId, "fresh-token")
+        advanceUntilIdle()
+
+        val failed = viewModel.v2RebindState.value as SharedSetupV2RebindState.Failed
+        assertThat(failed.message).contains("profile editor")
+        assertThat(credentialStore.authorization).isEqualTo("Bearer prior")
+        assertThat(credentialStore.requestHeaders())
+            .containsExactly(APIExportRequestHeader("X-Custom", "prior"))
+        assertThat(viewModel.v2BlockedProfiles.value).hasSize(1)
+    }
+
+    @Test
+    fun `unreadable credential store fails closed before any mutation`() = runTest {
+        val bytes = byteArrayOf(13)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        val production = productionAdapter()
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        coEvery { production.blockedImportedProfiles() } returns listOf(
+            SharedSetupV2BlockedImportedProfile(
+                "30000000-0000-4000-8000-000000000003",
+                "Daily",
+                "api_endpoint",
+            ),
+        )
+        val viewModel = newViewModel(service, store, coordinator, SavedStateHandle(), production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 9, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        credentialStore.failReads = true
+        credentialStore.authorization = "Bearer prior"
+        viewModel.confirmBlockedApiCredential(
+            "30000000-0000-4000-8000-000000000003",
+            "fresh-token",
+        )
+        advanceUntilIdle()
+
+        val failed = viewModel.v2RebindState.value as SharedSetupV2RebindState.Failed
+        assertThat(failed.message).contains("could not be read safely")
+        assertThat(credentialStore.authorization).isEqualTo("Bearer prior")
+        coVerify(exactly = 0) {
+            profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(any())
+        }
+    }
+
+    @Test
+    fun `invalid api credential is rejected before the store is touched`() = runTest {
+        val bytes = byteArrayOf(14)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        val production = productionAdapter()
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        coEvery { production.blockedImportedProfiles() } returns emptyList()
+        val viewModel = newViewModel(service, store, coordinator, SavedStateHandle(), production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 10, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        credentialStore.authorization = "Bearer prior"
+        viewModel.confirmBlockedApiCredential(
+            "30000000-0000-4000-8000-000000000004",
+            "\u0007bad-value",
+        )
+        advanceUntilIdle()
+
+        val failed = viewModel.v2RebindState.value as SharedSetupV2RebindState.Failed
+        assertThat(failed.message).contains("valid bearer token")
+        assertThat(credentialStore.authorization).isEqualTo("Bearer prior")
+        assertThat(credentialStore.requestHeaders()).isEmpty()
+    }
+
+    @Test
+    fun `mac pairing confirmation clears an attested connected-mac profile`() = runTest {
+        val bytes = byteArrayOf(15)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000005"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(SharedSetupV2BlockedImportedProfile(blockedId, "Daily", "connected_mac")),
+            emptyList(),
+            emptyList(),
+        )
+        coEvery {
+            profileRepository.clearSharedSetupV2BlockAfterMacPairingConfirmation(blockedId)
+        } returns true
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 11, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        viewModel.confirmBlockedMacPairing(blockedId)
+        advanceUntilIdle()
+
+        assertThat(viewModel.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+        assertThat(viewModel.v2BlockedProfiles.value).isEmpty()
+        coVerify(exactly = 1) {
+            profileRepository.clearSharedSetupV2BlockAfterMacPairingConfirmation(blockedId)
+        }
+    }
+
+    @Test
+    fun `mac pairing confirmation failure keeps the block and resets after process recreation`() = runTest {
+        val bytes = byteArrayOf(16)
+        val profile = mockk<SharedSetupV2ProfileImportPlan>()
+        val plan = mockk<SharedSetupV2ImportPlan>()
+        every { profile.bundleId } returns "profile-001"
+        every { plan.profiles } returns listOf(profile)
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        val savedState = SavedStateHandle()
+        val production = productionAdapter()
+        val blockedId = "30000000-0000-4000-8000-000000000006"
+        every { coordinator.imports } returns imports
+        coEvery { service.pendingEndpoint() } returns null
+        coEvery { service.previewVersioned(bytes) } returns
+            Result.success(SharedSetupVersionedPreview.V2(plan))
+        coEvery {
+            service.applyV2(plan, listOf("profile-001"), SharedSetupV2ApplyMode.ADD, production)
+        } returns Result.success(
+            SharedSetupV2ApplyResult(listOf("profile-001"), SharedSetupV2ApplyMode.ADD),
+        )
+        val blockedRow = SharedSetupV2BlockedImportedProfile(blockedId, "Daily", "connected_mac")
+        coEvery { production.blockedImportedProfiles() } returnsMany listOf(
+            listOf(blockedRow),
+            listOf(blockedRow),
+            listOf(blockedRow),
+        )
+        coEvery {
+            profileRepository.clearSharedSetupV2BlockAfterMacPairingConfirmation(blockedId)
+        } returns false
+        val viewModel = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        imports.value = PendingSharedSetupImport(id = 12, bytes = bytes)
+        advanceUntilIdle()
+        viewModel.applyV2(listOf("profile-001"), SharedSetupV2ApplyMode.ADD)
+        advanceUntilIdle()
+
+        viewModel.confirmBlockedMacPairing(blockedId)
+        advanceUntilIdle()
+
+        val failed = viewModel.v2RebindState.value as SharedSetupV2RebindState.Failed
+        assertThat(failed.message).contains("connected-Mac")
+        assertThat(viewModel.v2BlockedProfiles.value).hasSize(1)
+
+        // Process death: recreation restores the Applied review and honestly resets the rebind
+        // machine to Idle while refreshing blocked visibility, matching ReviewV2 restore behavior.
+        val recreated = newViewModel(service, store, coordinator, savedState, production)
+        advanceUntilIdle()
+        assertThat(recreated.v2TransactionState.value)
+            .isInstanceOf(SharedSetupV2TransactionState.Applied::class.java)
+        assertThat(recreated.v2RebindState.value).isEqualTo(SharedSetupV2RebindState.Idle)
+        assertThat(recreated.v2BlockedProfiles.value).hasSize(1)
+    }
+}
+
+/**
+ * In-memory stand-in for [APIExportCredentialStore] with the same normalization semantics, so
+ * ViewModel tests can assert the verified persistence shape of the v2 confirmation flows.
+ */
+private class InMemoryAPIExportCredentialStore : APIExportCredentialStore {
+    var authorization: String? = null
+    var requestHeadersRaw: String? = null
+    var failReads = false
+
+    override suspend fun authorizationHeader(): String? {
+        if (failReads) error("secure store unavailable")
+        return authorization
+    }
+
+    override suspend fun saveAuthorization(value: String) {
+        val validated = APIExportAuthorization.validate(value)
+        check(validated is APIExportAuthorizationValidationResult.Valid) { "invalid authorization" }
+        authorization = validated.normalizedValue
+    }
+
+    override suspend fun clearAuthorization() {
+        authorization = null
+    }
+
+    override suspend fun requestHeaders(): List<APIExportRequestHeader> {
+        if (failReads) error("secure store unavailable")
+        return requestHeadersRaw
+            ?.lineSequence()
+            ?.filter { it.isNotBlank() }
+            ?.map { line ->
+                val separator = line.indexOf(':')
+                APIExportRequestHeader(
+                    name = line.substring(0, separator).trim(),
+                    value = line.substring(separator + 1).trim(),
+                )
+            }
+            ?.toList()
+            ?: emptyList()
+    }
+
+    override suspend fun saveRequestHeaders(rawValue: String) {
+        requestHeadersRaw = rawValue
+    }
+
+    override suspend fun clearRequestHeaders() {
+        requestHeadersRaw = null
     }
 }

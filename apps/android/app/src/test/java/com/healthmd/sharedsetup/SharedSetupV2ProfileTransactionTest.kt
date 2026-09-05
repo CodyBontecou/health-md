@@ -464,6 +464,103 @@ class SharedSetupV2ProfileTransactionTest {
     }
 
     @Test
+    fun `mac pairing confirmation clears only exact connected-mac intent`() = runTest {
+        val original = importPlan()
+        val retargetedSource = original.source.copy(
+            profiles = original.source.profiles.mapIndexed { index, profile ->
+                when (index) {
+                    0 -> profile.copy(
+                        destination = SharedSetupV2Destination(
+                            kind = "connected_mac",
+                            apiEndpoint = null,
+                        ),
+                    )
+                    1 -> profile.copy(
+                        destination = SharedSetupV2Destination(
+                            kind = "cloud",
+                            apiEndpoint = null,
+                        ),
+                    )
+                    else -> profile
+                }
+            },
+        )
+        val plan = SharedSetupV2Mapper(EmptyRegistry).planImport(retargetedSource)
+        val transaction = transaction(GENERATED_ONE_ID, GENERATED_TWO_ID)
+        transaction.apply(
+            plan,
+            listOf("profile-001", "profile-002"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+
+        // Unknown or absent ids never clear anything.
+        assertThat(repository.clearSharedSetupV2BlockAfterMacPairingConfirmation("missing"))
+            .isFalse()
+        // Cloud intent is never unblocked by a Mac pairing attestation; it stays blocked.
+        assertThat(repository.clearSharedSetupV2BlockAfterMacPairingConfirmation(GENERATED_TWO_ID))
+            .isFalse()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_TWO_ID)).isTrue()
+        assertThat(repository.activate(GENERATED_TWO_ID)).isFalse()
+
+        // The untouched connected-Mac projection clears exactly on the explicit attestation.
+        assertThat(repository.clearSharedSetupV2BlockAfterMacPairingConfirmation(GENERATED_ONE_ID))
+            .isTrue()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isFalse()
+        assertThat(repository.activate(GENERATED_ONE_ID)).isTrue()
+
+        // A second attestation is idempotent-honest: the id is no longer blocked.
+        assertThat(repository.clearSharedSetupV2BlockAfterMacPairingConfirmation(GENERATED_ONE_ID))
+            .isFalse()
+    }
+
+    @Test
+    fun `retargeted connected-mac import cannot be unblocked by pairing confirmation`() = runTest {
+        val original = importPlan()
+        val connectedSource = original.source.copy(
+            profiles = original.source.profiles.mapIndexed { index, profile ->
+                if (index == 0) {
+                    profile.copy(
+                        destination = SharedSetupV2Destination(
+                            kind = "connected_mac",
+                            apiEndpoint = null,
+                        ),
+                    )
+                } else {
+                    profile
+                }
+            },
+        )
+        val plan = SharedSetupV2Mapper(EmptyRegistry).planImport(connectedSource)
+        val transaction = transaction(GENERATED_ONE_ID)
+        transaction.apply(
+            plan,
+            listOf("profile-001"),
+            SharedSetupV2ProfileImportMode.REPLACE,
+        ).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+
+        val imported = checkNotNull(repository.profileById(GENERATED_ONE_ID))
+        assertThat(
+            repository.applyEditorUpdate(
+                id = GENERATED_ONE_ID,
+                rawName = imported.name,
+                settingsSnapshotJson = imported.settingsSnapshotJson,
+                target = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = "https://local.invalid/retargeted",
+                folderUri = null,
+                folderDisplayName = null,
+            ),
+        ).isNotNull()
+
+        // A locally retargeted profile no longer represents the imported Mac intent.
+        assertThat(repository.clearSharedSetupV2BlockAfterMacPairingConfirmation(GENERATED_ONE_ID))
+            .isFalse()
+        assertThat(repository.isSharedSetupV2Blocked(GENERATED_ONE_ID)).isTrue()
+        assertThat(repository.activate(GENERATED_ONE_ID)).isFalse()
+    }
+
+    @Test
     fun `empty duplicate unknown and stale-plan selections perform zero writes and preserve prior Undo`() = runTest {
         seed(listOf(nativeProfile(EXISTING_ONE_ID, "Before")), EXISTING_ONE_ID, emptyList())
         dataStore.edit {

@@ -4,6 +4,11 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.data.export.APIExportAuthorization
+import com.healthmd.data.export.APIExportAuthorizationValidationException
+import com.healthmd.data.export.APIExportAuthorizationValidationResult
+import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.settings.ExportProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
@@ -28,10 +33,16 @@ sealed interface SharedSetupUiState {
     data class Error(val message: String) : SharedSetupUiState
 }
 
-/** Honest per-profile folder-rebind progress for the v2 review screen. */
+/** Honest per-profile destination-rebind progress for the v2 review screen. */
 sealed interface SharedSetupV2RebindState {
     data object Idle : SharedSetupV2RebindState
     data object Rebinding : SharedSetupV2RebindState
+
+    /** A freshly entered API credential is being verified against a blocked profile. */
+    data object ConfirmingApiCredential : SharedSetupV2RebindState
+
+    /** A local connected-Mac pairing attestation is being applied to a blocked profile. */
+    data object ConfirmingMacPairing : SharedSetupV2RebindState
     data class Failed(val message: String) : SharedSetupV2RebindState
 }
 
@@ -42,6 +53,8 @@ class SharedSetupViewModel @Inject constructor(
     private val coordinator: SharedSetupCoordinator,
     private val savedStateHandle: SavedStateHandle,
     private val v2Production: SharedSetupV2ProductionTransaction,
+    private val profileRepository: ExportProfileRepository,
+    private val credentialStore: APIExportCredentialStore,
 ) : ViewModel() {
     companion object {
         private const val PENDING_SHARE_ARTIFACT_ID = "sharedSetup.pendingShareArtifactID"
@@ -353,6 +366,157 @@ class SharedSetupViewModel @Inject constructor(
 
     fun dismissRebindFailure() {
         mutableV2RebindState.value = SharedSetupV2RebindState.Idle
+    }
+
+    /**
+     * In-flow API-credential confirmation for one blocked imported profile (v2 review). The
+     * freshly entered credential is persisted through the exact storage seam the v1 pending-
+     * endpoint flow uses (`APIExportCredentialStore` behind `confirmPendingEndpoint`): prior
+     * secure-store state is captured first and the store is fail-closed when unreadable, then
+     * authorization and custom request headers are cleared so no foreign credential can attach
+     * to the imported endpoint, the normalized credential is written and verified, and only then
+     * does the trusted repository hook run. When the hook does not clear the block — for example
+     * the profile's endpoint was never locally bound in the editor — the prior secure-store
+     * state is restored (or cleared, fail-closed) and the failure is surfaced honestly; the
+     * block always stays until a verified confirmation clears it.
+     */
+    fun confirmBlockedApiCredential(profileId: String, authorization: String) {
+        viewModelScope.launch {
+            mutableV2RebindState.value = SharedSetupV2RebindState.ConfirmingApiCredential
+            runCatching { persistVerifiedApiCredentialAndClearBlock(profileId, authorization) }
+                .onSuccess { cleared ->
+                    mutableV2RebindState.value = if (cleared) {
+                        SharedSetupV2RebindState.Idle
+                    } else {
+                        SharedSetupV2RebindState.Failed(
+                            "The credential did not clear this profile’s pending destination " +
+                                "state. Confirm the profile’s API endpoint in the profile editor " +
+                                "first, then enter the credential again.",
+                        )
+                    }
+                    refreshBlockedImportedProfiles()
+                }
+                .onFailure {
+                    mutableV2RebindState.value = SharedSetupV2RebindState.Failed(it.safeMessage())
+                    refreshBlockedImportedProfiles()
+                }
+        }
+    }
+
+    /**
+     * Attestation-only connected-Mac pairing confirmation for one blocked imported profile.
+     * There is no credential or endpoint to verify — the explicit local pairing attestation IS
+     * the confirmation (Apple's attestation-only precedent) — so the trusted repository hook
+     * performs the identity checks (blocked membership, untouched device-folder projection,
+     * exact `connected_mac` sidecar kind). The Boolean result is surfaced honestly: failure
+     * keeps the block.
+     */
+    fun confirmBlockedMacPairing(profileId: String) {
+        viewModelScope.launch {
+            mutableV2RebindState.value = SharedSetupV2RebindState.ConfirmingMacPairing
+            runCatching {
+                profileRepository.clearSharedSetupV2BlockAfterMacPairingConfirmation(profileId)
+            }
+                .onSuccess { cleared ->
+                    mutableV2RebindState.value = if (cleared) {
+                        SharedSetupV2RebindState.Idle
+                    } else {
+                        SharedSetupV2RebindState.Failed(
+                            "This profile’s pending destination state did not match a " +
+                                "connected-Mac import, so the pairing confirmation was not applied.",
+                        )
+                    }
+                    refreshBlockedImportedProfiles()
+                }
+                .onFailure {
+                    mutableV2RebindState.value = SharedSetupV2RebindState.Failed(it.safeMessage())
+                    refreshBlockedImportedProfiles()
+                }
+        }
+    }
+
+    /**
+     * Verified credential write plus block-clearing attempt, mirroring the v1
+     * `confirmPendingEndpoint` persistence shape. Returns whether the block was cleared; on a
+     * hook refusal the prior secure-store state is restored and verified, or cleared fail-closed
+     * when a verified restore is impossible.
+     */
+    private suspend fun persistVerifiedApiCredentialAndClearBlock(
+        profileId: String,
+        authorization: String,
+    ): Boolean {
+        // Fail closed: if the prior secure-store state cannot be read, no verified rollback
+        // would ever be possible, so no credential mutation is attempted at all.
+        val priorAuthorizationRead = runCatching { credentialStore.authorizationHeader() }
+        val priorHeadersRead = runCatching { credentialStore.requestHeaders() }
+        check(priorAuthorizationRead.isSuccess && priorHeadersRead.isSuccess) {
+            "Endpoint credentials could not be read safely. Try again."
+        }
+        val previousAuthorization = priorAuthorizationRead.getOrNull()
+        val previousHeaders = priorHeadersRead.getOrDefault(emptyList())
+        val expectedAuthorization = when (
+            val validated = APIExportAuthorization.validate(authorization)
+        ) {
+            is APIExportAuthorizationValidationResult.Valid -> validated.normalizedValue
+            is APIExportAuthorizationValidationResult.Invalid ->
+                throw APIExportAuthorizationValidationException(validated.reason)
+        }
+
+        // Clear first so neither authorization nor custom request headers from another
+        // destination can become attached to the imported endpoint.
+        credentialStore.clearAuthorization()
+        credentialStore.clearRequestHeaders()
+        credentialStore.saveAuthorization(authorization)
+        // The exact normalized credential must be present and no foreign headers may remain
+        // before the trusted block-clearing hook may run.
+        check(
+            credentialStore.authorizationHeader() == expectedAuthorization &&
+                credentialStore.requestHeaders().isEmpty()
+        ) {
+            "The new endpoint credential could not be verified."
+        }
+
+        if (profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(profileId)) {
+            return true
+        }
+
+        // The block stayed: never leave the unconfirmed credential attached to any endpoint.
+        // Restore the prior secure-store state and verify the restoration; when it cannot be
+        // verified, attempt a verified clear instead — same fail-closed rule as the v1 seam.
+        val credentialRollback = runCatching {
+            credentialStore.clearAuthorization()
+            credentialStore.clearRequestHeaders()
+            previousAuthorization?.let { credentialStore.saveAuthorization(it) }
+            if (previousHeaders.isNotEmpty()) {
+                credentialStore.saveRequestHeaders(
+                    previousHeaders.joinToString("\n") { header -> "${header.name}: ${header.value}" },
+                )
+            }
+        }
+        val rollbackVerified = credentialRollback.isSuccess && runCatching {
+            credentialStore.authorizationHeader() == previousAuthorization &&
+                credentialStore.requestHeaders() == previousHeaders
+        }.getOrDefault(false)
+        if (!rollbackVerified) {
+            val failClosedClear = runCatching {
+                credentialStore.clearAuthorization()
+                credentialStore.clearRequestHeaders()
+            }
+            val failClosedVerified = failClosedClear.isSuccess && runCatching {
+                credentialStore.authorizationHeader() == null &&
+                    credentialStore.requestHeaders().isEmpty()
+            }.getOrDefault(false)
+            error(
+                if (failClosedVerified) {
+                    "The confirmation failed and the previous credential could not be verified " +
+                        "as restored; credentials were cleared."
+                } else {
+                    "The confirmation failed and the previous credential could not be verified " +
+                        "as restored."
+                },
+            )
+        }
+        return false
     }
 
     private fun refreshBlockedImportedProfiles() {

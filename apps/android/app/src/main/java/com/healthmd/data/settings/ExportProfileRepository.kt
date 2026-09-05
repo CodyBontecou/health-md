@@ -401,6 +401,43 @@ class ExportProfileRepository @Inject constructor(
     }
 
     /**
+     * Separate trusted hook for the connected-Mac pairing confirmation flow. This mirrors the
+     * verification shape of [clearSharedSetupV2BlockAfterApiCredentialConfirmation] minus the
+     * endpoint fingerprint: the id must still be blocked, and the bounded sidecar must retain
+     * the exact `connected_mac` source destination kind. Android has no `CONNECTED_MAC`
+     * [ExportTarget] — connected-Mac imports project to [ExportTarget.DEVICE_FOLDER] for display
+     * (see `SharedSetupV2ProfileTransaction.materializeProfile`) — so the profile must still
+     * carry that untouched projection; a locally retargeted profile no longer represents the
+     * imported Mac intent and stays blocked. No endpoint or credential fingerprint applies: the
+     * explicit local pairing attestation IS the confirmation (Apple's attestation-only
+     * precedent, "Mac Is Paired — Rebind"). Fail-closed: any mismatch returns false and keeps
+     * the block. Cloud intent is never cleared here.
+     */
+    suspend fun clearSharedSetupV2BlockAfterMacPairingConfirmation(id: String): Boolean {
+        var cleared = false
+        dataStore.edit { prefs ->
+            val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            if (id !in blocked) return@edit
+            val profile = decodeProfiles(prefs[Keys.PROFILES])
+                ?.singleOrNull { it.id == id }
+                ?: return@edit
+            val sourceKind = SharedSetupV2ProfilePersistence.sourceDestinationKind(
+                prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+                id,
+            )
+            if (
+                profile.target != ExportTarget.DEVICE_FOLDER ||
+                sourceKind != "connected_mac"
+            ) {
+                return@edit
+            }
+            removeBlockedId(prefs, id)
+            cleared = true
+        }
+        return cleared
+    }
+
+    /**
      * One-time migration of current settings into a Default profile bound to the current target
      * and endpoint, activated immediately. No-op when any profile exists.
      */
