@@ -1470,4 +1470,24 @@
     <string name="fdroid_onboarding_access_body">La versión oficial de F-Droid incluye gratis todas las funciones locales de exportación y automatización.</string>
     <string name="fdroid_onboarding_no_purchase">No se requiere compra, restauración, precio ni cuenta de Play.</string>
     <string name="fdroid_onboarding_no_play_services">Las exportaciones programadas funcionan sin Google Play Billing.</string>
+    <string name="export_preview_gateway_destination">Puerta de enlace de Agent Data</string>
+    <string name="export_failure_gateway_format_label">Se requiere formato JSON</string>
+    <string name="export_guidance_gateway_format">La puerta de enlace de Agent Data sube exportaciones JSON. Selecciona JSON en Formatos y vuelve a intentarlo.</string>
+    <string name="agent_data_gateway_dialog_title">Puerta de enlace de Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">Cada archivo exportado se sube sin cambios al punto de conexión /v1/ingest de la puerta de enlace.</string>
+    <string name="agent_data_gateway_section_endpoint">Punto de conexión de la puerta de enlace</string>
+    <string name="agent_data_gateway_url_label">URL de la puerta de enlace</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Obligatorio. URL base de tu puerta de enlace; Health.md añade /v1/ingest. Mantén las claves de API y otros secretos fuera de la URL.</string>
+    <string name="agent_data_gateway_close_settings">Cerrar configuración</string>
+    <string name="agent_data_gateway_save_settings">Guardar configuración</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Ingrese una URL %1$s o %2$s válida sin un fragmento ni un nombre de usuario/contraseña incrustados.</string>
+    <string name="agent_data_gateway_close_content_description">Cerrar la configuración de la puerta de enlace</string>
+    <string name="agent_data_gateway_outcomes_title">Subidas de la puerta de enlace</string>
+    <string name="agent_data_gateway_outcome_accepted">Subido</string>
+    <string name="agent_data_gateway_outcome_rejected">Rechazado: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Error al subir</string>
+    <string name="agent_data_gateway_result_uploaded">Subido a la puerta de enlace</string>
+    <string name="export_target_gateway_configured_subtitle">Subir cada exportación a %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Sube exportaciones a tu puerta de enlace de Agent Data</string>
 </resources>

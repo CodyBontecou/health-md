@@ -128,7 +128,7 @@ class AgentDataGatewayExportRunnerTest {
             .isEqualTo("healthmd.health_data")
         assertThat(manifestRoot.getValue("artifact_schema_version").jsonPrimitive.content).isEqualTo("4")
         assertThat(manifestRoot.getValue("owner_date").jsonPrimitive.content).isEqualTo(day.toString())
-        assertThat(manifestRoot.getValue("completeness").jsonPrimitive.toString())
+        assertThat(manifestRoot.getValue("completeness").jsonObject.toString())
             .isEqualTo("{\"type\":\"complete\"}")
         assertThat(manifestRoot.getValue("byte_count").jsonPrimitive.content)
             .isEqualTo(artifactBytes.size.toString())

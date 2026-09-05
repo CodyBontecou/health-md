@@ -1470,4 +1470,24 @@
     <string name="fdroid_onboarding_access_body">Versiunea oficială F-Droid include gratuit toate funcțiile locale de export și automatizare.</string>
     <string name="fdroid_onboarding_no_purchase">Nu sunt necesare cumpărarea, restaurarea, un preț sau un cont Play.</string>
     <string name="fdroid_onboarding_no_play_services">Exporturile programate funcționează fără Google Play Billing.</string>
+    <string name="export_preview_gateway_destination">Gateway Agent Data</string>
+    <string name="export_failure_gateway_format_label">Format JSON obligatoriu</string>
+    <string name="export_guidance_gateway_format">Gateway-ul Agent Data încarcă exporturi JSON. Selectați JSON la Formate și încercați din nou.</string>
+    <string name="agent_data_gateway_dialog_title">Gateway Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">Fiecare fișier exportat este încărcat neschimbat către punctul final /v1/ingest al gateway-ului.</string>
+    <string name="agent_data_gateway_section_endpoint">Punct final al gateway-ului</string>
+    <string name="agent_data_gateway_url_label">URL al gateway-ului</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Obligatoriu. URL-ul de bază al gateway-ului; Health.md adaugă /v1/ingest. Păstrați cheile API și alte secrete în afara URL-ului.</string>
+    <string name="agent_data_gateway_close_settings">Închideți setările</string>
+    <string name="agent_data_gateway_save_settings">Salvați setările</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Introduceți o adresă URL validă %1$s sau %2$s fără un fragment sau un nume de utilizator/parolă încorporat.</string>
+    <string name="agent_data_gateway_close_content_description">Închide setările gateway-ului</string>
+    <string name="agent_data_gateway_outcomes_title">Încărcări gateway</string>
+    <string name="agent_data_gateway_outcome_accepted">Încărcat</string>
+    <string name="agent_data_gateway_outcome_rejected">Respins: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Încărcarea a eșuat</string>
+    <string name="agent_data_gateway_result_uploaded">Încărcat către gateway</string>
+    <string name="export_target_gateway_configured_subtitle">Încărcați fiecare export către %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Încărcați exporturile în gateway-ul dumneavoastră Agent Data</string>
 </resources>

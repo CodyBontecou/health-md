@@ -108,13 +108,15 @@ class AgentDataGatewayUploadClientTest {
     @Test
     fun fixAndReuploadCodesAreNeverRetried() = runTest {
         for (code in listOf("truncated", "checksum_invalid", "manifest_incomplete")) {
+            val requestsBefore = server.requestCount
             server.enqueue(MockResponse().setResponseCode(200).setBody(rejectReceipt(code)))
 
             val receipt = client.upload(server.url("/").toString(), manifest(), artifact)
 
             assertThat(receipt).isInstanceOf(AgentDataUploadReceipt.Rejected::class.java)
             assertThat((receipt as AgentDataUploadReceipt.Rejected).code).isEqualTo(code)
-            assertThat(server.requestCount).isEqualTo(1)
+            // Exactly one request per code: fix-and-re-upload outcomes are never auto-retried.
+            assertThat(server.requestCount).isEqualTo(requestsBefore + 1)
             server.takeRequest()
         }
     }

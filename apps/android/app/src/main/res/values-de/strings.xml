@@ -1422,4 +1422,24 @@
     <string name="fdroid_onboarding_access_body">Die offizielle F-Droid-Version enthält alle lokalen Export- und Automatisierungsfunktionen kostenlos.</string>
     <string name="fdroid_onboarding_no_purchase">Kein Kauf, keine Wiederherstellung, kein Preis und kein Play-Konto erforderlich.</string>
     <string name="fdroid_onboarding_no_play_services">Geplante Exporte funktionieren ohne Google Play Billing.</string>
+    <string name="export_preview_gateway_destination">Agent-Data-Gateway</string>
+    <string name="export_failure_gateway_format_label">JSON-Format erforderlich</string>
+    <string name="export_guidance_gateway_format">Das Agent-Data-Gateway lädt JSON-Exporte hoch. Wählen Sie unter „Formate“ JSON und versuchen Sie es erneut.</string>
+    <string name="agent_data_gateway_dialog_title">Agent-Data-Gateway</string>
+    <string name="agent_data_gateway_dialog_description">Jede exportierte Datei wird unverändert an den Endpunkt /v1/ingest des Gateways hochgeladen.</string>
+    <string name="agent_data_gateway_section_endpoint">Gateway-Endpunkt</string>
+    <string name="agent_data_gateway_url_label">Gateway-URL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Erforderlich. Basis-URL Ihres Gateways; Health.md hängt /v1/ingest an. Halten Sie API-Schlüssel und andere Geheimnisse aus der URL heraus.</string>
+    <string name="agent_data_gateway_close_settings">Einstellungen schließen</string>
+    <string name="agent_data_gateway_save_settings">Einstellungen speichern</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Geben Sie eine gültige %1$s- oder %2$s-URL ohne Fragment oder eingebetteten Benutzernamen/Passwort ein.</string>
+    <string name="agent_data_gateway_close_content_description">Gateway-Einstellungen schließen</string>
+    <string name="agent_data_gateway_outcomes_title">Gateway-Uploads</string>
+    <string name="agent_data_gateway_outcome_accepted">Hochgeladen</string>
+    <string name="agent_data_gateway_outcome_rejected">Abgelehnt: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Upload fehlgeschlagen</string>
+    <string name="agent_data_gateway_result_uploaded">Zum Gateway hochgeladen</string>
+    <string name="export_target_gateway_configured_subtitle">Jeden Export an %1$s hochladen</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Exporte zu Ihrem Agent-Data-Gateway hochladen</string>
 </resources>

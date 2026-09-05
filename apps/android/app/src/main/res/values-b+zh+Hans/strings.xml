@@ -1245,4 +1245,24 @@
     <string name="fdroid_onboarding_access_body">官方 F-Droid 版本免费提供全部本地导出和自动化功能。</string>
     <string name="fdroid_onboarding_no_purchase">无需购买、恢复、价格或 Play 帐号。</string>
     <string name="fdroid_onboarding_no_play_services">定时导出无需 Google Play Billing 即可工作。</string>
+    <string name="export_preview_gateway_destination">Agent Data网关</string>
+    <string name="export_failure_gateway_format_label">需要JSON格式</string>
+    <string name="export_guidance_gateway_format">Agent Data网关会上传JSON导出。请在“格式”中选择JSON后重试。</string>
+    <string name="agent_data_gateway_dialog_title">Agent Data网关</string>
+    <string name="agent_data_gateway_dialog_description">每个导出的文件都会原样上传到网关的 /v1/ingest 端点。</string>
+    <string name="agent_data_gateway_section_endpoint">网关端点</string>
+    <string name="agent_data_gateway_url_label">网关URL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">必填。网关的基础URL；Health.md 会追加 /v1/ingest。请勿将 API 密钥和其他机密放入 URL。</string>
+    <string name="agent_data_gateway_close_settings">关闭设置</string>
+    <string name="agent_data_gateway_save_settings">保存设置</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">请输入有效的 %1$s 或 %2$s URL，且不得包含片段或嵌入的用户名/密码。</string>
+    <string name="agent_data_gateway_close_content_description">关闭网关设置</string>
+    <string name="agent_data_gateway_outcomes_title">网关上传</string>
+    <string name="agent_data_gateway_outcome_accepted">已上传</string>
+    <string name="agent_data_gateway_outcome_rejected">已拒绝：%1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">上传失败</string>
+    <string name="agent_data_gateway_result_uploaded">已上传到网关</string>
+    <string name="export_target_gateway_configured_subtitle">将每次导出上传到 %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">将导出上传到你的Agent Data网关</string>
 </resources>

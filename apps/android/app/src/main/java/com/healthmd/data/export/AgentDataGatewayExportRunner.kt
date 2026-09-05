@@ -230,12 +230,15 @@ class AgentDataGatewayExportRunner private constructor(
                             relativePath = artifact.outcome.relativePath,
                             state = AgentDataArtifactOutcome.State.ACCEPTED,
                         )
-                        is AgentDataUploadReceipt.Rejected -> AgentDataArtifactOutcome(
-                            ownerDate = date,
-                            relativePath = artifact.outcome.relativePath,
-                            state = AgentDataArtifactOutcome.State.REJECTED,
-                            rejectionCode = receipt.code,
-                        )
+                        is AgentDataUploadReceipt.Rejected -> {
+                            daySucceeded = false
+                            AgentDataArtifactOutcome(
+                                ownerDate = date,
+                                relativePath = artifact.outcome.relativePath,
+                                state = AgentDataArtifactOutcome.State.REJECTED,
+                                rejectionCode = receipt.code,
+                            )
+                        }
                     }
                 } catch (error: CancellationException) {
                     throw error

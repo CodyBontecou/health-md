@@ -1247,4 +1247,24 @@
     <string name="fdroid_onboarding_access_body">公式 F-Droid ビルドでは、ローカルのエクスポート機能と自動化機能をすべて無料で利用できます。</string>
     <string name="fdroid_onboarding_no_purchase">購入、復元、価格、Play アカウントは不要です。</string>
     <string name="fdroid_onboarding_no_play_services">予約エクスポートは Google Play Billing なしで動作します。</string>
+    <string name="export_preview_gateway_destination">Agent Dataゲートウェイ</string>
+    <string name="export_failure_gateway_format_label">JSON形式が必要です</string>
+    <string name="export_guidance_gateway_format">Agent DataゲートウェイはJSONエクスポートをアップロードします。「形式」でJSONを選択して再試行してください。</string>
+    <string name="agent_data_gateway_dialog_title">Agent Dataゲートウェイ</string>
+    <string name="agent_data_gateway_dialog_description">エクスポートされた各ファイルは、変更せずにゲートウェイの /v1/ingest エンドポイントへアップロードされます。</string>
+    <string name="agent_data_gateway_section_endpoint">ゲートウェイエンドポイント</string>
+    <string name="agent_data_gateway_url_label">ゲートウェイURL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">必須。ゲートウェイのベースURL。Health.md が /v1/ingest を追加します。APIキーなどの機密情報はURLに含めないでください。</string>
+    <string name="agent_data_gateway_close_settings">設定を閉じる</string>
+    <string name="agent_data_gateway_save_settings">設定を保存</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">フラグメントや埋め込みのユーザー名／パスワードを含まない、有効な %1$s または %2$s URL を入力してください。</string>
+    <string name="agent_data_gateway_close_content_description">ゲートウェイ設定を閉じる</string>
+    <string name="agent_data_gateway_outcomes_title">ゲートウェイのアップロード</string>
+    <string name="agent_data_gateway_outcome_accepted">アップロード済み</string>
+    <string name="agent_data_gateway_outcome_rejected">拒否されました: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">アップロードに失敗しました</string>
+    <string name="agent_data_gateway_result_uploaded">ゲートウェイにアップロードしました</string>
+    <string name="export_target_gateway_configured_subtitle">各エクスポートを %1$s にアップロード</string>
+    <string name="export_target_gateway_unconfigured_subtitle">エクスポートをAgent Dataゲートウェイにアップロード</string>
 </resources>

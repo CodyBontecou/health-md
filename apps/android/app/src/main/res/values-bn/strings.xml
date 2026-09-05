@@ -1396,4 +1396,24 @@
     <string name="fdroid_onboarding_access_body">অফিসিয়াল F-Droid বিল্ডে সব লোকাল এক্সপোর্ট ও অটোমেশন সুবিধা বিনামূল্যে অন্তর্ভুক্ত।</string>
     <string name="fdroid_onboarding_no_purchase">কেনা, পুনরুদ্ধার, মূল্য বা Play অ্যাকাউন্টের প্রয়োজন নেই।</string>
     <string name="fdroid_onboarding_no_play_services">নির্ধারিত এক্সপোর্ট Google Play Billing ছাড়াই কাজ করে।</string>
+    <string name="export_preview_gateway_destination">Agent Data গেটওয়ে</string>
+    <string name="export_failure_gateway_format_label">JSON ফরম্যাট প্রয়োজন</string>
+    <string name="export_guidance_gateway_format">Agent Data গেটওয়ে JSON এক্সপোর্ট আপলোড করে। ফরম্যাটে JSON নির্বাচন করে আবার চেষ্টা করুন।</string>
+    <string name="agent_data_gateway_dialog_title">Agent Data গেটওয়ে</string>
+    <string name="agent_data_gateway_dialog_description">প্রতিটি এক্সপোর্ট করা ফাইল অপরিবর্তিতভাবে গেটওয়ের /v1/ingest এন্ডপয়েন্টে আপলোড হয়।</string>
+    <string name="agent_data_gateway_section_endpoint">গেটওয়ে এন্ডপয়েন্ট</string>
+    <string name="agent_data_gateway_url_label">গেটওয়ে URL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">প্রয়োজন। আপনার গেটওয়ের বেস URL; Health.md এর সাথে /v1/ingest যুক্ত করে। API কী ও অন্য গোপন তথ্য URL-এ রাখবেন না।</string>
+    <string name="agent_data_gateway_close_settings">সেটিংস বন্ধ করুন</string>
+    <string name="agent_data_gateway_save_settings">সেটিংস সংরক্ষণ করুন</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">ফ্র্যাগমেন্ট বা এম্বেড করা ব্যবহারকারীর নাম/পাসওয়ার্ড ছাড়া একটি বৈধ %1$s বা %2$s URL লিখুন।</string>
+    <string name="agent_data_gateway_close_content_description">গেটওয়ে সেটিংস বন্ধ করুন</string>
+    <string name="agent_data_gateway_outcomes_title">গেটওয়ে আপলোড</string>
+    <string name="agent_data_gateway_outcome_accepted">আপলোড হয়েছে</string>
+    <string name="agent_data_gateway_outcome_rejected">প্রত্যাখ্যাত: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">আপলোড ব্যর্থ</string>
+    <string name="agent_data_gateway_result_uploaded">গেটওয়েতে আপলোড হয়েছে</string>
+    <string name="export_target_gateway_configured_subtitle">প্রতিটি এক্সপোর্ট %1$s-এ আপলোড করুন</string>
+    <string name="export_target_gateway_unconfigured_subtitle">আপনার Agent Data গেটওয়েতে এক্সপোর্ট আপলোড করুন</string>
 </resources>

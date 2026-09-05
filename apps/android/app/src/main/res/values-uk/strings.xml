@@ -1524,4 +1524,24 @@
     <string name="fdroid_onboarding_access_body">Офіційна версія F-Droid безкоштовно включає всі локальні функції експорту й автоматизації.</string>
     <string name="fdroid_onboarding_no_purchase">Купівля, відновлення, ціна й обліковий запис Play не потрібні.</string>
     <string name="fdroid_onboarding_no_play_services">Експорт за розкладом працює без Google Play Billing.</string>
+    <string name="export_preview_gateway_destination">Шлюз Agent Data</string>
+    <string name="export_failure_gateway_format_label">Потрібен формат JSON</string>
+    <string name="export_guidance_gateway_format">Шлюз Agent Data завантажує експорт у форматі JSON. Виберіть JSON у розділі «Формати» та повторіть спробу.</string>
+    <string name="agent_data_gateway_dialog_title">Шлюз Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">Кожен експортований файл завантажується без змін до кінцевої точки /v1/ingest шлюзу.</string>
+    <string name="agent_data_gateway_section_endpoint">Кінцева точка шлюзу</string>
+    <string name="agent_data_gateway_url_label">URL-адреса шлюзу</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Обов’язково. Базова URL-адреса вашого шлюзу; Health.md додає /v1/ingest. Не розміщуйте API-ключі та інші секрети в URL-адресі.</string>
+    <string name="agent_data_gateway_close_settings">Закрити налаштування</string>
+    <string name="agent_data_gateway_save_settings">Зберегти налаштування</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Введіть дійсну URL-адресу %1$s або %2$s без фрагмента та вбудованого імені користувача чи пароля.</string>
+    <string name="agent_data_gateway_close_content_description">Закрити налаштування шлюзу</string>
+    <string name="agent_data_gateway_outcomes_title">Завантаження шлюзу</string>
+    <string name="agent_data_gateway_outcome_accepted">Завантажено</string>
+    <string name="agent_data_gateway_outcome_rejected">Відхилено: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Не вдалося завантажити</string>
+    <string name="agent_data_gateway_result_uploaded">Завантажено на шлюз</string>
+    <string name="export_target_gateway_configured_subtitle">Завантажувати кожен експорт на %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Завантажуйте експорт на ваш шлюз Agent Data</string>
 </resources>

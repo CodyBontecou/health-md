@@ -1422,4 +1422,24 @@
     <string name="fdroid_onboarding_access_body">De officiële F-Droid-versie bevat gratis alle lokale export- en automatiseringsfuncties.</string>
     <string name="fdroid_onboarding_no_purchase">Geen aankoop, herstel, prijs of Play-account vereist.</string>
     <string name="fdroid_onboarding_no_play_services">Geplande exports werken zonder Google Play Billing.</string>
+    <string name="export_preview_gateway_destination">Agent Data-gateway</string>
+    <string name="export_failure_gateway_format_label">JSON-indeling vereist</string>
+    <string name="export_guidance_gateway_format">De Agent Data-gateway uploadt JSON-export. Kies JSON onder Indelingen en probeer opnieuw.</string>
+    <string name="agent_data_gateway_dialog_title">Agent Data-gateway</string>
+    <string name="agent_data_gateway_dialog_description">Elk geëxporteerd bestand wordt ongewijzigd geüpload naar het /v1/ingest-endpoint van de gateway.</string>
+    <string name="agent_data_gateway_section_endpoint">Gateway-endpunt</string>
+    <string name="agent_data_gateway_url_label">Gateway-URL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Vereist. Basis-URL van je gateway; Health.md voegt /v1/ingest toe. Houd API-sleutels en andere geheime gegevens buiten de URL.</string>
+    <string name="agent_data_gateway_close_settings">Instellingen sluiten</string>
+    <string name="agent_data_gateway_save_settings">Instellingen opslaan</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Voer een geldige %1$s- of %2$s-URL in zonder fragment of ingesloten gebruikersnaam/wachtwoord.</string>
+    <string name="agent_data_gateway_close_content_description">Gateway-instellingen sluiten</string>
+    <string name="agent_data_gateway_outcomes_title">Gateway-uploads</string>
+    <string name="agent_data_gateway_outcome_accepted">Geüpload</string>
+    <string name="agent_data_gateway_outcome_rejected">Geweigerd: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Upload mislukt</string>
+    <string name="agent_data_gateway_result_uploaded">Geüpload naar de gateway</string>
+    <string name="export_target_gateway_configured_subtitle">Elke export uploaden naar %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Export uploaden naar je Agent Data-gateway</string>
 </resources>

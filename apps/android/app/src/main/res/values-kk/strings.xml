@@ -1363,4 +1363,24 @@
     <string name="fdroid_onboarding_access_body">Ресми F-Droid нұсқасы барлық жергілікті экспорт және автоматтандыру мүмкіндіктерін тегін қамтиды.</string>
     <string name="fdroid_onboarding_no_purchase">Сатып алу, қалпына келтіру, баға немесе Play аккаунты қажет емес.</string>
     <string name="fdroid_onboarding_no_play_services">Жоспарланған экспорттар Google Play Billing қызметінсіз жұмыс істейді.</string>
+    <string name="export_preview_gateway_destination">Agent Data шлюзі</string>
+    <string name="export_failure_gateway_format_label">JSON пішімі қажет</string>
+    <string name="export_guidance_gateway_format">Agent Data шлюзі JSON экспорттарын жүктейді. Пішімдер ішінен JSON таңдап, қайта байқап көріңіз.</string>
+    <string name="agent_data_gateway_dialog_title">Agent Data шлюзі</string>
+    <string name="agent_data_gateway_dialog_description">Әр экспортталған файл өзгеріссіз шлюздің /v1/ingest соңғы нүктесіне жүктеледі.</string>
+    <string name="agent_data_gateway_section_endpoint">Шлюз соңғы нүктесі</string>
+    <string name="agent_data_gateway_url_label">Шлюз URL мекенжайы</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Міндетті. Шлюзіңіздің негізгі URL мекенжайы; Health.md оған /v1/ingest қосады. API кілттері мен басқа құпия ақпаратты URL-ден тыс ұстаңыз.</string>
+    <string name="agent_data_gateway_close_settings">Параметрлерді жабу</string>
+    <string name="agent_data_gateway_save_settings">Параметрлерді сақтау</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Фрагменті немесе ішіне енгізілген пайдаланушы аты/құпиясөзі жоқ жарамды %1$s не %2$s URL мекенжайын енгізіңіз.</string>
+    <string name="agent_data_gateway_close_content_description">Шлюз параметрлерін жабу</string>
+    <string name="agent_data_gateway_outcomes_title">Шлюз жүктеулері</string>
+    <string name="agent_data_gateway_outcome_accepted">Жүктелді</string>
+    <string name="agent_data_gateway_outcome_rejected">Қабылданбады: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Жүктеу сәтсіз аяқталды</string>
+    <string name="agent_data_gateway_result_uploaded">Шлюзге жүктелді</string>
+    <string name="export_target_gateway_configured_subtitle">Әр экспортты %1$s мекенжайына жүктеу</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Экспорттарды Agent Data шлюзіңізге жүктеу</string>
 </resources>

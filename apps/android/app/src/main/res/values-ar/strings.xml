@@ -1615,4 +1615,24 @@
     <string name="fdroid_onboarding_access_body">يتضمن إصدار F-Droid الرسمي جميع ميزات التصدير المحلي والأتمتة مجانًا.</string>
     <string name="fdroid_onboarding_no_purchase">لا يلزم شراء أو استعادة أو سعر أو حساب Play.</string>
     <string name="fdroid_onboarding_no_play_services">تعمل عمليات التصدير المجدولة بدون Google Play Billing.</string>
+    <string name="export_preview_gateway_destination">بوابة Agent Data</string>
+    <string name="export_failure_gateway_format_label">مطلوب تنسيق JSON</string>
+    <string name="export_guidance_gateway_format">ترفع بوابة Agent Data تصديرات JSON. اختر JSON ضمن التنسيقات وأعد المحاولة.</string>
+    <string name="agent_data_gateway_dialog_title">بوابة Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">يُرفع كل ملف مُصدَّر دون تغيير إلى نقطة النهاية /v1/ingest للبوابة.</string>
+    <string name="agent_data_gateway_section_endpoint">نقطة نهاية البوابة</string>
+    <string name="agent_data_gateway_url_label">عنوان URL للبوابة</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">مطلوب. عنوان URL الأساسي لبوابتك؛ يُلحقه Health.md بـ /v1/ingest. أبقِ مفاتيح API والأسرار الأخرى خارج عنوان URL.</string>
+    <string name="agent_data_gateway_close_settings">إغلاق الإعدادات</string>
+    <string name="agent_data_gateway_save_settings">حفظ الإعدادات</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">أدخِل عنوان URL صالحًا لـ %1$s أو %2$s من دون جزء أو اسم مستخدم أو كلمة مرور مضمّنين.</string>
+    <string name="agent_data_gateway_close_content_description">إغلاق إعدادات البوابة</string>
+    <string name="agent_data_gateway_outcomes_title">عمليات رفع البوابة</string>
+    <string name="agent_data_gateway_outcome_accepted">تم الرفع</string>
+    <string name="agent_data_gateway_outcome_rejected">مرفوض: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">فشل الرفع</string>
+    <string name="agent_data_gateway_result_uploaded">تم الرفع إلى البوابة</string>
+    <string name="export_target_gateway_configured_subtitle">ارفع كل تصدير إلى %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">ارفع التصديرات إلى بوابة Agent Data الخاصة بك</string>
 </resources>

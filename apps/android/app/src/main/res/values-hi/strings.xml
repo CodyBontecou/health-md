@@ -1396,4 +1396,24 @@
     <string name="fdroid_onboarding_access_body">आधिकारिक F-Droid बिल्ड में सभी स्थानीय एक्सपोर्ट और ऑटोमेशन सुविधाएँ मुफ़्त शामिल हैं।</string>
     <string name="fdroid_onboarding_no_purchase">खरीद, रीस्टोर, कीमत या Play खाते की आवश्यकता नहीं है।</string>
     <string name="fdroid_onboarding_no_play_services">शेड्यूल किए गए एक्सपोर्ट Google Play Billing के बिना काम करते हैं।</string>
+    <string name="export_preview_gateway_destination">Agent Data गेटवे</string>
+    <string name="export_failure_gateway_format_label">JSON प्रारूप आवश्यक</string>
+    <string name="export_guidance_gateway_format">Agent Data गेटवे JSON निर्यात अपलोड करता है। प्रारूप में JSON चुनें और पुनः प्रयास करें।</string>
+    <string name="agent_data_gateway_dialog_title">Agent Data गेटवे</string>
+    <string name="agent_data_gateway_dialog_description">प्रत्येक निर्यातित फ़ाइल बिना बदलाव गेटवे के /v1/ingest एंडपॉइंट पर अपलोड की जाती है।</string>
+    <string name="agent_data_gateway_section_endpoint">गेटवे एंडपॉइंट</string>
+    <string name="agent_data_gateway_url_label">गेटवे URL</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">आवश्यक। आपके गेटवे का बेस URL; Health.md इसमें /v1/ingest जोड़ता है। API कुंजियाँ और अन्य गोपन जानकारी URL में न रखें।</string>
+    <string name="agent_data_gateway_close_settings">सेटिंग्स बंद करें</string>
+    <string name="agent_data_gateway_save_settings">सेटिंग्स सहेजें</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">फ़्रैगमेंट या एम्बेड किए गए उपयोगकर्ता नाम/पासवर्ड के बिना मान्य %1$s या %2$s URL दर्ज करें।</string>
+    <string name="agent_data_gateway_close_content_description">गेटवे सेटिंग बंद करें</string>
+    <string name="agent_data_gateway_outcomes_title">गेटवे अपलोड</string>
+    <string name="agent_data_gateway_outcome_accepted">अपलोड हो गया</string>
+    <string name="agent_data_gateway_outcome_rejected">अस्वीकृत: %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">अपलोड विफल</string>
+    <string name="agent_data_gateway_result_uploaded">गेटवे पर अपलोड हो गया</string>
+    <string name="export_target_gateway_configured_subtitle">प्रत्येक निर्यात %1$s पर अपलोड करें</string>
+    <string name="export_target_gateway_unconfigured_subtitle">अपने Agent Data गेटवे पर निर्यात अपलोड करें</string>
 </resources>

@@ -1470,4 +1470,24 @@
     <string name="fdroid_onboarding_access_body">La version F-Droid officielle inclut gratuitement toutes les fonctions locales d’exportation et d’automatisation.</string>
     <string name="fdroid_onboarding_no_purchase">Aucun achat, rétablissement, prix ou compte Play n’est requis.</string>
     <string name="fdroid_onboarding_no_play_services">Les exportations planifiées fonctionnent sans Google Play Billing.</string>
+    <string name="export_preview_gateway_destination">Passerelle Agent Data</string>
+    <string name="export_failure_gateway_format_label">Format JSON requis</string>
+    <string name="export_guidance_gateway_format">La passerelle Agent Data charge des exports JSON. Sélectionnez JSON dans Formats, puis réessayez.</string>
+    <string name="agent_data_gateway_dialog_title">Passerelle Agent Data</string>
+    <string name="agent_data_gateway_dialog_description">Chaque fichier exporté est chargé tel quel vers le point de terminaison /v1/ingest de la passerelle.</string>
+    <string name="agent_data_gateway_section_endpoint">Point de terminaison de la passerelle</string>
+    <string name="agent_data_gateway_url_label">URL de la passerelle</string>
+    <string name="agent_data_gateway_url_example">http://127.0.0.1:8791</string>
+    <string name="agent_data_gateway_url_help">Obligatoire. URL de base de votre passerelle ; Health.md ajoute /v1/ingest. Ne mettez pas de clés d’API ni d’autres secrets dans l’URL.</string>
+    <string name="agent_data_gateway_close_settings">Fermer les paramètres</string>
+    <string name="agent_data_gateway_save_settings">Enregistrer les paramètres</string>
+    <string name="agent_data_gateway_error_invalid_endpoint">Entrez une URL %1$s ou %2$s valide sans fragment ni nom d\'utilisateur/mot de passe intégré.</string>
+    <string name="agent_data_gateway_close_content_description">Fermer les réglages de la passerelle</string>
+    <string name="agent_data_gateway_outcomes_title">Chargements de la passerelle</string>
+    <string name="agent_data_gateway_outcome_accepted">Chargé</string>
+    <string name="agent_data_gateway_outcome_rejected">Rejeté : %1$s</string>
+    <string name="agent_data_gateway_outcome_upload_failed">Échec du chargement</string>
+    <string name="agent_data_gateway_result_uploaded">Chargé vers la passerelle</string>
+    <string name="export_target_gateway_configured_subtitle">Charger chaque export vers %1$s</string>
+    <string name="export_target_gateway_unconfigured_subtitle">Charger les exports vers votre passerelle Agent Data</string>
 </resources>
