@@ -956,6 +956,11 @@ struct ContentView: View {
             initialTarget: exportTargetSelection
         )
         profileCoordinator = coordinator
+        // The Shared Setup v2 review flow runs above this view; register the
+        // single production instance so its injected confirmation closures
+        // can reach the verified rebind paths (weak — no lifetime impact, and
+        // a missing registration keeps every confirmation fail-closed).
+        SharedSetupV2ExportProfileBridge.register(coordinator)
         return coordinator
     }
 
@@ -985,7 +990,14 @@ struct ContentView: View {
 
     private func exportData() {
         // Persist any in-flight profile edits before freezing the request.
-        profileCoordinator?.flushEdits()
+        let profiles = ensureProfileCoordinator()
+        profiles.flushEdits()
+        guard !profiles.isActiveProfileExecutionBlocked else {
+            presentExportConfigurationError(
+                SharedSetupV2ExecutionGate.blockedExecutionMessage
+            )
+            return
+        }
 
         // Durable work outlives this view and even the app process. Repeated
         // taps should focus that immutable export, not create a competing job.

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
+import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -58,6 +59,12 @@ class ScheduledProfileEntryStore @Inject constructor(
             // A corrupt persisted list must never be rewritten from a failed read;
             // that would silently wipe every other entry. Skip the mutation instead.
             val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+            if (
+                entry.isEnabled &&
+                entry.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            ) {
+                return@edit
+            }
             val previous = existing.firstOrNull { it.profileId == entry.profileId }
             // UI drafts may have been opened before a worker recorded success. Configuration
             // saves must never move the durable catch-up frontier backwards.
@@ -92,6 +99,12 @@ class ScheduledProfileEntryStore @Inject constructor(
             if (index < 0) return@edit
             val changed = change(existing[index])
             require(changed.profileId == profileId) { "Scheduled profile update cannot change identity." }
+            if (
+                changed.isEnabled &&
+                profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            ) {
+                return@edit
+            }
             val updated = existing.toMutableList().apply { set(index, changed) }
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
             persisted = true
@@ -183,7 +196,12 @@ class ScheduledProfileEntryStore @Inject constructor(
         var persisted = false
         dataStore.edit { prefs ->
             val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
-            if (existing.isNotEmpty()) return@edit
+            if (
+                existing.isNotEmpty() ||
+                entry.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            ) {
+                return@edit
+            }
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, listOf(entry))
             prefs[Keys.LEGACY_MIGRATION_PENDING_PROFILE_ID] = entry.profileId
             persisted = true

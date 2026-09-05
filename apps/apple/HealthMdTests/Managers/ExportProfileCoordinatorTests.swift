@@ -98,7 +98,9 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         settings: AdvancedExportSettings? = nil,
         vaultManager: VaultManager? = nil,
         apiExportSettings: APIExportSettings? = nil,
-        initialTarget: ExportTargetSelection = .localIPhoneFolder
+        initialTarget: ExportTargetSelection = .localIPhoneFolder,
+        sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate? = nil,
+        sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction? = nil
     ) -> ExportProfileCoordinator {
         let resolvedSettings = settings ?? makeSettings()
         let resolvedVaultManager = vaultManager ?? makeVaultManager()
@@ -110,7 +112,9 @@ final class ExportProfileCoordinatorTests: XCTestCase {
             settings: resolvedSettings,
             vaultManager: resolvedVaultManager,
             apiExportSettings: resolvedAPIExportSettings,
-            initialTarget: initialTarget
+            initialTarget: initialTarget,
+            sharedSetupV2ExecutionGate: sharedSetupV2ExecutionGate,
+            sharedSetupV2ProfileTransaction: sharedSetupV2ProfileTransaction
         )
         Self.retainedInstances.append(coordinator)
         Self.retainedInstances.append(resolvedVaultManager)
@@ -516,6 +520,190 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertTrue(coordinator.deleteProfile(id: second.id))
         XCTAssertEqual(coordinator.profileStore.activeProfileID, firstID)
         XCTAssertEqual(coordinator.profileStore.profiles.count, 1)
+    }
+
+    func testDeleteProfileCompactsSharedSetupV2SidecarEndToEnd() throws {
+        // Seed the native stores exactly as a v2 import leaves them: two
+        // profiles, both carrying retained-intent sidecar rows and blocked
+        // entries, plus a scheduled entry for the profile being deleted.
+        let seedingStore = ExportProfileStore(userDefaults: defaults)
+        let snapshot = ExportSettingsSnapshot.from(makeSettings())
+        let folderProfile = seedingStore.add(
+            name: "Imported Folder",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+        let apiProfile = seedingStore.add(
+            name: "Imported API",
+            settings: snapshot,
+            target: .apiEndpoint
+        )
+        let source = try importedSourceProfile()
+        defaults.set(
+            try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
+                .init(
+                    profileID: folderProfile.id,
+                    sourceBundleID: source.bundleID,
+                    sourceProfile: source,
+                    unsupportedSemanticIDs: []
+                ),
+                .init(
+                    profileID: apiProfile.id,
+                    sourceBundleID: source.bundleID,
+                    sourceProfile: source,
+                    unsupportedSemanticIDs: []
+                )
+            ])),
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        defaults.set(
+            try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs(
+                [folderProfile.id, apiProfile.id]
+            ),
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        let entryStore = ScheduledExportEntryStore(userDefaults: defaults)
+        _ = entryStore.upsert(ScheduledExportEntry(profileID: apiProfile.id, isEnabled: true))
+
+        let coordinator = makeCoordinator(
+            sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults),
+            sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction(
+                userDefaults: defaults
+            )
+        )
+        XCTAssertTrue(
+            coordinator.isProfileExecutionBlocked(apiProfile.id),
+            "seeded imported profile starts blocked"
+        )
+
+        XCTAssertTrue(coordinator.deleteProfile(id: apiProfile.id))
+
+        XCTAssertEqual(coordinator.profileStore.profiles.map(\.id), [folderProfile.id])
+        XCTAssertTrue(
+            coordinator.scheduledEntryStore.entries.allSatisfy { $0.profileID != apiProfile.id },
+            "the deleted profile's scheduled entry is gone"
+        )
+        let sidecar = try JSONDecoder().decode(
+            SharedSetupV2AppleProfileState.self,
+            from: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey))
+        )
+        XCTAssertEqual(sidecar.profiles.map(\.profileID), [folderProfile.id])
+        XCTAssertEqual(
+            try SharedSetupV2ProfileTransaction.decodeBlockedProfileIDs(
+                XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
+            ),
+            [folderProfile.id]
+        )
+
+        // Deleting a later native profile with no sidecar reference is a
+        // clean compaction no-op: the keys stay untouched.
+        let native = coordinator.profileStore.add(
+            name: "Native",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+        let sidecarBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey)
+        let blockedBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey)
+        XCTAssertTrue(coordinator.deleteProfile(id: native.id))
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey),
+            sidecarBytes
+        )
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey),
+            blockedBytes
+        )
+    }
+
+    func testDeleteProfileStandsWhenSidecarCompactionCannotVerify() throws {
+        // Chosen failure semantics: the native deletion stands and the
+        // sidecar keeps its stale-but-inert bytes when compaction cannot
+        // verify its write. Fresh UUIDs make block inheritance impossible
+        // and every read path filters rows for missing profiles, so the
+        // remaining profile keeps working exactly as before.
+        let seedingStore = ExportProfileStore(userDefaults: defaults)
+        let snapshot = ExportSettingsSnapshot.from(makeSettings())
+        let folderProfile = seedingStore.add(
+            name: "Imported Folder",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+        let apiProfile = seedingStore.add(
+            name: "Imported API",
+            settings: snapshot,
+            target: .apiEndpoint
+        )
+        let source = try importedSourceProfile()
+        let sidecarBytes = try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
+            .init(
+                profileID: folderProfile.id,
+                sourceBundleID: source.bundleID,
+                sourceProfile: source,
+                unsupportedSemanticIDs: []
+            ),
+            .init(
+                profileID: apiProfile.id,
+                sourceBundleID: source.bundleID,
+                sourceProfile: source,
+                unsupportedSemanticIDs: []
+            )
+        ]))
+        defaults.set(
+            sidecarBytes,
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        // Only the profile being deleted is blocked, so the survivor stays
+        // fully usable and the test observes real activation after failure.
+        let blockedBytes = try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs(
+            [apiProfile.id]
+        )
+        defaults.set(
+            blockedBytes,
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+
+        let coordinator = makeCoordinator(
+            sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults),
+            sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction(
+                userDefaults: defaults,
+                verificationOverride: { false }
+            )
+        )
+
+        XCTAssertTrue(coordinator.deleteProfile(id: apiProfile.id))
+
+        XCTAssertEqual(coordinator.profileStore.profiles.map(\.id), [folderProfile.id])
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey),
+            sidecarBytes,
+            "failed compaction leaves the exact stale bytes in place"
+        )
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey),
+            blockedBytes
+        )
+        XCTAssertTrue(coordinator.isProfileExecutionBlocked(apiProfile.id),
+                      "the stale id stays inert: it names no live profile")
+        XCTAssertFalse(coordinator.isProfileExecutionBlocked(folderProfile.id))
+        XCTAssertTrue(coordinator.activate(profileID: folderProfile.id))
+        XCTAssertEqual(coordinator.activeProfileName, "Imported Folder")
+    }
+
+    /// Decodes a contract-fixture source profile for seeding sidecar rows
+    /// without driving the full mapper pipeline.
+    private func importedSourceProfile() throws -> SharedSetupV2.Profile {
+        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while directory.path != "/" {
+            let candidate = directory.appendingPathComponent(
+                "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json"
+            )
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                let document = try SharedSetupV2Codec.decode(Data(contentsOf: candidate))
+                return document.profiles[1]
+            }
+            directory.deleteLastPathComponent()
+        }
+        throw XCTSkip("Could not locate the Shared Setup v2 Apple fixture")
     }
 
     func testRenameUpdatesPublishedActiveName() throws {

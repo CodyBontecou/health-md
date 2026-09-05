@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   authoredDocSlugs,
+  canonicalEnglishDocSlugs,
   defaultLocale,
   enabledLocales,
   localeFor,
@@ -29,11 +30,31 @@ const authoredDocFilenames = (await fs.readdir(DOCS_SOURCE_ROOT, { withFileTypes
 const discoveredAuthoredDocSlugs = authoredDocFilenames.map((filename) => (
   filename === 'index.md' ? 'docs' : `docs/${path.basename(filename, '.md')}`
 )).sort();
+const authoredGuideSlugs = authoredDocSlugs
+  .filter((slug) => slug.startsWith('docs/guides/'))
+  .sort();
+const canonicalEnglishGuideSlugs = canonicalEnglishDocSlugs
+  .filter((slug) => slug.startsWith('docs/guides/'))
+  .sort();
+const englishGuideFilenames = (await fs.readdir(path.join(DOCS_SOURCE_ROOT, 'guides'), { withFileTypes: true }))
+  .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+  .map(({ name }) => name)
+  .sort();
+const discoveredGuideSlugs = englishGuideFilenames.map((filename) => (
+  `docs/guides/${path.basename(filename, '.md')}`
+)).sort();
 assert.deepEqual(
-  [...authoredDocSlugs].sort(),
+  authoredDocSlugs.filter((slug) => !slug.startsWith('docs/guides/')).sort(),
   discoveredAuthoredDocSlugs,
   'authoredDocSlugs must cover every authored top-level documentation file',
 );
+assert.deepEqual(
+  [...authoredGuideSlugs, ...canonicalEnglishGuideSlugs].sort(),
+  discoveredGuideSlugs,
+  'Every English guide must be declared either authored or canonical-English fallback',
+);
+const authoredGuideFiles = authoredGuideSlugs.map((slug) => `${slug.replace(/^docs\//, '')}.md`).sort();
+const authoredDocFiles = [...authoredDocFilenames, ...authoredGuideFiles].sort();
 const authoredDocSlugSet = new Set(authoredDocSlugs);
 const authoredSidebarSlugs = docsSidebar
   .flatMap(({ items }) => items)
@@ -293,8 +314,8 @@ const requiredLocaleFiles = landingLocales.flatMap((locale) => {
     files.push(
       `assets/samples/${locale.path}/health-data-sample.md`,
       `assets/samples/${locale.path}/health-data-sample-obsidian.md`,
-      ...authoredDocFilenames
-        .map((filename) => `docs-src/src/content/docs/${locale.path}/${filename}`),
+      ...authoredDocFiles
+        .map((relative) => `docs-src/src/content/docs/${locale.path}/${relative}`),
     );
   }
   return files;
@@ -400,11 +421,25 @@ for (const locale of localeConfigs.filter(({ code }) => code !== defaultLocale))
   assert.deepEqual(
     localizedEntries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map(({ name }) => name).sort(),
     authoredDocFilenames,
-    `${locale.code} must translate exactly the authored guide set`,
+    `${locale.code} must translate exactly the authored top-level guide set`,
+  );
+  assert.deepEqual(
+    localizedEntries.filter((entry) => entry.isDirectory()).map(({ name }) => name),
+    ['guides'],
+    `${locale.code} may localize only the authored guides directory, never generated reference directories`,
+  );
+  const localizedGuideEntries = await fs.readdir(
+    path.join(DOCS_SOURCE_ROOT, locale.path, 'guides'),
+    { withFileTypes: true },
+  );
+  assert.deepEqual(
+    localizedGuideEntries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map(({ name }) => name).sort(),
+    authoredGuideFiles.map((relative) => path.basename(relative)).sort(),
+    `${locale.code} must translate exactly the authored guides set`,
   );
   assert.ok(
-    localizedEntries.every((entry) => !entry.isDirectory()),
-    `${locale.code} must not localize generated reference directories`,
+    localizedGuideEntries.every((entry) => entry.isFile()),
+    `${locale.code}/guides must contain only authored guide files`,
   );
 }
 
@@ -585,7 +620,7 @@ function likelyEnglishProseSegments(markdown) {
 }
 
 for (const locale of localeConfigs.filter(({ code }) => code !== defaultLocale)) {
-  for (const filename of authoredDocFilenames) {
+  for (const filename of authoredDocFiles) {
     const [source, translation] = await Promise.all([
       fs.readFile(path.join(DOCS_SOURCE_ROOT, filename), 'utf8'),
       fs.readFile(path.join(DOCS_SOURCE_ROOT, locale.path, filename), 'utf8'),

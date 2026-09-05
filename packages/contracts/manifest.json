@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "af044e35d45eaf4ffdf8a8f59c412c994450087d29da94e90c4210a32f5e3b99",
+      "sha256": "1d07b8162f79b896fbe04b15b81628060bc753204bd7f28a3007d834c170c367",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -398,44 +398,75 @@
     },
     {
       "id": "healthmd.shared_setup",
-      "version": 1,
+      "version": 2,
       "status": "deferred",
-      "summary": "Implemented bounded Apple/Android portable setup profile pending required physical-device interoperability and accessibility QA before canonicalization.",
-      "specification": "packages/contracts/shared-setup/v1/contract.md",
+      "summary": "Bounded named-profile Apple/Android portable setup bundle with exact v2 platform extensions and language-neutral Add/Replace/Undo semantics; version 2 is the one and only profile version and default writers emit it, with canonicalization still deferred pending native integration, physical-device interoperability, and accessibility QA.",
+      "specification": "packages/contracts/shared-setup/v2/contract.md",
       "authorities": [
-        "packages/contracts/shared-setup/v1/contract.md",
-        "packages/contracts/shared-setup/v1/shared-setup.schema.json"
+        "packages/contracts/shared-setup/v2/contract.md",
+        "packages/contracts/shared-setup/v2/shared-setup.schema.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"
       ],
       "implementations": [
         "packages/contracts/validate.py",
-        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV1.swift",
-        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupTransaction.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2Mapper.swift",
         "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
-        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupCodec.kt",
-        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupMapper.kt",
-        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupService.kt"
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ProfileTransaction.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ExecutionGate.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2TransactionAdapter.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupCompatibility.swift",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Models.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Codec.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Mapper.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupService.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransaction.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupVersionedModels.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupTemplateSyntax.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupTemplateSyntax.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransaction.kt"
       ],
       "consumers": [
         "packages/contracts/validate.py",
         "packages/contracts/test_validate_shared_setup.py",
-        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
-        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt",
-        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupServiceTest.kt"
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CodecMapperTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupAppleProfileFieldCoverageTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ProfileTransactionTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CanonicalIOTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CoordinatorIOTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionAdapterTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionScenariosTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ConfirmationFlowTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2CodecMapperTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupAndroidProfileFieldCoverageTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupServiceTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransactionTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupVersionedIoTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransactionTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2TransactionScenariosTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupShareFixtureDocumentTest.kt"
       ],
       "documentation": [
         "packages/contracts/README.md"
       ],
       "fixtures": [
         {
-          "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
-          "sha256": "4101ba35c58ed25af60ff8b540ed03e6e230153748fef52bbd70dece9b68f751",
-          "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "path": "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json",
+          "sha256": "51c4151a040f487cc1f1b1fff1fa9cd0dc7891babf1395d5e1c5ade58e7807c0",
+          "provenance": "Reviewed one-line synthetic Apple-origin named-profile bundle covering Summary, Detailed Time-Series, archive-only, and Lossless policy pairs plus inert destination/schedule intent; contains no health records, user/account/device identity, native IDs, credentials, grants, pairings, or runtime state.",
           "mirrors": []
         },
         {
-          "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
-          "sha256": "817e30ce6c3e1c7d2a74502608b7bc0cb203058b7aa5de1c3c9bef7c6c27ede5",
-          "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "path": "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
+          "sha256": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
+          "provenance": "Reviewed one-line synthetic Android-origin named-profile bundle covering compatibility and platform-distinct raw-snapshot modes, complete legacy data-type filters, and inert destination/schedule intent; contains no health records, user/account/device identity, native IDs, credentials, grants, pairings, or runtime state.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json",
+          "sha256": "2f72266daa4ac8d0a61e724b7eb9cada5528593d50f5b8f0de28dff4bb5d9deb",
+          "provenance": "Reviewed deterministic synthetic local-only transaction scenario for explicit selection normalization, Add/Replace materialization, disabled unbound imports, per-profile sidecar preservation, verified rollback, and one-shot Undo. Native IDs and runtime sentinels are confined to the scenario envelope; its embedded public v2 DTO and both canonical v2 artifact fixtures are recursively checked for identity, credential, grant, native path/URI, runtime, health-data, and operation-state leakage.",
           "mirrors": []
         }
       ]

@@ -5,9 +5,14 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.healthmd.domain.exportengine.AndroidExportProfile
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
+import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
 import javax.inject.Inject
@@ -63,6 +68,35 @@ class ExportProfileRepository @Inject constructor(
     suspend fun profileByName(name: String): ExportProfile? =
         ExportProfileRules.byName(getProfiles(), name)
 
+    /** Central non-secret execution gate for imported profiles awaiting local rebinding. */
+    suspend fun sharedSetupV2ExecutionAccess(id: String): SharedSetupV2ProfileExecutionAccess =
+        if (id in dataStore.data.first()[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()) {
+            SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        } else {
+            SharedSetupV2ProfileExecutionAccess.Allowed
+        }
+
+    suspend fun isSharedSetupV2Blocked(id: String): Boolean =
+        sharedSetupV2ExecutionAccess(id) ==
+            SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+
+    /** Manual-export gate for the effective active row, including first-row fallback semantics. */
+    suspend fun activeSharedSetupV2ExecutionAccess(): SharedSetupV2ProfileExecutionAccess {
+        val prefs = dataStore.data.first()
+        val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+        if (blocked.isEmpty()) return SharedSetupV2ProfileExecutionAccess.Allowed
+        val profiles = decodeProfiles(prefs[Keys.PROFILES])
+            ?: return SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        val effectiveActive = profiles.firstOrNull { it.id == prefs[Keys.ACTIVE_PROFILE_ID] }
+            ?: profiles.firstOrNull()
+            ?: return SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        return if (effectiveActive.id in blocked) {
+            SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        } else {
+            SharedSetupV2ProfileExecutionAccess.Allowed
+        }
+    }
+
     /** Adds a profile with a unique name; the first profile becomes active. */
     suspend fun add(
         name: String,
@@ -71,6 +105,7 @@ class ExportProfileRepository @Inject constructor(
         apiEndpointUrl: String? = null,
         folderUri: String? = null,
         folderDisplayName: String? = null,
+        derivedFromProfileId: String? = null,
     ): ExportProfile {
         require(ExportProfileRules.isValidName(name)) { "Profile name must not be blank." }
         val newId = UUID.randomUUID().toString()
@@ -79,6 +114,24 @@ class ExportProfileRepository @Inject constructor(
         dataStore.edit { prefs ->
             val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             require(existing.size < ExportProfileRules.MAX_PROFILES) { "Profile limit reached." }
+            if (derivedFromProfileId != null && existing.none { it.id == derivedFromProfileId }) {
+                return@edit
+            }
+            val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            val derivedSidecar = derivedFromProfileId
+                ?.takeIf { it in blocked }
+                ?.let { sourceId ->
+                    try {
+                        SharedSetupV2ProfilePersistence.decodeProfileStateOrNull(
+                            prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+                        )
+                    } catch (error: Exception) {
+                        Timber.e(error, "Shared Setup v2 profile state failed to decode; blocking duplicate")
+                        return@edit
+                    }?.takeIf { state ->
+                        state.profiles.count { it.profileId == sourceId } == 1
+                    } ?: return@edit
+                }
             val profile = ExportProfile(
                 id = newId,
                 name = ExportProfileRules.uniquifyName(name, existing),
@@ -90,7 +143,22 @@ class ExportProfileRepository @Inject constructor(
                 createdAtEpochMillis = now,
                 updatedAtEpochMillis = now,
             )
-            prefs[Keys.PROFILES] = json.encodeToString(listSerializer, existing + profile)
+            val encodedProfiles = json.encodeToString(listSerializer, existing + profile)
+            val encodedDerivedSidecar = derivedSidecar?.let { state ->
+                val sourceRow = state.profiles.single {
+                    it.profileId == derivedFromProfileId
+                }
+                SharedSetupV2ProfilePersistence.encodeProfileState(
+                    state.copy(
+                        profiles = state.profiles + sourceRow.copy(profileId = profile.id),
+                    ),
+                )
+            }
+            prefs[Keys.PROFILES] = encodedProfiles
+            if (encodedDerivedSidecar != null) {
+                prefs[SharedSetupV2ProfilePersistence.profileStateKey] = encodedDerivedSidecar
+                prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey] = blocked + profile.id
+            }
             val activeId = prefs[Keys.ACTIVE_PROFILE_ID]
             if (activeId == null || existing.none { it.id == activeId }) {
                 prefs[Keys.ACTIVE_PROFILE_ID] = profile.id
@@ -111,6 +179,8 @@ class ExportProfileRepository @Inject constructor(
             val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
+                val concreteFolderUri = folderUri
+                    ?.takeIf { it.isNotBlank() && it.startsWith("content://", ignoreCase = true) }
                 val updated = existing[index].copy(
                     folderUri = folderUri?.takeIf { it.isNotBlank() },
                     folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
@@ -120,6 +190,19 @@ class ExportProfileRepository @Inject constructor(
                     listSerializer,
                     existing.toMutableList().apply { set(index, updated) },
                 )
+                // Only the explicit SAF picker binding path may clear device-folder intent.
+                // Connected-Mac/cloud imports project to DEVICE_FOLDER for display but remain
+                // blocked because their exact source destination is retained in the sidecar.
+                if (
+                    updated.target == ExportTarget.DEVICE_FOLDER &&
+                    concreteFolderUri != null &&
+                    SharedSetupV2ProfilePersistence.sourceDestinationKind(
+                        prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+                        id,
+                    ) == "device_folder"
+                ) {
+                    removeBlockedId(prefs, id)
+                }
                 applied = true
             }
         }
@@ -238,28 +321,202 @@ class ExportProfileRepository @Inject constructor(
         dataStore.edit { prefs ->
             val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             if (ExportProfileRules.canDelete(existing) && existing.any { it.id == id }) {
+                val sidecarRaw = prefs[SharedSetupV2ProfilePersistence.profileStateKey]
+                val sidecar = try {
+                    SharedSetupV2ProfilePersistence.decodeProfileStateOrNull(sidecarRaw)
+                } catch (error: Exception) {
+                    Timber.e(error, "Shared Setup v2 profile state failed to decode; blocking delete")
+                    return@edit
+                }
                 val updated = existing.filterNot { it.id == id }
+                val updatedSidecar = sidecar?.copy(
+                    profiles = sidecar.profiles.filterNot { it.profileId == id },
+                )
+                val encodedSidecar = SharedSetupV2ProfilePersistence.encodeProfileState(
+                    updatedSidecar?.takeIf { it.profiles.isNotEmpty() },
+                )
                 prefs[Keys.PROFILES] = json.encodeToString(listSerializer, updated)
                 if (prefs[Keys.ACTIVE_PROFILE_ID] == id) {
                     updated.firstOrNull()?.let { first -> prefs[Keys.ACTIVE_PROFILE_ID] = first.id }
                 }
+                if (encodedSidecar == null) {
+                    prefs.remove(SharedSetupV2ProfilePersistence.profileStateKey)
+                } else {
+                    prefs[SharedSetupV2ProfilePersistence.profileStateKey] = encodedSidecar
+                }
+                removeBlockedId(prefs, id)
                 deleted = true
             }
         }
         return deleted
     }
 
-    /** Activates a profile for manual exports. Returns false for unknown ids. */
+    /** Activates a profile for manual exports. Blocked imports never move the pointer. */
     suspend fun activate(id: String): Boolean {
         var activated = false
         dataStore.edit { prefs ->
             val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
-            if (existing.any { it.id == id }) {
+            val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            if (existing.any { it.id == id } && id !in blocked) {
                 prefs[Keys.ACTIVE_PROFILE_ID] = id
                 activated = true
             }
         }
         return activated
+    }
+
+    /**
+     * Separate trusted hook for the in-flow endpoint-URL confirmation of one blocked imported
+     * profile (Shared Setup v2 review), mirroring the Apple twin's explicit-imported-URL
+     * confirmation. The bound URL is derived exclusively from the bounded sidecar's retained
+     * `api_endpoint` hint — never from caller input — and is bound through the same editor-path
+     * semantics the profile editor produces (see [applyEditorUpdate] and
+     * `ExportProfilesViewModel.endpointBinding`): the profile's [ExportProfile.apiEndpointUrl]
+     * plus its frozen settings snapshot re-scoped to [ExportTarget.API_ENDPOINT] so that
+     * `apiEndpointIdentitySha256` is the [APIExportEndpoint.fingerprint] of exactly that URL.
+     * Every frozen output choice and the frozen engine pin are preserved; only the destination
+     * fields change. An API-scoped snapshot's operation profile is always the frozen v4
+     * profile (`expectedScheduledExportProfile` semantics), so the re-scope pins it.
+     *
+     * This hook NEVER clears the pending-destination block:
+     * [clearSharedSetupV2BlockAfterApiCredentialConfirmation] remains the single clearing
+     * authority — its unchanged fingerprint verification is what a later verified credential
+     * must satisfy. The binding deliberately persists even when no credential is ever
+     * confirmed (exactly the state an editor detour would have produced), so no profile-store
+     * rollback path exists here; the credential hook alone decides when the block clears.
+     *
+     * Fail-closed (returns false, writes nothing) when the id is not blocked, the profile is
+     * unknown or no longer targets [ExportTarget.API_ENDPOINT], the sidecar row is missing or
+     * not exactly `api_endpoint`, the retained URL does not normalize, the profile is already
+     * bound to a different local endpoint (an explicit editor choice is never overwritten),
+     * or the frozen snapshot cannot be decoded or validly re-scoped. Idempotent: returns true
+     * without rewriting when the exact binding already exists.
+     */
+    suspend fun bindSharedSetupV2ApiEndpointAfterConfirmation(id: String): Boolean {
+        var bound = false
+        dataStore.edit { prefs ->
+            val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            if (id !in blocked) return@edit
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val index = existing.indexOfFirst { it.id == id }
+            if (index < 0) return@edit
+            val profile = existing[index]
+            if (profile.target != ExportTarget.API_ENDPOINT) return@edit
+            val endpoint = SharedSetupV2ProfilePersistence.retainedApiEndpointUrl(
+                prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+                id,
+            ) ?: return@edit
+            val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
+                ?: return@edit
+            val identity = APIExportEndpoint.fingerprint(endpoint)
+            if (profile.apiEndpointUrl != null && profile.apiEndpointUrl != endpoint) {
+                // An explicit local binding to another endpoint is never overwritten in-flow.
+                return@edit
+            }
+            if (
+                profile.apiEndpointUrl == endpoint &&
+                snapshot.scheduledExportTarget == ExportTarget.API_ENDPOINT &&
+                snapshot.apiEndpointIdentitySha256 == identity
+            ) {
+                // Already exactly bound (prior in-flow confirmation or editor save of the
+                // imported URL): confirm without rewriting anything.
+                bound = true
+                return@edit
+            }
+            val reboundSnapshot = snapshot.copy(
+                exportTarget = ExportTarget.API_ENDPOINT,
+                scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                exportProfile = AndroidExportProfile.android_frozen_v4,
+                apiEndpointIdentitySha256 = identity,
+            )
+            val encodedSnapshot = runCatching {
+                AndroidExportSettingsSnapshotCodec.encodeCanonical(reboundSnapshot)
+            }.getOrNull() ?: return@edit
+            val updated = profile.copy(
+                apiEndpointUrl = endpoint,
+                settingsSnapshotJson = encodedSnapshot,
+                updatedAtEpochMillis = System.currentTimeMillis(),
+            )
+            prefs[Keys.PROFILES] = json.encodeToString(
+                listSerializer,
+                existing.toMutableList().apply { set(index, updated) },
+            )
+            bound = true
+        }
+        return bound
+    }
+
+    /**
+     * Separate trusted hook for a credential coordinator after it has persisted and verified the
+     * endpoint plus local credentials. Merely editing an API URL never calls this method and never
+     * clears a block. The canonical snapshot must already bind the same local endpoint identity.
+     */
+    suspend fun clearSharedSetupV2BlockAfterApiCredentialConfirmation(id: String): Boolean {
+        var cleared = false
+        dataStore.edit { prefs ->
+            val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            if (id !in blocked) return@edit
+            val profile = decodeProfiles(prefs[Keys.PROFILES])
+                ?.singleOrNull { it.id == id }
+                ?: return@edit
+            val endpoint = profile.apiEndpointUrl
+                ?.let(APIExportEndpoint::normalizedOrNull)
+                ?: return@edit
+            val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
+                ?: return@edit
+            val sourceKind = SharedSetupV2ProfilePersistence.sourceDestinationKind(
+                prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+                id,
+            )
+            if (
+                profile.target != ExportTarget.API_ENDPOINT ||
+                sourceKind != "api_endpoint" ||
+                snapshot.scheduledExportTarget != ExportTarget.API_ENDPOINT ||
+                snapshot.apiEndpointIdentitySha256 != APIExportEndpoint.fingerprint(endpoint)
+            ) {
+                return@edit
+            }
+            removeBlockedId(prefs, id)
+            cleared = true
+        }
+        return cleared
+    }
+
+    /**
+     * Separate trusted hook for the connected-Mac pairing confirmation flow. This mirrors the
+     * verification shape of [clearSharedSetupV2BlockAfterApiCredentialConfirmation] minus the
+     * endpoint fingerprint: the id must still be blocked, and the bounded sidecar must retain
+     * the exact `connected_mac` source destination kind. Android has no `CONNECTED_MAC`
+     * [ExportTarget] — connected-Mac imports project to [ExportTarget.DEVICE_FOLDER] for display
+     * (see `SharedSetupV2ProfileTransaction.materializeProfile`) — so the profile must still
+     * carry that untouched projection; a locally retargeted profile no longer represents the
+     * imported Mac intent and stays blocked. No endpoint or credential fingerprint applies: the
+     * explicit local pairing attestation IS the confirmation (Apple's attestation-only
+     * precedent, "Mac Is Paired — Rebind"). Fail-closed: any mismatch returns false and keeps
+     * the block. Cloud intent is never cleared here.
+     */
+    suspend fun clearSharedSetupV2BlockAfterMacPairingConfirmation(id: String): Boolean {
+        var cleared = false
+        dataStore.edit { prefs ->
+            val blocked = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            if (id !in blocked) return@edit
+            val profile = decodeProfiles(prefs[Keys.PROFILES])
+                ?.singleOrNull { it.id == id }
+                ?: return@edit
+            val sourceKind = SharedSetupV2ProfilePersistence.sourceDestinationKind(
+                prefs[SharedSetupV2ProfilePersistence.profileStateKey],
+                id,
+            )
+            if (
+                profile.target != ExportTarget.DEVICE_FOLDER ||
+                sourceKind != "connected_mac"
+            ) {
+                return@edit
+            }
+            removeBlockedId(prefs, id)
+            cleared = true
+        }
+        return cleared
     }
 
     /**
@@ -287,6 +544,15 @@ class ExportProfileRepository @Inject constructor(
             migrated = profile
         }
         return migrated
+    }
+
+    private fun removeBlockedId(prefs: androidx.datastore.preferences.core.MutablePreferences, id: String) {
+        val remaining = prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty() - id
+        if (remaining.isEmpty()) {
+            prefs.remove(SharedSetupV2ProfilePersistence.blockedProfileIdsKey)
+        } else {
+            prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey] = remaining
+        }
     }
 
     private fun decodeProfiles(raw: String?): List<ExportProfile>? {

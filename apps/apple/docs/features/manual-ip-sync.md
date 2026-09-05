@@ -56,6 +56,14 @@ Health.md still does not upload health data to a Health.md server. The transfer 
 | Mac address list is empty | Confirm Wi‑Fi or Tailscale is active, then click **Refresh**. |
 | macOS firewall blocks the connection | Allow incoming connections for Health.md or permit TCP port `17646`. |
 
+## Video outline
+
+- **Suggested title:** Sync Health.md to Your Mac over Tailscale
+- **Hook:** "Bonjour can't cross a tailnet. Manual IP can."
+- **Demo flow:** 1. On Mac, enable Allow Manual IP Connections and generate a code. 2. On iPhone, Sync → Mac Destination → Connect by IP Address with the Tailscale address, port, and code. 3. Export to the Connected Mac, then reconnect later without a code.
+- **Key screenshot/recording moments:** the Tailscale address card, the pairing code, the first successful export, the trusted reconnect.
+- **CTA / next video:** [iPhone → Mac destination](./mac-sync.md).
+
 ## Implementation notes
 
 - Default nearby sync still uses Multipeer Connectivity.

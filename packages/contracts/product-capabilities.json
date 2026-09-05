@@ -699,7 +699,7 @@
       "id": "setup.share-portable-configuration",
       "name": "Share My Setup",
       "classification": "planned",
-      "summary": "Export, review, and transactionally import a bounded portable setup profile without health data, credentials, device grants, purchases, or runtime state; physical-device QA remains before availability.",
+      "summary": "Export, review, and transactionally import a bounded portable setup profile without health data, credentials, device grants, purchases, or runtime state; v2 transaction semantics are wired host-side behind explicit caller-supplied seams and stay deferred with default writers on the one and only v2 contract while physical-device interoperability and accessibility QA remain before availability.",
       "profiles": [],
       "platforms": {
         "apple": {
@@ -712,11 +712,20 @@
         }
       },
       "evidence": [
-        "packages/contracts/shared-setup/v1/contract.md",
+        "packages/contracts/shared-setup/v2/contract.md",
+        "packages/contracts/shared-setup/v2/shared-setup.schema.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
         "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
-        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ProfileTransaction.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ExecutionGate.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2TransactionAdapter.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionScenariosTests.swift",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupScreen.kt",
-        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt"
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransaction.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransaction.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2TransactionScenariosTest.kt",
+        "docs/qa/shared-setup-v2.md"
       ]
     },
     {

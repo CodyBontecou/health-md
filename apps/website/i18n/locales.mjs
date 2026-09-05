@@ -1,12 +1,10 @@
 export const defaultLocale = 'en';
 
-// Focused integration guides may intentionally publish canonical English fallback
-// routes while their translated editions are pending. Fallback pages stay noindex.
+// Every focused integration guide is authored and translated in all locales. A
+// guide whose translated editions are still pending may temporarily publish a
+// canonical English fallback route instead; fallback pages stay noindex. The
+// list is empty today and is retained for future pending guides.
 export const canonicalEnglishDocSlugs = Object.freeze([
-  'docs/guides/connect-agent',
-  'docs/guides/platform-features',
-  'docs/guides/raw-snapshots',
-  'docs/guides/wear-os',
 ]);
 
 // Authored user guides are translated. Generated contract/reference pages remain
@@ -28,6 +26,10 @@ export const authoredDocSlugs = Object.freeze([
   'docs/export-profiles',
   'docs/folder-vault',
   'docs/format',
+  'docs/guides/connect-agent',
+  'docs/guides/platform-features',
+  'docs/guides/raw-snapshots',
+  'docs/guides/wear-os',
   'docs/individual-tracking',
   'docs/iphone-first-export',
   'docs/macos',

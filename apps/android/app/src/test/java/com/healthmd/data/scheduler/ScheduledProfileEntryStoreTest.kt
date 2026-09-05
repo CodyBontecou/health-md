@@ -168,6 +168,23 @@ class ScheduledProfileEntryStoreTest {
     }
 
     @Test
+    fun `blocked imported profile cannot be enabled by upsert update or legacy migration`() = runTest {
+        assertThat(store.upsert(entry("blocked"))).isTrue()
+        dataStore.edit {
+            it[com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence.blockedProfileIdsKey] =
+                setOf("blocked")
+        }
+
+        assertThat(store.upsert(entry("blocked").copy(isEnabled = true))).isFalse()
+        assertThat(store.update("blocked") { it.copy(isEnabled = true) }).isFalse()
+        assertThat(store.entry("blocked")!!.isEnabled).isFalse()
+
+        store.delete("blocked")
+        assertThat(store.beginLegacyMigration(entry("blocked").copy(isEnabled = true))).isFalse()
+        assertThat(store.getEntries()).isEmpty()
+    }
+
+    @Test
     fun `legacy migration entry and pending marker commit together`() = runTest {
         val migrated = entry("default").copy(isEnabled = true)
 

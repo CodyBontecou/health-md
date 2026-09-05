@@ -86,6 +86,7 @@ class ExportProfileCoordinatorTest {
                 ?: profilesState.value.firstOrNull()
         }
         coEvery { profileById(any()) } answers { profilesState.value.firstOrNull { it.id == firstArg<String>() } }
+        coEvery { isSharedSetupV2Blocked(any()) } returns false
         coEvery { activate(any()) } answers {
             val id = firstArg<String>()
             if (profilesState.value.any { it.id == id }) {
@@ -429,6 +430,25 @@ class ExportProfileCoordinatorTest {
     }
 
     @Test
+    fun `activate rejects a blocked imported profile before staging or flushing`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "live-{date}")),
+            profile("p2", settings = ExportSettings(filenameFormat = "imported-{date}")),
+        )
+        activeIdState.value = "p1"
+        val before = settingsState.value
+        coEvery { profileRepository.isSharedSetupV2Blocked("p2") } returns true
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        assertThat(coordinator.activate("p2")).isFalse()
+
+        assertThat(activeIdState.value).isEqualTo("p1")
+        assertThat(settingsState.value).isEqualTo(before)
+        coVerify(exactly = 0) { profileRepository.updateProfile(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { profileRepository.activate("p2") }
+    }
+
+    @Test
     fun `activate rejects unknown ids`() = runTest {
         profilesState.value = listOf(profile("p1"))
         activeIdState.value = "p1"
@@ -675,6 +695,42 @@ class ExportProfileCoordinatorTest {
         val bound = profilesState.value.single()
         assertThat(bound.folderUri).isEqualTo("content://vault-x")
         assertThat(bound.folderDisplayName).isEqualTo("Vault X")
+    }
+
+    @Test
+    fun `folder rebind projects a blocked active snapshot before opening its gate`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "imported-{date}")),
+        )
+        activeIdState.value = "p1"
+        settingsState.value = settingsState.value.copy(filenameFormat = "old-live-{date}")
+        var blocked = true
+        coEvery { profileRepository.isSharedSetupV2Blocked("p1") } answers { blocked }
+        coEvery { profileRepository.bindFolder("p1", any(), any()) } answers {
+            blocked = false
+            true
+        }
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        coordinator.folderWasSelected("content://vault-local", "Local")
+
+        assertThat(blocked).isFalse()
+        assertThat(settingsState.value.filenameFormat).isEqualTo("imported-{date}")
+    }
+
+    @Test
+    fun `unsupported folder rebind keeps its block and rolls live settings back`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "imported-{date}")),
+        )
+        activeIdState.value = "p1"
+        settingsState.value = settingsState.value.copy(filenameFormat = "old-live-{date}")
+        coEvery { profileRepository.isSharedSetupV2Blocked("p1") } returns true
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        coordinator.folderWasSelected("content://vault-local", "Local")
+
+        assertThat(settingsState.value.filenameFormat).isEqualTo("old-live-{date}")
     }
 
     // MARK: - Edit flush

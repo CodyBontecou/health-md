@@ -25,7 +25,7 @@
 | First-run onboarding | ✅ `onboarding.md` | ✅ `onboarding.md` | shared | Different step flows; same outcome (permissions → destination → unlock → ready). Android onboarding offers a Shared Setup entry point. |
 | Health data permissions | ✅ `healthkit-permissions.md` | ✅ `health-connect-permissions.md` | shared | HealthKit type requests vs Health Connect category grants; Android adds a rationale activity (Health Connect policy). |
 | Destination selection | ✅ `vault-folder-selection.md` | ✅ `folder-destination.md` | shared | Obsidian vault/iCloud/Files vs SAF folder picker (Drive/OneDrive/Syncthing/Obsidian Sync). |
-| Share My Setup | ✅ `share-my-setup.md` (needs QA) | 🟡 mention in `onboarding.md` | shared (code), docs gap | Contract `shared-setup/v1` is pre-canonical pending device QA on both. **Android lacks a dedicated page.** |
+| Share My Setup | ✅ `share-my-setup.md` (needs QA) | ✅ `share-my-setup.md` (needs QA) | shared | Contract `shared-setup/v2` is pre-canonical pending device QA on both; v2 is the one and only profile contract since the 2026-09-05 sunset (ADR-0006: v1 removed, default writers emit v2 exclusively, v1 input rejected as unsupported). Android page added 2026-09-05. |
 | Metric selection | ✅ `metric-selection.md` | ✅ `metric-selection.md` | shared | 225+ HealthKit definitions / 21 categories vs 106 Health Connect metrics; identities aligned through the shared Rust metric registry. |
 
 ## Export core
@@ -55,7 +55,7 @@
 | Filename templates | ✅ `filename-templates.md` | ✅ `filename-templates.md` | shared | Same placeholder vocabulary. |
 | Folder organization | ✅ `folder-organization.md` | ✅ `folder-organization.md` | shared | `{year}/{month}`, `{year}/{quarter}`. |
 | Frontmatter customization | ✅ `frontmatter-customization.md` | ✅ `frontmatter-customization.md` | shared | |
-| Date/time/unit preferences | ✅ `date-time-units.md` | 🟡 in format pages (`DateFormatPreference`, `unitPreference`) | shared | Android lacks a standalone page; covered inside format customization content. |
+| Date/time/unit preferences | ✅ `date-time-units.md` | ✅ `date-time-units.md` | shared | Same picker surface (7 date styles, 12/24-hour time, Metric/Imperial); Android JSON stays frozen v4/analytical v5 with canonical numerics while Apple documents the v8 time-context and structured-unit contract. |
 | Markdown template customization | ✅ `markdown-template-customization.md` | 🟡 in `markdown-export.md` | shared | |
 | Write modes | ✅ `write-modes.md` | ✅ `write-modes.md` | shared | Overwrite / append / update-merge. |
 | Daily note injection | ✅ `daily-note-injection.md` | ✅ `daily-note-injection.md` | shared | |
@@ -87,9 +87,9 @@
 | Manual IP / Tailscale | ✅ `manual-ip-sync.md` | 🟡 in `direct-cli.md` | shared | Connect-by-address on both. |
 | CLI-triggered export | ✅ `cli-mac-iphone-export.md` | 🟡 in `direct-cli.md` | shared | Mac app broker on Apple; CLI direct on Android. |
 | Home-screen widgets | ✅ `widgets.md` | ✅ `widgets.md` | shared | Four families each; Android substitutes Steps for Stand Hours (no HC Stand Hours) and excludes lock-screen measurement widgets (no Apple-style redaction). |
-| Watch/wearable | ✅ `watch-app.md` (app + 10 widgets) | 🔧 `wear-os-implementation.md` runbook (tiles + 10 complications) | platform-distinct | watchOS app+widgets vs Wear OS tiles/complications; both phone/watch-authoritative or phone-only sensing. Android docs are a runbook, not a feature page. |
+| Watch/wearable | ✅ `watch-app.md` (app + 10 widgets) | ✅ `wear-os.md` (+ runbook `wear-os-implementation.md`) (tiles + 10 complications) | platform-distinct | watchOS app+widgets vs Wear OS tiles/complications; both phone/watch-authoritative or phone-only sensing. Android page is `needs QA` pending the release gates in its completion audit. |
 | Export progress Live Activity | 🟡 in `scheduled-exports.md`/`widgets.md` | — | apple_only | No Android equivalent (foreground service notification instead — 🟡 in `direct-cli.md`). |
-| Agent/MCP local surfaces | ✅ `agent-local-api.md`, `local-mcp.md`, encrypted store/executor pages | — | apple_only | Loopback agent API and MCP hosting live on the Mac app; CLI/MCP client itself is cross-platform (see CLI inventory rows). |
+| Agent/MCP local surfaces | ✅ `agent-local-api.md`, `local-mcp.md`, `evidence-packets.md`, encrypted store/executor pages | — | apple_only | Loopback agent API and MCP hosting live on the Mac app; CLI/MCP client itself is cross-platform (see CLI inventory rows). |
 
 ## Reports, purchase, privacy
 
@@ -102,9 +102,9 @@
 
 ## Documentation gaps surfaced by this table
 
-1. **Android Share My Setup page** — feature implemented on both; only Apple has a dedicated page (and it is `needs QA` pending contract canonicalization).
-2. **Android date-time-units page** — capability exists (`DateFormatPreference`, `unitPreference`); currently folded into format pages. Either fold deliberately into `markdown-export.md`/format content or split a page.
-3. **Android Wear OS feature page** — only a runbook + website guide exist; no user-facing page in the Android tree.
+1. **Android Share My Setup page** — closed 2026-09-05: dedicated page added at `apps/android/docs/features/share-my-setup.md` (status `needs QA`, matching the pre-canonical contract on both platforms).
+2. **Android date-time-units page** — closed 2026-09-05: split into a dedicated page at `apps/android/docs/features/date-time-units.md` (status `draft`) after the source survey found a rich dedicated surface (`FormatCustomizationScreen` with 7 date, 4 time, and 2 unit options feeding Markdown/Bases/JSON/CSV plus shared-setup wire mapping); the previous fold into format pages was implicit, not deliberate.
+3. **Android Wear OS feature page** — closed 2026-09-05: dedicated page added at `apps/android/docs/features/wear-os.md` (status `needs QA`; the companion is implemented and emulator-verified but unreleased per its completion audit). Runbook `wear-os-implementation.md` and website `guides/wear-os` remain as maintainer/public companions.
 4. **Android roll-up summaries** — page intentionally absent until the v9 writer ships (`planned`); do not document ahead of the capability.
 5. **Zip export** — Apple-only toggle today; revisit if Android adds zip writing.
 

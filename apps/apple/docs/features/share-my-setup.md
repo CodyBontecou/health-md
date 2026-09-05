@@ -2,14 +2,14 @@
 
 ## Status
 
-- **Docs status:** needs QA (shipped in Settings on both platforms; contract is pre-canonical pending physical-device interoperability and accessibility QA — see `packages/contracts/shared-setup/v1/contract.md`)
+- **Docs status:** needs QA (shipped in Settings on both platforms; contract is pre-canonical pending physical-device interoperability and accessibility QA — see `packages/contracts/shared-setup/v2/contract.md`; v2 has been the one and only profile contract since the 2026-09-05 sunset — `docs/architecture/adr-0006-shared-setup-v2-only-contract.md`)
 - **Video priority:** medium
 - **Primary screen:** Settings → Configuration (Apple); Settings → Share My Setup (Android)
 - **Source files:** `HealthMd/Shared/SharedSetup/`, `HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift`; Android `sharedsetup/` package
 
 ## What it does
 
-Share My Setup packages your export preferences — metric selection, formats, naming/organization choices — into one small portable file you can hand to your other device (or a friend setting up Health.md). The recipient reviews exactly what will change and applies it in one transaction, with Undo. The file deliberately contains **no health data, credentials, device pairings, purchases, or runtime state**.
+Share My Setup packages your export profiles — metric selection, formats, naming/organization choices, and destination *intent* — into one bounded portable file you can hand to your other device (or a friend setting up Health.md). A v2 document can carry **multiple profiles**; the recipient reviews exactly what will change, applies it as a transactional **Add** or **Replace**, and can **Undo** once. The file deliberately contains **no health data, credentials, device pairings, purchases, or runtime state**.
 
 ## Who it is for
 
@@ -24,33 +24,33 @@ Share My Setup packages your export preferences — metric selection, formats, n
 
 ## Prerequisites
 
-- No permissions needed — the profile contains preferences only.
-- Recipient device runs a Health.md version that supports `healthmd.shared_setup` v1.
+- No permissions needed — the document contains preferences only.
+- Recipient device runs a Health.md version that supports `healthmd.shared_setup` v2 (post-sunset builds reject v1 files as an unsupported version).
 
 ## Setup
 
-1. Tap **Share My Setup** → export the profile file.
+1. Tap **Share My Setup** → export the setup file (a v2 document can carry several profiles).
 2. Send it to the target device.
 3. On the target, open the file with Health.md (or import from the Configuration section).
-4. Review the preview of what will change, then **Apply** — or **Undo** to roll back.
+4. Review the multi-profile preview, choose the profiles to import and **Add** or **Replace**, then **Apply** — or **Undo** from the success screen to roll back.
 
 ## Example output
 
-A bounded (≤ 256 KiB) JSON document, `healthmd.shared_setup` v1, listing selected metrics by registry alias, format toggles, and organization preferences — with a preflight summary the recipient sees before anything is written.
+A bounded (≤ 4 MiB) JSON document, `healthmd.shared_setup` v2, carrying one or more profiles — each listing selected metrics by registry alias, format toggles, and organization preferences — with a preflight summary the recipient sees before anything is written. Writers emit v2 exclusively; a v1 file is rejected as an unsupported version.
 
 ## Tips
 
-- Apply is transactional: either every preference lands or none does; Undo restores the prior state from a local snapshot.
-- Files larger than 256 KiB or with an unknown schema version are rejected before anything is read.
-- Re-exporting an applied profile emits only the allowlisted fields — imported junk never round-trips.
-- Shared Setup v1 has only the historical combined detail Boolean. Summary and Lossless round-trip exactly; a split Detailed Time-Series or archive-only policy is rejected instead of silently enabling a large archive or dropping requested data. A versioned Shared Setup successor will carry the exact two-dimensional policy.
+- Apply is a transactional Add or Replace: either every selected profile lands or none does; one-shot Undo restores the exact prior state, including blocked identities.
+- Imported profiles land **blocked** until you rebind their destination locally (concrete folder, verified API endpoint, or confirmed Mac pairing); imported schedules stay off; endpoints arrive without credentials.
+- Files larger than 4 MiB or with an unsupported schema version — including v1 files — are rejected before anything is read.
+- Re-export is canonical: sorted compact JSON with exactly one trailing newline, only allowlisted fields, and foreign typed extensions preserved exactly per profile — imported junk never round-trips.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| "File not supported" on import | Wrong file or newer schema version | Regenerate on the source device |
-| Import rejected as oversized | Profile exceeds the 256 KiB bound | Reduce selected metrics and retry |
+| "File not supported" on import | Wrong file or unsupported schema version (v1 files are unsupported since the v2-only sunset) | Regenerate on the source device with a current Health.md |
+| Import rejected as oversized | Document exceeds the 4 MiB bound | Reduce selected metrics or profiles and retry |
 | Wrong preferences after apply | Imported profile was reviewed as-is | Use Undo immediately, then re-review |
 
 ## Video outline
@@ -63,4 +63,4 @@ A bounded (≤ 256 KiB) JSON document, `healthmd.shared_setup` v1, listing selec
 
 ## Implementation notes
 
-`SharedSetupV1` defines the bounded envelope; `SharedSetupCoordinator` (Apple) drives export/review/apply/undo with a `FileDocument` (size-checked, codec-validated before accept). Android mirrors it (`SharedSetupScreen`, codec, document store, registry-backed alias mapping). The contract lives at `packages/contracts/shared-setup/v1/` with a JSON Schema, security checks (bounded read, allowlist write, recursive preflight), and cross-language fixtures; it is **pre-canonical** until physical-device interop and accessibility QA complete, which is why this page's docs status is `needs QA`. Capabilities registry entry: `setup.share-portable-configuration` (`planned`).
+`SharedSetupV2` defines the bounded v2 envelope, and `SharedSetupVersionedCodec`/`SharedSetupV2Codec` enforce the v2-only dispatch: reads accept at most 4,194,304 bytes, require `schema_version` 2, and reject any other version — including 1 — before review. `SharedSetupV2ProfileTransaction` performs the atomic Add/Replace with the blocked set, per-profile compatibility sidecar, and one-shot Undo persistence plus their pre-mutation 4 MiB/8 MiB bounds; `SharedSetupV2ExecutionGate` is the fail-closed gate with typed rebind confirmations, driven in production by `SharedSetupV2TransactionAdapter`; the iOS `SharedSetupCoordinator` presents the multi-profile review and success views with the rebind and Undo affordances. Android mirrors the surface (`SharedSetupScreen`, `SharedSetupV2Codec`, `SharedSetupV2ProfileTransaction`, and the production transaction). The contract lives at `packages/contracts/shared-setup/v2/` with a JSON Schema, per-platform field-coverage inventories, and the frozen transaction scenario fixture; it is **pre-canonical** until physical-device interop and accessibility QA complete, which is why this page's docs status is `needs QA`. v2 became the one and only profile contract through the 2026-09-05 sunset decision recorded in ADR-0006 (`docs/architecture/adr-0006-shared-setup-v2-only-contract.md`), with the QA records at `docs/qa/shared-setup-v2.md` and `docs/qa/shared-setup-v1.md`. Capabilities registry entry: `setup.share-portable-configuration` (`planned`).

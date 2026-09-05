@@ -135,7 +135,7 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings: AdvancedExportSettings
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var healthKitManager = HealthKitManager.shared
-    @StateObject private var syncService = SyncService()
+    @StateObject private var syncService: SyncService
     @StateObject private var directCLIService: IPhoneDirectCLIService
     @StateObject private var directWakeManager = IPhoneDirectWakeManager()
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
@@ -164,14 +164,63 @@ struct HealthMdApp: App {
         let advancedSettings = AdvancedExportSettings()
         let apiExportSettings = APIExportSettings()
         let directWakeManager = IPhoneDirectWakeManager()
+        let syncService = SyncService()
         _advancedSettings = StateObject(wrappedValue: advancedSettings)
         _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
         _directWakeManager = StateObject(wrappedValue: directWakeManager)
+        _syncService = StateObject(wrappedValue: syncService)
         _directCLIService = StateObject(wrappedValue: IPhoneDirectCLIService(wakeManager: directWakeManager))
         _configurationProtection = StateObject(wrappedValue: ConfigurationProtectionManager())
+        // Production Shared Setup v2 wiring: the durable Add/Replace/Undo
+        // transaction and the verified destination-rebind execution gate run
+        // against the standard defaults with no verification overrides. The
+        // review flow's in-flow API-credential confirmation and its
+        // endpoint-row creation from a user-confirmed imported URL resolve
+        // the lazily built production export profile coordinator through the
+        // weak bridge (ContentView registers it), and its connected-Mac rows
+        // read read-only pairing facts from the shared sync service,
+        // re-rendering whenever those published facts change. The default
+        // Share/Save writer resolves its v2 export context through the same
+        // weak bridge — flushing any debounced profile edits first — plus
+        // the v2 sidecar's preserved Android extensions, so production
+        // writes schema_version 2 exclusively. Unit tests construct their own
+        // coordinators over isolated suites, so the app-hosted test process
+        // keeps the adapter and context resolver absent and the fail-closed
+        // no-adapter behavior stays observable.
+        let sharedSetupV2Service = TestMode.isUnitTesting
+            ? nil
+            : SharedSetupV2TransactionAdapter()
         _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
-            settings: advancedSettings,
-            apiExportSettings: apiExportSettings
+            v2Adapter: sharedSetupV2Service.map { service in
+                SharedSetupV2CoordinatorAdapter.production(
+                    service,
+                    exportProfiles: { SharedSetupV2ExportProfileBridge.current },
+                    connectedMacState: {
+                        SharedSetupV2ConnectedMacState(syncService: syncService)
+                    },
+                    connectedMacStateChanges: {
+                        SharedSetupV2CoordinatorAdapter
+                            .connectedMacFactChanges(syncService: syncService)
+                    }
+                )
+            },
+            v2ExportContext: {
+                guard let exportProfiles = SharedSetupV2ExportProfileBridge.current else {
+                    return nil
+                }
+                // Freeze any debounced live edits into the active profile so
+                // the shared document reflects the settings the user sees.
+                exportProfiles.flushEdits()
+                return SharedSetupV2ExportContext(
+                    profiles: exportProfiles.profileStore.profiles,
+                    activeProfileID: exportProfiles.profileStore.activeProfileID,
+                    destinationVaults: exportProfiles.destinationStore.vaults,
+                    destinationAPIEndpoints: exportProfiles.destinationStore.apiEndpoints,
+                    scheduledEntries: exportProfiles.scheduledEntryStore.entries,
+                    preservedAndroidExtensions:
+                        sharedSetupV2Service?.preservedAndroidExtensionsByProfileID ?? [:]
+                )
+            }
         ))
 
         configureTransparentTabBarAppearance()
@@ -297,12 +346,22 @@ struct HealthMdApp: App {
         // Export profiles, their scheduled entries, and their destination
         // bindings are UserDefaults-backed stores created after this reset
         // was written; clear them so a UI-test journey never inherits profile
-        // state from an earlier journey on the same install.
+        // state from an earlier journey on the same install. Shared Setup v2
+        // sidecar/blocked/Undo state is the same kind of profile state.
         UserDefaults.standard.removeObject(forKey: "exportProfiles.list")
         UserDefaults.standard.removeObject(forKey: "exportProfiles.activeProfileID")
         UserDefaults.standard.removeObject(forKey: "scheduledExportEntries.list")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.vaults")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.apiEndpoints")
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.undoKey
+        )
 
         // All managers are @MainActor — set state in Task.
         Task { @MainActor in

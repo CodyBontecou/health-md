@@ -147,6 +147,55 @@ class ScheduledProfileExportWorkerCancellationTest {
     }
 
     @Test
+    fun `blocked imported profile disables its entry and fails before settings or health access`() = runTest {
+        val profileId = "blocked-profile"
+        val profile = ExportProfile(
+            id = profileId,
+            name = "Imported",
+            settingsSnapshotJson = "must-not-decode",
+            target = ExportTarget.DEVICE_FOLDER,
+            createdAtEpochMillis = 1L,
+            updatedAtEpochMillis = 1L,
+        )
+        val entry = ScheduledProfileEntry(
+            profileId = profileId,
+            isEnabled = true,
+            anchorEpochDay = LocalDate.now(ZoneId.of("UTC")).toEpochDay(),
+            hour = 0,
+            zoneId = "UTC",
+        )
+        val profileRepository = mockk<ExportProfileRepository>(relaxed = true)
+        coEvery { profileRepository.profileById(profileId) } returns profile
+        coEvery { profileRepository.isSharedSetupV2Blocked(profileId) } returns true
+        val entryStore = mockk<ScheduledProfileEntryStore>(relaxed = true)
+        coEvery { entryStore.entry(profileId) } returns entry
+        coEvery { entryStore.update(profileId, any()) } returns true
+        val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+        val healthRepository = mockk<HealthRepository>(relaxed = true)
+        val worker = worker(
+            profileId = profileId,
+            settingsRepository = settingsRepository,
+            healthRepository = healthRepository,
+            exportHistoryRepository = mockk(relaxed = true),
+            apiEndpointExportRunner = mockk(relaxed = true),
+            profileRepository = profileRepository,
+            entryStore = entryStore,
+            snapshotFactory = mockk(relaxed = true),
+            profileScheduler = mockk(relaxed = true),
+        )
+
+        val result = worker.doWork()
+
+        assertThat(result.outputData.getString(ScheduledProfileExportWorker.OUTPUT_PROFILE_ERROR))
+            .isEqualTo(ScheduledProfileExportWorker.PROFILE_REBIND_REQUIRED)
+        coVerify(exactly = 1) {
+            entryStore.update(profileId, any())
+        }
+        coVerify(exactly = 0) { settingsRepository.getExportSettings() }
+        coVerify(exactly = 0) { healthRepository.hasBackgroundReadPermission() }
+    }
+
+    @Test
     fun `failed attempt freezes profile provenance before WorkManager backoff`() = runTest {
         val profileId = "profile-retry"
         val profile = ExportProfile(

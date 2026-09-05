@@ -174,6 +174,7 @@ class SchedulingManager: ObservableObject {
     /// persisted vault keys + APIExportSettings exactly like the UI
     /// coordinator.
     private let scheduledProfileDestinationAdopter: @MainActor (ExportProfile?) -> Void
+    private let isSharedSetupV2ProfileBlocked: @MainActor (UUID) -> Bool
 
     /// Result from notification-triggered export, observed by UI to show alert
     /// when no in-app activity banner owns the operation.
@@ -264,7 +265,8 @@ class SchedulingManager: ObservableObject {
         scheduledEntryStore: ScheduledExportEntryStore = ScheduledExportEntryStore(),
         scheduledProfileStore: ExportProfileStore = ExportProfileStore(),
         scheduledDestinationStore: ProfileDestinationStore = ProfileDestinationStore(),
-        scheduledProfileDestinationAdopter: (@MainActor (ExportProfile?) -> Void)? = nil
+        scheduledProfileDestinationAdopter: (@MainActor (ExportProfile?) -> Void)? = nil,
+        isSharedSetupV2ProfileBlocked: (@MainActor (UUID) -> Bool)? = nil
     ) {
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
@@ -283,6 +285,10 @@ class SchedulingManager: ObservableObject {
         self.scheduledDestinationStore = scheduledDestinationStore
         self.scheduledProfileDestinationAdopter = scheduledProfileDestinationAdopter
             ?? { profile in Self.defaultAdoptProfileDestinations(profile) }
+        self.isSharedSetupV2ProfileBlocked = isSharedSetupV2ProfileBlocked
+            ?? { profileID in
+                SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profileID)
+            }
         self.scheduledExportCoordinator = ScheduledExportCoordinator(
             pendingExportStore: pendingExportStore,
             exportNotificationScheduler: exportNotificationScheduler
@@ -557,7 +563,8 @@ class SchedulingManager: ObservableObject {
                 timestamp: now(),
                 operationID: request.id
             )
-        case .noVault, .destinationChanged, .paywall, .failure, .profileNotFound:
+        case .noVault, .destinationChanged, .paywall, .failure, .profileNotFound,
+             .profileRequiresRebind:
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now(),
@@ -627,6 +634,13 @@ class SchedulingManager: ObservableObject {
         let result = await runCancellableNotificationExport(
             operationID: notificationOperationID
         ) {
+            if request.profileID != nil, profileForRun == nil {
+                return self.scheduledFailureResult(
+                    dates: request.dates,
+                    reason: .unknown,
+                    message: "The scheduled export profile is unavailable."
+                )
+            }
             if let profileForRun {
                 return await self.runProfileScopedExport(
                     profile: profileForRun,
@@ -666,6 +680,18 @@ class SchedulingManager: ObservableObject {
         // Phase 3: profile requests gate on their entry's enabled state, not
         // the legacy schedule.
         if let profileID = request.profileID {
+            guard !isSharedSetupV2ProfileBlocked(profileID) else {
+                logger.info("Blocked imported profile skipped for pending scheduled export")
+                if trigger == .notificationTap {
+                    notificationExportResult = NotificationExportResult(
+                        status: .failure(
+                            reason: SharedSetupV2ExecutionGate.blockedExecutionMessage
+                        ),
+                        timestamp: now()
+                    )
+                }
+                return false
+            }
             let entry = scheduledEntryStore.entry(profileID: profileID)
             guard entry?.isEnabled == true else {
                 logger.info("Profile schedule disabled, skipping pending request \(request.id.uuidString)")
@@ -1054,7 +1080,8 @@ class SchedulingManager: ObservableObject {
             let reason: String
             if let firstErrorDetails,
                firstErrorDetails == VaultManager.destinationChangedMessage
-                || firstErrorDetails == Self.exportLimitReachedMessage {
+                || firstErrorDetails == Self.exportLimitReachedMessage
+                || firstErrorDetails == SharedSetupV2ExecutionGate.blockedExecutionMessage {
                 reason = firstErrorDetails
             } else {
                 reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
@@ -2610,6 +2637,13 @@ class SchedulingManager: ObservableObject {
         quotaJobID: UUID?,
         notificationOperationID: UUID? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        guard !isSharedSetupV2ProfileBlocked(profile.id) else {
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .unknown,
+                message: SharedSetupV2ExecutionGate.blockedExecutionMessage
+            )
+        }
         if target == .localIPhoneFolder {
             return await profileFolderRunGate.withPermit {
                 await self.runGatedFolderProfileExport(
@@ -2656,6 +2690,17 @@ class SchedulingManager: ObservableObject {
         guard let profile = scheduledProfileStore.profile(id: due.profileID) else {
             logger.error("Scheduled entry references a missing profile; disabling entry")
             scheduledEntryStore.update(profileID: due.profileID) { $0.isEnabled = false }
+            return
+        }
+        guard !isSharedSetupV2ProfileBlocked(profile.id) else {
+            logger.info("Blocked imported profile skipped for scheduled occurrence")
+            scheduledEntryStore.update(profileID: due.profileID) { $0.isEnabled = false }
+            notificationExportResult = NotificationExportResult(
+                status: .failure(
+                    reason: SharedSetupV2ExecutionGate.blockedExecutionMessage
+                ),
+                timestamp: now()
+            )
             return
         }
 
@@ -2897,6 +2942,10 @@ class SchedulingManager: ObservableObject {
         if let entry {
             guard let profile = scheduledProfileStore.profile(id: entry.profileID) else {
                 logger.error("Cannot arm profile fallback: entry \(entry.profileID.uuidString) references a missing profile")
+                return nil
+            }
+            guard !isSharedSetupV2ProfileBlocked(profile.id) else {
+                logger.info("Cannot arm fallback for blocked imported profile")
                 return nil
             }
             profileContext = ScheduledExportCoordinator.ScheduledProfileRequestContext(

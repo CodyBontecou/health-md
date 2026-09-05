@@ -146,7 +146,7 @@ Do not mark the capability available, canonicalize the contract, or call the thr
 | Objective requirement | Concrete evidence | Status |
 |---|---|---|
 | Dedicated local worktree | `/Users/codybontecou/dev/health-md-shared-setup`, branch `feature/shared-setup-v1` | Done |
-| Versioned contract directory with `contract.md`, schema, and fixtures | `packages/contracts/shared-setup/v1/`; synthetic Apple- and Android-origin fixtures | Done |
+| Versioned contract directory with `contract.md`, schema, and fixtures | `packages/contracts/shared-setup/v1/` *(directory removed 2026-09-05 by the v1 sunset — ADR-0006; the fixtures it named are preserved only by this record's receipts)*; synthetic Apple- and Android-origin fixtures | Done |
 | Envelope, canonical enums, semantic metric IDs, aliases, and no category authority | Schema plus contract sections; `test_metric_alias_tampering_and_categories_are_rejected`; Swift/Kotlin alias and registry-drift tests | Done |
 | Manifest, capability ledger, and validator | `manifest.json` entry `healthmd.shared_setup`; capability `setup.share-portable-configuration`; `validate.py`; 11 contract tests | Done, intentionally `deferred` / `planned` |
 | Independent version; no Apple export-schema or direct-protocol bump | Diff does not alter `HealthMdExportSchema.version` or a direct protocol version | Done |
@@ -180,3 +180,24 @@ Do not mark the capability available, canonicalize the contract, or call the thr
 | Manual Messages, AirDrop, Files, and Android Sharesheet | Android Files/Sharesheet and iOS simulator document opening completed | **Incomplete:** physical Messages, AirDrop, Files/providers, and real Android recipients remain unavailable |
 
 **Audit verdict:** not achieved. The implementation and automated/simulator coverage are complete enough for continued device QA, but the explicitly required physical interoperability and accessibility evidence is still missing. The contract therefore remains `deferred`, the capability remains `planned`, and the branch remains uncommitted/unpushed.
+
+*Cross-reference added 2026-09-05 (cycle-7 integrator):* the executable form of the remaining device gates for the v2 multi-profile surface is the [v2 physical-device execution matrix](./shared-setup-v2.md#cycle-6-amendment-2026-09-05) (24 rows, all `Not run`; run out-of-loop by the user). No v1 row above is affected by this pointer.
+
+## Cycle-10 disposition (2026-09-05)
+
+Recorded from `c10/docs` (worktree `/private/tmp/healthmd-c10-docs`, base `a1f45e4b3`) — the docs lane of fleet cycle 10. On 2026-09-05 the repo owner decided, in direct conversation with the cycle-9 coordinator — verbatim, never paraphrased:
+
+1. "let's move away from the v1 contract and work towards making v2 the one and only profile contract"
+2. "okay, i like your read - implement them, use our fleet loop skill if relevant"
+
+The fleet loop was re-armed expressly for this decision. It is recorded in full in [ADR-0006](../architecture/adr-0006-shared-setup-v2-only-contract.md) and in the [v2 record's cycle-10 amendment](./shared-setup-v2.md#cycle-10-amendment-2026-09-05).
+
+**This record's executable gates are mooted by the sunset.** The v1 contract family is removed from `packages/contracts/shared-setup/v1/`, and v1 readers/writers no longer exist in production code on either platform: a document declaring `schema_version: 1` now fails closed as an unsupported version before review, with zero writes. Accordingly, the physical-device execution matrix, the "Remaining release gate" checklist, and the completion-audit close-out above no longer govern any shipped code path — no row can be executed against v1 behavior, and no row will be satisfied or marked passed.
+
+Nothing recorded above is deleted or retracted:
+
+- Every automated-gate, simulator, emulator, and physical-hardware receipt in this record remains valid **history** for the v1-era binaries that produced them. The symbols those receipts cite (`SharedSetupV1Tests`, the v1 codec/mapper/transaction symbols) were removed from the tree by the cycle-10 sibling lanes; the receipts still attest what those historical builds did.
+- The audit verdict ("not achieved") stands as the honest close-out of the v1 era. The live device gate for the surviving surface is the [v2 physical-device execution matrix](./shared-setup-v2.md#cycle-6-amendment-2026-09-05) — 24 rows, all `Not run`, to be executed by the user out-of-loop — plus a follow-on separately reviewed availability decision.
+- The v1-era fixtures that were staged into the paired iPhone's app container (`Documents/Physical-Family-Setup.healthmdconfig`, `Documents/Family.healthmdconfig`) are v1 documents; a post-sunset build rejects them as unsupported versions rather than opening them for review.
+
+The capability classification stays `planned` and the contract family stays `deferred`-class (now v2-only, still pre-canonical); the sunset changed the contract set and the default writer, not availability.

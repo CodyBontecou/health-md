@@ -71,7 +71,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             keychain: FakeKeychainStore,
             now: @escaping @Sendable () -> Date,
             schedule: ExportSchedule? = nil,
-            systemSideEffectsEnabled: Bool = false
+            systemSideEffectsEnabled: Bool = false,
+            isProfileBlocked: @escaping @MainActor (UUID) -> Bool = { _ in false }
         ) -> SchedulingManager {
             let harness = self
             let manager = SchedulingManager(
@@ -109,7 +110,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 ),
                 scheduledProfileDestinationAdopter: { profile in
                     harness.adoptedProfiles.append(profile?.name)
-                }
+                },
+                isSharedSetupV2ProfileBlocked: isProfileBlocked
             )
             SchedulingManagerProfileSchedulingTests.retainedInstances.append(manager)
             return manager
@@ -196,6 +198,36 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         XCTAssertNotNil(entry?.lastExportDate)
         await manager.runDueProfileOccurrences()
         XCTAssertEqual(harness.runnerDates.count, 1, "entry no longer due")
+    }
+
+    func testBlockedImportedProfileDisablesEntryBeforeDestinationOrExportWork() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(
+            defaults: defaults,
+            keychain: keychain,
+            now: now
+        )
+        let manager = harness.makeManager(
+            defaults: defaults,
+            keychain: keychain,
+            now: { now },
+            isProfileBlocked: { $0 == profileID }
+        )
+
+        await manager.runDueProfileOccurrences()
+
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+        XCTAssertTrue(harness.adoptedProfiles.isEmpty)
+        XCTAssertEqual(
+            ScheduledExportEntryStore(userDefaults: defaults)
+                .entry(profileID: profileID)?.isEnabled,
+            false
+        )
+        guard case .failure(let reason) = manager.notificationExportResult?.status else {
+            return XCTFail("Expected a blocked-profile scheduling failure")
+        }
+        XCTAssertEqual(reason, SharedSetupV2ExecutionGate.blockedExecutionMessage)
     }
 
     func testDueLocalProfileHistoryCapturesProfileAndRefreshedFolderName() async throws {

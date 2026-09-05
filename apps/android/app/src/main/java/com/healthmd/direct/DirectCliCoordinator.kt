@@ -569,6 +569,17 @@ class DirectCliCoordinator @Inject constructor(
                 "The export profile's saved settings are invalid; re-save the profile on the device.",
                 DirectCliFailure.PROFILE_NOT_FOUND,
             )
+        } catch (_: DirectProfileRebindRequiredException) {
+            reject(
+                channel,
+                request.jobId,
+                ErrorCode.INVALID_REQUEST,
+                phase,
+                "profile_rebind_required",
+                // Keep the shipped UI failure enum stable; the direct protocol still receives
+                // the distinct bounded rebind-required rejection above.
+                DirectCliFailure.PROFILE_NOT_FOUND,
+            )
         } catch (_: DirectExportCancelledException) {
             jobStore.cancel(request.jobId)
             _state.value = DirectCliConnectionState.Completed(
@@ -1026,6 +1037,14 @@ class DirectCliCoordinator @Inject constructor(
             is ExportProfileResolution.NotFound -> throw DirectProfileNotFoundException(resolution.reference)
             ExportProfileResolution.LegacySettings -> throw DirectProfileNotFoundException(profileId)
         }
+        val blocked = try {
+            exportProfileRepository.isSharedSetupV2Blocked(profile.id)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            true
+        }
+        if (blocked) throw DirectProfileRebindRequiredException()
         return snapshotFactory.applyForActivation(profile, current)
             ?: throw DirectProfileSnapshotException(profile.name)
     }
@@ -1083,6 +1102,9 @@ class DirectCliCoordinator @Inject constructor(
 
     /** The referenced profile exists but its frozen snapshot failed validation (fail-closed). */
     private class DirectProfileSnapshotException(val profileName: String) : Exception(profileName)
+
+    /** The referenced imported profile still has inert destination intent. */
+    private class DirectProfileRebindRequiredException : Exception()
 
     private object UUIDs {
         fun random(): String = java.util.UUID.randomUUID().toString()

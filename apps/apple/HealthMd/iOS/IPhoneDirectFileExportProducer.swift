@@ -14,6 +14,7 @@ enum IPhoneDirectFileProducerError: LocalizedError {
     case unexpectedResponse
     case healthKitNotAuthorized
     case exportLimitReached
+    case profileRequiresRebind
     /// A direct request referenced an export profile that no longer exists.
     /// Fails closed: no fallback to live settings ever runs.
     case profileNotFound(profileID: String, name: String?)
@@ -21,6 +22,8 @@ enum IPhoneDirectFileProducerError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidRequest(let message): return message
+        case .profileRequiresRebind:
+            return SharedSetupV2ExecutionGate.blockedExecutionMessage
         case .profileNotFound(let profileID, let name):
             return "No export profile matches \(name ?? profileID). Open Health.md to review profiles."
         case .requestChanged: return "A durable direct file job with this ID changed."
@@ -93,9 +96,6 @@ final class IPhoneDirectFileExportProducer {
             jobPerformanceSpan.finish(outcome: jobPerformanceOutcome)
         }
         #endif
-        externalIntegrations?.beginExportAction()
-        var externalExportSucceeded = false
-        defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
         guard request.protocolVersion == HealthMdDirectProtocol.currentVersion,
               request.createdAt <= Date().addingTimeInterval(5 * 60),
               request.createdAt.addingTimeInterval(HealthMdDirectProtocol.jobLifetime) > Date(),
@@ -110,6 +110,12 @@ final class IPhoneDirectFileExportProducer {
         if cancelledJobIDs.contains(request.jobID) {
             throw IPhoneDirectFileProducerError.cancelled
         }
+        try enforceBlockedProfileGate(for: request)
+        // The profile gate must run before even beginning an external-provider
+        // export action; a blocked durable resume performs no health-data work.
+        externalIntegrations?.beginExportAction()
+        var externalExportSucceeded = false
+        defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
         let journal: IPhoneDirectFileJournal
         if let persisted = try? loadJournal(jobID: request.jobID) {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
@@ -1287,7 +1293,47 @@ final class IPhoneDirectFileExportProducer {
                 name: reference.name
             )
         }
+        guard !SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profile.id) else {
+            throw IPhoneDirectFileProducerError.profileRequiresRebind
+        }
         return profile.settings.makeAdvancedExportSettings()
+    }
+
+    /// Check every invocation, including durable resumes, before any journal,
+    /// HealthKit, destination, or external-provider work. Name-only references
+    /// are resolved only to decide the gate and retain the existing not-found
+    /// behavior later.
+    private func enforceBlockedProfileGate(for request: DirectExportRequest) throws {
+        try Self.enforceBlockedProfileGate(
+            for: request,
+            profileStore: ExportProfileStore(),
+            isBlocked: { profileID in
+                SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profileID)
+            }
+        )
+    }
+
+    /// Internal seam keeps the pre-journal direct gate hermetic in tests while
+    /// the production wrapper always resolves from the standard profile store.
+    static func enforceBlockedProfileGate(
+        for request: DirectExportRequest,
+        profileStore: ExportProfileStore,
+        isBlocked: (UUID) -> Bool
+    ) throws {
+        guard request.settingsPolicy == .profile,
+              let reference = request.profileReference else { return }
+        let profile: ExportProfile?
+        if let profileID = UUID(uuidString: reference.profileID) {
+            profile = profileStore.profile(id: profileID)
+        } else if let name = reference.name {
+            profile = profileStore.profile(named: name)
+        } else {
+            profile = nil
+        }
+        guard let profile else { return }
+        guard !isBlocked(profile.id) else {
+            throw IPhoneDirectFileProducerError.profileRequiresRebind
+        }
     }
 
     private func makeInternalRequest(

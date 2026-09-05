@@ -1,388 +1,157 @@
 package com.healthmd.sharedsetup
 
 import com.google.common.truth.Truth.assertThat
-import com.healthmd.data.export.APIExportCredentialStore
-import com.healthmd.data.export.APIExportRequestHeader
-import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.scheduler.ScheduledProfileEntryStore
+import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
-import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.IndividualTrackingSettings
+import com.healthmd.domain.model.MetricSelectionState
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.io.File
+import java.time.ZoneId
 
 class SharedSetupServiceTest {
     @Test
-    fun `preview of canonical fixture performs zero writes`() = runTest {
-        val repository = mockk<SettingsRepository>(relaxed = true)
-        coEvery { repository.getExportSettings() } returns ExportSettings.newInstallDefaults()
-        val service = SharedSetupService(
-            repository,
-            mockk<ExportScheduler>(relaxed = true),
-            InMemoryCredentialStore(null, mutableListOf()),
-            FixtureRegistry,
-        )
+    fun `versioned preview is a zero-write v2 import plan`() = runTest {
+        val service = SharedSetupService(FixtureRegistry)
+        val bytes = v2FixtureFile().readBytes()
 
-        val result = service.preview(fixtureFile().readBytes())
+        val versioned = service.previewVersioned(bytes).getOrThrow()
 
-        assertThat(result.isSuccess).isTrue()
-        coVerify(exactly = 0) { repository.updateExportSettings(any()) }
-        coVerify(exactly = 0) { repository.applySharedSetupTransaction(any(), any(), any(), any()) }
+        assertThat(versioned.profiles).hasSize(2)
+        assertThat(versioned.source.schemaVersion).isEqualTo(SHARED_SETUP_V2_VERSION)
     }
 
     @Test
-    fun `apply transaction completes after caller cancellation`() = runTest {
-        var stored = ExportSettings.newInstallDefaults().normalized()
-        var pendingEndpoint: String? = null
-        var preservedExtension: String? = null
-        val commitStarted = CompletableDeferred<Unit>()
-        val releaseCommit = CompletableDeferred<Unit>()
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getExportSettings() } answers { stored }
-        coEvery { repository.getPendingSharedSetupEndpoint() } answers { pendingEndpoint }
-        coEvery { repository.getPreservedSharedSetupAppleExtension() } answers { preservedExtension }
-        coEvery {
-            repository.applySharedSetupTransaction(any(), any(), any(), any())
-        } coAnswers {
-            commitStarted.complete(Unit)
-            releaseCommit.await()
-            stored = secondArg()
-            pendingEndpoint = thirdArg()
-            preservedExtension = arg(3)
-            true
-        }
-        val scheduler = mockk<ExportScheduler>()
-        coEvery { scheduler.cancel() } returns Unit
-        val service = SharedSetupService(
-            repository,
-            scheduler,
-            InMemoryCredentialStore(null, mutableListOf()),
-            FixtureRegistry,
-        )
-        val preview = service.preview(fixtureFile().readBytes()).getOrThrow()
-        var result: Result<SharedSetupApplyResult>? = null
-        val apply = launch { result = service.apply(preview) }
-        commitStarted.await()
+    fun `preview fails closed on a v1-shaped document with a bounded message`() = runTest {
+        val service = SharedSetupService(FixtureRegistry)
+        // Minimal v1-shaped bytes, synthesized inline: the pre-canonical v1 contract is gone
+        // and dispatch must reject it before any typed decoding.
+        val v1Bytes = """{"schema":"healthmd.shared_setup","schema_version":1}"""
+            .encodeToByteArray()
 
-        apply.cancel()
-        releaseCommit.complete(Unit)
-        apply.join()
-
-        assertThat(result?.isSuccess).isTrue()
-        assertThat(stored.scheduleEnabled).isFalse()
-        coVerify(exactly = 1) { scheduler.cancel() }
-    }
-
-    @Test
-    fun `post commit verification failure rolls back imported settings`() = runTest {
-        val previous = ExportSettings.newInstallDefaults().copy(filenameFormat = "before-{date}").normalized()
-        var stored = previous
-        var undo: ExportSettings? = null
-        var committed = false
-        val repository = mockk<SettingsRepository>(relaxed = true)
-        coEvery { repository.getExportSettings() } answers {
-            if (committed) stored.copy(filenameFormat = "verification-corrupt") else stored
-        }
-        coEvery { repository.applySharedSetupTransaction(any(), any(), any(), any()) } answers {
-            undo = stored
-            stored = secondArg<ExportSettings>()
-            committed = true
-            true
-        }
-        coEvery { repository.rollbackSharedSetupTransaction(any()) } answers {
-            val restored = undo
-            if (restored != null) {
-                stored = restored!!
-                committed = false
-            }
-            restored
-        }
-        val service = SharedSetupService(
-            repository,
-            mockk<ExportScheduler>(relaxed = true),
-            InMemoryCredentialStore(null, mutableListOf()),
-            FixtureRegistry,
-        )
-        val preview = service.preview(fixtureFile().readBytes()).getOrThrow()
-
-        val result = service.apply(preview)
+        val result = service.previewVersioned(v1Bytes)
 
         assertThat(result.isFailure).isTrue()
-        assertThat(stored).isEqualTo(previous)
-        coVerify(exactly = 1) { repository.rollbackSharedSetupTransaction(any()) }
+        assertThat(result.exceptionOrNull()?.message)
+            .isEqualTo("This shared setup version is not supported.")
     }
+
     @Test
-    fun `failed apply reports an unverified rollback instead of silently ignoring it`() = runTest {
-        val previous = ExportSettings.newInstallDefaults().copy(filenameFormat = "before-{date}").normalized()
-        var stored = previous
-        var committed = false
-        val repository = mockk<SettingsRepository>(relaxed = true)
-        coEvery { repository.getExportSettings() } answers {
-            if (committed) stored.copy(filenameFormat = "verification-corrupt") else stored
-        }
-        coEvery { repository.applySharedSetupTransaction(any(), any(), any(), any()) } answers {
-            stored = secondArg<ExportSettings>()
-            committed = true
-            true
-        }
-        coEvery { repository.rollbackSharedSetupTransaction(any()) } returns null
-        val service = SharedSetupService(
-            repository,
-            mockk<ExportScheduler>(relaxed = true),
-            InMemoryCredentialStore(null, mutableListOf()),
-            FixtureRegistry,
+    fun `explicit v2 writer maps export context then emits canonical LF bytes`() = runTest {
+        val service = SharedSetupService(FixtureRegistry)
+        val defaults = ExportSettings.newInstallDefaults().copy(
+            metricSelection = MetricSelectionState(emptySet()),
+            individualTracking = IndividualTrackingSettings(),
         )
-        val preview = service.preview(fixtureFile().readBytes()).getOrThrow()
+        val snapshot = AndroidExportSettingsSnapshot.capture(defaults, pin = null, zone = ZoneId.of("UTC"))
+        val profile = ExportProfile(
+            id = "123e4567-e89b-42d3-a456-426614174099",
+            name = "Portable",
+            settingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot),
+            target = ExportTarget.DEVICE_FOLDER,
+            folderUri = "content://local-only/not-exported",
+            folderDisplayName = "Local only",
+            createdAtEpochMillis = 1,
+            updatedAtEpochMillis = 2,
+        )
+        val profileRepository = mockk<ExportProfileRepository>()
+        val scheduleStore = mockk<ScheduledProfileEntryStore>()
+        coEvery { profileRepository.getProfiles() } returns listOf(profile)
+        coEvery { profileRepository.getActiveProfileId() } returns profile.id
+        coEvery { scheduleStore.getEntries() } returns emptyList()
+        var extensionLoads = 0
+        val source = RepositorySharedSetupV2ExportSource(
+            profileRepository = profileRepository,
+            scheduledProfileEntryStore = scheduleStore,
+            appVersion = "1.2.3-test",
+            preservedAppleExtensions = {
+                extensionLoads += 1
+                emptyMap()
+            },
+        )
 
-        val result = service.apply(preview)
+        val bytes = service.exportV2Bytes(source)
 
-        assertThat(result.isFailure).isTrue()
-        assertThat(result.exceptionOrNull()?.message).contains("could not be verified as restored")
+        assertThat(extensionLoads).isEqualTo(1)
+        coVerify(exactly = 1) { profileRepository.getProfiles() }
+        coVerify(exactly = 1) { profileRepository.getActiveProfileId() }
+        coVerify(exactly = 1) { scheduleStore.getEntries() }
+        assertThat(bytes.last()).isEqualTo('\n'.code.toByte())
+        assertThat(bytes[bytes.lastIndex - 1]).isNotEqualTo('\n'.code.toByte())
+        val decoded = SharedSetupV2Codec(FixtureRegistry).decode(bytes)
+        assertThat(decoded).isInstanceOf(SharedSetupVersionedDecodeResult.Valid::class.java)
+        assertThat(bytes.decodeToString()).doesNotContain(profile.id)
+        assertThat(bytes.decodeToString()).doesNotContain("content://")
     }
 
     @Test
-    fun `endpoint confirmation clears old authorization and headers before saving new credential`() = runTest {
-        val hint = "https://setup.invalid/health"
-        var settings = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        var pending: String? = hint
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getPendingSharedSetupEndpoint() } answers { pending }
-        coEvery { repository.getExportSettings() } answers { settings }
-        coEvery { repository.confirmSharedSetupEndpoint(any(), any(), any()) } answers {
-            val expected = firstArg<ExportSettings>()
-            val expectedHint = secondArg<String>()
-            val candidate = thirdArg<ExportSettings>()
-            if (settings == expected && pending == expectedHint) {
-                settings = candidate
-                pending = null
-                true
-            } else false
+    fun `v2 apply validates plan normalizes selection and delegates explicit Undo`() = runTest {
+        val service = SharedSetupService(FixtureRegistry)
+        val preview = service.previewVersioned(v2FixtureFile().readBytes()).getOrThrow()
+        var appliedRequest: SharedSetupV2ApplyRequest? = null
+        val callback = SharedSetupV2ApplyCallback { request ->
+            appliedRequest = request
+            Result.success(Unit)
         }
-        val credentials = InMemoryCredentialStore(
-            authorization = "Bearer old-secret",
-            headers = mutableListOf(APIExportRequestHeader("X-Old-Tenant", "old")),
-        )
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
 
-        val result = service.confirmPendingEndpoint("new-local-secret")
+        val applied = service.applyV2(
+            plan = preview,
+            selectedBundleIds = listOf("profile-002", "profile-001"),
+            mode = SharedSetupV2ApplyMode.ADD,
+            callback = callback,
+        ).getOrThrow()
 
-        assertThat(result.isSuccess).isTrue()
-        assertThat(settings.apiEndpointUrl).isEqualTo(hint)
-        assertThat(pending).isNull()
-        assertThat(credentials.authorization).isEqualTo("Bearer new-local-secret")
-        assertThat(credentials.headers).isEmpty()
-    }
+        assertThat(applied.selectedBundleIds).containsExactly("profile-001", "profile-002").inOrder()
+        assertThat(appliedRequest?.selectedBundleIds)
+            .containsExactly("profile-001", "profile-002").inOrder()
+        assertThat(applied.canUndo).isTrue()
 
-    @Test
-    fun `undo after endpoint confirmation clears new credentials before restoring old endpoint`() = runTest {
-        val old = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        var stored = old.copy(apiEndpointUrl = "https://setup.invalid/health").normalized()
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getSharedSetupUndo() } returns old
-        coEvery { repository.getExportSettings() } answers { stored }
-        coEvery { repository.undoSharedSetupTransaction(any()) } answers {
-            stored = old
-            old
+        var invalidCallbackCalls = 0
+        val invalidCallback = SharedSetupV2ApplyCallback {
+            invalidCallbackCalls += 1
+            Result.success(Unit)
         }
-        val credentials = InMemoryCredentialStore(
-            authorization = "Bearer newly-confirmed-secret",
-            headers = mutableListOf(APIExportRequestHeader("X-New-Tenant", "new")),
+        val invalid = service.applyV2(
+            plan = preview.copy(activeProfile = "profile-999"),
+            selectedBundleIds = listOf("profile-001"),
+            mode = SharedSetupV2ApplyMode.REPLACE,
+            callback = invalidCallback,
         )
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
-
-        val result = service.undo()
-
-        assertThat(result.isSuccess).isTrue()
-        assertThat(stored).isEqualTo(old)
-        assertThat(credentials.authorization).isNull()
-        assertThat(credentials.headers).isEmpty()
-    }
-
-    @Test
-    fun `credential cleanup failure leaves Undo snapshot and endpoint untouched`() = runTest {
-        val old = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        val current = old.copy(apiEndpointUrl = "https://setup.invalid/health").normalized()
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getExportSettings() } returns current
-        coEvery { repository.getSharedSetupUndo() } returns old
-        val credentials = mockk<APIExportCredentialStore>()
-        coEvery { credentials.authorizationHeader() } returns "Bearer new-secret"
-        coEvery { credentials.requestHeaders() } returns emptyList()
-        coEvery { credentials.clearAuthorization() } throws IllegalStateException("Synthetic secure-store failure")
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
-
-        val result = service.undo()
-
-        assertThat(result.isFailure).isTrue()
-        coVerify(exactly = 0) { repository.undoSharedSetupTransaction(any()) }
-    }
-
-    @Test
-    fun `failed DataStore Undo restores credential to still-current endpoint`() = runTest {
-        val old = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        val current = old.copy(apiEndpointUrl = "https://setup.invalid/health").normalized()
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getExportSettings() } returns current
-        coEvery { repository.getSharedSetupUndo() } returns old
-        coEvery { repository.undoSharedSetupTransaction(current) } returns null
-        val credentials = InMemoryCredentialStore(
-            authorization = "Bearer new-secret",
-            headers = mutableListOf(APIExportRequestHeader("X-New-Tenant", "new")),
-        )
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
-
-        val result = service.undo()
-
-        assertThat(result.isFailure).isTrue()
-        assertThat(credentials.authorization).isEqualTo("Bearer new-secret")
-        assertThat(credentials.headers).containsExactly(APIExportRequestHeader("X-New-Tenant", "new"))
-    }
-
-    @Test
-    fun `failed endpoint compare and set restores prior credentials without changing endpoint`() = runTest {
-        val hint = "https://setup.invalid/health"
-        val previous = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getPendingSharedSetupEndpoint() } returns hint
-        coEvery { repository.getExportSettings() } returns previous
-        coEvery { repository.confirmSharedSetupEndpoint(any(), any(), any()) } returns false
-        val credentials = InMemoryCredentialStore(
-            authorization = "Bearer old-secret",
-            headers = mutableListOf(APIExportRequestHeader("X-Old-Tenant", "old")),
-        )
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
-
-        val result = service.confirmPendingEndpoint("new-local-secret")
-
-        assertThat(result.isFailure).isTrue()
-        assertThat(credentials.authorization).isEqualTo("Bearer old-secret")
-        assertThat(credentials.headers).containsExactly(APIExportRequestHeader("X-Old-Tenant", "old"))
-    }
-
-    @Test
-    fun `endpoint confirmation fails closed when prior credentials cannot be read`() = runTest {
-        val hint = "https://setup.invalid/health"
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getPendingSharedSetupEndpoint() } returns hint
-        coEvery { repository.getExportSettings() } returns ExportSettings.newInstallDefaults()
-        val credentials = mockk<APIExportCredentialStore>()
-        coEvery { credentials.authorizationHeader() } throws IllegalStateException("Synthetic secure-store read failure")
-        coEvery { credentials.requestHeaders() } returns emptyList()
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
-
-        val result = service.confirmPendingEndpoint("new-local-secret")
-
-        assertThat(result.isFailure).isTrue()
-        assertThat(result.exceptionOrNull()?.message).contains("could not be read safely")
-        coVerify(exactly = 0) { credentials.saveAuthorization(any()) }
-        coVerify(exactly = 0) { credentials.clearAuthorization() }
-        coVerify(exactly = 0) { credentials.clearRequestHeaders() }
-        coVerify(exactly = 0) { repository.confirmSharedSetupEndpoint(any(), any(), any()) }
-    }
-
-    @Test
-    fun `endpoint confirmation fails closed when the new credential write cannot be verified`() = runTest {
-        val hint = "https://setup.invalid/health"
-        val previous = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getPendingSharedSetupEndpoint() } returns hint
-        coEvery { repository.getExportSettings() } returns previous
-        val credentials = NoOpSaveCredentialStore(authorization = "Bearer old-secret", headers = mutableListOf())
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
-
-        val result = service.confirmPendingEndpoint("new-local-secret")
-
-        assertThat(result.isFailure).isTrue()
-        assertThat(result.exceptionOrNull()?.message).contains("could not be verified as restored")
-        assertThat(credentials.authorization).isNull()
-        assertThat(credentials.headers).isEmpty()
-        coVerify(exactly = 0) { repository.confirmSharedSetupEndpoint(any(), any(), any()) }
-    }
-
-    @Test
-    fun `endpoint confirmation reports unverified credential restoration after data store verification failure`() = runTest {
-        val hint = "https://setup.invalid/health"
-        val previous = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        val candidate = previous.copy(apiEndpointUrl = hint).normalized()
-        var settings = previous
-        var pending: String? = hint
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getPendingSharedSetupEndpoint() } answers { pending }
-        coEvery { repository.getExportSettings() } answers {
-            // Return a corrupted snapshot after the commit so post-commit verification fails.
-            if (pending == null) settings.copy(filenameFormat = "verification-corrupt") else settings
+        assertThat(invalid.isFailure).isTrue()
+        listOf(
+            emptyList(),
+            listOf("profile-001", "profile-001"),
+            listOf("profile-999"),
+        ).forEach { invalidSelection ->
+            assertThat(
+                service.applyV2(
+                    plan = preview,
+                    selectedBundleIds = invalidSelection,
+                    mode = SharedSetupV2ApplyMode.REPLACE,
+                    callback = invalidCallback,
+                ).isFailure,
+            ).isTrue()
         }
-        coEvery { repository.confirmSharedSetupEndpoint(any(), any(), any()) } answers {
-            settings = candidate
-            pending = null
-            true
-        }
-        coEvery { repository.rollbackSharedSetupEndpointConfirmation(any(), any(), any()) } answers {
-            settings = previous
-            pending = hint
-            true
-        }
-        val credentials = FailAfterSavesCredentialStore(
-            maxSuccessfulSaves = 1,
-            authorization = "Bearer old-secret",
-            headers = mutableListOf(),
-        )
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
+        assertThat(invalidCallbackCalls).isEqualTo(0)
 
-        val result = service.confirmPendingEndpoint("new-local-secret")
-
-        assertThat(result.isFailure).isTrue()
-        assertThat(result.exceptionOrNull()?.message).contains("could not be verified as restored")
-        assertThat(credentials.authorization).isNull()
-        assertThat(credentials.headers).isEmpty()
-        assertThat(settings).isEqualTo(previous)
-    }
-
-    @Test
-    fun `endpoint confirmation rejects a store that silently retains the old credential`() = runTest {
-        val hint = "https://setup.invalid/health"
-        val previous = ExportSettings.newInstallDefaults().copy(apiEndpointUrl = "https://old.invalid/path").normalized()
-        val repository = mockk<SettingsRepository>()
-        coEvery { repository.getPendingSharedSetupEndpoint() } returns hint
-        coEvery { repository.getExportSettings() } returns previous
-        val credentials = RetainingCredentialStore(
-            authorization = "Bearer old-secret",
-            headers = mutableListOf(APIExportRequestHeader("X-Old-Tenant", "old")),
-        )
-        val service = SharedSetupService(repository, mockk<ExportScheduler>(relaxed = true), credentials, EmptyRegistry)
-
-        val result = service.confirmPendingEndpoint("new-local-secret")
-
-        assertThat(result.isFailure).isTrue()
-        assertThat(result.exceptionOrNull()?.message).contains("new endpoint credential could not be verified")
-        assertThat(credentials.authorization).isEqualTo("Bearer old-secret")
-        assertThat(credentials.headers).containsExactly(APIExportRequestHeader("X-Old-Tenant", "old"))
-        coVerify(exactly = 0) { repository.confirmSharedSetupEndpoint(any(), any(), any()) }
-    }
-
-    /** Secure store whose save and clear operations silently retain the prior value. */
-    private class RetainingCredentialStore(
-        val authorization: String?,
-        val headers: MutableList<APIExportRequestHeader>,
-    ) : APIExportCredentialStore {
-        override suspend fun authorizationHeader(): String? = authorization
-        override suspend fun hasAuthorization(): Boolean = authorization != null
-        override suspend fun saveAuthorization(value: String) = Unit
-        override suspend fun clearAuthorization() = Unit
-        override suspend fun requestHeaders(): List<APIExportRequestHeader> = headers.toList()
-        override suspend fun saveRequestHeaders(rawValue: String) = Unit
-        override suspend fun clearRequestHeaders() = Unit
-    }
-
-    private object EmptyRegistry : SharedSetupMetricRegistry {
-        override val version = 1
-        override val sha256 = "0".repeat(64)
-        override val bySemanticId = emptyMap<String, SharedSetupRegistryBinding>()
-        override val byAndroidSelectionId = emptyMap<String, SharedSetupRegistryBinding>()
+        var undoCalls = 0
+        val undone = service.undoV2(
+            SharedSetupV2UndoCallback {
+                undoCalls += 1
+                Result.success(Unit)
+            },
+        ).getOrThrow()
+        assertThat(undone.didUndo).isTrue()
+        assertThat(undoCalls).isEqualTo(1)
     }
 
     private object FixtureRegistry : SharedSetupMetricRegistry {
@@ -402,86 +171,16 @@ class SharedSetupServiceTest {
         }.toMap()
     }
 
-    private fun fixtureFile(): File {
+    private fun v2FixtureFile(): File = contractFile(
+        "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
+    )
+
+    private fun contractFile(path: String): File {
         var directory = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
         while (true) {
-            val candidate = File(directory, "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json")
+            val candidate = File(directory, path)
             if (candidate.isFile) return candidate
-            directory = directory.parentFile ?: error("Could not locate shared-setup fixture")
-        }
-    }
-
-    /** Secure store whose save operations are silent no-ops, like a disk that ignores writes. */
-    private class NoOpSaveCredentialStore(
-        var authorization: String?,
-        val headers: MutableList<APIExportRequestHeader>,
-    ) : APIExportCredentialStore {
-        override suspend fun authorizationHeader(): String? = authorization
-        override suspend fun hasAuthorization(): Boolean = authorization != null
-        override suspend fun saveAuthorization(value: String) = Unit
-        override suspend fun clearAuthorization() {
-            authorization = null
-        }
-        override suspend fun requestHeaders(): List<APIExportRequestHeader> = headers.toList()
-        override suspend fun saveRequestHeaders(rawValue: String) = Unit
-        override suspend fun clearRequestHeaders() {
-            headers.clear()
-        }
-    }
-
-    /** Saves succeed until the quota is reached; later saves fail like a dying secure store. */
-    private class FailAfterSavesCredentialStore(
-        private val maxSuccessfulSaves: Int,
-        authorization: String?,
-        headers: MutableList<APIExportRequestHeader>,
-    ) : APIExportCredentialStore {
-        private val delegate = InMemoryCredentialStore(authorization, headers)
-        private var saves = 0
-        val authorization: String? get() = delegate.authorization
-        val headers: List<APIExportRequestHeader> get() = delegate.headers.toList()
-        override suspend fun authorizationHeader(): String? = delegate.authorizationHeader()
-        override suspend fun hasAuthorization(): Boolean = delegate.hasAuthorization()
-        override suspend fun saveAuthorization(value: String) {
-            check(saves < maxSuccessfulSaves) { "Synthetic secure-store write failure" }
-            saves += 1
-            delegate.saveAuthorization(value)
-        }
-        override suspend fun clearAuthorization() = delegate.clearAuthorization()
-        override suspend fun requestHeaders(): List<APIExportRequestHeader> = delegate.requestHeaders()
-        override suspend fun hasRequestHeaders(): Boolean = delegate.hasRequestHeaders()
-        override suspend fun saveRequestHeaders(rawValue: String) = delegate.saveRequestHeaders(rawValue)
-        override suspend fun clearRequestHeaders() = delegate.clearRequestHeaders()
-    }
-
-    private class InMemoryCredentialStore(
-        var authorization: String?,
-        val headers: MutableList<APIExportRequestHeader>,
-    ) : APIExportCredentialStore {
-        override suspend fun authorizationHeader(): String? = authorization
-        override suspend fun hasAuthorization(): Boolean = authorization != null
-        override suspend fun saveAuthorization(value: String) {
-            val trimmed = value.trim()
-            require(trimmed.isNotEmpty())
-            authorization = if (trimmed.startsWith("Bearer ", true) || trimmed.startsWith("Basic ", true)) {
-                trimmed
-            } else {
-                "Bearer $trimmed"
-            }
-        }
-        override suspend fun clearAuthorization() {
-            authorization = null
-        }
-        override suspend fun requestHeaders(): List<APIExportRequestHeader> = headers.toList()
-        override suspend fun saveRequestHeaders(rawValue: String) {
-            headers.clear()
-            rawValue.lineSequence().filter { it.isNotBlank() }.forEach { line ->
-                val parts = line.split(':', limit = 2)
-                require(parts.size == 2)
-                headers += APIExportRequestHeader(parts[0].trim(), parts[1].trim())
-            }
-        }
-        override suspend fun clearRequestHeaders() {
-            headers.clear()
+            directory = directory.parentFile ?: error("Could not locate $path")
         }
     }
 }
