@@ -141,3 +141,22 @@ The following render byte-identical to English because that is the natural, esta
 | Order/set/placeholder parity script (v1+v2 blocks, per key, vs English and vs base order) | `RESULT: ALL OK`, exit 0 |
 | `cd apps/android && ./gradlew :app:processPlayDebugResources --offline --no-daemon --max-workers=2` (`ANDROID_HOME=$HOME/Library/Android/sdk`) | BUILD SUCCESSFUL in 40s, exit 0 |
 | `git status --porcelain` | clean; only the 15 locale files changed before their commits, plus this file in its own commit |
+
+### Cycle-5 integrated receipts (coordinator fleet-c5, integrated at `c395c1d96` → receipts below)
+
+Lanes integrated serially via cherry-pick (8 lane commits, all patch-equivalent per `git cherry`), plus one integrator commit translating the cycle-5 endpoint-binding keys (`shared_setup_v2_rebind_api_url_*`, `shared_setup_v2_rebind_api_unretained`) into all 15 locales — closing the LocalizationContractTest gap this cycle's Android lane discovered as pre-existing at base `9cf250b73` (cycle-4's 8 EN-only keys; now repaired by the l10n lane + this commit: 42/42 v2 keys translated per locale).
+
+| Gate | Result |
+|---|---|
+| Apple FULL `HealthMd-Tests-iOS` (`Debug-iOS`, dedicated fresh `c5int-iPhone17Pro` simulator, unsigned, isolated derived data) | Executed 2288 tests, 13 skipped, 0 failures — TEST SUCCEEDED (cycle-4: 2277; +11 in-flow endpoint-add/Mac-re-render tests) |
+| Apple `HealthMd-Tests-macOS` build-for-testing (`Debug`, unsigned) | TEST BUILD SUCCEEDED |
+| Apple generic iOS Simulator app build (`Debug-iOS`) | BUILD SUCCEEDED |
+| Android FULL `:app:testPlayDebugUnitTest` (flavored, offline) | 1316 tests / 189 classes / 0 failures / 0 errors / 1 skipped; `LocalizationContractTest` 8/8 green |
+| Android `:app:compilePlayDebugAndroidTestKotlin` | BUILD SUCCEEDED |
+| Android `:app:processPlayDebugResources` | BUILD SUCCESSFUL (post-integrator-l10n re-run) |
+| `python3 packages/contracts/validate.py` | 15 contracts, 35 fixtures, 13 packaging mirrors, 2 inventories, 3 output profiles, 33 capabilities, 55 doc links — exit 0 |
+| `python3 packages/contracts/test_validate_shared_setup.py` | OK (33 tests) |
+| Frozen bytes vs `9cf250b73` | `git diff -- packages/contracts/shared-setup/` = 0 lines; SHA-256 prefixes equal baselines (v1 contract `a7ab1e660fce`, v1 schema `0f2a9367b52d`, v1 fixtures `4101ba35c58e`/`817e30ce6c3e`, v2 fixtures `51c4151a040f`/`1072b48321ec`/`2f72266daa4a`); `HealthMetricsDictionary.swift` 0-diff |
+| `git diff --check 9cf250b73..HEAD` | clean |
+
+Known state after cycle 5: every English `shared_setup_*` and `shared_setup_v2_*` key (47 + 42) is translated in all 15 locales (with the 9 documented intentional identicals above); no known-untranslated shared-setup keys remain on Android.
