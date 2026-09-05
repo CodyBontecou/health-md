@@ -169,9 +169,19 @@ struct HealthMdApp: App {
         _directWakeManager = StateObject(wrappedValue: directWakeManager)
         _directCLIService = StateObject(wrappedValue: IPhoneDirectCLIService(wakeManager: directWakeManager))
         _configurationProtection = StateObject(wrappedValue: ConfigurationProtectionManager())
+        // Production Shared Setup v2 wiring: the durable Add/Replace/Undo
+        // transaction and the verified destination-rebind execution gate run
+        // against the standard defaults with no verification overrides.
+        // Unit tests construct their own coordinators over isolated suites,
+        // so the app-hosted test process keeps the adapter absent and the
+        // fail-closed no-adapter behavior stays observable.
+        let sharedSetupV2Service = TestMode.isUnitTesting
+            ? nil
+            : SharedSetupV2TransactionAdapter()
         _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
             settings: advancedSettings,
-            apiExportSettings: apiExportSettings
+            apiExportSettings: apiExportSettings,
+            v2Adapter: sharedSetupV2Service.map(SharedSetupV2CoordinatorAdapter.production)
         ))
 
         configureTransparentTabBarAppearance()
@@ -297,12 +307,22 @@ struct HealthMdApp: App {
         // Export profiles, their scheduled entries, and their destination
         // bindings are UserDefaults-backed stores created after this reset
         // was written; clear them so a UI-test journey never inherits profile
-        // state from an earlier journey on the same install.
+        // state from an earlier journey on the same install. Shared Setup v2
+        // sidecar/blocked/Undo state is the same kind of profile state.
         UserDefaults.standard.removeObject(forKey: "exportProfiles.list")
         UserDefaults.standard.removeObject(forKey: "exportProfiles.activeProfileID")
         UserDefaults.standard.removeObject(forKey: "scheduledExportEntries.list")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.vaults")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.apiEndpoints")
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.undoKey
+        )
 
         // All managers are @MainActor — set state in Task.
         Task { @MainActor in
