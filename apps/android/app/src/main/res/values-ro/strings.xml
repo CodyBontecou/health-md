@@ -1439,6 +1439,12 @@
     <string name="shared_setup_v2_blocked_notice">Profilurile importate rămân inactive — fără export, programare, automatizare sau acces la destinație — până reasociați local destinația acestora.</string>
     <string name="shared_setup_v2_blocked_state">Se așteaptă o reasociere locală a destinației</string>
     <string name="shared_setup_v2_rebind_folder">Alegeți un dosar</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">URL-ul punctului final importat, în așteptarea confirmării locale:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Confirmați URL-ul punctului final</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Confirmați punctul final importat</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Asociați acest profil cu punctul final API pe care configurarea partajată l-a păstrat. URL-ul afișat este exact cel păstrat de import — nu este niciodată modificat sau ghicit aici. Profilul rămâne inactiv până când datele de autentificare verificate îl confirmă.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Confirmați și asociați punctul final</string>
+    <string name="shared_setup_v2_rebind_api_unretained">Identitatea punctului final importat al acestui profil nu este păstrată, deci nu poate fi confirmată aici. Reasociați punctul final în editorul de profiluri.</string>
     <string name="shared_setup_v2_rebind_api_title">Confirmați datele de autentificare ale punctului final API</string>
     <string name="shared_setup_v2_rebind_api_hint">Introduceți date de autentificare noi pentru punctul final API importat al acestui profil. Autorizarea existentă și antetele personalizate nu sunt niciodată moștenite; profilul rămâne inactiv, cu excepția cazului în care datele de autentificare sunt verificate pe punctul final confirmat local.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Confirmați datele de autentificare și deblocați</string>

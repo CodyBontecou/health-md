@@ -1493,6 +1493,12 @@
     <string name="shared_setup_v2_blocked_notice">Імпортовані профілі залишаються неактивними — без експорту, розкладу, автоматизації та доступу до призначення — доки ви не виконаєте локальну повторну прив’язку їхнього призначення.</string>
     <string name="shared_setup_v2_blocked_state">Очікування локальної повторної прив’язки призначення</string>
     <string name="shared_setup_v2_rebind_folder">Вибрати папку</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">URL імпортованої кінцевої точки очікує локального підтвердження:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Підтвердити URL кінцевої точки</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Підтвердити імпортовану кінцеву точку</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Прив’яжіть цей профіль до кінцевої точки API, яку зберегло спільне налаштування. Показаний URL — це саме те, що зберіг імпорт; тут його ніколи не змінюють і не вгадують. Профіль залишається неактивним, доки перевірені облікові дані не підтвердять його.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Підтвердити та прив’язати кінцеву точку</string>
+    <string name="shared_setup_v2_rebind_api_unretained">Імпортовану ідентичність кінцевої точки цього профілю не збережено, тому тут її неможливо підтвердити. Повторно прив’яжіть кінцеву точку в редакторі профілів.</string>
     <string name="shared_setup_v2_rebind_api_title">Підтвердьте облікові дані кінцевої точки API</string>
     <string name="shared_setup_v2_rebind_api_hint">Введіть нові облікові дані для імпортованої кінцевої точки API цього профілю. Наявна авторизація та власні заголовки ніколи не успадковуються; профіль залишається неактивним, доки облікові дані не буде перевірено щодо локально підтвердженої кінцевої точки.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Підтвердити облікові дані та розблокувати</string>

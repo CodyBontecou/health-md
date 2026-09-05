@@ -1439,6 +1439,12 @@
     <string name="shared_setup_v2_blocked_notice">Les profils importés restent inactifs — pas d\'exportation, de planification, d\'automatisation ni d\'accès à la destination — jusqu\'à ce que vous réassociiez leur destination localement.</string>
     <string name="shared_setup_v2_blocked_state">En attente d\'une réassociation locale de la destination</string>
     <string name="shared_setup_v2_rebind_folder">Choisir un dossier</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">URL du point de terminaison importé en attente de confirmation locale :</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Confirmer l\'URL du point de terminaison</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Confirmer le point de terminaison importé</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Associez ce profil au point de terminaison API que la configuration partagée a conservé. L\'URL affichée est exactement celle conservée par l\'import — elle n\'est jamais modifiée ni devinée ici. Le profil reste inactif tant qu\'une information d\'identification vérifiée ne le confirme pas.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Confirmer et associer le point de terminaison</string>
+    <string name="shared_setup_v2_rebind_api_unretained">L\'identité du point de terminaison importé de ce profil n\'est pas conservée, elle ne peut donc pas être confirmée ici. Réassociez le point de terminaison dans l\'éditeur de profils.</string>
     <string name="shared_setup_v2_rebind_api_title">Confirmer les informations d\'identification du point de terminaison API</string>
     <string name="shared_setup_v2_rebind_api_hint">Saisissez de nouvelles informations d\'identification pour le point de terminaison API importé de ce profil. L\'autorisation existante et les en-têtes personnalisés ne sont jamais hérités ; le profil reste inactif tant que les informations d\'identification ne sont pas vérifiées auprès de son point de terminaison confirmé localement.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Confirmer les informations d\'identification et débloquer</string>

@@ -1439,6 +1439,12 @@
     <string name="shared_setup_v2_blocked_notice">Los perfiles importados permanecen inactivos —sin exportación, programación, automatización ni acceso al destino— hasta que revincule su destino localmente.</string>
     <string name="shared_setup_v2_blocked_state">Esperando una revinculación local del destino</string>
     <string name="shared_setup_v2_rebind_folder">Elegir carpeta</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">URL del endpoint importado pendiente de confirmación local:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Confirmar URL del endpoint</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Confirmar endpoint importado</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Vincule este perfil al endpoint de API que la configuración compartida retuvo. La URL mostrada es exactamente lo que retuvo la importación — aquí nunca se cambia ni se supone. El perfil permanece inactivo hasta que una credencial verificada lo confirme.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Confirmar y vincular endpoint</string>
+    <string name="shared_setup_v2_rebind_api_unretained">La identidad del endpoint importado de este perfil no se retuvo, por lo que no puede confirmarse aquí. Revincule el endpoint en el editor de perfiles.</string>
     <string name="shared_setup_v2_rebind_api_title">Confirmar credencial del endpoint de API</string>
     <string name="shared_setup_v2_rebind_api_hint">Introduzca una credencial nueva para el endpoint de API importado de este perfil. La autorización existente y los encabezados personalizados nunca se heredan; el perfil permanece inactivo a menos que la credencial se verifique contra su endpoint confirmado localmente.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Confirmar credencial y desbloquear</string>

@@ -1214,6 +1214,12 @@
     <string name="shared_setup_v2_blocked_notice">在本地重新绑定目标位置之前，导入的导出配置将保持停用状态——不会导出、不会按计划运行、不会执行自动化，也无法访问目标位置。</string>
     <string name="shared_setup_v2_blocked_state">等待本地重新绑定目标位置</string>
     <string name="shared_setup_v2_rebind_folder">选择文件夹</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">导入的端点 URL 正等待本地确认：</string>
+    <string name="shared_setup_v2_rebind_api_url_action">确认端点 URL</string>
+    <string name="shared_setup_v2_rebind_api_url_title">确认导入的端点</string>
+    <string name="shared_setup_v2_rebind_api_url_body">将此导出配置绑定到共享配置保留的 API 端点。显示的 URL 正是导入时保留的 URL——在此绝不会更改或猜测。在经验证的凭据确认之前，该导出配置保持停用状态。</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">确认并绑定端点</string>
+    <string name="shared_setup_v2_rebind_api_unretained">此导出配置导入的端点标识未被保留，因此无法在此确认。请在导出配置编辑器中重新绑定端点。</string>
     <string name="shared_setup_v2_rebind_api_title">确认 API 端点凭据</string>
     <string name="shared_setup_v2_rebind_api_hint">为此导出配置导入的 API 端点输入新的凭据。现有授权和自定义标头绝不会继承；凭据未经其本地确认的端点验证之前，该导出配置将保持停用状态。</string>
     <string name="shared_setup_v2_rebind_api_confirm">确认凭据并解除停用</string>

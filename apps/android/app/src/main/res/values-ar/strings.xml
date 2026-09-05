@@ -1584,6 +1584,12 @@
     <string name="shared_setup_v2_blocked_notice">تظل ملفات التصدير المستوردة غير نشطة — بلا تصدير أو جدولة أو أتمتة أو وصول إلى الوجهة — حتى تعيد ربط وجهتها محليًا.</string>
     <string name="shared_setup_v2_blocked_state">بانتظار إعادة ربط محلية للوجهة</string>
     <string name="shared_setup_v2_rebind_folder">اختيار المجلد</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">عنوان URL لنقطة النهاية المستوردة في انتظار التأكيد المحلي:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">تأكيد عنوان URL لنقطة النهاية</string>
+    <string name="shared_setup_v2_rebind_api_url_title">تأكيد نقطة النهاية المستوردة</string>
+    <string name="shared_setup_v2_rebind_api_url_body">اربط ملف التصدير هذا بنقطة نهاية API التي احتفظ بها الإعداد المشترك. عنوان URL المعروض هو بالضبط ما احتفظ به الاستيراد — لا يُغيَّر هنا أبدًا ولا يُخمَّن. يظل ملف التصدير غير نشط حتى تؤكده بيانات اعتماد تم التحقق منها.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">تأكيد نقطة النهاية وربطها</string>
+    <string name="shared_setup_v2_rebind_api_unretained">لم يتم الاحتفاظ بهوية نقطة النهاية المستوردة لملف التصدير هذا، لذا لا يمكن تأكيدها هنا. أعد ربط نقطة النهاية في محرر ملفات التصدير.</string>
     <string name="shared_setup_v2_rebind_api_title">تأكيد بيانات اعتماد نقطة نهاية API</string>
     <string name="shared_setup_v2_rebind_api_hint">أدخل بيانات اعتماد جديدة لنقطة نهاية API المستوردة في ملف التصدير هذا. لا تُورَّث التفويض الحالي ولا الرؤوس المخصصة أبدًا؛ يظل ملف التصدير غير نشط ما لم يتم التحقق من بيانات الاعتماد مقابل نقطة النهاية المؤكدة محليًا.</string>
     <string name="shared_setup_v2_rebind_api_confirm">تأكيد بيانات الاعتماد وإلغاء الحظر</string>

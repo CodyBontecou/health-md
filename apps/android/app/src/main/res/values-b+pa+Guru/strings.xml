@@ -1365,6 +1365,12 @@
     <string name="shared_setup_v2_blocked_notice">ਇੰਪੋਰਟ ਕੀਤੀਆਂ ਪ੍ਰੋਫਾਈਲਾਂ ਨਿਸ਼ਕਿਰਿਆ ਰਹਿੰਦੀਆਂ ਹਨ — ਕੋਈ ਨਿਰਯਾਤ, ਸਮਾਂ-ਸਾਰਣੀ, ਆਟੋਮੇਸ਼ਨ ਜਾਂ ਮੰਜ਼ਿਲ ਦੀ ਪਹੁੰਚ ਨਹੀਂ — ਜਦ ਤੱਕ ਤੁਸੀਂ ਉਹਨਾਂ ਦੀ ਮੰਜ਼ਿਲ ਸਥਾਨਕ ਤੌਰ \'ਤੇ ਮੁੜ-ਜੋੜ ਨਹੀਂ ਦਿੰਦੇ।</string>
     <string name="shared_setup_v2_blocked_state">ਸਥਾਨਕ ਮੰਜ਼ਿਲ ਮੁੜ-ਜੋੜ ਦੀ ਉਡੀਕ ਹੈ</string>
     <string name="shared_setup_v2_rebind_folder">ਫੋਲਡਰ ਚੁਣੋ</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">ਇੰਪੋਰਟ ਕੀਤੇ ਐਂਡਪੌਇੰਟ ਦਾ URL ਸਥਾਨਕ ਪੁਸ਼ਟੀ ਦੀ ਉਡੀਕ ਵਿੱਚ ਹੈ:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">ਐਂਡਪੌਇੰਟ ਦੇ URL ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ</string>
+    <string name="shared_setup_v2_rebind_api_url_title">ਇੰਪੋਰਟ ਕੀਤੇ ਐਂਡਪੌਇੰਟ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ</string>
+    <string name="shared_setup_v2_rebind_api_url_body">ਇਸ ਪ੍ਰੋਫਾਈਲ ਨੂੰ ਉਸ API ਐਂਡਪੌਇੰਟ ਨਾਲ ਜੋੜੋ ਜਿਸਨੂੰ ਸਾਂਝਾ ਸੈੱਟਅੱਪ ਨੇ ਰੱਖਿਆ ਹੈ। ਦਿੱਖਿਆ URL ਬਿਲਕੁਲ ਉਹੀ ਹੈ ਜੋ ਇੰਪੋਰਟ ਨੇ ਰੱਖਿਆ ਸੀ — ਇਸਨੂੰ ਇੱਥੇ ਕਦੇ ਨਹੀਂ ਬਦਲਿਆ ਜਾਂਦਾ ਜਾਂ ਅੰਦਾਜ਼ਾ ਲਗਾਇਆ ਜਾਂਦਾ। ਜਦ ਤੱਕ ਤਸਦੀਕ ਸ਼ੁਦਾ ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ ਇਸਦੀ ਪੁਸ਼ਟੀ ਨਾ ਕਰੇ, ਪ੍ਰੋਫਾਈਲ ਨਿਸ਼ਕਿਰਿਆ ਰਹਿੰਦੀ ਹੈ।</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">ਐਂਡਪੌਇੰਟ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ ਅਤੇ ਜੋੜੋ</string>
+    <string name="shared_setup_v2_rebind_api_unretained">ਇਸ ਪ੍ਰੋਫਾਈਲ ਦੀ ਇੰਪੋਰਟ ਕੀਤੀ ਐਂਡਪੌਇੰਟ ਪਛਾਣ ਨਹੀਂ ਰੱਖੀ ਗਈ, ਇਸ ਲਈ ਇਸਨੂੰ ਇੱਥੇ ਪੁਸ਼ਟੀ ਨਹੀਂ ਕੀਤੀ ਜਾ ਸਕਦੀ। ਪ੍ਰੋਫਾਈਲ ਐਡੀਟਰ ਵਿੱਚ ਐਂਡਪੌਇੰਟ ਨੂੰ ਮੁੜ-ਜੋੜੋ।</string>
     <string name="shared_setup_v2_rebind_api_title">API ਐਂਡਪੌਇੰਟ ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ</string>
     <string name="shared_setup_v2_rebind_api_hint">ਇਸ ਪ੍ਰੋਫਾਈਲ ਦੇ ਇੰਪੋਰਟ ਕੀਤੇ API ਐਂਡਪੌਇੰਟ ਲਈ ਨਵਾਂ ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ ਦਾਖਲ ਕਰੋ। ਮੌਜੂਦਾ ਅਧਿਕਾਰਤਾ ਅਤੇ ਕਸਟਮ ਹੈਡਰ ਕਦੇ ਵੀ ਵਿਰਾਸਤ ਵਿੱਚ ਨਹੀਂ ਮਿਲਦੇ; ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ ਦੀ ਸਥਾਨਕ ਤੌਰ \'ਤੇ ਪੁਸ਼ਟੀ ਕੀਤੇ ਐਂਡਪੌਇੰਟ ਨਾਲ ਪੁਸ਼ਟੀ ਨਾ ਹੋਵੇ ਤਾਂ ਪ੍ਰੋਫਾਈਲ ਨਿਸ਼ਕਿਰਿਆ ਰਹਿੰਦੀ ਹੈ।</string>
     <string name="shared_setup_v2_rebind_api_confirm">ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ ਅਤੇ ਅਨਬਲੌਕ ਕਰੋ</string>

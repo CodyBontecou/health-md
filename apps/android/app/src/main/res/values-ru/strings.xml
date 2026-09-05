@@ -1493,6 +1493,12 @@
     <string name="shared_setup_v2_blocked_notice">Импортированные профили остаются неактивными — без экспорта, расписания, автоматизации и доступа к назначению — пока вы не перепривяжете их назначение локально.</string>
     <string name="shared_setup_v2_blocked_state">Ожидание локальной перепривязки назначения</string>
     <string name="shared_setup_v2_rebind_folder">Выбрать папку</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">URL импортированной конечной точки ожидает локального подтверждения:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Подтвердить URL конечной точки</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Подтвердить импортированную конечную точку</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Привяжите этот профиль к конечной точке API, которую сохранила общая настройка. Показанный URL — в точности то, что сохранил импорт; здесь он никогда не изменяется и не подбирается наугад. Профиль остаётся неактивным, пока проверенные учётные данные не подтвердят его.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Подтвердить и привязать конечную точку</string>
+    <string name="shared_setup_v2_rebind_api_unretained">Импортированная идентичность конечной точки этого профиля не сохранена, поэтому её нельзя подтвердить здесь. Перепривяжите конечную точку в редакторе профилей.</string>
     <string name="shared_setup_v2_rebind_api_title">Подтвердите учётные данные конечной точки API</string>
     <string name="shared_setup_v2_rebind_api_hint">Введите новые учётные данные для импортированной конечной точки API этого профиля. Существующая авторизация и пользовательские заголовки никогда не наследуются; профиль остаётся неактивным, пока учётные данные не будут проверены относительно локально подтверждённой конечной точки.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Подтвердить учётные данные и разблокировать</string>

@@ -1332,6 +1332,12 @@
     <string name="shared_setup_v2_blocked_notice">Импортталған профильдер экспорт орны жергілікті түрде қайта байланыстырылғанға дейін белсенді емес күйде қалады — экспорт, кесте, автоматтандыру және экспорт орнына қол жеткізу жүргізілмейді.</string>
     <string name="shared_setup_v2_blocked_state">Экспорт орнының жергілікті қайта байланыстырылуын күтуде</string>
     <string name="shared_setup_v2_rebind_folder">Қалта таңдаңыз</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">Импортталған соңғы нүктенің URL-і жергілікті растауды күтуде:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Соңғы нүкте URL-ін растау</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Импортталған соңғы нүктені растау</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Бұл профильді бөліскен реттеу сақтап тұрған API соңғы нүктесіне байланыстырыңыз. Көрсетілген URL — импорт сақтап тұрғаннан дәл солай; ол мұнда ешқашан өзгертілмейді немесе болжанбайды. Расталған тіркелгі деректері растамағанша, профиль белсенді емес күйде қалады.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Соңғы нүктені растап, байланыстыру</string>
+    <string name="shared_setup_v2_rebind_api_unretained">Бұл профильдің импортталған соңғы нүкте сәйкестігі сақталмаған, сондықтан оны мұнда растау мүмкін емес. Соңғы нүктені профиль редакторында қайта байланыстырыңыз.</string>
     <string name="shared_setup_v2_rebind_api_title">API соңғы нүктесінің тіркелгі деректерін растау</string>
     <string name="shared_setup_v2_rebind_api_hint">Осы профильдің импортталған API соңғы нүктесі үшін жаңа тіркелгі деректерін енгізіңіз. Бар қолданыстағы авторизация мен арнаулы тақырыптар ешқашан мұраға қалдырылмайды; тіркелгі деректері жергілікті түрде расталған соңғы нүктеге қарсы тексерілмегенше, профиль белсенді емес күйде қалады.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Тіркелгі деректерін растап, блоктан шығару</string>

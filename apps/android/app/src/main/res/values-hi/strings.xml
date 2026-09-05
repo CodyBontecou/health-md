@@ -1365,6 +1365,12 @@
     <string name="shared_setup_v2_blocked_notice">इंपोर्ट की गई प्रोफ़ाइलें निष्क्रिय रहती हैं — कोई एक्सपोर्ट, अनुसूची, स्वचालन या गंतव्य एक्सेस नहीं — जब तक आप उनका गंतव्य स्थानीय रूप से पुनः नहीं जोड़ते।</string>
     <string name="shared_setup_v2_blocked_state">स्थानीय गंतव्य पुनः जोड़ने की प्रतीक्षा में</string>
     <string name="shared_setup_v2_rebind_folder">फ़ोल्डर चुनें</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">इंपोर्ट किए गए एंडपॉइंट का URL स्थानीय पुष्टि की प्रतीक्षा में है:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">एंडपॉइंट URL की पुष्टि करें</string>
+    <string name="shared_setup_v2_rebind_api_url_title">इंपोर्ट किए गए एंडपॉइंट की पुष्टि करें</string>
+    <string name="shared_setup_v2_rebind_api_url_body">इस प्रोफ़ाइल को उस API एंडपॉइंट से जोड़ें जिसे साझा सेटअप ने रखा है। दिखाया गया URL बिल्कुल वही है जो इंपोर्ट ने रखा था — इसे यहाँ कभी नहीं बदला या अनुमानित किया जाता। जब तक सत्यापित क्रेडेंशियल इसकी पुष्टि न करे, प्रोफ़ाइल निष्क्रिय रहती है।</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">एंडपॉइंट की पुष्टि करें और जोड़ें</string>
+    <string name="shared_setup_v2_rebind_api_unretained">इस प्रोफ़ाइल की इंपोर्ट की गई एंडपॉइंट पहचान रखी नहीं गई है, इसलिए इसे यहाँ पुष्टि नहीं की जा सकती। प्रोफ़ाइल संपादक में एंडपॉइंट को पुनः जोड़ें।</string>
     <string name="shared_setup_v2_rebind_api_title">API एंडपॉइंट क्रेडेंशियल की पुष्टि करें</string>
     <string name="shared_setup_v2_rebind_api_hint">इस प्रोफ़ाइल के इंपोर्ट किए गए API एंडपॉइंट के लिए नया क्रेडेंशियल दर्ज करें। मौजूदा प्राधिकरण और कस्टम हेडर कभी इनहेरिट नहीं होते; क्रेडेंशियल की पुष्टि स्थानीय रूप से पुष्टि किए गए एंडपॉइंट से न होने तक प्रोफ़ाइल निष्क्रिय रहती है।</string>
     <string name="shared_setup_v2_rebind_api_confirm">क्रेडेंशियल की पुष्टि करें और अनब्लॉक करें</string>

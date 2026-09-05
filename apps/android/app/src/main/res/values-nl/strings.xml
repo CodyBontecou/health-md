@@ -1391,6 +1391,12 @@
     <string name="shared_setup_v2_blocked_notice">Geïmporteerde profielen blijven inactief — geen export, planning, automatisering of toegang tot de bestemming — totdat je de bestemming ervan lokaal opnieuw koppelt.</string>
     <string name="shared_setup_v2_blocked_state">Wachten op lokale herkoppeling van de bestemming</string>
     <string name="shared_setup_v2_rebind_folder">Map kiezen</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">Geïmporteerde endpoint-URL die nog lokaal bevestigd moet worden:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Endpoint-URL bevestigen</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Geïmporteerd endpoint bevestigen</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Verbind dit profiel met het API-endpoint dat de gedeelde setup heeft bewaard. De getoonde URL is precies wat de import heeft bewaard — hij wordt hier nooit gewijzigd of geraden. Het profiel blijft inactief totdat geverifieerde inloggegevens het bevestigen.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Endpoint bevestigen en verbinden</string>
+    <string name="shared_setup_v2_rebind_api_unretained">De geïmporteerde endpoint-identiteit van dit profiel is niet bewaard, dus deze kan hier niet bevestigd worden. Verbind het endpoint opnieuw in de profieleditor.</string>
     <string name="shared_setup_v2_rebind_api_title">Inloggegevens van API-endpoint bevestigen</string>
     <string name="shared_setup_v2_rebind_api_hint">Voer nieuwe inloggegevens in voor het geïmporteerde API-endpoint van dit profiel. Bestaande autorisatie en aangepaste headers worden nooit overgenomen; het profiel blijft inactief totdat de inloggegevens zijn geverifieerd tegen het lokaal bevestigde endpoint.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Inloggegevens bevestigen en deblokkeren</string>

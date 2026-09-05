@@ -1391,6 +1391,12 @@
     <string name="shared_setup_v2_blocked_notice">Importierte Profile bleiben inaktiv — kein Export, keine Zeitplanung, keine Automatisierung und kein Zugriff auf das Ziel —, bis Sie deren Ziel lokal neu verknüpfen.</string>
     <string name="shared_setup_v2_blocked_state">Warten auf lokale Neuverknüpfung des Ziels</string>
     <string name="shared_setup_v2_rebind_folder">Ordner wählen</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">Importierte Endpunkt-URL, die noch lokal bestätigt werden muss:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">Endpunkt-URL bestätigen</string>
+    <string name="shared_setup_v2_rebind_api_url_title">Importierten Endpunkt bestätigen</string>
+    <string name="shared_setup_v2_rebind_api_url_body">Verknüpfen Sie dieses Profil mit dem API-Endpunkt, den das geteilte Setup übernommen hat. Die angezeigte URL ist genau die vom Import übernommene — sie wird hier niemals geändert oder erraten. Das Profil bleibt inaktiv, bis eine verifizierte Anmeldeinformation es bestätigt.</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">Endpunkt bestätigen und verknüpfen</string>
+    <string name="shared_setup_v2_rebind_api_unretained">Die importierte Endpunkt-Identität dieses Profils wurde nicht übernommen, daher kann sie hier nicht bestätigt werden. Verknüpfen Sie den Endpunkt im Profil-Editor neu.</string>
     <string name="shared_setup_v2_rebind_api_title">API-Endpunkt-Anmeldeinformationen bestätigen</string>
     <string name="shared_setup_v2_rebind_api_hint">Geben Sie neue Anmeldeinformationen für den importierten API-Endpunkt dieses Profils ein. Vorhandene Autorisierungen und benutzerdefinierte Header werden niemals übernommen; das Profil bleibt inaktiv, bis die Anmeldeinformationen gegenüber seinem lokal bestätigten Endpunkt verifiziert sind.</string>
     <string name="shared_setup_v2_rebind_api_confirm">Anmeldeinformationen bestätigen und entsperren</string>

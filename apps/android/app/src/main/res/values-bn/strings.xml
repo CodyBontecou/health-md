@@ -1365,6 +1365,12 @@
     <string name="shared_setup_v2_blocked_notice">ইমপোর্ট করা প্রোফাইলগুলো নিষ্ক্রিয় থাকে — কোনো এক্সপোর্ট, সময়সূচী, স্বয়ংক্রিয়তা বা গন্তব্যে প্রবেশাধিকার থাকে না — যতক্ষণ না আপনি সেগুলোর গন্তব্য স্থানীয়ভাবে পুনঃসংযোগ করেন।</string>
     <string name="shared_setup_v2_blocked_state">স্থানীয় গন্তব্য পুনঃসংযোগের অপেক্ষায়</string>
     <string name="shared_setup_v2_rebind_folder">ফোল্ডার নির্বাচন করুন</string>
+    <string name="shared_setup_v2_rebind_api_url_hint">ইমপোর্ট করা এন্ডপয়েন্টের URL স্থানীয় নিশ্চিতকরণের অপেক্ষায়:</string>
+    <string name="shared_setup_v2_rebind_api_url_action">এন্ডপয়েন্টের URL নিশ্চিত করুন</string>
+    <string name="shared_setup_v2_rebind_api_url_title">ইমপোর্ট করা এন্ডপয়েন্ট নিশ্চিত করুন</string>
+    <string name="shared_setup_v2_rebind_api_url_body">এই প্রোফাইলটিকে শেয়ার করা সেটআপ যে API এন্ডপয়েন্ট ধরে রেখেছে তার সঙ্গে সংযুক্ত করুন। দেখানো URL ঠিক সেটাই যা ইমপোর্ট ধরে রেখেছে — এখানে এটি কখনোই পরিবর্তন বা অনুমান করা হয় না। যাচাই করা ক্রেডেনশিয়াল নিশ্চিত না করা পর্যন্ত প্রোফাইলটি নিষ্ক্রিয় থাকে।</string>
+    <string name="shared_setup_v2_rebind_api_url_confirm">এন্ডপয়েন্ট নিশ্চিত করে সংযুক্ত করুন</string>
+    <string name="shared_setup_v2_rebind_api_unretained">এই প্রোফাইলের ইমপোর্ট করা এন্ডপয়েন্ট পরিচয় ধরে রাখা হয়নি, তাই এটি এখানে নিশ্চিত করা যায় না। প্রোফাইল সম্পাদকে এন্ডপয়েন্টটি পুনঃসংযোগ করুন।</string>
     <string name="shared_setup_v2_rebind_api_title">API এন্ডপয়েন্ট ক্রেডেনশিয়াল নিশ্চিত করুন</string>
     <string name="shared_setup_v2_rebind_api_hint">এই প্রোফাইলের ইমপোর্ট করা API এন্ডপয়েন্টের জন্য নতুন ক্রেডেনশিয়াল দিন। বিদ্যমান অনুমোদন এবং কাস্টম হেডার কখনোই উত্তরাধিকারসূত্রে পাওয়া যায় না; ক্রেডেনশিয়ালটি স্থানীয়ভাবে নিশ্চিত করা এন্ডপয়েন্টের বিপরীতে যাচাই না হওয়া পর্যন্ত প্রোফাইলটি নিষ্ক্রিয় থাকে।</string>
     <string name="shared_setup_v2_rebind_api_confirm">ক্রেডেনশিয়াল নিশ্চিত করে আনব্লক করুন</string>
