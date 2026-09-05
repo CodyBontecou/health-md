@@ -159,6 +159,102 @@ fn data_ingest_serve_parse_errors_list_accepted_arguments_without_echoing_values
 }
 
 #[test]
+fn mcp_serve_data_parse_errors_list_every_backing_argument_without_echoing_values() {
+    // The mcp group listing keeps exactly one serve-data entry covering every backing.
+    let output = run(&["mcp"]);
+    assert!(output.status.success());
+    let value = json_output(&output);
+    let serve_data_entries: Vec<&str> = value["available_commands"]
+        .as_array()
+        .expect("available commands")
+        .iter()
+        .map(|command| command["command"].as_str().expect("command"))
+        .filter(|command| command.starts_with("healthmd mcp serve-data"))
+        .collect();
+    assert_eq!(serve_data_entries.len(), 1);
+    assert!(serve_data_entries[0].contains("--directory"));
+    assert!(serve_data_entries[0].contains("--database"));
+    assert!(serve_data_entries[0].contains("--object-store-url"));
+    assert!(serve_data_entries[0].contains("--grant"));
+
+    let private = "synthetic-private-health-value";
+    let cases: &[&[&str]] = &[
+        // --bucket without --object-store-url leaves the required backing choice unsatisfied.
+        &["mcp", "serve-data", "--bucket", private, "--grant", private],
+        // Two backings at once conflict.
+        &[
+            "mcp",
+            "serve-data",
+            "--database",
+            private,
+            "--object-store-url",
+            private,
+            "--grant",
+            private,
+        ],
+        // An unrecognized flag.
+        &[
+            "mcp",
+            "serve-data",
+            "--nope",
+            "--directory",
+            private,
+            "--grant",
+            private,
+        ],
+    ];
+    for arguments in cases {
+        let output = run(arguments);
+        assert!(!output.status.success(), "{arguments:?} should fail");
+        assert!(output.stderr.is_empty(), "{arguments:?} wrote stderr");
+        let value = json_output(&output);
+        assert_eq!(value["schema"], "healthmd.cli_error");
+        assert_eq!(value["error"], "invalid_request");
+        assert_eq!(value["command"], "healthmd mcp serve-data");
+        assert_eq!(value["request_sent"], false);
+        let text = String::from_utf8_lossy(&output.stdout).into_owned();
+        assert!(
+            !text.contains(private),
+            "{arguments:?} must not echo values"
+        );
+        let accepted: Vec<&str> = value["accepted_arguments"]
+            .as_array()
+            .expect("accepted arguments")
+            .iter()
+            .map(|argument| argument.as_str().expect("argument"))
+            .collect();
+        for flag in [
+            "--directory",
+            "--database",
+            "--object-store-url",
+            "--bucket",
+            "--prefix",
+            "--grant",
+            "--index",
+        ] {
+            assert!(
+                accepted.iter().any(|argument| argument.contains(flag)),
+                "{arguments:?} guidance must list {flag}"
+            );
+        }
+        // The embedded reference documents every backing with a value-free example.
+        assert_eq!(
+            value.pointer("/guidance/command"),
+            Some(&Value::String("healthmd mcp serve-data".into()))
+        );
+        let examples = value
+            .pointer("/guidance/examples")
+            .and_then(|examples| examples.as_array())
+            .expect("serve-data guidance examples");
+        assert!(
+            examples.len() >= 3,
+            "{arguments:?} guidance must example every backing"
+        );
+        assert!(text.contains("healthmd mcp serve-data --help"));
+    }
+}
+
+#[test]
 fn data_ingest_failures_exit_nonzero_with_health_free_recovery() {
     let output = run(&[
         "data",

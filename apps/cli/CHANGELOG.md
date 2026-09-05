@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Complete the agent-facing `healthmd mcp serve-data` guidance surface: parse errors now list the
+  full honest argument set (the three exclusive backings `--directory` | `--database` |
+  `--object-store-url` with its dispatch-required `--bucket`, `[--prefix]`, the required
+  `--grant`, `[--index]`, and `[--serve-transport]`) instead of only the directory-backing
+  subset, the single `healthmd mcp` listing entry covers every backing, and serve-data parse
+  errors embed a reference document that examples the directory, SQLite database, and
+  read-only object store backings. Streamable HTTP transport options
+  (`--serve-transport streamable-http`, `--bind`, `--allowed-host`, `--allowed-origin`) are
+  advertised only by builds that compile the `streamable-http` feature, mirroring what the
+  shipped binary accepts at parse time.
 - Add the self-hosted reference ingestion gateway: `healthmd data ingest-serve --database`
   serves Agent Data ingestion protocol v1 on loopback HTTP/1.1 (`POST /v1/ingest`, one
   manifest line + exact artifact bytes, `application/x-healthmd-agent-data-ingest`, exact
