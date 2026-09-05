@@ -435,10 +435,10 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: Histor
         DetailLine(
             stringResource(R.string.history_detail_destination_type),
             stringResource(
-                if (entry.target == ExportTarget.API_ENDPOINT) {
-                    R.string.export_preview_api_destination
-                } else {
-                    R.string.export_preview_device_destination
+                when (entry.target) {
+                    ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
+                    ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
+                    ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination
                 },
             ),
         )
@@ -628,6 +628,7 @@ private fun ExportFailureReason.localizedLabel(): String = stringResource(
         ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> R.string.export_failure_background_permission_label
         ExportFailureReason.PAYWALL_REQUIRED -> R.string.export_failure_paywall_label
         ExportFailureReason.INVALID_API_ENDPOINT -> R.string.export_failure_invalid_api_endpoint_label
+        ExportFailureReason.GATEWAY_FORMAT_UNSUPPORTED -> R.string.export_failure_gateway_format_label
         ExportFailureReason.NETWORK_ERROR -> R.string.export_failure_network_label
         ExportFailureReason.API_REJECTED -> R.string.export_failure_api_rejected_label
         ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> R.string.raw_snapshot_provider_unsupported

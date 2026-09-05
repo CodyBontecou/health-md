@@ -403,6 +403,8 @@ private fun destinationLine(profile: ExportProfile): String = when (profile.targ
             ?: "Device folder (selected in Export tab)"
     ExportTarget.API_ENDPOINT ->
         "API: ${profile.apiEndpointUrl ?: "not configured"}"
+    ExportTarget.AGENT_DATA_GATEWAY ->
+        "Gateway: ${profile.agentDataGatewayUrl ?: "not configured"}"
 }
 
 private fun formatsLine(row: ExportProfileRow): String {

@@ -13,6 +13,7 @@ import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportProfileOverlapDetector
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
@@ -53,6 +54,8 @@ data class ExportProfileEditorDraft(
     val folderDisplayName: String? = null,
     /** Raw endpoint URL for API_ENDPOINT targets (validated on save). */
     val apiEndpointUrl: String = "",
+    /** Raw gateway base URL for AGENT_DATA_GATEWAY targets (validated on save). */
+    val agentDataGatewayUrl: String = "",
     val settings: ExportSettings = ExportSettings(),
 )
 
@@ -178,6 +181,7 @@ class ExportProfilesViewModel @Inject constructor(
                     settingsSnapshotJson = snapshotJson,
                     target = draft.target,
                     apiEndpointUrl = endpointBinding(draft),
+                    agentDataGatewayUrl = gatewayBinding(draft),
                     folderUri = folderBinding(draft)?.first,
                     folderDisplayName = folderBinding(draft)?.second,
                 )
@@ -224,6 +228,7 @@ class ExportProfilesViewModel @Inject constructor(
                     settingsSnapshotJson = snapshotJson,
                     target = draft.target,
                     apiEndpointUrl = endpointBinding(draft),
+                    agentDataGatewayUrl = gatewayBinding(draft),
                     folderUri = folderBinding(draft)?.first,
                     folderDisplayName = folderBinding(draft)?.second,
                 )
@@ -309,6 +314,7 @@ class ExportProfilesViewModel @Inject constructor(
                     settingsSnapshotJson = source.settingsSnapshotJson,
                     target = source.target,
                     apiEndpointUrl = source.apiEndpointUrl,
+                    agentDataGatewayUrl = source.agentDataGatewayUrl,
                     folderUri = source.folderUri,
                     folderDisplayName = source.folderDisplayName,
                     // A blocked imported source must not become executable merely by duplication.
@@ -373,6 +379,15 @@ class ExportProfilesViewModel @Inject constructor(
         ExportTarget.API_ENDPOINT -> APIExportEndpoint.normalizedOrNull(draft.apiEndpointUrl)
             ?: throw IllegalArgumentException("API target requires a configured endpoint URL.")
         ExportTarget.DEVICE_FOLDER -> null
+        ExportTarget.AGENT_DATA_GATEWAY -> null
+    }
+
+    /** Gateway base URL persisted for gateway targets; null for other destinations. */
+    private fun gatewayBinding(draft: ExportProfileEditorDraft): String? = when (draft.target) {
+        ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.normalizedOrNull(draft.agentDataGatewayUrl)
+            ?: throw IllegalArgumentException("Agent Data gateway target requires a configured gateway URL.")
+        ExportTarget.DEVICE_FOLDER -> null
+        ExportTarget.API_ENDPOINT -> null
     }
 
     /** Folder binding persisted for folder targets; null for API targets. */
@@ -380,6 +395,7 @@ class ExportProfilesViewModel @Inject constructor(
         when (draft.target) {
             ExportTarget.DEVICE_FOLDER -> draft.folderUri to draft.folderDisplayName
             ExportTarget.API_ENDPOINT -> null
+            ExportTarget.AGENT_DATA_GATEWAY -> null
         }
 
     /**
@@ -395,6 +411,12 @@ class ExportProfilesViewModel @Inject constructor(
                 ExportTarget.API_ENDPOINT -> endpointBinding(draft)
                     ?: throw IllegalArgumentException("API target requires a configured endpoint URL.")
                 ExportTarget.DEVICE_FOLDER -> draft.settings.apiEndpointUrl
+                ExportTarget.AGENT_DATA_GATEWAY -> ""
+            },
+            agentDataGatewayUrl = when (draft.target) {
+                ExportTarget.AGENT_DATA_GATEWAY -> gatewayBinding(draft)
+                    ?: throw IllegalArgumentException("Agent Data gateway target requires a configured gateway URL.")
+                else -> ""
             },
         )
         return snapshotFactory.captureFromCurrent(
@@ -402,6 +424,9 @@ class ExportProfilesViewModel @Inject constructor(
             target = draft.target,
             apiEndpointUrl = scoped.apiEndpointUrl.takeIf {
                 draft.target == ExportTarget.API_ENDPOINT
+            },
+            agentDataGatewayUrl = scoped.agentDataGatewayUrl.takeIf {
+                draft.target == ExportTarget.AGENT_DATA_GATEWAY
             },
         )
     }
@@ -431,6 +456,8 @@ class ExportProfilesViewModel @Inject constructor(
                 folderDisplayName = active?.folderDisplayName,
                 apiEndpointUrl = active?.apiEndpointUrl?.takeIf { it.isNotBlank() }
                     ?: currentSettings.apiEndpointUrl,
+                agentDataGatewayUrl = active?.agentDataGatewayUrl?.takeIf { it.isNotBlank() }
+                    ?: currentSettings.agentDataGatewayUrl,
                 settings = currentSettings,
             )
         }
@@ -444,12 +471,13 @@ class ExportProfilesViewModel @Inject constructor(
             profile: ExportProfile,
             currentSettings: ExportSettings,
         ): ExportProfileEditorDraft {
-            val withProfileEndpoint = currentSettings.copy(
+            val withProfileDestinations = currentSettings.copy(
                 apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
+                agentDataGatewayUrl = profile.agentDataGatewayUrl ?: currentSettings.agentDataGatewayUrl,
             )
             val restored = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
                 ?.let { snapshot ->
-                    runCatching { snapshot.restoreOnto(withProfileEndpoint) }.getOrNull()
+                    runCatching { snapshot.restoreOnto(withProfileDestinations) }.getOrNull()
                 }
                 ?: currentSettings
             return ExportProfileEditorDraft(
@@ -458,6 +486,7 @@ class ExportProfilesViewModel @Inject constructor(
                 folderUri = profile.folderUri,
                 folderDisplayName = profile.folderDisplayName,
                 apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
+                agentDataGatewayUrl = profile.agentDataGatewayUrl ?: currentSettings.agentDataGatewayUrl,
                 settings = restored,
             )
         }

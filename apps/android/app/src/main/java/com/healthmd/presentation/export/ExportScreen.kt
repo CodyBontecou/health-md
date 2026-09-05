@@ -71,6 +71,8 @@ import com.healthmd.data.health.grantedAllRequestedHealthPermissions
 import com.healthmd.data.health.grantedAnyRequestedHealthPermission
 import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
+import com.healthmd.domain.model.AgentDataArtifactOutcome
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportPreviewIssue
@@ -84,6 +86,7 @@ import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistElevation
 import com.healthmd.presentation.theme.GeistMono
+import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.util.runCatchingCancellable
@@ -243,6 +246,7 @@ fun ExportScreen(
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
     var showAPISettings by remember { mutableStateOf(false) }
+    var showGatewaySettings by remember { mutableStateOf(false) }
     var selectedDateRangeOption by remember {
         mutableStateOf(
             DateRangeOption.fromDates(
@@ -371,10 +375,10 @@ fun ExportScreen(
             preview = uiState.preview,
             isLoading = uiState.isPreviewing,
             destinationLabel = uiState.destinationLabel ?: stringResource(
-                if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
-                    R.string.export_preview_api_destination
-                } else {
-                    R.string.export_preview_device_destination
+                when (uiState.selectedTarget) {
+                    ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
+                    ExportTarget.AGENT_DATA_GATEWAY -> R.string.export_preview_gateway_destination
+                    ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination
                 }
             ),
             formatsPerDay = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) 1 else uiState.exportFormats.size,
@@ -665,11 +669,22 @@ fun ExportScreen(
             } else {
                 stringResource(R.string.export_target_api_json_unconfigured_subtitle)
             },
+            gatewaySubtitle = if (uiState.agentDataGatewayConfigured) {
+                stringResource(
+                    R.string.export_target_gateway_configured_subtitle,
+                    AgentDataGatewayEndpoint.displayName(uiState.settings.agentDataGatewayUrl),
+                )
+            } else {
+                stringResource(R.string.export_target_gateway_unconfigured_subtitle)
+            },
             onTargetSelected = { target ->
                 attemptConfigurationChange {
                     viewModel.setExportTarget(target)
                     if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
                         showAPISettings = true
+                    }
+                    if (target == ExportTarget.AGENT_DATA_GATEWAY && !uiState.agentDataGatewayConfigured) {
+                        showGatewaySettings = true
                     }
                 }
             },
@@ -728,7 +743,7 @@ fun ExportScreen(
                     fontWeight = FontWeight.Medium,
                 )
             }
-        } else {
+        } else if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
             GeistCardClickable(onClick = {
                 attemptConfigurationChange { showAPISettings = true }
             }) {
@@ -805,6 +820,53 @@ fun ExportScreen(
                     fontWeight = FontWeight.Medium,
                 )
             }
+        } else if (uiState.selectedTarget == ExportTarget.AGENT_DATA_GATEWAY) {
+            GeistCardClickable(onClick = {
+                attemptConfigurationChange { showGatewaySettings = true }
+            }) {
+                Icon(
+                    Icons.Outlined.UploadFile,
+                    contentDescription = null,
+                    tint = if (uiState.agentDataGatewayConfigured) AppColors.accent else AppColors.textMuted,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.export_preview_gateway_destination),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppColors.textMuted,
+                    )
+                    Text(
+                        if (uiState.agentDataGatewayConfigured) {
+                            AgentDataGatewayEndpoint.redactedDescription(uiState.settings.agentDataGatewayUrl)
+                        } else {
+                            stringResource(R.string.export_target_gateway_unconfigured_subtitle)
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                    )
+                    apiConfigurationErrorText?.let { error ->
+                        Text(
+                            error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppColors.error,
+                        )
+                    }
+                }
+                Text(
+                    stringResource(
+                        if (uiState.agentDataGatewayConfigured) {
+                            R.string.export_api_action_edit
+                        } else {
+                            R.string.action_configure_endpoint
+                        }
+                    ),
+                    color = AppColors.accent,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
         }
         }
 
@@ -861,6 +923,56 @@ fun ExportScreen(
                             }
                         },
                     )
+                }
+
+                // Per-artifact Agent Data gateway outcomes (health-free labels).
+                if (result.agentDataOutcomes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(Spacing.xs))
+                    GeistCard {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        ) {
+                            Text(
+                                stringResource(R.string.agent_data_gateway_outcomes_title),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = AppColors.textMuted,
+                            )
+                            result.agentDataOutcomes.forEach { outcome ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = outcome.relativePath.substringAfterLast('/'),
+                                        style = GeistType.copy13Mono,
+                                        color = AppColors.textPrimary,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    val label = when (outcome.state) {
+                                        AgentDataArtifactOutcome.State.ACCEPTED ->
+                                            stringResource(R.string.agent_data_gateway_outcome_accepted)
+                                        AgentDataArtifactOutcome.State.REJECTED ->
+                                            stringResource(
+                                                R.string.agent_data_gateway_outcome_rejected,
+                                                outcome.rejectionCode.orEmpty(),
+                                            )
+                                        AgentDataArtifactOutcome.State.UPLOAD_FAILED ->
+                                            stringResource(R.string.agent_data_gateway_outcome_upload_failed)
+                                    }
+                                    Text(
+                                        text = label,
+                                        style = GeistType.copy13,
+                                        color = when (outcome.state) {
+                                            AgentDataArtifactOutcome.State.ACCEPTED -> AppColors.success
+                                            else -> AppColors.error
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1031,6 +1143,22 @@ fun ExportScreen(
             },
             onClearRequestHeaders = {
                 attemptConfigurationChange(viewModel::clearAPIRequestHeaders)
+            },
+        )
+    }
+
+    if (showGatewaySettings) {
+        AgentDataGatewaySettingsDialog(
+            initialEndpointUrl = uiState.settings.agentDataGatewayUrl,
+            configurationError = apiConfigurationErrorText,
+            onDismiss = {
+                showGatewaySettings = false
+                viewModel.clearAPIConfigurationError()
+            },
+            onSave = { endpoint ->
+                attemptConfigurationChange {
+                    viewModel.saveAgentDataGatewayConfiguration(endpoint)
+                }
             },
         )
     }
@@ -1419,6 +1547,9 @@ private fun ExportResultBadge(
                     result.successCount,
                     result.totalCount,
                 ) + (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
+            } else if (result.target == ExportTarget.AGENT_DATA_GATEWAY) {
+                stringResource(R.string.agent_data_gateway_result_uploaded) +
+                    (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
             } else {
                 pluralStringResource(
                     R.plurals.export_result_exported_days,
@@ -1695,6 +1826,7 @@ private fun ExportFailureReason.localizedFailureLabel(): String =
         ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> stringResource(R.string.export_failure_background_permission_label)
         ExportFailureReason.PAYWALL_REQUIRED -> stringResource(R.string.export_failure_paywall_label)
         ExportFailureReason.INVALID_API_ENDPOINT -> stringResource(R.string.export_failure_invalid_api_endpoint_label)
+        ExportFailureReason.GATEWAY_FORMAT_UNSUPPORTED -> stringResource(R.string.export_failure_gateway_format_label)
         ExportFailureReason.NETWORK_ERROR -> stringResource(R.string.export_failure_network_label)
         ExportFailureReason.API_REJECTED -> stringResource(R.string.export_failure_api_rejected_label)
         ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> stringResource(R.string.raw_snapshot_provider_unsupported)
@@ -1716,6 +1848,7 @@ fun ExportFailureDiagnosticGroup.guidanceText(): String =
         ExportDiagnosticGuidance.PAYWALL -> stringResource(R.string.export_guidance_paywall)
         ExportDiagnosticGuidance.HEALTH_CONNECT -> stringResource(R.string.export_guidance_health_connect)
         ExportDiagnosticGuidance.API_CONFIGURATION -> stringResource(R.string.export_guidance_api_configuration)
+        ExportDiagnosticGuidance.GATEWAY_FORMAT -> stringResource(R.string.export_guidance_gateway_format)
         ExportDiagnosticGuidance.NETWORK -> stringResource(R.string.export_guidance_network)
         ExportDiagnosticGuidance.API_REJECTED -> stringResource(R.string.export_guidance_api_rejected)
         ExportDiagnosticGuidance.RAW_PROVIDER -> stringResource(R.string.raw_snapshot_guidance_provider)

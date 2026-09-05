@@ -80,10 +80,12 @@ import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.grantedAllRequestedHealthPermissions
 import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.presentation.common.APIExportSettingsDialog
+import com.healthmd.presentation.common.AgentDataGatewaySettingsDialog
 import com.healthmd.presentation.common.ConfigurationProtectedRegion
 import com.healthmd.presentation.common.ExportTargetSelector
 import com.healthmd.presentation.common.HealthConnectActionError
@@ -125,6 +127,7 @@ fun ScheduleScreen(
         mutableStateOf(hasPostNotificationsPermission(context))
     }
     var showAPISettings by remember { mutableStateOf(false) }
+    var showGatewaySettings by remember { mutableStateOf(false) }
     val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
     val notificationsReady = notificationsGranted && notificationsEnabled
     var hasPromptedForNotifications by rememberSaveable { mutableStateOf(false) }
@@ -441,11 +444,22 @@ fun ScheduleScreen(
             } else {
                 stringResource(R.string.schedule_target_api_unconfigured)
             },
+            gatewaySubtitle = if (uiState.agentDataGatewayConfigured) {
+                stringResource(
+                    R.string.export_target_gateway_configured_subtitle,
+                    AgentDataGatewayEndpoint.displayName(uiState.agentDataGatewayUrl),
+                )
+            } else {
+                stringResource(R.string.export_target_gateway_unconfigured_subtitle)
+            },
             onTargetSelected = { target ->
                 attemptConfigurationChange {
                     viewModel.setScheduledExportTarget(target)
                     if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
                         showAPISettings = true
+                    }
+                    if (target == ExportTarget.AGENT_DATA_GATEWAY && !uiState.agentDataGatewayConfigured) {
+                        showGatewaySettings = true
                     }
                 }
             },
@@ -458,6 +472,22 @@ fun ScheduleScreen(
                 Text(
                     stringResource(
                         if (uiState.apiEndpointConfigured) {
+                            R.string.action_edit_endpoint
+                        } else {
+                            R.string.action_configure_endpoint
+                        },
+                    ),
+                )
+            }
+        }
+
+        if (uiState.selectedTarget == ExportTarget.AGENT_DATA_GATEWAY) {
+            TextButton(onClick = {
+                attemptConfigurationChange { showGatewaySettings = true }
+            }) {
+                Text(
+                    stringResource(
+                        if (uiState.agentDataGatewayConfigured) {
                             R.string.action_edit_endpoint
                         } else {
                             R.string.action_configure_endpoint
@@ -635,6 +665,21 @@ fun ScheduleScreen(
             },
             onClearRequestHeaders = {
                 attemptConfigurationChange(viewModel::clearAPIRequestHeaders)
+            },
+        )
+    }
+    if (showGatewaySettings) {
+        AgentDataGatewaySettingsDialog(
+            initialEndpointUrl = uiState.agentDataGatewayUrl,
+            configurationError = configurationErrorText,
+            onDismiss = {
+                showGatewaySettings = false
+                viewModel.clearConfigurationError()
+            },
+            onSave = { endpoint ->
+                attemptConfigurationChange {
+                    viewModel.saveAgentDataGatewayConfiguration(endpoint)
+                }
             },
         )
     }
