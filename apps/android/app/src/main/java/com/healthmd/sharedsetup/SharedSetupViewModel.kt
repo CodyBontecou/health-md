@@ -4,10 +4,12 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.BuildConfig
 import com.healthmd.data.export.APIExportAuthorization
 import com.healthmd.data.export.APIExportAuthorizationValidationException
 import com.healthmd.data.export.APIExportAuthorizationValidationResult
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.settings.ExportProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
@@ -24,12 +26,10 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 sealed interface SharedSetupUiState {
-    data class Idle(val pendingEndpoint: String? = null) : SharedSetupUiState
+    data object Idle : SharedSetupUiState
     data object Loading : SharedSetupUiState
-    data class Review(val preview: SharedSetupPreview) : SharedSetupUiState
-    /** Real v2 multi-profile review state; v2 is never flattened into the v1 review model. */
+    /** Real v2 multi-profile review state. */
     data class ReviewV2(val plan: SharedSetupV2ImportPlan) : SharedSetupUiState
-    data class Success(val result: SharedSetupApplyResult, val pendingEndpoint: String?) : SharedSetupUiState
     data class Error(val message: String) : SharedSetupUiState
 }
 
@@ -57,6 +57,7 @@ class SharedSetupViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val v2Production: SharedSetupV2ProductionTransaction,
     private val profileRepository: ExportProfileRepository,
+    private val scheduledProfileEntryStore: ScheduledProfileEntryStore,
     private val credentialStore: APIExportCredentialStore,
 ) : ViewModel() {
     companion object {
@@ -66,18 +67,16 @@ class SharedSetupViewModel @Inject constructor(
         private const val RESTORABLE_V2_SELECTED_BUNDLE_IDS =
             "sharedSetup.restorableV2SelectedBundleIDs"
         private const val RESTORABLE_V2_APPLY_MODE = "sharedSetup.restorableV2ApplyMode"
-        private const val PHASE_REVIEW = "review"
-        private const val PHASE_SUCCESS = "success"
         private const val PHASE_V2_REVIEW = "v2_review"
         private const val PHASE_V2_SUCCESS = "v2_success"
     }
 
     private val shareLaunchMutex = Mutex()
     private val previewRequestIDs = AtomicLong()
-    private val mutableState = MutableStateFlow<SharedSetupUiState>(SharedSetupUiState.Idle())
+    private val mutableState = MutableStateFlow<SharedSetupUiState>(SharedSetupUiState.Idle)
     val state: StateFlow<SharedSetupUiState> = mutableState.asStateFlow()
-    private val mutableVersionedPreview = MutableStateFlow<SharedSetupVersionedPreview?>(null)
-    val versionedPreview: StateFlow<SharedSetupVersionedPreview?> =
+    private val mutableVersionedPreview = MutableStateFlow<SharedSetupV2ImportPlan?>(null)
+    val versionedPreview: StateFlow<SharedSetupV2ImportPlan?> =
         mutableVersionedPreview.asStateFlow()
     private val mutableV2TransactionState =
         MutableStateFlow<SharedSetupV2TransactionState>(SharedSetupV2TransactionState.Idle)
@@ -112,8 +111,6 @@ class SharedSetupViewModel @Inject constructor(
                     "The saved shared setup state is incomplete."
                 },
             )
-        } else {
-            refreshPendingEndpointIfIdle()
         }
         viewModelScope.launch {
             coordinator.imports.collect { pending ->
@@ -172,13 +169,13 @@ class SharedSetupViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Default writer action. Production shares the closed Shared Setup v2 writer: ordered
+     * repository profile rows, active identity, schedule store entries, the app version, and
+     * the v2 transaction's preserved foreign Apple extensions.
+     */
     fun exportTo(uri: Uri) {
-        exportTo(uri) { service.exportBytes() }
-    }
-
-    /** Explicit v2 writer seam; no current production UI calls this overload. */
-    fun exportV2To(uri: Uri, source: SharedSetupV2ExportSource) {
-        exportTo(uri) { service.exportV2Bytes(source) }
+        exportTo(uri) { service.exportV2Bytes(productionExportSource()) }
     }
 
     private fun exportTo(uri: Uri, bytes: suspend () -> ByteArray) {
@@ -187,20 +184,30 @@ class SharedSetupViewModel @Inject constructor(
             runCatching { bytes() }
                 .onSuccess { encoded ->
                     runCatching { withContext(Dispatchers.IO) { documentStore.copyTo(encoded, uri) } }
-                        .onSuccess { refreshPendingEndpointIfIdle(force = true) }
+                        .onSuccess { mutableState.value = SharedSetupUiState.Idle }
                         .onFailure { mutableState.value = SharedSetupUiState.Error(it.safeMessage()) }
                 }
                 .onFailure { mutableState.value = SharedSetupUiState.Error(it.safeMessage()) }
         }
     }
 
+    /** Default share action; emits `schema_version: 2` exclusively. */
     suspend fun shareIntent(): Result<SharedSetupShare> = createShareIntent {
-        service.exportBytes()
+        service.exportV2Bytes(productionExportSource())
     }
 
-    /** Explicit v2 writer seam; the default share action remains byte-identical v1. */
-    suspend fun shareV2Intent(source: SharedSetupV2ExportSource): Result<SharedSetupShare> =
-        createShareIntent { service.exportV2Bytes(source) }
+    /**
+     * Real owners behind the production v2 writer: the profile repository (ordered rows plus
+     * active identity), the scheduled-profile entry store, the app version, and the
+     * transaction-owned preserved Apple extensions — never guessed defaults.
+     */
+    private fun productionExportSource(): SharedSetupV2ExportSource =
+        RepositorySharedSetupV2ExportSource(
+            profileRepository = profileRepository,
+            scheduledProfileEntryStore = scheduledProfileEntryStore,
+            appVersion = BuildConfig.VERSION_NAME,
+            preservedAppleExtensions = { v2Production.preservedAppleExtensionsByProfileId() },
+        )
 
     private suspend fun createShareIntent(
         bytes: suspend () -> ByteArray,
@@ -255,40 +262,26 @@ class SharedSetupViewModel @Inject constructor(
         mutableState.value = SharedSetupUiState.Error(error.safeMessage())
     }
 
-    fun apply() {
-        val preview = (mutableState.value as? SharedSetupUiState.Review)?.preview ?: return
-        viewModelScope.launch {
-            mutableState.value = SharedSetupUiState.Loading
-            service.apply(preview)
-                .onSuccess {
-                    savedStateHandle[RESTORABLE_PHASE] = PHASE_SUCCESS
-                    mutableState.value = SharedSetupUiState.Success(it, preview.pendingEndpoint)
-                }
-                .onFailure { mutableState.value = SharedSetupUiState.Error(it.safeMessage()) }
-        }
-    }
-
     /**
      * Post-merge v2 apply seam. It is callable only with an explicit transaction callback and an
-     * actual v2 plan produced by the latest bounded preview; the current v1 Apply action cannot
-     * reach it.
+     * actual v2 plan produced by the latest bounded preview.
      */
     fun applyV2(
         selectedBundleIds: List<String>,
         mode: SharedSetupV2ApplyMode,
         callback: SharedSetupV2ApplyCallback,
     ) {
-        val preview = mutableVersionedPreview.value as? SharedSetupVersionedPreview.V2 ?: return
+        val plan = mutableVersionedPreview.value ?: return
         val requestID = previewRequestIDs.get()
         viewModelScope.launch {
             mutableV2TransactionState.value = SharedSetupV2TransactionState.Applying
-            service.applyV2(preview.plan, selectedBundleIds, mode, callback)
+            service.applyV2(plan, selectedBundleIds, mode, callback)
                 .onSuccess { result ->
                     // A newer document keeps preview ownership. The completed transaction is still
                     // reported, but must not relabel the newer document's SavedState bytes.
                     if (
                         previewRequestIDs.get() == requestID &&
-                        mutableVersionedPreview.value == preview
+                        mutableVersionedPreview.value == plan
                     ) {
                         savedStateHandle[RESTORABLE_PHASE] = PHASE_V2_SUCCESS
                         savedStateHandle[RESTORABLE_V2_SELECTED_BUNDLE_IDS] =
@@ -309,7 +302,7 @@ class SharedSetupViewModel @Inject constructor(
         applyV2(selectedBundleIds, mode, v2Production)
     }
 
-    /** Explicit v2 one-shot Undo seam; no default production callback exists in this lane. */
+    /** Explicit v2 one-shot Undo seam; callers must pass a transaction adapter. */
     fun undoV2(callback: SharedSetupV2UndoCallback) {
         viewModelScope.launch {
             mutableV2TransactionState.value = SharedSetupV2TransactionState.Undoing
@@ -321,8 +314,7 @@ class SharedSetupViewModel @Inject constructor(
                         // Keep the v2 review screen so the honest undone result stays visible.
                         return@onSuccess
                     }
-                    mutableState.value = SharedSetupUiState.Idle()
-                    refreshPendingEndpointIfIdle(force = true)
+                    mutableState.value = SharedSetupUiState.Idle
                 }
                 .onFailure {
                     mutableV2TransactionState.value =
@@ -411,15 +403,15 @@ class SharedSetupViewModel @Inject constructor(
 
     /**
      * In-flow API-credential confirmation for one blocked imported profile (v2 review). The
-     * freshly entered credential is persisted through the exact storage seam the v1 pending-
-     * endpoint flow uses (`APIExportCredentialStore` behind `confirmPendingEndpoint`): prior
-     * secure-store state is captured first and the store is fail-closed when unreadable, then
-     * authorization and custom request headers are cleared so no foreign credential can attach
-     * to the imported endpoint, the normalized credential is written and verified, and only then
-     * does the trusted repository hook run. When the hook does not clear the block — for
-     * example the endpoint URL was never confirmed (in-flow or in the profile editor) — the
-     * prior secure-store state is restored (or cleared, fail-closed) and the failure is surfaced
-     * honestly; the block always stays until a verified confirmation clears it.
+     * freshly entered credential is persisted through the verified secure-store seam
+     * (`APIExportCredentialStore`): prior secure-store state is captured first and the flow
+     * fails closed when unreadable, then authorization and custom request headers are cleared
+     * so no foreign credential can attach to the imported endpoint, the normalized credential
+     * is written and verified, and only then does the trusted repository hook run. When the
+     * hook does not clear the block — for example the endpoint URL was never confirmed
+     * (in-flow or in the profile editor) — the prior secure-store state is restored (or
+     * cleared, fail-closed) and the failure is surfaced honestly; the block always stays
+     * until a verified confirmation clears it.
      */
     fun confirmBlockedApiCredential(profileId: String, authorization: String) {
         viewModelScope.launch {
@@ -478,10 +470,9 @@ class SharedSetupViewModel @Inject constructor(
     }
 
     /**
-     * Verified credential write plus block-clearing attempt, mirroring the v1
-     * `confirmPendingEndpoint` persistence shape. Returns whether the block was cleared; on a
-     * hook refusal the prior secure-store state is restored and verified, or cleared fail-closed
-     * when a verified restore is impossible.
+     * Verified credential write plus block-clearing attempt. Returns whether the block was
+     * cleared; on a hook refusal the prior secure-store state is restored and verified, or
+     * cleared fail-closed when a verified restore is impossible.
      */
     private suspend fun persistVerifiedApiCredentialAndClearBlock(
         profileId: String,
@@ -524,7 +515,7 @@ class SharedSetupViewModel @Inject constructor(
 
         // The block stayed: never leave the unconfirmed credential attached to any endpoint.
         // Restore the prior secure-store state and verify the restoration; when it cannot be
-        // verified, attempt a verified clear instead — same fail-closed rule as the v1 seam.
+        // verified, attempt a verified clear instead — the same fail-closed rule.
         val credentialRollback = runCatching {
             credentialStore.clearAuthorization()
             credentialStore.clearRequestHeaders()
@@ -570,48 +561,13 @@ class SharedSetupViewModel @Inject constructor(
         }
     }
 
-    fun confirmPendingEndpoint(authorization: String) {
-        val success = mutableState.value as? SharedSetupUiState.Success
-        viewModelScope.launch {
-            mutableState.value = SharedSetupUiState.Loading
-            service.confirmPendingEndpoint(authorization)
-                .onSuccess {
-                    if (success != null) mutableState.value = success.copy(pendingEndpoint = null)
-                    else refreshPendingEndpointIfIdle(force = true)
-                }
-                .onFailure { mutableState.value = SharedSetupUiState.Error(it.safeMessage()) }
-        }
-    }
-
-    fun undo() {
-        viewModelScope.launch {
-            mutableState.value = SharedSetupUiState.Loading
-            service.undo()
-                .onSuccess {
-                    clearRestorableImport()
-                    refreshPendingEndpointIfIdle(force = true)
-                }
-                .onFailure { mutableState.value = SharedSetupUiState.Error(it.safeMessage()) }
-        }
-    }
-
     fun dismiss() {
         previewRequestIDs.incrementAndGet()
         clearRestorableImport()
         mutableV2TransactionState.value = SharedSetupV2TransactionState.Idle
         mutableV2BlockedProfiles.value = null
         mutableV2RebindState.value = SharedSetupV2RebindState.Idle
-        mutableState.value = SharedSetupUiState.Idle()
-        refreshPendingEndpointIfIdle(force = true)
-    }
-
-    private fun refreshPendingEndpointIfIdle(force: Boolean = false) {
-        viewModelScope.launch {
-            val endpoint = service.pendingEndpoint()
-            if (force || mutableState.value is SharedSetupUiState.Idle) {
-                mutableState.value = SharedSetupUiState.Idle(endpoint)
-            }
-        }
+        mutableState.value = SharedSetupUiState.Idle
     }
 
     private fun restore(bytes: ByteArray, phase: String) {
@@ -620,9 +576,9 @@ class SharedSetupViewModel @Inject constructor(
             if (previewRequestIDs.get() != requestID) return@launch
             mutableState.value = SharedSetupUiState.Loading
             service.previewVersioned(bytes)
-                .onSuccess { preview ->
+                .onSuccess { plan ->
                     if (previewRequestIDs.get() != requestID) return@onSuccess
-                    runCatching { publishRestoredPreview(preview, phase) }
+                    runCatching { publishRestoredPreview(plan, phase) }
                         .onFailure {
                             if (previewRequestIDs.get() != requestID) return@onFailure
                             clearRestorableImport()
@@ -631,6 +587,10 @@ class SharedSetupViewModel @Inject constructor(
                         }
                 }
                 .onFailure {
+                    // A restored in-flight document that no longer decodes — including a
+                    // pre-canonical v1 document saved before this app version — fails honestly:
+                    // the bounded error is surfaced, the restorable import is cleared, and no
+                    // partial state survives. The v1-era phase strings can no longer publish.
                     if (previewRequestIDs.get() != requestID) return@onFailure
                     clearRestorableImport()
                     mutableV2TransactionState.value = SharedSetupV2TransactionState.Idle
@@ -639,54 +599,35 @@ class SharedSetupViewModel @Inject constructor(
         }
     }
 
-    private suspend fun publishRestoredPreview(
-        preview: SharedSetupVersionedPreview,
+    private fun publishRestoredPreview(
+        plan: SharedSetupV2ImportPlan,
         phase: String,
     ) {
-        mutableVersionedPreview.value = preview
-        when (preview) {
-            is SharedSetupVersionedPreview.V1 -> {
-                require(phase == PHASE_REVIEW || phase == PHASE_SUCCESS) {
-                    "The saved Shared Setup phase does not match its document version."
-                }
-                mutableV2TransactionState.value = SharedSetupV2TransactionState.Idle
-                mutableState.value = if (phase == PHASE_SUCCESS) {
-                    SharedSetupUiState.Success(
-                        SharedSetupApplyResult(preview.preview.review, canUndo = true),
-                        service.pendingEndpoint(),
-                    )
-                } else {
-                    SharedSetupUiState.Review(preview.preview)
-                }
-            }
-            is SharedSetupVersionedPreview.V2 -> {
-                require(phase == PHASE_V2_REVIEW || phase == PHASE_V2_SUCCESS) {
-                    "The saved Shared Setup phase does not match its document version."
-                }
-                mutableV2TransactionState.value = if (phase == PHASE_V2_SUCCESS) {
-                    val selected = savedStateHandle
-                        .get<ArrayList<String>>(RESTORABLE_V2_SELECTED_BUNDLE_IDS)
-                        ?.toList()
-                        ?: error("The saved Shared Setup v2 selection is missing.")
-                    val mode = savedStateHandle.get<String>(RESTORABLE_V2_APPLY_MODE)
-                        ?.let { runCatching { SharedSetupV2ApplyMode.valueOf(it) }.getOrNull() }
-                        ?: error("The saved Shared Setup v2 mode is missing.")
-                    val sourceOrder = preview.plan.profiles.map { it.bundleId }
-                    require(
-                        selected.isNotEmpty() && selected == selected.distinct() &&
-                            selected == sourceOrder.filter(selected.toSet()::contains)
-                    ) { "The saved Shared Setup v2 selection is invalid." }
-                    SharedSetupV2TransactionState.Applied(
-                        SharedSetupV2ApplyResult(selected, mode, canUndo = true),
-                    )
-                } else {
-                    SharedSetupV2TransactionState.Idle
-                }
-                // The typed plan drives the real multi-profile selection screen; v2 is never
-                // flattened into the single-profile v1 review.
-                mutableState.value = SharedSetupUiState.ReviewV2(preview.plan)
-            }
+        mutableVersionedPreview.value = plan
+        require(phase == PHASE_V2_REVIEW || phase == PHASE_V2_SUCCESS) {
+            "The saved Shared Setup phase does not match its document version."
         }
+        mutableV2TransactionState.value = if (phase == PHASE_V2_SUCCESS) {
+            val selected = savedStateHandle
+                .get<ArrayList<String>>(RESTORABLE_V2_SELECTED_BUNDLE_IDS)
+                ?.toList()
+                ?: error("The saved Shared Setup v2 selection is missing.")
+            val mode = savedStateHandle.get<String>(RESTORABLE_V2_APPLY_MODE)
+                ?.let { runCatching { SharedSetupV2ApplyMode.valueOf(it) }.getOrNull() }
+                ?: error("The saved Shared Setup v2 mode is missing.")
+            val sourceOrder = plan.profiles.map { it.bundleId }
+            require(
+                selected.isNotEmpty() && selected == selected.distinct() &&
+                    selected == sourceOrder.filter(selected.toSet()::contains)
+            ) { "The saved Shared Setup v2 selection is invalid." }
+            SharedSetupV2TransactionState.Applied(
+                SharedSetupV2ApplyResult(selected, mode, canUndo = true),
+            )
+        } else {
+            SharedSetupV2TransactionState.Idle
+        }
+        // The typed plan drives the real multi-profile selection screen.
+        mutableState.value = SharedSetupUiState.ReviewV2(plan)
     }
 
     private suspend fun preview(bytes: ByteArray, requestID: Long) {
@@ -698,21 +639,15 @@ class SharedSetupViewModel @Inject constructor(
         }
         mutableState.value = SharedSetupUiState.Loading
         service.previewVersioned(bytes)
-            .onSuccess { preview ->
+            .onSuccess { plan ->
                 if (previewRequestIDs.get() != requestID) return@onSuccess
                 savedStateHandle[RESTORABLE_DOCUMENT_BYTES] = bytes.copyOf()
-                savedStateHandle[RESTORABLE_PHASE] = when (preview) {
-                    is SharedSetupVersionedPreview.V1 -> PHASE_REVIEW
-                    is SharedSetupVersionedPreview.V2 -> PHASE_V2_REVIEW
-                }
+                savedStateHandle[RESTORABLE_PHASE] = PHASE_V2_REVIEW
                 savedStateHandle.remove<ArrayList<String>>(RESTORABLE_V2_SELECTED_BUNDLE_IDS)
                 savedStateHandle.remove<String>(RESTORABLE_V2_APPLY_MODE)
-                mutableVersionedPreview.value = preview
+                mutableVersionedPreview.value = plan
                 mutableV2TransactionState.value = SharedSetupV2TransactionState.Idle
-                mutableState.value = when (preview) {
-                    is SharedSetupVersionedPreview.V1 -> SharedSetupUiState.Review(preview.preview)
-                    is SharedSetupVersionedPreview.V2 -> SharedSetupUiState.ReviewV2(preview.plan)
-                }
+                mutableState.value = SharedSetupUiState.ReviewV2(plan)
             }
             .onFailure {
                 if (previewRequestIDs.get() != requestID) return@onFailure

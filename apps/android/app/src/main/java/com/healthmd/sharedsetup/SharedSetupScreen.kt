@@ -56,7 +56,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -128,8 +127,6 @@ fun SharedSetupScreen(
         ) {
             when (val current = state) {
                 is SharedSetupUiState.Idle -> SharedSetupStart(
-                    pendingEndpoint = current.pendingEndpoint,
-                    onConfirmEndpoint = viewModel::confirmPendingEndpoint,
                     onOpen = { openDocument.launch(arrayOf(SHARED_SETUP_MIME_TYPE, "application/json", "application/octet-stream")) },
                     onSave = { createDocument.launch("HealthMd-Shared-Setup.$SHARED_SETUP_EXTENSION") },
                     onShare = {
@@ -151,11 +148,6 @@ fun SharedSetupScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
                     Text(stringResource(R.string.shared_setup_checking), color = AppColors.textSecondary)
                 }
-                is SharedSetupUiState.Review -> SharedSetupReview(
-                    preview = current.preview,
-                    onApply = viewModel::apply,
-                    onCancel = viewModel::dismiss,
-                )
                 is SharedSetupUiState.ReviewV2 -> SharedSetupV2Review(
                     plan = current.plan,
                     transactionState = v2TransactionState,
@@ -172,13 +164,6 @@ fun SharedSetupScreen(
                     onCancel = viewModel::dismiss,
                     onFinishSetup = finishSetup,
                 )
-                is SharedSetupUiState.Success -> SharedSetupSuccess(
-                    result = current.result,
-                    pendingEndpoint = current.pendingEndpoint,
-                    onConfirmEndpoint = viewModel::confirmPendingEndpoint,
-                    onUndo = viewModel::undo,
-                    onFinishSetup = finishSetup,
-                )
                 is SharedSetupUiState.Error -> SharedSetupError(current.message, viewModel::dismiss)
             }
         }
@@ -187,8 +172,6 @@ fun SharedSetupScreen(
 
 @Composable
 private fun SharedSetupStart(
-    pendingEndpoint: String?,
-    onConfirmEndpoint: (String) -> Unit,
     onOpen: () -> Unit,
     onSave: () -> Unit,
     onShare: () -> Unit,
@@ -203,9 +186,6 @@ private fun SharedSetupStart(
         style = MaterialTheme.typography.bodySmall,
         color = AppColors.textMuted,
     )
-    pendingEndpoint?.let {
-        PendingEndpointConfirmation(it, onConfirmEndpoint)
-    }
     GeistCardClickable(onClick = onOpen) {
         Icon(Icons.Outlined.FileOpen, contentDescription = null, tint = AppColors.accent)
         Column(modifier = Modifier.padding(start = Spacing.sm)) {
@@ -227,36 +207,6 @@ private fun SharedSetupStart(
             Text(stringResource(R.string.shared_setup_save_detail), color = AppColors.textMuted)
         }
     }
-}
-
-@Composable
-private fun SharedSetupReview(preview: SharedSetupPreview, onApply: () -> Unit, onCancel: () -> Unit) {
-    val review = preview.review
-    Text(
-        stringResource(R.string.shared_setup_review),
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.semantics { heading() },
-    )
-    GeistCard {
-        ReviewLine(stringResource(R.string.shared_setup_formats), review.formats.joinToString().ifBlank { stringResource(R.string.shared_setup_none_selected) })
-        ReviewLine(stringResource(R.string.shared_setup_selected_metrics), review.metricCount.toString())
-        ReviewLine(stringResource(R.string.shared_setup_naming), review.filenameTemplate)
-        ReviewLine(stringResource(R.string.shared_setup_units), review.units)
-        ReviewLine(stringResource(R.string.shared_setup_daily_notes), if (review.dailyNotesEnabled) stringResource(R.string.shared_setup_on) else stringResource(R.string.shared_setup_off))
-        ReviewLine(stringResource(R.string.shared_setup_individual_entries), if (review.individualEntriesEnabled) stringResource(R.string.shared_setup_on) else stringResource(R.string.shared_setup_off))
-        ReviewLine(stringResource(R.string.shared_setup_custom_content), if (review.hasCustomContent) stringResource(R.string.shared_setup_custom_included) else stringResource(R.string.shared_setup_none))
-        if (review.scheduleRequested) ReviewLine(stringResource(R.string.shared_setup_schedule), stringResource(R.string.shared_setup_remains_off))
-        review.endpointDescription?.let { ReviewLine(stringResource(R.string.shared_setup_endpoint), stringResource(R.string.shared_setup_endpoint_no_auth, it)) }
-    }
-    review.items.forEach { item ->
-        SharedSetupCompatibilityCard(item)
-    }
-    Text(
-        stringResource(R.string.shared_setup_device_requirements),
-        color = AppColors.textSecondary,
-    )
-    Button(onClick = onApply, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.shared_setup_apply)) }
-    TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.shared_setup_cancel)) }
 }
 
 /** Real v2 review: ordered multi-select, Add/Replace mode, apply, one-shot Undo, and rebind. */
@@ -312,24 +262,7 @@ private fun SharedSetupV2Review(
                 )
             }
         }
-        is SharedSetupV2TransactionState.Undone -> {
-            Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = AppColors.success)
-            Text(
-                stringResource(R.string.shared_setup_v2_undone),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.semantics {
-                    heading()
-                    liveRegion = LiveRegionMode.Polite
-                },
-            )
-            Text(
-                stringResource(R.string.shared_setup_v2_undone_detail),
-                color = AppColors.textSecondary,
-            )
-            Button(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.shared_setup_done))
-            }
-        }
+        is SharedSetupV2TransactionState.Undone -> SharedSetupV2Undone(onCancel = onCancel)
         is SharedSetupV2TransactionState.Error -> {
             Icon(Icons.Outlined.ErrorOutline, contentDescription = null, tint = AppColors.error)
             Text(
@@ -348,6 +281,27 @@ private fun SharedSetupV2Review(
                 Text(stringResource(R.string.shared_setup_cancel))
             }
         }
+    }
+}
+
+/** Honest one-shot-undone result; the heading is a polite live region for TalkBack. */
+@Composable
+internal fun SharedSetupV2Undone(onCancel: () -> Unit) {
+    Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = AppColors.success)
+    Text(
+        stringResource(R.string.shared_setup_v2_undone),
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier.semantics {
+            heading()
+            liveRegion = LiveRegionMode.Polite
+        },
+    )
+    Text(
+        stringResource(R.string.shared_setup_v2_undone_detail),
+        color = AppColors.textSecondary,
+    )
+    Button(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.shared_setup_done))
     }
 }
 
@@ -756,9 +710,9 @@ private fun BlockedApiEndpointUrlConfirmation(
 }
 
 /**
- * In-flow credential entry for one blocked API-endpoint imported profile (v2 review). Mirrors
- * the v1 [PendingEndpointConfirmation] precedent: a password-masked authorization field whose
- * value is handed to the ViewModel's verified persistence seam — never stored in the UI layer.
+ * In-flow credential entry for one blocked API-endpoint imported profile (v2 review). A
+ * password-masked authorization field whose value is handed to the ViewModel's verified
+ * persistence seam — never stored in the UI layer.
  */
 @Composable
 private fun BlockedApiCredentialConfirmation(onConfirm: (String) -> Unit) {
@@ -833,90 +787,6 @@ private fun destinationKindLabel(kind: String): String = when (kind) {
 private fun applyModeLabel(mode: SharedSetupV2ApplyMode): String = when (mode) {
     SharedSetupV2ApplyMode.ADD -> stringResource(R.string.shared_setup_v2_mode_add)
     SharedSetupV2ApplyMode.REPLACE -> stringResource(R.string.shared_setup_v2_mode_replace)
-}
-
-@Composable
-internal fun SharedSetupCompatibilityCard(item: SharedSetupCompatibilityItem) {
-    val statusLabel = when (item.status) {
-        SharedSetupCompatibilityStatus.APPLIED -> stringResource(R.string.shared_setup_status_applied)
-        SharedSetupCompatibilityStatus.REQUIRES_ACTION -> stringResource(R.string.shared_setup_status_action)
-        SharedSetupCompatibilityStatus.UNSUPPORTED -> stringResource(R.string.shared_setup_status_unsupported)
-        SharedSetupCompatibilityStatus.INVALID -> stringResource(R.string.shared_setup_status_invalid)
-    }
-    val statusColor = when (item.status) {
-        SharedSetupCompatibilityStatus.APPLIED -> AppColors.success
-        SharedSetupCompatibilityStatus.REQUIRES_ACTION -> AppColors.warning
-        SharedSetupCompatibilityStatus.UNSUPPORTED -> AppColors.textMuted
-        SharedSetupCompatibilityStatus.INVALID -> AppColors.error
-    }
-    GeistCard(
-        modifier = Modifier.clearAndSetSemantics {
-            contentDescription = "$statusLabel: ${item.title}. ${item.detail}"
-        }
-    ) {
-        Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor)
-        Text(item.title, fontWeight = FontWeight.Medium)
-        Text(item.detail, color = AppColors.textSecondary)
-    }
-}
-
-@Composable
-internal fun SharedSetupSuccess(
-    result: SharedSetupApplyResult,
-    pendingEndpoint: String?,
-    onConfirmEndpoint: (String) -> Unit,
-    onUndo: () -> Unit,
-    onFinishSetup: () -> Unit,
-) {
-    Icon(Icons.Outlined.CheckCircle, contentDescription = null, tint = AppColors.success)
-    Text(
-        stringResource(R.string.shared_setup_applied),
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.semantics {
-            heading()
-            liveRegion = LiveRegionMode.Polite
-        },
-    )
-    GeistCard {
-        ReviewLine(stringResource(R.string.shared_setup_applied_items), result.review.appliedCount.toString())
-        ReviewLine(stringResource(R.string.shared_setup_attention_items), result.review.requiresActionCount.toString())
-        ReviewLine(stringResource(R.string.shared_setup_unsupported_items), result.review.unsupportedCount.toString())
-    }
-    pendingEndpoint?.let {
-        PendingEndpointConfirmation(it, onConfirmEndpoint)
-    }
-    if (result.canUndo) OutlinedButton(onClick = onUndo, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.shared_setup_undo)) }
-    Button(onClick = onFinishSetup, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.shared_setup_finish)) }
-}
-
-@Composable
-private fun PendingEndpointConfirmation(endpoint: String, onConfirm: (String) -> Unit) {
-    var authorization by remember(endpoint) { mutableStateOf("") }
-    GeistCard {
-        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Text(stringResource(R.string.shared_setup_finish_endpoint), fontWeight = FontWeight.Medium)
-            Text(endpoint, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary)
-            Text(
-                stringResource(R.string.shared_setup_endpoint_confirmation),
-                color = AppColors.textSecondary,
-            )
-            OutlinedTextField(
-                value = authorization,
-                onValueChange = { authorization = it },
-                label = { Text(stringResource(R.string.shared_setup_authorization_label)) },
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Button(
-                onClick = { onConfirm(authorization) },
-                enabled = authorization.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.shared_setup_confirm_endpoint))
-            }
-        }
-    }
 }
 
 @Composable

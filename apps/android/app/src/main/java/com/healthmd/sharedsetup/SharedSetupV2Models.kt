@@ -3,6 +3,9 @@ package com.healthmd.sharedsetup
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+const val SHARED_SETUP_SCHEMA = "healthmd.shared_setup"
+const val SHARED_SETUP_MIME_TYPE = "application/vnd.healthmd.configuration+json"
+const val SHARED_SETUP_EXTENSION = "healthmdconfig"
 const val SHARED_SETUP_V2_VERSION: Int = 2
 const val SHARED_SETUP_V2_MAX_BYTES: Int = 4 * 1024 * 1024
 const val SHARED_SETUP_V2_MAX_PROFILES: Int = 100
@@ -260,13 +263,8 @@ data class SharedSetupV2AndroidRawSnapshot(
 )
 
 /** Strict dispatch result. The v1 and v2 typed graphs remain intentionally separate. */
-sealed interface SharedSetupDecodedDocument {
-    data class V1(val document: SharedSetupV1) : SharedSetupDecodedDocument
-    data class V2(val document: SharedSetupV2) : SharedSetupDecodedDocument
-}
-
 sealed interface SharedSetupVersionedDecodeResult {
-    data class Valid(val document: SharedSetupDecodedDocument) : SharedSetupVersionedDecodeResult
+    data class Valid(val document: SharedSetupV2) : SharedSetupVersionedDecodeResult
     data class Invalid(val message: String) : SharedSetupVersionedDecodeResult
 }
 

@@ -88,7 +88,7 @@ class SharedSetupV2Codec(
             return invalid("Shared Setup v2 is missing required settings or contains invalid values.")
         }
         validateV2Document(document)?.let { return invalid(it) }
-        return SharedSetupVersionedDecodeResult.Valid(SharedSetupDecodedDocument.V2(document))
+        return SharedSetupVersionedDecodeResult.Valid(document)
     }
 
     internal fun validateV2Document(document: SharedSetupV2): String? {

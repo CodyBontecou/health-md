@@ -5,11 +5,7 @@ import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportProfile
 
-/** A decode-specific preview. V2 is never flattened into the single-profile v1 review model. */
-sealed interface SharedSetupVersionedPreview {
-    data class V1(val preview: SharedSetupPreview) : SharedSetupVersionedPreview
-    data class V2(val plan: SharedSetupV2ImportPlan) : SharedSetupVersionedPreview
-}
+/** A decode-specific v2 import plan; the pre-canonical v1 preview model was removed with v1. */
 
 /**
  * Complete native inputs for the closed Shared Setup v2 writer.
@@ -41,7 +37,7 @@ fun interface SharedSetupV2ExportSource {
 }
 
 /**
- * Narrow repository adapter for a future production v2 writer switch.
+ * Narrow repository adapter for the production v2 writer.
  *
  * The extension loader is deliberately mandatory: a caller must read the transaction lane's
  * per-profile preservation state rather than silently dropping foreign typed extensions.

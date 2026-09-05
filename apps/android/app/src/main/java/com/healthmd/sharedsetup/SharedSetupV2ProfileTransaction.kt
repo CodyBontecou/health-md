@@ -764,7 +764,7 @@ class SharedSetupV2ProfileTransaction private constructor(
 
     private fun templateIsExactlySupported(markdown: SharedSetupV2Markdown): Boolean {
         if (markdown.style != "custom") return true
-        if (SharedSetupCodec.templateSyntaxProblem(markdown.customText) != null) return false
+        if (SharedSetupTemplateSyntax.templateSyntaxProblem(markdown.customText) != null) return false
         return Regex("\\{\\{([#/]?)([A-Za-z0-9_]+)\\}\\}")
             .findAll(markdown.customText)
             .none { match ->
