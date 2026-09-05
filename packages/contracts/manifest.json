@@ -373,6 +373,7 @@
         "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
         "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ProfileTransaction.swift",
         "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ExecutionGate.swift",
+    "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2TransactionAdapter.swift",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Models.kt",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Codec.kt",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Mapper.kt",
@@ -380,7 +381,8 @@
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupMapper.kt",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupService.kt",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransaction.kt",
-        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupVersionedModels.kt"
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupVersionedModels.kt",
+    "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransaction.kt"
       ],
       "consumers": [
         "packages/contracts/validate.py",
@@ -391,13 +393,18 @@
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ProfileTransactionTests.swift",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CanonicalIOTests.swift",
         "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CoordinatorIOTests.swift",
+    "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionAdapterTests.swift",
+    "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionScenariosTests.swift",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2CodecMapperTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupAndroidProfileFieldCoverageTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupServiceTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransactionTest.kt",
         "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupVersionedIoTest.kt",
-        "apps/android/app/src/test/java/com/healthmd/data/settings/SharedSetupSettingsTransactionTest.kt"
+        "apps/android/app/src/test/java/com/healthmd/data/settings/SharedSetupSettingsTransactionTest.kt",
+    "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransactionTest.kt",
+    "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2TransactionScenariosTest.kt",
+    "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupShareFixtureDocumentTest.kt"
       ],
       "documentation": [
         "packages/contracts/README.md"
