@@ -25,7 +25,7 @@
 | First-run onboarding | ✅ `onboarding.md` | ✅ `onboarding.md` | shared | Different step flows; same outcome (permissions → destination → unlock → ready). Android onboarding offers a Shared Setup entry point. |
 | Health data permissions | ✅ `healthkit-permissions.md` | ✅ `health-connect-permissions.md` | shared | HealthKit type requests vs Health Connect category grants; Android adds a rationale activity (Health Connect policy). |
 | Destination selection | ✅ `vault-folder-selection.md` | ✅ `folder-destination.md` | shared | Obsidian vault/iCloud/Files vs SAF folder picker (Drive/OneDrive/Syncthing/Obsidian Sync). |
-| Share My Setup | ✅ `share-my-setup.md` (needs QA) | 🟡 mention in `onboarding.md` | shared (code), docs gap | Contract `shared-setup/v1` is pre-canonical pending device QA on both. **Android lacks a dedicated page.** |
+| Share My Setup | ✅ `share-my-setup.md` (needs QA) | ✅ `share-my-setup.md` (needs QA) | shared | Contract `shared-setup/v1` is pre-canonical pending device QA on both; Android page added 2026-09-05. |
 | Metric selection | ✅ `metric-selection.md` | ✅ `metric-selection.md` | shared | 225+ HealthKit definitions / 21 categories vs 106 Health Connect metrics; identities aligned through the shared Rust metric registry. |
 
 ## Export core
@@ -102,7 +102,7 @@
 
 ## Documentation gaps surfaced by this table
 
-1. **Android Share My Setup page** — feature implemented on both; only Apple has a dedicated page (and it is `needs QA` pending contract canonicalization).
+1. **Android Share My Setup page** — closed 2026-09-05: dedicated page added at `apps/android/docs/features/share-my-setup.md` (status `needs QA`, matching the pre-canonical contract on both platforms).
 2. **Android date-time-units page** — capability exists (`DateFormatPreference`, `unitPreference`); currently folded into format pages. Either fold deliberately into `markdown-export.md`/format content or split a page.
 3. **Android Wear OS feature page** — only a runbook + website guide exist; no user-facing page in the Android tree.
 4. **Android roll-up summaries** — page intentionally absent until the v9 writer ships (`planned`); do not document ahead of the capability.

@@ -18,6 +18,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Setup | [Onboarding](./onboarding.md) | First-run path: Health Connect setup, permissions, destination, formats, and first export. | Draft | High | `presentation/onboarding/OnboardingScreen.kt` |
 | Setup | [Health Connect permissions](./health-connect-permissions.md) | Grant only the categories you want exported, with a rationale screen for review. | Draft | High | `presentation/HealthPermissionsRationaleActivity.kt`, `data/health/` |
 | Setup | [Folder destination](./folder-destination.md) | Pick any SAF folder: local, Obsidian vault, Drive, OneDrive, Syncthing, or another provider. | Draft | High | `data/storage/`, Export screen folder UI |
+| Setup | [Share My Setup](./share-my-setup.md) | Move export preferences between devices in one reviewed, transactional `.healthmdconfig` file — no health data or credentials. | Needs QA | Medium | `sharedsetup/` |
 | Export | [Manual export](./manual-export.md) | Export one day or a range on demand; 10 free actions before unlock. | Draft | High | `presentation/export/ExportScreen.kt` |
 | Export | [Metric selection](./metric-selection.md) | Choose from 106 Health Connect metrics with search and category toggles. | Draft | High | `presentation/metrics/MetricSelectionScreen.kt` |
 | Export | [Export preview](./export-preview.md) | Inspect generated output before writing to your folder. | Draft | Medium | `presentation/export/` preview components |
