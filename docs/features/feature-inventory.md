@@ -67,7 +67,7 @@
 | Medication dose events | iOS | HealthKit medication catalog + taken/skipped dose events in export | export schema; parity ledger | ✅ via export-schema/parity docs |
 | Zip archive export toggle | iOS | Bundle export files into a zip (DEFLATE) | `ExportTabView.swift:673`, `ZipArchiveWriter.swift` | 🟡 within `multi-format-export.md` |
 | Export schema contract | iOS, Android, CLI, core | Versioned public schema (Apple v8; Android frozen v4 + analytical v5; v9 proposed) | `packages/contracts/`, `HealthMdExportSchema` | ✅ `export-schema.md` + contracts |
-| Raw API Snapshot product | Android (+CLI delivery) | Immutable versioned JSON/NDJSON provider-native snapshot: Health Connect + Fitbit/Oura/WHOOP/Withings cloud; manifests, checksums, `.sha256` sidecars, preview-without-destination, HTTPS-only streaming upload | android `rawexport/`, `rawchanges/`; docs `raw-snapshot-v1.md`, `raw-record-v1.md`, `raw-changes-v1.md` | ✅ android export-contract docs + website `guides/raw-snapshots` (canonical EN, translations pending) |
+| Raw API Snapshot product | Android (+CLI delivery) | Immutable versioned JSON/NDJSON provider-native snapshot: Health Connect + Fitbit/Oura/WHOOP/Withings cloud; manifests, checksums, `.sha256` sidecars, preview-without-destination, HTTPS-only streaming upload | android `rawexport/`, `rawchanges/`; docs `raw-snapshot-v1.md`, `raw-record-v1.md`, `raw-changes-v1.md` | ✅ android export-contract docs + website `guides/raw-snapshots` (authored in all 10 locales) |
 | Raw changes backend | Android | `healthmd.raw-changes` change tokens + deletion tombstones for incremental archives | android `rawchanges/` | ✅ `raw-changes-v1.md` |
 | Exercise route consent | Android | Explicit consent coordination before exporting exercise routes | `rawexport/ExerciseRouteConsent*.kt` | 🟡 raw docs |
 | Daily note injection | iOS, macOS, Android | Merge health sections into existing Obsidian daily notes | `DailyNoteInjector` (+`MarkdownMerger`) | ✅ `daily-note-injection.md`; website `daily-notes.md` |
@@ -171,7 +171,7 @@
 | Watch app | watchOS | Watch dashboard from health snapshot | `HealthMdWatch/WatchDashboardView.swift` | ✅ `apps/apple/docs/features/watch-app.md` |
 | Watch widgets | watchOS | DailyActivity, Recovery, Steps, MoveEnergy, ExerciseMinutes, StandHours, Sleep, RestingHeartRate, HRV, BloodOxygen | `HealthMdWatchWidgets/WatchHealthWidgets.swift` | ✅ within `watch-app.md` |
 | Android home-screen widgets | Android | Glance: Health Summary, Activity, Heart Range, Sleep; 14-day no-backup snapshot; 7-day charts; permission-revocation pulse; no lock-screen measurement widgets | `widget/` package | ✅ `docs/features/widgets.md` |
-| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os.md` + runbook `wear-os-implementation.md` + website `guides/wear-os` (canonical EN, translations pending) |
+| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os.md` + runbook `wear-os-implementation.md` + website `guides/wear-os` (authored in all 10 locales) |
 | Wear OS complications | Wear | 10 metric complications (activity, recovery, steps, move, exercise, sleep, RHR, avg HR, HRV, SpO2) | `wear/.../surface/HealthComplications.kt` | ✅ `wear-os.md` |
 | Wear data layer sync | Wear, Android | Phone-authoritative aggregate transport, diagnostics provider, invalidation | `wear/.../sync/`, `wearable-contract/` | ✅ |
 

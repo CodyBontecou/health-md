@@ -180,3 +180,5 @@ Do not mark the capability available, canonicalize the contract, or call the thr
 | Manual Messages, AirDrop, Files, and Android Sharesheet | Android Files/Sharesheet and iOS simulator document opening completed | **Incomplete:** physical Messages, AirDrop, Files/providers, and real Android recipients remain unavailable |
 
 **Audit verdict:** not achieved. The implementation and automated/simulator coverage are complete enough for continued device QA, but the explicitly required physical interoperability and accessibility evidence is still missing. The contract therefore remains `deferred`, the capability remains `planned`, and the branch remains uncommitted/unpushed.
+
+*Cross-reference added 2026-09-05 (cycle-7 integrator):* the executable form of the remaining device gates for the v2 multi-profile surface is the [v2 physical-device execution matrix](./shared-setup-v2.md#cycle-6-amendment-2026-09-05) (24 rows, all `Not run`; run out-of-loop by the user). No v1 row above is affected by this pointer.
