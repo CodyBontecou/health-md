@@ -108,3 +108,36 @@ Every shared-setup file added in cycles 2–3 (`git diff --name-only eae6feb97..
 ### Still not claimed (unchanged)
 
 No physical-device, emulator, simulator-manual, share-channel, or accessibility QA; no default-writer change; `healthmd.shared_setup` stays version 2 / `deferred`; capability classification stays `planned`.
+
+## Cycle-5 localization amendment (2026-09-06)
+
+Recorded from `shared-setup-v2/c5-android-v1-l10n` (worktree `/private/tmp/health-md-c5-l10n`, base `9cf250b73`). Android resource-string localization only; no Kotlin, Apple, contract, or English `values/strings.xml` change.
+
+### Final localization coverage (all 15 non-English Android locales)
+
+Every `shared_setup_*` key defined in `apps/android/app/src/main/res/values/strings.xml` at the base — 47 v1 keys (`shared_setup_*`) and 36 v2 keys (`shared_setup_v2_*`) — is translated in all 15 locale files (ar, b+pa+Guru, b+zh+Hans, bn, de, es, fr, hi, ja, kk, nl, pt-rBR, ro, ru, uk). This cycle backfilled the previously untranslated v1 block (0/47 in 13 locales, 10/47 in es/fr) and completed the 8 confirmation-flow v2 keys (`shared_setup_v2_rebind_api_*`, `shared_setup_v2_rebind_mac_*`, `shared_setup_v2_rebind_cloud_unavailable`) that were missing in every locale. The 8 v2 keys are exactly the set added to English by this cycle's sibling Android confirmation-flow lane; they were translated in this same pass, so **there is no pending next-l10n-pass set as of base `9cf250b73`** — coverage is complete. Terminology anchors were the cycle-4 v2 translations plus each file's established strings; per-key placeholder multisets (v1 `shared_setup_endpoint_no_auth` carries `%1$s`) match English exactly.
+
+### Documented intentional identical-to-English values
+
+The following render byte-identical to English because that is the natural, established term in that locale file (same rationale as the cycle-4 `shared_setup_v2_applied`/`_applied_count` note):
+
+| Locale | Key | Value | Rationale |
+|---|---|---|---|
+| de | `shared_setup_v2_destination_cloud` | Cloud | Standard German term (file's own cycle-4 render) |
+| nl | `shared_setup_v2_destination_cloud` | Cloud | Standard Dutch term (file's own cycle-4 render) |
+| ro | `shared_setup_v2_destination_cloud` | Cloud | Standard Romanian term (file's own cycle-4 render) |
+| fr | `shared_setup_v2_destination` | Destination | Identical French word (file's own cycle-4 render) |
+| fr | `shared_setup_v2_destination_cloud` | Cloud | Standard French term (file's own cycle-4 render) |
+| es | `shared_setup_endpoint` | Endpoint | Established es-file term (`api_export_section_endpoint`, v2 `Endpoint de API`) |
+| nl | `shared_setup_endpoint` | Endpoint | Established nl-file term (`api_export_section_endpoint`, v2 `API-endpoint`) |
+| pt-rBR | `shared_setup_endpoint` | Endpoint | Established pt-file term (`api_export_section_endpoint`, v2 `Endpoint da API`) |
+| fr | `shared_setup_formats` | Formats | Identical French word (anchor `Formats par jour`) |
+
+### Cycle-5 receipts (this lane)
+
+| Gate | Result |
+|---|---|
+| `xmllint --noout` × 15 locale files | all "ok", exit 0 |
+| Order/set/placeholder parity script (v1+v2 blocks, per key, vs English and vs base order) | `RESULT: ALL OK`, exit 0 |
+| `cd apps/android && ./gradlew :app:processPlayDebugResources --offline --no-daemon --max-workers=2` (`ANDROID_HOME=$HOME/Library/Android/sdk`) | BUILD SUCCESSFUL in 40s, exit 0 |
+| `git status --porcelain` | clean; only the 15 locale files changed before their commits, plus this file in its own commit |
