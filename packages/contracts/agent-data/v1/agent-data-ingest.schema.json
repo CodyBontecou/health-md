@@ -32,6 +32,7 @@
     "media_type": { "type": "string", "minLength": 1, "maxLength": 128 },
     "byte_count": { "type": "integer", "minimum": 1, "maximum": 67108864 },
     "sha256": { "$ref": "#/$defs/digest" },
+    "record_count": { "type": "integer", "minimum": 1 },
     "completeness": { "$ref": "#/$defs/completeness" }
   },
   "allOf": [

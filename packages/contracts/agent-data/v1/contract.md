@@ -87,9 +87,15 @@ An upload is one artifact described by one manifest, `agent-data-ingest.schema.j
 - the artifact's own schema identity and a concrete schema version;
 - the artifact kind, source platform, physical format, and media type;
 - the owner-date partition identity the artifact belongs to;
-- the byte length and SHA-256 of the exact uploaded bytes; and
+- the byte length and SHA-256 of the exact uploaded bytes;
+- an optional record count the phone may declare as a cheap manifest/bytes consistency aid; and
 - completeness: `complete`, or `partial` with an explicit finalization marker and the covered
   owner dates.
+
+`record_count` is INFORMATIONAL in v1. The phone MAY declare it, and ingestion attaches no
+v1 semantics to it: cross-checking a declared count against the stored artifact is deferred to
+the gateway implementation cycle and must not add a new rejection code or reinterpret any of the
+four existing ones.
 
 Artifact uploads are bounded to 64 MiB, matching the read model's JSON artifact bound. NDJSON
 uploads remain subject to the read model's 2 MiB line bound during content validation. The
@@ -112,9 +118,13 @@ authoritative partition view.
 
 ### Promotion
 
-Stored revisions group into owner-date partitions. Within a partition, the newest complete
-accepted revision is authoritative. A partial revision never displaces a complete one: while a
-complete revision exists it remains authoritative and any stored partial shadows nothing. When
+Stored revisions group into owner-date partitions. Partition keying is settled v1 semantics:
+each manifest's single `owner_date` keys the partition — the exported day for daily artifacts and
+the capture day for `raw_snapshot` and `raw_changes` artifacts. Splitting one artifact across
+multiple date partitions would change these semantics and requires a versioned contract change.
+Within a partition, the newest complete accepted revision is authoritative. A partial revision
+never displaces a complete one: while a complete revision exists it remains authoritative and
+any stored partial shadows nothing. When
 no complete revision exists, the newest accepted partial is authoritative and is always
 reported with its explicit partial status and covered owner dates, so partial coverage is never
 concealed from agents. The stored revision identifier is the SHA-256 of the stored artifact
