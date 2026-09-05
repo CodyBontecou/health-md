@@ -5,7 +5,8 @@
 `healthmd.agent_data_grant` v1, `healthmd.agent_data_query` v1, and
 `healthmd.agent_query_response` v1 define Health.md's read-only data surface for AI agents.
 They do not define an analysis service, a diagnosis service, a write-back API, or a new health
-export schema.
+export schema. `healthmd.agent_data_ingest` v1 and `healthmd.agent_ingest_response` v1 add the
+separate phone-to-gateway upload contracts; see [Ingestion](#ingestion).
 
 The source artifacts remain the frozen Apple and Android JSON or NDJSON contracts that produced
 them. Agent Data v1 indexes those artifacts without rewriting them. A returned common-data value
@@ -70,3 +71,57 @@ V1 readers are append-safe and non-destructive. They may index complete or expli
 daily exports, but reject structurally incomplete raw snapshots and raw-change archives. They do
 not delete, rewrite, repair, or promote source artifacts. Supersession and cleanup policy are
 outside this contract.
+
+## Ingestion
+
+`healthmd.agent_data_ingest` v1 and `healthmd.agent_ingest_response` v1 define the
+phone-to-gateway upload surface. One ingestion protocol serves managed cloud, convenient
+bring-your-own, private bring-your-own, and self-hosted gateways. The phone uploads exact
+existing Health.md artifacts; the gateway validates and stores them unchanged. V1 defines no
+third-party schemas, no producer-side transformation, and no transport; the HTTPS transport and
+gateway implementation are later cycles. Promotion in gateway stores does not change the
+append-safe, non-promoting behavior of local V1 directory readers.
+
+An upload is one artifact described by one manifest, `agent-data-ingest.schema.json`, carrying:
+
+- the artifact's own schema identity and a concrete schema version;
+- the artifact kind, source platform, physical format, and media type;
+- the owner-date partition identity the artifact belongs to;
+- the byte length and SHA-256 of the exact uploaded bytes; and
+- completeness: `complete`, or `partial` with an explicit finalization marker and the covered
+  owner dates.
+
+Artifact uploads are bounded to 64 MiB, matching the read model's JSON artifact bound. NDJSON
+uploads remain subject to the read model's 2 MiB line bound during content validation. The
+recognized kinds are the read model's standalone artifact families: `health_data_daily`,
+`external_provider_daily`, `raw_snapshot`, and `raw_changes`. `raw_snapshot` and `raw_changes`
+artifacts must be uploaded as `complete`; structurally incomplete raw artifacts are rejected.
+Embedded `healthkit_records` are not a standalone upload kind; they ride inside lossless daily
+exports.
+
+The gateway accepts complete artifacts that validate, and accepts finalized, schema-valid
+partial daily exports only when the manifest carries the explicit partial status and integrity
+metadata. It rejects truncated, transient (not finalized), checksum-invalid, and
+manifest-incomplete uploads with the stable, health-free codes `truncated`, `transient`,
+`checksum_invalid`, and `manifest_incomplete` in `agent-ingest-response.schema.json`. V1
+defines exactly these four rejection classes.
+
+Receipts are health-free. They carry no health values, no interpretation, no account identity,
+and no paths: only the accepted or rejected outcome, the stored revision identity, and the
+authoritative partition view.
+
+### Promotion
+
+Stored revisions group into owner-date partitions. Within a partition, the newest complete
+accepted revision is authoritative. A partial revision never displaces a complete one: while a
+complete revision exists it remains authoritative and any stored partial shadows nothing. When
+no complete revision exists, the newest accepted partial is authoritative and is always
+reported with its explicit partial status and covered owner dates, so partial coverage is never
+concealed from agents. The stored revision identifier is the SHA-256 of the stored artifact
+bytes, identical to the `artifact_id` the read model reports.
+
+### Non-destructive v1
+
+V1 ingestion implements promotion and health-free receipts only. Gateways must not delete,
+purge, or rewrite stored revisions, and V1 makes no retention decisions; retention policy is not
+yet user-confirmed and remains deferred to a later contract version.
