@@ -38,7 +38,6 @@ use healthmd_protocol::{
 };
 use qrcode::{QrCode, render::unicode};
 use serde_json::{Value, json};
-#[cfg(feature = "streamable-http")]
 use std::net::SocketAddr;
 #[cfg(feature = "oauth-resource-server")]
 use url::Url;
@@ -158,6 +157,8 @@ enum DataCommand {
     Import(DataImportArgs),
     /// Validate and store one manifest-described artifact upload (ingestion protocol v1).
     Ingest(DataIngestArgs),
+    /// Serve the self-hosted ingestion gateway for protocol v1 uploads on loopback.
+    IngestServe(DataIngestServeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -191,6 +192,28 @@ struct DataIngestArgs {
     /// Absolute path of the exact artifact bytes referenced by the manifest.
     #[arg(long)]
     artifact: PathBuf,
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd data ingest-serve --database /absolute/private/agent-data.sqlite\n\nServe the self-hosted reference ingestion gateway on loopback. One POST /v1/ingest request\ncarries one newline-terminated agent-data-ingest v1 manifest line followed immediately by the\nexact artifact bytes (Content-Type: application/x-healthmd-agent-data-ingest, exact\nContent-Length, Connection: close). Every validated outcome answers HTTP 200 with the same\nhealth-free agent_ingest_response v1 receipt `data ingest` prints; an unfinalized partial\nupload is the retryable transient class for the gateway. The listener policy matches the data\nHTTP surface: loopback-only bind, loopback Host by default, Origin rejected until allowlisted,\nall validated before the database opens."
+)]
+struct DataIngestServeArgs {
+    /// Absolute path of the `SQLite` Agent Data database to create or extend.
+    #[arg(long)]
+    database: PathBuf,
+
+    /// Loopback address for the ingestion gateway listener.
+    #[arg(long, default_value = "127.0.0.1:8791")]
+    bind: SocketAddr,
+
+    /// Accepted Host header. Repeat for a reverse-proxy hostname during local development.
+    #[arg(long = "allowed-host")]
+    allowed_hosts: Vec<String>,
+
+    /// Accepted browser Origin. Repeat for each trusted browser-based client.
+    #[arg(long = "allowed-origin")]
+    allowed_origins: Vec<String>,
 }
 
 #[derive(Debug, Args)]
@@ -848,6 +871,23 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
             return ExitCode::SUCCESS;
         }
         let result = mcp::serve_data(backing).await;
+        if let Err(error) = result {
+            eprintln!("healthmd: {error}");
+            return ExitCode::from(1);
+        }
+        return ExitCode::SUCCESS;
+    }
+    if let Command::Data(DataArgs {
+        command: Some(DataCommand::IngestServe(options)),
+    }) = &cli.command
+    {
+        let result = mcp::serve_ingest_gateway(mcp::IngestServeOptions {
+            database: options.database.clone(),
+            bind: options.bind,
+            allowed_hosts: options.allowed_hosts.clone(),
+            allowed_origins: options.allowed_origins.clone(),
+        })
+        .await;
         if let Err(error) = result {
             eprintln!("healthmd: {error}");
             return ExitCode::from(1);
@@ -2662,6 +2702,9 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Data(DataArgs {
             command: Some(DataCommand::Ingest(_)),
         }) => "data ingest",
+        Command::Data(DataArgs {
+            command: Some(DataCommand::IngestServe(_)),
+        }) => "data ingest-serve",
         Command::Data(DataArgs { command: None }) => "data",
         Command::Mcp(McpArgs {
             command: Some(McpCommand::Serve(_)),

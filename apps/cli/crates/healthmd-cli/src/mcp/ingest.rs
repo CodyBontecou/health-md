@@ -9,11 +9,15 @@
 //! into owner-date partitions.
 //!
 //! Rejection codes are the four stable v1 classes: `truncated`,
-//! `checksum_invalid`, `manifest_incomplete`, and `transient`. The `transient`
-//! mapping documented in `apps/cli/docs/agent-data.md` is local-file-only: it
-//! is produced when the artifact file cannot be read as bytes at dispatch
-//! time. The HTTPS transport mapping stays open for the gateway cycle; the
-//! contract codes themselves are stable.
+//! `checksum_invalid`, `manifest_incomplete`, and `transient`. The
+//! `transient` mapping documented in `apps/cli/docs/agent-data.md` is
+//! local-file-only for `healthmd data ingest`: it is produced when the
+//! artifact file cannot be read as bytes at dispatch time. The ingestion
+//! gateway (`healthmd data ingest-serve`, `ingest_http.rs`) adds exactly one
+//! surface divergence through [`IngestSurface`]: an unfinalized partial
+//! upload is the retryable `transient` class for the gateway reading, while
+//! the local classification stays `manifest_incomplete`. Every other
+//! validation, integrity, promotion, and receipt path is shared.
 
 use std::path::{Path, PathBuf};
 
@@ -39,7 +43,11 @@ const MAXIMUM_UPLOAD_BYTES: u64 = 67_108_864;
 /// Bound for the `covered_owner_dates` list of a finalized partial upload.
 const MAXIMUM_COVERED_OWNER_DATES: usize = 400;
 /// Local bound for the manifest document itself; a valid manifest is tiny.
-const MAXIMUM_MANIFEST_BYTES: u64 = 1_048_576;
+pub(super) const MAXIMUM_MANIFEST_BYTES: u64 = 1_048_576;
+/// Byte bound for scanning one framed manifest line (the manifest document
+/// bound plus its terminating newline), shared with the gateway framing
+/// parser in `ingest_http.rs`.
+pub(super) const INGEST_MANIFEST_LINE_BOUND_BYTES: usize = 1_048_577;
 /// Identifier length bound mirroring the manifest schema's `maxLength`.
 const MAXIMUM_IDENTIFIER_CHARS: usize = 128;
 
@@ -106,6 +114,11 @@ struct ManifestWire {
     media_type: String,
     byte_count: u64,
     sha256: String,
+    /// Optional, strictly informational declared record count
+    /// (`agent-data-ingest.schema.json`: integer, minimum 1). Ingestion
+    /// attaches no v1 semantics to it; the stored index derives from the
+    /// verified bytes alone.
+    record_count: Option<u64>,
     completeness: CompletenessWire,
 }
 
@@ -155,6 +168,10 @@ pub(super) struct IngestManifest {
     media_type: String,
     byte_count: u64,
     sha256: String,
+    /// Informational declared record count; never cross-checked against the
+    /// artifact bytes (v1 attaches no semantics to a disagreeing count).
+    #[allow(dead_code)]
+    record_count: Option<u64>,
     completeness: Completeness,
 }
 
@@ -206,6 +223,7 @@ impl IngestManifest {
             media_type: wire.media_type,
             byte_count: wire.byte_count,
             sha256: wire.sha256,
+            record_count: wire.record_count,
             completeness,
         };
         manifest.validate()?;
@@ -232,6 +250,9 @@ impl IngestManifest {
             return Err(());
         }
         if !is_lowercase_sha256(&self.sha256) {
+            return Err(());
+        }
+        if self.record_count.is_some_and(|count| count == 0) {
             return Err(());
         }
         if let Completeness::Partial {
@@ -323,6 +344,62 @@ impl Rejection {
     }
 }
 
+/// The surface one upload arrives through.
+///
+/// The single behavioral difference between surfaces is the
+/// unfinalized-partial completeness shape: the strict manifest grammar
+/// rejects it on every surface (the schema stays frozen — `finalized`
+/// remains `const: true`), but the surfaces CLASSIFY the rejection
+/// differently. This is the only seam between the local CLI command and the
+/// ingestion gateway; every other validation, integrity, promotion, and
+/// receipt path is shared byte-for-byte.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum IngestSurface {
+    /// `healthmd data ingest`: an unfinalized partial is a strict-grammar
+    /// violation rejected as `manifest_incomplete` (the unchanged cycle-2
+    /// local classification).
+    LocalCli,
+    /// `healthmd data ingest-serve`: an unfinalized partial is the retryable
+    /// `transient` class — the gateway reading of an upload that is still in
+    /// progress on the phone.
+    Gateway,
+}
+
+/// Detect the unfinalized-partial shape BEFORE strict schema/grammar
+/// validation (case 5 of the frozen gateway transport mapping).
+///
+/// The shape is a manifest object whose `completeness` is an object with
+/// `type` equal to `"partial"` and `finalized` equal to JSON `false`. A
+/// missing or non-boolean `finalized` is NOT this shape: it is a grammar
+/// violation and stays `manifest_incomplete` on every surface, because it
+/// identifies a structurally incomplete manifest document rather than an
+/// explicitly unfinalized upload.
+pub(super) fn unfinalized_partial_shape(value: &Value) -> bool {
+    value
+        .get("completeness")
+        .and_then(Value::as_object)
+        .is_some_and(|completeness| {
+            completeness.get("type").and_then(Value::as_str) == Some("partial")
+                && completeness.get("finalized") == Some(&Value::Bool(false))
+        })
+}
+
+/// Classify one manifest document under a surface's rejection policy.
+///
+/// The gateway's unfinalized-partial shape (detected before strict
+/// validation) classifies as `transient`; every other rejected shape
+/// classifies as `manifest_incomplete` on both surfaces, and every accepted
+/// manifest is identical on both surfaces.
+pub(super) fn validated_manifest(
+    value: Value,
+    surface: IngestSurface,
+) -> Result<IngestManifest, Rejection> {
+    if matches!(surface, IngestSurface::Gateway) && unfinalized_partial_shape(&value) {
+        return Err(Rejection::Transient);
+    }
+    IngestManifest::from_value(value).map_err(|()| Rejection::ManifestIncomplete)
+}
+
 /// Ingest one manifest-described artifact upload into the `SQLite` store.
 ///
 /// Rejected uploads are protocol outcomes and are returned as receipts; only
@@ -399,6 +476,116 @@ pub(super) fn ingest_upload(
     }))
 }
 
+/// Dispatch one framed gateway upload against the same `SQLite` store.
+///
+/// The gateway fronts the store `healthmd data ingest` uses: per request it
+/// re-opens and re-migrates the database, classifies the manifest under the
+/// gateway surface policy, verifies the artifact bytes, and promotes accepted
+/// bytes through the identical atomic path. The function is infallible at the
+/// protocol level: every failure mode maps to one health-free receipt, with
+/// any server-side read/dispatch failure classified as the retryable
+/// `transient` (case 6 of the frozen gateway transport mapping).
+pub(super) fn ingest_gateway_upload(
+    database: &Path,
+    manifest_line: &[u8],
+    artifact_bytes: &[u8],
+) -> Value {
+    let Ok(manifest_value) = serde_json::from_slice::<Value>(manifest_line) else {
+        // An unparseable manifest line is unidentifiable (case 4).
+        return rejected_receipt(Rejection::ManifestIncomplete, None);
+    };
+    let manifest = match validated_manifest(manifest_value, IngestSurface::Gateway) {
+        Ok(manifest) => manifest,
+        // Case 5 (unfinalized partial) classifies as `transient` before the
+        // strict grammar runs; every other rejected shape (case 4) carries no
+        // partition view because the manifest never validated.
+        Err(rejection) => return rejected_receipt(rejection, None),
+    };
+    let Some(mut connection) = open_gateway_connection(database) else {
+        return rejected_receipt(Rejection::Transient, None);
+    };
+    if artifact_bytes.len() as u64 != manifest.byte_count {
+        return receipt_or_transient(
+            Rejection::Truncated,
+            partition_view(&connection, &manifest.owner_date),
+        );
+    }
+    if sha256_hex(artifact_bytes) != manifest.sha256 {
+        return receipt_or_transient(
+            Rejection::ChecksumInvalid,
+            partition_view(&connection, &manifest.owner_date),
+        );
+    }
+    let Some(spool) = spool_verified_artifact(&manifest, artifact_bytes) else {
+        return rejected_receipt(Rejection::Transient, None);
+    };
+    let promoted = promote(&mut connection, &manifest, artifact_bytes, &spool.path)
+        .and_then(|()| partition_view_of_revision(&connection, &manifest));
+    drop(spool);
+    match promoted {
+        Ok(Some(partition)) => json!({
+            "schema": INGEST_RESPONSE_SCHEMA,
+            "schema_version": INGEST_SCHEMA_VERSION,
+            "outcome": "accepted",
+            "stored": {
+                "revision_id": manifest.sha256,
+                "byte_count": manifest.byte_count,
+                "completeness": manifest.completeness.to_json()
+            },
+            "partition": partition
+        }),
+        // A missing view after a committed promotion, or any read/dispatch
+        // failure, is the retryable server-side class (case 6).
+        Ok(None) | Err(_) => rejected_receipt(Rejection::Transient, None),
+    }
+}
+
+/// Open (or create) and migrate the store for one gateway request, mirroring
+/// the per-invocation open the local `data ingest` command performs.
+fn open_gateway_connection(database: &Path) -> Option<Connection> {
+    let mut connection = data_sqlite::open_read_write(database).ok()?;
+    data_sqlite::migrate(&mut connection).ok()?;
+    Some(connection)
+}
+
+/// Map an optional partition view to a rejection receipt, treating a view
+/// read failure as the retryable server-side class.
+fn receipt_or_transient(
+    rejection: Rejection,
+    partition: Result<Option<Value>, DataStoreOpenError>,
+) -> Value {
+    match partition {
+        Ok(partition) => rejected_receipt(rejection, partition),
+        Err(_) => rejected_receipt(Rejection::Transient, None),
+    }
+}
+
+/// One verified upload spooled to a private temporary file for promotion.
+///
+/// The shared promotion machinery recognizes artifacts through the read
+/// model's file-backed parser, so the gateway re-materializes the exact
+/// verified bytes in a private temporary directory with the
+/// manifest-declared physical-format extension, promotes through the
+/// identical path, and deletes the spool. This keeps gateway promotion
+/// byte-identical to what `data import` would store for the same bytes
+/// instead of forking the parser.
+struct ArtifactSpool {
+    #[allow(dead_code)] // ownership handle; the path outlives use inside this module
+    directory: tempfile::TempDir,
+    path: PathBuf,
+}
+
+fn spool_verified_artifact(manifest: &IngestManifest, bytes: &[u8]) -> Option<ArtifactSpool> {
+    let directory = tempfile::tempdir().ok()?;
+    let extension = match manifest.physical_format {
+        PhysicalFormat::Json => "json",
+        PhysicalFormat::Ndjson => "ndjson",
+    };
+    let path = directory.path().join(format!("artifact.{extension}"));
+    std::fs::write(&path, bytes).ok()?;
+    Some(ArtifactSpool { directory, path })
+}
+
 enum ArtifactRead {
     Bytes(Vec<u8>),
     Truncated,
@@ -416,7 +603,9 @@ fn read_manifest(path: &Path) -> Option<IngestManifest> {
     }
     let bytes = std::fs::read(path).ok()?;
     let value = serde_json::from_slice::<Value>(&bytes).ok()?;
-    IngestManifest::from_value(value).ok()
+    // The local command threads the LocalCli classification policy: the
+    // unfinalized-partial shape stays the cycle-2 manifest_incomplete class.
+    validated_manifest(value, IngestSurface::LocalCli).ok()
 }
 
 /// Read the exact artifact bytes, mapping genuine local I/O failures to
@@ -711,7 +900,7 @@ fn partition_view_of_revision(
     }
 }
 
-fn rejected_receipt(rejection: Rejection, partition: Option<Value>) -> Value {
+pub(super) fn rejected_receipt(rejection: Rejection, partition: Option<Value>) -> Value {
     let mut receipt = json!({
         "schema": INGEST_RESPONSE_SCHEMA,
         "schema_version": INGEST_SCHEMA_VERSION,
@@ -1337,5 +1526,191 @@ mod tests {
         assert!(!is_strict_date("2026-00-01"));
         assert!(!is_strict_date("2026-01-32"));
         assert!(!is_strict_date("20260101"));
+    }
+
+    fn classification(value: &Value, surface: IngestSurface) -> Result<(), Rejection> {
+        validated_manifest(value.clone(), surface).map(|_| ())
+    }
+
+    #[test]
+    fn surface_policy_diverges_only_on_the_unfinalized_partial_shape() {
+        let unfinalized = json!({
+            "type": "partial", "finalized": false,
+            "covered_owner_dates": ["2026-03-15"]
+        });
+        let manifest = manifest_with_overrides(&unfinalized, &[]);
+        // The local classification is byte-identical to cycle 2: the strict
+        // grammar rejects the unfinalized partial as manifest_incomplete.
+        assert_eq!(
+            classification(&manifest, IngestSurface::LocalCli),
+            Err(Rejection::ManifestIncomplete)
+        );
+        // The gateway reading classifies the identical shape as retryable.
+        assert_eq!(
+            classification(&manifest, IngestSurface::Gateway),
+            Err(Rejection::Transient)
+        );
+        // The pre-strict detection wins even when the rest of the manifest is
+        // also invalid (case 5 fires before strict schema/grammar validation).
+        let mut also_broken = manifest.clone();
+        also_broken
+            .as_object_mut()
+            .unwrap()
+            .insert("extra".into(), json!(null));
+        assert_eq!(
+            classification(&also_broken, IngestSurface::Gateway),
+            Err(Rejection::Transient)
+        );
+        // A missing or non-boolean finalized is a grammar violation, not the
+        // unfinalized-partial shape, on every surface.
+        for completeness in [
+            json!({"type": "partial", "covered_owner_dates": ["2026-03-15"]}),
+            json!({"type": "partial", "finalized": "no", "covered_owner_dates": ["2026-03-15"]}),
+        ] {
+            let manifest = manifest_with_overrides(&completeness, &[]);
+            assert_eq!(
+                classification(&manifest, IngestSurface::LocalCli),
+                Err(Rejection::ManifestIncomplete)
+            );
+            assert_eq!(
+                classification(&manifest, IngestSurface::Gateway),
+                Err(Rejection::ManifestIncomplete)
+            );
+        }
+        // Every accepted and every other rejected shape classifies
+        // identically across both surfaces.
+        let shapes = [
+            manifest_for(DAY_BYTES, &complete()),
+            manifest_for(DAY_BYTES, &partial()),
+            manifest_with_overrides(&complete(), &[("schema", json!("healthmd.other"))]),
+            manifest_with_overrides(&complete(), &[("extra", json!(null))]),
+            manifest_with_overrides(&complete(), &[("byte_count", json!(0))]),
+            manifest_with_overrides(&complete(), &[("sha256", json!("1".repeat(64)))]),
+            manifest_with_overrides(&partial(), &[("artifact_kind", json!("raw_snapshot"))]),
+        ];
+        for shape in &shapes {
+            assert_eq!(
+                classification(shape, IngestSurface::LocalCli),
+                classification(shape, IngestSurface::Gateway),
+                "surfaces must agree on {shape}"
+            );
+        }
+    }
+
+    #[test]
+    fn record_count_is_informational_and_schema_bounded() {
+        let mut declared = manifest_for(DAY_BYTES, &complete());
+        declared
+            .as_object_mut()
+            .unwrap()
+            .insert("record_count".into(), json!(512));
+        assert!(IngestManifest::from_value(declared).is_ok());
+        let mut zero = manifest_for(DAY_BYTES, &complete());
+        zero.as_object_mut()
+            .unwrap()
+            .insert("record_count".into(), json!(0));
+        assert!(IngestManifest::from_value(zero).is_err());
+    }
+
+    #[test]
+    fn gateway_upload_maps_the_frozen_transport_outcomes() {
+        let temporary = temporary();
+        let database = temporary.path().join("agent-data.sqlite");
+        let manifest_line = serde_json::to_vec(&manifest_for(DAY_BYTES, &complete())).unwrap();
+
+        // Accepted: a declared record count that disagrees with the bytes is
+        // still accepted (strictly informational).
+        let mut counted = manifest_for(DAY_BYTES, &complete());
+        counted
+            .as_object_mut()
+            .unwrap()
+            .insert("record_count".into(), json!(999));
+        let receipt = ingest_gateway_upload(
+            &database,
+            &serde_json::to_vec(&counted).unwrap(),
+            DAY_BYTES.as_bytes(),
+        );
+        assert_eq!(receipt["outcome"], "accepted");
+        assert_eq!(
+            receipt["stored"]["revision_id"],
+            sha256_hex(DAY_BYTES.as_bytes())
+        );
+
+        // Idempotent: identical manifest+bytes re-upload is byte-identical.
+        let again = ingest_gateway_upload(&database, &manifest_line, DAY_BYTES.as_bytes());
+        assert_eq!(
+            serde_json::to_string(&receipt).unwrap(),
+            serde_json::to_string(&again).unwrap()
+        );
+
+        // truncated: artifact bytes shorter than the declared byte_count.
+        let receipt = ingest_gateway_upload(
+            &database,
+            &manifest_line,
+            &DAY_BYTES.as_bytes()[..DAY_BYTES.len() - 1],
+        );
+        assert_eq!(receipt["rejection"], json!({"code": "truncated"}));
+        assert_eq!(
+            receipt["partition"]["authoritative"]["revision_id"],
+            sha256_hex(DAY_BYTES.as_bytes())
+        );
+
+        // checksum_invalid: correct length, wrong digest.
+        let mut wrong = manifest_for(DAY_BYTES, &complete());
+        wrong
+            .as_object_mut()
+            .unwrap()
+            .insert("sha256".into(), json!("1".repeat(64)));
+        let receipt = ingest_gateway_upload(
+            &database,
+            &serde_json::to_vec(&wrong).unwrap(),
+            DAY_BYTES.as_bytes(),
+        );
+        assert_eq!(receipt["rejection"], json!({"code": "checksum_invalid"}));
+
+        // transient (case 5): unfinalized partial, detected pre-strict.
+        let unfinalized = manifest_with_overrides(
+            &json!({
+                "type": "partial", "finalized": false,
+                "covered_owner_dates": ["2026-03-15"]
+            }),
+            &[],
+        );
+        let receipt = ingest_gateway_upload(
+            &database,
+            &serde_json::to_vec(&unfinalized).unwrap(),
+            DAY_BYTES.as_bytes(),
+        );
+        assert_eq!(receipt["rejection"], json!({"code": "transient"}));
+        assert!(receipt.get("partition").is_none());
+
+        // manifest_incomplete (case 4): malformed JSON manifest line.
+        let receipt = ingest_gateway_upload(&database, b"{not json", DAY_BYTES.as_bytes());
+        assert_eq!(receipt["rejection"], json!({"code": "manifest_incomplete"}));
+
+        // manifest_incomplete (case 4): unknown field.
+        let mut unknown = manifest_for(DAY_BYTES, &complete());
+        unknown
+            .as_object_mut()
+            .unwrap()
+            .insert("extra".into(), json!(null));
+        let receipt = ingest_gateway_upload(
+            &database,
+            &serde_json::to_vec(&unknown).unwrap(),
+            DAY_BYTES.as_bytes(),
+        );
+        assert_eq!(receipt["rejection"], json!({"code": "manifest_incomplete"}));
+
+        // transient (case 6): a server-side failure to open the store maps to
+        // the retryable class, never to a health-bearing error.
+        let receipt = ingest_gateway_upload(
+            &temporary
+                .path()
+                .join("missing-directory")
+                .join("store.sqlite"),
+            &manifest_line,
+            DAY_BYTES.as_bytes(),
+        );
+        assert_eq!(receipt["rejection"], json!({"code": "transient"}));
     }
 }

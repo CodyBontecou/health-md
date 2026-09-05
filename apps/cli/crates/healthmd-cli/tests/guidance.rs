@@ -72,6 +72,11 @@ fn data_group_lists_import_and_ingest() {
             .iter()
             .any(|name| name.starts_with("healthmd data ingest"))
     );
+    assert!(
+        names
+            .iter()
+            .any(|name| name.starts_with("healthmd data ingest-serve"))
+    );
 }
 
 #[test]
@@ -100,6 +105,57 @@ fn data_ingest_parse_errors_list_accepted_arguments_without_echoing_paths() {
             .iter()
             .any(|argument| argument.contains("--artifact"))
     );
+}
+
+#[test]
+fn data_ingest_serve_parse_errors_list_accepted_arguments_without_echoing_values() {
+    // The data group listing includes the gateway command.
+    let output = run(&["data"]);
+    assert!(output.status.success());
+    let value = json_output(&output);
+    assert!(
+        value["available_commands"]
+            .as_array()
+            .expect("available commands")
+            .iter()
+            .any(|command| command["command"]
+                .as_str()
+                .expect("command")
+                .starts_with("healthmd data ingest-serve"))
+    );
+
+    let output = run(&["data", "ingest-serve"]);
+    assert!(!output.status.success());
+    assert!(output.stderr.is_empty());
+    let value = json_output(&output);
+    assert_eq!(value["schema"], "healthmd.cli_error");
+    assert_eq!(value["error"], "invalid_request");
+    assert_eq!(value["command"], "healthmd data ingest-serve");
+    assert_eq!(value["request_sent"], false);
+    let arguments: Vec<&str> = value["accepted_arguments"]
+        .as_array()
+        .expect("accepted arguments")
+        .iter()
+        .map(|argument| argument.as_str().expect("argument"))
+        .collect();
+    assert!(
+        arguments
+            .iter()
+            .any(|argument| argument.contains("--database"))
+    );
+    assert!(arguments.iter().any(|argument| argument.contains("--bind")));
+    assert!(
+        arguments
+            .iter()
+            .any(|argument| argument.contains("--allowed-host"))
+    );
+    assert!(
+        arguments
+            .iter()
+            .any(|argument| argument.contains("--allowed-origin"))
+    );
+    let encoded = String::from_utf8_lossy(&output.stdout).into_owned();
+    assert!(encoded.contains("healthmd data ingest-serve --help"));
 }
 
 #[test]

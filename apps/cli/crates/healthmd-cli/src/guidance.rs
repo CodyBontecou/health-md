@@ -412,6 +412,7 @@ pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
             vec![
                 json!({"command": "healthmd data import --database <ABSOLUTE_SQLITE_FILE> --directory <ABSOLUTE_EXPORTS_DIRECTORY>", "description": "Ingest every recognized export artifact in a directory into the SQLite store."}),
                 json!({"command": "healthmd data ingest --database <ABSOLUTE_SQLITE_FILE> --manifest <ABSOLUTE_MANIFEST_JSON> --artifact <ABSOLUTE_ARTIFACT_FILE>", "description": "Validate and store one manifest-described artifact upload under ingestion protocol v1."}),
+                json!({"command": "healthmd data ingest-serve --database <ABSOLUTE_SQLITE_FILE>", "description": "Serve the self-hosted loopback ingestion gateway for protocol v1 uploads."}),
             ],
         ),
         "setup" => (
@@ -833,6 +834,12 @@ fn accepted_arguments(path: &str) -> Value {
             "--manifest <ABSOLUTE_MANIFEST_JSON>",
             "--artifact <ABSOLUTE_ARTIFACT_FILE>",
         ],
+        "data ingest-serve" => &[
+            "--database <ABSOLUTE_SQLITE_FILE>",
+            "[--bind 127.0.0.1:8791]",
+            "[--allowed-host <HOST>]",
+            "[--allowed-origin <ORIGIN>]",
+        ],
         "setup codex" => &["--skip-pairing", "--pairing-timeout <SECONDS>"],
         _ => &[],
     };
@@ -944,6 +951,7 @@ fn command_path(arguments: &[OsString]) -> &'static str {
             .find_map(|value| match *value {
                 "import" => Some("data import"),
                 "ingest" => Some("data ingest"),
+                "ingest-serve" => Some("data ingest-serve"),
                 _ => None,
             })
             .unwrap_or("data"),
