@@ -723,6 +723,16 @@ enum SharedSetupVersionedCodec {
             throw SharedSetupV2Error.unsupportedVersion
         }
     }
+
+    static func encode(_ document: SharedSetupVersionedDocument) throws -> Data {
+        switch document {
+        case .v1(let document):
+            // Keep the historical v1 encoder byte-for-byte unchanged.
+            return try SharedSetupCodec.encode(document)
+        case .v2(let document):
+            return try SharedSetupV2Codec.encode(document)
+        }
+    }
 }
 
 enum SharedSetupV2Codec {
@@ -745,18 +755,29 @@ enum SharedSetupV2Codec {
         try SharedSetupV2Validation.validate(document)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let data: Data
+        var data: Data
         do {
             data = try encoder.encode(document)
         } catch {
             throw SharedSetupV2Error.malformed("Health.md could not encode the Shared Setup v2 document.")
         }
-        guard data.count <= SharedSetupV2.maximumEncodedBytes else {
+
+        // Canonical v2 bytes are compact sorted UTF-8 JSON followed by exactly
+        // one LF. The public 4 MiB limit includes that final byte.
+        guard data.count < SharedSetupV2.maximumEncodedBytes else {
             throw SharedSetupV2Error.oversized(maximumBytes: SharedSetupV2.maximumEncodedBytes)
         }
-        // Also proves that the allowlisted writer emitted every required
-        // explicit nullable key and no prohibited material.
-        try SharedSetupV2JSONPreflight.preflightV2(data)
+        data.append(0x0A)
+
+        // A successful decode proves the allowlisted writer emitted all
+        // required nullable keys, no prohibited material, and a document that
+        // round-trips through the strict v2 grammar.
+        let decoded = try decode(data)
+        guard decoded == document else {
+            throw SharedSetupV2Error.malformed(
+                "Health.md could not round-trip the Shared Setup v2 document."
+            )
+        }
         return data
     }
 }
