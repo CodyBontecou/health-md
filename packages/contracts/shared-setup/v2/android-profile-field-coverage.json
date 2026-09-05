@@ -1,0 +1,1708 @@
+{
+  "schema": "healthmd.shared_setup.android_profile_field_coverage",
+  "schema_version": 1,
+  "target_contract": {
+    "schema": "healthmd.shared_setup",
+    "schema_version": 2
+  },
+  "audited_git_base": "74bd5fdc5a75daf703c17aa4d596d918e174e4c4",
+  "allowed_dispositions": [
+    "portable",
+    "platform_extension",
+    "destination_intent",
+    "schedule_intent",
+    "derived_or_legacy",
+    "local_only",
+    "prohibited"
+  ],
+  "fields": [
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "apiEndpointIdentitySha256",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Endpoint fingerprints are explicitly forbidden destination identity state."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "dailyNoteInjection",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].daily_notes",
+      "evidence": "The nested Daily Notes configuration has a typed portable projection."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "dataTypes",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types",
+      "evidence": "Broad legacy data-type filters are preserved exactly in the Android extension."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "enginePin",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Renderer and engine pins are execution authority and are forbidden in Shared Setup."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "exportFormat",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_primary_format",
+      "evidence": "The old single primary format remains an Android compatibility field; formats is common authority."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "exportFormats",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.formats",
+      "evidence": "The complete selected format set maps to canonical common format values."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "exportMode",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.mode",
+      "evidence": "Android compatibility versus raw-snapshot mode is platform-distinct and must not imply a HealthKit archive."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "exportProfile",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.compatibility_profile",
+      "evidence": "The frozen-v4 versus analytical-v5 output profile is an Android typed compatibility choice."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "exportTarget",
+      "coverage_kind": "descriptor",
+      "disposition": "destination_intent",
+      "contract_path": "profiles[].destination.kind",
+      "evidence": "The accepted profile destination becomes inert destination intent and requires local rebinding."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "filenameFormat",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.filename_template",
+      "evidence": "The profile-owned filename template is portable after common path validation."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "folderOrganization",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.folder_organization",
+      "evidence": "Android folder organization fallback is a typed extension preference."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "folderStructure",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.folder_template",
+      "evidence": "The relative folder template is portable after common path validation."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "formatCustomization",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "This mixed native container is decomposed into presentation and Android-extension field rows; it is never copied opaquely."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "groupByCategory",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.group_by_category",
+      "evidence": "Category grouping has the same profile-owned output meaning on both platforms."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "ianaTimeZone",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Captured operation timezone is runtime context and is explicitly forbidden."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "includeGranularData",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.compatibility_detail",
+      "evidence": "The historical Boolean projects exactly to summary or selected_time_series detail."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "includeMetadata",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.include_metadata",
+      "evidence": "Metadata inclusion has the same profile-owned output meaning on both platforms."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "individualTracking",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries",
+      "evidence": "The nested individual-entry configuration has a typed portable projection."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "metricSelection",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].metrics",
+      "evidence": "The nested semantic metric selection is the common selection authority."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "rawSnapshot",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.raw_snapshot",
+      "evidence": "Android raw-snapshot options remain together in the typed Android extension."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "scheduledExportTarget",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Named profiles use ExportProfile.target; this duplicate native operation target is not a second v2 destination."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "subfolder",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.subfolder",
+      "evidence": "Android aggregate subfolder behavior is preserved as a typed extension preference."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "version",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "Version of the native durable snapshot codec, not the Shared Setup grammar."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "writeMode",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.write_mode",
+      "evidence": "Overwrite, append, and update are shared output intents."
+    },
+    {
+      "source_type": "CustomFrontmatterField",
+      "serialized_field": "customKey",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.fields[].output_key",
+      "evidence": "The user-authored output-key rename is portable typed presentation state."
+    },
+    {
+      "source_type": "CustomFrontmatterField",
+      "serialized_field": "isEnabled",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.fields[].enabled",
+      "evidence": "Per-field frontmatter enablement is portable typed presentation state."
+    },
+    {
+      "source_type": "CustomFrontmatterField",
+      "serialized_field": "originalKey",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.fields[].source_key",
+      "evidence": "The known source key identifies the portable frontmatter field being configured."
+    },
+    {
+      "source_type": "CustomFrontmatterField",
+      "serialized_field": "outputKey",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed effective-key fallback derives from originalKey and customKey and is not serialized."
+    },
+    {
+      "source_type": "DailyNoteInjectionSettings",
+      "serialized_field": "createIfMissing",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].daily_notes.create_if_missing",
+      "evidence": "The explicit value preserves the historical native default difference."
+    },
+    {
+      "source_type": "DailyNoteInjectionSettings",
+      "serialized_field": "enabled",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].daily_notes.enabled",
+      "evidence": "Daily Notes injection enablement is a shared profile preference."
+    },
+    {
+      "source_type": "DailyNoteInjectionSettings",
+      "serialized_field": "enabledMetrics",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Deprecated Daily Notes metric authority; ExportSettings.metricSelection now drives inclusion."
+    },
+    {
+      "source_type": "DailyNoteInjectionSettings",
+      "serialized_field": "filenamePattern",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].daily_notes.filename_template",
+      "evidence": "The Daily Notes filename template is portable after path validation."
+    },
+    {
+      "source_type": "DailyNoteInjectionSettings",
+      "serialized_field": "folderPath",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].daily_notes.folder",
+      "evidence": "The destination-relative Daily Notes folder is portable after path validation."
+    },
+    {
+      "source_type": "DailyNoteInjectionSettings",
+      "serialized_field": "injectMarkdownSections",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].daily_notes.inject_sections",
+      "evidence": "Markdown section injection has a common typed meaning."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "activity",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.activity",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "body",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.body",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "enabledCount",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed count derives from the twelve serialized switches."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "hasAnySelected",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed aggregate derives from the twelve serialized switches."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "heart",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.heart",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "medicalResources",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.medical_resources",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "mindfulness",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.mindfulness",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "mobility",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.mobility",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "nutrition",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.nutrition",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "plannedWorkouts",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.planned_workouts",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "reproductiveHealth",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.reproductive_health",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "sleep",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.sleep",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "vitals",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.vitals",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "DataTypeSelection",
+      "serialized_field": "workouts",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types.workouts",
+      "evidence": "This broad pre-metric filter is retained exactly as an Android legacy data-type switch."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "artifact_plan_version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "canonical_model_version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "core_api_version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "core_source_revision",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "engine",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "iana_time_zone",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "profile",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "public_schema",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "public_schema_version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "registry_sha256",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "registry_version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "render_input_version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "render_profile_revision",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "semantic_input_version",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportEnginePin",
+      "serialized_field": "semantic_profile_revision",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field is renderer/engine execution authority inside a prohibited durable engine pin."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "apiEndpointUrl",
+      "coverage_kind": "descriptor",
+      "disposition": "destination_intent",
+      "contract_path": "profiles[].destination.api_endpoint",
+      "evidence": "Only a validated safe endpoint hint is reconstructed; query, credentials, and active binding are excluded."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "createdAtEpochMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Native profile creation timestamps are runtime history and explicitly excluded."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "folderDisplayName",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "The local SAF binding label is presentation state for this installation, not portable destination intent."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "folderUri",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Android SAF content URIs and their persisted grants are explicitly forbidden."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "id",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Native profile IDs never cross devices; v2 assigns bundle-local profile-NNN identities."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "isMigrationDefault",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "One-time native migration bookkeeping has no cross-device meaning."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "name",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].name",
+      "evidence": "Trimmed case-insensitively unique display names are portable."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "settingsSnapshotJson",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "The opaque native snapshot container is decoded and decomposed; its raw JSON is never exported."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "target",
+      "coverage_kind": "descriptor",
+      "disposition": "destination_intent",
+      "contract_path": "profiles[].destination.kind",
+      "evidence": "Native target choice becomes inert destination kind intent."
+    },
+    {
+      "source_type": "ExportProfile",
+      "serialized_field": "updatedAtEpochMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Native profile update timestamps are runtime history and explicitly excluded."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "apiEndpointUrl",
+      "coverage_kind": "descriptor",
+      "disposition": "destination_intent",
+      "contract_path": "profiles[].destination.api_endpoint",
+      "evidence": "Only a validated safe inert endpoint hint may be reconstructed from this URL."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "dailyNoteInjection",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].daily_notes",
+      "evidence": "The nested Daily Notes configuration has a typed portable projection."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "dataTypes",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_data_types",
+      "evidence": "Broad legacy data-type filters are preserved exactly in the Android extension."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionEngineAuthorityIsFrozen",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient engine-authority state remains prohibited even though kotlinx serialization omits it."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionEnginePin",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient renderer authority remains prohibited even though kotlinx serialization omits it."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "exportFormat",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.legacy_primary_format",
+      "evidence": "The legacy primary format remains an Android extension field."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "exportFormats",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.formats",
+      "evidence": "The complete selected format set maps to canonical common format values."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "exportMode",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.mode",
+      "evidence": "Android compatibility versus raw-snapshot mode is platform-distinct and must not imply a HealthKit archive."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "exportTarget",
+      "coverage_kind": "descriptor",
+      "disposition": "destination_intent",
+      "contract_path": "profiles[].destination.kind",
+      "evidence": "The selected destination becomes inert destination intent and requires local rebinding."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "filenameFormat",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.filename_template",
+      "evidence": "The filename template is portable after common path validation."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "folderOrganization",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.folder_organization",
+      "evidence": "Android folder organization fallback is a profile-owned typed extension preference."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "folderStructure",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.folder_template",
+      "evidence": "The relative folder template is portable after common path validation."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "formatCustomization",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "This mixed native container is decomposed into presentation and Android-extension field rows; it is never copied opaquely."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "groupByCategory",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.group_by_category",
+      "evidence": "Category grouping has the same output meaning on both platforms."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "includeGranularData",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.compatibility_detail",
+      "evidence": "The historical Boolean projects exactly to summary or selected_time_series detail."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "includeMetadata",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.include_metadata",
+      "evidence": "Metadata inclusion has the same output meaning on both platforms."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "individualTracking",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries",
+      "evidence": "The nested individual-entry configuration has a typed portable projection."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "metricSelection",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].metrics",
+      "evidence": "The nested semantic metric selection is the common selection authority."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "pendingScheduledExportRequests",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Pending and retry queues are runtime work and explicitly forbidden."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "pendingScheduledRetryDates",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Legacy pending retry dates are runtime work and explicitly forbidden."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "rawSnapshot",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.raw_snapshot",
+      "evidence": "Android raw-snapshot options remain together in the typed Android extension."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduleCadenceUnit",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This is legacy single-schedule state; named v2 schedule intent comes only from ScheduledProfileEntry."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduleCadenceValue",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This is legacy single-schedule state; named v2 schedule intent comes only from ScheduledProfileEntry."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduleDateWindow",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This is legacy single-schedule state; named v2 schedule intent comes only from ScheduledProfileEntry."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduleEnabled",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This is legacy single-schedule state; named v2 schedule intent comes only from ScheduledProfileEntry."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduleHour",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This is legacy single-schedule state; named v2 schedule intent comes only from ScheduledProfileEntry."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduleLookbackDays",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This is legacy single-schedule state; named v2 schedule intent comes only from ScheduledProfileEntry."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduleMinute",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This is legacy single-schedule state; named v2 schedule intent comes only from ScheduledProfileEntry."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "scheduledExportTarget",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "This belongs to the legacy single-schedule model; named profiles use ExportProfile.target."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "selectedExportFormats",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed alias of exportFormats has no independent wire identity."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "subfolder",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.subfolder",
+      "evidence": "Android aggregate subfolder behavior is a profile-owned typed extension preference."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "writeMode",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].export.write_mode",
+      "evidence": "Overwrite, append, and update are shared output intents."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "compatibilitySchemaProfile",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.compatibility_profile",
+      "evidence": "Frozen-v4 versus analytical-v5 is an Android typed compatibility choice."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "dateFormat",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.date_format",
+      "evidence": "Canonical date-format choices have equivalent portable meaning."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "frontmatterConfig",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter",
+      "evidence": "The typed frontmatter customization has a portable projection."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "includeAndroidCompatibilityKeys",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Deprecated alias switch is migrated to explicit legacy-alias and native-field switches."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "includeAndroidNativeFields",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.include_android_native_fields",
+      "evidence": "Android-native analytical fields are a platform-distinct output preference."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "includeLegacyAndroidAliases",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.include_legacy_aliases",
+      "evidence": "Pre-parity Android aliases are an Android-only output compatibility preference."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "markdownTemplate",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown",
+      "evidence": "The typed Markdown customization has a portable projection."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "timeFormat",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.time_format",
+      "evidence": "Canonical time-format choices have equivalent portable meaning."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "unitConverter",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed formatting helper derives solely from unitPreference."
+    },
+    {
+      "source_type": "FormatCustomization",
+      "serialized_field": "unitPreference",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.units",
+      "evidence": "Metric and imperial display preferences have equivalent portable meaning."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "customDateKey",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.date_key",
+      "evidence": "User-authored date-key rename is portable."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "customFields",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.custom_values",
+      "evidence": "Bounded user-authored fixed frontmatter values are portable with disclosure."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "customTypeKey",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.type_key",
+      "evidence": "User-authored type-key rename is portable."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "customTypeValue",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.type_value",
+      "evidence": "Bounded user-authored fixed type value is portable with disclosure."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "fields",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.fields",
+      "evidence": "Ordered enablement and key-renaming rows are portable typed presentation state."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "includeDate",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.include_date",
+      "evidence": "Date-field enablement is a common presentation preference."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "includeType",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.include_type",
+      "evidence": "Type-field enablement is a common presentation preference."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "keyStyle",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.key_style",
+      "evidence": "Snake-case and camel-case key style has common meaning."
+    },
+    {
+      "source_type": "FrontmatterConfiguration",
+      "serialized_field": "placeholderFields",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.placeholders",
+      "evidence": "Bounded placeholder names are portable after dialect validation."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "enabledMetrics",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Legacy Android list is merged into metricConfigs and is not a second selection authority."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "entriesFolder",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries.entries_folder",
+      "evidence": "The destination-relative entries folder is portable after path validation."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "filenameTemplate",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries.filename_template",
+      "evidence": "The explicit filename template preserves native default differences."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "globalEnabled",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries.enabled",
+      "evidence": "The individual-entry master switch has common meaning."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "metricConfigs",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries.metrics",
+      "evidence": "Per-semantic-ID entry settings have a typed portable map."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "organizeByCategory",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries.organize_by_category",
+      "evidence": "Per-category folder organization has common meaning."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "rawTrackedMetricIds",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Private computed migration union feeding trackedMetricIds."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "requiresGranularData",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed fetch requirement derived from enabled granular entry metrics."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "trackedMetricCount",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed count of normalized tracked semantic IDs."
+    },
+    {
+      "source_type": "IndividualTrackingSettings",
+      "serialized_field": "trackedMetricIds",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed normalized union of legacy and current per-metric state."
+    },
+    {
+      "source_type": "MarkdownTemplateConfig",
+      "serialized_field": "bulletStyle",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.bullet_style",
+      "evidence": "Dash, asterisk, and plus bullets have common typed meaning."
+    },
+    {
+      "source_type": "MarkdownTemplateConfig",
+      "serialized_field": "customTemplate",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.custom_text",
+      "evidence": "Bounded user-authored Markdown is copied verbatim after dialect review."
+    },
+    {
+      "source_type": "MarkdownTemplateConfig",
+      "serialized_field": "includeSummary",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.include_summary",
+      "evidence": "Summary inclusion has common presentation meaning."
+    },
+    {
+      "source_type": "MarkdownTemplateConfig",
+      "serialized_field": "sectionHeaderLevel",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.header_level",
+      "evidence": "Markdown header level has common typed meaning."
+    },
+    {
+      "source_type": "MarkdownTemplateConfig",
+      "serialized_field": "style",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.style",
+      "evidence": "The canonical Markdown style choice is portable."
+    },
+    {
+      "source_type": "MarkdownTemplateConfig",
+      "serialized_field": "useEmoji",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.use_emoji",
+      "evidence": "Emoji presentation preference has common meaning."
+    },
+    {
+      "source_type": "MetricSelectionState",
+      "serialized_field": "enabledCount",
+      "coverage_kind": "supplemental",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Computed count derives from enabledMetrics and the local registry."
+    },
+    {
+      "source_type": "MetricSelectionState",
+      "serialized_field": "enabledMetrics",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].metrics.enabled_ids",
+      "evidence": "Canonical semantic IDs are the sole portable metric selection authority."
+    },
+    {
+      "source_type": "MetricTrackingConfig",
+      "serialized_field": "customFolder",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries.metrics.*.custom_folder",
+      "evidence": "Optional destination-relative per-metric folder is portable after validation."
+    },
+    {
+      "source_type": "MetricTrackingConfig",
+      "serialized_field": "trackIndividually",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].individual_entries.metrics.*.enabled",
+      "evidence": "Per-semantic-ID individual tracking enablement is portable."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "apiOperationId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "attemptCount",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "date",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "destinationFingerprint",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "enginePin",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "exportTarget",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "firstFailedAtMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "folderOperationId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "lastAttemptAtMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "lastFailureReason",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "PendingScheduledExportRequest",
+      "serialized_field": "settingsSnapshotJson",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This field belongs to pending/retry runtime work, which Shared Setup explicitly forbids."
+    },
+    {
+      "source_type": "RawSnapshotSettings",
+      "serialized_field": "format",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.raw_snapshot.format",
+      "evidence": "JSON versus NDJSON is an Android raw-snapshot setting."
+    },
+    {
+      "source_type": "RawSnapshotSettings",
+      "serialized_field": "includeExerciseRoutes",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.raw_snapshot.include_exercise_routes",
+      "evidence": "Exercise-route capture is an Android raw-snapshot option."
+    },
+    {
+      "source_type": "RawSnapshotSettings",
+      "serialized_field": "pageSize",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.raw_snapshot.page_size",
+      "evidence": "Bounded provider page size is an Android raw-snapshot option."
+    },
+    {
+      "source_type": "RawSnapshotSettings",
+      "serialized_field": "scope",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.raw_snapshot.scope",
+      "evidence": "Selected types versus all authorized supported data is Android raw-snapshot scope."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "anchorEpochDay",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.cadence.anchor_date",
+      "evidence": "The date-only cadence phase converts losslessly to YYYY-MM-DD, never a runtime timestamp."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "cadenceUnit",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.cadence.unit",
+      "evidence": "Day, week, and month units map exactly to plural contract values."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "cadenceValue",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.cadence.value",
+      "evidence": "Positive cadence interval is preserved exactly."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "dateWindow",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.date_window",
+      "evidence": "Past-complete-days window has the same declarative meaning."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "hour",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.local_time.hour",
+      "evidence": "Preferred local wall-clock hour is declarative schedule intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "isEnabled",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.activation_requested",
+      "evidence": "Sender enablement becomes non-operative activation intent; imports always remain disabled."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "lastRefreshSuccessEpochMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Refresh progress timestamp is runtime history and explicitly forbidden."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "lastSuccessEpochMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Last-success progress timestamp is runtime history and explicitly forbidden."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "lookbackDays",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.lookback_days",
+      "evidence": "Completed-day lookback is preserved as bounded schedule intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "minute",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.local_time.minute",
+      "evidence": "Preferred local wall-clock minute is declarative schedule intent."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "pendingExports",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Frozen residual pending work and retries are explicitly forbidden."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "profileId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Native profile identity is replaced by bundle-local attachment and is never serialized."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "weekdayIso",
+      "coverage_kind": "descriptor",
+      "disposition": "schedule_intent",
+      "contract_path": "profiles[].schedule.weekday",
+      "evidence": "ISO weekday 1 through 7 is preserved exactly."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "zone",
+      "coverage_kind": "supplemental",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "Computed local ZoneId wrapper derives from excluded zoneId and is not serialized."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "zoneId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Schedule timezone is local execution context and explicitly forbidden."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "apiEndpointUrl",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "durableOperationId",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "fireAtMillis",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "folderDisplayName",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "folderUri",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "id",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "ownerDates",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Computed pending owner dates remain part of prohibited runtime residual state."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "ownerEpochDays",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "profileName",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "settingsSnapshotJson",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "target",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "c",
+      "coverage_kind": "descriptor",
+      "disposition": "derived_or_legacy",
+      "contract_path": null,
+      "evidence": "Compact snapshot field for the deprecated includeAndroidCompatibilityKeys alias."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "d",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.date_format",
+      "evidence": "Compact snapshot field for FormatCustomization.dateFormat."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "f",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "Compact nested frontmatter container is decomposed into SnapshotFrontmatterPayload rows."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "l",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.include_legacy_aliases",
+      "evidence": "Compact snapshot field for includeLegacyAndroidAliases."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "m",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown",
+      "evidence": "Compact nested Markdown container has a typed portable projection."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "n",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.include_android_native_fields",
+      "evidence": "Compact snapshot field for includeAndroidNativeFields."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "p",
+      "coverage_kind": "descriptor",
+      "disposition": "platform_extension",
+      "contract_path": "profiles[].platform_extensions.android.export.compatibility_profile",
+      "evidence": "Compact snapshot field for compatibilitySchemaProfile."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "t",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.time_format",
+      "evidence": "Compact snapshot field for FormatCustomization.timeFormat."
+    },
+    {
+      "source_type": "SnapshotFormatCustomizationPayload",
+      "serialized_field": "u",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.units",
+      "evidence": "Compact snapshot field for FormatCustomization.unitPreference."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "D",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.date_key",
+      "evidence": "Compact field stores the user-authored date key."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "T",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.type_key",
+      "evidence": "Compact field stores the user-authored type key."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "c",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.custom_values",
+      "evidence": "Compact map stores bounded fixed frontmatter values."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "d",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.include_date",
+      "evidence": "Compact Boolean stores date-field enablement."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "k",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.fields",
+      "evidence": "Compact index map stores user-authored output-key renames."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "o",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.fields",
+      "evidence": "Compact ordered list stores frontmatter source keys."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "p",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.placeholders",
+      "evidence": "Compact list stores placeholder names."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "s",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.key_style",
+      "evidence": "Compact enum stores frontmatter key style."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "t",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.include_type",
+      "evidence": "Compact Boolean stores type-field enablement."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "v",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.type_value",
+      "evidence": "Compact field stores the bounded fixed type value."
+    },
+    {
+      "source_type": "SnapshotFrontmatterPayload",
+      "serialized_field": "x",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.frontmatter.fields",
+      "evidence": "Compact disabled-index set stores frontmatter enablement."
+    },
+    {
+      "source_type": "SnapshotMarkdownPayload",
+      "serialized_field": "b",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.bullet_style",
+      "evidence": "Compact enum stores Markdown bullet style."
+    },
+    {
+      "source_type": "SnapshotMarkdownPayload",
+      "serialized_field": "e",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.use_emoji",
+      "evidence": "Compact Boolean stores emoji preference."
+    },
+    {
+      "source_type": "SnapshotMarkdownPayload",
+      "serialized_field": "h",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.header_level",
+      "evidence": "Compact integer stores Markdown header level."
+    },
+    {
+      "source_type": "SnapshotMarkdownPayload",
+      "serialized_field": "i",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.include_summary",
+      "evidence": "Compact Boolean stores summary inclusion."
+    },
+    {
+      "source_type": "SnapshotMarkdownPayload",
+      "serialized_field": "s",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.style",
+      "evidence": "Compact enum stores Markdown style."
+    },
+    {
+      "source_type": "SnapshotMarkdownPayload",
+      "serialized_field": "t",
+      "coverage_kind": "descriptor",
+      "disposition": "portable",
+      "contract_path": "profiles[].presentation.markdown.custom_text",
+      "evidence": "Compact string stores bounded user-authored Markdown."
+    }
+  ]
+}
