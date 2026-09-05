@@ -8,14 +8,20 @@
 //! observed behavior of the shipped binary; opaque identifiers (record/artifact SHA-256 digests)
 //! are discovered through the surface and cross-checked for consistency rather than predicted.
 //!
-//! Store-parity kit: the corpus builder and every scenario run unchanged against BOTH local
+//! Store-parity kit: the corpus builder and every scenario run unchanged against all THREE
 //! store backings through [`StoreEndpoint`]: the v1 directory store
-//! (`--directory/--grant/--index`) and the Health.md-owned `SQLite` database, whose endpoints
+//! (`--directory/--grant/--index`), the Health.md-owned `SQLite` database, whose endpoints
 //! [`StoreEndpoint::database`] populates by driving the real `healthmd data import` binary over
-//! the corpus before the first spawn and then serves with `--database/--grant`. Per-store
-//! expectations are provided by the endpoint itself (receipt `source_kind`, the misplaced-grant
-//! refusal reason); everything else is store-neutral. The planned Cloudflare store follows the
-//! same seam. Keep new scenarios parameterized by endpoint, never by global state.
+//! the corpus before the first spawn and then serves with `--database/--grant`, and the
+//! read-only S3-compatible object store, whose endpoints [`StoreEndpoint::object_store`]
+//! serve with `--object-store-url/--bucket/--prefix/--grant/--index` against an embedded
+//! synthetic loopback S3 double holding the same corpus files under `exports/` and verifying
+//! the AWS `SigV4` signature of every request. Per-store expectations are provided by the
+//! endpoint itself (receipt `source_kind`, the misplaced-grant expectation: local backings
+//! refuse grants stored inside their private backing, while the object store has no local
+//! containment rule against a remote backing and its grant-shaped bucket object is ignored
+//! content); everything else is store-neutral. Keep new scenarios parameterized by endpoint,
+//! never by global state.
 //!
 //! Harness facts (observed, frozen): the server speaks one JSON document per `\n`-terminated
 //! line, echoes the negotiated MCP protocol version, ignores notifications, rejects duplicate
@@ -23,15 +29,18 @@
 //! child's stdin stays open for the life of each server handle.
 
 use std::{
-    collections::BTreeSet,
-    io::{BufRead as _, Write as _},
+    collections::{BTreeMap, BTreeSet},
+    fmt::Write as _,
+    io::{BufRead as _, Read as _, Write as _},
+    net::{TcpListener, TcpStream},
     path::PathBuf,
     process::{Child, ChildStdin, Command, Stdio},
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        Arc, Mutex,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
         mpsc::{Receiver, channel},
     },
-    thread,
+    thread::{self, JoinHandle},
     time::Duration,
 };
 
@@ -46,6 +55,28 @@ const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
 const CHUNK_OVERHEAD_BYTES: usize = 2_048;
 
 static INDEX_SEQUENCE: AtomicUsize = AtomicUsize::new(0);
+
+// ---------------------------------------------------------------------------
+// Object-store double fixtures (fixed synthetic values, never real)
+// ---------------------------------------------------------------------------
+
+/// Fixed synthetic credentials shared by the embedded double and the spawned object store.
+const OBJECT_TEST_ACCESS_KEY_ID: &str = "HEALTHMDTESTACCESSKEY1";
+const OBJECT_TEST_SECRET_ACCESS_KEY: &str = "healthmd-test-secret-key-0000000000000000000001";
+/// The store signs with region `auto` (Cloudflare R2); the double verifies the same scope.
+const OBJECT_TEST_REGION: &str = "auto";
+/// Fixed synthetic bucket whose prefix the object-store endpoints serve.
+const OBJECT_BUCKET: &str = "healthmd-test-bucket";
+/// Fixed synthetic `LastModified` for every object so index rebuilds/restarts are idempotent.
+const FIXED_LAST_MODIFIED: &str = "2026-01-02T03:04:05.000Z";
+/// The double pages listings at three keys, forcing `ListObjectsV2` continuation traffic.
+const LIST_PAGE_SIZE: usize = 3;
+/// Loopback port candidates for the embedded object-store double, probed before binding with
+/// fall-through. This suite owns 48411–48493; sibling suites own 481xx/482xx/483xx/485xx.
+const OBJECT_STORE_DOUBLE_PORTS: [u16; 23] = [
+    48_411, 48_413, 48_417, 48_419, 48_423, 48_429, 48_431, 48_437, 48_441, 48_443, 48_447, 48_449,
+    48_453, 48_459, 48_461, 48_467, 48_471, 48_473, 48_477, 48_479, 48_483, 48_489, 48_493,
+];
 
 // ---------------------------------------------------------------------------
 // Corpus
@@ -82,6 +113,36 @@ impl Corpus {
 
     fn exports(&self) -> PathBuf {
         self.root.path().join("exports")
+    }
+
+    /// The corpus as object-store bucket contents: every file under `exports/` served as-is
+    /// under the same relative key — including the unsupported and malformed entries, so the
+    /// never-queryable expectations hold identically — plus the grant-shaped object the
+    /// misplaced-grant scenario proves is ignored content on this backing.
+    fn object_corpus_objects(&self) -> BTreeMap<String, Vec<u8>> {
+        let mut objects = BTreeMap::new();
+        for entry in std::fs::read_dir(self.exports()).expect("corpus exports directory") {
+            let entry = entry.expect("corpus file");
+            if !entry.file_type().expect("corpus file").is_file() {
+                continue;
+            }
+            let name = entry.file_name();
+            let bytes = std::fs::read(entry.path()).expect("corpus bytes");
+            objects.insert(format!("exports/{}", name.to_string_lossy()), bytes);
+        }
+        let misplaced = grant(
+            all_available(),
+            all_available(),
+            all_available(),
+            all_available(),
+            json!(["common", "lossless"]),
+            true,
+        );
+        objects.insert(
+            "exports/misplaced-grant.json".to_owned(),
+            serde_json::to_vec(&misplaced).expect("misplaced grant object"),
+        );
+        objects
     }
 
     fn write_grant(&self, name: &str, grant: &Value) -> PathBuf {
@@ -197,10 +258,31 @@ impl Corpus {
         )
     }
 
+    /// One object-store endpoint for the parity kit: this corpus served under `exports/` by
+    /// an embedded synthetic loopback S3 double, with a fresh external index path like the
+    /// directory store (the default index is keyed by URL+bucket+prefix, so per-endpoint
+    /// isolation must come from the explicit fresh path).
+    fn object_store_endpoint(&self, grant: &std::path::Path) -> StoreEndpoint {
+        let sequence = INDEX_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        StoreEndpoint::object_store(
+            self.object_corpus_objects(),
+            grant.to_path_buf(),
+            self.root
+                .path()
+                .join("indexes")
+                .join(format!("index-{sequence}.json")),
+        )
+    }
+
     /// Every store the parity kit proves, in a fixed order (directory first, then the
-    /// Health.md-owned database); each scenario iterates this list unchanged.
+    /// Health.md-owned database, then the object store); each scenario iterates this list
+    /// unchanged.
     fn endpoints(&self, grant: &std::path::Path) -> Vec<StoreEndpoint> {
-        vec![self.endpoint(grant), self.database_endpoint(grant)]
+        vec![
+            self.endpoint(grant),
+            self.database_endpoint(grant),
+            self.object_store_endpoint(grant),
+        ]
     }
 }
 
@@ -363,16 +445,566 @@ fn raw_changes() -> Value {
 const BROKEN_JSON: &str = r#"{"schema":"healthmd.health_data","schema_version":8,"date":"2026-13-45","type":"health-data"}"#;
 
 // ---------------------------------------------------------------------------
+// Synthetic loopback S3 double (object-store backing)
+// ---------------------------------------------------------------------------
+
+/// `SigV4` HMAC helper (independent test-side implementation).
+fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
+    use hmac::Mac as _;
+    let mut mac = hmac::Hmac::<Sha256>::new_from_slice(key).expect("hmac accepts any key");
+    mac.update(data);
+    mac.finalize().into_bytes().to_vec()
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().fold(
+        String::with_capacity(bytes.len() * 2),
+        |mut output, byte| {
+            let _ = write!(output, "{byte:02x}");
+            output
+        },
+    )
+}
+
+/// Percent-encode per the `SigV4` canonical rules (`keep_slash` preserves `/` separators).
+fn aws_percent_encode(value: &str, keep_slash: bool) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.as_bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                encoded.push(char::from(*byte));
+            }
+            b'/' if keep_slash => encoded.push('/'),
+            _ => {
+                let _ = write!(encoded, "%{byte:02X}");
+            }
+        }
+    }
+    encoded
+}
+
+fn percent_decode(value: &str) -> String {
+    let bytes = value.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'%' if index + 2 < bytes.len() => {
+                let hex_pair = &value[index + 1..index + 3];
+                if let Ok(byte) = u8::from_str_radix(hex_pair, 16) {
+                    decoded.push(byte);
+                    index += 3;
+                    continue;
+                }
+                decoded.push(b'%');
+                index += 1;
+            }
+            byte => {
+                decoded.push(byte);
+                index += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&decoded).into_owned()
+}
+
+/// Verify one request's `SigV4` authorization against the fixed synthetic test keys.
+/// Returns a failure description when invalid.
+fn verify_sigv4(
+    method: &str,
+    path_and_query: &str,
+    headers: &[(String, String)],
+) -> Result<(), String> {
+    let header = |name: &str| {
+        headers
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.clone())
+    };
+    let authorization =
+        header("authorization").ok_or_else(|| "missing Authorization header".to_owned())?;
+    let remainder = authorization
+        .strip_prefix("AWS4-HMAC-SHA256 ")
+        .ok_or_else(|| "authorization is not AWS4-HMAC-SHA256".to_owned())?;
+    let mut credential = None;
+    let mut signed_headers = None;
+    let mut signature = None;
+    for part in remainder.split(", ") {
+        let (name, value) = part
+            .split_once('=')
+            .ok_or_else(|| format!("malformed authorization component {part:?}"))?;
+        match name {
+            "Credential" => credential = Some(value.to_owned()),
+            "SignedHeaders" => signed_headers = Some(value.to_owned()),
+            "Signature" => signature = Some(value.to_owned()),
+            _ => return Err(format!("unexpected authorization component {name:?}")),
+        }
+    }
+    let credential = credential.ok_or_else(|| "missing Credential".to_owned())?;
+    let signed_headers = signed_headers.ok_or_else(|| "missing SignedHeaders".to_owned())?;
+    let signature = signature.ok_or_else(|| "missing Signature".to_owned())?;
+    if credential.split('/').next() != Some(OBJECT_TEST_ACCESS_KEY_ID) {
+        return Err("credential is not the fixed synthetic access key id".to_owned());
+    }
+    let scope_parts: Vec<&str> = credential.split('/').collect();
+    if scope_parts.len() != 5 {
+        return Err("credential scope must have five components".to_owned());
+    }
+    let amz_date = header("x-amz-date").ok_or_else(|| "missing x-amz-date".to_owned())?;
+    let scope_date = scope_parts[1];
+    if scope_date.len() != 8 || scope_date != &amz_date[..8.min(amz_date.len())] {
+        return Err("credential date does not match x-amz-date".to_owned());
+    }
+    if scope_parts[3] != "s3"
+        || scope_parts[4] != "aws4_request"
+        || scope_parts[2] != OBJECT_TEST_REGION
+    {
+        return Err(format!("unexpected credential scope {credential}"));
+    }
+    let payload_hash =
+        header("x-amz-content-sha256").ok_or_else(|| "missing x-amz-content-sha256".to_owned())?;
+    if payload_hash != "UNSIGNED-PAYLOAD" {
+        return Err("payload hash must be UNSIGNED-PAYLOAD".to_owned());
+    }
+    for required in ["host", "x-amz-content-sha256", "x-amz-date"] {
+        if !signed_headers.split(';').any(|name| name == required) {
+            return Err(format!("SignedHeaders omits {required}"));
+        }
+    }
+    let (path, query) = path_and_query
+        .split_once('?')
+        .unwrap_or((path_and_query, ""));
+    let canonical_query = rebuild_canonical_query(query);
+    let mut canonical_headers = String::new();
+    for name in signed_headers.split(';') {
+        let value = header(name).ok_or_else(|| format!("signed header {name:?} is absent"))?;
+        canonical_headers.push_str(name);
+        canonical_headers.push(':');
+        canonical_headers.push_str(value.trim());
+        canonical_headers.push('\n');
+    }
+    let canonical_request = format!(
+        "{method}\n{path}\n{canonical_query}\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
+    );
+    let string_to_sign = format!(
+        "AWS4-HMAC-SHA256\n{amz_date}\n{scope_date}/{OBJECT_TEST_REGION}/s3/aws4_request\n{}",
+        hex(&Sha256::digest(canonical_request.as_bytes()))
+    );
+    let mut key = hmac_sha256(
+        format!("AWS4{OBJECT_TEST_SECRET_ACCESS_KEY}").as_bytes(),
+        scope_date.as_bytes(),
+    );
+    for part in [OBJECT_TEST_REGION, "s3", "aws4_request"] {
+        key = hmac_sha256(&key, part.as_bytes());
+    }
+    let expected = hex(&hmac_sha256(&key, string_to_sign.as_bytes()));
+    if expected != signature {
+        return Err(format!(
+            "signature mismatch: expected {expected}, got {signature}"
+        ));
+    }
+    Ok(())
+}
+
+/// Rebuild the canonical query from the received query string: decode each pair, re-encode,
+/// and sort — the store must send its query already in canonical form.
+fn rebuild_canonical_query(query: &str) -> String {
+    let mut pairs: Vec<(String, String)> = query
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(|pair| match pair.split_once('=') {
+            Some((key, value)) => (percent_decode(key), percent_decode(value)),
+            None => (percent_decode(pair), String::new()),
+        })
+        .collect();
+    pairs.sort();
+    pairs
+        .iter()
+        .map(|(key, value)| {
+            format!(
+                "{}={}",
+                aws_percent_encode(key, false),
+                aws_percent_encode(value, false)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("&")
+}
+
+#[derive(Debug)]
+struct DoubleState {
+    objects: BTreeMap<String, Vec<u8>>,
+    request_log: Vec<(String, String)>,
+    failures: Vec<String>,
+}
+
+/// A minimal std-only loopback S3 double implementing exactly the frozen subset the store
+/// may use: `ListObjectsV2` (prefix + continuation) XML, `HEAD` object, and `GET` object
+/// (with `Range`) at path-style addresses, plus `SigV4` verification of every request, a
+/// request method+path log, and fixed `LastModified` values so index rebuilds are
+/// idempotent. The double runs for the owning endpoint's lifetime (shared by its clones)
+/// and stops deterministically when the last clone drops.
+#[derive(Debug)]
+struct S3Double {
+    port: u16,
+    state: Arc<Mutex<DoubleState>>,
+    stopped: Arc<AtomicBool>,
+    listener: JoinHandle<()>,
+}
+
+impl S3Double {
+    /// Start the double on the first loopback candidate port that answers.
+    fn spawn(objects: BTreeMap<String, Vec<u8>>, ports: &[u16]) -> Self {
+        for port in ports {
+            let Ok(listener) = TcpListener::bind(("127.0.0.1", *port)) else {
+                continue;
+            };
+            let state = Arc::new(Mutex::new(DoubleState {
+                objects,
+                request_log: Vec::new(),
+                failures: Vec::new(),
+            }));
+            let stopped = Arc::new(AtomicBool::new(false));
+            let accept_state = Arc::clone(&state);
+            let accept_stopped = Arc::clone(&stopped);
+            let handle = thread::spawn(move || {
+                for stream in listener.incoming() {
+                    if accept_stopped.load(Ordering::SeqCst) {
+                        break;
+                    }
+                    let Ok(stream) = stream else { break };
+                    let state = Arc::clone(&accept_state);
+                    thread::spawn(move || handle_connection(stream, &state));
+                }
+            });
+            let double = Self {
+                port: *port,
+                state,
+                stopped,
+                listener: handle,
+            };
+            double.probe_ready();
+            return double;
+        }
+        panic!("no loopback candidate port answered; attempted {ports:?}");
+    }
+
+    fn probe_ready(&self) {
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        loop {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the synthetic S3 double never answered"
+            );
+            if TcpStream::connect_timeout(
+                &std::net::SocketAddr::from(([127, 0, 0, 1], self.port)),
+                Duration::from_millis(250),
+            )
+            .is_ok()
+            {
+                return;
+            }
+            thread::sleep(Duration::from_millis(25));
+        }
+    }
+
+    fn requests(&self) -> Vec<(String, String)> {
+        self.state.lock().expect("double state").request_log.clone()
+    }
+
+    /// Assert every request observed so far was fully `SigV4`-verified, carried no body,
+    /// used only the read-only method set, and addressed the configured bucket.
+    fn assert_read_only_traffic(&self, context: &str) {
+        let state = self.state.lock().expect("double state");
+        assert!(
+            state.failures.is_empty(),
+            "S3 double verification failures ({context}): {:?}",
+            state.failures
+        );
+        for (method, target) in &state.request_log {
+            assert!(
+                matches!(method.as_str(), "GET" | "HEAD"),
+                "only GET/HEAD methods may be sent ({context}), saw {method} {target}"
+            );
+            assert!(
+                target.starts_with(&format!("/{OBJECT_BUCKET}")),
+                "every request must address the configured bucket ({context}), saw {method} {target}"
+            );
+        }
+    }
+}
+
+impl Drop for S3Double {
+    fn drop(&mut self) {
+        self.stopped.store(true, Ordering::SeqCst);
+        // Wake the accept loop so it observes the stop flag and exits deterministically.
+        let _ = TcpStream::connect(("127.0.0.1", self.port));
+        let listener = std::mem::replace(&mut self.listener, thread::spawn(|| {}));
+        let _ = listener.join();
+        // Failures never verified by a scenario hook are reported without panicking: a panic
+        // from a destructor during an unwinding test would abort the whole test process.
+        let failures = self.state.lock().expect("double state").failures.clone();
+        if !failures.is_empty() {
+            eprintln!("S3 double dropped with unverified failures: {failures:?}");
+        }
+    }
+}
+
+fn handle_connection(mut stream: TcpStream, state: &Arc<Mutex<DoubleState>>) {
+    let mut buffer = Vec::new();
+    let mut chunk = [0_u8; 8_192];
+    // Read one complete request head (the store sends no bodies).
+    loop {
+        if buffer.windows(4).any(|window| window == b"\r\n\r\n") {
+            break;
+        }
+        match stream.read(&mut chunk) {
+            Ok(0) | Err(_) => return,
+            Ok(read) => buffer.extend_from_slice(&chunk[..read]),
+        }
+        if buffer.len() > 64 * 1_024 {
+            return;
+        }
+    }
+    let head_end = buffer
+        .windows(4)
+        .position(|window| window == b"\r\n\r\n")
+        .expect("checked above");
+    let text = String::from_utf8_lossy(&buffer[..head_end]).into_owned();
+    let mut lines = text.split("\r\n");
+    let request_line = lines.next().unwrap_or_default();
+    let mut parts = request_line.split_ascii_whitespace();
+    let method = parts.next().unwrap_or_default().to_owned();
+    let target = parts.next().unwrap_or_default().to_owned();
+    let headers: Vec<(String, String)> = lines
+        .filter(|line| !line.is_empty())
+        .filter_map(|line| {
+            line.split_once(':')
+                .map(|(name, value)| (name.trim().to_ascii_lowercase(), value.trim().to_owned()))
+        })
+        .collect();
+
+    let response = {
+        let mut state = state.lock().expect("double state");
+        state.request_log.push((method.clone(), target.clone()));
+        if let Some(length) = headers
+            .iter()
+            .find(|(name, _)| name == "content-length")
+            .and_then(|(_, value)| value.parse::<usize>().ok())
+        {
+            if length > 0 {
+                state
+                    .failures
+                    .push("the read-only store must never send a request body".to_owned());
+            }
+        }
+        if method != "GET" && method != "HEAD" {
+            state.failures.push(format!(
+                "the read-only store must never issue {method} requests"
+            ));
+        }
+        if let Err(failure) = verify_sigv4(&method, &target, &headers) {
+            state.failures.push(format!("SigV4: {failure}"));
+        }
+        route_request(&method, &target, &headers, &state)
+    };
+    let _ = stream.write_all(&response);
+    let _ = stream.flush();
+}
+
+fn route_request(
+    method: &str,
+    target: &str,
+    headers: &[(String, String)],
+    state: &DoubleState,
+) -> Vec<u8> {
+    let (path, query) = target.split_once('?').unwrap_or((target, ""));
+    if method == "GET" && query.contains("list-type=2") {
+        return list_response(path, query, state);
+    }
+    let Some(key) = path.strip_prefix(&format!("/{OBJECT_BUCKET}/")) else {
+        return error_response(404, "NoSuchBucket", "unexpected bucket");
+    };
+    let Some(bytes) = state.objects.get(key) else {
+        return error_response(404, "NoSuchKey", "object not found");
+    };
+    match method {
+        "HEAD" => {
+            let head = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                bytes.len()
+            );
+            head.into_bytes()
+        }
+        // Range support (frozen subset): the double honors `Range: bytes=a-b` exactly.
+        "GET" => object_response(bytes, parse_range_header(headers, bytes.len())),
+        _ => error_response(
+            403,
+            "AccessDenied",
+            "the double implements only the read subset",
+        ),
+    }
+}
+
+/// Parse one `Range: bytes=start-end` header (inclusive end, both bounds required) against
+/// the object length; anything malformed falls back to a plain whole-object GET.
+fn parse_range_header(headers: &[(String, String)], length: usize) -> Option<(usize, usize)> {
+    let value = headers
+        .iter()
+        .find(|(name, _)| name == "range")
+        .map(|(_, value)| value.trim().to_owned())?;
+    let specification = value.strip_prefix("bytes=")?;
+    let (start, end) = specification.split_once('-')?;
+    let start = start.trim().parse::<usize>().ok()?;
+    let end = end.trim().parse::<usize>().ok()?;
+    (start <= end && start < length).then_some((start, end.min(length.saturating_sub(1))))
+}
+
+/// Serve one `ListObjectsV2` page from the (sorted) object map with the fixed page size and
+/// opaque `page-<offset>` continuation tokens.
+fn list_response(path: &str, query: &str, state: &DoubleState) -> Vec<u8> {
+    if path != format!("/{OBJECT_BUCKET}") {
+        return error_response(404, "NoSuchBucket", "unexpected bucket");
+    }
+    let mut prefix = String::new();
+    let mut offset = 0_usize;
+    for pair in query.split('&').filter(|pair| !pair.is_empty()) {
+        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+        match percent_decode(name).as_str() {
+            "prefix" => prefix = percent_decode(value),
+            "continuation-token" => {
+                let token = percent_decode(value);
+                let Some(number) = token.strip_prefix("page-") else {
+                    return error_response(400, "InvalidArgument", "bad continuation token");
+                };
+                offset = number.parse::<usize>().unwrap_or(0);
+            }
+            "list-type" | "max-keys" | "delimiter" | "encoding-type" => {}
+            other => {
+                return error_response(
+                    400,
+                    "InvalidArgument",
+                    &format!("unknown parameter {other}"),
+                );
+            }
+        }
+    }
+    let matched: Vec<&String> = state
+        .objects
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .collect();
+    let end = (offset + LIST_PAGE_SIZE).min(matched.len());
+    let truncated = end < matched.len();
+    let mut body = String::from(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">",
+    );
+    let _ = write!(body, "\n  <Name>{OBJECT_BUCKET}</Name>");
+    let _ = write!(body, "\n  <Prefix>{}</Prefix>", xml_escape(&prefix));
+    let _ = write!(body, "\n  <KeyCount>{}</KeyCount>", matched.len());
+    let _ = write!(body, "\n  <IsTruncated>{truncated}</IsTruncated>");
+    if truncated {
+        let _ = write!(
+            body,
+            "\n  <NextContinuationToken>page-{end}</NextContinuationToken>"
+        );
+    }
+    for key in &matched[offset..end] {
+        let bytes = &state.objects[*key];
+        let _ = write!(
+            body,
+            "\n  <Contents>\n    <Key>{}</Key>\n    <LastModified>{FIXED_LAST_MODIFIED}</LastModified>\n    <Size>{}</Size>\n  </Contents>",
+            xml_escape(key),
+            bytes.len()
+        );
+    }
+    body.push_str("\n</ListBucketResult>");
+    let head = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/xml\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
+    let mut response = head.into_bytes();
+    response.extend_from_slice(body.as_bytes());
+    response
+}
+
+fn object_response(bytes: &[u8], range: Option<(usize, usize)>) -> Vec<u8> {
+    let Some((start, end)) = range else {
+        let head = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            bytes.len()
+        );
+        let mut response = head.into_bytes();
+        response.extend_from_slice(bytes);
+        return response;
+    };
+    let end = (end + 1).min(bytes.len());
+    let slice = &bytes[start.min(bytes.len())..end];
+    let head = format!(
+        "HTTP/1.1 206 Partial Content\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        slice.len()
+    );
+    let mut response = head.into_bytes();
+    response.extend_from_slice(slice);
+    response
+}
+
+fn error_response(status: u16, code: &str, message: &str) -> Vec<u8> {
+    let body = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Error><Code>{code}</Code><Message>{message}</Message></Error>"
+    );
+    let head = format!(
+        "HTTP/1.1 {status} Error\r\nContent-Type: application/xml\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
+    let mut response = head.into_bytes();
+    response.extend_from_slice(body.as_bytes());
+    response
+}
+
+fn xml_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+// ---------------------------------------------------------------------------
 // Store endpoint and stdio JSON-RPC client
 // ---------------------------------------------------------------------------
 
 /// One Agent Data store backing under test. The directory store is the v1 shape; the
-/// Health.md-owned `SQLite` database is populated by `healthmd data import` and owns its index
-/// internally. Later stores (Cloudflare) extend this enum and reuse the same scenarios.
+/// Health.md-owned `SQLite` database is populated by `healthmd data import` and owns its
+/// index internally; the object-store backing serves the corpus through an embedded
+/// synthetic loopback S3 double (shared by an endpoint's clones, stopped when the last one
+/// drops) with a fresh external index per endpoint.
 #[derive(Clone, Debug)]
 enum StoreBacking {
-    Directory { directory: PathBuf, index: PathBuf },
-    Database { database: PathBuf },
+    Directory {
+        directory: PathBuf,
+        index: PathBuf,
+    },
+    Database {
+        database: PathBuf,
+    },
+    ObjectStore {
+        double: Arc<S3Double>,
+        index: PathBuf,
+    },
+}
+
+/// The misplaced-grant expectation for one backing, provided by the endpoint so scenario
+/// bodies stay store-neutral. Local backings refuse grants stored inside their private
+/// backing; the object store has no local containment rule against a remote backing, so its
+/// grant-shaped bucket object is ordinary ignored content (counted, never loaded) and the
+/// scenario asserts that documented asymmetry instead of a refusal.
+#[derive(Debug)]
+enum MisplacedGrant {
+    /// `serve-data` must refuse the grant at `path`, printing `reason` on stderr.
+    Refused { path: PathBuf, reason: &'static str },
+    /// The corpus's grant-shaped bucket object must stay ignored content under a local grant.
+    IgnoredBucketContent,
 }
 
 /// One configured store endpoint: a backing plus the serving grant. Scenarios never inspect
@@ -403,6 +1035,21 @@ impl StoreEndpoint {
         }
     }
 
+    /// Object-store endpoint: spawns the embedded synthetic loopback S3 double holding
+    /// `objects` for the endpoint's lifetime (shared by its clones), then serves it with
+    /// `--object-store-url … --bucket … --prefix exports/ --grant … --index …` under the
+    /// fixed synthetic test credentials taken from the environment.
+    fn object_store(objects: BTreeMap<String, Vec<u8>>, grant: PathBuf, index: PathBuf) -> Self {
+        let double = S3Double::spawn(objects, &OBJECT_STORE_DOUBLE_PORTS);
+        Self {
+            backing: StoreBacking::ObjectStore {
+                double: Arc::new(double),
+                index,
+            },
+            grant,
+        }
+    }
+
     /// The same store under a different serving grant: scenarios re-authorize the identical
     /// corpus through grants bound to it.
     fn with_grant(&self, grant: &std::path::Path) -> Self {
@@ -416,20 +1063,24 @@ impl StoreEndpoint {
         match &self.backing {
             StoreBacking::Directory { .. } => "directory",
             StoreBacking::Database { .. } => "database",
+            StoreBacking::ObjectStore { .. } => "object_store",
         }
     }
 
     /// A grant deliberately stored inside the store's private backing, together with the
-    /// refusal reason `serve-data` must print for it.
-    fn misplaced_grant(&self) -> (PathBuf, &'static str) {
+    /// refusal reason `serve-data` must print for it — except the object store, which has no
+    /// local containment rule against its remote backing (see [`MisplacedGrant`]).
+    fn misplaced_grant(&self) -> MisplacedGrant {
         match &self.backing {
-            StoreBacking::Directory { directory, .. } => (
-                directory.join("inside-grant.json"),
-                "outside the export directory",
-            ),
-            StoreBacking::Database { database } => {
-                (database.clone(), "outside the Agent Data database")
-            }
+            StoreBacking::Directory { directory, .. } => MisplacedGrant::Refused {
+                path: directory.join("inside-grant.json"),
+                reason: "outside the export directory",
+            },
+            StoreBacking::Database { database } => MisplacedGrant::Refused {
+                path: database.clone(),
+                reason: "outside the Agent Data database",
+            },
+            StoreBacking::ObjectStore { .. } => MisplacedGrant::IgnoredBucketContent,
         }
     }
 
@@ -452,6 +1103,18 @@ impl StoreEndpoint {
                 argv.push("--grant".to_owned());
                 argv.push(grant);
             }
+            StoreBacking::ObjectStore { double, index } => {
+                argv.push("--object-store-url".to_owned());
+                argv.push(format!("http://127.0.0.1:{}", double.port));
+                argv.push("--bucket".to_owned());
+                argv.push(OBJECT_BUCKET.to_owned());
+                argv.push("--prefix".to_owned());
+                argv.push("exports/".to_owned());
+                argv.push("--grant".to_owned());
+                argv.push(grant);
+                argv.push("--index".to_owned());
+                argv.push(index.to_string_lossy().into_owned());
+            }
         }
         argv
     }
@@ -460,9 +1123,48 @@ impl StoreEndpoint {
         self.argv_with_grant(&self.grant)
     }
 
+    /// Extra environment for spawning this store: the object store reads its credentials
+    /// only from the environment (never flags), so the endpoint provides the fixed synthetic
+    /// test keys; the local backings need none.
+    fn environment(&self) -> Vec<(String, String)> {
+        match &self.backing {
+            StoreBacking::ObjectStore { .. } => vec![
+                (
+                    "HEALTHMD_OBJECT_STORE_ACCESS_KEY_ID".to_owned(),
+                    OBJECT_TEST_ACCESS_KEY_ID.to_owned(),
+                ),
+                (
+                    "HEALTHMD_OBJECT_STORE_SECRET_ACCESS_KEY".to_owned(),
+                    OBJECT_TEST_SECRET_ACCESS_KEY.to_owned(),
+                ),
+            ],
+            StoreBacking::Directory { .. } | StoreBacking::Database { .. } => Vec::new(),
+        }
+    }
+
     /// Spawn the shipped binary with piped stdio and perform the initialize handshake.
     fn serve(&self) -> StdioMcpServer {
-        StdioMcpServer::spawn(&self.argv())
+        if let StoreBacking::ObjectStore { double, .. } = &self.backing {
+            // Traffic observed so far on this endpoint's double must be read-only and fully
+            // SigV4-verified before another server instance joins it.
+            double.assert_read_only_traffic("before the next serve-data spawn");
+        }
+        StdioMcpServer::spawn(&self.argv(), &self.environment())
+    }
+
+    /// Verify the object-store endpoint's double observed only list/head/get traffic, every
+    /// request fully verified, and at least one listing served. Local backings have no double.
+    fn assert_double_clean(&self, context: &str) {
+        if let StoreBacking::ObjectStore { double, .. } = &self.backing {
+            double.assert_read_only_traffic(context);
+            assert!(
+                double
+                    .requests()
+                    .iter()
+                    .any(|(method, target)| method == "GET" && target.contains("list-type=2")),
+                "the double must have served at least one listing ({context})"
+            );
+        }
     }
 }
 
@@ -543,12 +1245,17 @@ struct StdioMcpServer {
 }
 
 impl StdioMcpServer {
-    fn spawn(argv: &[String]) -> Self {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_healthmd"))
+    fn spawn(argv: &[String], environment: &[(String, String)]) -> Self {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_healthmd"));
+        command
             .args(argv)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::null());
+        for (name, value) in environment {
+            command.env(name, value);
+        }
+        let mut child = command
             .spawn()
             .expect("healthmd mcp serve-data should launch");
         let stdin = child.stdin.take().expect("piped stdin");
@@ -892,13 +1599,7 @@ fn all_record_items(server: &mut StdioMcpServer, detail_level: &str) -> Vec<Valu
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
-    let digest = Sha256::digest(bytes);
-    let mut value = String::with_capacity(digest.len() * 2);
-    for byte in digest {
-        use std::fmt::Write as _;
-        let _ = write!(value, "{byte:02x}");
-    }
-    value
+    hex(&Sha256::digest(bytes))
 }
 
 // ---------------------------------------------------------------------------
@@ -1743,38 +2444,72 @@ fn unsupported_and_malformed_corpus_files_are_never_queryable() {
 fn serve_data_rejects_a_grant_inside_the_store_backing() {
     let corpus = Corpus::build();
     for endpoint in corpus.endpoints(&corpus.grant_bulk()) {
-        // Each store refuses a grant stored inside its own private backing before serving any
-        // data: the directory store rejects export-directory grants, the database store a
-        // grant that is the database file itself.
-        let (misplaced, reason) = endpoint.misplaced_grant();
-        write_json(
-            &misplaced,
-            &grant(
-                all_available(),
-                all_available(),
-                all_available(),
-                all_available(),
-                json!(["common", "lossless"]),
-                true,
-            ),
-        );
-        let output = Command::new(env!("CARGO_BIN_EXE_healthmd"))
-            .args(endpoint.argv_with_grant(&misplaced))
-            .stdin(Stdio::null())
-            .output()
-            .expect("healthmd should launch");
-        assert!(
-            !output.status.success(),
-            "a grant inside the store's private backing must be refused"
-        );
-        assert!(
-            output.stdout.is_empty(),
-            "no machine-readable payload on refusal"
-        );
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        assert!(
-            stderr.contains(reason),
-            "stderr should explain the boundary: {stderr}"
-        );
+        match endpoint.misplaced_grant() {
+            MisplacedGrant::Refused { path, reason } => {
+                // Each local store refuses a grant stored inside its own private backing
+                // before serving any data: the directory store rejects export-directory
+                // grants, the database store a grant that is the database file itself.
+                write_json(
+                    &path,
+                    &grant(
+                        all_available(),
+                        all_available(),
+                        all_available(),
+                        all_available(),
+                        json!(["common", "lossless"]),
+                        true,
+                    ),
+                );
+                let output = Command::new(env!("CARGO_BIN_EXE_healthmd"))
+                    .args(endpoint.argv_with_grant(&path))
+                    .stdin(Stdio::null())
+                    .output()
+                    .expect("healthmd should launch");
+                assert!(
+                    !output.status.success(),
+                    "a grant inside the store's private backing must be refused"
+                );
+                assert!(
+                    output.stdout.is_empty(),
+                    "no machine-readable payload on refusal"
+                );
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                assert!(
+                    stderr.contains(reason),
+                    "stderr should explain the boundary: {stderr}"
+                );
+            }
+            MisplacedGrant::IgnoredBucketContent => {
+                // The object store is the documented asymmetry: there is no local containment
+                // rule against a remote backing. The corpus's grant-shaped bucket object is
+                // ignored content — counted, never loaded as a grant — so serving under the
+                // local grant succeeds, exposes exactly the indexed corpus, and refuses
+                // nothing. The double must meanwhile have observed only verified read-only
+                // list/head/get traffic for all of it.
+                let mut server = endpoint.serve();
+                let catalog = server.call("healthmd_data_catalog", json!({"page": default_page()}));
+                let payload = catalog.expect_success("healthmd_data_catalog");
+                assert_eq!(
+                    payload["receipt"]["source_kind"],
+                    json!(endpoint.expected_source_kind())
+                );
+                assert_eq!(payload["receipt"]["returned_items"], json!(8));
+                let discovered: BTreeSet<String> = payload["items"]
+                    .as_array()
+                    .expect("catalog items")
+                    .iter()
+                    .map(|item| item["metric_id"].as_str().expect("metric_id").to_owned())
+                    .collect();
+                let expected: BTreeSet<String> = expected_bulk_catalog()
+                    .into_iter()
+                    .map(|item| item["metric_id"].as_str().expect("metric_id").to_owned())
+                    .collect();
+                assert_eq!(
+                    discovered, expected,
+                    "the grant-shaped bucket object must contribute nothing"
+                );
+                endpoint.assert_double_clean("misplaced-grant asymmetry");
+            }
+        }
     }
 }
