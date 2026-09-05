@@ -127,7 +127,13 @@ final class SharedSetupV2TransactionAdapterTests: XCTestCase {
         XCTAssertThrowsError(try service.undo()) { error in
             XCTAssertEqual(error as? SharedSetupV2TransactionError, .noUndoSnapshot)
         }
-        XCTAssertEqual(try storedProfiles().count, 0)
+        // The prior state was total absence, and Undo restores that exactly:
+        // every aggregate key is removed rather than left holding empty data.
+        XCTAssertNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.profileListKey))
+        XCTAssertNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.activeProfileIDKey))
+        XCTAssertNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.scheduledEntriesKey))
+        XCTAssertNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.profileStateKey))
+        XCTAssertNil(defaults.object(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
     }
 
     // MARK: - Production coordinator bridge (iOS coordinator seam)
