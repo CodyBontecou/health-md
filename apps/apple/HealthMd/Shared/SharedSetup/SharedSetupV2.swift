@@ -181,8 +181,8 @@ struct SharedSetupV2: Codable, Equatable, Sendable {
         }
     }
 
-    // v2 deliberately owns this presentation grammar even though its current
-    // wire shape matches v1. Future v1 compatibility must not be retrofitted.
+    // v2 deliberately owns this presentation grammar. Compatibility with the
+    // removed pre-canonical v1 draft must never be retrofitted.
     struct Presentation: Codable, Equatable, Sendable {
         var dateFormat: DateFormat
         var timeFormat: TimeFormat
@@ -695,43 +695,24 @@ enum SharedSetupV2Error: LocalizedError, Equatable {
     }
 }
 
-enum SharedSetupVersionedDocument: Equatable, Sendable {
-    case v1(SharedSetupV1)
-    case v2(SharedSetupV2)
-}
-
-/// Strict shared-setup dispatcher. It performs only a bounded generic parse to
-/// discover the discriminator, then applies the selected version's recursive
-/// preflight before any typed decode.
+/// Strict shared-setup dispatcher. It performs only a bounded generic parse
+/// to discover the discriminator, rejects every version other than 2 before
+/// any typed decode, then applies v2's recursive preflight. Version 1 is no
+/// longer a readable contract: it fails closed as unsupported.
 enum SharedSetupVersionedCodec {
-    static func decode(_ data: Data) throws -> SharedSetupVersionedDocument {
+    static func decode(_ data: Data) throws -> SharedSetupV2 {
         guard data.count <= SharedSetupV2.maximumEncodedBytes else {
             throw SharedSetupV2Error.oversized(maximumBytes: SharedSetupV2.maximumEncodedBytes)
         }
         let version = try SharedSetupV2JSONPreflight.strictVersion(in: data)
-        switch version {
-        case SharedSetupV1.schemaVersion:
-            guard data.count <= SharedSetupV1.maximumEncodedBytes else {
-                throw SharedSetupError.oversized
-            }
-            // SharedSetupCodec performs the historical v1 depth/container/node
-            // preflight before decoding and preserves the 256 KiB contract.
-            return .v1(try SharedSetupCodec.decode(data))
-        case SharedSetupV2.schemaVersion:
-            return .v2(try SharedSetupV2Codec.decode(data))
-        default:
+        guard version == SharedSetupV2.schemaVersion else {
             throw SharedSetupV2Error.unsupportedVersion
         }
+        return try SharedSetupV2Codec.decode(data)
     }
 
-    static func encode(_ document: SharedSetupVersionedDocument) throws -> Data {
-        switch document {
-        case .v1(let document):
-            // Keep the historical v1 encoder byte-for-byte unchanged.
-            return try SharedSetupCodec.encode(document)
-        case .v2(let document):
-            return try SharedSetupV2Codec.encode(document)
-        }
+    static func encode(_ document: SharedSetupV2) throws -> Data {
+        try SharedSetupV2Codec.encode(document)
     }
 }
 
@@ -821,7 +802,7 @@ private enum SharedSetupV2JSONPreflight {
             throw SharedSetupV2Error.invalid("The setup schema version must be an integer.")
         }
         let version = number.intValue
-        guard version == SharedSetupV1.schemaVersion || version == SharedSetupV2.schemaVersion else {
+        guard version == SharedSetupV2.schemaVersion else {
             throw SharedSetupV2Error.unsupportedVersion
         }
         return version

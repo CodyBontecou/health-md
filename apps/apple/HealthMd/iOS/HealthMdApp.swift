@@ -191,8 +191,6 @@ struct HealthMdApp: App {
             ? nil
             : SharedSetupV2TransactionAdapter()
         _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
-            settings: advancedSettings,
-            apiExportSettings: apiExportSettings,
             v2Adapter: sharedSetupV2Service.map { service in
                 SharedSetupV2CoordinatorAdapter.production(
                     service,

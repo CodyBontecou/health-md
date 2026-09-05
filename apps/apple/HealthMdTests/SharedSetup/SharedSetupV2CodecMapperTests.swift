@@ -301,9 +301,7 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
             activeProfileID: profile.id
         ))
 
-        guard case .v2(let dispatched) = try SharedSetupVersionedCodec.decode(encoded) else {
-            return XCTFail("Expected v2 dispatch")
-        }
+        let dispatched = try SharedSetupVersionedCodec.decode(encoded)
         XCTAssertEqual(dispatched.profiles.first?.name, "Dispatch")
 
         var unknownRoot = try jsonObject(encoded)
@@ -355,22 +353,25 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
         let oversizedV2 = Data(repeating: 0, count: SharedSetupV2.maximumEncodedBytes + 1)
         XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(oversizedV2))
 
-        let v1 = try Data(contentsOf: v1FixtureURL())
-        guard case .v1(let v1Document) = try SharedSetupVersionedCodec.decode(v1) else {
-            return XCTFail("Expected v1 dispatch")
+        // Minimal v1-shaped bytes synthesized inline: the dispatcher must
+        // reject schema_version 1 as unsupported before any versioned
+        // decoding, regardless of how large the document is.
+        var v1ShapedRoot: [String: Any] = [
+            "schema": "healthmd.shared_setup",
+            "schema_version": 1
+        ]
+        let v1Shaped = try jsonData(v1ShapedRoot)
+        XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(v1Shaped)) { error in
+            XCTAssertEqual(error as? SharedSetupV2Error, .unsupportedVersion)
         }
-        XCTAssertEqual(v1Document.schemaVersion, 1)
-
-        var oversizedV1Root = try jsonObject(v1)
-        oversizedV1Root["future_optional"] = Array(
+        v1ShapedRoot["future_optional"] = Array(
             repeating: String(repeating: "x", count: 60_000),
             count: 5
         )
-        let oversizedV1 = try jsonData(oversizedV1Root)
-        XCTAssertGreaterThan(oversizedV1.count, SharedSetupV1.maximumEncodedBytes)
-        XCTAssertLessThan(oversizedV1.count, SharedSetupV2.maximumEncodedBytes)
-        XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(oversizedV1)) { error in
-            XCTAssertEqual(error as? SharedSetupError, .oversized)
+        let oversizedV1Shaped = try jsonData(v1ShapedRoot)
+        XCTAssertLessThan(oversizedV1Shaped.count, SharedSetupV2.maximumEncodedBytes)
+        XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(oversizedV1Shaped)) { error in
+            XCTAssertEqual(error as? SharedSetupV2Error, .unsupportedVersion)
         }
     }
 
@@ -767,20 +768,6 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
         return defaults
-    }
-
-    private func v1FixtureURL() throws -> URL {
-        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-        while directory.path != "/" {
-            let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json"
-            )
-            if FileManager.default.fileExists(atPath: candidate.path) {
-                return candidate
-            }
-            directory.deleteLastPathComponent()
-        }
-        throw XCTSkip("Could not locate the canonical Shared Setup v1 fixture")
     }
 
     private func sharedSetupV2FixtureDirectory() -> URL? {

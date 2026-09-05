@@ -499,17 +499,6 @@ final class SharedSetupV2TransactionAdapterTests: XCTestCase {
         adapter: SharedSetupV2CoordinatorAdapter?
     ) -> SharedSetupCoordinator {
         SharedSetupCoordinator(
-            settings: AdvancedExportSettings(userDefaults: defaults),
-            apiExportSettings: APIExportSettings(
-                userDefaults: defaults,
-                keychain: FakeKeychainStore()
-            ),
-            schedulingManager: SchedulingManager(
-                initialSchedule: ExportSchedule(),
-                persistScheduleChanges: false,
-                systemSideEffectsEnabled: false
-            ),
-            userDefaults: defaults,
             registry: fixtureRegistry(),
             accessibilityAnnouncer: { _ in },
             v2Adapter: adapter

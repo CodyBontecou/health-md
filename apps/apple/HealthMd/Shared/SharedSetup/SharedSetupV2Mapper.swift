@@ -303,10 +303,7 @@ enum SharedSetupV2Mapper {
             let installCustomTemplate = markdown.style != .custom ||
                 (markdown.originDialect == .apple &&
                     SharedSetupPlaceholderValidator.isSyntacticallyValid(markdown.customText)) ||
-                SharedSetupPlaceholderValidator.isCompatible(
-                    markdown.customText,
-                    dialect: .portable
-                )
+                SharedSetupPlaceholderValidator.isCompatible(markdown.customText)
             if !installCustomTemplate {
                 items.append(.init(
                     id: "\(profile.bundleID).template",
@@ -446,10 +443,8 @@ enum SharedSetupV2Mapper {
             )
         }
         let originDialect: SharedSetupV2.OriginDialect = markdown.style == .custom &&
-            !SharedSetupPlaceholderValidator.isCompatible(
-                markdown.customTemplate,
-                dialect: .portable
-            ) ? .apple : .portable
+            !SharedSetupPlaceholderValidator.isCompatible(markdown.customTemplate)
+            ? .apple : .portable
 
         let destination: SharedSetupV2.Destination
         switch nativeProfile.target {
@@ -717,7 +712,7 @@ enum SharedSetupV2Mapper {
     }
 
     private nonisolated static func sharedEquivalence(
-        _ value: SharedSetupV1.Equivalence
+        _ value: SharedSetupEquivalence
     ) -> SharedSetupV2.Equivalence {
         switch value {
         case .platformExactOrUnavailable: .platformExactOrUnavailable

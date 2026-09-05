@@ -61,15 +61,14 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
                 .transactionUnavailable
             )
         }
-        XCTAssertNil(coordinator.result)
         XCTAssertNil(coordinator.v2Result)
 
-        try coordinator.load(try v1FixtureData())
-        guard case .v1 = coordinator.loadedPreview else {
-            return XCTFail("Expected the historical v1 preview case")
+        XCTAssertThrowsError(try coordinator.load(try syntheticV1DocumentData())) { error in
+            XCTAssertEqual(error as? SharedSetupV2Error, .unsupportedVersion)
         }
-        XCTAssertNotNil(coordinator.preview)
-        XCTAssertNil(coordinator.v2Preview)
+        // A rejected v1 document never replaces the loaded v2 preview, and
+        // no v1 preview case exists anymore.
+        XCTAssertNotNil(coordinator.v2Preview)
     }
 
     func testCoordinatorPassesExplicitSelectionAndAddReplaceToAdapterAndUsesOneShotUndo() throws {
@@ -256,9 +255,7 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
             appVersion: "v2-coordinator-test",
             calendar: utcCalendar()
         )
-        guard case .v2(let exported) = try SharedSetupVersionedCodec.decode(encoded) else {
-            return XCTFail("Expected v2 export")
-        }
+        let exported = try SharedSetupVersionedCodec.decode(encoded)
         let exportedProfile = try XCTUnwrap(exported.profiles.first)
         let text = String(decoding: encoded, as: UTF8.self).lowercased()
 
@@ -322,9 +319,11 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
         )
         let artifact = try await SharedSetupCoordinator.readBoundedFile(artifactURL)
         XCTAssertEqual(artifact, encoded)
-        guard case .v2 = try SharedSetupVersionedCodec.decode(artifact) else {
-            return XCTFail("Expected a complete validated v2 share artifact")
-        }
+        XCTAssertEqual(
+            try SharedSetupVersionedCodec.decode(artifact).schemaVersion,
+            2,
+            "Expected a complete validated v2 share artifact"
+        )
         coordinator.removeShareArtifact(artifactURL)
         XCTAssertFalse(FileManager.default.fileExists(atPath: artifactURL.path))
     }
@@ -335,19 +334,7 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
         let firstData = try fixtureData("apple-shared-setup-v2.json")
         let secondData = try fixtureData("android-shared-setup-v2.json")
         let secondDocument = try SharedSetupV2Codec.decode(secondData)
-        let defaults = isolatedDefaults()
         let coordinator = SharedSetupCoordinator(
-            settings: AdvancedExportSettings(userDefaults: defaults),
-            apiExportSettings: APIExportSettings(
-                userDefaults: defaults,
-                keychain: FakeKeychainStore()
-            ),
-            schedulingManager: SchedulingManager(
-                initialSchedule: ExportSchedule(),
-                persistScheduleChanges: false,
-                systemSideEffectsEnabled: false
-            ),
-            userDefaults: defaults,
             registry: registry(for: secondDocument),
             externalFileReader: { url in
                 if url.lastPathComponent == "First.healthmdconfig" {
@@ -384,17 +371,6 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
         v2ExportContext: (@MainActor () -> SharedSetupV2ExportContext?)? = nil
     ) -> SharedSetupCoordinator {
         SharedSetupCoordinator(
-            settings: AdvancedExportSettings(userDefaults: defaults),
-            apiExportSettings: APIExportSettings(
-                userDefaults: defaults,
-                keychain: FakeKeychainStore()
-            ),
-            schedulingManager: SchedulingManager(
-                initialSchedule: ExportSchedule(),
-                persistScheduleChanges: false,
-                systemSideEffectsEnabled: false
-            ),
-            userDefaults: defaults,
             registry: registry,
             accessibilityAnnouncer: { _ in },
             v2Adapter: adapter,
@@ -418,7 +394,7 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
             ),
             equivalence: Dictionary(
                 uniqueKeysWithValues: document.metricAliases.map { alias in
-                    let equivalence: SharedSetupV1.Equivalence
+                    let equivalence: SharedSetupEquivalence
                     switch alias.equivalence {
                     case .platformExactOrUnavailable:
                         equivalence = .platformExactOrUnavailable
@@ -439,10 +415,16 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
         ))
     }
 
-    private func v1FixtureData() throws -> Data {
-        try Data(contentsOf: repositoryFileURL(
-            "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json"
-        ))
+    /// Minimal v1-shaped bytes synthesized inline: v1 must fail closed as
+    /// unsupported without depending on any v1 fixture file.
+    private func syntheticV1DocumentData() throws -> Data {
+        try JSONSerialization.data(
+            withJSONObject: [
+                "schema": "healthmd.shared_setup",
+                "schema_version": 1
+            ],
+            options: [.sortedKeys]
+        )
     }
 
     private func repositoryFileURL(_ relativePath: String) throws -> URL {

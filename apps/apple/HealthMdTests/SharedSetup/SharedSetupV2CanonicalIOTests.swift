@@ -30,29 +30,33 @@ final class SharedSetupV2CanonicalIOTests: XCTestCase {
         XCTAssertEqual(root["schema_version"] as? Int, 2)
     }
 
-    func testVersionedDecodeRetainsExactV1AndV2ByteLimits() throws {
-        let v1 = try Data(contentsOf: v1FixtureURL())
-        let v1AtMaximum = padded(v1, to: SharedSetupV1.maximumEncodedBytes)
-
-        guard case .v1 = try SharedSetupVersionedCodec.decode(v1AtMaximum) else {
-            return XCTFail("Expected v1 at its exact byte limit")
+    func testVersionedDecodeRejectsV1AsUnsupportedAndRetainsExactV2ByteLimit() throws {
+        // Minimal v1-shaped bytes synthesized inline: v1 is no longer a
+        // readable contract and must fail closed as unsupported before any
+        // versioned decoding, regardless of size.
+        let v1Shaped = try JSONSerialization.data(
+            withJSONObject: [
+                "schema": "healthmd.shared_setup",
+                "schema_version": 1
+            ],
+            options: [.sortedKeys]
+        )
+        XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(v1Shaped)) { error in
+            XCTAssertEqual(error as? SharedSetupV2Error, .unsupportedVersion)
         }
-        var v1OverMaximum = v1AtMaximum
-        v1OverMaximum.append(0x20)
-        XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(v1OverMaximum)) { error in
-            XCTAssertEqual(error as? SharedSetupError, .oversized)
+        let v1ShapedAtV2Maximum = padded(v1Shaped, to: SharedSetupV2.maximumEncodedBytes)
+        XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(v1ShapedAtV2Maximum)) { error in
+            XCTAssertEqual(error as? SharedSetupV2Error, .unsupportedVersion)
         }
 
         let v2 = try Data(contentsOf: fixtureURL("apple-shared-setup-v2.json"))
         let v2NearMaximum = padded(v2, to: SharedSetupV2.maximumEncodedBytes - 1)
         let v2AtMaximum = padded(v2, to: SharedSetupV2.maximumEncodedBytes)
 
-        guard case .v2 = try SharedSetupVersionedCodec.decode(v2NearMaximum) else {
-            return XCTFail("Expected v2 immediately below its byte limit")
-        }
-        guard case .v2 = try SharedSetupVersionedCodec.decode(v2AtMaximum) else {
-            return XCTFail("Expected v2 at its exact byte limit")
-        }
+        let v2NearMaximumDecoded = try SharedSetupVersionedCodec.decode(v2NearMaximum)
+        XCTAssertEqual(v2NearMaximumDecoded.schemaVersion, 2)
+        let v2AtMaximumDecoded = try SharedSetupVersionedCodec.decode(v2AtMaximum)
+        XCTAssertEqual(v2AtMaximumDecoded.schemaVersion, 2)
         var v2OverMaximum = v2AtMaximum
         v2OverMaximum.append(0x20)
         XCTAssertThrowsError(try SharedSetupVersionedCodec.decode(v2OverMaximum)) { error in
@@ -117,15 +121,6 @@ final class SharedSetupV2CanonicalIOTests: XCTestCase {
         }
     }
 
-    func testVersionedEncoderDelegatesWithoutChangingV1Bytes() throws {
-        let source = try SharedSetupCodec.decode(Data(contentsOf: v1FixtureURL()))
-
-        XCTAssertEqual(
-            try SharedSetupVersionedCodec.encode(.v1(source)),
-            try SharedSetupCodec.encode(source)
-        )
-    }
-
     private func canonicalJSONWithoutLF(_ document: SharedSetupV2) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -141,12 +136,6 @@ final class SharedSetupV2CanonicalIOTests: XCTestCase {
 
     private func fixtureURL(_ name: String) throws -> URL {
         try repositoryFileURL("packages/contracts/shared-setup/v2/fixtures/\(name)")
-    }
-
-    private func v1FixtureURL() throws -> URL {
-        try repositoryFileURL(
-            "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json"
-        )
     }
 
     private func repositoryFileURL(_ relativePath: String) throws -> URL {

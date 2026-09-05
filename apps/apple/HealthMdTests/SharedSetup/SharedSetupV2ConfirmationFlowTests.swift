@@ -1213,17 +1213,6 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
         announcer: @escaping @MainActor @Sendable (String) -> Void = { _ in }
     ) -> SharedSetupCoordinator {
         SharedSetupCoordinator(
-            settings: AdvancedExportSettings(userDefaults: defaults),
-            apiExportSettings: APIExportSettings(
-                userDefaults: defaults,
-                keychain: FakeKeychainStore()
-            ),
-            schedulingManager: SchedulingManager(
-                initialSchedule: ExportSchedule(),
-                persistScheduleChanges: false,
-                systemSideEffectsEnabled: false
-            ),
-            userDefaults: defaults,
             registry: fixtureRegistry(),
             accessibilityAnnouncer: announcer,
             v2Adapter: adapter

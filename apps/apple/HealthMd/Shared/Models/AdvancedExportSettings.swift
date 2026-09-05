@@ -1140,8 +1140,8 @@ class AdvancedExportSettings: ObservableObject {
         _healthKitSourceArchivePolicy = Published(
             initialValue: portableDetailPolicy.healthKitSourceArchive
         )
-        // Shared Setup v1 cannot represent range summaries losslessly, so its
-        // portable snapshot carries the current local value through unchanged.
+        // The portable settings envelope cannot represent range summaries
+        // losslessly, so it carries the current local value through unchanged.
         _generateRangeSummary = Published(initialValue:
             snapshot.generateWeeklyRollups
                 || snapshot.generateMonthlyRollups
@@ -1163,14 +1163,14 @@ class AdvancedExportSettings: ObservableObject {
 
     private func persistSharedSetupSnapshot(_ snapshot: SharedSetupPortableSnapshot) throws {
         let data = try Self.internalSettingsEncoder().encode(snapshot)
-        guard data.count <= SharedSetupV1.maximumEncodedBytes else { throw SharedSetupError.oversized }
+        guard data.count <= SharedSetupPortableSnapshot.maximumPersistedEncodedBytes else { throw SharedSetupError.oversized }
         userDefaults.set(data, forKey: sharedSetupPortableSettingsKey)
         persistAllSettings()
     }
 
     private func persistedSharedSetupSnapshot() -> SharedSetupPortableSnapshot? {
         guard let data = userDefaults.data(forKey: sharedSetupPortableSettingsKey),
-              data.count <= SharedSetupV1.maximumEncodedBytes else { return nil }
+              data.count <= SharedSetupPortableSnapshot.maximumPersistedEncodedBytes else { return nil }
         return try? Self.internalSettingsDecoder().decode(SharedSetupPortableSnapshot.self, from: data)
     }
 

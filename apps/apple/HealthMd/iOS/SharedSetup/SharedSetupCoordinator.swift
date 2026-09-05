@@ -9,12 +9,10 @@ extension UTType {
 }
 
 enum SharedSetupLoadedPreview: Equatable, Sendable {
-    case v1(SharedSetupPreview)
     case v2(SharedSetupV2ImportPlan)
 
     var hasInvalidItems: Bool {
         switch self {
-        case .v1(let preview): preview.hasInvalidItems
         case .v2(let preview): preview.hasInvalidItems
         }
     }
@@ -86,7 +84,7 @@ enum SharedSetupV2CoordinatorError: LocalizedError, Equatable {
 /// Read-only facts about one imported API endpoint identity retained in
 /// the still-loaded Shared Setup v2 plan.
 struct SharedSetupV2ImportedEndpointIdentity: Equatable, Sendable {
-    /// Human display hint (host + path), mirroring the v1 endpoint hint.
+    /// Human display hint (host + path) for an imported endpoint.
     let displayHint: String
     /// Canonical validated URL string — the conservative identity used to
     /// match a locally saved endpoint row.
@@ -572,7 +570,6 @@ final class SharedSetupCoordinator: ObservableObject {
     enum RouteSource: Equatable { case fileImporter; case coldOpen; case warmOpen; case onboarding }
 
     @Published private(set) var loadedPreview: SharedSetupLoadedPreview?
-    @Published private(set) var result: SharedSetupApplyResult?
     @Published private(set) var v2Result: SharedSetupV2CoordinatorResult?
     /// True when `v2Result` describes a successful one-shot Undo rather than
     /// an apply, so review surfaces never label an undone import as applied.
@@ -595,21 +592,11 @@ final class SharedSetupCoordinator: ObservableObject {
     @Published var errorMessage: String?
     @Published private(set) var lastRouteSource: RouteSource?
 
-    /// Historical v1 convenience API retained for existing callers and tests.
-    var preview: SharedSetupPreview? {
-        guard case .v1(let preview) = loadedPreview else { return nil }
-        return preview
-    }
-
     var v2Preview: SharedSetupV2ImportPlan? {
         guard case .v2(let preview) = loadedPreview else { return nil }
         return preview
     }
 
-    let settings: AdvancedExportSettings
-    let apiExportSettings: APIExportSettings
-    private let schedulingManager: SchedulingManager
-    private let transaction: SharedSetupTransaction
     private let registry: SharedSetupMetricRegistry?
     private let fileManager: FileManager
     private let externalFileReader: @Sendable (URL) async throws -> Data
@@ -624,10 +611,6 @@ final class SharedSetupCoordinator: ObservableObject {
     private var importRequestID = 0
 
     init(
-        settings: AdvancedExportSettings? = nil,
-        apiExportSettings: APIExportSettings? = nil,
-        schedulingManager: SchedulingManager? = nil,
-        userDefaults: UserDefaults = .standard,
         registry: SharedSetupMetricRegistry?? = nil,
         fileManager: FileManager = .default,
         externalFileReader: @escaping @Sendable (URL) async throws -> Data = {
@@ -641,19 +624,7 @@ final class SharedSetupCoordinator: ObservableObject {
     ) {
         // Default argument expressions are evaluated in a nonisolated context (SE-0411),
         // so MainActor-isolated defaults are resolved inside the initializer body instead.
-        let resolvedSettings = settings ?? AdvancedExportSettings()
-        let resolvedAPIExportSettings = apiExportSettings ?? APIExportSettings()
-        let resolvedSchedulingManager = schedulingManager ?? .shared
         let resolvedRegistry = registry ?? (try? SharedSetupMetricRegistry.current())
-        self.settings = resolvedSettings
-        self.apiExportSettings = resolvedAPIExportSettings
-        self.schedulingManager = resolvedSchedulingManager
-        self.transaction = SharedSetupTransaction(
-            settings: resolvedSettings,
-            apiExportSettings: resolvedAPIExportSettings,
-            schedulingManager: resolvedSchedulingManager,
-            userDefaults: userDefaults
-        )
         self.registry = resolvedRegistry
         self.fileManager = fileManager
         self.externalFileReader = externalFileReader
@@ -671,7 +642,6 @@ final class SharedSetupCoordinator: ObservableObject {
         }
     }
 
-    var canUndo: Bool { transaction.canUndo }
     var canUndoV2: Bool { v2Adapter?.canUndo() ?? false }
     var isV2TransactionAvailable: Bool { v2Adapter != nil }
     /// True only when the installed adapter exposes both the live blocked
@@ -681,8 +651,6 @@ final class SharedSetupCoordinator: ObservableObject {
         guard let v2Adapter else { return false }
         return v2Adapter.isExecutionBlocked != nil && v2Adapter.confirmRebind != nil
     }
-
-    var pendingEndpointHint: String? { transaction.pendingEndpointHint }
 
     func beginImport(source: RouteSource = .fileImporter) {
         lastRouteSource = source
@@ -729,43 +697,19 @@ final class SharedSetupCoordinator: ObservableObject {
     }
 
     func load(_ data: Data) throws {
-        switch try SharedSetupVersionedCodec.decode(data) {
-        case .v1(let document):
-            let candidate = SharedSetupMapper.preview(document, registry: registry)
-            guard !candidate.hasInvalidItems else {
-                throw SharedSetupError.invalid(
-                    candidate.items.first(where: { $0.status == .invalid })?.detail ??
-                        "The setup is invalid."
-                )
-            }
-            loadedPreview = .v1(candidate)
-        case .v2(let document):
-            guard let registry else {
-                throw SharedSetupV2CoordinatorError.metricRegistryUnavailable
-            }
-            // Mapping is pure. Keep even an invalid local compatibility plan
-            // reviewable, but never expose it as eligible for Apply.
-            loadedPreview = .v2(SharedSetupV2Mapper.preview(document, registry: registry))
+        let document = try SharedSetupVersionedCodec.decode(data)
+        guard let registry else {
+            throw SharedSetupV2CoordinatorError.metricRegistryUnavailable
         }
-        result = nil
+        // Mapping is pure. Keep even an invalid local compatibility plan
+        // reviewable, but never expose it as eligible for Apply.
+        loadedPreview = .v2(SharedSetupV2Mapper.preview(document, registry: registry))
         v2Result = nil
         v2ResultWasUndo = false
         v2ReboundProfileIDs = []
         v2InFlowEndpointRowIDs = []
         errorMessage = nil
         isFlowPresented = true
-    }
-
-    func apply() {
-        guard case .v1(let preview) = loadedPreview else { return }
-        do {
-            result = try transaction.apply(preview)
-            accessibilityAnnouncer(
-                String(localized: "Shared Setup applied. Review items requiring attention, then finish setup.")
-            )
-        } catch {
-            errorMessage = error.localizedDescription
-        }
     }
 
     func canApplyV2(selectedBundleIDs: [String]) -> Bool {
@@ -797,7 +741,6 @@ final class SharedSetupCoordinator: ObservableObject {
             }
 
             let outcome = try v2Adapter.apply(plan, Array(selectedBundleIDs), mode)
-            result = nil
             v2Result = outcome
             v2ResultWasUndo = false
             v2ReboundProfileIDs = []
@@ -813,15 +756,6 @@ final class SharedSetupCoordinator: ObservableObject {
         }
     }
 
-    func undo() {
-        do {
-            result = try transaction.undo()
-            accessibilityAnnouncer(String(localized: "Shared Setup import undone"))
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
     @discardableResult
     func undoV2() throws -> SharedSetupV2CoordinatorResult {
         do {
@@ -832,7 +766,6 @@ final class SharedSetupCoordinator: ObservableObject {
                 throw SharedSetupV2CoordinatorError.noUndoSnapshot
             }
             let outcome = try v2Adapter.undo()
-            result = nil
             v2Result = outcome
             v2ResultWasUndo = true
             v2ReboundProfileIDs = []
@@ -843,22 +776,6 @@ final class SharedSetupCoordinator: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             throw error
-        }
-    }
-
-    func confirmPendingEndpoint(authorization: String) {
-        do {
-            try transaction.confirmPendingEndpoint(authorization: authorization)
-            if var updated = result {
-                updated.appliedItems.append("API endpoint confirmed with a new local credential")
-                updated.attentionItems.removeAll { $0.hasPrefix("API endpoint:") }
-                result = updated
-            } else {
-                objectWillChange.send()
-            }
-            accessibilityAnnouncer(String(localized: "API endpoint confirmed"))
-        } catch {
-            errorMessage = error.localizedDescription
         }
     }
 
@@ -901,7 +818,6 @@ final class SharedSetupCoordinator: ObservableObject {
         importTask = nil
         importRequestID &+= 1
         loadedPreview = nil
-        result = nil
         v2Result = nil
         v2ResultWasUndo = false
         v2ReboundProfileIDs = []
@@ -1039,7 +955,7 @@ final class SharedSetupCoordinator: ObservableObject {
 
     /// Routes one explicit API-endpoint rebind through the installed verified
     /// production path. The credential is validated with the same bounds as
-    /// the v1 endpoint flow (non-empty after trimming, at most 8,192
+    /// every local credential entry (non-empty after trimming, at most 8,192
     /// characters, no newlines or control characters) and is only ever handed
     /// to the injected closure — this coordinator never stores it. Failures
     /// throw, publish an error, and leave the blocked identity intact.
@@ -1334,13 +1250,10 @@ struct SharedSetupFlowView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if let result = coordinator.result {
-                    success(result)
-                } else if let result = coordinator.v2Result {
+                if let result = coordinator.v2Result {
                     v2Success(result)
                 } else if let loadedPreview = coordinator.loadedPreview {
                     switch loadedPreview {
-                    case .v1(let preview): review(preview)
                     case .v2(let preview): v2Review(preview)
                     }
                 } else {
@@ -1352,7 +1265,7 @@ struct SharedSetupFlowView: View {
                 }
             }
             .navigationTitle(
-                coordinator.result == nil && coordinator.v2Result == nil
+                coordinator.v2Result == nil
                     ? "Review Shared Setup"
                     : (coordinator.v2ResultWasUndo ? "Import Undone" : "Setup Applied")
             )
@@ -1369,47 +1282,6 @@ struct SharedSetupFlowView: View {
         guard case .v2(let plan) = coordinator.loadedPreview else { return }
         v2SelectedBundleIDs = Set(plan.defaultSelectedBundleIDs)
         v2ApplyMode = .add
-    }
-
-    private func review(_ preview: SharedSetupPreview) -> some View {
-        List {
-            Section("Overview") {
-                LabeledContent("Formats", value: preview.document.profile.export.formats.map(\.rawValue).joined(separator: ", "))
-                LabeledContent("Selected metrics", value: "\(preview.selectedMetricCount)")
-                LabeledContent("Naming", value: preview.document.profile.export.filenameTemplate)
-                LabeledContent("Units", value: preview.document.profile.presentation.units.rawValue.capitalized)
-                LabeledContent("Daily Notes", value: preview.document.profile.dailyNotes.enabled ? "On" : "Off")
-                LabeledContent("Individual entries", value: preview.document.profile.individualEntries.enabled ? "On" : "Off")
-            }
-            if preview.document.profile.presentation.markdown.style == .custom || !preview.document.profile.presentation.frontmatter.customValues.isEmpty {
-                Section("Custom Content") { Text("Custom templates and frontmatter are copied verbatim. Review them for personal, tenant, routing, or secret text.") }
-            }
-            Section("Automation") {
-                Text("Schedule: \(preview.document.profile.schedule.cadence.value) \(preview.document.profile.schedule.cadence.unit.rawValue) at \(String(format: "%02d:%02d", preview.document.profile.schedule.localTime.hour, preview.document.profile.schedule.localTime.minute)); will remain off.")
-                if let endpoint = preview.document.profile.apiEndpoint { Text("Endpoint: \(endpoint.host)\(endpoint.path). Authentication not included; confirmation and credentials are required.") }
-            }
-            Section("Compatibility") {
-                ForEach(preview.items) { item in
-                    HStack(alignment: .top) {
-                        Image(systemName: icon(item.status)).foregroundStyle(color(item.status)).accessibilityHidden(true)
-                        VStack(alignment: .leading) {
-                            Text(statusTitle(item.status)).font(.caption.bold()).foregroundStyle(color(item.status))
-                            Text(item.title).font(.headline)
-                            Text(item.detail).font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(statusTitle(item.status)): \(item.title). \(item.detail)")
-                }
-            }
-            Section("Still required on this device") { Text("Choose folders, grant Apple Health access, confirm purchases/entitlements, enter endpoint credentials, and enable automation locally. Existing device state is not changed.") }
-            Section {
-                Button("Apply Shared Setup") { coordinator.apply() }
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier(AccessibilityID.SharedSetup.apply)
-            }
-        }
     }
 
     private func v2Review(_ preview: SharedSetupV2ImportPlan) -> some View {
@@ -1577,29 +1449,6 @@ struct SharedSetupFlowView: View {
     /// Persisted order follows source-document order; tap order never decides.
     private func orderedV2Selection(in plan: SharedSetupV2ImportPlan) -> [String] {
         plan.document.profiles.map(\.bundleID).filter { v2SelectedBundleIDs.contains($0) }
-    }
-
-    private func success(_ result: SharedSetupApplyResult) -> some View {
-        List {
-            Section("Applied items") { ForEach(result.appliedItems, id: \.self) { Label($0, systemImage: "checkmark.circle.fill").foregroundStyle(.green) } }
-            Section("Items requiring attention") {
-                if result.attentionItems.isEmpty { Text("None") }
-                else { ForEach(result.attentionItems, id: \.self) { Text($0) } }
-            }
-            if coordinator.pendingEndpointHint != nil {
-                Section("Finish API endpoint setup") {
-                    SharedSetupEndpointConfirmation(coordinator: coordinator)
-                }
-            }
-            Section {
-                Button("Undo") { coordinator.undo() }
-                    .disabled(!coordinator.canUndo)
-                    .accessibilityIdentifier(AccessibilityID.SharedSetup.undo)
-                Button("Finish Setup") { coordinator.finish(); dismiss() }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier(AccessibilityID.SharedSetup.finish)
-            }
-        }
     }
 
     private func v2Success(_ result: SharedSetupV2CoordinatorResult) -> some View {
@@ -1900,10 +1749,6 @@ struct SharedSetupConfigurationCard: View {
                 }
                 .accessibilityIdentifier(AccessibilityID.SharedSetup.share)
             }
-            if coordinator.pendingEndpointHint != nil {
-                Divider()
-                SharedSetupEndpointConfirmation(coordinator: coordinator)
-            }
         }
         .fileExporter(isPresented: $isExporterPresented, document: exportDocument, contentType: .healthMdConfiguration, defaultFilename: "Health-md-Setup.healthmdconfig") { result in
             if case .failure(let error) = result { coordinator.errorMessage = error.localizedDescription }
@@ -1926,31 +1771,6 @@ struct SharedSetupConfigurationCard: View {
     private struct ShareURL: Identifiable { let url: URL; var id: URL { url } }
 }
 
-private struct SharedSetupEndpointConfirmation: View {
-    @ObservedObject var coordinator: SharedSetupCoordinator
-    @State private var authorization = ""
-
-    var body: some View {
-        if let endpoint = coordinator.pendingEndpointHint {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(endpoint).font(.caption.monospaced()).textSelection(.enabled)
-                Text("Confirm this imported endpoint by entering a new credential. Existing credentials are never inherited.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                SecureField("Bearer token or Authorization value", text: $authorization)
-                    .textContentType(.password)
-                    .privacySensitive()
-                    .accessibilityLabel("New local API endpoint credential")
-                Button("Confirm Endpoint and Save Credential") {
-                    coordinator.confirmPendingEndpoint(authorization: authorization)
-                    if coordinator.pendingEndpointHint == nil { authorization = "" }
-                }
-                .disabled(authorization.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-    }
-}
-
 /// View-local credential entry model for the v2 in-flow API endpoint
 /// confirmation. It holds only the typed string; validation of the attempt
 /// and every persistence decision live in the coordinator's verified path.
@@ -1969,8 +1789,8 @@ final class SharedSetupV2CredentialEntryModel: ObservableObject {
     }
 }
 
-/// In-flow credential confirmation for one blocked imported API endpoint —
-/// the v2 counterpart of the v1 `SharedSetupEndpointConfirmation`. The typed
+/// In-flow credential confirmation for one blocked imported API endpoint.
+/// The typed
 /// credential is handed only to the coordinator's injected verified rebind
 /// path and is never stored by the flow; the field resets after every
 /// attempt.
