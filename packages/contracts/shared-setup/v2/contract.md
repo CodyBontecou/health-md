@@ -4,7 +4,9 @@
 
 `healthmd.shared_setup` version 2 is the deferred, language-neutral contract for sharing a bounded bundle of named Health.md setup profiles between Apple and Android. The observable outcome remains **Share My Setup**: a recipient can review and choose how to apply portable export preferences without receiving health records, credentials, native destination bindings, or operational state.
 
-Version 2 is a separate grammar from the immutable [version 1 contract](../v1/contract.md). It adds named multi-profile bundles, exact split data-detail policies, per-profile destination and schedule intent, and typed Apple and Android v2 extensions. It does not change Apple `healthmd.health_data` v8, Android v4/v5 output, any raw-snapshot or HealthKit archive schema, or a direct-device protocol. Canonical status remains deferred until native import transactions, physical-device interoperability, and accessibility gates are complete.
+Version 2 is the one and only grammar of this contract family. It supersedes the removed version 1 grammar, adding named multi-profile bundles, exact split data-detail policies, per-profile destination and schedule intent, and typed Apple and Android v2 extensions. It does not change Apple `healthmd.health_data` v8, Android v4/v5 output, any raw-snapshot or HealthKit archive schema, or a direct-device protocol. Canonical status remains deferred until native import transactions, physical-device interoperability, and accessibility gates are complete.
+
+Version 1 was pre-canonical and unreleased — it had no in-the-wild consumers, so this is a clean removal rather than a deprecation shim. Version 1 was removed by deliberate owner decision on 2026-09-05, and version 2 is now the one and only `healthmd.shared_setup` profile contract. Version 1 input fails closed: readers reject it as unsupported before versioned decoding.
 
 The registered representation remains UTF-8 JSON with:
 
@@ -20,13 +22,11 @@ A file is attacker-controlled. A reader MUST use this order:
 1. read at most 4,194,304 bytes (plus a one-byte overflow probe);
 2. parse generic JSON without constructing a versioned setup DTO;
 3. require root `schema` to equal `healthmd.shared_setup` and require `schema_version` to be a JSON integer, never a Boolean, floating-point number, string, or `null`;
-4. dispatch only integer version `1` or `2`, using the version-specific byte limit and grammar;
+4. require `schema_version` to equal integer `2` only, rejecting every other version — including the removed version `1` — as unsupported before versioned decoding;
 5. before versioned decoding, recursively reject depth greater than 20, any object or array with more than 512 members/items, any string or key with more than 65,536 Unicode scalar values, invalid Unicode scalar content, non-finite numbers, or more than 262,144 total JSON nodes;
 6. run schema, prohibited-content, path, endpoint, ordering, reference, registry, and cross-field checks;
 7. produce a human-readable compatibility preview without writes;
 8. apply only after explicit confirmation and native transactional checks.
-
-Version 1 keeps its own 262,144-byte, depth-16, container-256, key-256, and 16,384-node limits and continues to use its frozen schema and semantics.
 
 Readers MAY ignore bounded unknown optional fields after the complete generic preflight and recursive security scan. Ignored input is never applied, persisted, put into Undo state, or re-exported. Writers are closed DTO allowlists: they MUST emit only fields defined by the [v2 JSON Schema](shared-setup.schema.json), including every required field. Writers do not retain unknown reader input.
 
@@ -118,7 +118,7 @@ Each profile requires:
 
 All imported destination kinds are inert and pending. Import does not resolve, inspect, open, create, pair, authenticate, or bind a destination. A recipient must separately choose a local folder, enter endpoint credentials, select a cloud account, or pair a Mac. Existing local credentials and bindings are never inherited.
 
-A non-null endpoint uses the exact safe v1 hint: HTTPS `scheme`, DNS `host`, nullable numeric `port`, absolute URL `path`, `query_omitted`, and `credentials_required: true`. Userinfo, percent escapes, `//` network paths, queries, fragments, control characters, credentials, and headers are forbidden. Native code constructs the reviewed URL from components rather than concatenating an untrusted URL string. No network request occurs during import or preview.
+A non-null endpoint uses the exact safe component hint: HTTPS `scheme`, DNS `host`, nullable numeric `port`, absolute URL `path`, `query_omitted`, and `credentials_required: true`. Userinfo, percent escapes, `//` network paths, queries, fragments, control characters, credentials, and headers are forbidden. Native code constructs the reviewed URL from components rather than concatenating an untrusted URL string. No network request occurs during import or preview.
 
 ## Schedule intent
 
@@ -270,4 +270,4 @@ The [transaction scenario fixture](fixtures/transaction-scenarios-v1.json) is de
 
 Validation recursively proves selection normalization, active-profile fallbacks, collision suffixing, nil imported bindings, disabled imported schedules, per-generated-profile foreign/unsupported preservation, exact rollback, Undo consumption, and unchanged destination/secure-store markers. It also recursively rejects native IDs, credentials, grants, native paths/URIs, runtime timestamps/history, health data, and operation identity in the embedded or canonical public artifacts.
 
-The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures remain one-line UTF-8 synthetic public documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes. V2 status remains `deferred`, its schema/version remain frozen, and every tracked v1 authority/fixture byte remains immutable.
+The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures remain one-line UTF-8 synthetic public documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes. V2 status remains `deferred`, and its schema, canonical fixtures, transaction scenario, and field-coverage inventories remain byte-frozen.

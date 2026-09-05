@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Focused acceptance and rejection tests for shared-setup v1/v2 validation."""
+"""Focused acceptance and rejection tests for shared-setup v2 validation."""
 
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import tempfile
 import unittest
@@ -15,228 +14,10 @@ import validate
 
 
 ROOT = Path(__file__).resolve().parents[2]
-FIXTURE = ROOT / "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json"
-ANDROID_FIXTURE = ROOT / "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json"
 APPLE_V2_FIXTURE = ROOT / "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json"
 ANDROID_V2_FIXTURE = ROOT / "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json"
 TRANSACTION_SCENARIO_FIXTURE = ROOT / "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json"
 METRIC_REGISTRY = ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"
-V1_IMMUTABLE_SHA256 = {
-    "packages/contracts/shared-setup/v1/contract.md": "a7ab1e660fce30288e3f4fbad42aa16fba87062e30e76ee4a3ae6e7b5a52b40a",
-    "packages/contracts/shared-setup/v1/shared-setup.schema.json": "0f2a9367b52d1c3c15d950dd6a3c4ca494214b2dc32a3105cc71576e60d0ad60",
-    "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json": "4101ba35c58ed25af60ff8b540ed03e6e230153748fef52bbd70dece9b68f751",
-    "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json": "817e30ce6c3e1c7d2a74502608b7bc0cb203058b7aa5de1c3c9bef7c6c27ede5",
-}
-
-
-def project_onto_current_metric_registry(payload: dict[str, Any]) -> dict[str, Any]:
-    """Build an exact current-registry projection without rewriting historical fixtures."""
-    candidate = copy.deepcopy(payload)
-    registry_bytes = METRIC_REGISTRY.read_bytes()
-    registry = json.loads(registry_bytes)
-    registry_metrics = {metric["semantic_id"]: metric for metric in registry["metrics"]}
-    enabled_ids = candidate["profile"]["metrics"]["enabled_ids"]
-
-    candidate["metric_registry"] = {
-        "schema": registry["schema"],
-        "registry_version": registry["registry_version"],
-        "registry_sha256": hashlib.sha256(registry_bytes).hexdigest(),
-    }
-    candidate["metric_aliases"] = [
-        {
-            "semantic_id": semantic_id,
-            "equivalence": registry_metrics[semantic_id]["equivalence"],
-            "apple_selection_id": _backed_selection_id(registry_metrics[semantic_id], "apple"),
-            "android_selection_id": _backed_selection_id(registry_metrics[semantic_id], "android"),
-        }
-        for semantic_id in enabled_ids
-    ]
-    return candidate
-
-
-def _backed_selection_id(metric: dict[str, Any], platform: str) -> str | None:
-    binding = metric[platform]
-    return binding["selection_id"] if binding["status"] == "backed" else None
-
-
-class SharedSetupValidationTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.payload = json.loads(FIXTURE.read_text(encoding="utf-8"))
-
-    def validate(self, payload: object) -> None:
-        encoded = validate.canonical_json(payload) + b"\n"
-        with tempfile.NamedTemporaryFile(suffix=".json") as handle:
-            handle.write(encoded)
-            handle.flush()
-            validate.validate_shared_setup_fixture(ROOT, Path(handle.name))
-
-    def assert_rejected(self, payload: object) -> None:
-        with self.assertRaises(validate.ContractValidationError):
-            self.validate(payload)
-
-    def test_v1_authorities_and_fixtures_remain_byte_immutable(self) -> None:
-        for raw_path, expected in V1_IMMUTABLE_SHA256.items():
-            self.assertEqual(hashlib.sha256((ROOT / raw_path).read_bytes()).hexdigest(), expected)
-
-    def test_canonical_fixture_and_safe_unknown_fields_are_accepted(self) -> None:
-        self.validate(self.payload)
-        android = json.loads(ANDROID_FIXTURE.read_text(encoding="utf-8"))
-        self.validate(android)
-        self.assertEqual(android["created_by"]["platform"], "android")
-        self.assertTrue(android["profile"]["daily_notes"]["create_if_missing"])
-        self.assertEqual(android["profile"]["individual_entries"]["filename_template"], "{metric}-{date}-{time}")
-        self.assertEqual(android["profile"]["schedule"]["local_time"], {"hour": 6, "minute": 0})
-        self.assertIsNone(android["metric_aliases"][0]["apple_selection_id"])
-        self.assertEqual(android["metric_aliases"][0]["semantic_id"], "android.hrv_rmssd")
-        candidate = copy.deepcopy(self.payload)
-        candidate["future_optional"] = {"bounded_note": "ignored"}
-        candidate["profile"]["presentation"]["future_optional"] = [1, 2, 3]
-        self.validate(candidate)
-
-    def test_canonical_fixtures_pin_the_current_metric_registry(self) -> None:
-        registry_bytes = METRIC_REGISTRY.read_bytes()
-        registry = json.loads(registry_bytes)
-        expected = {
-            "schema": registry["schema"],
-            "registry_version": registry["registry_version"],
-            "registry_sha256": hashlib.sha256(registry_bytes).hexdigest(),
-        }
-        for fixture in (FIXTURE, ANDROID_FIXTURE):
-            payload = json.loads(fixture.read_text(encoding="utf-8"))
-            self.assertEqual(payload["metric_registry"], expected)
-
-    def test_writer_extension_is_required_but_foreign_extension_may_be_null(self) -> None:
-        candidate = copy.deepcopy(self.payload)
-        candidate["platform_extensions"]["android"] = None
-        self.validate(candidate)
-
-        candidate["platform_extensions"]["apple"] = None
-        self.assert_rejected(candidate)
-
-    def test_future_registry_metric_is_preserved_for_compatibility_analysis(self) -> None:
-        candidate = copy.deepcopy(self.payload)
-        candidate["metric_registry"]["registry_sha256"] = "0" * 64
-        candidate["profile"]["metrics"]["enabled_ids"].append("future_metric")
-        candidate["profile"]["metrics"]["enabled_ids"].sort()
-        candidate["metric_aliases"].append(
-            {
-                "semantic_id": "future_metric",
-                "equivalence": "platform_exact_or_unavailable",
-                "apple_selection_id": None,
-                "android_selection_id": "future_metric",
-            }
-        )
-        candidate["metric_aliases"].sort(key=lambda item: item["semantic_id"])
-        self.validate(candidate)
-
-        known = copy.deepcopy(self.payload)
-        known["metric_registry"]["registry_sha256"] = "0" * 64
-        known["metric_aliases"][0]["android_selection_id"] = "historical_selection"
-        self.validate(known)
-
-    def test_future_schema_versions_and_missing_required_fields_are_rejected(self) -> None:
-        for value in (0, 2, "1", None):
-            candidate = copy.deepcopy(self.payload)
-            candidate["schema_version"] = value
-            self.assert_rejected(candidate)
-        candidate = copy.deepcopy(self.payload)
-        del candidate["profile"]["schedule"]
-        self.assert_rejected(candidate)
-
-    def test_sensitive_unknown_fields_and_authorization_values_are_rejected(self) -> None:
-        for key in ("health_records", "source_data", "analytics", "email", "api_key"):
-            candidate = copy.deepcopy(self.payload)
-            candidate["profile"][key] = "not portable"
-            self.assert_rejected(candidate)
-        for value in ("Bearer abc123", "Basic dXNlcjpwYXNz", "Authorization: secret"):
-            candidate = copy.deepcopy(self.payload)
-            candidate["future_optional"] = value
-            self.assert_rejected(candidate)
-
-    def test_contradictory_schedule_representations_are_rejected(self) -> None:
-        candidate = copy.deepcopy(self.payload)
-        candidate["platform_extensions"]["apple"]["schedule"]["frequency"] = "weekly"
-        self.assert_rejected(candidate)
-
-        candidate = copy.deepcopy(self.payload)
-        candidate["platform_extensions"]["apple"]["schedule"]["desired_target"] = "connected_mac"
-        candidate["profile"]["schedule"]["desired_target"] = "api_endpoint"
-        self.assert_rejected(candidate)
-
-    def test_operational_schedule_and_credential_fields_are_rejected(self) -> None:
-        for key in ("enabled", "enabled_at", "last_run", "operation_id", "engine_pin"):
-            candidate = copy.deepcopy(self.payload)
-            candidate["profile"]["schedule"][key] = True
-            self.assert_rejected(candidate)
-        candidate = copy.deepcopy(self.payload)
-        candidate["profile"]["api_endpoint"]["token"] = "secret"
-        self.assert_rejected(candidate)
-
-    def test_unsafe_paths_are_rejected(self) -> None:
-        for value in (
-            "/absolute",
-            "C:/windows",
-            "../escape",
-            "nested/../escape",
-            "nested//empty",
-            "nested\\windows",
-            "content://grant",
-            "%2e%2e/escape",
-            "nested/%252e%252e/escape",
-        ):
-            candidate = copy.deepcopy(self.payload)
-            candidate["profile"]["export"]["folder_template"] = value
-            self.assert_rejected(candidate)
-        for value in (".", ".."):
-            candidate = copy.deepcopy(self.payload)
-            candidate["profile"]["export"]["filename_template"] = value
-            self.assert_rejected(candidate)
-
-    def test_unsafe_endpoints_are_rejected(self) -> None:
-        mutations = (
-            ("scheme", "http"),
-            ("host", "user@setup.invalid"),
-            ("host", "bad..example"),
-            ("host", "-bad.example"),
-            ("path", "//network-path"),
-            ("path", "/ingest?token=secret"),
-            ("path", "/ingest%3Ftoken"),
-        )
-        for field, value in mutations:
-            candidate = copy.deepcopy(self.payload)
-            candidate["profile"]["api_endpoint"][field] = value
-            self.assert_rejected(candidate)
-
-    def test_metric_alias_tampering_and_categories_are_rejected(self) -> None:
-        candidate = project_onto_current_metric_registry(self.payload)
-        self.validate(candidate)
-        candidate["metric_aliases"][0]["android_selection_id"] = "wrong"
-        self.assert_rejected(candidate)
-        candidate = copy.deepcopy(self.payload)
-        candidate["profile"]["metrics"]["enabled_categories"] = ["activity"]
-        self.assert_rejected(candidate)
-
-    def test_generic_depth_collection_string_and_file_bounds_are_rejected(self) -> None:
-        candidate = copy.deepcopy(self.payload)
-        nested: dict[str, object] = {}
-        candidate["future_optional"] = nested
-        for _ in range(17):
-            child: dict[str, object] = {}
-            nested["next"] = child
-            nested = child
-        self.assert_rejected(candidate)
-
-        candidate = copy.deepcopy(self.payload)
-        candidate["future_optional"] = list(range(257))
-        self.assert_rejected(candidate)
-
-        candidate = copy.deepcopy(self.payload)
-        candidate["future_optional"] = "x" * 65_537
-        self.assert_rejected(candidate)
-
-        candidate = copy.deepcopy(self.payload)
-        candidate["future_optional"] = "x" * validate.SHARED_SETUP_MAX_BYTES
-        self.assert_rejected(candidate)
 
 
 class SharedSetupV2ValidationTests(unittest.TestCase):
@@ -523,10 +304,25 @@ class SharedSetupV2ValidationTests(unittest.TestCase):
         )
         self.assert_bytes_rejected(oversized)
 
-    def test_dispatch_accepts_only_strict_integer_v1_or_v2(self) -> None:
+    def test_dispatch_rejects_every_version_except_strict_integer_v2(self) -> None:
         self.validate(self.apple)
-        for fixture in (FIXTURE, ANDROID_FIXTURE):
-            validate.validate_shared_setup_fixture(ROOT, fixture)
+
+        # Version 1 was removed by deliberate owner decision; a well-formed
+        # v1-shaped document fails closed as unsupported before versioned
+        # decoding rather than being read as a v1 document.
+        v1_shaped = {
+            "schema": "healthmd.shared_setup",
+            "schema_version": 1,
+            "created_by": {"platform": "apple", "app_version": "1.0"},
+            "metric_registry": copy.deepcopy(self.apple["metric_registry"]),
+            "profile": {
+                "name": "Removed Version 1 Shape",
+                "metrics": {"enabled_ids": []},
+            },
+            "metric_aliases": [],
+            "platform_extensions": {"apple": None, "android": None},
+        }
+        self.assert_rejected(v1_shaped)
 
         for value in (0, 1, 3, "2", 2.0, True, None):
             candidate = copy.deepcopy(self.apple)
