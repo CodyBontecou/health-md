@@ -239,6 +239,49 @@ because an unfinalized partial manifest already fails the strict manifest gramma
 as `manifest_incomplete`. The gateway transport mapping below documents the one deliberate
 divergence; the four contract codes themselves are stable.
 
+### Phone-side destination
+
+The phone side of the ingestion protocol is an export destination: a profile configured with
+the destination "Agent Data gateway" uploads that profile's exact, already-generated export
+artifacts to a user-configured gateway endpoint URL. The destination uploads existing Health.md
+artifacts one at a time and never transforms, regenerates, or rewrites them; it adds an upload
+step after the local artifacts exist, not a new export format. Both platforms expose the same
+outcome — pick the destination in the profile, provide the endpoint URL, and each artifact the
+profile produces is offered to the gateway — while the native settings surfaces differ.
+
+**Request framing.** One artifact per request: the phone sends one `POST` to the gateway's
+`/v1/ingest` endpoint with the body framed as one `\n`-terminated `healthmd.agent_data_ingest`
+v1 manifest line followed immediately by exactly the manifest's `byte_count` artifact bytes,
+carrying `Content-Type: application/x-healthmd-agent-data-ingest` and an exact `Content-Length`.
+There is no compression, multipart, or chunked upload session in v1, and artifacts are bounded
+to 64 MiB. The normative mapping is
+[`HTTPS transport (gateways)`](../../../packages/contracts/agent-data/v1/contract.md#https-transport-gateways)
+in the contract; the reference gateway realization is documented in the next subsection.
+
+**Client retry posture.** The phone retries transport failures (the connection closes before
+the full body arrives, producing no receipt) and `transient` outcomes with bounded backoff.
+It never auto-retries `truncated`, `checksum_invalid`, or `manifest_incomplete` — those are
+fix-and-re-upload outcomes. Re-uploading an identical manifest and bytes is idempotent and
+returns a byte-identical receipt. A failed or rejected upload never loses the local artifact:
+upload outcomes do not delete or invalidate the phone's existing export files.
+
+**Manifest fields the phone fills.** One manifest describes one artifact: the artifact's own
+schema identity and a concrete schema version; the artifact kind (`health_data_daily`,
+`external_provider_daily`, `raw_snapshot`, or `raw_changes` — raw kinds must be `complete`);
+the source platform; the physical format and media type; the owner-date partition identity
+(the exported day for daily artifacts, the capture day for `raw_snapshot` and `raw_changes`);
+the byte length and SHA-256 of the exact uploaded bytes; and completeness — `complete`, or
+`partial` with the explicit finalization marker and the covered owner dates. `record_count` is
+informational in v1 and the phone omits it.
+
+**Self-hosted posture.** The gateway is the user's own listener on the user's machine or LAN —
+for example `healthmd data ingest-serve`, whose default `--bind` stays on loopback: use
+`--bind` to listen on a LAN-facing address and `--allowed-host` to allowlist the `Host` the
+phone's requests carry. The reference serves plain HTTP on loopback and expects TLS to be
+terminated by a co-resident reverse proxy in front of the listener for anything beyond
+loopback, per the contract. There are no accounts, OAuth, or managed-cloud hosting in v1;
+those remain deferred to later cycles.
+
 ### Self-hosted ingestion gateway (protocol v1 reference)
 
 `healthmd data ingest-serve` is the self-hosted reference gateway for the ingestion protocol's
