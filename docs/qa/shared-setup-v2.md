@@ -1,8 +1,8 @@
 # Share My Setup v2 transaction QA record
 
-Date: 2026-09-05  
-Branch: `shared-setup-v2/c3-contract-manifest` (record written from the cycle-2 integrated tree at base `eae6feb97`)  
-Worktree: `/private/tmp/healthmd-c3-contract-manifest`
+- Date: 2026-09-05
+- Branch: `shared-setup-v2/c3-contract-manifest` (record written from the cycle-2 integrated tree at base `eae6feb97`)
+- Worktree: `/private/tmp/healthmd-c3-contract-manifest`
 
 ## Status: deferred — not default
 
