@@ -325,7 +325,7 @@ struct ExportPreviewView: View {
                 if let estimatedExportSize {
                     HStack {
                         Text(
-                            targetType == .apiEndpoint
+                            targetType == .apiEndpoint || targetType == .agentDataGateway
                                 ? String(localized: "Estimated payload")
                                 : String(localized: "Estimated output")
                         )
@@ -338,7 +338,7 @@ struct ExportPreviewView: View {
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(
-                        targetType == .apiEndpoint
+                        targetType == .apiEndpoint || targetType == .agentDataGateway
                             ? String(localized: "Estimated payload, approximately \(estimatedExportSize.sizeLabel), based on \(localizedSourceDayCount(estimatedExportSize.sampledDataDayCount))")
                             : String(localized: "Estimated final export output, approximately \(estimatedExportSize.sizeLabel), based on \(localizedSourceDayCount(estimatedExportSize.sampledDataDayCount)) and the configured roll-up scope")
                     )
@@ -617,7 +617,8 @@ struct ExportPreviewView: View {
         totalDateCount = dates.count
 
         guard settings.hasFileDestinationOutput,
-              !(settings.dailyNotesOnlyModeEnabled && targetType == .apiEndpoint) else {
+              !(settings.dailyNotesOnlyModeEnabled
+                && (targetType == .apiEndpoint || targetType == .agentDataGateway)) else {
             isLoading = false
             analytics.trackExportPreviewFailed(
                 metadata: metadata,
@@ -648,7 +649,7 @@ struct ExportPreviewView: View {
             guard healthData.filtered(by: settings.metricSelection).hasAnyData else { continue }
             rollupInputs.append(healthData)
 
-            if targetType == .apiEndpoint {
+            if targetType == .apiEndpoint || targetType == .agentDataGateway {
                 sizeSamples.append(ExportPreviewSizeSample(
                     aggregateByteCount: healthData.export(format: .json, settings: settings).utf8.count
                 ))
@@ -749,7 +750,7 @@ struct ExportPreviewView: View {
                 ))
             }
 
-            if targetType != .apiEndpoint {
+            if targetType != .apiEndpoint && targetType != .agentDataGateway {
                 sizeSamples.append(ExportPreviewSizeSample(
                     aggregateByteCount: files
                         .filter(\.kind.isDailyAggregateFormat)

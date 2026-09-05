@@ -103,6 +103,7 @@ struct ScheduleSettingsView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
+    @ObservedObject var agentDataGatewaySettings: AgentDataGatewaySettings
     @Binding var showFolderPicker: Bool
     /// Built by ContentView when the main UI appears; forwarded so
     /// `ProfileScheduleSection` observes the shared profile stores.
@@ -112,6 +113,7 @@ struct ScheduleSettingsView: View {
 
     @State private var selectedEntry: ExportHistoryEntry?
     @State private var showAPIEndpointSettings = false
+    @State private var showAgentDataGatewaySettings = false
     @State private var showTodayRefreshInfo = false
 
     // Retry export state
@@ -335,6 +337,11 @@ struct ScheduleSettingsView: View {
         }
         .sheet(isPresented: $showAPIEndpointSettings) {
             APIExportSettingsSheet(settings: apiExportSettings)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showAgentDataGatewaySettings) {
+            AgentDataGatewaySettingsSheet(settings: agentDataGatewaySettings)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -909,6 +916,7 @@ struct ScheduleSettingsView: View {
             localSubtitle: scheduledLocalTargetSubtitle,
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
+            gatewaySubtitle: scheduledAgentDataGatewayTargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
             // See the export tab: prompt from current destination usability, not
             // retained-selection metadata, so unavailable folders still open the picker.
@@ -916,9 +924,19 @@ struct ScheduleSettingsView: View {
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
+            gatewayAccessibilityIdentifier: AccessibilityID.Schedule.agentDataGatewayTargetOption,
             onRequestFolderPicker: { showFolderPicker = true },
-            onOpenAPISettings: { showAPIEndpointSettings = true }
+            onOpenAPISettings: { showAPIEndpointSettings = true },
+            onOpenGatewaySettings: { showAgentDataGatewaySettings = true }
         )
+    }
+
+    private var scheduledAgentDataGatewayTargetSubtitle: String {
+        let settings = AgentDataGatewaySettings()
+        if settings.isConfigured {
+            return "Scheduled exports upload artifacts to \(settings.displayName)."
+        }
+        return "Scheduled exports upload artifacts to your Agent Data gateway."
     }
 
     private var scheduledLocalTargetSubtitle: String {
@@ -2052,6 +2070,7 @@ struct ExportHistoryDetailView: View {
         case .generatedFiles: return String(localized: "Generated files")
         case .rawExport: return String(localized: "Raw data export")
         case .canonicalExtraction: return String(localized: "Canonical extraction")
+        case .agentDataGatewayUpload: return String(localized: "Agent Data gateway upload")
         }
     }
 
@@ -2127,6 +2146,7 @@ private struct ScheduleSettingsPreviewContainer: View {
                 vaultManager: VaultManager(),
                 advancedSettings: AdvancedExportSettings(),
                 apiExportSettings: APIExportSettings(),
+                agentDataGatewaySettings: AgentDataGatewaySettings(),
                 showFolderPicker: $showFolderPicker
             )
             .environmentObject(SchedulingManager.shared)

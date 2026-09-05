@@ -23,6 +23,7 @@ enum AccessibilityID {
         static let localTargetOption = "export.target.local"
         static let macTargetOption = "export.target.mac"
         static let apiTargetOption = "export.target.api"
+        static let agentDataGatewayTargetOption = "export.target.agentDataGateway"
         static let datePresetTodayButton = "export.dateRange.preset.today"
         static let datePresetYesterdayButton = "export.dateRange.preset.yesterday"
         static let datePresetAllTimeButton = "export.dateRange.preset.allTime"
@@ -132,6 +133,7 @@ enum AccessibilityID {
         static let localTargetOption = "schedule.target.local"
         static let macTargetOption = "schedule.target.mac"
         static let apiTargetOption = "schedule.target.api"
+        static let agentDataGatewayTargetOption = "schedule.target.agentDataGateway"
     }
 
     // MARK: - Sync

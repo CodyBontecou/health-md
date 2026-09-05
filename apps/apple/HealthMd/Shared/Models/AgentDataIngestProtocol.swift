@@ -521,6 +521,9 @@ nonisolated enum AgentDataGatewayEndpoint {
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return nil
         }
+        // Twin parity with the Android endpoint helper: user info and
+        // fragments invalidate the endpoint; query parameters are valid but
+        // never shown or logged by the redacted description.
         guard components.user == nil, components.password == nil, components.fragment == nil else {
             return nil
         }
