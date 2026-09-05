@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fmt, fs,
-    io::{BufRead as _, BufReader, Read as _, Write as _},
+    io::{BufRead, BufReader, Read as _, Write as _},
     path::{Path, PathBuf},
     sync::Arc,
     time::UNIX_EPOCH,
@@ -488,7 +488,7 @@ fn validated_index_path(root: &Path, path: &Path) -> Result<PathBuf, DataStoreOp
     Ok(resolved)
 }
 
-fn default_index_path(root_binding: &str) -> Result<PathBuf, DataStoreOpenError> {
+pub(super) fn default_index_path(root_binding: &str) -> Result<PathBuf, DataStoreOpenError> {
     let base = BaseDirs::new()
         .ok_or_else(|| DataStoreOpenError::new("no private data directory is available"))?;
     let directory = base
@@ -502,7 +502,7 @@ fn default_index_path(root_binding: &str) -> Result<PathBuf, DataStoreOpenError>
     Ok(directory.join(format!("{root_binding}.json")))
 }
 
-fn prepare_private_directory(path: &Path) -> Result<(), DataStoreOpenError> {
+pub(super) fn prepare_private_directory(path: &Path) -> Result<(), DataStoreOpenError> {
     fs::create_dir_all(path).map_err(|_| {
         DataStoreOpenError::new("the private Agent Data directory could not be created")
     })?;
@@ -639,8 +639,33 @@ fn build_stable_index(
             "the Agent Data directory changed during indexing",
         ));
     }
+    finalize_index(
+        expected_fingerprint,
+        artifacts,
+        records,
+        ignored_file_count,
+        invalid_artifact_count,
+    )
+}
+
+/// Assemble the stable index revision shared by every store backing.
+///
+/// The revision is derived deterministically from the source fingerprint, the sorted artifact
+/// and record entries, and the ignored/invalid counts, so identical store content always
+/// produces an identical `index_revision` (and therefore cursor scope).
+///
+/// # Errors
+///
+/// Returns a health-free error when the index entries cannot be encoded.
+fn finalize_index(
+    source_fingerprint: String,
+    artifacts: Vec<ArtifactEntry>,
+    records: Vec<RecordEntry>,
+    ignored_file_count: usize,
+    invalid_artifact_count: usize,
+) -> Result<ArtifactIndex, DataStoreOpenError> {
     let revision_value = serde_json::to_vec(&(
-        &expected_fingerprint,
+        &source_fingerprint,
         &artifacts,
         &records,
         ignored_file_count,
@@ -650,7 +675,7 @@ fn build_stable_index(
     Ok(ArtifactIndex {
         schema: INDEX_SCHEMA.to_owned(),
         schema_version: INDEX_SCHEMA_VERSION,
-        source_fingerprint: expected_fingerprint,
+        source_fingerprint,
         index_revision: sha256_hex(&revision_value),
         artifacts,
         records,
@@ -662,16 +687,11 @@ fn build_stable_index(
 pub(super) fn parse_artifact(
     file: &SourceFile,
 ) -> Result<Option<(ArtifactEntry, Vec<RecordEntry>)>, ()> {
-    let physical_format = match file
-        .path
-        .extension()
-        .and_then(|value| value.to_str())
-        .map(str::to_ascii_lowercase)
-        .as_deref()
-    {
-        Some("json") => PhysicalFormat::Json,
-        Some("jsonl" | "ndjson") => PhysicalFormat::Ndjson,
-        _ => return Ok(None),
+    let physical_format = match physical_format_from_extension(
+        file.path.extension().and_then(|value| value.to_str()),
+    ) {
+        Some(physical_format) => physical_format,
+        None => return Ok(None),
     };
     let artifact_id = hash_file(&file.path).map_err(|_| ())?;
     let parsed = match physical_format {
@@ -680,11 +700,82 @@ pub(super) fn parse_artifact(
                 return Err(());
             }
             let bytes = fs::read(&file.path).map_err(|_| ())?;
-            let value: Value = serde_json::from_slice(&bytes).map_err(|_| ())?;
-            parse_json_artifact(&value, &artifact_id)?
+            parse_json_artifact_bytes(&bytes, &artifact_id)?
         }
-        PhysicalFormat::Ndjson => parse_ndjson_artifact(&file.path, &artifact_id)?,
+        PhysicalFormat::Ndjson => {
+            let file = fs::File::open(&file.path).map_err(|_| ())?;
+            parse_ndjson_artifact_from(BufReader::new(file), &artifact_id)?
+        }
     };
+    finalize_parsed_artifact(
+        &file.relative_path,
+        file.byte_count,
+        physical_format,
+        artifact_id,
+        parsed,
+    )
+}
+
+/// Parse one artifact from its exact stored bytes instead of a local file.
+///
+/// The storage-neutral seam shared by remote stores: `relative_path` carries the store's own
+/// path grammar (object key relative to the store root), `byte_count` is the stored size, and
+/// the artifact identity is derived as SHA-256 of `bytes` exactly like the directory store.
+pub(super) fn parse_artifact_bytes(
+    relative_path: &str,
+    byte_count: u64,
+    bytes: &[u8],
+) -> Result<Option<(ArtifactEntry, Vec<RecordEntry>)>, ()> {
+    let physical_format = match physical_format_from_extension(
+        Path::new(relative_path)
+            .extension()
+            .and_then(|value| value.to_str()),
+    ) {
+        Some(physical_format) => physical_format,
+        None => return Ok(None),
+    };
+    let artifact_id = sha256_hex(bytes);
+    let parsed = match physical_format {
+        PhysicalFormat::Json => {
+            if byte_count > MAXIMUM_JSON_ARTIFACT_BYTES {
+                return Err(());
+            }
+            parse_json_artifact_bytes(bytes, &artifact_id)?
+        }
+        PhysicalFormat::Ndjson => parse_ndjson_artifact_from(BufReader::new(bytes), &artifact_id)?,
+    };
+    finalize_parsed_artifact(
+        relative_path,
+        byte_count,
+        physical_format,
+        artifact_id,
+        parsed,
+    )
+}
+
+fn physical_format_from_extension(extension: Option<&str>) -> Option<PhysicalFormat> {
+    match extension.map(str::to_ascii_lowercase).as_deref() {
+        Some("json") => Some(PhysicalFormat::Json),
+        Some("jsonl" | "ndjson") => Some(PhysicalFormat::Ndjson),
+        _ => None,
+    }
+}
+
+fn parse_json_artifact_bytes(
+    bytes: &[u8],
+    artifact_id: &str,
+) -> Result<Option<ParsedArtifact>, ()> {
+    let value: Value = serde_json::from_slice(bytes).map_err(|_| ())?;
+    parse_json_artifact(&value, artifact_id)
+}
+
+fn finalize_parsed_artifact(
+    relative_path: &str,
+    byte_count: u64,
+    physical_format: PhysicalFormat,
+    artifact_id: String,
+    parsed: Option<ParsedArtifact>,
+) -> Result<Option<(ArtifactEntry, Vec<RecordEntry>)>, ()> {
     let Some(mut parsed) = parsed else {
         return Ok(None);
     };
@@ -707,8 +798,8 @@ pub(super) fn parse_artifact(
     Ok(Some((
         ArtifactEntry {
             artifact_id,
-            relative_path: file.relative_path.clone(),
-            byte_count: file.byte_count,
+            relative_path: relative_path.to_owned(),
+            byte_count,
             media_type: media_type.to_owned(),
             physical_format,
             schemas: parsed.schemas,
@@ -1173,9 +1264,11 @@ fn parse_raw_changes(value: &Value, artifact_id: &str) -> Result<ParsedArtifact,
 }
 
 #[allow(clippy::too_many_lines)]
-fn parse_ndjson_artifact(path: &Path, artifact_id: &str) -> Result<Option<ParsedArtifact>, ()> {
-    let file = fs::File::open(path).map_err(|_| ())?;
-    let mut reader = BufReader::new(file);
+fn parse_ndjson_artifact_from(
+    reader: impl BufRead,
+    artifact_id: &str,
+) -> Result<Option<ParsedArtifact>, ()> {
+    let mut reader = reader;
     let mut line = Vec::new();
     let mut line_number = 0_usize;
     let mut saw_header = false;
@@ -1418,7 +1511,7 @@ fn locator_order(locator: &RecordLocator) -> String {
     }
 }
 
-fn persist_index(path: &Path, index: &ArtifactIndex) -> Result<(), DataStoreOpenError> {
+pub(super) fn persist_index(path: &Path, index: &ArtifactIndex) -> Result<(), DataStoreOpenError> {
     let parent = path.parent().ok_or_else(|| {
         DataStoreOpenError::new("the Agent Data index path has no parent directory")
     })?;
