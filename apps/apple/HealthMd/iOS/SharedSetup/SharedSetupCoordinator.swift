@@ -55,6 +55,7 @@ enum SharedSetupV2CoordinatorError: LocalizedError, Equatable {
     case invalidCredential
     case exportProfileServiceUnavailable
     case importedEndpointUnavailable
+    case v2ExportContextUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -76,6 +77,8 @@ enum SharedSetupV2CoordinatorError: LocalizedError, Equatable {
             "The export profile service is unavailable, so this endpoint cannot be confirmed here. The imported profile stays blocked."
         case .importedEndpointUnavailable:
             "The imported endpoint identity is no longer available, so it cannot be added here. Configure the endpoint in this profile's export settings."
+        case .v2ExportContextUnavailable:
+            "The export profile service is unavailable, so the current setup cannot be shared from here. Open the main export surface once, then try again."
         }
     }
 }
@@ -612,6 +615,10 @@ final class SharedSetupCoordinator: ObservableObject {
     private let externalFileReader: @Sendable (URL) async throws -> Data
     private let accessibilityAnnouncer: @MainActor (String) -> Void
     private let v2Adapter: SharedSetupV2CoordinatorAdapter?
+    /// Production resolver for the v2 export context the default writer
+    /// needs. Absent — or returning nil — keeps the default Share/Save path
+    /// honestly unavailable; Health.md never falls back to another writer.
+    private let v2ExportContextResolver: (@MainActor () -> SharedSetupV2ExportContext?)?
     private var v2ConnectedMacStateCancellable: AnyCancellable?
     private var importTask: Task<Void, Never>?
     private var importRequestID = 0
@@ -629,7 +636,8 @@ final class SharedSetupCoordinator: ObservableObject {
         accessibilityAnnouncer: @escaping @MainActor @Sendable (String) -> Void = {
             UIAccessibility.post(notification: .announcement, argument: $0)
         },
-        v2Adapter: SharedSetupV2CoordinatorAdapter? = nil
+        v2Adapter: SharedSetupV2CoordinatorAdapter? = nil,
+        v2ExportContext: (@MainActor () -> SharedSetupV2ExportContext?)? = nil
     ) {
         // Default argument expressions are evaluated in a nonisolated context (SE-0411),
         // so MainActor-isolated defaults are resolved inside the initializer body instead.
@@ -651,6 +659,7 @@ final class SharedSetupCoordinator: ObservableObject {
         self.externalFileReader = externalFileReader
         self.accessibilityAnnouncer = accessibilityAnnouncer
         self.v2Adapter = v2Adapter
+        self.v2ExportContextResolver = v2ExportContext
         // Re-render signal for the connected-Mac review rows: the adapter's
         // optional change publisher bumps the published revision, and rows
         // re-read the authoritative connectedMacState closure on the next
@@ -1067,19 +1076,20 @@ final class SharedSetupCoordinator: ObservableObject {
         }
     }
 
-    /// The production default deliberately remains the shipped v1 writer. A
-    /// post-merge caller must opt into the explicit v2 context API only after
-    /// installing a verified v2 transaction/Undo adapter.
-    func exportData(appVersion: String) throws -> Data {
-        let document = try SharedSetupMapper.exportDocument(
-            settings: settings,
-            schedule: schedulingManager.schedule,
-            apiExportSettings: apiExportSettings,
+    /// THE production Shared Setup writer. It resolves the export context
+    /// from the injected production owner — the single export-profile
+    /// coordinator plus the v2 sidecar's preserved extensions — and encodes
+    /// canonical `schema_version: 2` bytes exclusively. A missing resolver
+    /// or owner fails closed; there is no other writer to fall back to.
+    func exportData(appVersion: String, calendar: Calendar = .current) throws -> Data {
+        guard let context = v2ExportContextResolver?() else {
+            throw SharedSetupV2CoordinatorError.v2ExportContextUnavailable
+        }
+        return try exportV2Data(
+            context: context,
             appVersion: appVersion,
-            preservedAndroidExtension: transaction.preservedAndroidExtension,
-            registry: registry
+            calendar: calendar
         )
-        return try SharedSetupCodec.encode(document)
     }
 
     func exportV2Data(
@@ -1115,8 +1125,13 @@ final class SharedSetupCoordinator: ObservableObject {
         return try SharedSetupV2Codec.encode(document)
     }
 
-    func makeShareArtifact(appVersion: String) throws -> URL {
-        try makeValidatedShareArtifact(exportData(appVersion: appVersion))
+    func makeShareArtifact(appVersion: String, calendar: Calendar = .current) throws -> URL {
+        guard let context = v2ExportContextResolver?() else {
+            throw SharedSetupV2CoordinatorError.v2ExportContextUnavailable
+        }
+        return try makeValidatedShareArtifact(
+            exportV2Data(context: context, appVersion: appVersion, calendar: calendar)
+        )
     }
 
     func makeV2ShareArtifact(
@@ -1510,7 +1525,7 @@ struct SharedSetupFlowView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("No verified Shared Setup v2 Add/Replace/Undo adapter is installed. The production Share action continues to write version 1.")
+                    Text("No verified Shared Setup v2 Add/Replace/Undo adapter is installed.")
                 }
                 if !selectionAvailable {
                     Button("Apply Shared Setup v2") {}

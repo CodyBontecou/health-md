@@ -179,10 +179,14 @@ struct HealthMdApp: App {
         // the lazily built production export profile coordinator through the
         // weak bridge (ContentView registers it), and its connected-Mac rows
         // read read-only pairing facts from the shared sync service,
-        // re-rendering whenever those published facts change. Unit tests
-        // construct their own coordinators over isolated suites, so the
-        // app-hosted test process keeps the adapter absent and the
-        // fail-closed no-adapter behavior stays observable.
+        // re-rendering whenever those published facts change. The default
+        // Share/Save writer resolves its v2 export context through the same
+        // weak bridge — flushing any debounced profile edits first — plus
+        // the v2 sidecar's preserved Android extensions, so production
+        // writes schema_version 2 exclusively. Unit tests construct their own
+        // coordinators over isolated suites, so the app-hosted test process
+        // keeps the adapter and context resolver absent and the fail-closed
+        // no-adapter behavior stays observable.
         let sharedSetupV2Service = TestMode.isUnitTesting
             ? nil
             : SharedSetupV2TransactionAdapter()
@@ -200,6 +204,23 @@ struct HealthMdApp: App {
                         SharedSetupV2CoordinatorAdapter
                             .connectedMacFactChanges(syncService: syncService)
                     }
+                )
+            },
+            v2ExportContext: {
+                guard let exportProfiles = SharedSetupV2ExportProfileBridge.current else {
+                    return nil
+                }
+                // Freeze any debounced live edits into the active profile so
+                // the shared document reflects the settings the user sees.
+                exportProfiles.flushEdits()
+                return SharedSetupV2ExportContext(
+                    profiles: exportProfiles.profileStore.profiles,
+                    activeProfileID: exportProfiles.profileStore.activeProfileID,
+                    destinationVaults: exportProfiles.destinationStore.vaults,
+                    destinationAPIEndpoints: exportProfiles.destinationStore.apiEndpoints,
+                    scheduledEntries: exportProfiles.scheduledEntryStore.entries,
+                    preservedAndroidExtensions:
+                        sharedSetupV2Service?.preservedAndroidExtensionsByProfileID ?? [:]
                 )
             }
         ))

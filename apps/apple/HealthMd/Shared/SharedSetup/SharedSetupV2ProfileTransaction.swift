@@ -499,6 +499,22 @@ final class SharedSetupV2ProfileTransaction {
             (try? decodeState(snapshot.raw)) != nil
     }
 
+    /// Read-only map of each retained profile's preserved Android platform
+    /// extension, keyed by native profile ID, in profile-store order. The v2
+    /// sidecar is the preservation authority; unreadable state fails closed
+    /// to an empty map so the production writer shares without preserved
+    /// extensions rather than guessing.
+    var preservedAndroidExtensionsByProfileID: [UUID: SharedSetupV2.AndroidExtension] {
+        guard let state = try? readState() else { return [:] }
+        var preserved: [UUID: SharedSetupV2.AndroidExtension] = [:]
+        for row in state.sidecar.profiles {
+            if let android = row.sourceProfile.platformExtensions.android {
+                preserved[row.profileID] = android
+            }
+        }
+        return preserved
+    }
+
     func apply(
         _ plan: SharedSetupV2ImportPlan,
         selectedBundleIDs: [String],

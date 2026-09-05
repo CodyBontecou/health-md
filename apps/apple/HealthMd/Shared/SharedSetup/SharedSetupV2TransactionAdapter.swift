@@ -98,6 +98,13 @@ final class SharedSetupV2TransactionAdapter {
 
     var canUndo: Bool { transaction.canUndo }
 
+    /// Read-only preserved Android platform extensions keyed by native
+    /// profile ID — the v2 sidecar retention surface the production v2
+    /// writer re-exports from.
+    var preservedAndroidExtensionsByProfileID: [UUID: SharedSetupV2.AndroidExtension] {
+        transaction.preservedAndroidExtensionsByProfileID
+    }
+
     @discardableResult
     func apply(
         _ plan: SharedSetupV2ImportPlan,

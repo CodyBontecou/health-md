@@ -279,11 +279,36 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
             XCTAssertFalse(text.contains(prohibited), prohibited)
         }
 
-        guard case .v1 = try SharedSetupVersionedCodec.decode(
-            coordinator.exportData(appVersion: "still-v1")
-        ) else {
-            return XCTFail("The default production writer must remain v1")
+        // The default production writer is v2 exclusively: schema_version 2,
+        // canonical bytes identical to the explicit context API, and a
+        // missing production context resolver fails closed instead of
+        // falling back to any other writer.
+        XCTAssertThrowsError(
+            try coordinator.exportData(
+                appVersion: "no-resolver",
+                calendar: utcCalendar()
+            )
+        ) { error in
+            XCTAssertEqual(
+                error as? SharedSetupV2CoordinatorError,
+                .v2ExportContextUnavailable
+            )
         }
+        let defaultWriterCoordinator = makeCoordinator(
+            defaults: defaults,
+            registry: registry,
+            v2ExportContext: { context }
+        )
+        let defaultWriterData = try defaultWriterCoordinator.exportData(
+            appVersion: "v2-coordinator-test",
+            calendar: utcCalendar()
+        )
+        XCTAssertEqual(defaultWriterData, encoded)
+        XCTAssertEqual(
+            try SharedSetupV2Codec.decode(defaultWriterData).schemaVersion,
+            2,
+            "The default production writer must be v2"
+        )
 
         var fileDocument = try SharedSetupDocument(data: encoded)
         XCTAssertEqual(try fileDocument.validatedContentsForWriting(), encoded)
@@ -355,7 +380,8 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
     private func makeCoordinator(
         defaults: UserDefaults,
         registry: SharedSetupMetricRegistry,
-        adapter: SharedSetupV2CoordinatorAdapter? = nil
+        adapter: SharedSetupV2CoordinatorAdapter? = nil,
+        v2ExportContext: (@MainActor () -> SharedSetupV2ExportContext?)? = nil
     ) -> SharedSetupCoordinator {
         SharedSetupCoordinator(
             settings: AdvancedExportSettings(userDefaults: defaults),
@@ -371,7 +397,8 @@ final class SharedSetupV2CoordinatorIOTests: XCTestCase {
             userDefaults: defaults,
             registry: registry,
             accessibilityAnnouncer: { _ in },
-            v2Adapter: adapter
+            v2Adapter: adapter,
+            v2ExportContext: v2ExportContext
         )
     }
 
