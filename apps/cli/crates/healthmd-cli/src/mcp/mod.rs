@@ -328,9 +328,11 @@ fn open_data_backend(
     options: DataServeOptions,
 ) -> Result<healthmd_operations::ArtifactStoreBackend, DataStoreOpenError> {
     match options {
-        options @ DataServeOptions::Directory { .. } => Ok(healthmd_operations::ArtifactStoreBackend::new(
-            Arc::new(DirectoryArtifactStore::open(options)?),
-        )),
+        options @ DataServeOptions::Directory { .. } => {
+            Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
+                DirectoryArtifactStore::open(options)?,
+            )))
+        }
         options @ DataServeOptions::Database { .. } => {
             Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
                 data_sqlite::SqliteArtifactStore::open(options)?,

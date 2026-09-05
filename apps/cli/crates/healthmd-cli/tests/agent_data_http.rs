@@ -615,9 +615,7 @@ impl HttpMcpServer {
             let _ = child.wait();
             attempts.push(*port);
         }
-        panic!(
-            "no loopback candidate port answered; attempted {attempts:?} of {ports:?}"
-        );
+        panic!("no loopback candidate port answered; attempted {attempts:?} of {ports:?}");
     }
 
     fn raw(&self) -> RawHttp {
@@ -638,7 +636,11 @@ impl HttpMcpServer {
             .to_string(),
             &[],
         );
-        assert_eq!(response.status, 200, "initialize must succeed: {:?}", response.body);
+        assert_eq!(
+            response.status, 200,
+            "initialize must succeed: {:?}",
+            response.body
+        );
         let session = response
             .header("mcp-session-id")
             .expect("initialize returns mcp-session-id")
@@ -689,7 +691,11 @@ impl HttpMcpServer {
             &body.to_string(),
             &extra,
         );
-        assert_eq!(response.status, 200, "request must succeed: {:?}", response.body);
+        assert_eq!(
+            response.status, 200,
+            "request must succeed: {:?}",
+            response.body
+        );
         response
     }
 
@@ -699,16 +705,12 @@ impl HttpMcpServer {
         if let Some(session) = &self.session {
             extra.push(("mcp-session-id", session.as_str()));
         }
-        self.raw()
-            .post(host, "/mcp", &body.to_string(), &extra)
+        self.raw().post(host, "/mcp", &body.to_string(), &extra)
     }
 
     /// Call one fixed MCP tool and return its text payload plus `isError`.
     fn call(&mut self, name: &str, arguments: &Value) -> (Value, bool) {
-        let response = self.request(
-            "tools/call",
-            &json!({"name": name, "arguments": arguments}),
-        );
+        let response = self.request("tools/call", &json!({"name": name, "arguments": arguments}));
         let value = response.json();
         assert_eq!(value["jsonrpc"], json!("2.0"), "JSON-RPC 2.0 envelope");
         let result = value["result"].as_object().expect("tools/call result");
@@ -773,7 +775,10 @@ fn http_initialize_performs_the_handshake_and_exposes_only_the_five_data_tools()
     let initialize = server.initialize();
     let result = initialize["result"].as_object().expect("initialize result");
     assert_eq!(result["protocolVersion"], json!(PROTOCOL_VERSION));
-    assert_eq!(result["capabilities"], json!({"tools": {"listChanged": false}}));
+    assert_eq!(
+        result["capabilities"],
+        json!({"tools": {"listChanged": false}})
+    );
     assert_eq!(result["serverInfo"]["name"], json!("healthmd-mcp"));
     let instructions = result["instructions"].as_str().expect("instructions");
     assert!(instructions.contains("healthmd_data_catalog"));
@@ -811,11 +816,15 @@ fn http_initialize_performs_the_handshake_and_exposes_only_the_five_data_tools()
     );
     let unknown = unknown.json();
     assert_eq!(unknown.pointer("/error/code"), Some(&json!(-32_602)));
-    assert_eq!(unknown.pointer("/error/message"), Some(&json!("Unknown tool")));
+    assert_eq!(
+        unknown.pointer("/error/message"),
+        Some(&json!("Unknown tool"))
+    );
 
     // One bounded query against the synthetic corpus: the exact bulk catalog, identical to the
     // stdio expectation for the same corpus and grant.
-    let (catalog, is_error) = server.call("healthmd_data_catalog", &json!({"page": default_page()}));
+    let (catalog, is_error) =
+        server.call("healthmd_data_catalog", &json!({"page": default_page()}));
     assert!(!is_error, "catalog query: {catalog}");
     assert_eq!(catalog["schema"], json!("healthmd.agent_query_response"));
     assert_eq!(catalog["schema_version"], json!(1));
@@ -882,10 +891,7 @@ fn http_record_read_chunks_oversized_records_with_exact_reassembly() {
     assert!(!is_error, "tail read: {tail}");
     let tail_item = &tail["items"][0];
     assert_eq!(tail_item["offset"], json!(4_608));
-    assert_eq!(
-        tail_item["byte_count"],
-        json!(expected_bytes.len() - 4_608)
-    );
+    assert_eq!(tail_item["byte_count"], json!(expected_bytes.len() - 4_608));
     assert_eq!(tail_item["complete"], json!(true));
     assert_eq!(tail["next_cursor"], Value::Null);
 
@@ -905,10 +911,7 @@ fn http_record_read_chunks_oversized_records_with_exact_reassembly() {
         &json!({"record_id": record_id, "page": page(1, CHUNK_OVERHEAD_BYTES, None)}),
     );
     assert!(is_error, "undersized page: {rejected}");
-    assert_eq!(
-        rejected["error"],
-        json!("healthmd_agent_page_too_small")
-    );
+    assert_eq!(rejected["error"], json!("healthmd_agent_page_too_small"));
 }
 
 #[test]
@@ -918,7 +921,8 @@ fn http_grant_denial_and_host_origin_validation_are_enforced() {
     server.initialize();
 
     // Under a record-scoped grant the artifact listing is empty and reads are denied.
-    let (listing, is_error) = server.call("healthmd_data_artifacts", &json!({"page": default_page()}));
+    let (listing, is_error) =
+        server.call("healthmd_data_artifacts", &json!({"page": default_page()}));
     assert!(!is_error, "artifact listing: {listing}");
     assert_eq!(listing["operation"], json!("artifacts"));
     assert_eq!(listing["items"], json!([]));
@@ -951,9 +955,15 @@ fn http_grant_denial_and_host_origin_validation_are_enforced() {
         &body.to_string(),
         &[("origin", "https://untrusted.example")],
     );
-    assert_eq!(bad_origin.status, 403, "unconfigured Origin must be rejected");
+    assert_eq!(
+        bad_origin.status, 403,
+        "unconfigured Origin must be rejected"
+    );
     assert!(bad_origin.body.is_empty());
     // The session survives; the next well-formed request still answers.
     let after = server.request("tools/list", &json!({}));
-    assert_eq!(after.json()["result"]["tools"].as_array().map(Vec::len), Some(5));
+    assert_eq!(
+        after.json()["result"]["tools"].as_array().map(Vec::len),
+        Some(5)
+    );
 }

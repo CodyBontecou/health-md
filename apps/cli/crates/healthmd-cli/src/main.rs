@@ -3130,24 +3130,26 @@ mod tests {
         assert_eq!(options.transport, DataServeTransport::Stdio);
         #[cfg(feature = "streamable-http")]
         {
-            assert!(Cli::try_parse_from([
-                "healthmd",
-                "mcp",
-                "serve-data",
-                "--serve-transport",
-                "streamable-http",
-                "--bind",
-                "127.0.0.1:8787",
-                "--allowed-host",
-                "localhost:8787",
-                "--allowed-origin",
-                "http://127.0.0.1:3000",
-                "--directory",
-                "/tmp/healthmd-exports",
-                "--grant",
-                "/tmp/healthmd-grant.json"
-            ])
-            .is_ok());
+            assert!(
+                Cli::try_parse_from([
+                    "healthmd",
+                    "mcp",
+                    "serve-data",
+                    "--serve-transport",
+                    "streamable-http",
+                    "--bind",
+                    "127.0.0.1:8787",
+                    "--allowed-host",
+                    "localhost:8787",
+                    "--allowed-origin",
+                    "http://127.0.0.1:3000",
+                    "--directory",
+                    "/tmp/healthmd-exports",
+                    "--grant",
+                    "/tmp/healthmd-grant.json"
+                ])
+                .is_ok()
+            );
         }
         #[cfg(not(feature = "streamable-http"))]
         {
