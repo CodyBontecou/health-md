@@ -28,7 +28,7 @@ pub(super) const INDEX_SCHEMA_VERSION: u16 = 1;
 pub(super) const MAXIMUM_GRANT_BYTES: u64 = 1_048_576;
 const MAXIMUM_JSON_ARTIFACT_BYTES: u64 = 64 * 1_048_576;
 pub(super) const MAXIMUM_NDJSON_LINE_BYTES: usize = 2 * 1_048_576;
-const MAXIMUM_SOURCE_FILES: usize = 10_000;
+pub(super) const MAXIMUM_SOURCE_FILES: usize = 10_000;
 const MAXIMUM_DIRECTORY_DEPTH: usize = 32;
 pub(super) const CURSOR_VERSION: u16 = 1;
 const CURSOR_RESPONSE_OVERHEAD_BYTES: usize = 2_048;
@@ -59,6 +59,16 @@ pub enum DataServeOptions {
     },
     /// Serve from a Health.md-owned `SQLite` Agent Data database created by `healthmd data import`.
     Database { database: PathBuf, grant: PathBuf },
+    /// Serve from a read-only, S3-compatible (Cloudflare R2) object store bucket prefix laid
+    /// out like an export directory. `url` is the bare endpoint URL, credentials are read from
+    /// the environment at open, and `prefix` (if any) selects the bucket subtree to serve.
+    ObjectStore {
+        url: String,
+        bucket: String,
+        prefix: Option<String>,
+        grant: PathBuf,
+        index: Option<PathBuf>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -657,7 +667,7 @@ fn build_stable_index(
 /// # Errors
 ///
 /// Returns a health-free error when the index entries cannot be encoded.
-fn finalize_index(
+pub(super) fn finalize_index(
     source_fingerprint: String,
     artifacts: Vec<ArtifactEntry>,
     records: Vec<RecordEntry>,
@@ -687,11 +697,10 @@ fn finalize_index(
 pub(super) fn parse_artifact(
     file: &SourceFile,
 ) -> Result<Option<(ArtifactEntry, Vec<RecordEntry>)>, ()> {
-    let physical_format = match physical_format_from_extension(
-        file.path.extension().and_then(|value| value.to_str()),
-    ) {
-        Some(physical_format) => physical_format,
-        None => return Ok(None),
+    let Some(physical_format) =
+        physical_format_from_extension(file.path.extension().and_then(|value| value.to_str()))
+    else {
+        return Ok(None);
     };
     let artifact_id = hash_file(&file.path).map_err(|_| ())?;
     let parsed = match physical_format {
@@ -726,13 +735,12 @@ pub(super) fn parse_artifact_bytes(
     byte_count: u64,
     bytes: &[u8],
 ) -> Result<Option<(ArtifactEntry, Vec<RecordEntry>)>, ()> {
-    let physical_format = match physical_format_from_extension(
+    let Some(physical_format) = physical_format_from_extension(
         Path::new(relative_path)
             .extension()
             .and_then(|value| value.to_str()),
-    ) {
-        Some(physical_format) => physical_format,
-        None => return Ok(None),
+    ) else {
+        return Ok(None);
     };
     let artifact_id = sha256_hex(bytes);
     let parsed = match physical_format {

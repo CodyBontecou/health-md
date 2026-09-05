@@ -253,7 +253,7 @@ enum DataServeTransport {
     ArgGroup::new("data_backing")
         .required(true)
         .multiple(false)
-        .args(&["directory", "database"]),
+        .args(&["directory", "database", "object_store_url"]),
 ))]
 struct McpServeDataArgs {
     /// Existing absolute directory containing immutable Health.md JSON or NDJSON exports.
@@ -264,12 +264,29 @@ struct McpServeDataArgs {
     #[arg(long)]
     database: Option<PathBuf>,
 
+    /// Bare endpoint URL of a read-only S3-compatible (Cloudflare R2) object store, e.g.
+    /// `https://accountid.r2.cloudflarestorage.com`. `https://` is required for non-loopback
+    /// hosts; `http://` is accepted only for loopback hosts (local testing). Credentials are
+    /// read from `HEALTHMD_OBJECT_STORE_ACCESS_KEY_ID` and
+    /// `HEALTHMD_OBJECT_STORE_SECRET_ACCESS_KEY` and never accepted as flags.
+    #[arg(long = "object-store-url", id = "object_store_url")]
+    object_store_url: Option<String>,
+
+    /// Bucket name under the object store endpoint (path-style addressing).
+    #[arg(long, requires = "object_store_url")]
+    bucket: Option<String>,
+
+    /// Optional key prefix inside the bucket whose layout mirrors an export directory.
+    #[arg(long, requires = "object_store_url")]
+    prefix: Option<String>,
+
     /// Absolute path to a version-1 Agent Data grant JSON file outside the backing store.
     #[arg(long)]
     grant: PathBuf,
 
     /// Optional absolute path for the rebuildable private index, outside the export directory.
-    /// Applies only to `--directory` backing; enforced with `--database` in the dispatcher.
+    /// Applies to `--directory` and `--object-store-url` backing; enforced with `--database`
+    /// in the dispatcher.
     #[arg(long)]
     index: Option<PathBuf>,
 
@@ -810,25 +827,44 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
         command: Some(McpCommand::ServeData(options)),
     }) = &cli.command
     {
-        let backing = match (options.directory.clone(), options.database.clone()) {
-            (Some(directory), None) => mcp::DataServeOptions::Directory {
+        let backing = match (
+            options.directory.clone(),
+            options.database.clone(),
+            options.object_store_url.clone(),
+        ) {
+            (Some(directory), None, None) => mcp::DataServeOptions::Directory {
                 directory,
                 grant: options.grant.clone(),
                 index: options.index.clone(),
             },
-            (None, Some(database)) if options.index.is_none() => mcp::DataServeOptions::Database {
-                database,
-                grant: options.grant.clone(),
-            },
-            (None, Some(_)) => {
+            (None, Some(database), None) if options.index.is_none() => {
+                mcp::DataServeOptions::Database {
+                    database,
+                    grant: options.grant.clone(),
+                }
+            }
+            (None, Some(_), None) => {
                 eprintln!(
-                    "healthmd: --index applies only to --directory backing; the database store owns its index internally"
+                    "healthmd: --index applies only to --directory and --object-store-url backing; the database store owns its index internally"
                 );
                 return ExitCode::from(2);
             }
+            (None, None, Some(url)) => {
+                let Some(bucket) = options.bucket.clone() else {
+                    eprintln!("healthmd: --object-store-url requires --bucket");
+                    return ExitCode::from(2);
+                };
+                mcp::DataServeOptions::ObjectStore {
+                    url,
+                    bucket,
+                    prefix: options.prefix.clone(),
+                    grant: options.grant.clone(),
+                    index: options.index.clone(),
+                }
+            }
             _ => {
                 eprintln!(
-                    "healthmd: mcp serve-data requires exactly one of --directory or --database"
+                    "healthmd: mcp serve-data requires exactly one of --directory, --database, or --object-store-url"
                 );
                 return ExitCode::from(2);
             }
