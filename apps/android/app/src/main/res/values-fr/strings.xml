@@ -1439,8 +1439,6 @@
     <string name="shared_setup_v2_blocked_notice">Les profils importés restent inactifs — pas d\'exportation, de planification, d\'automatisation ni d\'accès à la destination — jusqu\'à ce que vous réassociiez leur destination localement.</string>
     <string name="shared_setup_v2_blocked_state">En attente d\'une réassociation locale de la destination</string>
     <string name="shared_setup_v2_rebind_folder">Choisir un dossier</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">La confirmation des informations d\'identification du point de terminaison API n\'est pas encore disponible dans ce flux. Ce profil reste inactif jusqu\'à sa confirmation ultérieure par réassociation.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">Les destinations Mac connecté et Cloud nécessitent ultérieurement un appariement local ou une confirmation par réassociation. Ce profil reste inactif jusque-là.</string>
     <string name="shared_setup_v2_rebinding">Réassociation de la destination…</string>
     <string name="shared_setup_v2_undone">Importation annulée</string>
     <string name="shared_setup_v2_undone_detail">Vos profils, planifications et profil actif précédents ont été restaurés.</string>

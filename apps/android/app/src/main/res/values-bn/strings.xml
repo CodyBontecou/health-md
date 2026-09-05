@@ -1365,8 +1365,6 @@
     <string name="shared_setup_v2_blocked_notice">ইমপোর্ট করা প্রোফাইলগুলো নিষ্ক্রিয় থাকে — কোনো এক্সপোর্ট, সময়সূচী, স্বয়ংক্রিয়তা বা গন্তব্যে প্রবেশাধিকার থাকে না — যতক্ষণ না আপনি সেগুলোর গন্তব্য স্থানীয়ভাবে পুনঃসংযোগ করেন।</string>
     <string name="shared_setup_v2_blocked_state">স্থানীয় গন্তব্য পুনঃসংযোগের অপেক্ষায়</string>
     <string name="shared_setup_v2_rebind_folder">ফোল্ডার নির্বাচন করুন</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">এই ফ্লোতে API এন্ডপয়েন্ট ক্রেডেনশিয়াল নিশ্চিত করা এখনও সম্ভব নয়। পরে পুনঃসংযোগের মাধ্যমে নিশ্চিত না হওয়া পর্যন্ত এই প্রোফাইলটি নিষ্ক্রিয় থাকবে।</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">সংযুক্ত ম্যাক ও ক্লাউড গন্তব্যের জন্য পরে স্থানীয় পেয়ারিং বা পুনঃসংযোগের মাধ্যমে নিশ্চিতকরণ প্রয়োজন। ততক্ষণ পর্যন্ত এই প্রোফাইলটি নিষ্ক্রিয় থাকবে।</string>
     <string name="shared_setup_v2_rebinding">গন্তব্য পুনঃসংযোগ করা হচ্ছে…</string>
     <string name="shared_setup_v2_undone">ইমপোর্ট পূর্বাবস্থায় ফেরানো হয়েছে</string>
     <string name="shared_setup_v2_undone_detail">আপনার পূর্বের প্রোফাইল, সময়সূচী এবং সক্রিয় প্রোফাইল পুনরুদ্ধার করা হয়েছে।</string>

@@ -1584,8 +1584,6 @@
     <string name="shared_setup_v2_blocked_notice">تظل ملفات التصدير المستوردة غير نشطة — بلا تصدير أو جدولة أو أتمتة أو وصول إلى الوجهة — حتى تعيد ربط وجهتها محليًا.</string>
     <string name="shared_setup_v2_blocked_state">بانتظار إعادة ربط محلية للوجهة</string>
     <string name="shared_setup_v2_rebind_folder">اختيار المجلد</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">تأكيد بيانات اعتماد نقطة نهاية API غير متاح في هذا المسار بعد. يظل ملف التصدير هذا غير نشط حتى يُؤكَّد لاحقًا عبر إعادة الربط.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">تتطلب وجهتا «جهاز Mac المتصل» و«السحابة» لاحقًا اقترانًا محليًا أو تأكيدًا عبر إعادة الربط. ويظل ملف التصدير هذا غير نشط حتى ذلك الحين.</string>
     <string name="shared_setup_v2_rebinding">جارٍ إعادة ربط الوجهة…</string>
     <string name="shared_setup_v2_undone">تم التراجع عن الاستيراد</string>
     <string name="shared_setup_v2_undone_detail">تمت استعادة ملفات التصدير السابقة وعمليات الجدولة وملف التصدير النشط.</string>

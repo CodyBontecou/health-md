@@ -1332,8 +1332,6 @@
     <string name="shared_setup_v2_blocked_notice">Импортталған профильдер экспорт орны жергілікті түрде қайта байланыстырылғанға дейін белсенді емес күйде қалады — экспорт, кесте, автоматтандыру және экспорт орнына қол жеткізу жүргізілмейді.</string>
     <string name="shared_setup_v2_blocked_state">Экспорт орнының жергілікті қайта байланыстырылуын күтуде</string>
     <string name="shared_setup_v2_rebind_folder">Қалта таңдаңыз</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">Бұл ағында API соңғы нүктесінің тіркелгі деректерін растау әзірге қолжетімді емес. Бұл профиль кейін қайта байланыстырылып расталғанға дейін белсенді емес күйде қалады.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">Қосылған Mac және бұлт экспорт орындары үшін кейін жергілікті жұптастыру немесе қайта байланыстыру арқылы растау қажет. Сол кезге дейін бұл профиль белсенді емес күйде қалады.</string>
     <string name="shared_setup_v2_rebinding">Экспорт орны қайта байланыстырылуда…</string>
     <string name="shared_setup_v2_undone">Импорт болдырылды</string>
     <string name="shared_setup_v2_undone_detail">Сіздің бұрынғы профильдеріңіз, кестелеріңіз және белсенді профиліңіз қалпына келтірілді.</string>

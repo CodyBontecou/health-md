@@ -1493,8 +1493,6 @@
     <string name="shared_setup_v2_blocked_notice">Імпортовані профілі залишаються неактивними — без експорту, розкладу, автоматизації та доступу до призначення — доки ви не виконаєте локальну повторну прив’язку їхнього призначення.</string>
     <string name="shared_setup_v2_blocked_state">Очікування локальної повторної прив’язки призначення</string>
     <string name="shared_setup_v2_rebind_folder">Вибрати папку</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">Підтвердження облікових даних кінцевої точки API у цьому потоці ще недоступне. Цей профіль залишатиметься неактивним, доки пізніше не буде підтверджено повторною прив’язкою.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">Для призначень «Підключений Mac» і «Хмара» згодом знадобиться локальне створення пари або підтвердження повторною прив’язкою. До того часу цей профіль залишатиметься неактивним.</string>
     <string name="shared_setup_v2_rebinding">Повторна прив’язка призначення…</string>
     <string name="shared_setup_v2_undone">Імпорт скасовано</string>
     <string name="shared_setup_v2_undone_detail">Ваші попередні профілі, розклади та активний профіль відновлено.</string>

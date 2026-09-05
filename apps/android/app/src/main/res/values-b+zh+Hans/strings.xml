@@ -1214,8 +1214,6 @@
     <string name="shared_setup_v2_blocked_notice">在本地重新绑定目标位置之前，导入的导出配置将保持停用状态——不会导出、不会按计划运行、不会执行自动化，也无法访问目标位置。</string>
     <string name="shared_setup_v2_blocked_state">等待本地重新绑定目标位置</string>
     <string name="shared_setup_v2_rebind_folder">选择文件夹</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">此流程暂不支持确认 API 端点凭据。该导出配置将保持停用，直到稍后通过重新绑定予以确认。</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">已连接的 Mac 和云端目标位置需要稍后进行本地配对或重新绑定确认。在此之前，该导出配置将保持停用。</string>
     <string name="shared_setup_v2_rebinding">正在重新绑定目标位置…</string>
     <string name="shared_setup_v2_undone">已撤销导入</string>
     <string name="shared_setup_v2_undone_detail">您之前的导出配置、计划以及当前使用的配置均已恢复。</string>

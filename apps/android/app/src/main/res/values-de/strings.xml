@@ -1391,8 +1391,6 @@
     <string name="shared_setup_v2_blocked_notice">Importierte Profile bleiben inaktiv — kein Export, keine Zeitplanung, keine Automatisierung und kein Zugriff auf das Ziel —, bis Sie deren Ziel lokal neu verknüpfen.</string>
     <string name="shared_setup_v2_blocked_state">Warten auf lokale Neuverknüpfung des Ziels</string>
     <string name="shared_setup_v2_rebind_folder">Ordner wählen</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">Die Bestätigung der Anmeldeinformationen für den API-Endpunkt ist in diesem Ablauf noch nicht verfügbar. Dieses Profil bleibt inaktiv, bis es später per Neuverknüpfung bestätigt wird.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">Ziele vom Typ „Verbundener Mac“ und „Cloud“ erfordern später eine lokale Kopplung oder eine Bestätigung per Neuverknüpfung. Dieses Profil bleibt bis dahin inaktiv.</string>
     <string name="shared_setup_v2_rebinding">Ziel wird neu verknüpft…</string>
     <string name="shared_setup_v2_undone">Import rückgängig gemacht</string>
     <string name="shared_setup_v2_undone_detail">Ihre vorherigen Profile, Zeitpläne und Ihr aktives Profil wurden wiederhergestellt.</string>

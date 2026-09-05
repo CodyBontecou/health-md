@@ -1216,8 +1216,6 @@
     <string name="shared_setup_v2_blocked_notice">インポートしたプロファイルは、出力先をローカルで再設定するまで無効のままです。エクスポート、スケジュール、自動化、出力先へのアクセスは行われません。</string>
     <string name="shared_setup_v2_blocked_state">出力先のローカルでの再設定を待っています</string>
     <string name="shared_setup_v2_rebind_folder">フォルダを選択</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">このフローではまだ API エンドポイントの認証情報の確認は利用できません。このプロファイルは、後で再設定によって確認されるまで無効のままです。</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">接続済みの Mac とクラウドの出力先には、後でローカルでのペアリングまたは再設定による確認が必要です。それまでこのプロファイルは無効のままです。</string>
     <string name="shared_setup_v2_rebinding">出力先を再設定しています…</string>
     <string name="shared_setup_v2_undone">インポートを取り消しました</string>
     <string name="shared_setup_v2_undone_detail">以前のプロファイル、スケジュール、アクティブなプロファイルが復元されました。</string>

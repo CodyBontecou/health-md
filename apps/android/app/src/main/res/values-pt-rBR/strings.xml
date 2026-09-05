@@ -1439,8 +1439,6 @@
     <string name="shared_setup_v2_blocked_notice">Os perfis importados permanecem inativos — sem exportação, agendamento, automação ou acesso ao destino — até você revincular o destino deles localmente.</string>
     <string name="shared_setup_v2_blocked_state">Aguardando uma revinculação local do destino</string>
     <string name="shared_setup_v2_rebind_folder">Escolher pasta</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">A confirmação da credencial do endpoint da API ainda não está disponível neste fluxo. Este perfil permanece inativo até ser confirmado depois por meio de uma revinculação.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">Os destinos Mac conectado e nuvem exigem mais tarde um pareamento local ou uma confirmação por revinculação. Este perfil permanece inativo até lá.</string>
     <string name="shared_setup_v2_rebinding">Revinculando o destino…</string>
     <string name="shared_setup_v2_undone">Importação desfeita</string>
     <string name="shared_setup_v2_undone_detail">Seus perfis, agendamentos e perfil ativo anteriores foram restaurados.</string>

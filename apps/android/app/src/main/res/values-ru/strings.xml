@@ -1493,8 +1493,6 @@
     <string name="shared_setup_v2_blocked_notice">Импортированные профили остаются неактивными — без экспорта, расписания, автоматизации и доступа к назначению — пока вы не перепривяжете их назначение локально.</string>
     <string name="shared_setup_v2_blocked_state">Ожидание локальной перепривязки назначения</string>
     <string name="shared_setup_v2_rebind_folder">Выбрать папку</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">Подтверждение учётных данных конечной точки API в этом сценарии пока недоступно. Этот профиль останется неактивным, пока позже не будет подтверждён перепривязкой.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">Для назначений «Подключённый Mac» и «Облако» позже потребуется локальное сопряжение или подтверждение перепривязкой. До этого профиль останется неактивным.</string>
     <string name="shared_setup_v2_rebinding">Перепривязка назначения…</string>
     <string name="shared_setup_v2_undone">Импорт отменён</string>
     <string name="shared_setup_v2_undone_detail">Ваши предыдущие профили, расписания и активный профиль были восстановлены.</string>

@@ -1391,8 +1391,6 @@
     <string name="shared_setup_v2_blocked_notice">Geïmporteerde profielen blijven inactief — geen export, planning, automatisering of toegang tot de bestemming — totdat je de bestemming ervan lokaal opnieuw koppelt.</string>
     <string name="shared_setup_v2_blocked_state">Wachten op lokale herkoppeling van de bestemming</string>
     <string name="shared_setup_v2_rebind_folder">Map kiezen</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">Het bevestigen van de inloggegevens van het API-endpoint is in deze flow nog niet beschikbaar. Dit profiel blijft inactief totdat het later via herkoppeling wordt bevestigd.</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">Bestemmingen van het type verbonden Mac en cloud vereisen later een lokale koppeling of een bevestiging via herkoppeling. Dit profiel blijft tot die tijd inactief.</string>
     <string name="shared_setup_v2_rebinding">Bestemming wordt opnieuw gekoppeld…</string>
     <string name="shared_setup_v2_undone">Import ongedaan gemaakt</string>
     <string name="shared_setup_v2_undone_detail">Je eerdere profielen, planningen en actieve profiel zijn hersteld.</string>

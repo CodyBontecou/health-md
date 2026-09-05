@@ -1365,8 +1365,6 @@
     <string name="shared_setup_v2_blocked_notice">इंपोर्ट की गई प्रोफ़ाइलें निष्क्रिय रहती हैं — कोई एक्सपोर्ट, अनुसूची, स्वचालन या गंतव्य एक्सेस नहीं — जब तक आप उनका गंतव्य स्थानीय रूप से पुनः नहीं जोड़ते।</string>
     <string name="shared_setup_v2_blocked_state">स्थानीय गंतव्य पुनः जोड़ने की प्रतीक्षा में</string>
     <string name="shared_setup_v2_rebind_folder">फ़ोल्डर चुनें</string>
-    <string name="shared_setup_v2_rebind_api_unavailable">इस फ़्लो में API एंडपॉइंट क्रेडेंशियल की पुष्टि अभी उपलब्ध नहीं है। बाद में पुनः जोड़कर पुष्टि होने तक यह प्रोफ़ाइल निष्क्रिय रहेगी।</string>
-    <string name="shared_setup_v2_rebind_mac_unavailable">कनेक्टेड Mac और क्लाउड गंतव्यों के लिए बाद में स्थानीय पेयरिंग या पुनः जोड़ने की पुष्टि आवश्यक है। तब तक यह प्रोफ़ाइल निष्क्रिय रहेगी।</string>
     <string name="shared_setup_v2_rebinding">गंतव्य पुनः जोड़ा जा रहा है…</string>
     <string name="shared_setup_v2_undone">इंपोर्ट पूर्ववत किया गया</string>
     <string name="shared_setup_v2_undone_detail">आपकी पिछली प्रोफ़ाइलें, अनुसूचियाँ और सक्रिय प्रोफ़ाइल पुनर्स्थापित कर दी गई हैं।</string>
