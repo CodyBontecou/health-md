@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Add the local Rust half of Agent Data ingestion protocol v1: `healthmd data ingest --database
+  --manifest --artifact` validates one manifest-described upload (strict `agent-data-ingest` v1
+  grammar, SHA-256 integrity) and promotes accepted bytes atomically into owner-date partitions of
+  the SQLite store — idempotent, non-destructive, newest-complete-revision-authoritative — and
+  prints the health-free `agent-ingest-response` v1 receipt with the four stable rejection codes
+  (`truncated`, `transient`, `checksum_invalid`, `manifest_incomplete`). The local `transient`
+  mapping covers only unreadable artifact files at dispatch time; the HTTPS transport mapping stays
+  open for the gateway cycle.
+
 - Add the Health.md-owned SQLite Agent Data store: `healthmd data import --database --directory`
   ingests recognized export artifacts into a versioned, non-destructive local database (idempotent
   re-imports, supersession bookkeeping without deletion, exact stored bytes) and

@@ -107,7 +107,7 @@ Import semantics are non-destructive by design:
   stored and queryable. No deletion, purge, or rewrite is ever performed — retention stays
   user-controlled.
 
-The database schema is versioned with `PRAGMA user_version` (currently 1) plus an `application_id`
+The database schema is versioned with `PRAGMA user_version` (currently 2) plus an `application_id`
 file marker, with a forward-migration path for future versions; a database created by a newer
 Health.md version is rejected rather than misread. Serving opens the database read-only. Every
 record value, record chunk, and artifact chunk is verified against the stored SHA-256 before any
@@ -117,6 +117,71 @@ reports the schema version, a SQLite `quick_check` result, and supersession coun
 
 Import is storage-side only: grants are not consulted during import and apply only when the
 database is served.
+
+## Local ingestion (protocol v1)
+
+`healthmd data ingest` is the local Rust half of the Agent Data ingestion protocol defined by
+[`packages/contracts/agent-data/v1/contract.md`](../../../packages/contracts/agent-data/v1/contract.md).
+One upload is one artifact described by one `healthmd.agent_data_ingest` v1 manifest:
+
+```bash
+healthmd data ingest \
+  --database /absolute/private/path/agent-data.sqlite \
+  --manifest /absolute/upload/manifest.json \
+  --artifact /absolute/upload/day.json
+```
+
+All three paths must be absolute, and the database must live apart from the upload files. The
+command always prints one `healthmd.agent_ingest_response` v1 receipt and exits `0` whenever the
+protocol completed — including for the four stable rejection classes — so automation reads the
+`outcome` field rather than the exit status. Non-zero exits are reserved for CLI-level failures
+where no receipt could be produced (for example a relative path or an unusable database), mirroring
+`data import`.
+
+Validation and receipts are health-free: the manifest is checked strictly against the JSON schema
+semantics (unknown fields, bounds, formats, the four artifact kinds, both platforms, the
+complete-or-finalized-partial completeness grammar, and the rule that `raw_snapshot` and
+`raw_changes` uploads must be complete), then the artifact bytes are verified by exact length and
+SHA-256. Rejections use exactly the stable codes:
+
+- `truncated` — the artifact's actual length differs from the manifest's `byte_count`;
+- `checksum_invalid` — the artifact's SHA-256 differs from the manifest digest;
+- `manifest_incomplete` — the manifest is unreadable, oversized, or structurally
+  incomplete/unidentifiable (a missing manifest file, invalid JSON, an unknown field, an
+  unfinalized partial, or a partial raw artifact);
+- `transient` — see the local mapping decision below.
+
+**Local `transient` mapping decision.** For this file-based local ingest, `transient` maps only to
+genuine transient I/O conditions: the artifact file cannot be read as bytes at dispatch time (it is
+missing at dispatch, is a directory or special file, or its read fails). The gateway-side reading —
+where an unfinalized, not-yet-complete upload is the transient class — does not apply locally
+because an unfinalized partial manifest already fails the strict manifest grammar and is rejected
+as `manifest_incomplete`. The HTTPS transport mapping (network, timeout, and retry semantics) is
+deliberately left open for the gateway cycle; the four contract codes themselves are stable.
+
+Promotion into the SQLite store is a single atomic transaction reusing the import machinery:
+exact artifact bytes plus indexing metadata are inserted once per SHA-256 identity, so re-ingesting
+identical bytes returns a byte-identical receipt, creates no duplicate rows, and does not advance
+the store content revision (no cursor invalidation beyond the existing content-revision
+semantics). When the read model recognizes the artifact bytes, the stored row is exactly what
+`data import` would store for the same bytes, so ingested artifacts are immediately servable with
+`serve-data --database`. When the bytes are integrity-verified but not recognized by the read
+model, they are still stored unchanged with the manifest-declared schema identity and zero record
+rows — never a fabricated index. There is deliberately no rejection code for unrecognized content
+in v1.
+
+Stored revisions group into owner-date partitions (`ingested_partitions`, schema version 2 — an
+additive migration; version-1 databases upgrade in place and stay readable). Within a partition
+the newest complete accepted revision is authoritative; a partial revision never displaces a
+complete one, and while no complete revision exists the newest accepted partial is authoritative
+and is always reported with its explicit partial status and covered owner dates, so partial
+coverage is never concealed. A complete restatement of identical bytes upgrades the recorded
+revision's completeness; it never downgrades. Authority flips are recorded as supersession
+bookkeeping (`ingest-partition:<owner_date>` observations) and, like directory supersessions,
+never delete anything: retention stays user-controlled and deferred.
+
+The phone-to-gateway HTTPS transport, accounts, and hosted gateway stores are not implemented by
+this command; they remain later cycles per the contract.
 
 ## Read model
 
