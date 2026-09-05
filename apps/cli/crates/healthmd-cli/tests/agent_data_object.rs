@@ -1465,6 +1465,11 @@ fn object_store_parse_errors_reject_conflicting_and_incomplete_backing() {
     );
 }
 
+// Feature-off behavior assertion: with `object-store-tls` compiled in (e.g. --all-features)
+// `https://` endpoints are spoken over TLS, so the "not available in this build" boundary
+// this test pins no longer holds (and reaching it would contact a real endpoint). Default
+// builds still run this test unchanged.
+#[cfg(not(feature = "object-store-tls"))]
 #[test]
 fn object_store_url_policy_fails_closed_without_network() {
     let corpus = Corpus::build();
