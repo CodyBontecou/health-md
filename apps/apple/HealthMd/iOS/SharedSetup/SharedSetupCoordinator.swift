@@ -54,6 +54,7 @@ enum SharedSetupV2CoordinatorError: LocalizedError, Equatable {
     case metricRegistryUnavailable
     case invalidCredential
     case exportProfileServiceUnavailable
+    case importedEndpointUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -73,6 +74,8 @@ enum SharedSetupV2CoordinatorError: LocalizedError, Equatable {
             "Enter a valid local endpoint credential."
         case .exportProfileServiceUnavailable:
             "The export profile service is unavailable, so this endpoint cannot be confirmed here. The imported profile stays blocked."
+        case .importedEndpointUnavailable:
+            "The imported endpoint identity is no longer available, so it cannot be added here. Configure the endpoint in this profile's export settings."
         }
     }
 }
@@ -230,10 +233,29 @@ struct SharedSetupV2CoordinatorAdapter {
         UUID,
         String
     ) throws -> Bool)? = nil
+    /// Optional in-flow endpoint-row creation surface for the no-match review
+    /// row. Given an honest identity-derived name and the EXACT URL string the
+    /// still-loaded plan retains — the user explicitly confirmed that URL in
+    /// the flow — it creates or reuses the local endpoint row through the
+    /// profile editor's exact upsert path, never inventing a URL and never
+    /// storing a credential (the credential confirmation flow that follows
+    /// owns that step). It returns the upserted row id so the caller can
+    /// re-verify it against the conservative identity matcher; a mismatch
+    /// must fail closed. Absent closures keep the no-match review row's
+    /// honest dead-end copy.
+    var upsertAPIEndpointForImportedURL: (@MainActor (String, String) throws -> UUID)? = nil
     /// Optional read-only connected-Mac pairing facts for the review rows.
     /// Informational only; the explicit attestation confirmation remains the
     /// only path that can clear a connected-Mac block.
     var connectedMacState: (@MainActor () -> SharedSetupV2ConnectedMacState?)? = nil
+    /// Optional change signal for those read-only connected-Mac facts.
+    /// Production supplies the shared sync service's published facts; every
+    /// signal re-renders the presented review rows, which re-read the
+    /// authoritative `connectedMacState` closure at render time. The signal
+    /// performs no transport work and mutates no state, and absent signals
+    /// keep the render-time snapshot semantics (the historical behavior).
+    /// Production delivers on the main thread.
+    var connectedMacStateChanges: (@MainActor () -> AnyPublisher<Void, Never>?)? = nil
 }
 
 extension SharedSetupV2CoordinatorAdapter {
@@ -273,17 +295,20 @@ extension SharedSetupV2CoordinatorAdapter {
         )
     }
 
-    /// Production wiring for the in-flow API-credential confirmation and the
-    /// connected-Mac pairing-state display. `exportProfiles` lazily resolves
-    /// the single production export-profile coordinator (nil keeps the
-    /// affordance honestly unavailable); `connectedMacState` supplies
-    /// read-only native pairing facts. The verified paths stay exactly the
-    /// coordinator's — nothing here re-implements binding, rollback, or the
-    /// execution gate.
+    /// Production wiring for the in-flow API-credential confirmation, the
+    /// in-flow endpoint-row creation from a user-confirmed imported URL, and
+    /// the connected-Mac pairing-state display. `exportProfiles` lazily
+    /// resolves the single production export-profile coordinator (nil keeps
+    /// both affordances honestly unavailable); `connectedMacState` supplies
+    /// read-only native pairing facts and `connectedMacStateChanges` the
+    /// signal that re-renders them while the review sheet stays presented.
+    /// The verified paths stay exactly the coordinator's — nothing here
+    /// re-implements binding, rollback, or the execution gate.
     static func production(
         _ service: SharedSetupV2TransactionAdapter,
         exportProfiles: @escaping @MainActor () -> ExportProfileCoordinator?,
-        connectedMacState: @escaping @MainActor () -> SharedSetupV2ConnectedMacState?
+        connectedMacState: @escaping @MainActor () -> SharedSetupV2ConnectedMacState?,
+        connectedMacStateChanges: @escaping @MainActor () -> AnyPublisher<Void, Never>? = { nil }
     ) -> SharedSetupV2CoordinatorAdapter {
         var adapter = production(service)
         adapter.localAPIEndpointID = { importedEndpointURLString in
@@ -295,6 +320,26 @@ extension SharedSetupV2CoordinatorAdapter {
                         matchesImportedURLString: importedEndpointURLString
                     )
                 }?.id
+        }
+        adapter.upsertAPIEndpointForImportedURL = { name, urlString in
+            guard let exportProfiles = exportProfiles() else {
+                throw SharedSetupV2CoordinatorError.exportProfileServiceUnavailable
+            }
+            // The profile editor's exact upsert path: resolves rows
+            // case-insensitively by raw URL string, stores a token only when
+            // one is supplied (never clearing an existing Keychain-backed
+            // slot), and never touches live shared endpoint settings. No
+            // credential travels here — the caller re-verifies the row id
+            // against the conservative identity matcher before the separate
+            // credential confirmation runs.
+            guard let rowID = exportProfiles.importAPIEndpointSelection(
+                name: name,
+                endpointURLString: urlString,
+                bearerToken: nil
+            ) else {
+                throw SharedSetupV2CoordinatorError.exportProfileServiceUnavailable
+            }
+            return rowID
         }
         adapter.confirmAPIEndpointRebind = { profileID, endpointID, freshCredential in
             guard let exportProfiles = exportProfiles(),
@@ -322,7 +367,28 @@ extension SharedSetupV2CoordinatorAdapter {
             return true
         }
         adapter.connectedMacState = connectedMacState
+        adapter.connectedMacStateChanges = connectedMacStateChanges
         return adapter
+    }
+
+    /// Precise change signal for the connected-Mac facts the review rows
+    /// display: only the shared sync service's connection state, connected
+    /// peer name, and saved Manual-IP pairing facts fire it. Pure
+    /// subscription over existing `@Published` state — no transport work, no
+    /// entitlements, no state mutation. `dropFirst()` discards the initial
+    /// subscription-time replay of current values so only real changes fire.
+    static func connectedMacFactChanges(
+        syncService: SyncService
+    ) -> AnyPublisher<Void, Never> {
+        Publishers.CombineLatest4(
+            syncService.$connectionState,
+            syncService.$connectedPeerName,
+            syncService.$hasSavedManualIPConnection,
+            syncService.$savedManualIPMacName
+        )
+        .dropFirst()
+        .map { _ in () }
+        .eraseToAnyPublisher()
     }
 
     /// Honest result mapping for a successful Add/Replace. Counts, identities,
@@ -486,6 +552,16 @@ final class SharedSetupCoordinator: ObservableObject {
     /// verified rebind path during this flow. Purely a presentation trigger;
     /// the execution gate remains the authority for blocked truth.
     @Published private(set) var v2ReboundProfileIDs: Set<UUID> = []
+    /// Local endpoint rows created in-flow from a user-confirmed imported
+    /// URL. Purely a presentation trigger: durable row truth lives in the
+    /// destination store, and the verified credential rebind remains the
+    /// only path that can clear a blocked identity.
+    @Published private(set) var v2InFlowEndpointRowIDs: Set<UUID> = []
+    /// Bumped whenever the adapter's connected-Mac change signal fires, so
+    /// the presented review rows re-render and re-read the authoritative
+    /// `v2ConnectedMacState` snapshot at render time. Monotonic presentation
+    /// counter only — it carries no facts of its own.
+    @Published private(set) var v2ConnectedMacStateRevision = 0
     @Published var isFlowPresented = false
     @Published var errorMessage: String?
     @Published private(set) var lastRouteSource: RouteSource?
@@ -510,6 +586,7 @@ final class SharedSetupCoordinator: ObservableObject {
     private let externalFileReader: @Sendable (URL) async throws -> Data
     private let accessibilityAnnouncer: @MainActor (String) -> Void
     private let v2Adapter: SharedSetupV2CoordinatorAdapter?
+    private var v2ConnectedMacStateCancellable: AnyCancellable?
     private var importTask: Task<Void, Never>?
     private var importRequestID = 0
 
@@ -548,6 +625,15 @@ final class SharedSetupCoordinator: ObservableObject {
         self.externalFileReader = externalFileReader
         self.accessibilityAnnouncer = accessibilityAnnouncer
         self.v2Adapter = v2Adapter
+        // Re-render signal for the connected-Mac review rows: the adapter's
+        // optional change publisher bumps the published revision, and rows
+        // re-read the authoritative connectedMacState closure on the next
+        // render. An absent signal keeps the render-time snapshot semantics
+        // (the historical cycle-4 behavior); production delivers on main.
+        if let connectedMacStateChanges = v2Adapter?.connectedMacStateChanges {
+            v2ConnectedMacStateCancellable = connectedMacStateChanges()?
+                .sink { [weak self] _ in self?.v2ConnectedMacStateRevision &+= 1 }
+        }
     }
 
     var canUndo: Bool { transaction.canUndo }
@@ -630,6 +716,7 @@ final class SharedSetupCoordinator: ObservableObject {
         v2Result = nil
         v2ResultWasUndo = false
         v2ReboundProfileIDs = []
+        v2InFlowEndpointRowIDs = []
         errorMessage = nil
         isFlowPresented = true
     }
@@ -679,6 +766,7 @@ final class SharedSetupCoordinator: ObservableObject {
             v2Result = outcome
             v2ResultWasUndo = false
             v2ReboundProfileIDs = []
+            v2InFlowEndpointRowIDs = []
             errorMessage = nil
             accessibilityAnnouncer(
                 String(localized: "Shared Setup profiles applied. Complete local destination setup before exporting.")
@@ -713,6 +801,7 @@ final class SharedSetupCoordinator: ObservableObject {
             v2Result = outcome
             v2ResultWasUndo = true
             v2ReboundProfileIDs = []
+            v2InFlowEndpointRowIDs = []
             errorMessage = nil
             accessibilityAnnouncer(String(localized: "Shared Setup profile import undone"))
             return outcome
@@ -781,6 +870,7 @@ final class SharedSetupCoordinator: ObservableObject {
         v2Result = nil
         v2ResultWasUndo = false
         v2ReboundProfileIDs = []
+        v2InFlowEndpointRowIDs = []
         isFlowPresented = false
     }
 
@@ -790,6 +880,14 @@ final class SharedSetupCoordinator: ObservableObject {
     var isV2APIEndpointRebindAvailable: Bool {
         guard let v2Adapter else { return false }
         return v2Adapter.localAPIEndpointID != nil && v2Adapter.confirmAPIEndpointRebind != nil
+    }
+
+    /// True only when the installed adapter also exposes the in-flow
+    /// endpoint-row creation path for a user-confirmed imported URL. Anything
+    /// less keeps the no-match review row's honest dead-end copy — the flow
+    /// never falls back to creating a row through any other path.
+    var isV2ImportedAPIEndpointAddAvailable: Bool {
+        v2Adapter?.upsertAPIEndpointForImportedURL != nil
     }
 
     /// Imported API endpoint identity for one review row, read from the
@@ -822,6 +920,54 @@ final class SharedSetupCoordinator: ObservableObject {
     /// when the installed adapter supplies them.
     var v2ConnectedMacState: SharedSetupV2ConnectedMacState? {
         v2Adapter?.connectedMacState?()
+    }
+
+    /// Creates the local endpoint row for a blocked imported API-endpoint
+    /// profile from the EXACT validated URL the still-loaded plan retains —
+    /// reachable only after the user explicitly confirmed that URL in the
+    /// flow, never from a typed or guessed one. The row name is derived
+    /// honestly from the imported identity, the row goes through the profile
+    /// editor's exact upsert path, and no credential is stored here. Identity
+    /// discipline: the upsert resolves rows case-insensitively by raw URL
+    /// string while review matching is conservative, so the resulting row is
+    /// re-resolved through the identity matcher; any mismatch fails closed
+    /// and the blocked identity stays intact. On success the caller routes
+    /// into the existing credential-confirmation flow against the new row —
+    /// which alone, through the verified rebind, can clear the block.
+    @discardableResult
+    func confirmV2ImportedAPIEndpointURL(
+        for review: SharedSetupV2ImportedProfileReview
+    ) throws -> UUID {
+        guard let upsert = v2Adapter?.upsertAPIEndpointForImportedURL else {
+            throw SharedSetupV2CoordinatorError.transactionUnavailable
+        }
+        guard let identity = importedV2APIEndpoint(for: review) else {
+            let error = SharedSetupV2CoordinatorError.importedEndpointUnavailable
+            errorMessage = error.localizedDescription
+            throw error
+        }
+        do {
+            let rowID = try upsert(identity.displayHint, identity.validatedURLString)
+            // Prove the upserted row is the resolved conservative match
+            // before routing the credential confirmation on. A mismatch —
+            // for example a pre-existing row the upsert reused under its
+            // case-insensitive URL rule while the conservative matcher
+            // rejects its identity — fails closed and keeps the block.
+            guard let resolvedID = matchingV2LocalAPIEndpointID(
+                forImportedURLString: identity.validatedURLString
+            ), resolvedID == rowID else {
+                throw SharedSetupV2ExecutionGateError.persistenceVerificationFailed
+            }
+            v2InFlowEndpointRowIDs.insert(rowID)
+            errorMessage = nil
+            accessibilityAnnouncer(
+                String(localized: "API endpoint added from the shared setup")
+            )
+            return rowID
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
+        }
     }
 
     /// Routes one explicit API-endpoint rebind through the installed verified
@@ -1499,6 +1645,12 @@ struct SharedSetupFlowView: View {
                 case .apiEndpoint:
                     v2APIEndpointRebindAffordance(for: review)
                 case .connectedMac:
+                    // Reading the revision here subscribes these rows to the
+                    // adapter's connected-Mac change signal, so the captions
+                    // re-render while the review sheet stays presented; the
+                    // captions themselves always re-read the live closure
+                    // snapshot at render time.
+                    let _ = coordinator.v2ConnectedMacStateRevision
                     Text("Pairing is never imported. Rebind only after this device is paired with your Mac and its export folder is ready.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1564,8 +1716,14 @@ struct SharedSetupFlowView: View {
                         endpointID: endpointID,
                         identityHint: identity.displayHint
                     )
+                } else if coordinator.isV2ImportedAPIEndpointAddAvailable {
+                    SharedSetupV2ImportedEndpointURLConfirmation(
+                        coordinator: coordinator,
+                        review: review,
+                        identity: identity
+                    )
                 } else {
-                    Text("No saved API endpoint on this device matches \(identity.displayHint). Add this endpoint in the profile's export settings first — this review never creates or guesses a destination.")
+                    Text("No saved API endpoint on this device matches \(identity.displayHint). Add this endpoint in the profile's export settings — this flow adds one only from the exact URL the shared setup retains after you confirm it, never a guess.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1774,6 +1932,41 @@ private struct SharedSetupV2EndpointCredentialConfirmation: View {
                 entry.reset()
             }
             .disabled(!entry.canConfirm)
+        }
+    }
+}
+
+/// In-flow URL confirmation for a blocked imported API-endpoint profile
+/// with no conservatively matching local row. The exact validated URL the
+/// loaded plan retains is displayed — the user reviews it, never types it:
+/// this flow cannot invent a URL. Only the explicit confirm button creates
+/// the local row, through the profile editor's upsert path re-verified
+/// against the conservative identity matcher; the credential confirmation
+/// that then renders against the new row — and its verified rebind — is the
+/// only path that can clear the block.
+private struct SharedSetupV2ImportedEndpointURLConfirmation: View {
+    @ObservedObject var coordinator: SharedSetupCoordinator
+    let review: SharedSetupV2ImportedProfileReview
+    let identity: SharedSetupV2ImportedEndpointIdentity
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(identity.validatedURLString)
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+            Text("No saved API endpoint on this device matches this identity. You can add it here from the shared setup: the row is created only from the exact URL shown above — never a guess — and a new local credential is still required before this profile can export.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Add This Exact Endpoint From the Shared Setup") {
+                do {
+                    _ = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+                } catch {
+                    // The coordinator publishes errorMessage; the profile
+                    // stays blocked until a matching row exists and a
+                    // verified credential rebind succeeds.
+                }
+            }
+            .accessibilityHint("Creates a local endpoint row from the exact imported URL shown above. A new local credential is still required before this profile can export.")
         }
     }
 }

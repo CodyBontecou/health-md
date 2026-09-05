@@ -174,10 +174,12 @@ struct HealthMdApp: App {
         // Production Shared Setup v2 wiring: the durable Add/Replace/Undo
         // transaction and the verified destination-rebind execution gate run
         // against the standard defaults with no verification overrides. The
-        // review flow's in-flow API-credential confirmation resolves the
-        // lazily built production export profile coordinator through the weak
-        // bridge (ContentView registers it), and its connected-Mac rows read
-        // read-only pairing facts from the shared sync service. Unit tests
+        // review flow's in-flow API-credential confirmation and its
+        // endpoint-row creation from a user-confirmed imported URL resolve
+        // the lazily built production export profile coordinator through the
+        // weak bridge (ContentView registers it), and its connected-Mac rows
+        // read read-only pairing facts from the shared sync service,
+        // re-rendering whenever those published facts change. Unit tests
         // construct their own coordinators over isolated suites, so the
         // app-hosted test process keeps the adapter absent and the
         // fail-closed no-adapter behavior stays observable.
@@ -193,6 +195,10 @@ struct HealthMdApp: App {
                     exportProfiles: { SharedSetupV2ExportProfileBridge.current },
                     connectedMacState: {
                         SharedSetupV2ConnectedMacState(syncService: syncService)
+                    },
+                    connectedMacStateChanges: {
+                        SharedSetupV2CoordinatorAdapter
+                            .connectedMacFactChanges(syncService: syncService)
                     }
                 )
             }
