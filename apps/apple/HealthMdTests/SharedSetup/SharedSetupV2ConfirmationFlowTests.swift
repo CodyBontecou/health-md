@@ -163,7 +163,7 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
             return spy.endpointID
         }
         adapter.confirmAPIEndpointRebind = { profileID, endpointID, credential in
-            spy.confirmCalls.append(ConfirmCall(
+            spy.confirmCalls.append(ConfirmationSpy.ConfirmCall(
                 profileID: profileID,
                 endpointID: endpointID,
                 credential: credential
@@ -220,7 +220,7 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
         let spy = ConfirmationSpy()
         adapter.localAPIEndpointID = { _ in spy.endpointID }
         adapter.confirmAPIEndpointRebind = { profileID, endpointID, credential in
-            spy.confirmCalls.append(ConfirmCall(
+            spy.confirmCalls.append(ConfirmationSpy.ConfirmCall(
                 profileID: profileID,
                 endpointID: endpointID,
                 credential: credential
@@ -396,7 +396,7 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
         spy.nextError = SharedSetupV2ExecutionGateError.persistenceVerificationFailed
         adapter.localAPIEndpointID = { _ in spy.endpointID }
         adapter.confirmAPIEndpointRebind = { profileID, endpointID, credential in
-            spy.confirmCalls.append(ConfirmCall(
+            spy.confirmCalls.append(ConfirmationSpy.ConfirmCall(
                 profileID: profileID,
                 endpointID: endpointID,
                 credential: credential
@@ -491,7 +491,7 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
             settings: settings,
             vaultManager: vaultManager,
             apiExportSettings: apiExportSettings,
-            initialTarget: .localIPPhoneFolder,
+            initialTarget: .localIPhoneFolder,
             sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults)
         )
         Self.retainedInstances.append(exportProfiles)
@@ -518,8 +518,9 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
         XCTAssertNil(coordinator.matchingV2LocalAPIEndpointID(
             forImportedURLString: identity.validatedURLString
         ))
-        // A credential against a fabricated endpoint row fails closed through
-        // the real coordinator's verified path.
+        // A credential against a fabricated endpoint row fails closed: the
+        // production closure cannot resolve that row, so it reports its own
+        // honest unavailability without touching the blocked identity.
         XCTAssertThrowsError(
             try coordinator.confirmV2APIEndpointRebind(
                 profileID: review.id,
@@ -527,7 +528,10 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
                 credential: "fresh-token"
             )
         ) { error in
-            XCTAssertEqual(error as? SharedSetupV2ExecutionGateError, .rebindNotConfirmed)
+            XCTAssertEqual(
+                error as? SharedSetupV2CoordinatorError,
+                .exportProfileServiceUnavailable
+            )
         }
         XCTAssertTrue(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
 
