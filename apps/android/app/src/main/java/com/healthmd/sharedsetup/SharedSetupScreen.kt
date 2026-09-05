@@ -628,7 +628,7 @@ private fun SharedSetupV2Applied(
                 "connected_mac" -> OutlinedButton(
                     onClick = { macConfirmTargetId = blocked.profileId },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.shared_setup_v2_rebind_mac_confirm)) }
+                ) { Text(stringResource(R.string.shared_setup_v2_rebind_mac_action)) }
                 else -> Text(
                     stringResource(R.string.shared_setup_v2_rebind_cloud_unavailable),
                     style = MaterialTheme.typography.bodySmall,
