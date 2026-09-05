@@ -9,7 +9,10 @@ import XCTest
 /// the injected verified path with a fresh local credential, blocked
 /// connected-Mac rows keep their explicit attestation path, and every
 /// missing/failing piece surfaces honest unavailability without ever
-/// weakening the fail-closed execution gate.
+/// weakening the fail-closed execution gate. Cycle-6 adds the reused-row
+/// name-preservation contract: the in-flow endpoint add never renames an
+/// existing row the editor's upsert reuses — only a genuinely new row
+/// receives the identity-derived display hint.
 @MainActor
 final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
@@ -804,12 +807,18 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
 
         // One explicit confirm reuses the case-variant row and canonicalizes
         // it to the exact user-confirmed URL; no second row is created.
+        // Cycle-6 name preservation: the reused row keeps its existing
+        // name ("Personal archive") — this previously asserted the rename
+        // to the identity-derived display hint, which silently renamed a
+        // row the user had already named; the hint names only a genuinely
+        // new row.
         let rowID = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
         XCTAssertEqual(rowID, preexistingID)
         XCTAssertEqual(exportProfiles.destinationStore.apiEndpoints.count, 1)
         let row = try XCTUnwrap(exportProfiles.destinationStore.apiEndpoints.first)
         XCTAssertEqual(row.endpointURLString, identity.validatedURLString)
-        XCTAssertEqual(row.name, identity.displayHint)
+        XCTAssertEqual(row.name, "Personal archive")
+        XCTAssertNotEqual(row.name, identity.displayHint)
         XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.contains(rowID))
 
         // The block still clears only through the verified credential rebind.
@@ -820,6 +829,103 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
             credential: "fresh-token"
         ))
         XCTAssertFalse(coordinator.isV2ProfileExecutionBlocked(profileID: review.id))
+    }
+
+    // MARK: - Cycle-6 reused-row name preservation
+
+    func testInFlowConfirmationPreservesReusedRowName() throws {
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        var adapter = SharedSetupV2CoordinatorAdapter.production(service)
+        let existingRowID = UUID()
+        var upsertCalls: [(name: String, url: String)] = []
+        adapter.reusedAPIEndpointNameForImportedURL = { _ in "Team archive" }
+        adapter.upsertAPIEndpointForImportedURL = { name, urlString in
+            upsertCalls.append((name: name, url: urlString))
+            return existingRowID
+        }
+        adapter.localAPIEndpointID = { _ in existingRowID }
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+
+        let rowID = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+        XCTAssertEqual(rowID, existingRowID)
+
+        // The upsert receives the reused row's existing name — never the
+        // identity-derived display hint, which would rename the row the
+        // editor's upsert path reuses. The identity discipline is
+        // unchanged: the post-upsert conservative re-verification still
+        // gates the row before any credential confirmation runs.
+        XCTAssertEqual(upsertCalls.count, 1)
+        XCTAssertEqual(upsertCalls.first?.name, "Team archive")
+        XCTAssertNotEqual(upsertCalls.first?.name, identity.displayHint)
+        XCTAssertEqual(upsertCalls.first?.url, identity.validatedURLString)
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.contains(rowID))
+        XCTAssertNil(coordinator.errorMessage)
+    }
+
+    func testInFlowNewRowStillReceivesIdentityHintName() throws {
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        var adapter = SharedSetupV2CoordinatorAdapter.production(service)
+        let newRowID = UUID()
+        var upsertCalls: [(name: String, url: String)] = []
+        adapter.reusedAPIEndpointNameForImportedURL = { _ in nil }
+        adapter.upsertAPIEndpointForImportedURL = { name, urlString in
+            upsertCalls.append((name: name, url: urlString))
+            return newRowID
+        }
+        adapter.localAPIEndpointID = { _ in newRowID }
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+
+        _ = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+
+        // No row is reused, so the identity-derived display hint names the
+        // genuinely new row exactly as before.
+        XCTAssertEqual(upsertCalls.count, 1)
+        XCTAssertEqual(upsertCalls.first?.name, identity.displayHint)
+        XCTAssertEqual(upsertCalls.first?.url, identity.validatedURLString)
+        XCTAssertTrue(coordinator.v2InFlowEndpointRowIDs.contains(newRowID))
+    }
+
+    func testInFlowBlankReusedRowNameFallsBackToIdentityHint() throws {
+        let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+        var adapter = SharedSetupV2CoordinatorAdapter.production(service)
+        let existingRowID = UUID()
+        var upsertCalls: [(name: String, url: String)] = []
+        adapter.reusedAPIEndpointNameForImportedURL = { _ in "   " }
+        adapter.upsertAPIEndpointForImportedURL = { name, urlString in
+            upsertCalls.append((name: name, url: urlString))
+            return existingRowID
+        }
+        adapter.localAPIEndpointID = { _ in existingRowID }
+        let coordinator = makeCoordinator(adapter: adapter)
+
+        try coordinator.load(try fixtureData("apple-shared-setup-v2.json"))
+        let review = try XCTUnwrap(
+            try coordinator.applyV2(selectedBundleIDs: ["profile-003"], mode: .add)
+                .importedProfiles.first
+        )
+        let identity = try XCTUnwrap(coordinator.importedV2APIEndpoint(for: review))
+
+        _ = try coordinator.confirmV2ImportedAPIEndpointURL(for: review)
+
+        // A blank reused name cannot be preserved (the editor's own empty-
+        // name rule would not keep it), so the hint names the row instead.
+        XCTAssertEqual(upsertCalls.count, 1)
+        XCTAssertEqual(upsertCalls.first?.name, identity.displayHint)
+        XCTAssertEqual(upsertCalls.first?.url, identity.validatedURLString)
     }
 
     func testInFlowConfirmationRequiresRetainedIdentity() throws {

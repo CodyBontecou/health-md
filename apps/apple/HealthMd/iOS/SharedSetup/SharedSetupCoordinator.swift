@@ -234,9 +234,11 @@ struct SharedSetupV2CoordinatorAdapter {
         String
     ) throws -> Bool)? = nil
     /// Optional in-flow endpoint-row creation surface for the no-match review
-    /// row. Given an honest identity-derived name and the EXACT URL string the
-    /// still-loaded plan retains — the user explicitly confirmed that URL in
-    /// the flow — it creates or reuses the local endpoint row through the
+    /// row. Given the name the caller resolved — the identity-derived display
+    /// hint for a genuinely new row, or the existing name of the row the
+    /// editor's upsert path is about to reuse — and the EXACT URL string the
+    /// still-loaded plan retains (the user explicitly confirmed that URL in
+    /// the flow), it creates or reuses the local endpoint row through the
     /// profile editor's exact upsert path, never inventing a URL and never
     /// storing a credential (the credential confirmation flow that follows
     /// owns that step). It returns the upserted row id so the caller can
@@ -244,6 +246,16 @@ struct SharedSetupV2CoordinatorAdapter {
     /// must fail closed. Absent closures keep the no-match review row's
     /// honest dead-end copy.
     var upsertAPIEndpointForImportedURL: (@MainActor (String, String) throws -> UUID)? = nil
+    /// Optional read-only lookup of the existing row name the profile
+    /// editor's upsert path would REUSE for an imported URL — the editor's
+    /// exact case-insensitive raw-URL rule, deliberately not the
+    /// conservative identity matcher. Nil means no row would be reused (or
+    /// the surface is honestly unavailable). The in-flow add consults it
+    /// purely to PRESERVE a reused row's existing name: the identity-derived
+    /// display hint names only a genuinely new row, so the flow never
+    /// renames a row it did not create. An absent closure keeps the
+    /// historical hint-naming behavior.
+    var reusedAPIEndpointNameForImportedURL: (@MainActor (String) -> String?)? = nil
     /// Optional read-only connected-Mac pairing facts for the review rows.
     /// Informational only; the explicit attestation confirmation remains the
     /// only path that can clear a connected-Mac block.
@@ -340,6 +352,20 @@ extension SharedSetupV2CoordinatorAdapter {
                 throw SharedSetupV2CoordinatorError.exportProfileServiceUnavailable
             }
             return rowID
+        }
+        adapter.reusedAPIEndpointNameForImportedURL = { importedEndpointURLString in
+            guard let exportProfiles = exportProfiles() else { return nil }
+            // The profile editor's exact row-reuse rule — the same lookup
+            // importAPIEndpointSelection performs before upserting: trimmed
+            // raw-URL strings compare case-insensitively, first match wins.
+            // Read-only: the caller uses the name solely to keep the upsert
+            // from renaming the row it is about to reuse.
+            let trimmedURL = importedEndpointURLString
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return exportProfiles.destinationStore.apiEndpoints.first {
+                $0.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .caseInsensitiveCompare(trimmedURL) == .orderedSame
+            }?.name
         }
         adapter.confirmAPIEndpointRebind = { profileID, endpointID, freshCredential in
             guard let exportProfiles = exportProfiles(),
@@ -925,15 +951,19 @@ final class SharedSetupCoordinator: ObservableObject {
     /// Creates the local endpoint row for a blocked imported API-endpoint
     /// profile from the EXACT validated URL the still-loaded plan retains —
     /// reachable only after the user explicitly confirmed that URL in the
-    /// flow, never from a typed or guessed one. The row name is derived
-    /// honestly from the imported identity, the row goes through the profile
-    /// editor's exact upsert path, and no credential is stored here. Identity
-    /// discipline: the upsert resolves rows case-insensitively by raw URL
-    /// string while review matching is conservative, so the resulting row is
-    /// re-resolved through the identity matcher; any mismatch fails closed
-    /// and the blocked identity stays intact. On success the caller routes
-    /// into the existing credential-confirmation flow against the new row —
-    /// which alone, through the verified rebind, can clear the block.
+    /// flow, never from a typed or guessed one. A genuinely new row is named
+    /// honestly from the imported identity's display hint; when the profile
+    /// editor's upsert path would REUSE an existing row (its exact
+    /// case-insensitive raw-URL rule), that row's existing name is preserved
+    /// — the flow never renames a row it did not create. The row goes
+    /// through the profile editor's exact upsert path, and no credential is
+    /// stored here. Identity discipline: the upsert resolves rows
+    /// case-insensitively by raw URL string while review matching is
+    /// conservative, so the resulting row is re-resolved through the
+    /// identity matcher; any mismatch fails closed and the blocked identity
+    /// stays intact. On success the caller routes into the existing
+    /// credential-confirmation flow against the row — which alone, through
+    /// the verified rebind, can clear the block.
     @discardableResult
     func confirmV2ImportedAPIEndpointURL(
         for review: SharedSetupV2ImportedProfileReview
@@ -947,7 +977,17 @@ final class SharedSetupCoordinator: ObservableObject {
             throw error
         }
         do {
-            let rowID = try upsert(identity.displayHint, identity.validatedURLString)
+            // The editor's upsert path resolves rows case-insensitively by
+            // raw URL string and renames the reused row to whatever name it
+            // is handed — so hand it the reused row's own name and preserve
+            // it; the identity-derived display hint names only a genuinely
+            // new row. This lookup is naming advice only: the post-upsert
+            // conservative identity re-verification below stays the sole
+            // authority on which row is trustworthy.
+            let rowID = try upsert(
+                resolvedInFlowRowName(for: identity),
+                identity.validatedURLString
+            )
             // Prove the upserted row is the resolved conservative match
             // before routing the credential confirmation on. A mismatch —
             // for example a pre-existing row the upsert reused under its
@@ -968,6 +1008,24 @@ final class SharedSetupCoordinator: ObservableObject {
             errorMessage = error.localizedDescription
             throw error
         }
+    }
+
+    /// The name the in-flow endpoint upsert receives: the existing name of
+    /// the row the profile editor's exact case-insensitive raw-URL rule
+    /// would reuse — preserved, so the flow never renames a row it did not
+    /// create — or the identity-derived display hint when the upsert creates
+    /// a genuinely new row. A blank reused name cannot be preserved (the
+    /// editor itself would not keep it), so it also falls back to the hint;
+    /// an unavailable reuse lookup keeps the historical hint naming.
+    private func resolvedInFlowRowName(
+        for identity: SharedSetupV2ImportedEndpointIdentity
+    ) -> String {
+        guard let reusedName = v2Adapter?.reusedAPIEndpointNameForImportedURL?(
+            identity.validatedURLString
+        ), !reusedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return identity.displayHint
+        }
+        return reusedName
     }
 
     /// Routes one explicit API-endpoint rebind through the installed verified
