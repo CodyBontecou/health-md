@@ -65,7 +65,7 @@ Every v2 document contains exactly one language-neutral bundle envelope:
 
 ### Profile identity and order
 
-The profile at zero-based array index `i` has exactly the bundle-local ID `profile-NNN`, where `NNN` is the one-based index padded to three digits. Thus the only valid sequence is `profile-001`, `profile-002`, … through at most `profile-100`. These IDs are synthesized for this artifact, have no stability outside it, and MUST NOT be copied from or mapped back to a native ID.
+The profile at zero-based array index `i` has exactly the bundle-local ID `profile-NNN`, where `NNN` is the one-based index padded to three digits. Thus the only valid sequence is `profile-001`, `profile-002`, … through at most `profile-100`. These IDs are synthesized for this artifact, have no stability outside it, and MUST NOT be copied from or reused as native identity. A local transaction sidecar may associate a source bundle ID with a separately generated native ID only to preserve the source DTO and compatibility meaning described below.
 
 `active_profile` MUST exactly equal one emitted `bundle_id`. Profile names are non-empty, have no control characters, equal their whitespace-trimmed form, and are unique under Unicode case-insensitive comparison. A reader does not rename duplicates or repair order.
 
@@ -192,8 +192,82 @@ Every folder is destination-relative. Empty folder text means the future recipie
 
 ## Compatibility results and apply boundary
 
-Preview reports reviewed items as `applied`, `requires_action`, `unsupported`, or `invalid`, retaining the v1 meanings. In cycle 1, these terms describe codec/mapper/preview foundations; they do not imply profile-store mutation is implemented.
+Preview reports reviewed items as `applied`, `requires_action`, `unsupported`, or `invalid`, retaining the v1 meanings. Preview and profile-selection changes perform no writes. They do not allocate persisted native identity, change the active profile, bind or inspect a destination, create a schedule row, or write sidecar/Undo state. The immutable validated import plan, not mutable UI state or a second decode, is the sole input to apply.
 
-Preview performs no writes. Destination and schedule intents stay inert. A future Add/Replace operation must be one native transaction, preserve the prior configuration for bounded local Undo, verify persistence, and leave prior state intact on failure. Unsupported platform extensions and unknown registry IDs are reported rather than approximated.
+Unsupported platform extensions, custom-template meaning, destination/schedule meaning, and registry IDs are reported rather than approximated. `applied` means that the portable setting is exactly representable in a fresh local snapshot; it does not mean that a destination is bound, a schedule is active, or the deferred v2 writer is canonical.
 
-The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures are one-line UTF-8 synthetic documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes.
+## Add, Replace, and native materialization
+
+The transaction input is one fully validated v2 import plan, mode `add` or `replace`, and an explicit non-empty collection of selected `bundle_id` values. Before any mutation, the implementation MUST reject a non-string or empty value, a duplicate, an ID absent from the plan, an empty selection, a stale/changed plan, an unrepresentable resulting profile count/name, or any sidecar/Undo bound failure. It then normalizes the selection to `profiles` document order. Caller order, set iteration order, and UI tap order never determine persistence order.
+
+Every selected source profile receives a fresh injected native profile identity that is unique against both the existing store and the other imports. `bundle_id` is retained only as source-document identity in compatibility sidecar state; it is never used or persisted as native profile identity. Native creation/update timestamps, when required internally, are newly generated local state and never come from the artifact.
+
+### Add
+
+Add preserves every existing native profile and schedule row byte-for-byte and in its existing order, retains aligned existing sidecar/blocked rows, then appends selected profiles and any exactly representable schedule rows in normalized source order. Imported names use the existing deterministic profile-store collision rule:
+
+1. use the already-trimmed source name as the base;
+2. compare names with locale-independent Unicode full case folding after trim, with no locale tailoring or additional Unicode normalization;
+3. if the base comparison key is free, retain the source spelling;
+4. otherwise try `Base 2`, `Base 3`, and so on, choosing the first free comparison key and considering earlier imports in the same transaction;
+5. fail before mutation if the resulting name cannot be represented within the native/profile bound.
+
+Thus a local `Café` collides with imported `CAFÉ`, while canonically different Unicode sequences are not silently normalized into one name. The imported source document itself already proves that its own names are unique under the same case-fold comparison.
+
+If the pre-transaction active native ID still references an existing profile in the Add candidate, it remains active. If it is absent, null, or dangling, the selected source `active_profile` becomes active when selected; otherwise the first selected profile in normalized document order becomes active.
+
+### Replace
+
+Replace discards the existing profile list from the candidate and creates only the selected imported profiles in normalized source order. It also removes every pre-transaction scheduled-profile, sidecar, and blocked-ID row from the candidate; the resulting sidecar/blocked state contains only the selected generated profiles. Replace retains source names exactly because a validated v2 document already proves trimmed case-insensitive uniqueness. The selected source `active_profile` becomes active when selected; otherwise the first selected profile in normalized document order becomes active.
+
+Replace changes only the profile/schedule/sidecar/blocked state covered by this transaction. It does not delete destination records or secure-store values formerly referenced by removed profiles.
+
+### Unbound and blocked imported profiles
+
+A selected profile receives a fresh native output-settings snapshot only for exact common settings and an exact supported native extension. The receiver owns its local engine, timezone, destination identities, credentials, authorization, purchases, and runtime state. Unsupported custom-template or other semantic meaning is retained for review and is not installed through a guessed fallback.
+
+A destination kind may be projected to the closest native display/configuration intent, but every imported folder/API binding field is `nil`. Connected-Mac and cloud meanings remain pending rather than being mapped to a local folder or endpoint. Import never resolves, lists, reads, opens, creates, pairs, authenticates, or probes a destination, and never inherits an existing binding merely because its kind or endpoint hint resembles the source intent.
+
+Every generated native profile ID is added to the local blocked/pending-destination set. Activation, manual/profile-scoped export, scheduled execution, App Intent/automation, and direct profile resolution MUST fail closed with a bounded non-secret reason while that ID remains blocked; none may fall back to live/global settings or a global destination. Only a later explicit local rebind gate may clear it. Folder intent requires a concrete locally selected binding, API intent requires a locally confirmed endpoint/credential flow, connected-Mac intent requires explicit local pairing/rebind confirmation, and cloud remains blocked until supported. Opening, editing, renaming, or duplicating the profile is insufficient.
+
+For each selected non-null schedule that is exactly representable, the candidate may contain one fresh native schedule row. It is always disabled: `isEnabled` is false and enabled-at, progress, history, retry/pending-work, last-run/success, operation, and worker/alarm identity are absent or empty. `activation_requested` remains inert sender review intent and MUST NOT be interpreted as runtime enablement. A null schedule creates no row. Unsupported schedule meaning remains sidecar-only and is never rounded or substituted.
+
+## Per-profile compatibility sidecar
+
+The local sidecar has version `1` and one ordered `profiles` array in resulting native profile-store order. Native encoders may use their ordinary same-platform JSON field casing only when the corresponding local reader is proven semantically compatible. Each imported row contains exactly:
+
+- generated native `profile_id`;
+- original `source_bundle_id`;
+- the complete closed `source_profile` v2 DTO;
+- unique `unsupported_semantic_ids` in lexicographic order.
+
+The complete source profile is the single retained meaning for pending destination/schedule intent, foreign typed extension, unsupported custom template, and other reviewed portable fields; an implementation MUST NOT split off a lossy second interpretation. Add retains sidecar rows for preserved existing profiles and appends selected rows in profile-store order. Replace retains only rows for the selected replacement profiles. A foreign typed extension and unsupported semantic ID remain attached to the generated profile identity that came from their source row, including after source-selection normalization.
+
+The encoded aggregate sidecar is bounded to 4,194,304 bytes. It contains no credentials, grants, bookmarks/URIs, pairing state, local destination data, runtime state, or health data. Bound and complete-encoding checks happen before mutation.
+
+The frozen local persistence keys are implementation interoperability constraints, not public artifact fields:
+
+| Platform | Profiles | Active profile | Schedules | v2 sidecar | Blocked IDs | One-shot Undo |
+| --- | --- | --- | --- | --- | --- | --- |
+| Apple | `exportProfiles.list` | `exportProfiles.activeProfileID` | `scheduledExportEntries.list` | `sharedSetup.apple.v2.profileState` | `sharedSetup.apple.v2.blockedProfileIDs` | `sharedSetup.apple.v2.undo` |
+| Android | `export_profiles` | `export_profiles_active_id` | `scheduled_profile_entries` | `shared_setup_v2_profile_state` | `shared_setup_v2_blocked_profile_ids` | `shared_setup_v2_undo` |
+
+## Atomic apply, rollback, and one-shot Undo
+
+Apply and Undo operations are serialized. The candidate covers profiles, active identity, scheduled-profile rows, sidecar rows, the blocked-ID set, and exactly one local Undo value. Before the first write, the implementation completely encodes the candidate and an Undo snapshot of the exact prior values/absence for those stores. The sidecar is bounded to 4 MiB and the complete Undo payload to 8 MiB.
+
+A successful Add or Replace persists one previous-state Undo snapshot, verifies the complete candidate by readback, and reports success only after verification. Cancellation before commit leaves state untouched. Once commit begins, cancellation cannot expose a partial candidate: the implementation finishes verified commit or performs verified rollback.
+
+On any encoding, write, synchronization, or verification failure, rollback restores and verifies the exact prior profile bytes/order, active identity or absence, schedule bytes/order, sidecar or absence, blocked set or absence, and the prior Undo value or absence. Apple may implement this as a bounded verified multi-key commit/restore. Android uses one DataStore edit for the candidate and, if post-commit semantic verification fails, compare-and-set rollback. An implementation that cannot attest rollback MUST report an unverified rollback and fail closed; it must not claim that prior state is intact.
+
+Undo restores and verifies the profiles, active identity, schedules, sidecar, and blocked set from the single snapshot, then removes and verifies removal of that snapshot. A second Undo returns `no_undo_snapshot` and performs no writes. If Undo fails before verified completion, it restores the post-apply state and keeps the same Undo snapshot available; inability to verify that recovery is an unverified rollback failure.
+
+Add, Replace, failed-apply rollback, and Undo never mutate the destination store or secure credential store. They never delete, rewrite, relink, or copy a folder grant/bookmark/SAF URI, endpoint credential/header, cloud account, or Mac pairing. Explicit rebinding is a separate local transaction outside this contract.
+
+## Transaction scenario and public-artifact isolation
+
+The [transaction scenario fixture](fixtures/transaction-scenarios-v1.json) is deterministic local test infrastructure, not a `healthmd.shared_setup` document, public wire field, native persistence grammar, or claim of production availability. Its explicit local-only envelope may name synthetic native profiles, schedules, bindings, blocked rows, and runtime sentinels so Add/Replace/rollback/Undo results can be compared exactly. Those values MUST NOT be copied into its embedded public source DTO or either canonical public v2 artifact fixture.
+
+Validation recursively proves selection normalization, active-profile fallbacks, collision suffixing, nil imported bindings, disabled imported schedules, per-generated-profile foreign/unsupported preservation, exact rollback, Undo consumption, and unchanged destination/secure-store markers. It also recursively rejects native IDs, credentials, grants, native paths/URIs, runtime timestamps/history, health data, and operation identity in the embedded or canonical public artifacts.
+
+The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures remain one-line UTF-8 synthetic public documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes. V2 status remains `deferred`, its schema/version remain frozen, and every tracked v1 authority/fixture byte remains immutable.

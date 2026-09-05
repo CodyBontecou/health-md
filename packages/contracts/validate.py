@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import copy
 import csv
 import hashlib
 import json
@@ -31,6 +32,10 @@ SHARED_SETUP_V1_SCHEMA_VERSION = 1
 SHARED_SETUP_V2_SCHEMA_VERSION = 2
 SHARED_SETUP_V1_MAX_BYTES = 262_144
 SHARED_SETUP_V2_MAX_BYTES = 4_194_304
+SHARED_SETUP_V2_SIDECAR_MAX_BYTES = 4_194_304
+SHARED_SETUP_V2_UNDO_MAX_BYTES = 8_388_608
+SHARED_SETUP_TRANSACTION_SCENARIO_SCHEMA = "healthmd.shared_setup_transaction_scenarios"
+SHARED_SETUP_TRANSACTION_SCENARIO_VERSION = 1
 # Kept as the historical v1 public constant for existing focused tests/readers.
 SHARED_SETUP_SCHEMA_VERSION = SHARED_SETUP_V1_SCHEMA_VERSION
 SHARED_SETUP_MAX_BYTES = SHARED_SETUP_V1_MAX_BYTES
@@ -2300,6 +2305,708 @@ def validate_shared_setup_writer_fixture(root: Path, path: Path) -> None:
     validate_shared_setup_fixture(root, path, enforce_writer_allowlist=True)
 
 
+_TRANSACTION_STATE_SNAPSHOT_KEYS = (
+    "profiles",
+    "active_profile_id",
+    "schedules",
+    "sidecar",
+    "blocked_profile_ids",
+)
+_TRANSACTION_STATE_KEYS = set(_TRANSACTION_STATE_SNAPSHOT_KEYS) | {"undo_snapshot"}
+_TRANSACTION_PROFILE_KEYS = {
+    "profile_id",
+    "name",
+    "settings_source_bundle_id",
+    "source_profile_sha256",
+    "destination_intent",
+    "folder_binding_id",
+    "api_endpoint_binding_id",
+}
+_TRANSACTION_SCHEDULE_KEYS = {
+    "schedule_id",
+    "profile_id",
+    "is_enabled",
+    "enabled_at",
+    "progress",
+    "history",
+    "pending_work",
+    "worker_id",
+}
+_TRANSACTION_SIDECAR_ROW_KEYS = {
+    "profile_id",
+    "source_bundle_id",
+    "source_profile",
+    "unsupported_semantic_ids",
+}
+_TRANSACTION_DESTINATION_KINDS = {
+    "device_folder",
+    "connected_mac",
+    "api_endpoint",
+    "cloud",
+}
+_TRANSACTION_LOCAL_ID_RE = re.compile(r"^native-[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def _require_transaction_local_id(value: Any, context: str) -> str:
+    if not isinstance(value, str) or not _TRANSACTION_LOCAL_ID_RE.fullmatch(value):
+        fail(f"{context}: expected an explicitly local synthetic native identifier")
+    return value
+
+
+def _shared_setup_transaction_name_key(value: str) -> str:
+    """Locale-independent comparison key used by the language-neutral scenario oracle."""
+    return value.strip().casefold()
+
+
+def _shared_setup_transaction_unique_name(
+    source_name: str,
+    taken_keys: set[str],
+    context: str,
+) -> str:
+    base = source_name.strip()
+    if not base:
+        fail(f"{context}: imported profile name must not be empty")
+    if _shared_setup_transaction_name_key(base) not in taken_keys:
+        result = base
+    else:
+        suffix = 2
+        while _shared_setup_transaction_name_key(f"{base} {suffix}") in taken_keys:
+            suffix += 1
+        result = f"{base} {suffix}"
+    if len(result) > 256:
+        fail(f"{context}: collision suffix makes the native profile name unrepresentable")
+    taken_keys.add(_shared_setup_transaction_name_key(result))
+    return result
+
+
+def normalize_shared_setup_transaction_selection(
+    source_document: dict[str, Any],
+    caller_selection: Any,
+) -> list[str]:
+    """Validate explicit bundle IDs and return them in source document order."""
+    context = "healthmd.shared_setup v2 transaction selection"
+    if not isinstance(caller_selection, list) or not caller_selection:
+        fail(f"{context}: selection must be an explicit non-empty array")
+    if not all(isinstance(item, str) and item for item in caller_selection):
+        fail(f"{context}: every selection value must be a non-empty bundle ID")
+    if len(caller_selection) != len(set(caller_selection)):
+        fail(f"{context}: duplicate bundle IDs are forbidden")
+    source_order = [profile["bundle_id"] for profile in source_document["profiles"]]
+    unknown = sorted(set(caller_selection) - set(source_order))
+    if unknown:
+        fail(f"{context}: unknown bundle IDs {unknown}")
+    selected = set(caller_selection)
+    return [bundle_id for bundle_id in source_order if bundle_id in selected]
+
+
+def _shared_setup_transaction_snapshot(state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: copy.deepcopy(state[key])
+        for key in _TRANSACTION_STATE_SNAPSHOT_KEYS
+    }
+
+
+def _validate_shared_setup_transaction_state(
+    state: Any,
+    source_profiles: dict[str, dict[str, Any]],
+    context: str,
+    *,
+    allow_undo: bool = True,
+) -> dict[str, Any]:
+    state = require_exact_keys(state, _TRANSACTION_STATE_KEYS, context)
+    profiles = state["profiles"]
+    if not isinstance(profiles, list):
+        fail(f"{context}.profiles: must be an array")
+    profile_ids: list[str] = []
+    for index, raw_profile in enumerate(profiles):
+        profile_context = f"{context}.profiles[{index}]"
+        profile = require_exact_keys(raw_profile, _TRANSACTION_PROFILE_KEYS, profile_context)
+        profile_id = _require_transaction_local_id(
+            profile["profile_id"], f"{profile_context}.profile_id"
+        )
+        profile_ids.append(profile_id)
+        name = profile["name"]
+        if not isinstance(name, str) or not name or name != name.strip():
+            fail(f"{profile_context}.name: must be a non-empty trimmed string")
+        source_bundle_id = profile["settings_source_bundle_id"]
+        source_hash = profile["source_profile_sha256"]
+        if source_bundle_id is None:
+            if source_hash is not None:
+                fail(f"{profile_context}: an existing local snapshot has no source hash")
+        else:
+            if not isinstance(source_bundle_id, str) or source_bundle_id not in source_profiles:
+                fail(f"{profile_context}: unknown settings source bundle ID")
+            expected_hash = hashlib.sha256(
+                canonical_json(source_profiles[source_bundle_id])
+            ).hexdigest()
+            if source_hash != expected_hash:
+                fail(f"{profile_context}: source profile hash differs from the v2 DTO")
+        if (
+            not isinstance(profile["destination_intent"], str)
+            or profile["destination_intent"] not in _TRANSACTION_DESTINATION_KINDS
+        ):
+            fail(f"{profile_context}.destination_intent: unsupported destination intent")
+        for binding_key in ("folder_binding_id", "api_endpoint_binding_id"):
+            binding = profile[binding_key]
+            if binding is not None:
+                _require_transaction_local_id(binding, f"{profile_context}.{binding_key}")
+    if len(profile_ids) != len(set(profile_ids)):
+        fail(f"{context}.profiles: native profile IDs must be unique")
+
+    active_profile_id = state["active_profile_id"]
+    if active_profile_id is not None:
+        _require_transaction_local_id(active_profile_id, f"{context}.active_profile_id")
+
+    schedules = state["schedules"]
+    if not isinstance(schedules, list):
+        fail(f"{context}.schedules: must be an array")
+    schedule_ids: list[str] = []
+    for index, raw_schedule in enumerate(schedules):
+        schedule_context = f"{context}.schedules[{index}]"
+        schedule = require_exact_keys(
+            raw_schedule, _TRANSACTION_SCHEDULE_KEYS, schedule_context
+        )
+        schedule_ids.append(
+            _require_transaction_local_id(
+                schedule["schedule_id"], f"{schedule_context}.schedule_id"
+            )
+        )
+        if schedule["profile_id"] not in set(profile_ids):
+            fail(f"{schedule_context}.profile_id: must reference a local profile row")
+        if not isinstance(schedule["is_enabled"], bool):
+            fail(f"{schedule_context}.is_enabled: must be Boolean")
+        for key in ("enabled_at", "progress", "pending_work", "worker_id"):
+            value = schedule[key]
+            if value is not None and not isinstance(value, str):
+                fail(f"{schedule_context}.{key}: must be a string or null")
+        if not isinstance(schedule["history"], list) or not all(
+            isinstance(item, str) for item in schedule["history"]
+        ):
+            fail(f"{schedule_context}.history: must be an array of strings")
+    if len(schedule_ids) != len(set(schedule_ids)):
+        fail(f"{context}.schedules: native schedule IDs must be unique")
+
+    sidecar = require_exact_keys(state["sidecar"], {"version", "profiles"}, f"{context}.sidecar")
+    if type(sidecar["version"]) is not int or sidecar["version"] != 1:
+        fail(f"{context}.sidecar.version: must be integer 1")
+    if not isinstance(sidecar["profiles"], list):
+        fail(f"{context}.sidecar.profiles: must be an array")
+    profile_positions = {profile_id: index for index, profile_id in enumerate(profile_ids)}
+    previous_position = -1
+    sidecar_profile_ids: list[str] = []
+    for index, raw_row in enumerate(sidecar["profiles"]):
+        row_context = f"{context}.sidecar.profiles[{index}]"
+        row = require_exact_keys(raw_row, _TRANSACTION_SIDECAR_ROW_KEYS, row_context)
+        profile_id = row["profile_id"]
+        if profile_id not in profile_positions:
+            fail(f"{row_context}.profile_id: must reference a resulting native profile")
+        position = profile_positions[profile_id]
+        if position <= previous_position:
+            fail(f"{context}.sidecar.profiles: rows must follow native profile-store order")
+        previous_position = position
+        sidecar_profile_ids.append(profile_id)
+        source_bundle_id = row["source_bundle_id"]
+        if not isinstance(source_bundle_id, str) or source_bundle_id not in source_profiles:
+            fail(f"{row_context}.source_bundle_id: unknown source profile")
+        if row["source_profile"] != source_profiles[source_bundle_id]:
+            fail(f"{row_context}.source_profile: complete source v2 DTO was not preserved")
+        unsupported = require_unique_string_array(
+            row["unsupported_semantic_ids"],
+            f"{row_context}.unsupported_semantic_ids",
+        )
+        if unsupported != sorted(unsupported):
+            fail(f"{row_context}.unsupported_semantic_ids: must be sorted")
+    if len(sidecar_profile_ids) != len(set(sidecar_profile_ids)):
+        fail(f"{context}.sidecar.profiles: profile IDs must be unique")
+    blocked = require_unique_string_array(
+        state["blocked_profile_ids"], f"{context}.blocked_profile_ids"
+    )
+    if any(profile_id not in profile_positions for profile_id in blocked):
+        fail(f"{context}.blocked_profile_ids: every ID must reference a profile row")
+
+    undo_snapshot = state["undo_snapshot"]
+    if undo_snapshot is not None:
+        if not allow_undo:
+            fail(f"{context}.undo_snapshot: nested Undo snapshots are forbidden")
+        undo_snapshot = require_exact_keys(
+            undo_snapshot, {"version", "previous_state"}, f"{context}.undo_snapshot"
+        )
+        if type(undo_snapshot["version"]) is not int or undo_snapshot["version"] != 1:
+            fail(f"{context}.undo_snapshot.version: must be integer 1")
+        previous_snapshot = require_exact_keys(
+            undo_snapshot["previous_state"],
+            set(_TRANSACTION_STATE_SNAPSHOT_KEYS),
+            f"{context}.undo_snapshot.previous_state",
+        )
+        previous_state = copy.deepcopy(previous_snapshot)
+        previous_state["undo_snapshot"] = None
+        _validate_shared_setup_transaction_state(
+            previous_state,
+            source_profiles,
+            f"{context}.undo_snapshot.previous_state",
+            allow_undo=False,
+        )
+    return state
+
+
+def build_shared_setup_transaction_candidate(
+    source_document: dict[str, Any],
+    existing_state: dict[str, Any],
+    caller_selection: Any,
+    mode: str,
+    generated_profile_ids: dict[str, str],
+    generated_schedule_ids: dict[str, str],
+    unsupported_semantic_ids: dict[str, list[str]],
+) -> dict[str, Any]:
+    """Materialize the frozen language-neutral Add/Replace scenario semantics."""
+    if mode not in {"add", "replace"}:
+        fail("healthmd.shared_setup v2 transaction: mode must be add or replace")
+    source_profiles = {
+        profile["bundle_id"]: profile for profile in source_document["profiles"]
+    }
+    _validate_shared_setup_transaction_state(
+        existing_state,
+        source_profiles,
+        "healthmd.shared_setup v2 transaction existing_state",
+    )
+    selected = normalize_shared_setup_transaction_selection(
+        source_document, caller_selection
+    )
+    selected_set = set(selected)
+    if not isinstance(generated_profile_ids, dict) or set(generated_profile_ids) != selected_set:
+        fail("healthmd.shared_setup v2 transaction: generated profile IDs must cover selection exactly")
+    selected_with_schedules = {
+        bundle_id for bundle_id in selected if source_profiles[bundle_id]["schedule"] is not None
+    }
+    if not isinstance(generated_schedule_ids, dict) or set(generated_schedule_ids) != selected_with_schedules:
+        fail("healthmd.shared_setup v2 transaction: generated schedule IDs must cover representable schedules exactly")
+    if not isinstance(unsupported_semantic_ids, dict) or set(unsupported_semantic_ids) != selected_set:
+        fail("healthmd.shared_setup v2 transaction: unsupported-ID rows must cover selection exactly")
+
+    existing_profile_ids = {profile["profile_id"] for profile in existing_state["profiles"]}
+    fresh_profile_ids: list[str] = []
+    for bundle_id in selected:
+        native_id = _require_transaction_local_id(
+            generated_profile_ids[bundle_id],
+            f"healthmd.shared_setup v2 transaction generated_profile_ids.{bundle_id}",
+        )
+        if native_id == bundle_id or native_id in existing_profile_ids:
+            fail("healthmd.shared_setup v2 transaction: every imported profile needs fresh native identity")
+        fresh_profile_ids.append(native_id)
+    if len(fresh_profile_ids) != len(set(fresh_profile_ids)):
+        fail("healthmd.shared_setup v2 transaction: generated native profile IDs must be unique")
+
+    existing_schedule_ids = {row["schedule_id"] for row in existing_state["schedules"]}
+    fresh_schedule_ids: list[str] = []
+    for bundle_id in selected:
+        if bundle_id not in selected_with_schedules:
+            continue
+        schedule_id = _require_transaction_local_id(
+            generated_schedule_ids[bundle_id],
+            f"healthmd.shared_setup v2 transaction generated_schedule_ids.{bundle_id}",
+        )
+        if schedule_id in existing_schedule_ids:
+            fail("healthmd.shared_setup v2 transaction: generated schedule IDs must be fresh")
+        fresh_schedule_ids.append(schedule_id)
+    if len(fresh_schedule_ids) != len(set(fresh_schedule_ids)):
+        fail("healthmd.shared_setup v2 transaction: generated native schedule IDs must be unique")
+
+    for bundle_id in selected:
+        unsupported = require_unique_string_array(
+            unsupported_semantic_ids[bundle_id],
+            f"healthmd.shared_setup v2 transaction unsupported_semantic_ids.{bundle_id}",
+        )
+        if unsupported != sorted(unsupported):
+            fail("healthmd.shared_setup v2 transaction: unsupported semantic IDs must be sorted")
+        source_ids = set(source_profiles[bundle_id]["metrics"]["enabled_ids"]) | set(
+            source_profiles[bundle_id]["individual_entries"]["metrics"]
+        )
+        if not set(unsupported).issubset(source_ids):
+            fail("healthmd.shared_setup v2 transaction: unsupported IDs must come from their source profile")
+
+    profiles = copy.deepcopy(existing_state["profiles"] if mode == "add" else [])
+    taken_name_keys = {
+        _shared_setup_transaction_name_key(profile["name"])
+        for profile in profiles
+    }
+    imported_rows: list[dict[str, Any]] = []
+    for bundle_id in selected:
+        source_profile = source_profiles[bundle_id]
+        name = source_profile["name"]
+        if mode == "add":
+            name = _shared_setup_transaction_unique_name(
+                name,
+                taken_name_keys,
+                f"healthmd.shared_setup v2 transaction {bundle_id}.name",
+            )
+        imported_row = {
+            "profile_id": generated_profile_ids[bundle_id],
+            "name": name,
+            "settings_source_bundle_id": bundle_id,
+            "source_profile_sha256": hashlib.sha256(
+                canonical_json(source_profile)
+            ).hexdigest(),
+            "destination_intent": source_profile["destination"]["kind"],
+            "folder_binding_id": None,
+            "api_endpoint_binding_id": None,
+        }
+        profiles.append(imported_row)
+        imported_rows.append(imported_row)
+    if len(profiles) > 100:
+        fail("healthmd.shared_setup v2 transaction: resulting profile count exceeds 100")
+
+    schedules = copy.deepcopy(existing_state["schedules"] if mode == "add" else [])
+    for bundle_id in selected:
+        if source_profiles[bundle_id]["schedule"] is None:
+            continue
+        schedules.append(
+            {
+                "schedule_id": generated_schedule_ids[bundle_id],
+                "profile_id": generated_profile_ids[bundle_id],
+                "is_enabled": False,
+                "enabled_at": None,
+                "progress": None,
+                "history": [],
+                "pending_work": None,
+                "worker_id": None,
+            }
+        )
+
+    sidecar_rows = copy.deepcopy(
+        existing_state["sidecar"]["profiles"] if mode == "add" else []
+    )
+    for bundle_id in selected:
+        sidecar_rows.append(
+            {
+                "profile_id": generated_profile_ids[bundle_id],
+                "source_bundle_id": bundle_id,
+                "source_profile": copy.deepcopy(source_profiles[bundle_id]),
+                "unsupported_semantic_ids": copy.deepcopy(
+                    unsupported_semantic_ids[bundle_id]
+                ),
+            }
+        )
+    sidecar = {"version": 1, "profiles": sidecar_rows}
+
+    blocked = copy.deepcopy(
+        existing_state["blocked_profile_ids"] if mode == "add" else []
+    )
+    blocked.extend(generated_profile_ids[bundle_id] for bundle_id in selected)
+
+    imported_by_bundle = {
+        bundle_id: generated_profile_ids[bundle_id] for bundle_id in selected
+    }
+    existing_active = existing_state["active_profile_id"]
+    resulting_ids = {profile["profile_id"] for profile in profiles}
+    if mode == "add" and existing_active in existing_profile_ids:
+        active_profile_id = existing_active
+    elif source_document["active_profile"] in imported_by_bundle:
+        active_profile_id = imported_by_bundle[source_document["active_profile"]]
+    else:
+        active_profile_id = generated_profile_ids[selected[0]]
+
+    candidate = {
+        "profiles": profiles,
+        "active_profile_id": active_profile_id,
+        "schedules": schedules,
+        "sidecar": sidecar,
+        "blocked_profile_ids": blocked,
+        "undo_snapshot": {
+            "version": 1,
+            "previous_state": _shared_setup_transaction_snapshot(existing_state),
+        },
+    }
+    if len(canonical_json(sidecar)) > SHARED_SETUP_V2_SIDECAR_MAX_BYTES:
+        fail("healthmd.shared_setup v2 transaction: sidecar exceeds 4 MiB")
+    if len(canonical_json(candidate["undo_snapshot"])) > SHARED_SETUP_V2_UNDO_MAX_BYTES:
+        fail("healthmd.shared_setup v2 transaction: Undo snapshot exceeds 8 MiB")
+    _validate_shared_setup_transaction_state(
+        candidate,
+        source_profiles,
+        f"healthmd.shared_setup v2 transaction expected_{mode}",
+    )
+    if candidate["active_profile_id"] not in resulting_ids:
+        fail("healthmd.shared_setup v2 transaction: resulting active profile must be valid")
+    if any(
+        row["folder_binding_id"] is not None or row["api_endpoint_binding_id"] is not None
+        for row in imported_rows
+    ):
+        fail("healthmd.shared_setup v2 transaction: imported destination bindings must be nil")
+    return candidate
+
+
+def undo_shared_setup_transaction_candidate(
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    """Restore one bounded snapshot and consume it; a second call fails closed."""
+    snapshot = state.get("undo_snapshot")
+    if not isinstance(snapshot, dict):
+        fail("healthmd.shared_setup v2 transaction: no Undo snapshot")
+    snapshot = require_exact_keys(
+        snapshot,
+        {"version", "previous_state"},
+        "healthmd.shared_setup v2 transaction Undo snapshot",
+    )
+    if type(snapshot["version"]) is not int or snapshot["version"] != 1:
+        fail("healthmd.shared_setup v2 transaction: invalid Undo snapshot version")
+    if len(canonical_json(snapshot)) > SHARED_SETUP_V2_UNDO_MAX_BYTES:
+        fail("healthmd.shared_setup v2 transaction: Undo snapshot exceeds 8 MiB")
+    previous_state = require_exact_keys(
+        snapshot["previous_state"],
+        set(_TRANSACTION_STATE_SNAPSHOT_KEYS),
+        "healthmd.shared_setup v2 transaction Undo previous_state",
+    )
+    restored = copy.deepcopy(previous_state)
+    restored["undo_snapshot"] = None
+    return restored
+
+
+def validate_shared_setup_public_artifact_isolation(
+    payload: Any,
+    local_native_values: set[str],
+    context: str,
+) -> None:
+    """Recursively keep local transaction identity/state out of public v2 DTOs."""
+    if not isinstance(payload, dict):
+        fail(f"{context}: public Shared Setup artifact must be an object")
+    _reject_sensitive_shared_setup_v2(payload, context)
+
+    def visit(value: Any, value_context: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if any(native_value in key for native_value in local_native_values):
+                    fail(f"{value_context}: local native identity leaked into a public key")
+                visit(child, f"{value_context}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{value_context}[{index}]")
+        elif isinstance(value, str):
+            if any(native_value in value for native_value in local_native_values):
+                fail(f"{value_context}: local transaction identity/state leaked into public data")
+            lowered = value.lower()
+            if re.search(r"(?<![a-z0-9])native-[a-z0-9]+(?:-[a-z0-9]+)+(?![a-z0-9])", lowered):
+                fail(f"{value_context}: synthetic native identity leaked into public data")
+            if lowered.startswith(("content://", "file://", "saf://")) or re.match(
+                r"^(?:/users/|/private/|/storage/|/data/|[a-z]:[\\/])",
+                lowered,
+            ):
+                fail(f"{value_context}: native path or URI leaked into public data")
+
+    visit(payload, context)
+
+
+def validate_shared_setup_transaction_scenario_fixture(root: Path, path: Path) -> None:
+    context = "healthmd.shared_setup v2 transaction scenario"
+    fixture_bytes = path.read_bytes()
+    if len(fixture_bytes) > SHARED_SETUP_V2_MAX_BYTES:
+        fail(f"{context}: fixture exceeds 4 MiB")
+    payload = _decode_shared_setup_json(fixture_bytes, context)
+    if fixture_bytes != canonical_json(payload) + b"\n":
+        fail(f"{context}: fixture must be canonical sorted compact JSON with one newline")
+    _validate_shared_setup_generic_bounds(
+        payload,
+        context,
+        max_depth=20,
+        max_container_items=512,
+        max_key_scalars=65_536,
+        max_string_scalars=65_536,
+        max_nodes=262_144,
+    )
+    payload = require_exact_keys(payload, {"schema", "schema_version", "scenario"}, context)
+    if payload["schema"] != SHARED_SETUP_TRANSACTION_SCENARIO_SCHEMA:
+        fail(f"{context}: invalid test-infrastructure schema")
+    if (
+        type(payload["schema_version"]) is not int
+        or payload["schema_version"] != SHARED_SETUP_TRANSACTION_SCENARIO_VERSION
+    ):
+        fail(f"{context}: schema_version must be integer 1")
+    scenario = require_exact_keys(
+        payload["scenario"],
+        {
+            "name",
+            "scope",
+            "source_document",
+            "caller_selection",
+            "normalized_selection",
+            "generated_profile_ids",
+            "generated_schedule_ids",
+            "unsupported_semantic_ids",
+            "existing_state",
+            "local_environment",
+            "expected_add_state",
+            "expected_replace_state",
+            "expected_failed_apply_rollback",
+            "expected_undo",
+            "expected_unmodified_local_environment",
+        },
+        f"{context}.scenario",
+    )
+    if scenario["name"] != "selection-normalized-add-replace-undo":
+        fail(f"{context}.scenario.name: unknown scenario")
+    if scenario["scope"] != "synthetic_local_transaction_test_only":
+        fail(f"{context}.scenario.scope: native IDs require explicit local-only scope")
+
+    source_document = scenario["source_document"]
+    if (
+        not isinstance(source_document, dict)
+        or source_document.get("schema") != SHARED_SETUP_SCHEMA
+        or type(source_document.get("schema_version")) is not int
+        or source_document["schema_version"] != SHARED_SETUP_V2_SCHEMA_VERSION
+    ):
+        fail(f"{context}.source_document: must be a Shared Setup v2 public DTO")
+    _validate_shared_setup_generic_bounds(
+        source_document,
+        f"{context}.source_document",
+        max_depth=20,
+        max_container_items=512,
+        max_key_scalars=65_536,
+        max_string_scalars=65_536,
+        max_nodes=262_144,
+    )
+    _validate_shared_setup_v2_payload(root, source_document, f"{context}.source_document")
+    _validate_shared_setup_writer_allowlist(
+        source_document,
+        _shared_setup_schema(root, 2, f"{context}.source_document"),
+        f"{context}.source_document.writer",
+    )
+    source_profiles = {
+        profile["bundle_id"]: profile for profile in source_document["profiles"]
+    }
+    _validate_shared_setup_transaction_state(
+        scenario["existing_state"], source_profiles, f"{context}.existing_state"
+    )
+
+    normalized = normalize_shared_setup_transaction_selection(
+        source_document, scenario["caller_selection"]
+    )
+    if scenario["normalized_selection"] != normalized:
+        fail(f"{context}: caller selection was not normalized into document order")
+    if scenario["caller_selection"] == normalized:
+        fail(f"{context}: fixture must prove normalization from non-document caller order")
+
+    registry_path = repository_path(
+        root,
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        f"{context}.registry",
+    )
+    registry = load_json(registry_path, f"{context}.registry")
+    known_ids = {metric["semantic_id"] for metric in registry["metrics"]}
+    unsupported_map = scenario["unsupported_semantic_ids"]
+    if not isinstance(unsupported_map, dict):
+        fail(f"{context}.unsupported_semantic_ids: must be an object")
+    for bundle_id in normalized:
+        source_profile = source_profiles[bundle_id]
+        referenced = set(source_profile["metrics"]["enabled_ids"]) | set(
+            source_profile["individual_entries"]["metrics"]
+        )
+        if unsupported_map.get(bundle_id) != sorted(referenced - known_ids):
+            fail(f"{context}: unsupported semantic meaning must be preserved per profile")
+
+    add_state = build_shared_setup_transaction_candidate(
+        source_document,
+        scenario["existing_state"],
+        scenario["caller_selection"],
+        "add",
+        scenario["generated_profile_ids"],
+        scenario["generated_schedule_ids"],
+        unsupported_map,
+    )
+    replace_state = build_shared_setup_transaction_candidate(
+        source_document,
+        scenario["existing_state"],
+        scenario["caller_selection"],
+        "replace",
+        scenario["generated_profile_ids"],
+        scenario["generated_schedule_ids"],
+        unsupported_map,
+    )
+    if scenario["expected_add_state"] != add_state:
+        fail(f"{context}: expected Add logical result differs from frozen semantics")
+    if scenario["expected_replace_state"] != replace_state:
+        fail(f"{context}: expected Replace logical result differs from frozen semantics")
+
+    rollback = require_exact_keys(
+        scenario["expected_failed_apply_rollback"],
+        {"state", "verification_required", "previous_undo_restored"},
+        f"{context}.expected_failed_apply_rollback",
+    )
+    if (
+        rollback["state"] != scenario["existing_state"]
+        or rollback["verification_required"] is not True
+        or rollback["previous_undo_restored"] is not True
+    ):
+        fail(f"{context}: failed apply must restore and verify the exact previous state")
+
+    expected_undo = require_exact_keys(
+        scenario["expected_undo"],
+        {"restored_state", "snapshot_consumed", "second_attempt"},
+        f"{context}.expected_undo",
+    )
+    restored_add = undo_shared_setup_transaction_candidate(add_state)
+    restored_replace = undo_shared_setup_transaction_candidate(replace_state)
+    if (
+        restored_add != expected_undo["restored_state"]
+        or restored_replace != expected_undo["restored_state"]
+        or expected_undo["restored_state"] != scenario["existing_state"]
+        or expected_undo["snapshot_consumed"] is not True
+        or expected_undo["second_attempt"] != "no_undo_snapshot"
+    ):
+        fail(f"{context}: Undo must restore exactly once and consume its snapshot")
+    try:
+        undo_shared_setup_transaction_candidate(restored_add)
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: replayed Undo must fail after snapshot consumption")
+
+    local_environment = require_exact_keys(
+        scenario["local_environment"],
+        {"destination_store_marker", "secure_store_marker"},
+        f"{context}.local_environment",
+    )
+    if not all(
+        isinstance(value, str) and value.startswith("native-")
+        for value in local_environment.values()
+    ):
+        fail(f"{context}.local_environment: markers must be explicitly synthetic and local")
+    if scenario["expected_unmodified_local_environment"] != local_environment:
+        fail(f"{context}: destination and secure stores must remain unchanged")
+
+    local_native_values: set[str] = set()
+
+    def collect_local_values(value: Any) -> None:
+        if isinstance(value, dict):
+            for child in value.values():
+                collect_local_values(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect_local_values(child)
+        elif isinstance(value, str) and value.startswith(("native-", "local-")):
+            local_native_values.add(value)
+
+    collect_local_values(scenario)
+    validate_shared_setup_public_artifact_isolation(
+        source_document,
+        local_native_values,
+        f"{context}.source_document.public_isolation",
+    )
+    for fixture_name in (
+        "apple-shared-setup-v2.json",
+        "android-shared-setup-v2.json",
+    ):
+        canonical_path = repository_path(
+            root,
+            f"packages/contracts/shared-setup/v2/fixtures/{fixture_name}",
+            f"{context}.canonical_artifact",
+        )
+        validate_shared_setup_writer_fixture(root, canonical_path)
+        validate_shared_setup_public_artifact_isolation(
+            load_json(canonical_path, f"{context}.{fixture_name}"),
+            local_native_values,
+            f"{context}.{fixture_name}.public_isolation",
+        )
+
+
 def validate_provider_sections_fixture(root: Path, path: Path) -> None:
     context = "healthmd.provider_sections v1 fixture"
     payload = require_exact_keys(load_json(path, context), {"whoop"}, context)
@@ -3273,7 +3980,10 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             elif identifier == "healthmd.provider_sections":
                 validate_provider_sections_fixture(root, fixture_path)
             elif identifier == SHARED_SETUP_SCHEMA:
-                validate_shared_setup_writer_fixture(root, fixture_path)
+                if fixture_path.name == "transaction-scenarios-v1.json":
+                    validate_shared_setup_transaction_scenario_fixture(root, fixture_path)
+                else:
+                    validate_shared_setup_writer_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
             elif identifier == "healthmd.rollup_summary":

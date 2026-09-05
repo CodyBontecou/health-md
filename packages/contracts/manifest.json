@@ -354,7 +354,7 @@
       "id": "healthmd.shared_setup",
       "version": 2,
       "status": "deferred",
-      "summary": "Bounded named-profile Apple/Android portable setup bundle with exact v2 platform extensions; canonicalization remains deferred pending native transactions, physical-device interoperability, and accessibility QA.",
+      "summary": "Bounded named-profile Apple/Android portable setup bundle with exact v2 platform extensions and language-neutral Add/Replace/Undo semantics; canonicalization remains deferred pending native integration, physical-device interoperability, and accessibility QA.",
       "specification": "packages/contracts/shared-setup/v2/contract.md",
       "authorities": [
         "packages/contracts/shared-setup/v2/contract.md",
@@ -421,6 +421,12 @@
           "path": "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
           "sha256": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
           "provenance": "Reviewed one-line synthetic Android-origin named-profile bundle covering compatibility and platform-distinct raw-snapshot modes, complete legacy data-type filters, and inert destination/schedule intent; contains no health records, user/account/device identity, native IDs, credentials, grants, pairings, or runtime state.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json",
+          "sha256": "2f72266daa4ac8d0a61e724b7eb9cada5528593d50f5b8f0de28dff4bb5d9deb",
+          "provenance": "Reviewed deterministic synthetic local-only transaction scenario for explicit selection normalization, Add/Replace materialization, disabled unbound imports, per-profile sidecar preservation, verified rollback, and one-shot Undo. Native IDs and runtime sentinels are confined to the scenario envelope; its embedded public v2 DTO and both canonical v2 artifact fixtures are recursively checked for identity, credential, grant, native path/URI, runtime, health-data, and operation-state leakage.",
           "mirrors": []
         },
         {
