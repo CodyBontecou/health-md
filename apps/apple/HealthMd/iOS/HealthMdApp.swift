@@ -135,7 +135,7 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings: AdvancedExportSettings
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var healthKitManager = HealthKitManager.shared
-    @StateObject private var syncService = SyncService()
+    @StateObject private var syncService: SyncService
     @StateObject private var directCLIService: IPhoneDirectCLIService
     @StateObject private var directWakeManager = IPhoneDirectWakeManager()
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
@@ -164,16 +164,22 @@ struct HealthMdApp: App {
         let advancedSettings = AdvancedExportSettings()
         let apiExportSettings = APIExportSettings()
         let directWakeManager = IPhoneDirectWakeManager()
+        let syncService = SyncService()
         _advancedSettings = StateObject(wrappedValue: advancedSettings)
         _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
         _directWakeManager = StateObject(wrappedValue: directWakeManager)
+        _syncService = StateObject(wrappedValue: syncService)
         _directCLIService = StateObject(wrappedValue: IPhoneDirectCLIService(wakeManager: directWakeManager))
         _configurationProtection = StateObject(wrappedValue: ConfigurationProtectionManager())
         // Production Shared Setup v2 wiring: the durable Add/Replace/Undo
         // transaction and the verified destination-rebind execution gate run
-        // against the standard defaults with no verification overrides.
-        // Unit tests construct their own coordinators over isolated suites,
-        // so the app-hosted test process keeps the adapter absent and the
+        // against the standard defaults with no verification overrides. The
+        // review flow's in-flow API-credential confirmation resolves the
+        // lazily built production export profile coordinator through the weak
+        // bridge (ContentView registers it), and its connected-Mac rows read
+        // read-only pairing facts from the shared sync service. Unit tests
+        // construct their own coordinators over isolated suites, so the
+        // app-hosted test process keeps the adapter absent and the
         // fail-closed no-adapter behavior stays observable.
         let sharedSetupV2Service = TestMode.isUnitTesting
             ? nil
@@ -181,7 +187,15 @@ struct HealthMdApp: App {
         _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
             settings: advancedSettings,
             apiExportSettings: apiExportSettings,
-            v2Adapter: sharedSetupV2Service.map(SharedSetupV2CoordinatorAdapter.production)
+            v2Adapter: sharedSetupV2Service.map { service in
+                SharedSetupV2CoordinatorAdapter.production(
+                    service,
+                    exportProfiles: { SharedSetupV2ExportProfileBridge.current },
+                    connectedMacState: {
+                        SharedSetupV2ConnectedMacState(syncService: syncService)
+                    }
+                )
+            }
         ))
 
         configureTransparentTabBarAppearance()

@@ -956,6 +956,11 @@ struct ContentView: View {
             initialTarget: exportTargetSelection
         )
         profileCoordinator = coordinator
+        // The Shared Setup v2 review flow runs above this view; register the
+        // single production instance so its injected confirmation closures
+        // can reach the verified rebind paths (weak — no lifetime impact, and
+        // a missing registration keeps every confirmation fail-closed).
+        SharedSetupV2ExportProfileBridge.register(coordinator)
         return coordinator
     }
 

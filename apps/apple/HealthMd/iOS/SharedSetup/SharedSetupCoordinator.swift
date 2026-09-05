@@ -52,6 +52,8 @@ enum SharedSetupV2CoordinatorError: LocalizedError, Equatable {
     case invalidSelection
     case noUndoSnapshot
     case metricRegistryUnavailable
+    case invalidCredential
+    case exportProfileServiceUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -67,7 +69,131 @@ enum SharedSetupV2CoordinatorError: LocalizedError, Equatable {
             "There is no Shared Setup v2 import to undo."
         case .metricRegistryUnavailable:
             "The metric registry is unavailable."
+        case .invalidCredential:
+            "Enter a valid local endpoint credential."
+        case .exportProfileServiceUnavailable:
+            "The export profile service is unavailable, so this endpoint cannot be confirmed here. The imported profile stays blocked."
         }
+    }
+}
+
+/// Read-only facts about one imported API endpoint identity retained in
+/// the still-loaded Shared Setup v2 plan.
+struct SharedSetupV2ImportedEndpointIdentity: Equatable, Sendable {
+    /// Human display hint (host + path), mirroring the v1 endpoint hint.
+    let displayHint: String
+    /// Canonical validated URL string — the conservative identity used to
+    /// match a locally saved endpoint row.
+    let validatedURLString: String
+}
+
+/// Honest, read-only snapshot of the connected-Mac facts Health.md tracks
+/// natively today. There is no durable multipeer pairing record in the app;
+/// the saved Manual IP connection is the only persistent pairing evidence,
+/// and the live connection state is ephemeral transport state. Every fact is
+/// reported exactly as tracked — informational only, never pairing proof.
+struct SharedSetupV2ConnectedMacState: Equatable, Sendable {
+    var hasSavedManualIPPairing: Bool
+    var savedManualIPMacName: String?
+    var isLiveConnectionActive: Bool
+    var liveConnectedPeerName: String?
+
+    init(
+        hasSavedManualIPPairing: Bool,
+        savedManualIPMacName: String?,
+        isLiveConnectionActive: Bool,
+        liveConnectedPeerName: String?
+    ) {
+        self.hasSavedManualIPPairing = hasSavedManualIPPairing
+        self.savedManualIPMacName = savedManualIPMacName
+        self.isLiveConnectionActive = isLiveConnectionActive
+        self.liveConnectedPeerName = liveConnectedPeerName
+    }
+
+    /// Production snapshot read from the shared sync service. Property reads
+    /// only — no transport work, no new entitlements, no state mutation.
+    @MainActor
+    init(syncService: SyncService) {
+        self.init(
+            hasSavedManualIPPairing: syncService.hasSavedManualIPConnection,
+            savedManualIPMacName: syncService.savedManualIPMacName,
+            isLiveConnectionActive: syncService.connectionState == .connected,
+            liveConnectedPeerName: syncService.connectedPeerName
+        )
+    }
+
+    var savedPairingCaption: String {
+        hasSavedManualIPPairing
+            ? "Saved Manual IP pairing: \(savedManualIPMacName ?? "a paired Mac")"
+            : "No saved Manual IP pairing on this device"
+    }
+
+    var liveConnectionCaption: String {
+        if isLiveConnectionActive {
+            return liveConnectedPeerName.map { "Mac connection active (\($0))" }
+                ?? "Mac connection active"
+        }
+        return "No Mac connection active right now"
+    }
+}
+
+/// Conservative identity matching between an imported API endpoint and a
+/// locally saved endpoint row. Any parse failure, non-http(s) scheme, or
+/// component mismatch — scheme, host, effective port, path, query — means NO
+/// match: the review stays fail-closed and points at export settings rather
+/// than guessing a destination.
+enum SharedSetupV2EndpointIdentity {
+    static func localRowURL(
+        _ rowURLString: String,
+        matchesImportedURLString importedURLString: String
+    ) -> Bool {
+        guard let row = URLComponents(
+            string: rowURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        ),
+            let imported = URLComponents(
+                string: importedURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+            ),
+            let rowScheme = row.scheme?.lowercased(),
+            let importedScheme = imported.scheme?.lowercased(),
+            rowScheme == importedScheme,
+            rowScheme == "https" || rowScheme == "http",
+            let rowHost = row.host?.lowercased(),
+            let importedHost = imported.host?.lowercased(),
+            rowHost == importedHost,
+            effectivePort(of: row, scheme: rowScheme)
+                == effectivePort(of: imported, scheme: importedScheme),
+            row.query == imported.query else {
+            return false
+        }
+        return normalizedPath(row.path) == normalizedPath(imported.path)
+    }
+
+    /// A nil port means the scheme default; an explicit default port equals
+    /// the implicit one. Non-default ports must match exactly.
+    private static func effectivePort(of components: URLComponents, scheme: String) -> Int {
+        components.port ?? (scheme == "https" ? 443 : 80)
+    }
+
+    private static func normalizedPath(_ path: String) -> String {
+        path.isEmpty ? "/" : path
+    }
+}
+
+/// Process-wide, weak production bridge to the lazily constructed
+/// `ExportProfileCoordinator` owned by the main UI. The Shared Setup review
+/// flow is presented above the tab view in `HealthMdApp`, while the export
+/// profile coordinator is built lazily inside `ContentView`; this bridge lets
+/// the injected production closures reach the single production instance —
+/// and only that instance — without duplicating its stores or re-implementing
+/// its verified rebind path. Weak by design: the bridge never extends the
+/// coordinator's lifetime, and a missing registration keeps every in-flow
+/// API endpoint confirmation honestly unavailable (fail closed).
+@MainActor
+enum SharedSetupV2ExportProfileBridge {
+    static weak var current: ExportProfileCoordinator?
+
+    static func register(_ coordinator: ExportProfileCoordinator) {
+        current = coordinator
     }
 }
 
@@ -89,6 +215,25 @@ struct SharedSetupV2CoordinatorAdapter {
     /// v2 Undo, no rebind claim.
     var isExecutionBlocked: (@MainActor (UUID) -> Bool)? = nil
     var confirmRebind: (@MainActor (UUID, SharedSetupV2RebindConfirmation) throws -> Bool)? = nil
+    /// Optional production surface for the in-flow API-credential
+    /// confirmation. `localAPIEndpointID` resolves the single local endpoint
+    /// row whose identity conservatively matches an imported endpoint; nil
+    /// means no honest match exists. `confirmAPIEndpointRebind` persists a
+    /// fresh local credential through the destination store's Keychain-backed
+    /// token slot and then runs the ONLY verified rebind path on the
+    /// production `ExportProfileCoordinator`. Absent closures surface honest
+    /// unavailability — nothing in this flow may guess a destination or clear
+    /// a blocked identity without them.
+    var localAPIEndpointID: (@MainActor (String) -> UUID?)? = nil
+    var confirmAPIEndpointRebind: (@MainActor (
+        UUID,
+        UUID,
+        String
+    ) throws -> Bool)? = nil
+    /// Optional read-only connected-Mac pairing facts for the review rows.
+    /// Informational only; the explicit attestation confirmation remains the
+    /// only path that can clear a connected-Mac block.
+    var connectedMacState: (@MainActor () -> SharedSetupV2ConnectedMacState?)? = nil
 }
 
 extension SharedSetupV2CoordinatorAdapter {
@@ -126,6 +271,58 @@ extension SharedSetupV2CoordinatorAdapter {
                 try service.confirmRebind(profileID: profileID, confirmation: confirmation)
             }
         )
+    }
+
+    /// Production wiring for the in-flow API-credential confirmation and the
+    /// connected-Mac pairing-state display. `exportProfiles` lazily resolves
+    /// the single production export-profile coordinator (nil keeps the
+    /// affordance honestly unavailable); `connectedMacState` supplies
+    /// read-only native pairing facts. The verified paths stay exactly the
+    /// coordinator's — nothing here re-implements binding, rollback, or the
+    /// execution gate.
+    static func production(
+        _ service: SharedSetupV2TransactionAdapter,
+        exportProfiles: @escaping @MainActor () -> ExportProfileCoordinator?,
+        connectedMacState: @escaping @MainActor () -> SharedSetupV2ConnectedMacState?
+    ) -> SharedSetupV2CoordinatorAdapter {
+        var adapter = production(service)
+        adapter.localAPIEndpointID = { importedEndpointURLString in
+            guard let exportProfiles = exportProfiles() else { return nil }
+            return exportProfiles.destinationStore.apiEndpoints
+                .first { row in
+                    SharedSetupV2EndpointIdentity.localRowURL(
+                        row.endpointURLString,
+                        matchesImportedURLString: importedEndpointURLString
+                    )
+                }?.id
+        }
+        adapter.confirmAPIEndpointRebind = { profileID, endpointID, freshCredential in
+            guard let exportProfiles = exportProfiles(),
+                  let row = exportProfiles.destinationStore.apiEndpoint(id: endpointID) else {
+                throw SharedSetupV2CoordinatorError.exportProfileServiceUnavailable
+            }
+            // Reuse the destination store's Keychain-backed token slot — the
+            // same verified storage path the profile editor uses. The upsert
+            // resolves by the row's own URL string, so the only durable change
+            // is that row's credential; a different resolved row id means the
+            // row changed concurrently and fails closed without clearing the
+            // blocked identity.
+            guard let storedEndpointID = exportProfiles.importAPIEndpointSelection(
+                name: row.name,
+                endpointURLString: row.endpointURLString,
+                bearerToken: freshCredential
+            ), storedEndpointID == endpointID else {
+                throw SharedSetupV2ExecutionGateError.persistenceVerificationFailed
+            }
+            try exportProfiles.confirmAPIEndpointRebind(
+                profileID: profileID,
+                endpointID: endpointID,
+                credentialsConfirmed: true
+            )
+            return true
+        }
+        adapter.connectedMacState = connectedMacState
+        return adapter
     }
 
     /// Honest result mapping for a successful Add/Replace. Counts, identities,
@@ -585,6 +782,85 @@ final class SharedSetupCoordinator: ObservableObject {
         v2ResultWasUndo = false
         v2ReboundProfileIDs = []
         isFlowPresented = false
+    }
+
+    /// True only when the installed adapter exposes the complete in-flow API
+    /// credential confirmation path (conservative identity match plus the
+    /// verified rebind). Anything less stays honestly unavailable.
+    var isV2APIEndpointRebindAvailable: Bool {
+        guard let v2Adapter else { return false }
+        return v2Adapter.localAPIEndpointID != nil && v2Adapter.confirmAPIEndpointRebind != nil
+    }
+
+    /// Imported API endpoint identity for one review row, read from the
+    /// still-loaded v2 plan. Nil keeps the row fail-closed — the flow never
+    /// guesses an endpoint identity that is not retained.
+    func importedV2APIEndpoint(
+        for review: SharedSetupV2ImportedProfileReview
+    ) -> SharedSetupV2ImportedEndpointIdentity? {
+        guard case .v2(let plan) = loadedPreview,
+              let profile = plan.document.profiles.first(where: {
+                  $0.bundleID == review.sourceBundleID
+              }),
+              let endpoint = profile.destination.apiEndpoint,
+              let validatedURLString = endpoint.validatedURLString else {
+            return nil
+        }
+        return SharedSetupV2ImportedEndpointIdentity(
+            displayHint: "\(endpoint.host)\(endpoint.path)",
+            validatedURLString: validatedURLString
+        )
+    }
+
+    /// The local endpoint row conservatively matching an imported endpoint
+    /// identity, or nil when no honest match exists (fail closed).
+    func matchingV2LocalAPIEndpointID(forImportedURLString url: String) -> UUID? {
+        v2Adapter?.localAPIEndpointID?(url)
+    }
+
+    /// Read-only native connected-Mac pairing facts for the review rows,
+    /// when the installed adapter supplies them.
+    var v2ConnectedMacState: SharedSetupV2ConnectedMacState? {
+        v2Adapter?.connectedMacState?()
+    }
+
+    /// Routes one explicit API-endpoint rebind through the installed verified
+    /// production path. The credential is validated with the same bounds as
+    /// the v1 endpoint flow (non-empty after trimming, at most 8,192
+    /// characters, no newlines or control characters) and is only ever handed
+    /// to the injected closure — this coordinator never stores it. Failures
+    /// throw, publish an error, and leave the blocked identity intact.
+    @discardableResult
+    func confirmV2APIEndpointRebind(
+        profileID: UUID,
+        endpointID: UUID,
+        credential: String
+    ) throws -> Bool {
+        guard let confirmAPIEndpointRebind = v2Adapter?.confirmAPIEndpointRebind else {
+            throw SharedSetupV2CoordinatorError.transactionUnavailable
+        }
+        let trimmed = credential.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              trimmed.count <= 8_192,
+              !trimmed.contains(where: {
+                  $0.isNewline || $0.asciiValue.map { $0 < 32 } == true
+              }) else {
+            let error = SharedSetupV2CoordinatorError.invalidCredential
+            errorMessage = error.localizedDescription
+            throw error
+        }
+        do {
+            let didRebind = try confirmAPIEndpointRebind(profileID, endpointID, trimmed)
+            if didRebind {
+                v2ReboundProfileIDs.insert(profileID)
+                errorMessage = nil
+                accessibilityAnnouncer(String(localized: "API endpoint confirmed locally"))
+            }
+            return didRebind
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
+        }
     }
 
     /// The production default deliberately remains the shipped v1 writer. A
@@ -1221,13 +1497,26 @@ struct SharedSetupFlowView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 case .apiEndpoint:
-                    Text("To rebind: configure the endpoint and enter a new credential in this profile's export settings. Credentials are never imported and this review cannot confirm them.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    v2APIEndpointRebindAffordance(for: review)
                 case .connectedMac:
                     Text("Pairing is never imported. Rebind only after this device is paired with your Mac and its export folder is ready.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    // Honest, read-only native pairing facts. Health.md tracks
+                    // no durable multipeer pairing record; the saved Manual IP
+                    // connection is the only persistent pairing evidence
+                    // in-repo, and the live connection state is ephemeral
+                    // transport state. Informational only — the explicit
+                    // attestation below remains the only path that can clear
+                    // this block.
+                    if let macState = coordinator.v2ConnectedMacState {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(macState.savedPairingCaption)
+                            Text(macState.liveConnectionCaption)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
                     if coordinator.isV2RebindAvailable {
                         Button("Confirm Paired Mac and Rebind…") {
                             v2RebindTarget = review
@@ -1251,6 +1540,47 @@ struct SharedSetupFlowView: View {
                 .font(.caption)
                 .foregroundStyle(.green)
             }
+        }
+    }
+
+    /// In-flow API-credential confirmation affordance for one blocked
+    /// imported API-endpoint profile. The imported identity is displayed
+    /// exactly as the loaded plan retains it; a credential entry is offered
+    /// ONLY against a local endpoint row that conservatively matches that
+    /// identity. Without the injected verified path — or without a matching
+    /// local row — the row stays fail-closed and points at export settings.
+    @ViewBuilder
+    private func v2APIEndpointRebindAffordance(
+        for review: SharedSetupV2ImportedProfileReview
+    ) -> some View {
+        if coordinator.isV2APIEndpointRebindAvailable {
+            if let identity = coordinator.importedV2APIEndpoint(for: review) {
+                if let endpointID = coordinator.matchingV2LocalAPIEndpointID(
+                    forImportedURLString: identity.validatedURLString
+                ) {
+                    SharedSetupV2EndpointCredentialConfirmation(
+                        coordinator: coordinator,
+                        profileID: review.id,
+                        endpointID: endpointID,
+                        identityHint: identity.displayHint
+                    )
+                } else {
+                    Text("No saved API endpoint on this device matches \(identity.displayHint). Add this endpoint in the profile's export settings first — this review never creates or guesses a destination.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("The imported endpoint identity is no longer available. Configure the endpoint in this profile's export settings.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text("To rebind: configure the endpoint and enter a new credential in this profile's export settings. Credentials are never imported and this review cannot confirm them.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("Explicit endpoint confirmation is not available in this flow.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -1386,6 +1716,64 @@ private struct SharedSetupEndpointConfirmation: View {
                 }
                 .disabled(authorization.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+        }
+    }
+}
+
+/// View-local credential entry model for the v2 in-flow API endpoint
+/// confirmation. It holds only the typed string; validation of the attempt
+/// and every persistence decision live in the coordinator's verified path.
+@MainActor
+final class SharedSetupV2CredentialEntryModel: ObservableObject {
+    @Published var authorization = ""
+
+    var canConfirm: Bool {
+        !authorization.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// The attempt is over after every confirm tap — success or failure —
+    /// so the typed secret never lingers in the flow.
+    func reset() {
+        authorization = ""
+    }
+}
+
+/// In-flow credential confirmation for one blocked imported API endpoint —
+/// the v2 counterpart of the v1 `SharedSetupEndpointConfirmation`. The typed
+/// credential is handed only to the coordinator's injected verified rebind
+/// path and is never stored by the flow; the field resets after every
+/// attempt.
+private struct SharedSetupV2EndpointCredentialConfirmation: View {
+    @ObservedObject var coordinator: SharedSetupCoordinator
+    let profileID: UUID
+    let endpointID: UUID
+    let identityHint: String
+    @StateObject private var entry = SharedSetupV2CredentialEntryModel()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(identityHint).font(.caption.monospaced()).textSelection(.enabled)
+            Text("Confirm this endpoint by entering a new local credential. Credentials are never imported and existing credentials are never inherited.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            SecureField("Bearer token or Authorization value", text: $entry.authorization)
+                .textContentType(.password)
+                .privacySensitive()
+                .accessibilityLabel("New local API endpoint credential")
+            Button("Confirm Endpoint and Save Credential") {
+                do {
+                    _ = try coordinator.confirmV2APIEndpointRebind(
+                        profileID: profileID,
+                        endpointID: endpointID,
+                        credential: entry.authorization
+                    )
+                } catch {
+                    // The coordinator publishes errorMessage; the profile
+                    // stays blocked until a verified rebind succeeds.
+                }
+                entry.reset()
+            }
+            .disabled(!entry.canConfirm)
         }
     }
 }
