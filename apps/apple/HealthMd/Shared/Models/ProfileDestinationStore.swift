@@ -56,6 +56,29 @@ struct SavedAPIEndpoint: Codable, Identifiable, Equatable {
     }
 }
 
+/// A saved Agent Data gateway destination. Gateways carry no credential in
+/// v1, so the Codable payload is the whole configuration; the endpoint URL
+/// is validated and displayed through `AgentDataGatewayEndpoint`'s
+/// health-free helpers.
+struct SavedAgentDataGateway: Codable, Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var endpointURLString: String
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        endpointURLString: String,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.name = name
+        self.endpointURLString = endpointURLString
+        self.createdAt = createdAt
+    }
+}
+
 /// Multi-destination persistence for export profiles: any number of folder
 /// bookmarks and API endpoints, each referenced by stable UUID from an
 /// `ExportProfile`. The legacy single-vault/single-endpoint state remains
@@ -73,6 +96,7 @@ final class ProfileDestinationStore: ObservableObject {
     nonisolated deinit {}
     @Published private(set) var vaults: [SavedVaultDestination]
     @Published private(set) var apiEndpoints: [SavedAPIEndpoint]
+    @Published private(set) var agentDataGateways: [SavedAgentDataGateway]
 
     private let userDefaults: UserDefaults
     private let keychain: any KeychainStoring
@@ -80,6 +104,7 @@ final class ProfileDestinationStore: ObservableObject {
     private enum Key {
         static let vaults = "exportProfileDestinations.vaults"
         static let apiEndpoints = "exportProfileDestinations.apiEndpoints"
+        static let agentDataGateways = "exportProfileDestinations.agentDataGateways"
     }
 
     private static func apiTokenKey(for id: UUID) -> String {
@@ -108,6 +133,13 @@ final class ProfileDestinationStore: ObservableObject {
         } else {
             apiEndpoints = []
         }
+
+        if let data = userDefaults.data(forKey: Key.agentDataGateways),
+           let decoded = try? JSONDecoder().decode([SavedAgentDataGateway].self, from: data) {
+            agentDataGateways = decoded
+        } else {
+            agentDataGateways = []
+        }
     }
 
     // MARK: - Lookup
@@ -127,6 +159,12 @@ final class ProfileDestinationStore: ObservableObject {
            decoded != apiEndpoints {
             apiEndpoints = decoded
         }
+
+        if let data = userDefaults.data(forKey: Key.agentDataGateways),
+           let decoded = try? JSONDecoder().decode([SavedAgentDataGateway].self, from: data),
+           decoded != agentDataGateways {
+            agentDataGateways = decoded
+        }
     }
 
     func vault(id: UUID?) -> SavedVaultDestination? {
@@ -141,6 +179,11 @@ final class ProfileDestinationStore: ObservableObject {
     func apiEndpoint(id: UUID?) -> SavedAPIEndpoint? {
         guard let id else { return nil }
         return apiEndpoints.first { $0.id == id }
+    }
+
+    func agentDataGateway(id: UUID?) -> SavedAgentDataGateway? {
+        guard let id else { return nil }
+        return agentDataGateways.first { $0.id == id }
     }
 
     // MARK: - Vault CRUD
@@ -273,6 +316,46 @@ final class ProfileDestinationStore: ObservableObject {
         persistAPIEndpoints()
     }
 
+    // MARK: - Agent Data gateway CRUD
+
+    /// Adds or updates a gateway destination keyed by the normalized endpoint
+    /// URL. Re-entering an already-saved URL reuses its gateway row. Gateways
+    /// carry no credential in v1, so there is no Keychain slot to maintain.
+    @discardableResult
+    func upsertAgentDataGateway(
+        name: String,
+        endpointURLString: String
+    ) -> SavedAgentDataGateway {
+        let trimmedURL = endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let existing = agentDataGateways.first(where: {
+            $0.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare(trimmedURL) == .orderedSame
+        }) {
+            if existing.endpointURLString != trimmedURL || existing.name != name {
+                var updated = existing
+                updated.name = name
+                updated.endpointURLString = trimmedURL
+                if let index = agentDataGateways.firstIndex(where: { $0.id == existing.id }) {
+                    agentDataGateways[index] = updated
+                    persistAgentDataGateways()
+                }
+            }
+            return existing
+        }
+
+        let gateway = SavedAgentDataGateway(name: name, endpointURLString: trimmedURL)
+        agentDataGateways.append(gateway)
+        persistAgentDataGateways()
+        return gateway
+    }
+
+    /// Removes a gateway destination. Profiles still referencing its id
+    /// resolve to nil at runtime.
+    func deleteAgentDataGateway(id: UUID) {
+        agentDataGateways.removeAll { $0.id == id }
+        persistAgentDataGateways()
+    }
+
     // MARK: - Persistence
 
     private func persistVaults() {
@@ -284,6 +367,12 @@ final class ProfileDestinationStore: ObservableObject {
     private func persistAPIEndpoints() {
         if let encoded = try? JSONEncoder().encode(apiEndpoints) {
             userDefaults.set(encoded, forKey: Key.apiEndpoints)
+        }
+    }
+
+    private func persistAgentDataGateways() {
+        if let encoded = try? JSONEncoder().encode(agentDataGateways) {
+            userDefaults.set(encoded, forKey: Key.agentDataGateways)
         }
     }
 }
