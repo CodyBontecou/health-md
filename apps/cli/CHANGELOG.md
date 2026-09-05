@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add the Health.md-owned SQLite Agent Data store: `healthmd data import --database --directory`
+  ingests recognized export artifacts into a versioned, non-destructive local database (idempotent
+  re-imports, supersession bookkeeping without deletion, exact stored bytes) and
+  `healthmd mcp serve-data --database` serves the identical five-tool grant/query/response contract
+  with `database` receipts, read-only connections, and SHA-256 verification of every returned byte.
 - Add the first data-only Agent Data vertical slice: versioned metric/source/date/time grants,
   storage-neutral read-only operations, a verified external index for existing Apple/Android JSON
   and NDJSON exports, and the separate five-tool `healthmd mcp serve-data` stdio surface. Direct
