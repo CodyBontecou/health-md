@@ -71,6 +71,12 @@ struct SharedSetupV2TransactionResult: Equatable, Sendable {
     var importedScheduleCount: Int
 }
 
+struct SharedSetupV2UndoResult: Equatable, Sendable {
+    var restoredProfileIDs: [UUID]
+    var activeProfileID: UUID?
+    var restoredScheduleCount: Int
+}
+
 /// Pure selection and materialization helpers. They never touch defaults,
 /// destination stores, Keychain, automation, or live settings.
 enum SharedSetupV2AppleProfileMaterializer {
@@ -667,7 +673,7 @@ final class SharedSetupV2ProfileTransaction {
         )
     }
 
-    func undo() throws -> SharedSetupV2TransactionResult {
+    func undo() throws -> SharedSetupV2UndoResult {
         guard let undoData = userDefaults.data(forKey: Self.undoKey),
               undoData.count <= Self.maximumUndoBytes,
               let snapshot = try? decoder().decode(UndoSnapshot.self, from: undoData),
@@ -707,11 +713,10 @@ final class SharedSetupV2ProfileTransaction {
             throw error
         }
 
-        return SharedSetupV2TransactionResult(
-            mode: .replace,
-            importedProfileIDs: [],
+        return SharedSetupV2UndoResult(
+            restoredProfileIDs: restored.profiles.map(\.id),
             activeProfileID: restored.activeProfileID,
-            importedScheduleCount: 0
+            restoredScheduleCount: restored.schedules.count
         )
     }
 

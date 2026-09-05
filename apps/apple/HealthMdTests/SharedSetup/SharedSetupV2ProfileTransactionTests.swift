@@ -244,8 +244,11 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         XCTAssertNotEqual(fiveKeyState(), prior)
         XCTAssertTrue(transaction.canUndo)
 
-        _ = try transaction.undo()
+        let undoResult = try transaction.undo()
 
+        XCTAssertEqual(undoResult.restoredProfileIDs, [oldID])
+        XCTAssertEqual(undoResult.activeProfileID, oldID)
+        XCTAssertEqual(undoResult.restoredScheduleCount, 1)
         XCTAssertEqual(fiveKeyState(), prior, "Undo restores exact prior bytes and absence")
         XCTAssertFalse(transaction.canUndo)
         XCTAssertThrowsError(try transaction.undo()) { error in
