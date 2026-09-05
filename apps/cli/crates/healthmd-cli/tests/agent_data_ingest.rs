@@ -20,8 +20,7 @@ const COMPLETE_DAY_SHA256: &str =
 /// Synthetic finalized partial daily export for the same owner date.
 const PARTIAL_DAY: &str = r#"{"schema":"healthmd.health_data","schema_version":8,"date":"2026-03-15","type":"health-data","raw_capture_status":"partial","unit_system":"metric","units":{},"activity":{"steps":9999}}"#;
 /// SHA-256 of [`PARTIAL_DAY`].
-const PARTIAL_DAY_SHA256: &str =
-    "755f2eaea025776e4239a28c802de28f2db13b2c9d27a2494b9ad562eba4cfe3";
+const PARTIAL_DAY_SHA256: &str = "755f2eaea025776e4239a28c802de28f2db13b2c9d27a2494b9ad562eba4cfe3";
 
 struct Layout {
     root: tempfile::TempDir,
@@ -50,11 +49,8 @@ impl Layout {
 
     fn grant(&self) -> PathBuf {
         let path = self.root.path().join("grant.json");
-        std::fs::write(
-            &path,
-            &serde_json::to_string(&grant()).expect("grant JSON"),
-        )
-        .expect("grant write");
+        std::fs::write(&path, &serde_json::to_string(&grant()).expect("grant JSON"))
+            .expect("grant write");
         path
     }
 }
@@ -91,7 +87,11 @@ fn manifest(contents_sha256: &str, byte_count: usize, completeness: Value) -> St
 }
 
 fn complete_manifest_for(contents: &str) -> String {
-    manifest(&digest(contents), contents.len(), json!({"type": "complete"}))
+    manifest(
+        &digest(contents),
+        contents.len(),
+        json!({"type": "complete"}),
+    )
 }
 
 fn partial_manifest_for(contents: &str) -> String {
@@ -147,12 +147,7 @@ fn json_output(output: &Output) -> Value {
 }
 
 fn sorted_keys(value: &Value) -> Vec<String> {
-    let mut keys: Vec<String> = value
-        .as_object()
-        .expect("object")
-        .keys()
-        .cloned()
-        .collect();
+    let mut keys: Vec<String> = value.as_object().expect("object").keys().cloned().collect();
     keys.sort();
     keys
 }
@@ -181,11 +176,7 @@ struct StdioSession {
 impl StdioSession {
     fn start(layout: &Layout) -> Self {
         let child = Command::new(env!("CARGO_BIN_EXE_healthmd"))
-            .args([
-                "mcp",
-                "serve-data",
-                "--database",
-            ])
+            .args(["mcp", "serve-data", "--database"])
             .arg(layout.database())
             .arg("--grant")
             .arg(layout.grant())
@@ -275,7 +266,10 @@ fn accepted_complete_upload_matches_the_receipt_fixture_grammar() {
     );
     assert_eq!(receipt["stored"]["revision_id"], COMPLETE_DAY_SHA256);
     assert_eq!(receipt["stored"]["byte_count"], COMPLETE_DAY.len() as u64);
-    assert_eq!(receipt["stored"]["completeness"], json!({"type": "complete"}));
+    assert_eq!(
+        receipt["stored"]["completeness"],
+        json!({"type": "complete"})
+    );
     let partition = &receipt["partition"];
     assert_partition_grammar(partition);
     assert_eq!(partition["owner_date"], "2026-03-15");
@@ -314,7 +308,10 @@ fn accepted_partial_is_authoritative_until_shadowed_by_a_complete_revision() {
     );
     assert_eq!(receipt["partition"]["complete_revision_present"], false);
     assert_eq!(receipt["partition"]["partial_revision_present"], true);
-    assert_eq!(receipt["partition"]["authoritative"]["revision_id"], PARTIAL_DAY_SHA256);
+    assert_eq!(
+        receipt["partition"]["authoritative"]["revision_id"],
+        PARTIAL_DAY_SHA256
+    );
     assert_eq!(
         receipt["partition"]["authoritative"]["completeness"],
         json!({"type": "partial", "finalized": true, "covered_owner_dates": ["2026-03-15"]})
@@ -394,8 +391,8 @@ fn rejected_uploads_return_the_four_stable_codes_with_grammar_receipts() {
     ));
 
     // truncated: the declared byte count disagrees with the artifact file.
-    let mut truncated = serde_json::from_str::<Value>(&complete_manifest_for(COMPLETE_DAY))
-        .expect("manifest");
+    let mut truncated =
+        serde_json::from_str::<Value>(&complete_manifest_for(COMPLETE_DAY)).expect("manifest");
     truncated
         .as_object_mut()
         .unwrap()
@@ -409,7 +406,13 @@ fn rejected_uploads_return_the_four_stable_codes_with_grammar_receipts() {
     assert_eq!(receipt["rejection"], json!({"code": "truncated"}));
     assert_eq!(
         sorted_keys(&receipt),
-        ["outcome", "partition", "rejection", "schema", "schema_version"]
+        [
+            "outcome",
+            "partition",
+            "rejection",
+            "schema",
+            "schema_version"
+        ]
     );
     assert_partition_grammar(&receipt["partition"]);
     assert_eq!(
@@ -418,8 +421,8 @@ fn rejected_uploads_return_the_four_stable_codes_with_grammar_receipts() {
     );
 
     // checksum_invalid: correct length, wrong digest.
-    let mut checksum = serde_json::from_str::<Value>(&complete_manifest_for(COMPLETE_DAY))
-        .expect("manifest");
+    let mut checksum =
+        serde_json::from_str::<Value>(&complete_manifest_for(COMPLETE_DAY)).expect("manifest");
     checksum
         .as_object_mut()
         .unwrap()
@@ -451,7 +454,10 @@ fn rejected_uploads_return_the_four_stable_codes_with_grammar_receipts() {
     );
 
     // manifest_incomplete: schema-invalid manifest document.
-    let invalid = layout.upload("invalid.json", "{\"schema\":\"healthmd.agent_data_ingest\"}");
+    let invalid = layout.upload(
+        "invalid.json",
+        "{\"schema\":\"healthmd.agent_data_ingest\"}",
+    );
     let receipt = json_output(&ingest(&layout, "{\"not\":\"a manifest\"}", &invalid));
     assert_eq!(receipt["rejection"], json!({"code": "manifest_incomplete"}));
 
