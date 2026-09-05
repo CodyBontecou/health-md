@@ -50,6 +50,82 @@ fn incomplete_public_commands_return_successful_non_network_guidance() {
 }
 
 #[test]
+fn data_group_lists_import_and_ingest() {
+    let output = run(&["data"]);
+    assert!(output.status.success());
+    let value = json_output(&output);
+    assert_eq!(value["command"], "healthmd data");
+    let commands = value["available_commands"]
+        .as_array()
+        .expect("available commands");
+    let names: Vec<&str> = commands
+        .iter()
+        .map(|command| command["command"].as_str().expect("command"))
+        .collect();
+    assert!(
+        names
+            .iter()
+            .any(|name| name.starts_with("healthmd data import"))
+    );
+    assert!(
+        names
+            .iter()
+            .any(|name| name.starts_with("healthmd data ingest"))
+    );
+}
+
+#[test]
+fn data_ingest_parse_errors_list_accepted_arguments_without_echoing_paths() {
+    let output = run(&["data", "ingest"]);
+    assert!(!output.status.success());
+    assert!(output.stderr.is_empty());
+    let value = json_output(&output);
+    assert_eq!(value["schema"], "healthmd.cli_error");
+    assert_eq!(value["error"], "invalid_request");
+    assert_eq!(value["command"], "healthmd data ingest");
+    assert_eq!(value["request_sent"], false);
+    let arguments: Vec<&str> = value["accepted_arguments"]
+        .as_array()
+        .expect("accepted arguments")
+        .iter()
+        .map(|argument| argument.as_str().expect("argument"))
+        .collect();
+    assert!(
+        arguments
+            .iter()
+            .any(|argument| argument.contains("--manifest"))
+    );
+    assert!(
+        arguments
+            .iter()
+            .any(|argument| argument.contains("--artifact"))
+    );
+}
+
+#[test]
+fn data_ingest_failures_exit_nonzero_with_health_free_recovery() {
+    let output = run(&[
+        "data",
+        "ingest",
+        "--database",
+        "relative.sqlite",
+        "--manifest",
+        "manifest.json",
+        "--artifact",
+        "day.json",
+    ]);
+    assert!(!output.status.success());
+    assert!(output.stderr.is_empty());
+    let value = json_output(&output);
+    assert_eq!(value["error"], "data_ingest_failed");
+    assert_eq!(
+        value["message"],
+        "the Agent Data database path must be absolute"
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).contains("healthmd data ingest --help"));
+}
+
+#[test]
 fn discovery_does_not_initialize_private_cli_state() {
     let temporary = tempfile::tempdir().expect("temporary root should exist");
     for (index, arguments) in [

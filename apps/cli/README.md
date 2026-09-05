@@ -439,7 +439,11 @@ The same contract is available from a Health.md-owned SQLite database: ingest ex
 `healthmd data import --database <ABSOLUTE_SQLITE_FILE> --directory <ABSOLUTE_EXPORTS_DIRECTORY>`
 (idempotent, non-destructive, supersession bookkeeping without deletion), then serve with
 `healthmd mcp serve-data --database <ABSOLUTE_SQLITE_FILE> --grant <ABSOLUTE_GRANT_JSON>`.
-Stored bytes are SHA-256-verified on every read, and retention stays user-controlled. See
+Stored bytes are SHA-256-verified on every read, and retention stays user-controlled. Single
+manifest-described uploads follow ingestion protocol v1 with
+`healthmd data ingest --database <ABSOLUTE_SQLITE_FILE> --manifest <ABSOLUTE_MANIFEST_JSON>
+--artifact <ABSOLUTE_ARTIFACT_FILE>`, which prints the health-free accepted/rejected receipt and
+never deletes stored revisions. See
 [Agent Data store](docs/agent-data.md) for the grant shape, supported artifacts, MCP host
 configuration, and exact trust boundary.
 
