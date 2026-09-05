@@ -591,7 +591,10 @@ impl TlsS3Double {
                     if accept_stopped.load(Ordering::SeqCst) {
                         break;
                     }
-                    let Ok(stream) = stream else { break };
+                    // Transient accept failures (peers resetting before the accept
+                    // completes, e.g. an environment port scanner probing freshly
+                    // bound loopback ports) must not stop the double mid-test.
+                    let Ok(stream) = stream else { continue };
                     let state = Arc::clone(&accept_state);
                     let config = Arc::clone(&config);
                     thread::spawn(move || handle_tls_connection(stream, &config, &state));

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Fail closed on stray `--bucket`/`--prefix` arguments: `healthmd mcp serve-data` now rejects
+  them health-free (exit 2, stable message) when another backing is present, instead of
+  parsing and silently ignoring them; clap's backing-conflict rule previously masked the
+  `requires` enforcement for `--directory … --bucket …` and `--database … --prefix …` shapes.
+- Keep `healthmd data ingest-serve` serving through transient accept failures: a peer
+  resetting before the accept completes (observed from environment port scanners probing
+  freshly bound loopback ports) or a signal-interrupted accept no longer stops the gateway;
+  only a genuinely unusable listener does.
+- Harden the loopback e2e harnesses against shared-machine interference: the ingestion
+  gateway scenarios serialize (parallel execution intermittently tore down established
+  loopback connections mid-exchange with every gateway healthy; serialized runs are 100%
+  stable), the test client boundedly retries transient connection refusals per the
+  contract's phone posture, the synthetic S3 doubles ignore unsigned bare-`GET /` port
+  probes (impossible store shapes) and keep accepting through transient accept errors, and
+  `INGEST_GATEWAY_STDERR_LOG=1` now captures gateway stderr per port for diagnosis.
 - Complete the agent-facing `healthmd mcp serve-data` guidance surface: parse errors now list the
   full honest argument set (the three exclusive backings `--directory` | `--database` |
   `--object-store-url` with its dispatch-required `--bucket`, `[--prefix]`, the required

@@ -141,7 +141,9 @@ healthmd mcp serve-data \
 `--object-store-url`, `--directory`, and `--database` are mutually exclusive and exactly one is
 required; `--bucket` is required with `--object-store-url` and `--prefix` optionally selects the
 bucket subtree (`exports` and `exports/` both normalize to `exports/`; omit it to serve the whole
-bucket). The optional rebuildable `--index` path applies to this backing exactly as it does to the
+bucket). `--bucket` and `--prefix` are accepted only with the object-store backing: alongside
+another backing they are rejected health-free instead of being silently ignored. The optional
+rebuildable `--index` path applies to this backing exactly as it does to the
 directory store, with the same private default location; the database store remains the only one
 that owns its index internally.
 

@@ -672,7 +672,10 @@ impl S3Double {
                     if accept_stopped.load(Ordering::SeqCst) {
                         break;
                     }
-                    let Ok(stream) = stream else { break };
+                    // Transient accept failures (peers resetting before the accept
+                    // completes, e.g. an environment port scanner probing freshly
+                    // bound loopback ports) must not stop the double mid-test.
+                    let Ok(stream) = stream else { continue };
                     let state = Arc::clone(&accept_state);
                     thread::spawn(move || handle_connection(stream, &state));
                 }
@@ -786,6 +789,20 @@ fn handle_connection(mut stream: TcpStream, state: &Arc<Mutex<DoubleState>>) {
 
     let response = {
         let mut state = state.lock().expect("double state");
+        // Environmental port scanners probe freshly bound loopback ports with a bare
+        // unsigned `GET /`. The store can never emit that shape (every request is
+        // SigV4-signed and targets a bucket path or a `?list-type=2` query), so such
+        // probes are answered and ignored: they touch no request log and no failure
+        // log. An unsigned request to any real path is still recorded as a failure.
+        let unsigned_bare_root = method == "GET"
+            && target == "/"
+            && !headers.iter().any(|(name, _)| name == "authorization");
+        if unsigned_bare_root {
+            drop(state);
+            let _ = stream.write_all(&error_response(404, "NoSuchKey", "not found"));
+            let _ = stream.flush();
+            return;
+        }
         state.request_log.push((method.clone(), target.clone()));
         if let Some(length) = headers
             .iter()

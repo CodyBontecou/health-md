@@ -28,8 +28,36 @@ use std::{
     path::PathBuf,
     process::{Child, Command, Output, Stdio},
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
+
+/// Optional stderr capture for the spawned gateways: set INGEST_GATEWAY_STDERR_LOG=1 to
+/// write each gateway's stderr to /tmp/ingest-gw-<port>.log (loopback diagnosis on a
+/// shared machine; empty files mean the gateway never reported an error).
+fn gateway_stderr_log(port: u16) -> Stdio {
+    if std::env::var_os("INGEST_GATEWAY_STDERR_LOG").is_some() {
+        std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(format!("/tmp/ingest-gw-{port}.log"))
+            .map(Stdio::from)
+            .unwrap_or_else(|_| Stdio::null())
+    } else {
+        Stdio::null()
+    }
+}
+
+/// Serialize the gateway scenarios. On shared macOS machines, parallel test execution
+/// (multiple gateway processes, probe connections, and loopback churn from sibling
+/// threads) intermittently tears down established loopback connections mid-exchange
+/// (ECONNRESET before any response byte) even while every gateway stays healthy — the
+/// same scenarios are 100% stable when serialized. The lock removes only the cross-test
+/// concurrency; every receipt and error assertion is unchanged.
+fn gateway_suite_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 use serde_json::{Value, json};
 use tempfile::TempDir;
@@ -205,7 +233,25 @@ fn send(
 }
 
 fn connect(port: u16) -> TcpStream {
-    TcpStream::connect(("127.0.0.1", port)).expect("connect to the ingestion gateway")
+    // Boundedly retry transient refusals (gateway startup latency, a momentarily full
+    // accept backlog under parallel suite load). This mirrors the contract's client
+    // posture — the phone retries transport failures — and never weakens any receipt
+    // assertion.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        match TcpStream::connect(("127.0.0.1", port)) {
+            Ok(stream) => return stream,
+            Err(error)
+                if error.kind() == std::io::ErrorKind::ConnectionRefused
+                    && Instant::now() < deadline =>
+            {
+                thread::sleep(Duration::from_millis(50));
+            }
+            Err(error) => {
+                panic!("connect to the ingestion gateway on port {port} failed: {error}")
+            }
+        }
+    }
 }
 
 /// Read and parse one complete `Content-Length`-framed HTTP/1.1 response.
@@ -341,7 +387,7 @@ impl GatewayServer {
                 .args(&arguments)
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                .stderr(gateway_stderr_log(port))
                 .spawn()
                 .expect("healthmd data ingest-serve should launch");
             if wait_for_listener(&mut child, port) {
@@ -364,7 +410,7 @@ impl GatewayServer {
             .arg(layout.database())
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stderr(gateway_stderr_log(DEFAULT_PORT))
             .spawn()
             .expect("healthmd data ingest-serve should launch");
         assert!(
@@ -498,6 +544,8 @@ fn run(arguments: &[String]) -> Output {
 
 #[test]
 fn accepted_upload_matches_the_receipt_fixture_grammar_and_is_servable() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_311, 48_313], &[]);
 
@@ -549,6 +597,8 @@ fn accepted_upload_matches_the_receipt_fixture_grammar_and_is_servable() {
 
 #[test]
 fn identical_reupload_returns_a_byte_identical_receipt_without_duplicates() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_321, 48_323], &[]);
     let manifest = manifest_for(COMPLETE_DAY.as_bytes(), &complete(), &[]);
@@ -573,6 +623,8 @@ fn identical_reupload_returns_a_byte_identical_receipt_without_duplicates() {
 
 #[test]
 fn integrity_rejections_are_protocol_outcomes_over_http_200() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_331, 48_333], &[]);
     let manifest = manifest_for(COMPLETE_DAY.as_bytes(), &complete(), &[]);
@@ -638,6 +690,8 @@ fn integrity_rejections_are_protocol_outcomes_over_http_200() {
 
 #[test]
 fn manifest_incomplete_covers_malformed_json_and_unknown_fields() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_341, 48_343], &[]);
 
@@ -689,6 +743,8 @@ fn manifest_incomplete_covers_malformed_json_and_unknown_fields() {
 
 #[test]
 fn unfinalized_partial_is_transient_over_http_and_manifest_incomplete_locally() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_351, 48_353], &[]);
     let unfinalized = json!({
@@ -736,6 +792,8 @@ fn unfinalized_partial_is_transient_over_http_and_manifest_incomplete_locally() 
 
 #[test]
 fn premature_body_close_is_a_client_connection_error_without_a_receipt() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_361, 48_363], &[]);
     let manifest = manifest_for(COMPLETE_DAY.as_bytes(), &complete(), &[]);
@@ -778,6 +836,8 @@ fn premature_body_close_is_a_client_connection_error_without_a_receipt() {
 
 #[test]
 fn transport_errors_are_health_free_code_message_json() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_371, 48_373], &[]);
 
@@ -892,6 +952,8 @@ fn transport_errors_are_health_free_code_message_json() {
 
 #[test]
 fn host_and_origin_validation_is_enforced_before_request_logic() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn(&layout, [48_381, 48_383], &[]);
     let manifest = manifest_for(COMPLETE_DAY.as_bytes(), &complete(), &[]);
@@ -933,6 +995,8 @@ fn host_and_origin_validation_is_enforced_before_request_logic() {
 
 #[test]
 fn allowlisted_origin_is_accepted() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     // Explicit --bind plus an allowlisted loopback Origin.
     let origin = "http://127.0.0.1:48393";
@@ -955,6 +1019,8 @@ fn allowlisted_origin_is_accepted() {
 
 #[test]
 fn the_default_bind_is_loopback_8791() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let layout = Layout::new();
     let server = GatewayServer::spawn_default_bind(&layout);
     let manifest = manifest_for(COMPLETE_DAY.as_bytes(), &complete(), &[]);
@@ -965,6 +1031,8 @@ fn the_default_bind_is_loopback_8791() {
 
 #[test]
 fn absolute_database_paths_are_enforced_with_health_free_errors() {
+    let _gateway_serialization = gateway_suite_lock();
+
     let output = run(&[
         "data".into(),
         "ingest-serve".into(),
