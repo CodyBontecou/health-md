@@ -234,7 +234,7 @@
 | Shared Rust core (semantic/render) | core | Deterministic post-capture semantic ingestion + frozen render formats (apple_v8, rollups, android v4/v5) | `healthmd-core/src/{semantic,render}` | ✅ ADR-0001, milestone baselines |
 | Rust output profile engine (planned) | core | Native-authoritative → Rust serialization migration, shadow gates | `product-capabilities.json` (planned) | ✅ rollout runbooks |
 | UniFFI bindings | core | Swift + Kotlin bindings, xcframework, registry adapters | `healthmd-core-uniffi`, `scripts/generate-*-bindings.sh` | ✅ |
-| Share My Setup (portable configuration) | iOS, macOS, Android | Export/review/transactionally import bounded setup profile (no health data/credentials); apply/undo/share; registry entry `planned` pending device QA (contract pre-canonical) | `Shared/SharedSetup/`, `iOS/SharedSetup/SharedSetupCoordinator.swift`; android `sharedsetup/`; contract `shared-setup/v1` | ✅ apple + android `docs/features/share-my-setup.md` (both status: needs QA) |
+| Share My Setup (portable configuration) | iOS, macOS, Android | Export/review/transactionally import bounded multi-profile setup document (no health data/credentials); Add/Replace apply, one-shot Undo, blocked-destination rebind; registry entry `planned` pending device QA (contract pre-canonical). v2 is the one and only profile contract since the 2026-09-05 sunset (ADR-0006); v1 input fails closed as unsupported | `Shared/SharedSetup/`, `iOS/SharedSetup/SharedSetupCoordinator.swift`; android `sharedsetup/`; contract `shared-setup/v2` (v1 family removed) | ✅ apple + android `docs/features/share-my-setup.md` (both status: needs QA) |
 | Semantic-input / render-input contracts | core | Internal post-capture envelope + rendering/artifact-plan contracts | `packages/contracts/{semantic-input,render-input}` | ✅ contract docs |
 | Unified v9 proposal | contract | Proposed unified Apple/Android daily contract with platform sections | `proposals/unified-health-data-v9` | ✅ RFC-0004 |
 
@@ -257,7 +257,7 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 
 ### D. Cross-platform parity flags (from `product-capabilities.json` + ledgers)
 - Range/rollup summaries: Apple available, Android planned (v9).
-- Share My Setup: planned on both (contract + code staged).
+- Share My Setup: planned on both (contract + code staged; v2-only since ADR-0006 — v1 removed, writers emit v2 exclusively, physical-device matrix outstanding).
 - Apple-only: lossless HealthKit archive, medication dose events, State of Mind, wrist temperature, hearing/symptoms, typed WHOOP section.
 - Android-only: activity intensity, planned workouts, menstruation periods, PHR/FHIR, nutrition meals, contextual source fields, skin temperature, cloud raw snapshots (Fitbit/Oura/WHOOP/Withings), raw changes backend.
 - Never equivalent (explicitly distinct): HRV SDNN vs RMSSD; wrist vs skin temperature; Apple menstrual flow vs HC period intervals.
