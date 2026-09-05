@@ -4,8 +4,9 @@ import XCTest
 
 @MainActor
 final class SharedSetupV2TransactionAdapterTests: XCTestCase {
-    // Match the repository's retention workaround for nested ObservableObject
-    // settings on older simulator runtimes.
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings is an ObservableObject
+    // with nested observable properties. Static retention avoids the older-simulator-
+    // runtimes / Swift 6 deinit crash documented in docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     private var defaults: UserDefaults!

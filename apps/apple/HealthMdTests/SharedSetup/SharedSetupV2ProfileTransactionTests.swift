@@ -7,8 +7,10 @@ import HealthMdConnectionCore
 
 @MainActor
 final class SharedSetupV2ProfileTransactionTests: XCTestCase {
-    // Match the repository's retention workaround for nested ObservableObject
-    // settings on older simulator runtimes.
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings (and retained transaction
+    // collaborators) are ObservableObjects with nested observable properties. Static
+    // retention avoids the older-simulator-runtimes / Swift 6 deinit crash documented
+    // in docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedInstances: [AnyObject] = []
 
