@@ -581,11 +581,20 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
     }
 
     func testCanonicalV2FixturesDecodeWhenContractLaneIsIntegrated() throws {
+        // Only the canonical public `healthmd.shared_setup` artifacts live here.
+        // The cycle-2 transaction scenario fixture is deliberately excluded: it is
+        // local test infrastructure with its own schema identity whose envelope
+        // must be rejected by the public v2 security validation.
+        let canonicalFixtureNames = [
+            "android-shared-setup-v2.json",
+            "apple-shared-setup-v2.json",
+        ]
         guard let directory = sharedSetupV2FixtureDirectory(),
               let fixtureURLs = try? FileManager.default.contentsOfDirectory(
                 at: directory,
                 includingPropertiesForKeys: nil
-              ).filter({ $0.pathExtension == "json" }).sorted(by: { $0.lastPathComponent < $1.lastPathComponent }),
+              ).filter({ canonicalFixtureNames.contains($0.lastPathComponent) })
+              .sorted(by: { $0.lastPathComponent < $1.lastPathComponent }),
               !fixtureURLs.isEmpty else {
             throw XCTSkip(
                 "Cycle-1 contract lane fixture is not in this isolated worktree; reconcile this test against packages/contracts/shared-setup/v2/fixtures after integration."
