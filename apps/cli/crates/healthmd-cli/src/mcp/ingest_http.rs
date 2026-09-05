@@ -149,7 +149,7 @@ pub async fn serve_ingest_gateway(options: IngestServeOptions) -> Result<(), Ing
             match stream {
                 Ok(stream) => {
                     let state = Arc::clone(&state);
-                    std::thread::spawn(move || handle_connection(stream, state));
+                    std::thread::spawn(move || handle_connection(stream, &state));
                 }
                 Err(_) => return Err(IngestServeError::Listener),
             }
@@ -188,7 +188,7 @@ fn validate_policy(options: &IngestServeOptions) -> Result<(), IngestServeError>
     let origins_are_loopback = options
         .allowed_origins
         .iter()
-        .all(|value| origin_host(value).is_some_and(|host| host_is_loopback(host)));
+        .all(|value| origin_host(value).is_some_and(host_is_loopback));
     if hosts_are_loopback && origins_are_loopback {
         Ok(())
     } else {
@@ -349,8 +349,16 @@ fn read_line_bounded(reader: &mut impl BufRead, maximum: usize) -> std::io::Resu
     }
 }
 
+/// The read outcome of one request head: complete, closed by the peer before
+/// a full head arrived, or malformed.
+enum HeadRead {
+    Head(RequestHead),
+    Closed,
+    Malformed,
+}
+
 /// Handle one connection: exactly one request, then close.
-fn handle_connection(stream: TcpStream, state: Arc<GatewayState>) {
+fn handle_connection(stream: TcpStream, state: &GatewayState) {
     if stream.set_read_timeout(Some(CONNECTION_TIMEOUT)).is_err() {
         return;
     }
@@ -358,59 +366,13 @@ fn handle_connection(stream: TcpStream, state: Arc<GatewayState>) {
         return;
     }
     let mut reader = BufReader::new(stream);
-
-    // Request line.
-    let Some(request_line) = read_line_bounded(&mut reader, MAXIMUM_HEADER_LINE_BYTES)
-        .ok()
-        .flatten()
-    else {
-        return;
-    };
-    let mut segments = request_line.split_ascii_whitespace();
-    let parsed = match (
-        segments.next(),
-        segments.next(),
-        segments.next(),
-        segments.next(),
-    ) {
-        (Some(method), Some(path), Some("HTTP/1.1"), None) => (method.to_owned(), path.to_owned()),
-        _ => {
+    let request = match read_request_head(&mut reader) {
+        HeadRead::Head(request) => request,
+        HeadRead::Closed => return,
+        HeadRead::Malformed => {
             respond_transport_error(&mut reader, 400, "bad_request", MALFORMED_REQUEST);
             return;
         }
-    };
-    let (method, path) = parsed;
-
-    // Header block.
-    let mut headers = Vec::new();
-    loop {
-        let Some(line) = read_line_bounded(&mut reader, MAXIMUM_HEADER_LINE_BYTES)
-            .ok()
-            .flatten()
-        else {
-            return;
-        };
-        if line.is_empty() {
-            break;
-        }
-        if headers.len() >= MAXIMUM_HEADER_COUNT {
-            respond_transport_error(&mut reader, 400, "bad_request", MALFORMED_REQUEST);
-            return;
-        }
-        match line.split_once(':') {
-            Some((name, value)) if !name.is_empty() => {
-                headers.push((name.trim().to_ascii_lowercase(), value.trim().to_owned()));
-            }
-            _ => {
-                respond_transport_error(&mut reader, 400, "bad_request", MALFORMED_REQUEST);
-                return;
-            }
-        }
-    }
-    let request = RequestHead {
-        method,
-        path,
-        headers,
     };
 
     // Host/Origin gate first, mirroring the data HTTP middleware posture:
@@ -420,22 +382,90 @@ fn handle_connection(stream: TcpStream, state: Arc<GatewayState>) {
         respond(&mut reader, 403, "Forbidden", None, &[]);
         return;
     }
-    if request.path != INGEST_REQUEST_PATH {
-        respond_transport_error(&mut reader, 404, "not_found", UNKNOWN_PATH);
+    let content_length = match route_transport_checks(&request) {
+        Ok(content_length) => content_length,
+        Err((status, code, message)) => {
+            respond_transport_error(&mut reader, status, code, message);
+            return;
+        }
+    };
+
+    // Read the exact declared body. A connection that closes before the full
+    // Content-Length body arrives is closed without any receipt (case 1, the
+    // phone-side retryable class).
+    let Some(body) = read_declared_body(&mut reader, content_length) else {
         return;
+    };
+    dispatch_framed_upload(&mut reader, &state.database, &body);
+}
+
+/// Parse the request line plus header block of one request.
+fn read_request_head(reader: &mut BufReader<TcpStream>) -> HeadRead {
+    // Request line.
+    let Some(request_line) = read_line_bounded(reader, MAXIMUM_HEADER_LINE_BYTES)
+        .ok()
+        .flatten()
+    else {
+        return HeadRead::Closed;
+    };
+    let mut segments = request_line.split_ascii_whitespace();
+    let parsed = if let (Some(method), Some(path), Some("HTTP/1.1"), None) = (
+        segments.next(),
+        segments.next(),
+        segments.next(),
+        segments.next(),
+    ) {
+        (method.to_owned(), path.to_owned())
+    } else {
+        return HeadRead::Malformed;
+    };
+    let (method, path) = parsed;
+
+    // Header block.
+    let mut headers = Vec::new();
+    loop {
+        let Some(line) = read_line_bounded(reader, MAXIMUM_HEADER_LINE_BYTES)
+            .ok()
+            .flatten()
+        else {
+            return HeadRead::Closed;
+        };
+        if line.is_empty() {
+            break;
+        }
+        if headers.len() >= MAXIMUM_HEADER_COUNT {
+            return HeadRead::Malformed;
+        }
+        match line.split_once(':') {
+            Some((name, value)) if !name.is_empty() => {
+                headers.push((name.trim().to_ascii_lowercase(), value.trim().to_owned()));
+            }
+            _ => return HeadRead::Malformed,
+        }
+    }
+    HeadRead::Head(RequestHead {
+        method,
+        path,
+        headers,
+    })
+}
+
+/// Apply the transport-level routing checks (path, method, framing headers,
+/// body bound, media type) and return the validated `Content-Length`.
+///
+/// # Errors
+///
+/// Returns the health-free transport error (status, code, message) of the
+/// first violated check.
+fn route_transport_checks(request: &RequestHead) -> Result<u64, (u16, &'static str, &'static str)> {
+    if request.path != INGEST_REQUEST_PATH {
+        return Err((404, "not_found", UNKNOWN_PATH));
     }
     if request.method != "POST" {
-        respond_transport_error(&mut reader, 405, "method_not_allowed", WRONG_METHOD);
-        return;
+        return Err((405, "method_not_allowed", WRONG_METHOD));
     }
     if request.header("transfer-encoding").is_some() {
-        respond_transport_error(
-            &mut reader,
-            400,
-            "chunked_encoding_unsupported",
-            CHUNKED_NOT_SUPPORTED,
-        );
-        return;
+        return Err((400, "chunked_encoding_unsupported", CHUNKED_NOT_SUPPORTED));
     }
     let content_lengths: Vec<&str> = request
         .headers
@@ -444,21 +474,13 @@ fn handle_connection(stream: TcpStream, state: Arc<GatewayState>) {
         .map(|(_, value)| value.as_str())
         .collect();
     let content_length = match content_lengths.as_slice() {
-        [single] => match single.parse::<u64>() {
-            Ok(length) => length,
-            Err(_) => {
-                respond_transport_error(&mut reader, 400, "bad_request", MALFORMED_REQUEST);
-                return;
-            }
-        },
-        _ => {
-            respond_transport_error(&mut reader, 400, "bad_request", MALFORMED_REQUEST);
-            return;
-        }
+        [single] => single
+            .parse::<u64>()
+            .map_err(|_| (400, "bad_request", MALFORMED_REQUEST))?,
+        _ => return Err((400, "bad_request", MALFORMED_REQUEST)),
     };
     if content_length > MAXIMUM_REQUEST_BYTES {
-        respond_transport_error(&mut reader, 413, "payload_too_large", BODY_TOO_LARGE);
-        return;
+        return Err((413, "payload_too_large", BODY_TOO_LARGE));
     }
     let media_type = request
         .header("content-type")
@@ -472,21 +494,23 @@ fn handle_connection(stream: TcpStream, state: Arc<GatewayState>) {
         })
         .unwrap_or_default();
     if media_type != INGEST_MEDIA_TYPE {
-        respond_transport_error(&mut reader, 415, "unsupported_media_type", WRONG_MEDIA_TYPE);
-        return;
+        return Err((415, "unsupported_media_type", WRONG_MEDIA_TYPE));
     }
+    Ok(content_length)
+}
 
-    // Read the exact declared body. A connection that closes before the full
-    // Content-Length body arrives is closed without any receipt (case 1, the
-    // phone-side retryable class).
-    let Ok(length) = usize::try_from(content_length) else {
-        return;
-    };
+/// Read exactly the declared number of body bytes; `None` closes the
+/// connection silently (case 1).
+fn read_declared_body(reader: &mut BufReader<TcpStream>, content_length: u64) -> Option<Vec<u8>> {
+    let length = usize::try_from(content_length).ok()?;
     let mut body = vec![0_u8; length];
-    if reader.read_exact(&mut body).is_err() {
-        return;
-    }
+    reader.read_exact(&mut body).ok()?;
+    Some(body)
+}
 
+/// Split the framed body and dispatch the shared ingestion path, answering
+/// HTTP 200 with the resulting receipt.
+fn dispatch_framed_upload(reader: &mut BufReader<TcpStream>, database: &Path, body: &[u8]) {
     // Framing: one `\n`-terminated manifest line followed immediately by the
     // artifact bytes. A missing or oversized manifest line is an
     // unidentifiable manifest (protocol outcome, mirroring the local
@@ -494,13 +518,13 @@ fn handle_connection(stream: TcpStream, state: Arc<GatewayState>) {
     let bound = INGEST_MANIFEST_LINE_BOUND_BYTES.min(body.len());
     let Some(newline) = body[..bound].iter().position(|byte| *byte == b'\n') else {
         let receipt = rejected_receipt(Rejection::ManifestIncomplete, None);
-        respond_receipt(&mut reader, &receipt);
+        respond_receipt(reader, &receipt);
         return;
     };
     let manifest_line = &body[..newline];
     let artifact_bytes = &body[newline + 1..];
-    let receipt = ingest_gateway_upload(&state.database, manifest_line, artifact_bytes);
-    respond_receipt(&mut reader, &receipt);
+    let receipt = ingest_gateway_upload(database, manifest_line, artifact_bytes);
+    respond_receipt(reader, &receipt);
 }
 
 const MALFORMED_REQUEST: &str =
@@ -551,6 +575,11 @@ fn reason(status: u16) -> &'static str {
 }
 
 /// Write one complete `Connection: close` response.
+///
+/// After writing, the listener half-closes its write side and drains any
+/// unread request bytes until the peer closes or the socket timeout fires,
+/// so closing with an unread request body sends a clean FIN instead of a
+/// reset that could overtake the response on the client.
 fn respond(
     reader: &mut BufReader<TcpStream>,
     status: u16,
@@ -572,6 +601,14 @@ fn respond(
     let _ = stream.write_all(response.as_bytes());
     let _ = stream.write_all(body);
     let _ = stream.flush();
+    let _ = stream.shutdown(std::net::Shutdown::Write);
+    let mut sink = [0_u8; 4_096];
+    loop {
+        match stream.read(&mut sink) {
+            Ok(0) | Err(_) => break,
+            Ok(_) => {}
+        }
+    }
 }
 
 #[cfg(test)]

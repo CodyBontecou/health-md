@@ -397,7 +397,7 @@ pub(super) fn validated_manifest(
     if matches!(surface, IngestSurface::Gateway) && unfinalized_partial_shape(&value) {
         return Err(Rejection::Transient);
     }
-    IngestManifest::from_value(value).map_err(|_| Rejection::ManifestIncomplete)
+    IngestManifest::from_value(value).map_err(|()| Rejection::ManifestIncomplete)
 }
 
 /// Ingest one manifest-described artifact upload into the `SQLite` store.
@@ -490,10 +490,9 @@ pub(super) fn ingest_gateway_upload(
     manifest_line: &[u8],
     artifact_bytes: &[u8],
 ) -> Value {
-    let manifest_value = match serde_json::from_slice::<Value>(manifest_line) {
-        Ok(value) => value,
+    let Ok(manifest_value) = serde_json::from_slice::<Value>(manifest_line) else {
         // An unparseable manifest line is unidentifiable (case 4).
-        Err(_) => return rejected_receipt(Rejection::ManifestIncomplete, None),
+        return rejected_receipt(Rejection::ManifestIncomplete, None);
     };
     let manifest = match validated_manifest(manifest_value, IngestSurface::Gateway) {
         Ok(manifest) => manifest,
