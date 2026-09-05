@@ -156,10 +156,19 @@ enum SharedSetupV2AppleProfileMaterializer {
             )
         } else {
             // There is no pre-existing local value for a fresh profile. Keep
-            // the unsupported source template only in the sidecar and install
-            // the explicit inert native standard template rather than trying
-            // to reinterpret foreign placeholders.
-            markdown = MarkdownTemplateConfig()
+            // the unsupported source text/style only in the sidecar and use
+            // the inert native standard text rather than reinterpreting foreign
+            // placeholders. Orthogonal, exactly supported presentation fields
+            // still retain their source meanings.
+            let standard = MarkdownTemplateConfig()
+            markdown = MarkdownTemplateConfig(
+                style: .standard,
+                customTemplate: standard.customTemplate,
+                sectionHeaderLevel: source.presentation.markdown.headerLevel,
+                useEmoji: source.presentation.markdown.useEmoji,
+                includeSummary: source.presentation.markdown.includeSummary,
+                bulletStyle: nativeBulletStyle(source.presentation.markdown.bulletStyle)
+            )
         }
 
         let settings = ExportSettingsSnapshot(

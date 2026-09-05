@@ -132,6 +132,63 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         XCTAssertEqual(try storedBlockedIDs(), importedIDs)
     }
 
+    func testForeignExtensionAndUnavailableMeaningRemainSidecarOnly() throws {
+        var document = try fixtureDocument(named: "android-shared-setup-v2.json")
+        document.profiles[1].presentation.markdown.originDialect = .android
+        document.profiles[1].presentation.markdown.customText = "{{android_only_token}}"
+        document.profiles[1].presentation.markdown.headerLevel = 4
+        document.profiles[1].presentation.markdown.useEmoji = true
+        document.profiles[1].presentation.markdown.includeSummary = false
+        document.profiles[1].presentation.markdown.bulletStyle = .plus
+        let plan = SharedSetupV2Mapper.preview(document, registry: fixtureRegistry())
+        XCTAssertFalse(plan.hasInvalidItems)
+        XCTAssertFalse(plan.profiles[1].installCustomTemplate)
+        XCTAssertEqual(
+            plan.profiles[1].unsupportedPreservedSemanticIDs,
+            ["android.hrv_rmssd"]
+        )
+
+        let profileID = uuid(105)
+        let transaction = makeTransaction(profileIDs: [profileID], scheduleIDs: [])
+        _ = try transaction.apply(
+            plan,
+            selectedBundleIDs: ["profile-002"],
+            mode: .replace
+        )
+
+        let native = try XCTUnwrap(storedProfiles().first)
+        XCTAssertEqual(native.id, profileID)
+        XCTAssertEqual(native.settings.metricSelection.enabledMetricIDs, [])
+        XCTAssertEqual(
+            native.settings.individualTracking.metricConfigs,
+            [
+                "sleep_core": MetricTrackingConfig(
+                    trackIndividually: false,
+                    customFolder: "entries/sleep"
+                )
+            ]
+        )
+        XCTAssertNil(native.settings.individualTracking.metricConfigs["android.hrv_rmssd"])
+        let installedMarkdown = native.settings.formatCustomization.markdownTemplate
+        XCTAssertEqual(installedMarkdown.style, .standard)
+        XCTAssertNotEqual(
+            installedMarkdown.customTemplate,
+            document.profiles[1].presentation.markdown.customText
+        )
+        XCTAssertEqual(installedMarkdown.sectionHeaderLevel, 4)
+        XCTAssertTrue(installedMarkdown.useEmoji)
+        XCTAssertFalse(installedMarkdown.includeSummary)
+        XCTAssertEqual(installedMarkdown.bulletStyle, .plus)
+        XCTAssertNil(native.folderVaultID)
+        XCTAssertNil(native.apiEndpointID)
+
+        let row = try XCTUnwrap(storedSidecar().profiles.first)
+        XCTAssertEqual(row.sourceProfile, document.profiles[1])
+        XCTAssertNotNil(row.sourceProfile.platformExtensions.android)
+        XCTAssertNil(row.sourceProfile.platformExtensions.apple)
+        XCTAssertEqual(row.unsupportedSemanticIDs, ["android.hrv_rmssd"])
+    }
+
     func testReplaceUsesSelectedOnlySourceActiveFallbackAndUndoRestoresExactFiveKeyStateOnce() throws {
         let oldID = uuid(10)
         let oldScheduleID = uuid(11)
@@ -554,7 +611,11 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
     }
 
     private func appleDocument() throws -> SharedSetupV2 {
-        try SharedSetupV2Codec.decode(Data(contentsOf: try fixtureURL()))
+        try fixtureDocument(named: "apple-shared-setup-v2.json")
+    }
+
+    private func fixtureDocument(named name: String) throws -> SharedSetupV2 {
+        try SharedSetupV2Codec.decode(Data(contentsOf: try fixtureURL(named: name)))
     }
 
     private func fixtureRegistry() -> SharedSetupMetricRegistry {
@@ -574,7 +635,8 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
                 "blood_pressure_systolic": "bp_systolic",
                 "heart_rate_avg": "avg_hr",
                 "sleep_core": "sleep_light",
-                "steps": "steps"
+                "steps": "steps",
+                "android.hrv_rmssd": "hrv"
             ],
             equivalence: [
                 "active_energy": .mappedAlias,
@@ -582,7 +644,8 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
                 "heart_rate_avg": .mappedAlias,
                 "hrv": .platformExactOrUnavailable,
                 "sleep_core": .mappedAlias,
-                "steps": .platformExactOrUnavailable
+                "steps": .platformExactOrUnavailable,
+                "android.hrv_rmssd": .platformDistinct
             ]
         )
     }
@@ -675,11 +738,11 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         return defaults.dictionaryRepresentation().filter { keys.contains($0.key) } as NSDictionary
     }
 
-    private func fixtureURL() throws -> URL {
+    private func fixtureURL(named name: String) throws -> URL {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json"
+                "packages/contracts/shared-setup/v2/fixtures/\(name)"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
