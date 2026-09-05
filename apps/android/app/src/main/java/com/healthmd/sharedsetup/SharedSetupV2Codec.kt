@@ -15,9 +15,10 @@ import kotlinx.serialization.json.encodeToJsonElement
 /**
  * Bounded version dispatcher plus the independent Shared Setup v2 codec.
  *
- * Dispatch examines only a generically preflighted JSON object. No typed v1 or v2 decode occurs
- * until `schema` and the lexical integer `schema_version` have been accepted. V1 is then delegated
- * unchanged to its existing codec and keeps its 256 KiB and v1 structural limits.
+ * Dispatch examines only a generically preflighted JSON object. No typed decode occurs until
+ * `schema` and the lexical integer `schema_version` have been accepted. Version 2 is the one
+ * and only profile contract: the pre-canonical version 1 and every other version fail closed
+ * as unsupported with the same bounded non-secret message, before any typed decoding occurs.
  */
 class SharedSetupV2Codec(
     private val registry: SharedSetupMetricRegistry = AndroidSharedSetupMetricRegistry(),
@@ -28,7 +29,6 @@ class SharedSetupV2Codec(
         encodeDefaults = true
         isLenient = false
     }
-    private val v1Codec by lazy { SharedSetupCodec(registry) }
 
     fun decode(bytes: ByteArray): SharedSetupVersionedDecodeResult {
         if (bytes.size > SHARED_SETUP_V2_MAX_BYTES) {
@@ -58,25 +58,14 @@ class SharedSetupV2Codec(
         val version = versionPrimitive?.strictIntegerOrNull()
             ?: return invalid("Shared setup schema_version must be an integer.")
 
-        return when (version) {
-            SHARED_SETUP_VERSION -> {
-                if (bytes.size > SHARED_SETUP_MAX_BYTES) {
-                    invalid("Shared Setup v1 exceeds 256 KiB.")
-                } else {
-                    when (val decoded = v1Codec.decode(bytes)) {
-                        is SharedSetupDecodeResult.Valid -> SharedSetupVersionedDecodeResult.Valid(
-                            SharedSetupDecodedDocument.V1(decoded.document),
-                        )
-                        is SharedSetupDecodeResult.Invalid -> invalid(decoded.message)
-                    }
-                }
-            }
-            SHARED_SETUP_V2_VERSION -> decodeV2(root)
-            else -> invalid("This shared setup version is not supported.")
+        return if (version == SHARED_SETUP_V2_VERSION) {
+            decodeV2(root)
+        } else {
+            invalid("This shared setup version is not supported.")
         }
     }
 
-    /** Canonical v2 only. Production v1 writing remains owned by [SharedSetupCodec]. */
+    /** Canonical v2; the sole production Shared Setup writer format. */
     fun encode(document: SharedSetupV2): ByteArray {
         validateV2Document(document)?.let { throw IllegalArgumentException(it) }
         val canonical = canonicalize(
