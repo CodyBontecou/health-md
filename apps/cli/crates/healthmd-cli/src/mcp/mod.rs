@@ -1,6 +1,7 @@
 mod data_backend;
 mod data_sqlite;
 mod direct_backend;
+mod ingest;
 
 pub use data_backend::{DataServeOptions, DataStoreOpenError, DirectoryArtifactStore};
 pub use data_sqlite::SqliteArtifactStore;
@@ -298,6 +299,27 @@ pub async fn import_data(
     tokio::task::spawn_blocking(move || data_sqlite::import_data(&database, &directory))
         .await
         .map_err(|_| DataStoreOpenError::new("the Agent Data import could not be completed"))?
+}
+
+/// Validate and store one manifest-described artifact upload (Agent Data ingestion protocol v1).
+///
+/// The local half performs strict manifest validation and integrity verification, promotes
+/// accepted bytes atomically into the SQLite store, and returns the health-free receipt.
+/// Rejected uploads (`truncated`, `transient`, `checksum_invalid`, `manifest_incomplete`) are
+/// protocol outcomes returned as receipts; grants still apply only when the database is served.
+///
+/// # Errors
+///
+/// Returns a [`DataStoreOpenError`] with a health-free reason when the argument paths or the
+/// database are unusable, so that no receipt could be produced.
+pub async fn ingest_data(
+    database: std::path::PathBuf,
+    manifest: std::path::PathBuf,
+    artifact: std::path::PathBuf,
+) -> Result<Value, DataStoreOpenError> {
+    tokio::task::spawn_blocking(move || ingest::ingest_upload(&database, &manifest, &artifact))
+        .await
+        .map_err(|_| DataStoreOpenError::new("the Agent Data ingest could not be completed"))?
 }
 
 async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(), ServeError> {

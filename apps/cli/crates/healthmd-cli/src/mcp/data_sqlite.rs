@@ -612,7 +612,7 @@ fn advance_content_revision(
     Ok(())
 }
 
-fn read_content_revision(connection: &Connection) -> Result<String, DataStoreOpenError> {
+pub(super) fn read_content_revision(connection: &Connection) -> Result<String, DataStoreOpenError> {
     connection
         .query_row(
             "SELECT value FROM store_meta WHERE key = 'content_revision'",
