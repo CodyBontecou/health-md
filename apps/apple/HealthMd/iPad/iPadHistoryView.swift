@@ -235,11 +235,19 @@ struct iPadHistoryView: View {
 
                     if !entry.partialFailures.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            iPadBrandLabel("Partial Export Warnings")
+                            // Informational omissions (for example an optional
+                            // WorkoutKit plan this device cannot decode) do not
+                            // reduce the export below full success, so the
+                            // section reads as notes rather than warnings.
+                            iPadBrandLabel(entry.isFullSuccess ? "Export Notes" : "Partial Export Warnings")
                             ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
                                 HStack(alignment: .top, spacing: 6) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Color.warning)
+                                    Image(systemName: failure.isInformational == true
+                                        ? "info.circle"
+                                        : "exclamationmark.triangle.fill")
+                                        .foregroundStyle(failure.isInformational == true
+                                            ? Color.textSecondary
+                                            : Color.warning)
                                         .font(Typography.caption())
                                     Text(failure.summary)
                                         .font(Typography.caption())

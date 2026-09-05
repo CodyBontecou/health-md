@@ -325,6 +325,72 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("1 of 1 data day"))
     }
 
+    func testEntry_informationalWorkoutPlanOmissionKeepsFullSuccess() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 3,
+            partialFailures: [
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+                    isInformational: true
+                ),
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "HealthKit workout child 154B9A3E-E019-42C1-8467-BF0278B20974:workoutPlan",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+                    isInformational: true
+                )
+            ]
+        )
+
+        XCTAssertTrue(entry.isFullSuccess)
+        XCTAssertFalse(entry.isPartialSuccess)
+        XCTAssertEqual(
+            entry.summaryDescription,
+            "Exported 3 generated file(s) from 1 data day(s)"
+        )
+        // The omission stays visible in details for transparency.
+        XCTAssertEqual(entry.partialFailures.count, 2)
+    }
+
+    func testEntry_degradingWarningStillBlocksFullSuccess() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            partialFailures: [
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+                    isInformational: true
+                ),
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "workouts",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "HealthKit query failed"
+                )
+            ]
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+    }
+
     func testEntry_partialMetricFailure_isPartialAndSummarizesWarning() {
         let entry = ExportHistoryEntry(
             source: .manual,

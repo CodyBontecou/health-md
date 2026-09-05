@@ -271,6 +271,66 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         }
     }
 
+    /// A WorkoutKit plan this device cannot decode is an optional attachment:
+    /// the workout graph still exports and the surfaced warning must be
+    /// informational so the export is not permanently degraded to Partial
+    /// (user report 2026-09-05).
+    @MainActor
+    func testUndecodableWorkoutPlanChildWarningIsInformationalAndKeepsFullSuccess() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let actualEnd = dayStart.addingTimeInterval(50 * 60)
+        let store = FakeHealthStore()
+        let planFailure = HealthKitQueryResult(
+            identifier: "\(Self.workoutUUID.uuidString):workoutPlan",
+            objectTypeIdentifier: "com.apple.health.workout-plan",
+            operation: "loadWorkoutPlan",
+            metricIDs: ["workouts"],
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            interval: HealthKitQueryInterval(startDate: dayStart, endDate: actualEnd),
+            status: .failure,
+            recordCount: 0,
+            error: HealthKitQueryError(
+                domain: "WorkoutKit.ImportError",
+                code: 3,
+                description: SystemHealthStoreAdapter.workoutPlanImportFailureDescription(
+                    for: NSError(domain: "WorkoutKit.ImportError", code: 3)
+                )!,
+                isRecoverable: true
+            ),
+            statusDescription: "workout_uuid=\(Self.workoutUUID.uuidString)"
+        )
+        store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
+            records: [
+                Self.workoutRecord(dayStart: dayStart, actualEnd: actualEnd),
+                Self.routeRecord(uuid: Self.routeUUID1, dayStart: dayStart, pointOffset: 10, simulated: false),
+            ],
+            childQueryFailures: [planFailure]
+        )
+
+        let data = try await makeManager(store: store).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: workoutSelection()
+        )
+
+        let planWarning = try XCTUnwrap(data.partialFailures.first {
+            $0.dataType.contains("HealthKit workout child")
+                && $0.dataType.contains("workoutPlan")
+        })
+        XCTAssertEqual(planWarning.isInformational, true)
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            partialFailures: data.partialFailures,
+            formatsPerDate: 1,
+            looseAggregateFileCount: 1,
+            authoritativeFileCount: 1,
+            isFileCategoryBreakdownComplete: true
+        )
+        XCTAssertTrue(result.isFullSuccess)
+    }
+
     @MainActor
     func testWorkoutChildFailureIsExplicitAndDoesNotDropSuccessfulGraph() async throws {
         let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))

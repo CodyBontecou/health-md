@@ -1578,7 +1578,8 @@ final class HealthKitManager: ObservableObject {
                         dateRangeDescription: "\(ownership.ownerDate) [\(intervalStart)..<\(intervalEnd))",
                         errorDescription: childResult.error?.description
                             ?? childResult.statusDescription
-                            ?? "Workout child query failed"
+                            ?? "Workout child query failed",
+                        isInformational: Self.isWorkoutPlanOmission(childResult)
                     )
                     if !partialFailures.contains(failure) {
                         partialFailures.append(failure)
@@ -2247,6 +2248,18 @@ final class HealthKitManager: ObservableObject {
             return false
         }
         return true
+    }
+
+    /// A workout child query for the optional WorkoutKit plan whose failure is
+    /// a recoverable import error: the workout itself and all of its samples
+    /// (routes included) exported successfully and only the structured plan —
+    /// written by another app, device, or OS version this device cannot decode —
+    /// was omitted. Such omissions are informational and must not degrade the
+    /// export status below full success.
+    private static func isWorkoutPlanOmission(_ childResult: HealthKitQueryResult) -> Bool {
+        childResult.identifier.hasSuffix(":workoutPlan")
+            && childResult.error?.domain == "WorkoutKit.ImportError"
+            && (childResult.error?.isRecoverable ?? false)
     }
 
     private static func dayRangeDescription(for date: Date) -> String {

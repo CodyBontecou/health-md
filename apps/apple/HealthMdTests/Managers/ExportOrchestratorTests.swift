@@ -248,6 +248,50 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
     }
 
+    /// Scheduled local exports must report an authoritative generated-file
+    /// count so Export History can distinguish a run that wrote files from one
+    /// that wrote none (user report 2026-09-05: scheduled runs showed the legacy
+    /// "Exported 1 of 1 data day(s)" summary while no file appeared).
+    @MainActor
+    func testExportDatesBackground_localVaultRunReportsAuthoritativeFileAccounting() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorScheduledFileAccountingVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEngineAuthorityIsFrozen: true,
+            calendarTimeZoneIdentifier: TimeZone.current.identifier
+        )
+
+        let result = await ExportOrchestrator.exportDatesBackground(
+            [date],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: snapshot.makeAdvancedExportSettings(),
+            frozenSettingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        let writtenLooseFiles = fileSystem.files.keys.filter {
+            !$0.contains("/Rollups/") && !$0.hasSuffix("data_dictionary.json")
+        }
+        XCTAssertFalse(writtenLooseFiles.isEmpty, "scheduled run must write daily files")
+        XCTAssertTrue(
+            result.hasAuthoritativeFileCount,
+            "scheduled background results must carry an authoritative file count"
+        )
+        XCTAssertEqual(result.totalFilesWritten, fileSystem.files.count)
+        XCTAssertEqual(result.looseAggregateFileCount, writtenLooseFiles.count)
+    }
+
     @MainActor
     func testBackgroundExportUsesFrozenSnapshotAndAsyncEnginePlanner() async {
         let date = HealthKitFixtures.referenceDate
@@ -1115,7 +1159,8 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.formatsPerDate, 0)
         XCTAssertEqual(result.rollupFileCount, 1)
-        XCTAssertEqual(result.totalFilesWritten, 1)
+        // Range roll-up + data dictionary (asserted below).
+        XCTAssertEqual(result.totalFilesWritten, 2)
         XCTAssertTrue(result.isFullSuccess)
         XCTAssertNil(fileSystem.files.first { path, _ in
             path.hasSuffix("/Health/2026-03-15.md")
@@ -1278,7 +1323,8 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.totalCount, 1)
         XCTAssertEqual(result.rollupFileCount, 1)
-        XCTAssertEqual(result.totalFilesWritten, 2)
+        // Markdown daily file + data dictionary + range roll-up.
+        XCTAssertEqual(result.totalFilesWritten, 3)
         XCTAssertTrue(result.failedDateDetails.isEmpty)
         XCTAssertTrue(result.isPartialSuccess)
         XCTAssertFalse(result.isFullSuccess)
