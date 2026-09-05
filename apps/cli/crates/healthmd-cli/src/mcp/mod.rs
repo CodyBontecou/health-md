@@ -1,10 +1,12 @@
 mod data_backend;
+mod data_object;
 mod data_sqlite;
 mod direct_backend;
 mod ingest;
 mod ingest_http;
 
 pub use data_backend::{DataServeOptions, DataStoreOpenError, DirectoryArtifactStore};
+pub use data_object::ObjectStoreArtifactStore;
 pub use data_sqlite::SqliteArtifactStore;
 pub use ingest_http::{IngestServeError, IngestServeOptions, serve_ingest_gateway};
 
@@ -278,8 +280,9 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
     serve_stdio(options, StdioSurface::ReadOnly).await
 }
 
-/// Serve a data-only MCP surface over stdio from an explicitly configured export directory or
-/// an imported Health.md-owned `SQLite` database.
+/// Serve a data-only MCP surface over stdio from an explicitly configured export directory,
+/// an imported Health.md-owned `SQLite` database, or a read-only S3-compatible object store
+/// bucket prefix.
 ///
 /// This server never opens mobile pairing state and never modifies stored artifacts. Its grant is
 /// enforced inside the artifact-store backend before records are returned.
@@ -339,6 +342,11 @@ fn open_data_backend(
         options @ DataServeOptions::Database { .. } => {
             Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
                 data_sqlite::SqliteArtifactStore::open(options)?,
+            )))
+        }
+        options @ DataServeOptions::ObjectStore { .. } => {
+            Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
+                data_object::ObjectStoreArtifactStore::open(options)?,
             )))
         }
     }

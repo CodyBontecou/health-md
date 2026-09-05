@@ -450,7 +450,12 @@ manifest-described uploads follow ingestion protocol v1 with
 `healthmd data ingest --database <ABSOLUTE_SQLITE_FILE> --manifest <ABSOLUTE_MANIFEST_JSON>
 --artifact <ABSOLUTE_ARTIFACT_FILE>`, which prints the health-free accepted/rejected receipt and
 never deletes stored revisions. Serve the same store as the self-hosted ingestion gateway with
-`healthmd data ingest-serve --database <ABSOLUTE_SQLITE_FILE>` on loopback `127.0.0.1:8791`. See
+`healthmd data ingest-serve --database <ABSOLUTE_SQLITE_FILE>` on loopback `127.0.0.1:8791`. The
+same read-only contract is available from an S3-compatible (Cloudflare R2) bucket prefix laid
+out like an export directory:
+`healthmd mcp serve-data --object-store-url <ENDPOINT> --bucket <NAME> [--prefix <PREFIX>]
+--grant <ABSOLUTE_GRANT_JSON>` (credentials via `HEALTHMD_OBJECT_STORE_*` environment variables;
+list/head/get requests only). See
 [Agent Data store](docs/agent-data.md) for the grant shape, supported artifacts, MCP host
 configuration, and exact trust boundary.
 

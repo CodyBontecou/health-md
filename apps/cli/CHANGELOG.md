@@ -13,6 +13,16 @@
   partial upload is the retryable `transient` class for the gateway (detected before strict
   validation) while local `data ingest` keeps `manifest_incomplete`; `record_count` stays strictly
   informational.
+- Add the third Agent Data store backing: `healthmd mcp serve-data --object-store-url
+  <ENDPOINT> --bucket <NAME> [--prefix <PREFIX>] --grant <ABSOLUTE>` serves a BYO S3-compatible
+  (Cloudflare R2) bucket prefix laid out like an export directory with the identical five-tool
+  grant/query/response contract (`object_store` receipts, already contract-sanctioned). The store
+  is strictly read-only (ListObjectsV2/HEAD/GET only, path-style), signs with hand-written AWS
+  SigV4 (UNSIGNED-PAYLOAD, zero new dependencies; RFC 4231 and AWS known-answer tested), takes
+  credentials only from `HEALTHMD_OBJECT_STORE_*` environment variables (fail closed at open),
+  and enforces the URL policy at open (`https://` off loopback, `http://` loopback-only testing).
+  Proven against a SigV4-verifying synthetic loopback double; TLS egress for real R2 endpoints
+  is honestly deferred (stable health-free transport error) until a TLS layer is wired.
 
 - Add the local Rust half of Agent Data ingestion protocol v1: `healthmd data ingest --database
   --manifest --artifact` validates one manifest-described upload (strict `agent-data-ingest` v1
