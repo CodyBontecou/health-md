@@ -11,6 +11,13 @@
   mapping covers only unreadable artifact files at dispatch time; the HTTPS transport mapping stays
   open for the gateway cycle.
 
+- Serve the Agent Data MCP surface over Streamable HTTP as well as stdio:
+  `healthmd mcp serve-data --serve-transport streamable-http` (feature-gated behind
+  `streamable-http`) exposes the identical five-tool grant/query/response contract on a
+  loopback listener using the same transport, `--bind`/`--allowed-host`/`--allowed-origin`
+  options, and loopback-only validation as the direct `mcp serve-http` surface. stdio remains
+  the default with unchanged behavior; the flag is named `--serve-transport` because the root
+  global `--transport` selects the direct mobile connection.
 - Add the Health.md-owned SQLite Agent Data store: `healthmd data import --database --directory`
   ingests recognized export artifacts into a versioned, non-destructive local database (idempotent
   re-imports, supersession bookkeeping without deletion, exact stored bytes) and

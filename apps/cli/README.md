@@ -435,6 +435,12 @@ instant, and common/lossless layer. The export directory is read-only; the rebui
 grant live outside it. Whole-artifact bytes are available only under an explicit unrestricted bulk
 grant.
 
+The same five-tool surface is also available over loopback Streamable HTTP in builds with the
+`streamable-http` feature: `healthmd mcp serve-data --serve-transport streamable-http --bind
+127.0.0.1:8787 ...` serves the identical catalog and response contracts through the same
+transport and loopback-only listener rules as `mcp serve-http`. stdio stays the default; see
+[Agent Data store](docs/agent-data.md) for the transport section.
+
 The same contract is available from a Health.md-owned SQLite database: ingest exports once with
 `healthmd data import --database <ABSOLUTE_SQLITE_FILE> --directory <ABSOLUTE_EXPORTS_DIRECTORY>`
 (idempotent, non-destructive, supersession bookkeeping without deletion), then serve with

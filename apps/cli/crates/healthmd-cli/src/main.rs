@@ -237,6 +237,17 @@ struct McpServeArgs {
     timeout_seconds: u64,
 }
 
+/// Transport selection for the Agent Data MCP server. `stdio` is the default everywhere; the
+/// Streamable HTTP value exists only in builds that compile the shared HTTP transport.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum DataServeTransport {
+    /// Newline-delimited JSON-RPC over standard input/output.
+    Stdio,
+    /// Streamable HTTP on a loopback listener (requires the `streamable-http` feature).
+    #[cfg(feature = "streamable-http")]
+    StreamableHttp,
+}
+
 #[derive(Debug, Args)]
 #[command(group(
     ArgGroup::new("data_backing")
@@ -261,6 +272,33 @@ struct McpServeDataArgs {
     /// Applies only to `--directory` backing; enforced with `--database` in the dispatcher.
     #[arg(long)]
     index: Option<PathBuf>,
+
+    /// MCP serving transport for the Agent Data server. `stdio` is the default and stays
+    /// byte-identical; `streamable-http` serves the identical five-tool surface on a loopback
+    /// listener. Named `--serve-transport` because the root global `--transport` selects the
+    /// direct mobile connection (manual-ip/nearby) and clap requires unique long names.
+    #[arg(
+        long = "serve-transport",
+        id = "serve_data_transport",
+        value_enum,
+        default_value_t = DataServeTransport::Stdio
+    )]
+    transport: DataServeTransport,
+
+    /// Loopback address for the Streamable HTTP listener.
+    #[cfg(feature = "streamable-http")]
+    #[arg(long, default_value = "127.0.0.1:8787")]
+    bind: SocketAddr,
+
+    /// Accepted Host header. Repeat for a reverse-proxy hostname during local development.
+    #[cfg(feature = "streamable-http")]
+    #[arg(long = "allowed-host")]
+    allowed_hosts: Vec<String>,
+
+    /// Accepted browser Origin. Repeat for each trusted browser-based MCP client.
+    #[cfg(feature = "streamable-http")]
+    #[arg(long = "allowed-origin")]
+    allowed_origins: Vec<String>,
 }
 
 #[cfg(feature = "streamable-http")]
@@ -795,6 +833,20 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
                 return ExitCode::from(2);
             }
         };
+        #[cfg(feature = "streamable-http")]
+        if options.transport == DataServeTransport::StreamableHttp {
+            let http_options = mcp::HttpServerOptions {
+                bind: options.bind,
+                allowed_hosts: options.allowed_hosts.clone(),
+                allowed_origins: options.allowed_origins.clone(),
+            };
+            let result = mcp::serve_data_http(backing, http_options).await;
+            if let Err(error) = result {
+                eprintln!("healthmd: {error}");
+                return ExitCode::from(1);
+            }
+            return ExitCode::SUCCESS;
+        }
         let result = mcp::serve_data(backing).await;
         if let Err(error) = result {
             eprintln!("healthmd: {error}");
@@ -3091,6 +3143,66 @@ mod tests {
             ])
             .is_ok()
         );
+
+        // --serve-transport defaults to stdio; the streamable-http value and its listener
+        // options exist only in builds that compile the shared HTTP transport (covered
+        // end-to-end in tests/agent_data_http.rs).
+        let default_transport = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-data",
+            "--directory",
+            "/tmp/healthmd-exports",
+            "--grant",
+            "/tmp/healthmd-grant.json",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(options)),
+        }) = default_transport.command
+        else {
+            panic!("expected data MCP serve command");
+        };
+        assert_eq!(options.transport, DataServeTransport::Stdio);
+        #[cfg(feature = "streamable-http")]
+        {
+            assert!(
+                Cli::try_parse_from([
+                    "healthmd",
+                    "mcp",
+                    "serve-data",
+                    "--serve-transport",
+                    "streamable-http",
+                    "--bind",
+                    "127.0.0.1:8787",
+                    "--allowed-host",
+                    "localhost:8787",
+                    "--allowed-origin",
+                    "http://127.0.0.1:3000",
+                    "--directory",
+                    "/tmp/healthmd-exports",
+                    "--grant",
+                    "/tmp/healthmd-grant.json"
+                ])
+                .is_ok()
+            );
+        }
+        #[cfg(not(feature = "streamable-http"))]
+        {
+            assert!(
+                Cli::try_parse_from([
+                    "healthmd",
+                    "mcp",
+                    "serve-data",
+                    "--serve-transport",
+                    "streamable-http",
+                    "--grant",
+                    "/tmp/grant.json"
+                ])
+                .is_err(),
+                "the streamable-http transport value requires the streamable-http feature"
+            );
+        }
 
         let schema = Cli::try_parse_from([
             "healthmd",
