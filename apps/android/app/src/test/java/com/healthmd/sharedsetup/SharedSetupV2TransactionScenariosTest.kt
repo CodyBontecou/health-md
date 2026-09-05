@@ -178,10 +178,7 @@ class SharedSetupV2TransactionScenariosTest {
             scenario.jsonObject("source_document"),
         ).encodeToByteArray()
         return when (val decoded = scenarioCodec.decode(bytes)) {
-            is SharedSetupVersionedDecodeResult.Valid -> when (val document = decoded.document) {
-                is SharedSetupDecodedDocument.V2 -> document.document
-                else -> error("Frozen scenario source document is not a v2 document")
-            }
+            is SharedSetupVersionedDecodeResult.Valid -> decoded.document
             is SharedSetupVersionedDecodeResult.Invalid ->
                 error("Frozen scenario source document failed native decode: ${decoded.message}")
         }

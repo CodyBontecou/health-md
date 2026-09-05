@@ -21,6 +21,7 @@ interface SharedSetupInstrumentationEntryPoint {
     fun sharedSetupDocumentStore(): SharedSetupDocumentStore
     fun sharedSetupCoordinator(): SharedSetupCoordinator
     fun settingsRepository(): SettingsRepository
+    fun sharedSetupV2ProductionTransaction(): SharedSetupV2ProductionTransaction
     fun scheduledProfileEntryStore(): ScheduledProfileEntryStore
     fun scheduledProfileScheduler(): ScheduledProfileScheduler
     fun exportProfileRepository(): ExportProfileRepository

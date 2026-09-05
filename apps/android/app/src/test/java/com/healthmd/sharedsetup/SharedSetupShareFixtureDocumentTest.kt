@@ -13,16 +13,15 @@ import org.junit.Test
  * SharedSetupDocumentStore.shareIntent funnels every shared byte sequence through
  * SharedSetupV2Codec.decode (see validatedVersionedBytes) and throws IllegalArgumentException on
  * any Invalid result, so the instrumentation fixture must be a production-valid Shared Setup
- * document rather than opaque filler bytes. These tests pin the frozen Android-origin v1 fixture
- * bytes, prove the exact decode the store performs accepts them, and prove share validation still
- * rejects the filler bytes the runtime test previously used.
+ * document rather than opaque filler bytes. These tests pin the frozen Android-origin v2 fixture
+ * bytes, prove the exact decode the store performs accepts them, and prove share validation
+ * still rejects the filler bytes the runtime test previously used.
  *
  * The native AndroidSharedSetupMetricRegistry cannot be constructed on the JVM, so the pinned
  * registry double below reproduces the production registry identity (version 1, sha256
  * 4597c2f1…). Because the identity matches, decode enforces the same metric-alias pinning as
- * production; the two aliases the fixture carries (android.hrv_rmssd platform_distinct, steps
- * platform_exact_or_unavailable) are asserted against the real registry on device by
- * SharedSetupAndroidRuntimeTest.registryIncludesPinnedAppleOnlyAliasEvidenceWithoutFabricatingAndroidSupport.
+ * production; the aliases the fixture carries are asserted against the real registry on device
+ * by SharedSetupAndroidRuntimeTest.registryIncludesPinnedAppleOnlyAliasEvidenceWithoutFabricatingAndroidSupport.
  */
 class SharedSetupShareFixtureDocumentTest {
     @Test
@@ -30,13 +29,13 @@ class SharedSetupShareFixtureDocumentTest {
         val bytes = fixtureFile().readBytes()
 
         assertEquals(ANDROID_FIXTURE_SHA_256, sha256(bytes))
-        assertTrue(bytes.size <= SHARED_SETUP_MAX_BYTES)
+        assertTrue(bytes.size <= SHARED_SETUP_V2_MAX_BYTES)
 
         val decoded = SharedSetupV2Codec(ShareFixtureRegistry).decode(bytes)
         assertTrue(decoded is SharedSetupVersionedDecodeResult.Valid)
-        assertTrue(
-            (decoded as SharedSetupVersionedDecodeResult.Valid).document
-                is SharedSetupDecodedDocument.V1,
+        assertEquals(
+            SHARED_SETUP_V2_VERSION,
+            (decoded as SharedSetupVersionedDecodeResult.Valid).document.schemaVersion,
         )
     }
 
@@ -48,11 +47,27 @@ class SharedSetupShareFixtureDocumentTest {
     }
 
     @Test
+    fun shareValidationFailsClosedOnAV1ShapedDocument() {
+        // Minimal v1-shaped bytes, synthesized inline: the pre-canonical v1 contract is gone,
+        // so v1 must fail closed with the bounded unsupported-version message.
+        val v1Bytes = """{"schema":"healthmd.shared_setup","schema_version":1}"""
+            .encodeToByteArray()
+
+        val decoded = SharedSetupV2Codec(ShareFixtureRegistry).decode(v1Bytes)
+
+        assertTrue(decoded is SharedSetupVersionedDecodeResult.Invalid)
+        assertEquals(
+            "This shared setup version is not supported.",
+            (decoded as SharedSetupVersionedDecodeResult.Invalid).message,
+        )
+    }
+
+    @Test
     fun instrumentationShareTestEmbedsTheCanonicalFixtureBytes() {
         val fixtureText = fixtureFile().readText()
 
         assertTrue(
-            "SharedSetupAndroidRuntimeTest must embed the canonical Android v1 fixture verbatim",
+            "SharedSetupAndroidRuntimeTest must embed the canonical Android v2 fixture verbatim",
             androidRuntimeTestSource().readText().contains(fixtureText),
         )
     }
@@ -61,7 +76,7 @@ class SharedSetupShareFixtureDocumentTest {
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     private fun fixtureFile(): File = repositoryFile(
-        "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
+        "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
     )
 
     private fun androidRuntimeTestSource(): File = repositoryFile(
@@ -89,6 +104,24 @@ class SharedSetupShareFixtureDocumentTest {
                 equivalence = "platform_distinct",
             ),
             SharedSetupRegistryBinding(
+                semanticId = "active_energy",
+                appleSelectionId = "active_energy",
+                androidSelectionId = "active_calories",
+                equivalence = "mapped_alias",
+            ),
+            SharedSetupRegistryBinding(
+                semanticId = "heart_rate_avg",
+                appleSelectionId = "heart_rate_avg",
+                androidSelectionId = "avg_hr",
+                equivalence = "mapped_alias",
+            ),
+            SharedSetupRegistryBinding(
+                semanticId = "sleep_core",
+                appleSelectionId = "sleep_core",
+                androidSelectionId = "sleep_light",
+                equivalence = "mapped_alias",
+            ),
+            SharedSetupRegistryBinding(
                 semanticId = "steps",
                 appleSelectionId = "steps",
                 androidSelectionId = "steps",
@@ -103,6 +136,6 @@ class SharedSetupShareFixtureDocumentTest {
 
     private companion object {
         const val ANDROID_FIXTURE_SHA_256 =
-            "817e30ce6c3e1c7d2a74502608b7bc0cb203058b7aa5de1c3c9bef7c6c27ede5"
+            "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0"
     }
 }

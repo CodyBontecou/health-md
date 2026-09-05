@@ -14,7 +14,12 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
+import com.healthmd.BuildConfig
 import com.healthmd.R
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.presentation.MainActivity
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.first
@@ -24,12 +29,39 @@ import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.ZoneId
 
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class SharedSetupActivityLifecycleTest {
     @get:Rule
     val compose = createEmptyComposeRule()
+
+    /** Production v2 share bytes from the real writer owners, seeding a profile if needed. */
+    private fun productionV2ShareBytes(context: Context, entryPoint: SharedSetupInstrumentationEntryPoint): ByteArray {
+        val profileRepository = entryPoint.exportProfileRepository()
+        if (runBlocking { profileRepository.getProfiles() }.isEmpty()) {
+            val snapshot = AndroidExportSettingsSnapshot.capture(
+                ExportSettings.newInstallDefaults(),
+                pin = null,
+                zone = ZoneId.systemDefault(),
+            )
+            runBlocking {
+                profileRepository.migrateDefaultIfNeeded(
+                    settingsSnapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot),
+                    target = ExportTarget.DEVICE_FOLDER,
+                )
+            }
+        }
+        val production = entryPoint.sharedSetupV2ProductionTransaction()
+        val source = RepositorySharedSetupV2ExportSource(
+            profileRepository = profileRepository,
+            scheduledProfileEntryStore = entryPoint.scheduledProfileEntryStore(),
+            appVersion = BuildConfig.VERSION_NAME,
+            preservedAppleExtensions = { production.preservedAppleExtensionsByProfileId() },
+        )
+        return runBlocking { entryPoint.sharedSetupService().exportV2Bytes(source) }
+    }
 
     @Test
     fun externalApplyAndUndoSurviveRecreationWithoutIntentReplay() {
@@ -39,22 +71,27 @@ class SharedSetupActivityLifecycleTest {
             SharedSetupInstrumentationEntryPoint::class.java,
         )
         val store = entryPoint.sharedSetupDocumentStore()
-        val share = store.shareIntent(runBlocking { entryPoint.sharedSetupService().exportBytes() })
+        val share = store.shareIntent(productionV2ShareBytes(context, entryPoint))
         val uri = IntentCompat.getParcelableExtra(share.intent, Intent.EXTRA_STREAM, Uri::class.java)
         assertNotNull(uri)
+        val profileName = runBlocking { entryPoint.exportProfileRepository().getProfiles().first().name }
 
         val scenario = ActivityScenario.launch<MainActivity>(
             Intent(Intent.ACTION_VIEW, requireNotNull(uri), context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
         )
         try {
-            val review = context.getString(R.string.shared_setup_review)
+            val review = context.getString(R.string.shared_setup_v2_review)
             val apply = context.getString(R.string.shared_setup_apply)
-            val applied = context.getString(R.string.shared_setup_applied)
+            val applied = context.getString(R.string.shared_setup_v2_applied)
             val undo = context.getString(R.string.shared_setup_undo)
+            val undone = context.getString(R.string.shared_setup_v2_undone)
+            val done = context.getString(R.string.shared_setup_done)
             val use = context.getString(R.string.shared_setup_use)
 
             waitForText(review)
+            // Select the first profile row, then apply in the default Add mode.
+            compose.onNodeWithText(profileName).performScrollTo().performClick()
             compose.onNodeWithText(apply).performScrollTo().performClick()
             waitForText(applied)
 
@@ -63,6 +100,8 @@ class SharedSetupActivityLifecycleTest {
             compose.onAllNodesWithText(review).assertCountEquals(0)
 
             compose.onNodeWithText(undo).performScrollTo().performClick()
+            waitForText(undone)
+            compose.onNodeWithText(done).performScrollTo().performClick()
             waitForText(use)
 
             scenario.recreate()
@@ -89,7 +128,7 @@ class SharedSetupActivityLifecycleTest {
         runBlocking { settingsRepository.setOnboardingCompleted(true) }
         coordinator.finishExternalImport()
 
-        val share = store.shareIntent(runBlocking { entryPoint.sharedSetupService().exportBytes() })
+        val share = store.shareIntent(productionV2ShareBytes(context, entryPoint))
         val uri = requireNotNull(
             IntentCompat.getParcelableExtra(share.intent, Intent.EXTRA_STREAM, Uri::class.java),
         )
@@ -113,7 +152,7 @@ class SharedSetupActivityLifecycleTest {
                 )
             }
 
-            val review = context.getString(R.string.shared_setup_review)
+            val review = context.getString(R.string.shared_setup_v2_review)
             waitForText(review)
             compose.onAllNodesWithText(context.getString(R.string.shared_setup_use))
                 .assertCountEquals(0)

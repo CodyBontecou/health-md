@@ -205,14 +205,14 @@ class SharedSetupV2CodecMapperTest {
     }
 
     @Test
-    fun `dispatch is lexical integer strict keeps v1 decode and never reexports bounded unknown fields`() {
+    fun `dispatch is lexical integer strict fails closed on v1 and never reexports bounded unknown fields`() {
         val document = mappedFixture().document
         val encoded = codec.encode(document)
         val root = json.parseToJsonElement(encoded.decodeToString()).jsonObject
 
         assertTrue(codec.decode(encoded) is SharedSetupVersionedDecodeResult.Valid)
         listOf<JsonElement>(
-            JsonPrimitive("2"),
+            JsonPrimitive("1"),
             JsonPrimitive(2.0),
             JsonPrimitive(true),
             JsonNull,
@@ -226,39 +226,22 @@ class SharedSetupV2CodecMapperTest {
                 is SharedSetupVersionedDecodeResult.Invalid,
         )
 
-        val v1Bytes = contractFile("packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json").readBytes()
-        val v1 = codec.decode(v1Bytes)
-        assertTrue(v1 is SharedSetupVersionedDecodeResult.Valid)
-        assertTrue((v1 as SharedSetupVersionedDecodeResult.Valid).document is SharedSetupDecodedDocument.V1)
-
-        val oversizedV1Root = json.parseToJsonElement(v1Bytes.decodeToString()).jsonObject
-        val oversizedV1 = JsonObject(
-            oversizedV1Root + (
-                "future_optional" to JsonArray(
-                    List(5) { JsonPrimitive("x".repeat(60_000)) },
-                )
-                ),
-        ).encoded()
-        assertTrue(oversizedV1.size > SHARED_SETUP_MAX_BYTES)
-        assertTrue(codec.decode(oversizedV1) is SharedSetupVersionedDecodeResult.Invalid)
-
-        val exactV1 = ByteArray(SHARED_SETUP_MAX_BYTES) { ' '.code.toByte() }.also {
-            v1Bytes.copyInto(it)
+        // The pre-canonical v1 contract is gone: minimal v1-shaped bytes (synthesized inline,
+        // never read from the deleted v1 contract fixtures) must fail closed with the bounded
+        // unsupported-version message before any typed decoding occurs — including padded v1
+        // payloads of any size under the public 4 MiB bound.
+        val minimalV1 = """{"schema":"healthmd.shared_setup","schema_version":1}"""
+            .encodeToByteArray()
+        val minimalV1Result = codec.decode(minimalV1)
+        assertTrue(minimalV1Result is SharedSetupVersionedDecodeResult.Invalid)
+        assertEquals(
+            "This shared setup version is not supported.",
+            (minimalV1Result as SharedSetupVersionedDecodeResult.Invalid).message,
+        )
+        val paddedV1 = ByteArray(SHARED_SETUP_V2_MAX_BYTES) { ' '.code.toByte() }.also {
+            minimalV1.copyInto(it)
         }
-        val overflowV1 = ByteArray(SHARED_SETUP_MAX_BYTES + 1) { ' '.code.toByte() }.also {
-            v1Bytes.copyInto(it)
-        }
-        assertTrue(codec.decode(exactV1) is SharedSetupVersionedDecodeResult.Valid)
-        assertTrue(codec.decode(overflowV1) is SharedSetupVersionedDecodeResult.Invalid)
-        var tooDeepForV1: JsonElement = JsonPrimitive(true)
-        repeat(SharedSetupV2Codec.MAX_JSON_DEPTH - 2) {
-            tooDeepForV1 = JsonObject(mapOf("next" to tooDeepForV1))
-        }
-        val deepV1 = JsonObject(
-            oversizedV1Root + ("future_optional" to tooDeepForV1),
-        ).encoded()
-        assertTrue(deepV1.size <= SHARED_SETUP_MAX_BYTES)
-        assertTrue(codec.decode(deepV1) is SharedSetupVersionedDecodeResult.Invalid)
+        assertTrue(codec.decode(paddedV1) is SharedSetupVersionedDecodeResult.Invalid)
 
         val boundedUnknown = JsonObject(
             root + (
@@ -498,11 +481,12 @@ class SharedSetupV2CodecMapperTest {
             val decoded = codec.decode(fixtureBytes)
             assertTrue("Canonical fixture failed to decode: $fixture", decoded is SharedSetupVersionedDecodeResult.Valid)
             val valid = decoded as SharedSetupVersionedDecodeResult.Valid
-            assertTrue(
+            assertEquals(
                 "Canonical fixture was not v2: $fixture",
-                valid.document is SharedSetupDecodedDocument.V2,
+                SHARED_SETUP_V2_VERSION,
+                valid.document.schemaVersion,
             )
-            val document = (valid.document as SharedSetupDecodedDocument.V2).document
+            val document = valid.document
             assertArrayEquals(fixtureBytes, codec.encode(document))
         }
         assertTrue(codec.decode(codec.encode(mappedFixture().document)) is SharedSetupVersionedDecodeResult.Valid)
@@ -702,9 +686,7 @@ class SharedSetupV2CodecMapperTest {
 
     private fun requireV2(result: SharedSetupVersionedDecodeResult): SharedSetupV2 {
         assertTrue(result is SharedSetupVersionedDecodeResult.Valid)
-        val valid = result as SharedSetupVersionedDecodeResult.Valid
-        assertTrue(valid.document is SharedSetupDecodedDocument.V2)
-        return (valid.document as SharedSetupDecodedDocument.V2).document
+        return (result as SharedSetupVersionedDecodeResult.Valid).document
     }
 
     private fun assertRejects(document: SharedSetupV2) {

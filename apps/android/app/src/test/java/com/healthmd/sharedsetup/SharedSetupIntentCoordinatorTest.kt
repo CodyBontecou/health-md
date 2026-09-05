@@ -180,11 +180,11 @@ class SharedSetupIntentCoordinatorTest {
             store.shareIntent(byteArrayOf(1, 2, 3))
         }
         assertThat(directory.exists()).isFalse()
-        val oversizedV1 = ByteArray(SHARED_SETUP_MAX_BYTES + 1) { ' '.code.toByte() }.also {
+        val oversizedV2 = ByteArray(SHARED_SETUP_V2_MAX_BYTES + 1) { ' '.code.toByte() }.also {
             validBytes.copyInto(it)
         }
         assertThrows(IllegalArgumentException::class.java) {
-            store.shareIntent(oversizedV1)
+            store.shareIntent(oversizedV2)
         }
         assertThat(directory.exists()).isFalse()
 
@@ -320,7 +320,7 @@ class SharedSetupIntentCoordinatorTest {
         while (true) {
             val candidate = File(
                 directory,
-                "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
+                "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
             )
             if (candidate.isFile) return candidate
             directory = directory.parentFile ?: error("Could not locate shared-setup fixture")
