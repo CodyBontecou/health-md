@@ -1,7 +1,9 @@
 export const defaultLocale = 'en';
 
-// Focused integration guides may intentionally publish canonical English fallback
-// routes while their translated editions are pending. Fallback pages stay noindex.
+// Every focused integration guide is authored and translated in all locales. A
+// guide whose translated editions are still pending may temporarily publish a
+// canonical English fallback route instead; fallback pages stay noindex. The
+// list is empty today and is retained for future pending guides.
 export const canonicalEnglishDocSlugs = Object.freeze([
 ]);
 
