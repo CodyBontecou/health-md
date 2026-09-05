@@ -191,6 +191,26 @@ async fn execute_query_invocation(
         .map_err(QueryError::Backend)
 }
 
+#[cfg(feature = "streamable-http")]
+#[derive(Debug)]
+pub enum DataHttpServeError {
+    Store(DataStoreOpenError),
+    Http(HttpServerError),
+}
+
+#[cfg(feature = "streamable-http")]
+impl fmt::Display for DataHttpServeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Store(error) => error.fmt(formatter),
+            Self::Http(error) => error.fmt(formatter),
+        }
+    }
+}
+
+#[cfg(feature = "streamable-http")]
+impl std::error::Error for DataHttpServeError {}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum StdioSurface {
     LocalDirect,
@@ -265,21 +285,58 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
 ///
 /// Returns [`DataStoreOpenError`] when the backing store, grant, or index is invalid.
 pub async fn serve_data(options: DataServeOptions) -> Result<(), DataStoreOpenError> {
-    let backend = match options {
-        options @ DataServeOptions::Directory { .. } => {
-            healthmd_operations::ArtifactStoreBackend::new(Arc::new(DirectoryArtifactStore::open(
-                options,
-            )?))
-        }
-        options @ DataServeOptions::Database { .. } => {
-            healthmd_operations::ArtifactStoreBackend::new(Arc::new(
-                data_sqlite::SqliteArtifactStore::open(options)?,
-            ))
-        }
-    };
+    let backend = open_data_backend(options)?;
     let dispatcher = stdio_dispatcher(Arc::new(backend), StdioSurface::Data);
     serve_dispatcher(dispatcher).await;
     Ok(())
+}
+
+/// Serve the same data-only MCP surface over Streamable HTTP on loopback.
+///
+/// This reuses the transport the direct HTTP surface serves on: the frozen five-tool Agent Data
+/// catalog, grant enforcement, response contracts, session handling, and loopback-only listener
+/// policy are identical to [`serve_data`] over stdio and to the direct `serve-http` surface. The
+/// unauthenticated listener policy is validated before the backing store is opened.
+///
+/// # Errors
+///
+/// Returns a [`DataHttpServeError`] when the listener policy is invalid, the backing store,
+/// grant, or index is invalid, or the HTTP listener cannot start.
+#[cfg(feature = "streamable-http")]
+pub async fn serve_data_http(
+    options: DataServeOptions,
+    http_options: HttpServerOptions,
+) -> Result<(), DataHttpServeError> {
+    http_options
+        .validate_unauthenticated()
+        .map_err(DataHttpServeError::Http)?;
+    let backend = open_data_backend(options).map_err(DataHttpServeError::Store)?;
+    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+        Arc::new(backend),
+        healthmd_mcp::SurfaceProfile::DataReadOnly,
+    ));
+    healthmd_mcp::transport::streamable_http::serve(
+        application,
+        healthmd_mcp::CallerIdentity::loopback(),
+        http_options,
+    )
+    .await
+    .map_err(DataHttpServeError::Http)
+}
+
+fn open_data_backend(
+    options: DataServeOptions,
+) -> Result<healthmd_operations::ArtifactStoreBackend, DataStoreOpenError> {
+    match options {
+        options @ DataServeOptions::Directory { .. } => Ok(healthmd_operations::ArtifactStoreBackend::new(
+            Arc::new(DirectoryArtifactStore::open(options)?),
+        )),
+        options @ DataServeOptions::Database { .. } => {
+            Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
+                data_sqlite::SqliteArtifactStore::open(options)?,
+            )))
+        }
+    }
 }
 
 /// Ingest recognized export artifacts from a directory into a Health.md-owned `SQLite` database.
@@ -638,6 +695,29 @@ mod tests {
         assert!(!at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS - 1));
         assert!(at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS));
         assert!(at_capacity(usize::MAX));
+    }
+
+    #[cfg(feature = "streamable-http")]
+    #[tokio::test]
+    async fn data_http_rejects_non_loopback_binds_before_opening_a_store() {
+        let options = HttpServerOptions {
+            bind: std::net::SocketAddr::from(([0, 0, 0, 0], 8_787)),
+            ..HttpServerOptions::default()
+        };
+        let error = serve_data_http(
+            DataServeOptions::Directory {
+                directory: "/nonexistent/export-directory".into(),
+                grant: "/nonexistent/grant.json".into(),
+                index: None,
+            },
+            options,
+        )
+        .await
+        .expect_err("non-loopback binds must be refused");
+        assert!(matches!(
+            error,
+            DataHttpServeError::Http(HttpServerError::NonLoopbackBind)
+        ));
     }
 
     #[tokio::test]
