@@ -908,6 +908,7 @@ fn command_path(arguments: &[OsString]) -> &'static str {
                 | "query"
                 | "resume"
                 | "cancel"
+                | "data"
                 | "direct"
                 | "mcp"
                 | "setup"
@@ -917,6 +918,10 @@ fn command_path(arguments: &[OsString]) -> &'static str {
         return "";
     };
     match command {
+        "data" => values[index + 1..]
+            .iter()
+            .find_map(|value| (*value == "import").then_some("data import"))
+            .unwrap_or("data"),
         "direct" => values[index + 1..]
             .iter()
             .find_map(|value| match *value {

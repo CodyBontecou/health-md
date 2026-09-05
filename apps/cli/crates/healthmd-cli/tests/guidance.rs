@@ -29,6 +29,7 @@ fn incomplete_public_commands_return_successful_non_network_guidance() {
         (&["direct"], "healthmd direct"),
         (&["direct", "unpair"], "healthmd direct unpair"),
         (&["direct", "reset-trust"], "healthmd direct reset-trust"),
+        (&["data"], "healthmd data"),
         (&["mcp"], "healthmd mcp"),
         (&["setup"], "healthmd setup"),
     ];

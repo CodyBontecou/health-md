@@ -433,7 +433,14 @@ This five-tool surface indexes existing Apple and Android JSON/NDJSON export con
 changing them. One explicit grant filters every catalog and read by metric, source, owner date,
 instant, and common/lossless layer. The export directory is read-only; the rebuildable index and
 grant live outside it. Whole-artifact bytes are available only under an explicit unrestricted bulk
-grant. See [Agent Data store](docs/agent-data.md) for the grant shape, supported artifacts, MCP host
+grant.
+
+The same contract is available from a Health.md-owned SQLite database: ingest exports once with
+`healthmd data import --database <ABSOLUTE_SQLITE_FILE> --directory <ABSOLUTE_EXPORTS_DIRECTORY>`
+(idempotent, non-destructive, supersession bookkeeping without deletion), then serve with
+`healthmd mcp serve-data --database <ABSOLUTE_SQLITE_FILE> --grant <ABSOLUTE_GRANT_JSON>`.
+Stored bytes are SHA-256-verified on every read, and retention stays user-controlled. See
+[Agent Data store](docs/agent-data.md) for the grant shape, supported artifacts, MCP host
 configuration, and exact trust boundary.
 
 A complete local desktop MCP client can onboard without opening a separate terminal. Call

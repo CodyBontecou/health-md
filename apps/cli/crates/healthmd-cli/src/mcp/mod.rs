@@ -1,7 +1,9 @@
 mod data_backend;
+mod data_sqlite;
 mod direct_backend;
 
 pub use data_backend::{DataServeOptions, DataStoreOpenError, DirectoryArtifactStore};
+pub use data_sqlite::SqliteArtifactStore;
 
 #[cfg(feature = "streamable-http")]
 pub use healthmd_mcp::transport::streamable_http::{HttpServerError, HttpServerOptions};
@@ -253,20 +255,49 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
     serve_stdio(options, StdioSurface::ReadOnly).await
 }
 
-/// Serve a data-only MCP surface over stdio from an explicitly configured export directory.
+/// Serve a data-only MCP surface over stdio from an explicitly configured export directory or
+/// an imported Health.md-owned `SQLite` database.
 ///
-/// This server never opens mobile pairing state and never modifies source artifacts. Its grant is
+/// This server never opens mobile pairing state and never modifies stored artifacts. Its grant is
 /// enforced inside the artifact-store backend before records are returned.
 ///
 /// # Errors
 ///
-/// Returns [`DataStoreOpenError`] when the directory, grant, or external index is invalid.
+/// Returns [`DataStoreOpenError`] when the backing store, grant, or index is invalid.
 pub async fn serve_data(options: DataServeOptions) -> Result<(), DataStoreOpenError> {
-    let store = DirectoryArtifactStore::open(options)?;
-    let backend = healthmd_operations::ArtifactStoreBackend::new(Arc::new(store));
+    let backend = match options {
+        options @ DataServeOptions::Directory { .. } => {
+            healthmd_operations::ArtifactStoreBackend::new(Arc::new(DirectoryArtifactStore::open(
+                options,
+            )?))
+        }
+        options @ DataServeOptions::Database { .. } => {
+            healthmd_operations::ArtifactStoreBackend::new(Arc::new(
+                data_sqlite::SqliteArtifactStore::open(options)?,
+            ))
+        }
+    };
     let dispatcher = stdio_dispatcher(Arc::new(backend), StdioSurface::Data);
     serve_dispatcher(dispatcher).await;
     Ok(())
+}
+
+/// Ingest recognized export artifacts from a directory into a Health.md-owned `SQLite` database.
+///
+/// The import is storage-side and non-destructive: identical bytes are never duplicated and no
+/// stored payload is deleted. Grants apply only when the database is served.
+///
+/// # Errors
+///
+/// Returns a [`DataStoreOpenError`] with a health-free reason when the database or export
+/// directory is invalid.
+pub async fn import_data(
+    database: std::path::PathBuf,
+    directory: std::path::PathBuf,
+) -> Result<Value, DataStoreOpenError> {
+    tokio::task::spawn_blocking(move || data_sqlite::import_data(&database, &directory))
+        .await
+        .map_err(|_| DataStoreOpenError::new("the Agent Data import could not be completed"))?
 }
 
 async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(), ServeError> {

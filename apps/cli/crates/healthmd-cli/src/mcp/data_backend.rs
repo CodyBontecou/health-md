@@ -23,14 +23,14 @@ use sha2::{Digest as _, Sha256};
 use tempfile::NamedTempFile;
 use tokio::sync::{Mutex, RwLock};
 
-const INDEX_SCHEMA: &str = "healthmd.agent_data_index";
-const INDEX_SCHEMA_VERSION: u16 = 1;
-const MAXIMUM_GRANT_BYTES: u64 = 1_048_576;
+pub(super) const INDEX_SCHEMA: &str = "healthmd.agent_data_index";
+pub(super) const INDEX_SCHEMA_VERSION: u16 = 1;
+pub(super) const MAXIMUM_GRANT_BYTES: u64 = 1_048_576;
 const MAXIMUM_JSON_ARTIFACT_BYTES: u64 = 64 * 1_048_576;
-const MAXIMUM_NDJSON_LINE_BYTES: usize = 2 * 1_048_576;
+pub(super) const MAXIMUM_NDJSON_LINE_BYTES: usize = 2 * 1_048_576;
 const MAXIMUM_SOURCE_FILES: usize = 10_000;
 const MAXIMUM_DIRECTORY_DEPTH: usize = 32;
-const CURSOR_VERSION: u16 = 1;
+pub(super) const CURSOR_VERSION: u16 = 1;
 const CURSOR_RESPONSE_OVERHEAD_BYTES: usize = 2_048;
 const DAILY_RESERVED_FIELDS: &[&str] = &[
     "schema",
@@ -50,10 +50,15 @@ const DAILY_RESERVED_FIELDS: &[&str] = &[
 type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Clone, Debug)]
-pub struct DataServeOptions {
-    pub directory: PathBuf,
-    pub grant: PathBuf,
-    pub index: Option<PathBuf>,
+pub enum DataServeOptions {
+    /// Serve from an explicitly configured read-only export directory.
+    Directory {
+        directory: PathBuf,
+        grant: PathBuf,
+        index: Option<PathBuf>,
+    },
+    /// Serve from a Health.md-owned `SQLite` Agent Data database created by `healthmd data import`.
+    Database { database: PathBuf, grant: PathBuf },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -62,7 +67,7 @@ pub struct DataStoreOpenError {
 }
 
 impl DataStoreOpenError {
-    const fn new(message: &'static str) -> Self {
+    pub(super) const fn new(message: &'static str) -> Self {
         Self { message }
     }
 }
@@ -80,8 +85,9 @@ pub struct DirectoryArtifactStore {
     index_path: PathBuf,
     grant: Arc<AgentDataGrant>,
     cursor_key: [u8; 32],
-    index: RwLock<Arc<DirectoryIndex>>,
+    index: RwLock<Arc<ArtifactIndex>>,
     refresh: Mutex<()>,
+    source: Arc<DirectoryByteSource>,
 }
 
 impl DirectoryArtifactStore {
@@ -90,9 +96,20 @@ impl DirectoryArtifactStore {
     /// # Errors
     ///
     /// Returns a path-free error when directory, grant, index, or artifact validation fails.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn open(options: DataServeOptions) -> Result<Self, DataStoreOpenError> {
-        let root = validated_directory(&options.directory)?;
-        let grant_path = validated_regular_file(&options.grant, MAXIMUM_GRANT_BYTES)?;
+        let DataServeOptions::Directory {
+            directory,
+            grant,
+            index,
+        } = &options
+        else {
+            return Err(DataStoreOpenError::new(
+                "the directory store requires --directory backing options",
+            ));
+        };
+        let root = validated_directory(directory)?;
+        let grant_path = validated_regular_file(grant, MAXIMUM_GRANT_BYTES)?;
         if grant_path.starts_with(&root) {
             return Err(DataStoreOpenError::new(
                 "the Agent Data grant must be stored outside the export directory",
@@ -106,8 +123,8 @@ impl DirectoryArtifactStore {
             .map_err(|_| DataStoreOpenError::new("the Agent Data grant is invalid"))?;
 
         let root_binding = sha256_hex(root.to_string_lossy().as_bytes());
-        let index_path = match options.index {
-            Some(path) => validated_index_path(&root, &path)?,
+        let index_path = match index {
+            Some(path) => validated_index_path(&root, path)?,
             None => default_index_path(&root_binding)?,
         };
         let source_files = scan_source_files(&root)?;
@@ -119,16 +136,17 @@ impl DirectoryArtifactStore {
             .map_err(|_| DataStoreOpenError::new("secure cursor state could not be initialized"))?;
 
         Ok(Self {
-            root,
+            root: root.clone(),
             index_path,
             grant: Arc::new(grant),
             cursor_key,
             index: RwLock::new(Arc::new(index)),
             refresh: Mutex::new(()),
+            source: Arc::new(DirectoryByteSource { root }),
         })
     }
 
-    async fn current_index(&self) -> Result<Arc<DirectoryIndex>, BackendError> {
+    async fn current_index(&self) -> Result<Arc<ArtifactIndex>, BackendError> {
         self.refresh_if_needed().await?;
         let index = self.index.read().await;
         Ok(Arc::clone(&index))
@@ -219,11 +237,18 @@ impl ArtifactStore for DirectoryArtifactStore {
             ));
         }
         let index = self.current_index().await?;
-        let root = self.root.clone();
         let grant = Arc::clone(&self.grant);
         let cursor_key = self.cursor_key;
+        let source = Arc::clone(&self.source);
         let result = tokio::task::spawn_blocking(move || {
-            execute_query(&root, &index, &grant, &cursor_key, &request)
+            execute_query(
+                source.as_ref(),
+                "directory",
+                &index,
+                &grant,
+                &cursor_key,
+                &request,
+            )
         })
         .await
         .map_err(|_| backend_failure("healthmd_agent_query_failed"))??;
@@ -238,69 +263,69 @@ impl ArtifactStore for DirectoryArtifactStore {
 }
 
 #[derive(Clone, Debug)]
-struct SourceFile {
-    path: PathBuf,
-    relative_path: String,
-    byte_count: u64,
-    modified_nanos: u128,
+pub(super) struct SourceFile {
+    pub(super) path: PathBuf,
+    pub(super) relative_path: String,
+    pub(super) byte_count: u64,
+    pub(super) modified_nanos: u128,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct DirectoryIndex {
-    schema: String,
-    schema_version: u16,
-    source_fingerprint: String,
-    index_revision: String,
-    artifacts: Vec<ArtifactEntry>,
-    records: Vec<RecordEntry>,
-    ignored_file_count: usize,
-    invalid_artifact_count: usize,
+pub(super) struct ArtifactIndex {
+    pub(super) schema: String,
+    pub(super) schema_version: u16,
+    pub(super) source_fingerprint: String,
+    pub(super) index_revision: String,
+    pub(super) artifacts: Vec<ArtifactEntry>,
+    pub(super) records: Vec<RecordEntry>,
+    pub(super) ignored_file_count: usize,
+    pub(super) invalid_artifact_count: usize,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct ArtifactEntry {
-    artifact_id: String,
-    relative_path: String,
-    byte_count: u64,
-    media_type: String,
-    physical_format: PhysicalFormat,
-    schemas: Vec<ArtifactSchema>,
-    capture_status: String,
-    detail_levels: Vec<AgentDataDetailLevel>,
-    record_count: usize,
+pub(super) struct ArtifactEntry {
+    pub(super) artifact_id: String,
+    pub(super) relative_path: String,
+    pub(super) byte_count: u64,
+    pub(super) media_type: String,
+    pub(super) physical_format: PhysicalFormat,
+    pub(super) schemas: Vec<ArtifactSchema>,
+    pub(super) capture_status: String,
+    pub(super) detail_levels: Vec<AgentDataDetailLevel>,
+    pub(super) record_count: usize,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-enum PhysicalFormat {
+pub(super) enum PhysicalFormat {
     Json,
     Ndjson,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
-struct ArtifactSchema {
-    schema: String,
-    schema_version: Option<u64>,
+pub(super) struct ArtifactSchema {
+    pub(super) schema: String,
+    pub(super) schema_version: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct RecordEntry {
-    record_id: String,
-    artifact_id: String,
-    locator: RecordLocator,
-    metric_ids: Vec<String>,
-    source_id: String,
-    source_schema: String,
-    source_schema_version: Option<u64>,
-    detail_level: AgentDataDetailLevel,
-    owner_date: Option<NaiveDate>,
-    start_time: Option<DateTime<Utc>>,
-    end_time: Option<DateTime<Utc>>,
-    capture_status: String,
+pub(super) struct RecordEntry {
+    pub(super) record_id: String,
+    pub(super) artifact_id: String,
+    pub(super) locator: RecordLocator,
+    pub(super) metric_ids: Vec<String>,
+    pub(super) source_id: String,
+    pub(super) source_schema: String,
+    pub(super) source_schema_version: Option<u64>,
+    pub(super) detail_level: AgentDataDetailLevel,
+    pub(super) owner_date: Option<NaiveDate>,
+    pub(super) start_time: Option<DateTime<Utc>>,
+    pub(super) end_time: Option<DateTime<Utc>>,
+    pub(super) capture_status: String,
 }
 
 impl RecordEntry {
@@ -318,9 +343,62 @@ impl RecordEntry {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case", deny_unknown_fields)]
-enum RecordLocator {
+pub(super) enum RecordLocator {
     JsonPointer { pointer: String },
     NdjsonLine { line: usize },
+}
+
+/// Verified exact-byte access to the artifacts referenced by an [`ArtifactIndex`].
+///
+/// Every method must verify the stored bytes against the indexed SHA-256 before returning them;
+/// shared query execution relies on that guarantee for every inline value and chunk.
+pub(super) trait ArtifactByteSource: Send + Sync {
+    /// Return the exact stored artifact bytes after SHA-256 verification.
+    fn full_bytes(&self, artifact: &ArtifactEntry) -> Result<Arc<Vec<u8>>, BackendError>;
+
+    /// Return one bounded byte window of the exact stored artifact after SHA-256 verification.
+    fn verified_chunk(
+        &self,
+        artifact: &ArtifactEntry,
+        offset: usize,
+        maximum_bytes: usize,
+    ) -> Result<(Vec<u8>, usize), BackendError>;
+
+    /// Return the exact bytes of one NDJSON line after whole-artifact SHA-256 verification.
+    fn verified_ndjson_line(
+        &self,
+        artifact: &ArtifactEntry,
+        target_line: usize,
+    ) -> Result<Vec<u8>, BackendError>;
+}
+
+/// Reads verified artifact bytes directly from the configured export directory.
+pub(super) struct DirectoryByteSource {
+    root: PathBuf,
+}
+
+impl ArtifactByteSource for DirectoryByteSource {
+    fn full_bytes(&self, artifact: &ArtifactEntry) -> Result<Arc<Vec<u8>>, BackendError> {
+        let bytes = read_artifact_bytes(&self.root, artifact)?;
+        Ok(Arc::new(bytes))
+    }
+
+    fn verified_chunk(
+        &self,
+        artifact: &ArtifactEntry,
+        offset: usize,
+        maximum_bytes: usize,
+    ) -> Result<(Vec<u8>, usize), BackendError> {
+        read_verified_artifact_chunk(&self.root, artifact, offset, maximum_bytes)
+    }
+
+    fn verified_ndjson_line(
+        &self,
+        artifact: &ArtifactEntry,
+        target_line: usize,
+    ) -> Result<Vec<u8>, BackendError> {
+        read_verified_ndjson_line(&self.root, artifact, target_line)
+    }
 }
 
 #[derive(Default)]
@@ -340,7 +418,7 @@ struct CursorPayload {
     offset: usize,
 }
 
-fn validated_directory(path: &Path) -> Result<PathBuf, DataStoreOpenError> {
+pub(super) fn validated_directory(path: &Path) -> Result<PathBuf, DataStoreOpenError> {
     if !path.is_absolute() {
         return Err(DataStoreOpenError::new(
             "the Agent Data directory must be an absolute path",
@@ -358,7 +436,10 @@ fn validated_directory(path: &Path) -> Result<PathBuf, DataStoreOpenError> {
         .map_err(|_| DataStoreOpenError::new("the Agent Data directory could not be resolved"))
 }
 
-fn validated_regular_file(path: &Path, maximum_bytes: u64) -> Result<PathBuf, DataStoreOpenError> {
+pub(super) fn validated_regular_file(
+    path: &Path,
+    maximum_bytes: u64,
+) -> Result<PathBuf, DataStoreOpenError> {
     if !path.is_absolute() {
         return Err(DataStoreOpenError::new(
             "the Agent Data grant must be an absolute path",
@@ -435,7 +516,7 @@ fn prepare_private_directory(path: &Path) -> Result<(), DataStoreOpenError> {
     Ok(())
 }
 
-fn scan_source_files(root: &Path) -> Result<Vec<SourceFile>, DataStoreOpenError> {
+pub(super) fn scan_source_files(root: &Path) -> Result<Vec<SourceFile>, DataStoreOpenError> {
     let mut pending = vec![(root.to_path_buf(), 0_usize)];
     let mut files = Vec::new();
     while let Some((directory, depth)) = pending.pop() {
@@ -526,7 +607,7 @@ fn source_fingerprint(files: &[SourceFile]) -> String {
 fn build_stable_index(
     root: &Path,
     files: &[SourceFile],
-) -> Result<DirectoryIndex, DataStoreOpenError> {
+) -> Result<ArtifactIndex, DataStoreOpenError> {
     let expected_fingerprint = source_fingerprint(files);
     let mut artifacts = Vec::new();
     let mut records = Vec::new();
@@ -566,7 +647,7 @@ fn build_stable_index(
         invalid_artifact_count,
     ))
     .map_err(|_| DataStoreOpenError::new("the Agent Data index could not be encoded"))?;
-    Ok(DirectoryIndex {
+    Ok(ArtifactIndex {
         schema: INDEX_SCHEMA.to_owned(),
         schema_version: INDEX_SCHEMA_VERSION,
         source_fingerprint: expected_fingerprint,
@@ -578,7 +659,9 @@ fn build_stable_index(
     })
 }
 
-fn parse_artifact(file: &SourceFile) -> Result<Option<(ArtifactEntry, Vec<RecordEntry>)>, ()> {
+pub(super) fn parse_artifact(
+    file: &SourceFile,
+) -> Result<Option<(ArtifactEntry, Vec<RecordEntry>)>, ()> {
     let physical_format = match file
         .path
         .extension()
@@ -1309,7 +1392,7 @@ fn escape_pointer(value: &str) -> String {
     value.replace('~', "~0").replace('/', "~1")
 }
 
-fn record_order(left: &RecordEntry, right: &RecordEntry) -> std::cmp::Ordering {
+pub(super) fn record_order(left: &RecordEntry, right: &RecordEntry) -> std::cmp::Ordering {
     (
         left.owner_date,
         left.start_time,
@@ -1335,7 +1418,7 @@ fn locator_order(locator: &RecordLocator) -> String {
     }
 }
 
-fn persist_index(path: &Path, index: &DirectoryIndex) -> Result<(), DataStoreOpenError> {
+fn persist_index(path: &Path, index: &ArtifactIndex) -> Result<(), DataStoreOpenError> {
     let parent = path.parent().ok_or_else(|| {
         DataStoreOpenError::new("the Agent Data index path has no parent directory")
     })?;
@@ -1362,9 +1445,10 @@ fn persist_index(path: &Path, index: &DirectoryIndex) -> Result<(), DataStoreOpe
     Ok(())
 }
 
-fn execute_query(
-    root: &Path,
-    index: &DirectoryIndex,
+pub(super) fn execute_query(
+    source: &dyn ArtifactByteSource,
+    source_kind: &str,
+    index: &ArtifactIndex,
     grant: &AgentDataGrant,
     cursor_key: &[u8; 32],
     request: &AgentDataQueryRequest,
@@ -1377,11 +1461,18 @@ fn execute_query(
         cursor_key,
     )?;
     match &request.operation {
-        AgentDataOperation::Catalog => {
-            query_catalog(index, grant, request, cursor_key, &fingerprint, offset)
-        }
+        AgentDataOperation::Catalog => query_catalog(
+            source_kind,
+            index,
+            grant,
+            request,
+            cursor_key,
+            &fingerprint,
+            offset,
+        ),
         AgentDataOperation::Records { .. } => query_records(
-            root,
+            source,
+            source_kind,
             index,
             grant,
             request,
@@ -1390,7 +1481,8 @@ fn execute_query(
             offset,
         ),
         AgentDataOperation::RecordRead { record_id } => query_record_read(
-            root,
+            source,
+            source_kind,
             index,
             grant,
             request,
@@ -1399,11 +1491,18 @@ fn execute_query(
             offset,
             record_id,
         ),
-        AgentDataOperation::Artifacts => {
-            query_artifacts(index, grant, request, cursor_key, &fingerprint, offset)
-        }
+        AgentDataOperation::Artifacts => query_artifacts(
+            source_kind,
+            index,
+            grant,
+            request,
+            cursor_key,
+            &fingerprint,
+            offset,
+        ),
         AgentDataOperation::ArtifactRead { artifact_id } => query_artifact_read(
-            root,
+            source,
+            source_kind,
             index,
             grant,
             request,
@@ -1425,7 +1524,8 @@ struct CatalogAggregate {
 }
 
 fn query_catalog(
-    index: &DirectoryIndex,
+    source_kind: &str,
+    index: &ArtifactIndex,
     grant: &AgentDataGrant,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
@@ -1479,6 +1579,7 @@ fn query_catalog(
         .collect::<Vec<_>>();
     paged_response(
         index,
+        source_kind,
         request,
         cursor_key,
         fingerprint,
@@ -1488,9 +1589,11 @@ fn query_catalog(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn query_records(
-    root: &Path,
-    index: &DirectoryIndex,
+    source: &dyn ArtifactByteSource,
+    source_kind: &str,
+    index: &ArtifactIndex,
     grant: &AgentDataGrant,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
@@ -1522,7 +1625,7 @@ fn query_records(
             .get(record.artifact_id.as_str())
             .copied()
             .ok_or_else(|| backend_failure("healthmd_agent_index_invalid"))?;
-        let value = read_record_value(root, artifact, record, &mut cache)?;
+        let value = read_record_value(source, artifact, record, &mut cache)?;
         let mut item = record_item(record, &value);
         let mut encoded = encoded_len(&item)?;
         if encoded > request.page.max_bytes {
@@ -1550,13 +1653,20 @@ fn query_records(
     let next_cursor = (next_offset < selected.len())
         .then(|| encode_cursor(index, fingerprint, next_offset, cursor_key))
         .transpose()?;
-    Ok(response(index, "records", &items, next_cursor.as_deref()))
+    Ok(response(
+        index,
+        source_kind,
+        "records",
+        &items,
+        next_cursor.as_deref(),
+    ))
 }
 
 #[allow(clippy::too_many_arguments)]
 fn query_record_read(
-    root: &Path,
-    index: &DirectoryIndex,
+    source: &dyn ArtifactByteSource,
+    source_kind: &str,
+    index: &ArtifactIndex,
     grant: &AgentDataGrant,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
@@ -1581,11 +1691,12 @@ fn query_record_read(
         .find(|artifact| artifact.artifact_id == record.artifact_id)
         .ok_or_else(|| backend_failure("healthmd_agent_index_invalid"))?;
     let mut cache = HashMap::new();
-    let value = read_record_value(root, artifact, record, &mut cache)?;
+    let value = read_record_value(source, artifact, record, &mut cache)?;
     let bytes =
         serde_json::to_vec(&value).map_err(|_| backend_failure("healthmd_agent_query_failed"))?;
     chunk_response(
         index,
+        source_kind,
         request,
         cursor_key,
         fingerprint,
@@ -1600,7 +1711,8 @@ fn query_record_read(
 }
 
 fn query_artifacts(
-    index: &DirectoryIndex,
+    source_kind: &str,
+    index: &ArtifactIndex,
     grant: &AgentDataGrant,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
@@ -1630,6 +1742,7 @@ fn query_artifacts(
     };
     paged_response(
         index,
+        source_kind,
         request,
         cursor_key,
         fingerprint,
@@ -1641,8 +1754,9 @@ fn query_artifacts(
 
 #[allow(clippy::too_many_arguments)]
 fn query_artifact_read(
-    root: &Path,
-    index: &DirectoryIndex,
+    source: &dyn ArtifactByteSource,
+    source_kind: &str,
+    index: &ArtifactIndex,
     grant: &AgentDataGrant,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
@@ -1667,7 +1781,8 @@ fn query_artifact_read(
             )
         })?;
     artifact_chunk_response(
-        root,
+        source,
+        source_kind,
         artifact,
         index,
         request,
@@ -1677,10 +1792,12 @@ fn query_artifact_read(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn artifact_chunk_response(
-    root: &Path,
+    source: &dyn ArtifactByteSource,
+    source_kind: &str,
     artifact: &ArtifactEntry,
-    index: &DirectoryIndex,
+    index: &ArtifactIndex,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
     fingerprint: &str,
@@ -1693,8 +1810,7 @@ fn artifact_chunk_response(
         ));
     }
     let maximum_raw = ((request.page.max_bytes - CURSOR_RESPONSE_OVERHEAD_BYTES) / 4) * 3;
-    let (chunk, total_byte_count) =
-        read_verified_artifact_chunk(root, artifact, offset, maximum_raw.max(1))?;
+    let (chunk, total_byte_count) = source.verified_chunk(artifact, offset, maximum_raw.max(1))?;
     let end = offset.saturating_add(chunk.len());
     let complete = end == total_byte_count;
     let item = json!({
@@ -1714,6 +1830,7 @@ fn artifact_chunk_response(
         .transpose()?;
     Ok(response(
         index,
+        source_kind,
         "artifact_read",
         &[item],
         next_cursor.as_deref(),
@@ -1722,7 +1839,8 @@ fn artifact_chunk_response(
 
 #[allow(clippy::too_many_arguments)]
 fn chunk_response(
-    index: &DirectoryIndex,
+    index: &ArtifactIndex,
+    source_kind: &str,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
     fingerprint: &str,
@@ -1759,11 +1877,19 @@ fn chunk_response(
     let next_cursor = (!complete)
         .then(|| encode_cursor(index, fingerprint, end, cursor_key))
         .transpose()?;
-    Ok(response(index, operation, &[item], next_cursor.as_deref()))
+    Ok(response(
+        index,
+        source_kind,
+        operation,
+        &[item],
+        next_cursor.as_deref(),
+    ))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paged_response(
-    index: &DirectoryIndex,
+    index: &ArtifactIndex,
+    source_kind: &str,
     request: &AgentDataQueryRequest,
     cursor_key: &[u8; 32],
     fingerprint: &str,
@@ -1794,11 +1920,18 @@ fn paged_response(
     let next_cursor = (next_offset < values.len())
         .then(|| encode_cursor(index, fingerprint, next_offset, cursor_key))
         .transpose()?;
-    Ok(response(index, operation, &items, next_cursor.as_deref()))
+    Ok(response(
+        index,
+        source_kind,
+        operation,
+        &items,
+        next_cursor.as_deref(),
+    ))
 }
 
 fn response(
-    index: &DirectoryIndex,
+    index: &ArtifactIndex,
+    source_kind: &str,
     operation: &str,
     items: &[Value],
     next_cursor: Option<&str>,
@@ -1810,7 +1943,7 @@ fn response(
         "receipt": {
             "index_revision": index.index_revision,
             "returned_items": items.len(),
-            "source_kind": "directory",
+            "source_kind": source_kind,
             "policy_enforced": true
         },
         "items": items,
@@ -1846,8 +1979,8 @@ fn record_item(record: &RecordEntry, value: &Value) -> Value {
     })
 }
 
-fn read_record_value(
-    root: &Path,
+pub(super) fn read_record_value(
+    source: &dyn ArtifactByteSource,
     artifact: &ArtifactEntry,
     record: &RecordEntry,
     cache: &mut HashMap<String, Arc<Value>>,
@@ -1857,8 +1990,8 @@ fn read_record_value(
             let document = if let Some(value) = cache.get(&artifact.artifact_id) {
                 Arc::clone(value)
             } else {
-                let bytes = read_artifact_bytes(root, artifact)?;
-                let value: Value = serde_json::from_slice(&bytes)
+                let bytes = source.full_bytes(artifact)?;
+                let value: Value = serde_json::from_slice(bytes.as_slice())
                     .map_err(|_| backend_failure("healthmd_agent_source_changed"))?;
                 let value = Arc::new(value);
                 cache.insert(artifact.artifact_id.clone(), Arc::clone(&value));
@@ -1870,7 +2003,7 @@ fn read_record_value(
                 .ok_or_else(|| backend_failure("healthmd_agent_source_changed"))
         }
         RecordLocator::NdjsonLine { line } => {
-            let bytes = read_verified_ndjson_line(root, artifact, *line)?;
+            let bytes = source.verified_ndjson_line(artifact, *line)?;
             let wrapper: Value = serde_json::from_slice(&bytes)
                 .map_err(|_| backend_failure("healthmd_agent_source_changed"))?;
             wrapper
@@ -1994,7 +2127,7 @@ fn artifact_path(root: &Path, artifact: &ArtifactEntry) -> Result<PathBuf, Backe
     Ok(canonical)
 }
 
-fn query_fingerprint(request: &AgentDataQueryRequest) -> Result<String, BackendError> {
+pub(super) fn query_fingerprint(request: &AgentDataQueryRequest) -> Result<String, BackendError> {
     let mut value = serde_json::to_value(request)
         .map_err(|_| backend_failure("healthmd_agent_query_failed"))?;
     value["page"]["cursor"] = Value::Null;
@@ -2003,8 +2136,8 @@ fn query_fingerprint(request: &AgentDataQueryRequest) -> Result<String, BackendE
     Ok(sha256_hex(&bytes))
 }
 
-fn encode_cursor(
-    index: &DirectoryIndex,
+pub(super) fn encode_cursor(
+    index: &ArtifactIndex,
     query_fingerprint: &str,
     offset: usize,
     key: &[u8; 32],
@@ -2028,7 +2161,7 @@ fn encode_cursor(
     ))
 }
 
-fn decode_cursor(
+pub(super) fn decode_cursor(
     cursor: Option<&str>,
     index_revision: &str,
     query_fingerprint: &str,
@@ -2060,7 +2193,7 @@ fn decode_cursor(
     Ok(payload.offset)
 }
 
-fn invalid_cursor() -> BackendError {
+pub(super) fn invalid_cursor() -> BackendError {
     BackendError::new(
         "healthmd_agent_cursor_invalid",
         "The Agent Data cursor is invalid.",
@@ -2103,11 +2236,11 @@ fn hash_file(path: &Path) -> Result<String, std::io::Error> {
     Ok(hex_digest(hasher.finalize()))
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
+pub(super) fn sha256_hex(bytes: &[u8]) -> String {
     hex_digest(Sha256::digest(bytes))
 }
 
-fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
+pub(super) fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
     let bytes = bytes.as_ref();
     let mut value = String::with_capacity(bytes.len() * 2);
     for byte in bytes {
@@ -2117,7 +2250,7 @@ fn hex_digest(bytes: impl AsRef<[u8]>) -> String {
     value
 }
 
-fn backend_failure(code: &'static str) -> BackendError {
+pub(super) fn backend_failure(code: &'static str) -> BackendError {
     BackendError::new(
         code,
         "The Agent Data store could not complete the bounded read.",
@@ -2209,7 +2342,7 @@ mod tests {
         let index_path = temporary.path().join("index.json");
         write_file(&exports.join(file_name), contents);
         write_file(&grant_path, &serde_json::to_string(&grant_value).unwrap());
-        let store = DirectoryArtifactStore::open(DataServeOptions {
+        let store = DirectoryArtifactStore::open(DataServeOptions::Directory {
             directory: exports,
             grant: grant_path,
             index: Some(index_path),
