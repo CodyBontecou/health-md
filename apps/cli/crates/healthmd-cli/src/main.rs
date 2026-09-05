@@ -253,9 +253,16 @@ struct McpServeDataArgs {
     #[arg(long)]
     index: Option<PathBuf>,
 
-    /// Transport for the Agent Data server. `stdio` is the default and stays byte-identical;
-    /// `streamable-http` serves the identical five-tool surface on a loopback listener.
-    #[arg(long, value_enum, default_value_t = DataServeTransport::Stdio)]
+    /// MCP serving transport for the Agent Data server. `stdio` is the default and stays
+    /// byte-identical; `streamable-http` serves the identical five-tool surface on a loopback
+    /// listener. Named `--serve-transport` because the root global `--transport` selects the
+    /// direct mobile connection (manual-ip/nearby) and clap requires unique long names.
+    #[arg(
+        long = "serve-transport",
+        id = "serve_data_transport",
+        value_enum,
+        default_value_t = DataServeTransport::Stdio
+    )]
     transport: DataServeTransport,
 
     /// Loopback address for the Streamable HTTP listener.
@@ -3101,9 +3108,9 @@ mod tests {
             .is_ok()
         );
 
-        // --transport defaults to stdio; the streamable-http value and its listener options
-        // exist only in builds that compile the shared HTTP transport (covered end-to-end in
-        // tests/agent_data_http.rs).
+        // --serve-transport defaults to stdio; the streamable-http value and its listener
+        // options exist only in builds that compile the shared HTTP transport (covered
+        // end-to-end in tests/agent_data_http.rs).
         let default_transport = Cli::try_parse_from([
             "healthmd",
             "mcp",
@@ -3127,7 +3134,7 @@ mod tests {
                 "healthmd",
                 "mcp",
                 "serve-data",
-                "--transport",
+                "--serve-transport",
                 "streamable-http",
                 "--bind",
                 "127.0.0.1:8787",
@@ -3149,7 +3156,7 @@ mod tests {
                     "healthmd",
                     "mcp",
                     "serve-data",
-                    "--transport",
+                    "--serve-transport",
                     "streamable-http",
                     "--grant",
                     "/tmp/grant.json"
