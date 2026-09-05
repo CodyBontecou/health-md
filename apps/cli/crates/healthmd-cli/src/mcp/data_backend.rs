@@ -57,11 +57,8 @@ pub enum DataServeOptions {
         grant: PathBuf,
         index: Option<PathBuf>,
     },
-    /// Serve from a Health.md-owned SQLite Agent Data database created by `healthmd data import`.
-    Database {
-        database: PathBuf,
-        grant: PathBuf,
-    },
+    /// Serve from a Health.md-owned `SQLite` Agent Data database created by `healthmd data import`.
+    Database { database: PathBuf, grant: PathBuf },
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -99,6 +96,7 @@ impl DirectoryArtifactStore {
     /// # Errors
     ///
     /// Returns a path-free error when directory, grant, index, or artifact validation fails.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn open(options: DataServeOptions) -> Result<Self, DataStoreOpenError> {
         let DataServeOptions::Directory {
             directory,
@@ -111,7 +109,7 @@ impl DirectoryArtifactStore {
             ));
         };
         let root = validated_directory(directory)?;
-        let grant_path = validated_regular_file(&grant, MAXIMUM_GRANT_BYTES)?;
+        let grant_path = validated_regular_file(grant, MAXIMUM_GRANT_BYTES)?;
         if grant_path.starts_with(&root) {
             return Err(DataStoreOpenError::new(
                 "the Agent Data grant must be stored outside the export directory",
@@ -126,7 +124,7 @@ impl DirectoryArtifactStore {
 
         let root_binding = sha256_hex(root.to_string_lossy().as_bytes());
         let index_path = match index {
-            Some(path) => validated_index_path(&root, &path)?,
+            Some(path) => validated_index_path(&root, path)?,
             None => default_index_path(&root_binding)?,
         };
         let source_files = scan_source_files(&root)?;
@@ -243,7 +241,14 @@ impl ArtifactStore for DirectoryArtifactStore {
         let cursor_key = self.cursor_key;
         let source = Arc::clone(&self.source);
         let result = tokio::task::spawn_blocking(move || {
-            execute_query(source.as_ref(), "directory", &index, &grant, &cursor_key, &request)
+            execute_query(
+                source.as_ref(),
+                "directory",
+                &index,
+                &grant,
+                &cursor_key,
+                &request,
+            )
         })
         .await
         .map_err(|_| backend_failure("healthmd_agent_query_failed"))??;
@@ -1486,9 +1491,15 @@ pub(super) fn execute_query(
             offset,
             record_id,
         ),
-        AgentDataOperation::Artifacts => {
-            query_artifacts(source_kind, index, grant, request, cursor_key, &fingerprint, offset)
-        }
+        AgentDataOperation::Artifacts => query_artifacts(
+            source_kind,
+            index,
+            grant,
+            request,
+            cursor_key,
+            &fingerprint,
+            offset,
+        ),
         AgentDataOperation::ArtifactRead { artifact_id } => query_artifact_read(
             source,
             source_kind,
@@ -1578,6 +1589,7 @@ fn query_catalog(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn query_records(
     source: &dyn ArtifactByteSource,
     source_kind: &str,
@@ -1780,6 +1792,7 @@ fn query_artifact_read(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn artifact_chunk_response(
     source: &dyn ArtifactByteSource,
     source_kind: &str,
@@ -1873,6 +1886,7 @@ fn chunk_response(
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn paged_response(
     index: &ArtifactIndex,
     source_kind: &str,

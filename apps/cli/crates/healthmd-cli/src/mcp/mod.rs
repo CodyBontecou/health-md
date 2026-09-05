@@ -256,7 +256,7 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
 }
 
 /// Serve a data-only MCP surface over stdio from an explicitly configured export directory or
-/// an imported Health.md-owned SQLite database.
+/// an imported Health.md-owned `SQLite` database.
 ///
 /// This server never opens mobile pairing state and never modifies stored artifacts. Its grant is
 /// enforced inside the artifact-store backend before records are returned.
@@ -267,9 +267,9 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
 pub async fn serve_data(options: DataServeOptions) -> Result<(), DataStoreOpenError> {
     let backend = match options {
         options @ DataServeOptions::Directory { .. } => {
-            healthmd_operations::ArtifactStoreBackend::new(Arc::new(
-                DirectoryArtifactStore::open(options)?,
-            ))
+            healthmd_operations::ArtifactStoreBackend::new(Arc::new(DirectoryArtifactStore::open(
+                options,
+            )?))
         }
         options @ DataServeOptions::Database { .. } => {
             healthmd_operations::ArtifactStoreBackend::new(Arc::new(
@@ -282,7 +282,7 @@ pub async fn serve_data(options: DataServeOptions) -> Result<(), DataStoreOpenEr
     Ok(())
 }
 
-/// Ingest recognized export artifacts from a directory into a Health.md-owned SQLite database.
+/// Ingest recognized export artifacts from a directory into a Health.md-owned `SQLite` database.
 ///
 /// The import is storage-side and non-destructive: identical bytes are never duplicated and no
 /// stored payload is deleted. Grants apply only when the database is served.

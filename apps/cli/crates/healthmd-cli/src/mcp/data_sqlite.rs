@@ -1,6 +1,6 @@
-//! Health.md-owned SQLite Agent Data store.
+//! Health.md-owned `SQLite` Agent Data store.
 //!
-//! The second local [`ArtifactStore`] backing class: a single SQLite database that
+//! The second local [`ArtifactStore`] backing class: a single `SQLite` database that
 //! stores the EXACT artifact bytes plus indexing metadata and exposes the identical
 //! Agent Data grant, query, response, and MCP operation contracts as the directory
 //! store. The database is append-safe and non-destructive: imports insert rows and
@@ -36,9 +36,9 @@ use super::data_backend::{
     execute_query, record_order, scan_source_files, sha256_hex,
 };
 
-/// `PRAGMA user_version` of the current Agent Data SQLite schema.
+/// `PRAGMA user_version` of the current Agent Data `SQLite` schema.
 pub(super) const DATABASE_SCHEMA_VERSION: u32 = 1;
-/// File-type identity so an unrelated SQLite database is never mistaken for a store.
+/// File-type identity so an unrelated `SQLite` database is never mistaken for a store.
 const DATABASE_APPLICATION_ID: i32 = 0x484D_4441; // "HMDA"
 const DATABASE_BUSY_TIMEOUT_MS: u64 = 5_000;
 
@@ -47,7 +47,7 @@ struct SqliteShared {
     index: std::sync::RwLock<Arc<ArtifactIndex>>,
 }
 
-/// Serves the Agent Data contract from a Health.md-owned SQLite database.
+/// Serves the Agent Data contract from a Health.md-owned `SQLite` database.
 ///
 /// The connection is opened read-only, so serving can never mutate stored data.
 pub struct SqliteArtifactStore {
@@ -56,7 +56,7 @@ pub struct SqliteArtifactStore {
     shared: Arc<SqliteShared>,
 }
 
-/// Reads verified artifact bytes from the SQLite payload table.
+/// Reads verified artifact bytes from the `SQLite` payload table.
 pub(super) struct SqliteByteSource {
     shared: Arc<SqliteShared>,
 }
@@ -79,9 +79,7 @@ impl ArtifactByteSource for SqliteByteSource {
         if offset > total_byte_count {
             return Err(data_backend::invalid_cursor());
         }
-        let end = offset
-            .saturating_add(maximum_bytes)
-            .min(total_byte_count);
+        let end = offset.saturating_add(maximum_bytes).min(total_byte_count);
         Ok((bytes[offset..end].to_vec(), total_byte_count))
     }
 
@@ -114,7 +112,14 @@ impl ArtifactByteSource for SqliteByteSource {
     }
 }
 
-fn lock_connection(shared: &SqliteShared) -> Result<std::sync::MutexGuard<'_, Connection>, BackendError> {
+/// Convert a bounded in-memory count into the database integer type without wrapping.
+fn sqlite_count(value: usize) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
+}
+
+fn lock_connection(
+    shared: &SqliteShared,
+) -> Result<std::sync::MutexGuard<'_, Connection>, BackendError> {
     shared
         .connection
         .lock()
@@ -129,14 +134,14 @@ fn store_corrupt() -> BackendError {
 }
 
 impl SqliteArtifactStore {
-    /// Open an imported Agent Data SQLite database for read-only serving.
+    /// Open an imported Agent Data `SQLite` database for read-only serving.
     ///
     /// # Errors
     ///
     /// Returns a path-free error when the database, grant, or stored index is invalid.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn open(options: DataServeOptions) -> Result<Self, DataStoreOpenError> {
-        let DataServeOptions::Database { database, grant } = &options
-        else {
+        let DataServeOptions::Database { database, grant } = &options else {
             return Err(DataStoreOpenError::new(
                 "the database store requires --database backing options",
             ));
@@ -167,7 +172,6 @@ impl SqliteArtifactStore {
             }),
         })
     }
-
 }
 
 /// Reload the in-memory index when the database content revision changed.
@@ -180,7 +184,8 @@ fn refresh_index(shared: &Arc<SqliteShared>) -> Result<Arc<ArtifactIndex>, Backe
             return Ok(Arc::clone(&cached));
         }
     }
-    let rebuilt = load_index(&connection).map_err(|_| backend_failure("healthmd_agent_index_failed"))?;
+    let rebuilt =
+        load_index(&connection).map_err(|_| backend_failure("healthmd_agent_index_failed"))?;
     let rebuilt = Arc::new(rebuilt);
     if let Ok(mut index) = shared.index.write() {
         *index = Arc::clone(&rebuilt);
@@ -245,7 +250,9 @@ impl ArtifactStore for SqliteArtifactStore {
         let shared = Arc::clone(&self.shared);
         let result = tokio::task::spawn_blocking(move || {
             let index = refresh_index(&shared)?;
-            let source = SqliteByteSource { shared: shared.clone() };
+            let source = SqliteByteSource {
+                shared: shared.clone(),
+            };
             execute_query(&source, "database", &index, &grant, &cursor_key, &request)
         })
         .await
@@ -310,11 +317,8 @@ fn doctor_with(shared: &Arc<SqliteShared>, index: &ArtifactIndex) -> Result<Valu
     }))
 }
 
-#[allow(clippy::missing_panics_doc)]
-pub(super) fn import_data(
-    database: &Path,
-    directory: &Path,
-) -> Result<Value, DataStoreOpenError> {
+#[allow(clippy::missing_panics_doc, clippy::too_many_lines)]
+pub(super) fn import_data(database: &Path, directory: &Path) -> Result<Value, DataStoreOpenError> {
     let database = validated_import_database_path(database, directory)?;
     let root = data_backend::validated_directory(directory)?;
     let mut connection = open_read_write(&database)?;
@@ -330,7 +334,7 @@ pub(super) fn import_data(
                 params![
                     started_at.to_rfc3339(),
                     root.to_string_lossy(),
-                    files.len() as i64
+                    sqlite_count(files.len())
                 ],
             )
             .map_err(|_| {
@@ -384,10 +388,10 @@ pub(super) fn import_data(
              ignored_count = ?4, invalid_count = ?5 WHERE import_id = ?6",
             params![
                 finished_at,
-                imported as i64,
-                duplicates as i64,
-                ignored as i64,
-                invalid as i64,
+                sqlite_count(imported),
+                sqlite_count(duplicates),
+                sqlite_count(ignored),
+                sqlite_count(invalid),
                 import_id
             ],
         )
@@ -447,11 +451,11 @@ fn insert_artifact(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 artifact.artifact_id,
-                artifact.byte_count as i64,
+                i64::try_from(artifact.byte_count).unwrap_or(i64::MAX),
                 artifact.media_type,
                 physical_format_text(artifact.physical_format),
                 artifact.capture_status,
-                records.len() as i64,
+                sqlite_count(records.len()),
                 bytes,
                 imported_at
             ],
@@ -464,9 +468,11 @@ fn insert_artifact(
                  VALUES (?1, ?2, ?3, ?4)",
                 params![
                     artifact.artifact_id,
-                    position as i64,
+                    sqlite_count(position),
                     schema.schema,
-                    schema.schema_version.map(|version| version as i64)
+                    schema
+                        .schema_version
+                        .map(|version| i64::try_from(version).unwrap_or(i64::MAX))
                 ],
             )
             .map_err(|_| failure())?;
@@ -492,13 +498,16 @@ fn insert_artifact(
                     record.artifact_id,
                     locator_type,
                     locator_value,
-                    serde_json::to_string(&record.metric_ids)
-                        .map_err(|_| failure())?,
+                    serde_json::to_string(&record.metric_ids).map_err(|_| failure())?,
                     record.source_id,
                     record.source_schema,
-                    record.source_schema_version.map(|version| version as i64),
+                    record
+                        .source_schema_version
+                        .map(|version| i64::try_from(version).unwrap_or(i64::MAX)),
                     detail_level_text(record.detail_level),
-                    record.owner_date.map(|date| date.format("%Y-%m-%d").to_string()),
+                    record
+                        .owner_date
+                        .map(|date| date.format("%Y-%m-%d").to_string()),
                     record.start_time.map(|time| time.to_rfc3339()),
                     record.end_time.map(|time| time.to_rfc3339()),
                     record.capture_status
@@ -526,16 +535,14 @@ fn record_source_observation(
     let failure = || DataStoreOpenError::new("the Agent Data import could not be completed");
     let previous: Vec<String> = {
         let mut statement = transaction
-            .prepare(
-                "SELECT DISTINCT artifact_id FROM artifact_sources WHERE relative_path = ?1",
-            )
+            .prepare("SELECT DISTINCT artifact_id FROM artifact_sources WHERE relative_path = ?1")
             .map_err(|_| failure())?;
-        let rows = statement
+
+        statement
             .query_map(params![relative_path], |row| row.get::<_, String>(0))
             .map_err(|_| failure())?
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| failure())?;
-        rows
+            .map_err(|_| failure())?
     };
     let observed_at = Utc::now().to_rfc3339();
     for previous_artifact in previous.iter().filter(|value| *value != artifact_id) {
@@ -796,7 +803,9 @@ fn validated_database_path(path: &Path) -> Result<PathBuf, DataStoreOpenError> {
         ));
     }
     let metadata = std::fs::symlink_metadata(path).map_err(|_| {
-        DataStoreOpenError::new("the Agent Data database does not exist; run `healthmd data import`")
+        DataStoreOpenError::new(
+            "the Agent Data database does not exist; run `healthmd data import`",
+        )
     })?;
     if metadata.file_type().is_symlink() || !metadata.is_file() {
         return Err(DataStoreOpenError::new(
@@ -819,12 +828,12 @@ fn validated_import_database_path(
     let parent = database.parent().ok_or_else(|| {
         DataStoreOpenError::new("the Agent Data database path has no parent directory")
     })?;
-    let parent = parent.canonicalize().map_err(|_| {
-        DataStoreOpenError::new("the Agent Data database directory does not exist")
-    })?;
-    let file_name = database.file_name().ok_or_else(|| {
-        DataStoreOpenError::new("the Agent Data database path has no file name")
-    })?;
+    let parent = parent
+        .canonicalize()
+        .map_err(|_| DataStoreOpenError::new("the Agent Data database directory does not exist"))?;
+    let file_name = database
+        .file_name()
+        .ok_or_else(|| DataStoreOpenError::new("the Agent Data database path has no file name"))?;
     let resolved = parent.join(file_name);
     if let Ok(metadata) = std::fs::symlink_metadata(&resolved) {
         if metadata.file_type().is_symlink() || !metadata.is_file() {
@@ -852,8 +861,6 @@ fn validated_grant_path(grant: &Path, database: &Path) -> Result<PathBuf, DataSt
     }
     Ok(grant_path)
 }
-
-/// Import-time artifact bytes are read from the recognized export file before insertion.
 
 fn physical_format_text(format: PhysicalFormat) -> &'static str {
     match format {
@@ -892,6 +899,7 @@ fn locator_columns(locator: &RecordLocator) -> (&'static str, String) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn load_index(connection: &Connection) -> Result<ArtifactIndex, DataStoreOpenError> {
     let failure = || DataStoreOpenError::new("the Agent Data index could not be loaded");
     let content_revision = read_content_revision(connection)?;
@@ -902,7 +910,8 @@ fn load_index(connection: &Connection) -> Result<ArtifactIndex, DataStoreOpenErr
                  record_count FROM artifacts ORDER BY artifact_id",
             )
             .map_err(|_| failure())?;
-        let rows = statement
+
+        statement
             .query_map([], |row| {
                 Ok(ArtifactEntry {
                     artifact_id: row.get(0)?,
@@ -919,8 +928,7 @@ fn load_index(connection: &Connection) -> Result<ArtifactIndex, DataStoreOpenErr
             })
             .map_err(|_| failure())?
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| failure())?;
-        rows
+            .map_err(|_| failure())?
     };
     let mut schemas: BTreeMap<String, Vec<ArtifactSchema>> = BTreeMap::new();
     {
@@ -966,7 +974,10 @@ fn load_index(connection: &Connection) -> Result<ArtifactIndex, DataStoreOpenErr
             .map_err(|_| failure())?;
         for (artifact_id, detail_level) in rows {
             if let Some(detail_level) = detail_level {
-                detail_levels.entry(artifact_id).or_default().insert(detail_level);
+                detail_levels
+                    .entry(artifact_id)
+                    .or_default()
+                    .insert(detail_level);
             }
         }
     }
@@ -986,7 +997,8 @@ fn load_index(connection: &Connection) -> Result<ArtifactIndex, DataStoreOpenErr
                  start_time, end_time, capture_status FROM records",
             )
             .map_err(|_| failure())?;
-        let rows = statement
+
+        statement
             .query_map([], |row| {
                 Ok::<RecordEntry, rusqlite::Error>(RecordEntry {
                     record_id: row.get(0)?,
@@ -999,8 +1011,7 @@ fn load_index(connection: &Connection) -> Result<ArtifactIndex, DataStoreOpenErr
                             line: row.get::<_, String>(3)?.parse().unwrap_or(0),
                         },
                     },
-                    metric_ids: serde_json::from_str(&row.get::<_, String>(4)?)
-                        .unwrap_or_default(),
+                    metric_ids: serde_json::from_str(&row.get::<_, String>(4)?).unwrap_or_default(),
                     source_id: row.get(5)?,
                     source_schema: row.get(6)?,
                     source_schema_version: row
@@ -1024,8 +1035,7 @@ fn load_index(connection: &Connection) -> Result<ArtifactIndex, DataStoreOpenErr
             })
             .map_err(|_| failure())?
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|_| failure())?;
-        rows
+            .map_err(|_| failure())?
     };
     records.sort_by(record_order);
     let (ignored, invalid): (u64, u64) = connection
@@ -1087,8 +1097,8 @@ mod tests {
 
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
     use healthmd_operations::{
-        AGENT_DATA_GRANT_SCHEMA, AGENT_DATA_QUERY_SCHEMA, AGENT_DATA_SCHEMA_VERSION,
-        ArtifactStore, CallerIdentity,
+        AGENT_DATA_GRANT_SCHEMA, AGENT_DATA_QUERY_SCHEMA, AGENT_DATA_SCHEMA_VERSION, ArtifactStore,
+        CallerIdentity,
     };
     use serde_json::{Value, json};
     use tempfile::TempDir;
@@ -1127,6 +1137,7 @@ mod tests {
         exports
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn grant_file(temporary: &TempDir, value: Value) -> PathBuf {
         let path = temporary.path().join("grant.json");
         write_file(&path, &serde_json::to_string(&value).unwrap());
@@ -1158,10 +1169,12 @@ mod tests {
         json!({"type": "all_available"})
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn query(operation: Value) -> AgentDataQueryRequest {
         query_paged(operation, 250, 262_144, None)
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn query_paged(
         operation: Value,
         max_items: usize,
@@ -1177,6 +1190,7 @@ mod tests {
         .unwrap()
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn records_operation(
         metrics: Value,
         sources: Value,
@@ -1230,6 +1244,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn catalog_and_records_enforce_every_grant_gate() {
         let (_temporary, _database, store) = two_day_store(grant(
             json!({"type": "explicit", "metric_ids": [
@@ -1271,7 +1286,9 @@ mod tests {
         assert_eq!(records["items"].as_array().unwrap().len(), 2);
         assert_eq!(records["items"][0]["value"], 12345);
         assert!(
-            !serde_json::to_string(&records).unwrap().contains("restingHeartRate"),
+            !serde_json::to_string(&records)
+                .unwrap()
+                .contains("restingHeartRate"),
             "an ungranted sibling metric must never leak"
         );
 
@@ -1412,7 +1429,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(artifacts["items"].as_array().unwrap().len(), 2);
-        let artifact_id = artifacts["items"][0]["artifact_id"].as_str().unwrap().to_owned();
+        let artifact_id = artifacts["items"][0]["artifact_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
         let response = broad
             .query_page(
                 &context(),
@@ -1424,17 +1444,17 @@ mod tests {
         let decoded = URL_SAFE_NO_PAD
             .decode(response["items"][0]["data"].as_str().unwrap())
             .unwrap();
-        let expected = if response["items"][0]["byte_count"].as_u64().unwrap()
-            == DAY_ONE.len() as u64
-        {
-            DAY_ONE
-        } else {
-            DAY_TWO
-        };
+        let expected =
+            if response["items"][0]["byte_count"].as_u64().unwrap() == DAY_ONE.len() as u64 {
+                DAY_ONE
+            } else {
+                DAY_TWO
+            };
         assert_eq!(decoded, expected.as_bytes());
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)]
     async fn record_read_and_artifact_read_are_chunked_and_exact() {
         let temporary = TempDir::new().unwrap();
         let big = format!(
@@ -1475,7 +1495,10 @@ mod tests {
             )
             .await
             .unwrap();
-        let record_id = records["items"][0]["record_id"].as_str().unwrap().to_owned();
+        let record_id = records["items"][0]["record_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
         let mut cursor = None;
         let mut assembled = Vec::new();
         let mut chunks = 0;
@@ -1494,7 +1517,9 @@ mod tests {
                 .unwrap();
             let item = &response["items"][0];
             assembled.extend_from_slice(
-                &URL_SAFE_NO_PAD.decode(item["data"].as_str().unwrap()).unwrap(),
+                &URL_SAFE_NO_PAD
+                    .decode(item["data"].as_str().unwrap())
+                    .unwrap(),
             );
             chunks += 1;
             if item["complete"].as_bool().unwrap() {
@@ -1504,16 +1529,21 @@ mod tests {
         }
         assert!(chunks >= 2, "an oversized record must need multiple chunks");
         let value: Value = serde_json::from_slice(&assembled).unwrap();
-        assert_eq!(
-            value.as_str().unwrap().ends_with("-tail-marker-for-chunking-verification"),
-            true
+        assert!(
+            value
+                .as_str()
+                .unwrap()
+                .ends_with("-tail-marker-for-chunking-verification")
         );
 
         let artifacts = store
             .query_page(&context(), query(json!({"type": "artifacts"})))
             .await
             .unwrap();
-        let artifact_id = artifacts["items"][0]["artifact_id"].as_str().unwrap().to_owned();
+        let artifact_id = artifacts["items"][0]["artifact_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
         let mut cursor = None;
         let mut assembled = Vec::new();
         let mut chunks = 0;
@@ -1532,7 +1562,9 @@ mod tests {
                 .unwrap();
             let item = &response["items"][0];
             assembled.extend_from_slice(
-                &URL_SAFE_NO_PAD.decode(item["data"].as_str().unwrap()).unwrap(),
+                &URL_SAFE_NO_PAD
+                    .decode(item["data"].as_str().unwrap())
+                    .unwrap(),
             );
             chunks += 1;
             if item["complete"].as_bool().unwrap() {
@@ -1625,8 +1657,7 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(
-            after_reimport.code,
-            "healthmd_agent_cursor_stale",
+            after_reimport.code, "healthmd_agent_cursor_stale",
             "a cursor from an older store revision must be rejected after re-import"
         );
     }
@@ -1724,7 +1755,10 @@ mod tests {
         );
         let context = context();
         let doctor = store.doctor(&context).await.unwrap();
-        assert_eq!(doctor["database"]["superseded_artifact_observation_count"], 1);
+        assert_eq!(
+            doctor["database"]["superseded_artifact_observation_count"],
+            1
+        );
         assert_eq!(doctor["artifact_count"], 2);
         let catalog = store
             .query_page(&context, query(json!({"type": "catalog"})))
@@ -1796,7 +1830,11 @@ mod tests {
         assert_eq!(readiness["source_kind"], "database");
         assert_eq!(readiness["ready"], true);
         assert_eq!(readiness["artifact_count"], 2);
-        assert!(readiness["index_revision"].as_str().is_some_and(|value| !value.is_empty()));
+        assert!(
+            readiness["index_revision"]
+                .as_str()
+                .is_some_and(|value| !value.is_empty())
+        );
         let capabilities = store.capabilities();
         assert_eq!(capabilities.transport, "local_database");
         assert!(!capabilities.requires_foreground_source);
@@ -1839,9 +1877,7 @@ mod tests {
         let database = import(&temporary, &exports);
         {
             let connection = Connection::open(&database).unwrap();
-            connection
-                .execute("PRAGMA user_version = 99", [])
-                .unwrap();
+            connection.execute("PRAGMA user_version = 99", []).unwrap();
         }
         let future = SqliteArtifactStore::open(DataServeOptions::Database {
             database,

@@ -154,7 +154,7 @@ struct DataArgs {
 
 #[derive(Debug, Subcommand)]
 enum DataCommand {
-    /// Ingest recognized export artifacts into a Health.md-owned SQLite Agent Data database.
+    /// Ingest recognized export artifacts into a Health.md-owned `SQLite` Agent Data database.
     Import(DataImportArgs),
 }
 
@@ -163,7 +163,7 @@ enum DataCommand {
     after_help = "EXAMPLES:\n  healthmd data import --database /absolute/private/agent-data.sqlite --directory /absolute/path/to/healthmd-exports\n\nThe import is idempotent and non-destructive: identical artifact bytes are never duplicated\nand no stored payload is deleted. Superseded artifacts stay recorded for user-controlled\nretention. Serve the database afterwards with `healthmd mcp serve-data --database ...`."
 )]
 struct DataImportArgs {
-    /// Absolute path of the SQLite Agent Data database to create or extend. Must live outside
+    /// Absolute path of the `SQLite` Agent Data database to create or extend. Must live outside
     /// the import directory.
     #[arg(long)]
     database: PathBuf,
@@ -229,7 +229,7 @@ struct McpServeDataArgs {
     #[arg(long)]
     directory: Option<PathBuf>,
 
-    /// Existing absolute SQLite Agent Data database created with `healthmd data import`.
+    /// Existing absolute `SQLite` Agent Data database created with `healthmd data import`.
     #[arg(long)]
     database: Option<PathBuf>,
 
@@ -752,10 +752,7 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
         command: Some(McpCommand::ServeData(options)),
     }) = &cli.command
     {
-        let backing = match (
-            options.directory.clone(),
-            options.database.clone(),
-        ) {
+        let backing = match (options.directory.clone(), options.database.clone()) {
             (Some(directory), None) => mcp::DataServeOptions::Directory {
                 directory,
                 grant: options.grant.clone(),
@@ -930,9 +927,7 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         }) => direct_reset_trust(confirm).await.map(CommandSuccess::json),
         Command::Data(DataArgs {
             command: Some(DataCommand::Import(options)),
-        }) if backend == Backend::Direct => data_import(options)
-            .await
-            .map(CommandSuccess::json),
+        }) if backend == Backend::Direct => data_import(options).await.map(CommandSuccess::json),
         Command::Setup(SetupArgs {
             command: Some(SetupCommand::Codex(options)),
         }) if backend == Backend::Direct => setup_codex(options, device, port)
@@ -2965,6 +2960,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn data_mcp_commands_parse() {
         let data = Cli::try_parse_from([
             "healthmd",
@@ -2984,10 +2980,16 @@ mod tests {
         else {
             panic!("expected data MCP serve command");
         };
-        assert_eq!(options.directory.as_deref(), Some(Path::new("/tmp/healthmd-exports")));
+        assert_eq!(
+            options.directory.as_deref(),
+            Some(Path::new("/tmp/healthmd-exports"))
+        );
         assert_eq!(options.database, None);
         assert_eq!(options.grant, PathBuf::from("/tmp/healthmd-grant.json"));
-        assert_eq!(options.index.as_deref(), Some(Path::new("/tmp/healthmd-index.json")));
+        assert_eq!(
+            options.index.as_deref(),
+            Some(Path::new("/tmp/healthmd-index.json"))
+        );
 
         let database = Cli::try_parse_from([
             "healthmd",
