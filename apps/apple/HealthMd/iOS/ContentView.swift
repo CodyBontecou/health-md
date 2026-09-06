@@ -16,6 +16,7 @@ struct ContentView: View {
     @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
     @EnvironmentObject var advancedSettings: AdvancedExportSettings
     @EnvironmentObject var apiExportSettings: APIExportSettings
+    @EnvironmentObject var agentDataGatewaySettings: AgentDataGatewaySettings
         @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
@@ -141,6 +142,7 @@ struct ContentView: View {
                         syncService: syncService,
                         advancedSettings: advancedSettings,
                         apiExportSettings: apiExportSettings,
+                        agentDataGatewaySettings: agentDataGatewaySettings,
                         externalIntegrations: ConnectedAppsFeature.isEnabled
                             ? externalIntegrationManager
                             : nil,
@@ -198,18 +200,13 @@ struct ContentView: View {
                 }
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
-                .onChange(of: exportTargetSelection) { _, newValue in
-                    profileCoordinator?.userSelectedTarget(newValue)
-                }
-                .onChange(of: profileCoordinator?.activeTarget) { _, newValue in
-                    guard let newValue, newValue != exportTargetSelection else { return }
+                .profileDestinationSync(
+                    exportTargetSelection: exportTargetSelection,
+                    profileCoordinator: profileCoordinator,
+                    apiExportSettings: apiExportSettings,
+                    agentDataGatewaySettings: agentDataGatewaySettings
+                ) { newValue in
                     exportTargetSelection = newValue
-                }
-                .onChange(of: apiExportSettings.endpointURLString) { _, _ in
-                    profileCoordinator?.apiEndpointDidChange()
-                }
-                .onChange(of: apiExportSettings.bearerToken) { _, _ in
-                    profileCoordinator?.apiEndpointDidChange()
                 }
                 .onAppear {
                     if directCLIService.pendingPairingLink != nil { selectedTab = .sync }
@@ -865,6 +862,8 @@ struct ContentView: View {
             return .connectedMac
         case .apiEndpoint:
             return .apiEndpoint
+        case .agentDataGateway:
+            return .agentDataGateway
         }
     }
 
@@ -1016,8 +1015,9 @@ struct ContentView: View {
             return
         }
 
-        if advancedSettings.dailyNotesOnlyModeEnabled && exportTargetSelection == .apiEndpoint {
-            presentExportConfigurationError("Daily Notes Only requires a Local Folder or Connected Mac destination. Turn it off to export to an API endpoint.")
+        if advancedSettings.dailyNotesOnlyModeEnabled
+            && (exportTargetSelection == .apiEndpoint || exportTargetSelection == .agentDataGateway) {
+            presentExportConfigurationError("Daily Notes Only requires a Local Folder or Connected Mac destination. Turn it off to export to an API endpoint or Agent Data gateway.")
             return
         }
 
@@ -1064,6 +1064,15 @@ struct ContentView: View {
                 presentExportConfigurationError("Configure a valid API endpoint before exporting.")
                 return
             }
+        case .agentDataGateway:
+            guard agentDataGatewaySettings.isConfigured else {
+                presentExportConfigurationError("Configure a valid Agent Data gateway endpoint before exporting.")
+                return
+            }
+            guard advancedSettings.exportFormats.contains(.json) else {
+                presentExportConfigurationError("Select the JSON format before exporting to an Agent Data gateway.")
+                return
+            }
         }
 
         // In UI test mode, simulate export only after the same configuration
@@ -1080,6 +1089,8 @@ struct ContentView: View {
             exportDataToConnectedMac()
         case .apiEndpoint:
             exportDataToAPIEndpoint()
+        case .agentDataGateway:
+            exportDataToAgentDataGateway()
         }
     }
 
@@ -1384,6 +1395,120 @@ struct ContentView: View {
                 let primaryReason = result.primaryFailureReason ?? .unknown
                 exportStatusMessage = "API export failed: \(primaryReason.shortDescription)"
                 vaultManager.lastExportStatus = "API export failed"
+                presentExportFailure(
+                    primaryReason,
+                    detail: result.failedDateDetails.first
+                )
+            }
+        }
+    }
+
+    private func exportDataToAgentDataGateway() {
+        guard purchaseManager.canExport else {
+            presentExportPaywall()
+            return
+        }
+        guard let gatewayDestination = agentDataGatewaySettings.destinationSnapshot else {
+            presentExportConfigurationError("Configure a valid Agent Data gateway endpoint before exporting.")
+            return
+        }
+
+        isExporting = true
+        exportProgress = 0.0
+        exportStatusMessage = "Preparing Agent Data gateway export…"
+        statusDismissTimer?.invalidate()
+
+        exportTask = Task {
+            defer {
+                isExporting = false
+                exportProgress = 0.0
+                exportTask = nil
+            }
+
+            let dateRange = effectiveExportDateRange()
+            startDate = dateRange.startDate
+            endDate = dateRange.endDate
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: dateRange.startDate,
+                to: dateRange.endDate,
+                calendar: calendar
+            )
+            let normalizedStartDate = dates.first ?? dateRange.startDate
+            let normalizedEndDate = dates.last ?? dateRange.endDate
+            let totalDays = dates.count
+            let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
+
+            let outcome = await AgentDataGatewayExportRunner.export(
+                dates: dates,
+                healthKitManager: healthKitManager,
+                settings: advancedSettings,
+                destination: gatewayDestination,
+                externalIntegrations: externalIntegrations,
+                onProgress: { phase in
+                    switch phase {
+                    case .materializing(_, let processed, let total):
+                        let clampedTotal = max(total, 1)
+                        exportProgress = Double(processed) / Double(clampedTotal) * 0.7
+                        if processed < clampedTotal {
+                            exportStatusMessage = "Preparing export for gateway… (\(processed)/\(clampedTotal))"
+                        } else {
+                            exportStatusMessage = "Uploading to Agent Data gateway…"
+                        }
+                    case .uploading(let processed, let total):
+                        let clampedTotal = max(total, 1)
+                        exportProgress = 0.7 + Double(processed) / Double(clampedTotal) * 0.3
+                        exportStatusMessage = "Uploading artifacts to Agent Data gateway… (\(processed)/\(clampedTotal))"
+                    }
+                }
+            )
+            let result = outcome.export
+
+            ExportOrchestrator.recordResult(
+                result,
+                source: .manual,
+                dateRangeStart: normalizedStartDate,
+                dateRangeEnd: normalizedEndDate,
+                targetLabel: gatewayDestination.displayName,
+                exportTarget: .agentDataGateway
+            )
+
+            if result.successCount > 0 {
+                purchaseManager.recordExportUse()
+                trackSuccessfulExport(
+                    targetType: .agentDataGateway,
+                    startDate: normalizedStartDate,
+                    endDate: normalizedEndDate
+                )
+            }
+
+            if result.wasCancelled {
+                exportStatusMessage = outcome.uploads.eligibleCount == 0
+                    ? "Agent Data gateway export cancelled"
+                    : "Gateway upload stopped — \(outcome.uploads.localizedDescription)"
+                vaultManager.lastExportStatus = exportStatusMessage
+                startStatusDismissTimer()
+            } else if result.isFullSuccess {
+                exportStatusMessage = outcome.uploads.localizedDescription
+                vaultManager.lastExportStatus = "Agent Data gateway export complete"
+                startStatusDismissTimer()
+
+                if ReviewManager.shared.recordSuccessfulExport() {
+                    ReviewManager.shared.didRequestReview()
+                    requestReview()
+                }
+            } else if result.isPartialSuccess {
+                partialExportNotice = PartialExportNotice(result: result)
+                let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+                exportStatusMessage = "\(outcome.uploads.localizedDescription). Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Agent Data gateway partial export"
+            } else {
+                let primaryReason = result.primaryFailureReason ?? .unknown
+                exportStatusMessage = "Agent Data gateway export failed: \(primaryReason.shortDescription)"
+                vaultManager.lastExportStatus = "Agent Data gateway export failed"
                 presentExportFailure(
                     primaryReason,
                     detail: result.failedDateDetails.first
@@ -2530,6 +2655,7 @@ struct ScheduleTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
+    @EnvironmentObject var agentDataGatewaySettings: AgentDataGatewaySettings
     @Binding var showFolderPicker: Bool
     var profileCoordinator: ExportProfileCoordinator? = nil
 
@@ -2539,6 +2665,7 @@ struct ScheduleTabView: View {
                 vaultManager: vaultManager,
                 advancedSettings: advancedSettings,
                 apiExportSettings: apiExportSettings,
+                agentDataGatewaySettings: agentDataGatewaySettings,
                 showFolderPicker: $showFolderPicker,
                 profileCoordinator: profileCoordinator
             )
@@ -3172,4 +3299,36 @@ private struct ExportProfilesSettingsRow: View {
         .environmentObject(SchedulingManager.shared)
         .environmentObject(ExternalIntegrationManager())
         .environmentObject(ConfigurationProtectionManager())
+}
+
+/// Extracted destination-sync modifier chain: keeps the TabView body inside
+/// the compiler's expression type-checking budget while preserving the exact
+/// onChange semantics (target selection, coordinator adoption of endpoint
+/// and gateway edits, and active-target mirroring).
+private extension View {
+    func profileDestinationSync(
+        exportTargetSelection: ExportTargetSelection,
+        profileCoordinator: ExportProfileCoordinator?,
+        apiExportSettings: APIExportSettings,
+        agentDataGatewaySettings: AgentDataGatewaySettings,
+        onActiveTargetChange: @escaping (ExportTargetSelection) -> Void
+    ) -> some View {
+        self
+            .onChange(of: exportTargetSelection) { _, newValue in
+                profileCoordinator?.userSelectedTarget(newValue)
+            }
+            .onChange(of: profileCoordinator?.activeTarget) { _, newValue in
+                guard let newValue, newValue != exportTargetSelection else { return }
+                onActiveTargetChange(newValue)
+            }
+            .onChange(of: apiExportSettings.endpointURLString) { _, _ in
+                profileCoordinator?.apiEndpointDidChange()
+            }
+            .onChange(of: apiExportSettings.bearerToken) { _, _ in
+                profileCoordinator?.apiEndpointDidChange()
+            }
+            .onChange(of: agentDataGatewaySettings.endpointURLString) { _, _ in
+                profileCoordinator?.agentDataGatewayDidChange()
+            }
+    }
 }

@@ -408,6 +408,7 @@ nonisolated enum PricingAnalyticsExportTargetType: String, CaseIterable, Sendabl
     case localFile = "local_file"
     case connectedMac = "connected_mac"
     case apiEndpoint = "api_endpoint"
+    case agentDataGateway = "agent_data_gateway"
     case previewOnly = "preview_only"
 }
 
