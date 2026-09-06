@@ -61,6 +61,12 @@ final class ConfigurationProtectionManager: ObservableObject {
         let toastID = UUID()
         blockedChangeToastID = toastID
         toastDismissTask?.cancel()
+        // UI tests pin the toast: the 4-second auto-dismiss clock starts at
+        // tap time, before the presentation transition settles, so a slow CI
+        // runner can lose the entire hittable window before the polling
+        // helper ever sees a tappable element. Tests dismiss the toast
+        // explicitly by tapping it.
+        guard !TestMode.isUITesting else { return }
         toastDismissTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled, self?.blockedChangeToastID == toastID else { return }

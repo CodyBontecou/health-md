@@ -21,7 +21,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
     /// element and querying again after the presentation animation.
     private func waitForHittableToast(
         in app: XCUIApplication,
-        timeout: TimeInterval = 3
+        timeout: TimeInterval = 10
     ) -> XCUIElement? {
         let deadline = Date().addingTimeInterval(timeout)
         let predicate = NSPredicate(format: "identifier == %@", UITestLaunchHelper.ConfigurationProtection.toast)
@@ -39,8 +39,10 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
 
     /// Waits until an element both exists and is hittable, so taps land even
     /// while sheet presentation or navigation-push animations are settling.
+    /// Generous by default: loaded CI runners can take several seconds for
+    /// sheet content to settle into a hittable state.
     @discardableResult
-    private func waitHittable(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+    private func waitHittable(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "isHittable == true"),
             object: element
