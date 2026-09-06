@@ -2257,9 +2257,7 @@ final class HealthKitManager: ObservableObject {
     /// was omitted. Such omissions are informational and must not degrade the
     /// export status below full success.
     private static func isWorkoutPlanOmission(_ childResult: HealthKitQueryResult) -> Bool {
-        childResult.identifier.hasSuffix(":workoutPlan")
-            && childResult.error?.domain == "WorkoutKit.ImportError"
-            && (childResult.error?.isRecoverable ?? false)
+        childResult.isInformationalWorkoutPlanOmission
     }
 
     private static func dayRangeDescription(for date: Date) -> String {

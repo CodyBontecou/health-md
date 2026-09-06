@@ -2388,7 +2388,12 @@ final class MacCorpusExportSessionManager {
         }
         return AppleLooseDailyRangeWriteResult(
             dailyFileCount: completedPlan.dailyFileCount,
-            rollupFileCount: completedPlan.rollupFileCount
+            rollupFileCount: completedPlan.rollupFileCount,
+            // The guard above ensures an acknowledged dictionary was committed
+            // (or verified exact) as part of this plan, so it is one of the
+            // files this range wrote. The journal schema keeps only the
+            // artifact, not the sender's count; its presence is authoritative.
+            dataDictionaryFileCount: completedPlan.dataDictionary != nil ? 1 : 0
         )
     }
 

@@ -395,7 +395,7 @@ enum ExportIntentRunner {
             )
         }
 
-        let reason = result.hasPartialFailures
+        let reason = result.hasDegradingPartialFailures
             ? result.partialFailureSummary
             : (result.primaryFailureReason?.shortDescription ?? "Some days had no data")
         return .partial(

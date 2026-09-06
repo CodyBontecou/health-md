@@ -1220,15 +1220,19 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
+                // An informational omission (for example a WorkoutKit plan this
+                // device cannot decode) keeps the full-success status; surface
+                // it as a note rather than letting it pass unnoticed.
+                let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
                     vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))"
+                    exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))\(noteSuffix)"
                     vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
                 } else {
-                    exportStatusMessage = result.localizedGeneratedFileAndDataDayDescription
-                    vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
+                    exportStatusMessage = result.localizedGeneratedFileAndDataDayDescription + noteSuffix
+                    vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
                 }
                 startStatusDismissTimer()
 
@@ -1243,7 +1247,7 @@ struct ContentView: View {
                 if !isCompletedDailyNoteSkip {
                     partialExportNotice = PartialExportNotice(result: result)
                 }
-                let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
+                let warning = result.hasDegradingPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
                 if isCompletedDailyNoteSkip {
@@ -1375,7 +1379,7 @@ struct ContentView: View {
                 }
             } else if result.isPartialSuccess {
                 partialExportNotice = PartialExportNotice(result: result)
-                let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
+                let warning = result.hasDegradingPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
                 exportStatusMessage = "Uploaded \(result.successCount)/\(totalDays) days\(providerRecordDescription) to API. \(suffix)"
@@ -2140,8 +2144,10 @@ struct ContentView: View {
         case .success:
             // Write-side warnings (individual-entry coverage gaps) do not fail
             // the export, so surface them alongside the success message.
-            let warningSuffix = exportResult.hasPartialFailures
-                ? " " + exportResult.partialFailureSummary : ""
+            // Informational omissions read as a note, not a warning.
+            let warningSuffix = exportResult.hasDegradingPartialFailures
+                ? " " + exportResult.partialFailureSummary
+                : (exportResult.informationalNoteSummary.map { " \($0)" } ?? "")
             if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)\(warningSuffix)"
                 vaultManager.lastExportStatus = exportStatusMessage
@@ -2169,7 +2175,7 @@ struct ContentView: View {
                 partialExportNotice = PartialExportNotice(result: exportResult)
             }
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-            let warning = exportResult.hasPartialFailures
+            let warning = exportResult.hasDegradingPartialFailures
                 ? exportResult.partialFailureSummary : nil
             let suffix = warning ?? "Failed: \(failedDatesStr)"
             if isCompletedDailyNoteSkip {

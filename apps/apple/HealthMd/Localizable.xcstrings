@@ -63968,6 +63968,36 @@
         }
       }
     },
+    "Note: %lld export notes, including %@": {
+      "comment": "Informational export notes summary prefix; the notes did not reduce the export below full success",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Note: %1$lld export notes, including %2$@"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Hinweis: %1$lld Exportnotizen, einschließlich %2$@"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Nota: %1$lld notas de exportación, incluida %2$@"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Remarque : %1$lld notes d'exportation, dont %2$@"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Nota: %1$lld note sull'esportazione, inclusa %2$@"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "メモ: %2$@を含む%1$lld件のエクスポートメモ"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "메모: %2$@을(를) 포함한 내보내기 메모 %1$lld건"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Let op: %1$lld exportnotities, waaronder %2$@"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Observação: %1$lld notas de exportação, incluindo %2$@"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "注：%1$lld条导出说明（包括%2$@）"}}
+      }
+    },
+    "Note: %@": {
+      "comment": "Informational export note prefix; the note did not reduce the export below full success",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Note: %1$@"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Hinweis: %1$@"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Nota: %1$@"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Remarque : %1$@"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Nota: %1$@"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "メモ: %1$@"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "메모: %1$@"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Let op: %1$@"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Observação: %1$@"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "注：%1$@"}}
+      }
+    },
     "Note: Your iPhone must be unlocked for exports to work—iOS protects health data when locked. If locked, we'll send a notification at the scheduled time; tap it to run the export. The scheduled time is approximate; iOS controls when background tasks run based on usage patterns and system conditions.": {
       "localizations": {
         "de": {

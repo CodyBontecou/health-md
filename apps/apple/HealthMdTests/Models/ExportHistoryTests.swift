@@ -362,6 +362,83 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(entry.partialFailures.count, 2)
     }
 
+    func testEntry_informationalNotesWithDegradingFreeOperationDetailsStayFullSuccess() {
+        // Direct iPhone→Mac transfers persist aggregate operation counts.
+        // When those counts exclude informational omissions, an entry whose
+        // only warnings are notes must stay a full success even though
+        // `operationDetails` is present (its `hasWarnings` gate remains the
+        // authority for genuinely degrading aggregates).
+        let informational = ExportPartialFailure(
+            date: Date(),
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 2,
+            partialFailures: [informational],
+            operationDetails: ExportHistoryOperationDetails(
+                kind: .generatedFiles,
+                requestID: UUID(),
+                dateSelection: "exact_range",
+                settingsPolicy: "frozen",
+                partitionCount: 1,
+                transferredBytes: 128,
+                sampleCount: 4,
+                recordCount: 4,
+                warningDayCount: 0,
+                failedDayCount: 0,
+                integrityWarningCount: 0,
+                partialFailureCount: 0
+            )
+        )
+
+        XCTAssertTrue(entry.isFullSuccess)
+        XCTAssertFalse(entry.isPartialSuccess)
+    }
+
+    func testEntry_operationDetailsWarningCountsStillBlockFullSuccess() {
+        let informational = ExportPartialFailure(
+            date: Date(),
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 2,
+            partialFailures: [informational],
+            operationDetails: ExportHistoryOperationDetails(
+                kind: .generatedFiles,
+                requestID: UUID(),
+                dateSelection: "exact_range",
+                settingsPolicy: "frozen",
+                partitionCount: 1,
+                transferredBytes: 128,
+                warningDayCount: 1,
+                failedDayCount: 0,
+                integrityWarningCount: 0,
+                partialFailureCount: 0
+            )
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+    }
+
     func testEntry_degradingWarningStillBlocksFullSuccess() {
         let entry = ExportHistoryEntry(
             source: .manual,

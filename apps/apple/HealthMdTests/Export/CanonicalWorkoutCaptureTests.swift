@@ -331,6 +331,52 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         XCTAssertTrue(result.isFullSuccess)
     }
 
+    /// The plan *serialization* child query fails with the same opaque
+    /// WorkoutKit import error when a loaded plan cannot be re-encoded. Like
+    /// the load-path failure it only omits the optional structured plan, so it
+    /// must also be informational (identifier suffix
+    /// `:workoutPlan:dataRepresentation`).
+    @MainActor
+    func testUndecodableWorkoutPlanSerializationWarningIsInformational() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let actualEnd = dayStart.addingTimeInterval(50 * 60)
+        let store = FakeHealthStore()
+        let serializeFailure = HealthKitQueryResult(
+            identifier: "\(Self.workoutUUID.uuidString):workoutPlan:dataRepresentation",
+            objectTypeIdentifier: "com.apple.health.workout-plan",
+            operation: "serializeWorkoutPlan",
+            metricIDs: ["workouts"],
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            interval: HealthKitQueryInterval(startDate: dayStart, endDate: actualEnd),
+            status: .failure,
+            recordCount: 0,
+            error: HealthKitQueryError(
+                domain: "WorkoutKit.ImportError",
+                code: 3,
+                description: SystemHealthStoreAdapter.workoutPlanImportFailureDescription(
+                    for: NSError(domain: "WorkoutKit.ImportError", code: 3)
+                )!,
+                isRecoverable: true
+            ),
+            statusDescription: "workout_uuid=\(Self.workoutUUID.uuidString)"
+        )
+        store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
+            records: [Self.workoutRecord(dayStart: dayStart, actualEnd: actualEnd)],
+            childQueryFailures: [serializeFailure]
+        )
+
+        let data = try await makeManager(store: store).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: workoutSelection()
+        )
+
+        let planWarning = try XCTUnwrap(data.partialFailures.first {
+            $0.dataType.contains("workoutPlan:dataRepresentation")
+        })
+        XCTAssertEqual(planWarning.isInformational, true)
+    }
+
     @MainActor
     func testWorkoutChildFailureIsExplicitAndDoesNotDropSuccessfulGraph() async throws {
         let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))

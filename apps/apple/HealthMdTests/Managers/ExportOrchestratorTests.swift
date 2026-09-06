@@ -248,6 +248,63 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
     }
 
+    /// Post-export surfaces separate degrading warnings from informational
+    /// notes: a full-success export with notes must never announce "Warning:".
+    func testExportResultSeparatesDegradingWarningsFromInformationalNotes() {
+        let informational = ExportPartialFailure(
+            date: HealthKitFixtures.referenceDate,
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let degrading = ExportPartialFailure(
+            date: HealthKitFixtures.referenceDate,
+            dataType: "workouts",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "HealthKit query failed"
+        )
+
+        let notesOnly = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            partialFailures: [informational]
+        )
+        XCTAssertTrue(notesOnly.hasPartialFailures)
+        XCTAssertFalse(notesOnly.hasDegradingPartialFailures)
+        XCTAssertEqual(notesOnly.partialFailureSummary, "")
+        XCTAssertEqual(
+            notesOnly.informationalNoteSummary,
+            "Note: \(informational.summary)"
+        )
+        XCTAssertNotNil(notesOnly.localizedInformationalNoteSummary)
+
+        let mixed = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            partialFailures: [informational, degrading]
+        )
+        XCTAssertTrue(mixed.hasDegradingPartialFailures)
+        XCTAssertEqual(
+            mixed.partialFailureSummary,
+            "Warning: \(degrading.summary)"
+        )
+        XCTAssertEqual(
+            mixed.informationalNoteSummary,
+            "Note: \(informational.summary)"
+        )
+
+        let clean = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: []
+        )
+        XCTAssertNil(clean.informationalNoteSummary)
+        XCTAssertEqual(clean.partialFailureSummary, "")
+    }
+
     /// Scheduled local exports must report an authoritative generated-file
     /// count so Export History can distinguish a run that wrote files from one
     /// that wrote none (user report 2026-09-05: scheduled runs showed the legacy

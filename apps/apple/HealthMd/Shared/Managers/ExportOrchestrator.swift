@@ -177,7 +177,7 @@ struct ExportOrchestrator {
             self.archiveCount = max(archiveCount, 0)
             self.externalRecordFileCount = max(externalRecordFileCount, 0)
             self.externalRecordPayloadCount = max(externalRecordPayloadCount, 0)
-            self.unclassifiedFileCount = Self.saturatingAdd(
+            self.unclassifiedFileCount = ExportOrchestrator.saturatingAdd(
                 max(unclassifiedFileCount, 0),
                 legacyUnclassified
             )
@@ -200,7 +200,7 @@ struct ExportOrchestrator {
             )
             let legacyLooseFileCount = impliedLooseFiles.overflow
                 ? 0 : max(impliedLooseFiles.partialValue, 0)
-            let legacyCategorizedFileCount = Self.saturatingAdd(
+            let legacyCategorizedFileCount = ExportOrchestrator.saturatingAdd(
                 legacyLooseFileCount,
                 payload.externalRecordFileCount
             )
@@ -212,7 +212,7 @@ struct ExportOrchestrator {
                 let difference = payload.totalFilesWritten.subtractingReportingOverflow(knownFiles)
                 unclassifiedGap = difference.overflow ? 0 : max(difference.partialValue, 0)
             }
-            let unclassified = Self.saturatingAdd(
+            let unclassified = ExportOrchestrator.saturatingAdd(
                 breakdown?.unclassifiedFileCount ?? 0,
                 unclassifiedGap
             )
@@ -251,21 +251,39 @@ struct ExportOrchestrator {
             )
         }
 
-        private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
-            let result = lhs.addingReportingOverflow(rhs)
-            return result.overflow ? Int.max : result.partialValue
-        }
-
         var hasPartialFailures: Bool { !partialFailures.isEmpty }
+        /// Warnings that reduce capture completeness or lose data. Informational
+        /// omissions of optional attachments are excluded, so a full-success
+        /// export with notes reports `false` here.
+        var hasDegradingPartialFailures: Bool {
+            partialFailures.contains(where: \.degradesSuccess)
+        }
         var partialFailureSummary: String {
-            guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 { return "Warning: \(first.summary)" }
-            return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
+            guard let first = partialFailures.first(where: \.degradesSuccess) else { return "" }
+            let degradingCount = partialFailures.filter(\.degradesSuccess).count
+            if degradingCount == 1 { return "Warning: \(first.summary)" }
+            return "Warning: \(degradingCount) export warnings, including \(first.summary)"
         }
         var localizedPartialFailureSummary: String {
-            guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 { return String(localized: "Warning: \(first.localizedSummary)") }
-            return String(localized: "Warning: \(partialFailures.count) export warnings, including \(first.localizedSummary)")
+            guard let first = partialFailures.first(where: \.degradesSuccess) else { return "" }
+            let degradingCount = partialFailures.filter(\.degradesSuccess).count
+            if degradingCount == 1 { return String(localized: "Warning: \(first.localizedSummary)") }
+            return String(localized: "Warning: \(degradingCount) export warnings, including \(first.localizedSummary)")
+        }
+        /// Informational omissions that did not reduce the export below full
+        /// success (for example a WorkoutKit plan this device cannot decode).
+        /// Nil when there are none. Surfaced as a note, never a warning.
+        var informationalNoteSummary: String? {
+            let notes = partialFailures.filter { $0.isInformational == true }
+            guard let first = notes.first else { return nil }
+            if notes.count == 1 { return "Note: \(first.summary)" }
+            return "Note: \(notes.count) export notes, including \(first.summary)"
+        }
+        var localizedInformationalNoteSummary: String? {
+            let notes = partialFailures.filter { $0.isInformational == true }
+            guard let first = notes.first else { return nil }
+            if notes.count == 1 { return String(localized: "Note: \(first.localizedSummary)") }
+            return String(localized: "Note: \(notes.count) export notes, including \(first.localizedSummary)")
         }
         var didCompleteAllRequestedDates: Bool {
             completedDateCount == totalCount && totalCount > 0 && !wasCancelled && !hadTerminalRangeFailure
@@ -299,10 +317,10 @@ struct ExportOrchestrator {
                 rollupFileCount,
                 archiveCount,
                 externalRecordFileCount
-            ].reduce(0, Self.saturatingAdd)
+            ].reduce(0, ExportOrchestrator.saturatingAdd)
         }
         var knownFileCount: Int {
-            Self.saturatingAdd(categorizedFileCount, unclassifiedFileCount)
+            ExportOrchestrator.saturatingAdd(categorizedFileCount, unclassifiedFileCount)
         }
         var totalFilesWritten: Int {
             max(authoritativeFileCount ?? 0, max(fileCountLowerBound ?? 0, knownFileCount))
@@ -1671,7 +1689,10 @@ struct ExportOrchestrator {
         values.reduce(0, Self.saturatingAdd)
     }
 
-    private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
+    /// Saturating addition shared by `ExportResult` and the local export
+    /// paths: overflow clamps to `Int.max` so summed file counts stay
+    /// non-negative and monotonic instead of trapping or wrapping.
+    static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
         let result = lhs.addingReportingOverflow(rhs)
         return result.overflow ? Int.max : result.partialValue
     }
