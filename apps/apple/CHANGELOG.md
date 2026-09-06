@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Export details on iPhone now show the Retry Export action at the top of the sheet, above the overview and any failure lists, so a large failed export no longer requires scrolling through every failed date to reach Retry. The failed-dates list is also capped to the first 8 rows with a "+N more" summary line, matching the Android history detail (Android's two-pane detail likewise places retry directly under the title).
+
 ### Fixed
 - Daily scheduled exports driven by an export profile no longer skip the day after every successful run. Catch-up date math treated the run day itself as already exported ("nothing to catch up"), so a daily 8:00 schedule ran only every other day and the run day's data was never exported by the schedule; users had to export those days manually. Catch-up now starts at the run day — matching the legacy schedule and macOS paths — so each occurrence exports the prior day's data (user report 2026-09-05).
 - Scheduled and manual local exports now record an authoritative generated-file count in Export History. Both orchestrator paths and the pinned Rust range path dropped the per-day write counts, so every scheduled run displayed the legacy "Exported 1 of 1 data day(s)" summary with no file count — a run that wrote files was indistinguishable in history from one that wrote none. History now shows "N generated file(s) from M data day(s)" (including the data dictionary) for scheduled, Shortcut, and manual runs.

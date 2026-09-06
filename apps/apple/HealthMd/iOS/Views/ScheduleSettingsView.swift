@@ -1682,6 +1682,35 @@ struct ExportHistoryDetailView: View {
     var body: some View {
         NavigationStack {
             List {
+                // Retry Section (top placement: keep the primary recovery
+                // action reachable without scrolling through long failure lists)
+                if canRetry, let onRetry = onRetry {
+                    Section {
+                        Button(action: {
+                            dismiss()
+                            onRetry(entry)
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Retry Export")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(Color.accent)
+                        }
+                        .accessibilityLabel("Retry export")
+                        .accessibilityHint(entry.failedDateDetails.isEmpty
+                            ? "Double tap to retry export for all dates"
+                            : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
+                    } footer: {
+                        Text(entry.failedDateDetails.isEmpty
+                            ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
+                            : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
+                        )
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
                 // Status Section
                 Section {
                     HStack {
@@ -1954,10 +1983,12 @@ struct ExportHistoryDetailView: View {
                     }
                 }
 
-                // Failed Dates Section (if applicable)
+                // Failed Dates Section (if applicable). Capped like the
+                // Android history detail so large failures stay scrollable;
+                // retry counts and actions still reflect the full list.
                 if !entry.failedDateDetails.isEmpty {
                     Section {
-                        ForEach(entry.failedDateDetails, id: \.date) { detail in
+                        ForEach(entry.failedDateDetails.prefix(8), id: \.date) { detail in
                             HStack {
                                 Text(detail.dateString)
                                     .foregroundStyle(Color.textPrimary)
@@ -1968,38 +1999,15 @@ struct ExportHistoryDetailView: View {
                                     .foregroundStyle(Color.error)
                             }
                         }
+                        if entry.failedDateDetails.count > 8 {
+                            Text("+\(entry.failedDateDetails.count - 8) more")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
                     } header: {
                         Text("Failed Dates")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
-                    }
-                }
-
-                // Retry Section (for failed or partial exports)
-                if canRetry, let onRetry = onRetry {
-                    Section {
-                        Button(action: {
-                            dismiss()
-                            onRetry(entry)
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Retry Export")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .foregroundStyle(Color.accent)
-                        }
-                        .accessibilityLabel("Retry export")
-                        .accessibilityHint(entry.failedDateDetails.isEmpty
-                            ? "Double tap to retry export for all dates"
-                            : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
-                    } footer: {
-                        Text(entry.failedDateDetails.isEmpty
-                            ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
-                            : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
-                        )
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
                     }
                 }
             }

@@ -390,13 +390,14 @@ private fun HistoryDetailCard(
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
-            HistoryDetailContent(entry = entry, retryMessage = retryMessage)
-            Spacer(modifier = Modifier.weight(1f))
+            // Retry stays above the content so the primary recovery action
+            // is reachable without scrolling through long failure lists.
             Button(onClick = onRetry, enabled = !isRetrying) {
                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(Spacing.xxs))
                 Text(if (isRetrying) stringResource(R.string.action_retrying_export) else stringResource(R.string.action_retry_export))
             }
+            HistoryDetailContent(entry = entry, retryMessage = retryMessage)
         }
     }
 }
