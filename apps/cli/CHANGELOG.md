@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.7
 
 - Compile the RFC-0005 P2 wake client into every macOS, Linux, and Windows CLI build, use the
   deployed `healthmd-wake.costream.workers.dev` doorbell by default, and retain explicit local

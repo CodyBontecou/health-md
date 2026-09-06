@@ -61,7 +61,7 @@ checksummed archives and installers. To build the same preview from source:
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
 cd health-md
-git checkout healthmd-cli/v0.1.0-alpha.6
+git checkout healthmd-cli/v0.1.0-alpha.7
 cd apps/cli
 cargo install --locked --path crates/healthmd-cli
 ```
