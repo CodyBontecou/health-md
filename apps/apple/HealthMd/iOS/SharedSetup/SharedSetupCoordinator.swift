@@ -1776,6 +1776,11 @@ struct SharedSetupConfigurationCard: View {
 /// and every persistence decision live in the coordinator's verified path.
 @MainActor
 final class SharedSetupV2CredentialEntryModel: ObservableObject {
+    /// `nonisolated deinit` keeps teardown off the MainActor back-deployed
+    /// task-deinit path that aborts older simulator runtimes (see the
+    /// matching annotations on the export stores and coordinators).
+    nonisolated deinit {}
+
     @Published var authorization = ""
 
     var canConfirm: Bool {
