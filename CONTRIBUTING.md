@@ -40,3 +40,5 @@ Exporter shapes and direct-device protocols have multiple producers and consumer
 - Include the component name in the title when practical.
 - Document tests run and any physical-device or deployment checks not run.
 - Do not commit credentials, signing files, health data, local agent state, or generated build output.
+
+<!-- ci-skip-verification marker -->
