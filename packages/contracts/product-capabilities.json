@@ -396,7 +396,7 @@
     {
       "id": "export.agent-data-gateway",
       "name": "Agent Data gateway export destination",
-      "classification": "planned",
+      "classification": "shared",
       "summary": "Upload a profile's exact exported artifacts to a configured self-hosted Agent Data ingestion gateway endpoint per ingestion protocol v1, with health-free per-artifact receipts and bounded retry of transient outcomes.",
       "profiles": [
         "apple-v8",
@@ -405,17 +405,19 @@
       ],
       "platforms": {
         "apple": {
-          "state": "planned",
-          "target": "Ships with this cycle's integration of the agent-data/c5-apple lane; ingestion protocol v1 and the CLI reference gateway already define the surface."
+          "state": "available"
         },
         "android": {
-          "state": "planned",
-          "target": "Ships with this cycle's integration of the agent-data/c5-android lane; ingestion protocol v1 and the CLI reference gateway already define the surface."
+          "state": "available"
         }
       },
       "evidence": [
         "packages/contracts/agent-data/v1/contract.md",
-        "apps/cli/docs/agent-data.md"
+        "apps/cli/docs/agent-data.md",
+        "apps/apple/docs/features/agent-data-gateway-export.md",
+        "apps/android/docs/features/agent-data-gateway.md",
+        "apps/apple/HealthMd/Shared/Managers/AgentDataGatewayExportRunner.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/export/AgentDataGatewayExportRunner.kt"
       ]
     },
     {
