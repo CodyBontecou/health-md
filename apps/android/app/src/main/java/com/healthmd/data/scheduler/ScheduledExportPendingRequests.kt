@@ -2,6 +2,7 @@ package com.healthmd.data.scheduler
 
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
@@ -71,7 +72,10 @@ object ScheduledExportPendingRequests {
         destinationFingerprint: String? = null,
     ): List<LocalDate> = pendingRequests(settings)
         .filter { target == null || it.exportTarget == target }
-        .filter { target != ExportTarget.API_ENDPOINT || it.destinationFingerprint == destinationFingerprint }
+        .filter {
+            target?.let(::requiresDestinationFingerprintMatch) != true ||
+                it.destinationFingerprint == destinationFingerprint
+        }
         .map { it.date }
         .filter { !it.isAfter(cutoffInclusive) }
         .distinct()
@@ -119,7 +123,7 @@ object ScheduledExportPendingRequests {
         val pendingForDestination = pendingRequests(settings)
             .filter { it.exportTarget == settings.scheduledExportTarget }
             .filter {
-                settings.scheduledExportTarget != ExportTarget.API_ENDPOINT ||
+                !requiresDestinationFingerprintMatch(settings.scheduledExportTarget) ||
                     it.destinationFingerprint == destinationFingerprint
             }
         val matchingPendingDates = pendingForDestination
@@ -141,6 +145,8 @@ object ScheduledExportPendingRequests {
                         } else {
                             request.folderOperationId == null || request.folderOperationId == folderOperationId
                         }
+                        // Gateway retries always capture fresh; no durable operation pinning yet.
+                        ExportTarget.AGENT_DATA_GATEWAY -> true
                     }
             }
             .map { it.date }
@@ -212,7 +218,7 @@ object ScheduledExportPendingRequests {
         val retained = existingByKey.values
             .filterNot {
                 it.exportTarget == target && it.date in attempted &&
-                    (target != ExportTarget.API_ENDPOINT || it.destinationFingerprint == destinationFingerprint)
+                    (!requiresDestinationFingerprintMatch(target) || it.destinationFingerprint == destinationFingerprint)
             }
             .toMutableList()
         val failedByDate = failedDateDetails.associateBy { it.date }
@@ -280,7 +286,7 @@ object ScheduledExportPendingRequests {
         }
         val retained = existingByKey.values.filterNot { request ->
             request.exportTarget == target && request.date in attempted &&
-                (target != ExportTarget.API_ENDPOINT ||
+                (!requiresDestinationFingerprintMatch(target) ||
                     request.destinationFingerprint == destinationFingerprint)
         }.toMutableList()
 
@@ -362,6 +368,13 @@ object ScheduledExportPendingRequests {
         )
     }
 
+    private fun requiresDestinationFingerprintMatch(target: ExportTarget): Boolean =
+        target == ExportTarget.API_ENDPOINT || target == ExportTarget.AGENT_DATA_GATEWAY
+
     private fun ExportTarget.destinationFingerprint(settings: ExportSettings): String? =
-        if (this == ExportTarget.API_ENDPOINT) APIExportEndpoint.fingerprint(settings.apiEndpointUrl) else null
+        when (this) {
+            ExportTarget.API_ENDPOINT -> APIExportEndpoint.fingerprint(settings.apiEndpointUrl)
+            ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.fingerprint(settings.agentDataGatewayUrl)
+            ExportTarget.DEVICE_FOLDER -> null
+        }
 }

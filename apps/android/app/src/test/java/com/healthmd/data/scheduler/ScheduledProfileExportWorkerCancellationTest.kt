@@ -7,6 +7,7 @@ import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.distribution.DistributionPolicy
@@ -272,6 +273,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             healthRepository = healthRepository,
             exportHistoryRepository = mockk(relaxed = true),
             apiEndpointExportRunner = apiRunner,
+            agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
             profileRepository = profileRepository,
             entryStore = entryStore,
             snapshotFactory = snapshotFactory,
@@ -390,6 +392,7 @@ class ScheduledProfileExportWorkerCancellationTest {
             healthRepository = healthRepository,
             exportHistoryRepository = historyRepository,
             apiEndpointExportRunner = apiRunner,
+            agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
             profileRepository = profileRepository,
             entryStore = entryStore,
             snapshotFactory = snapshotFactory,
@@ -414,6 +417,7 @@ class ScheduledProfileExportWorkerCancellationTest {
         healthRepository: HealthRepository,
         exportHistoryRepository: ExportHistoryRepository,
         apiEndpointExportRunner: APIEndpointExportRunner,
+        agentDataGatewayExportRunner: AgentDataGatewayExportRunner = mockk(relaxed = true),
         profileRepository: ExportProfileRepository,
         entryStore: ScheduledProfileEntryStore,
         snapshotFactory: ScheduledProfileSnapshotFactory,
@@ -433,6 +437,7 @@ class ScheduledProfileExportWorkerCancellationTest {
                 exportRepository = mockk<ExportRepository>(relaxed = true),
                 exportHistoryRepository = exportHistoryRepository,
                 apiEndpointExportRunner = apiEndpointExportRunner,
+                agentDataGatewayExportRunner = agentDataGatewayExportRunner,
                 profileRepository = profileRepository,
                 entryStore = entryStore,
                 snapshotFactory = snapshotFactory,

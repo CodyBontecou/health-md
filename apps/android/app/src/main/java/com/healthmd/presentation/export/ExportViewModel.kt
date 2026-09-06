@@ -4,6 +4,7 @@ import android.app.Activity
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportHeaders
@@ -114,6 +115,9 @@ data class ExportUiState(
     val apiEndpointConfigured: Boolean
         get() = APIExportEndpoint.isConfigured(settings.apiEndpointUrl)
 
+    val agentDataGatewayConfigured: Boolean
+        get() = AgentDataGatewayEndpoint.isConfigured(settings.agentDataGatewayUrl)
+
     val rawApiEndpointConfigured: Boolean
         get() = APIExportEndpoint.normalizedOrNull(settings.apiEndpointUrl)
             ?.let { runCatching { URI(it).scheme.equals("https", ignoreCase = true) }.getOrDefault(false) }
@@ -139,12 +143,14 @@ data class ExportUiState(
         get() = when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName != null
             ExportTarget.API_ENDPOINT -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) rawApiEndpointConfigured else apiEndpointConfigured
+            ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayConfigured
         }
 
     val destinationLabel: String?
         get() = when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName
             ExportTarget.API_ENDPOINT -> APIExportEndpoint.displayName(settings.apiEndpointUrl)
+            ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.displayName(settings.agentDataGatewayUrl)
         }
 }
 
@@ -160,6 +166,7 @@ class ExportViewModel @Inject constructor(
     private val exportHistoryRepository: ExportHistoryRepository,
     private val fileExportManager: FileExportManager,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val agentDataGatewayExportRunner: AgentDataGatewayExportRunner? = null,
     private val rawSnapshotExportRunner: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val exportScheduler: ExportScheduler? = null,
@@ -392,6 +399,28 @@ class ExportViewModel @Inject constructor(
         _uiState.update { it.copy(apiConfigurationError = null) }
     }
 
+    /** Persists the non-secret gateway base URL and selects the gateway destination. */
+    fun saveAgentDataGatewayConfiguration(endpointUrl: String) {
+        viewModelScope.launch {
+            val normalized = AgentDataGatewayEndpoint.normalizedOrNull(endpointUrl)
+            if (normalized == null) {
+                _uiState.update { it.copy(apiConfigurationError = APIConfigurationIssue.INVALID_ENDPOINT) }
+                return@launch
+            }
+            try {
+                settingsRepository.updateExportSettingsAtomically { current ->
+                    current.copy(
+                        agentDataGatewayUrl = normalized,
+                        exportTarget = ExportTarget.AGENT_DATA_GATEWAY,
+                    )
+                }
+                _uiState.update { it.copy(apiConfigurationError = null) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(apiConfigurationError = APIConfigurationIssue.SECURE_SAVE_FAILED) }
+            }
+        }
+    }
+
     fun resetSettings() {
         viewModelScope.launch {
             settingsRepository.updateExportSettingsAtomically { current ->
@@ -399,6 +428,7 @@ class ExportViewModel @Inject constructor(
                     exportTarget = current.exportTarget,
                     scheduledExportTarget = current.scheduledExportTarget,
                     apiEndpointUrl = current.apiEndpointUrl,
+                    agentDataGatewayUrl = current.agentDataGatewayUrl,
                     pendingScheduledRetryDates = current.pendingScheduledRetryDates,
                     pendingScheduledExportRequests = current.pendingScheduledExportRequests,
                 )
@@ -447,6 +477,7 @@ class ExportViewModel @Inject constructor(
                 exportMode = currentState.settings.exportMode,
                 rawProviderSupported = currentState.rawProviderSupported,
                 rawSelectionReady = currentState.rawSelectionReady,
+                agentDataGatewayConfigured = currentState.agentDataGatewayConfigured,
             )) return
 
         dismissJob?.cancel()
@@ -531,6 +562,17 @@ class ExportViewModel @Inject constructor(
                             target = ExportTarget.API_ENDPOINT,
                         )
                 }
+                ExportTarget.AGENT_DATA_GATEWAY -> withInteractiveRouteConsent {
+                    agentDataGatewayExportRunner?.exportDates(dates, settings, progress)
+                        ?: ExportResult(
+                            successCount = 0,
+                            totalCount = dates.size,
+                            failedDateDetails = dates.map {
+                                FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "Agent Data gateway service unavailable")
+                            },
+                            target = ExportTarget.AGENT_DATA_GATEWAY,
+                        )
+                }
             }
 
             // UI and local history consume typed failure reasons, never arbitrary producer text.
@@ -552,6 +594,7 @@ class ExportViewModel @Inject constructor(
                     targetLabel = when (settings.exportTarget) {
                         ExportTarget.DEVICE_FOLDER -> _uiState.value.folderName
                         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                        ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
                     },
                     fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
                         if (settings.exportMode == ExportMode.RAW_SNAPSHOT) presentationResult.artifactCount else estimatedFileCount(presentationResult.successCount, settings)
@@ -700,6 +743,16 @@ class ExportViewModel @Inject constructor(
                     ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
                         .previewDates(dates, settings, onProgress = progress)
                     ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.previewDates(
+                        dates = dates,
+                        settings = settings,
+                        onProgress = progress,
+                    ) ?: ExportPreview(
+                        requestedDateCount = dates.size,
+                        previewedDateCount = 0,
+                        isTruncated = false,
+                        days = emptyList(),
+                    )
+                    ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner?.previewDates(
                         dates = dates,
                         settings = settings,
                         onProgress = progress,

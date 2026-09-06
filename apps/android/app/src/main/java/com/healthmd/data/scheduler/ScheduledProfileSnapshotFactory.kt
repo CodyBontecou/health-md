@@ -31,6 +31,7 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
             current = current,
             target = profile.target,
             apiEndpointUrl = profile.apiEndpointUrl,
+            agentDataGatewayUrl = profile.agentDataGatewayUrl,
         )
 
     /** Captures a frozen snapshot of current settings scoped to an explicit target. */
@@ -38,12 +39,14 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         current: ExportSettings,
         target: ExportTarget,
         apiEndpointUrl: String? = null,
+        agentDataGatewayUrl: String? = null,
     ): String {
         val zone = ZoneId.systemDefault()
         val scoped = current.copy(
             exportTarget = target,
             scheduledExportTarget = target,
             apiEndpointUrl = apiEndpointUrl ?: current.apiEndpointUrl,
+            agentDataGatewayUrl = agentDataGatewayUrl ?: current.agentDataGatewayUrl,
         )
         val pin = enginePinPlanner.forScheduledExport(scoped, target, zone)
         return AndroidExportSettingsSnapshotCodec.encodeCanonical(
@@ -81,11 +84,12 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
     ): ExportSettings? {
         val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
             ?: return null
-        val withEndpoint = current.copy(
+        val withDestination = current.copy(
             apiEndpointUrl = profile.apiEndpointUrl ?: current.apiEndpointUrl,
+            agentDataGatewayUrl = profile.agentDataGatewayUrl ?: current.agentDataGatewayUrl,
         )
         val target = profile.target
-        val restored = runCatching { snapshot.restoreOnto(withEndpoint) }.getOrNull() ?: return null
+        val restored = runCatching { snapshot.restoreOnto(withDestination) }.getOrNull() ?: return null
         return restored.copy(
             exportTarget = target,
             scheduledExportTarget = target,

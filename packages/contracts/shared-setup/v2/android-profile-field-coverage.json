@@ -18,6 +18,14 @@
   "fields": [
     {
       "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "agentDataGatewayIdentitySha256",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Gateway fingerprints are explicitly forbidden destination identity state."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
       "serialized_field": "apiEndpointIdentitySha256",
       "coverage_kind": "descriptor",
       "disposition": "prohibited",
@@ -522,6 +530,14 @@
     },
     {
       "source_type": "ExportProfile",
+      "serialized_field": "agentDataGatewayUrl",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Agent Data gateway destinations are not part of Shared Setup v2; the URL never enters a bundle."
+    },
+    {
+      "source_type": "ExportProfile",
       "serialized_field": "apiEndpointUrl",
       "coverage_kind": "descriptor",
       "disposition": "destination_intent",
@@ -599,6 +615,14 @@
       "disposition": "prohibited",
       "contract_path": null,
       "evidence": "Native profile update timestamps are runtime history and explicitly excluded."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "agentDataGatewayUrl",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Agent Data gateway destinations are not part of Shared Setup v2; the URL never enters a bundle."
     },
     {
       "source_type": "ExportSettings",
@@ -1407,6 +1431,14 @@
       "disposition": "prohibited",
       "contract_path": null,
       "evidence": "Schedule timezone is local execution context and explicitly forbidden."
+    },
+    {
+      "source_type": "ScheduledProfilePendingExport",
+      "serialized_field": "agentDataGatewayUrl",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "This value is nested frozen pending/retry state and must never enter a Shared Setup artifact."
     },
     {
       "source_type": "ScheduledProfilePendingExport",

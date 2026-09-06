@@ -37,6 +37,7 @@ data class ScheduledProfilePendingExport(
     val target: ExportTarget,
     val profileName: String,
     val apiEndpointUrl: String? = null,
+    val agentDataGatewayUrl: String? = null,
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
     val durableOperationId: String? = null,

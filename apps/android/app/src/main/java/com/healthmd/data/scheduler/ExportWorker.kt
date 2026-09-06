@@ -16,6 +16,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.healthmd.HealthMdApplication
 import com.healthmd.R
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
@@ -32,6 +33,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
@@ -64,6 +66,7 @@ class ExportWorker @AssistedInject constructor(
     private val settingsRepository: SettingsRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner,
+    private val agentDataGatewayExportRunner: AgentDataGatewayExportRunner,
     private val rawSnapshotExportRunner: RawSnapshotService,
     private val apiCredentialStore: APIExportCredentialStore,
     private val runCoordinator: ScheduledExportRunCoordinator,
@@ -246,12 +249,16 @@ class ExportWorker @AssistedInject constructor(
         if (persistedSettings.scheduledExportTarget != capturedTarget) return Result.success()
 
         // Validate current credential/destination plumbing before restoring frozen output choices.
-        val currentFingerprint = if (capturedTarget == ExportTarget.API_ENDPOINT) {
-            apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
-        } else null
+        val currentFingerprint = when (capturedTarget) {
+            ExportTarget.API_ENDPOINT ->
+                apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
+            ExportTarget.AGENT_DATA_GATEWAY ->
+                AgentDataGatewayEndpoint.fingerprint(persistedSettings.agentDataGatewayUrl)
+            ExportTarget.DEVICE_FOLDER -> null
+        }
         val capturedFingerprint = capturedOccurrence.configuration.destinationFingerprint
         if (
-            capturedTarget == ExportTarget.API_ENDPOINT &&
+            (capturedTarget == ExportTarget.API_ENDPOINT || capturedTarget == ExportTarget.AGENT_DATA_GATEWAY) &&
             (capturedFingerprint == null || capturedFingerprint != currentFingerprint)
         ) {
             // A newer schedule points at a different endpoint. Never let this stale worker send to it.
@@ -511,6 +518,11 @@ class ExportWorker @AssistedInject constructor(
                             expectedDestinationFingerprint = destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = capturedSnapshotJson,
+                        )
+                        ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner.exportDates(
+                            dates = dates,
+                            settings = settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
+                            expectedDestinationFingerprint = destinationFingerprint,
                         )
                     }
                 }
@@ -848,6 +860,8 @@ class ExportWorker @AssistedInject constructor(
     private fun targetLabel(settings: ExportSettings, date: LocalDate): String =
         if (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT) {
             APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+        } else if (settings.scheduledExportTarget == ExportTarget.AGENT_DATA_GATEWAY) {
+            AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
         } else buildString {
             val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
             append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)
