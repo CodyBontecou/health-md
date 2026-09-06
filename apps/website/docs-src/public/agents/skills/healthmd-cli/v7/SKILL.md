@@ -15,7 +15,7 @@ foreground Health.md mobile app → HealthKit or Health Connect
   → bounded typed results, canonical data, or generated files
 ```
 
-The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.6 binaries are wait-only; subsequent official builds also send one best-effort APNs notification when the selected iPhone has enrolled wake material. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. Direct is the portable default. Do not add `--backend mac-app` or `--transport nearby`.
+The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.7 binaries send one best-effort APNs notification when the selected iPhone has enrolled wake material; alpha.6 binaries were wait-only. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. Direct is the portable default. Do not add `--backend mac-app` or `--transport nearby`.
 
 ## Authorization and privacy first
 
@@ -31,13 +31,13 @@ Treat the user's request as authority only for its stated device, operation, met
 
 ## Verify release compatibility
 
-The `0.1.0-alpha.6` package is an explicitly unqualified public preview. Physical QA has confirmed basic iPhone and Android connectivity, but no public CLI/mobile pair has completed and retained the full release qualification matrix yet. Its source snapshot contains these exact counterparts:
+The `0.1.0-alpha.7` package is an explicitly unqualified public preview. Physical QA has confirmed basic iPhone and Android connectivity, but no public CLI/mobile pair has completed and retained the full release qualification matrix yet. Its source snapshot contains these exact counterparts:
 
 | Mobile source | Protocol | Exact counterpart in the release snapshot | Portable operations |
 |---|---|---|---|
-| iPhone exports | v1 | iOS 3.3.0 (build 202609032317) | status, raw, extract, files, resume, cancel |
-| iPhone typed queries | v1 + query v3 | iOS 3.3.0 (build 202609032317) | the export operations plus fixed typed query tools |
-| Android exports | v2 | Android 1.8.2 (`versionCode 31`) | status, provider-native raw, files, resume, cancel |
+| iPhone exports | v1 | iOS 3.4.0 (build 202609032318) | status, raw, extract, files, resume, cancel |
+| iPhone typed queries | v1 + query v3 | iOS 3.4.0 (build 202609032318) | the export operations plus fixed typed query tools |
+| Android exports | v2 | Android 1.9.0 (`versionCode 38`) | status, provider-native raw, files, resume, cancel |
 | Android typed queries | unavailable | not implemented | do not claim support |
 
 The unqualified protocol floors remain iOS 3.0.3 and Android 1.5.4 (`versionCode 25`), but protocol implementation and basic connectivity are not release qualification. Check the exact package and mobile build before live work. Do not claim App Store or Play Store compatibility from a marketing version alone.
@@ -64,7 +64,7 @@ Authorized preview testers may build the exact tag from source:
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
 cd health-md
-git checkout healthmd-cli/v0.1.0-alpha.6
+git checkout healthmd-cli/v0.1.0-alpha.7
 cd apps/cli
 cargo install --locked --path crates/healthmd-cli
 ```
@@ -139,8 +139,8 @@ behavior is explicitly needed. Keep any outer process timeout longer than the wa
 operation timeout.
 
 MCP uses `HEALTHMD_WAKE_TIMEOUT` (`0` disables) and may emit `notifications/progress`. Inspect the
-selected device's `wake_window`: published alpha.6 binaries do not send push, even if enrollment
-metadata exists. In a subsequent official build, `available`/`enrolled` for an enrolled iPhone means
+selected device's `wake_window`: alpha.6 binaries do not send push, even if enrollment
+metadata exists. In alpha.7 and later, `available`/`enrolled` for an enrolled iPhone means
 the wait sends one best-effort APNs notification through Health.md's health-free wake service. Only
 tell the user to expect a notification when both the build and enrollment support it. Android and
 unenrolled iPhones remain wait-only. A local timeout or MCP cancellation ends only the waiter; it is not phone-side

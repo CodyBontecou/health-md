@@ -118,15 +118,15 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   assert.equal(skillManifest.install_as, 'healthmd-cli/SKILL.md');
   assert.equal(skillManifest.availability, 'public_preview');
   const skillText = publishedSkill.toString('utf8');
-  assert.match(skillText, /0\.1\.0-alpha\.6.*public preview/s);
+  assert.match(skillText, /0\.1\.0-alpha\.7.*public preview/s);
   assert.match(skillText, /explicitly unqualified public preview/);
   assert.match(skillText, /schema-v8 `healthmd\.health_data`/);
   assert.match(skillText, /Android raw remains provider-native/);
   assert.match(skillText, /mcp serve-read-only/);
   assert.match(skillText, /local model inference/);
   assert.match(skillText, /brew install CodyBontecou\/tap\/healthmd/);
-  assert.match(skillText, /git checkout healthmd-cli\/v0\.1\.0-alpha\.6/);
-  assert.match(skillText, /subsequent official builds.*best-effort APNs/s);
+  assert.match(skillText, /git checkout healthmd-cli\/v0\.1\.0-alpha\.7/);
+  assert.match(skillText, /alpha\.7 binaries send one best-effort APNs notification/s);
 
   const macTools = JSON.parse(await read('docs-src/public/agents/mcp/mac-tools-v1.json'));
   const portableTools = JSON.parse(portableSource);
@@ -149,7 +149,7 @@ test('CLI launch post uses runnable preview commands and honest privacy boundari
   assert.doesNotMatch(post, /never a dump of everything/);
   assert.match(post, /complete-corpus operation you explicitly request/);
   assert.match(post, /No Health\.md cloud/);
-  assert.match(cliReadme, /0\.1\.0-alpha\.6` is a public, explicitly unqualified preview/);
+  assert.match(cliReadme, /0\.1\.0-alpha\.7` is a public, explicitly unqualified preview/);
   assert.match(cliReadme, /workflow published a checksummed, explicitly unqualified preview/);
   assert.match(cliReadme, /every macOS, Linux, and Windows CLI build/);
   assert.match(cliReadme, /Authenticode — expect one SmartScreen prompt/);
