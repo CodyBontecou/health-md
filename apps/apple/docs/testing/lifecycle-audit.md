@@ -20,7 +20,7 @@ The E6 lifecycle stress epic (`TODO-2b0cd43e`) introduced:
 - **All remaining** `static var retained*` arrays now have `STATIC RETENTION JUSTIFICATION` comments.
 
 **Current state:**
-- **7 test files** contain static-retention workarounds (4 original + 3 discovered during E6 scan)
+- **8 test files** contain static-retention workarounds (4 original + 3 discovered during E6 scan + SharedSetupV2ConfirmationFlowTests added 2026-09-06)
 - **9 ObservableObject types** are affected (6 original + VaultManager, PurchaseManager, ReviewManager)
 - **All workarounds are temporary** -- they exist solely to work around the Swift 6 runtime bug
 
@@ -49,6 +49,7 @@ The E6 lifecycle stress epic (`TODO-2b0cd43e`) introduced:
 | ModelTests.swift | 470-491 | `static let` (closures) | `DailyNoteInjectionSettings` | 4 | Immutable read-only fixtures (yearMonthDay, quarter, dailyFolder, emptyFolder). |
 | ModelTests.swift | 580-625 | `static let` (closures) | `IndividualTrackingSettings` | 6 | Immutable read-only fixtures (various configs). |
 | VaultManagerTests.swift | 53-54 | `static var` (arrays) | `VaultManager`, `AdvancedExportSettings` | Dynamic | Manager tests retain per-test instances. |
+| SharedSetupV2ConfirmationFlowTests.swift | `LifecycleHarness.retain()` in `makeService`, `makeCoordinator`, `makeRetainedExportProfileCoordinator`, and per-test constructions | `SharedSetupCoordinator`, `SharedSetupV2CredentialEntryModel`, `APIExportSettings`, `ExportProfileStore`, `ProfileDestinationStore`, `ScheduledExportEntryStore`, `ExportProfileCoordinator`, `VaultManager`, `AdvancedExportSettings`, `SyncService`, `SharedSetupV2TransactionAdapter` | Dynamic | CI iOS 26.2 simulator deinit crashes (2026-09-06): the suite initially retained only the coordinator graph roots; unreleased-in-time ObservableObject deinits aborted the test process 8× with `malloc: pointer being freed was not allocated` (`swift_task_deinitOnExecutorMainActorBackDeploy`). Passes on iOS 26.5+ where the runtime fix landed. |
 | PurchaseManagerTests.swift | 16 | `static var` (array) | `PurchaseManager` | Dynamic | Manager tests retain per-test instances. |
 | ReviewManagerTests.swift | 15 | `static var` (array) | `ReviewManager` | Dynamic | Manager tests retain per-test instances. |
 
