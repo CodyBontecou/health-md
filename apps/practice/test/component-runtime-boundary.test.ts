@@ -49,8 +49,13 @@ describe("practice component and production-disabled runtime boundary", () => {
     expect(workflow).toContain("-Dhealthmd.practice.expectedCompiledIn=false");
     expect(workflow).toContain("-Dhealthmd.practice.expectedCompiledIn=true");
     expect(workflow).toContain("PRACTICE_COMPILED_IN: included");
-    expect(workflow).toContain(":app:clean :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest");
-    expect(workflow).toContain("needs: [validate, practice-focused-apple-policy, practice-focused-android-policy]");
+    // The included-policy pass no longer needs :app:clean: PRACTICE_COMPILED_IN feeds a
+    // tracked buildConfigField input, so Gradle re-runs GenerateBuildConfig plus the
+    // app-module Kotlin recompile on its own. Both focused passes must still invoke
+    // the exact policy test.
+    expect(workflow).toContain(":app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest");
+    expect(workflow.match(/:app:testPlayDebugUnitTest --tests com\.healthmd\.domain\.practice\.PracticeFeaturePolicyTest/g)).toHaveLength(2);
+    expect(workflow).toContain("needs: [changes, validate, practice-focused-apple-policy, practice-focused-android-policy]");
     expect(workflow.match(/ref: \$\{\{ github\.sha \}\}/g)).toHaveLength(3);
   });
 
