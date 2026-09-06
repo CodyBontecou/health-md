@@ -95,6 +95,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.completed-workouts",
         "export.mobility-and-performance",
         "export.profiles",
+        "export.agent-data-gateway",
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
         "direct-cli.shared-qr-pairing",
