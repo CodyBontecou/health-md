@@ -92,39 +92,20 @@ jobs:
             apps/website/docs-src/package-lock.json
             .external/health-md-visualizations/package-lock.json
 
-      - name: Restore validated Obsidian plugin marker
-        # The pinned revision only changes with external-sources.json; skip the
-        # plugin's own install/test/typecheck/build when this exact revision has
-        # already been validated. The source checkout remains because sync and
-        # the website tests bundle directly from the plugin's src directory.
-        id: obsidian
-        uses: actions/cache@v4
-        with:
-          path: apps/website/.external-plugin-validated
-          key: website-obsidian-plugin-validated-${{ steps.external-sources.outputs.obsidian_revision }}
-
       - name: Install dependencies
         run: |
           npm ci
           npm --prefix docs-src ci
-
-      - name: Install pinned Obsidian plugin dependencies
-        if: steps.obsidian.outputs.cache-hit != 'true'
-        run: npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" ci
+          npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" ci
 
       - name: Test pinned Obsidian plugin source
-        if: steps.obsidian.outputs.cache-hit != 'true'
+        # Kept unconditional: the visualization bundle resolves plugin imports such as
+        # "leaflet" from the plugin checkout's own node_modules, so its install cannot
+        # be skipped behind a revision marker without breaking visualizations:sync.
         run: |
           npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" test
           npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" run typecheck
           npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" run build
-
-      - name: Record validated Obsidian plugin marker
-        if: steps.obsidian.outputs.cache-hit != 'true'
-        run: |
-          printf 'revision=%s validated-at=%s\n' \
-            "${{ steps.external-sources.outputs.obsidian_revision }}" \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .external-plugin-validated
 
       - name: Sync visualizations from external plugin source
         run: npm run visualizations:sync
