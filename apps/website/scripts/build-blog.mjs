@@ -162,7 +162,7 @@ function headerHtml(depth = 1) {
   const prefix = depth === 2 ? '../../' : '../';
   return `<header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="${prefix}index.html">
+      <a class="brand" href="${prefix}">
         <img src="${prefix}assets/app-icon/icon_80x80.png" alt="">
         <span>health.md</span>
       </a>

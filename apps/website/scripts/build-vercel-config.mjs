@@ -8,16 +8,32 @@ import { routePath } from '../i18n/routes.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const VERCEL_TEMPLATE = path.join(ROOT, 'vercel.template.json');
 export const VERCEL_CONFIG = path.join(ROOT, 'vercel.json');
-const MARKER = '    "__HEALTHMD_LOCALE_REDIRECTS__",';
+const LOCALE_MARKER = '    "__HEALTHMD_LOCALE_REDIRECTS__",';
+const LEGAL_MARKER = '    "__HEALTHMD_LEGAL_REDIRECTS__",';
 
 function redirectLine(source) {
   return `    { "source": ${JSON.stringify(source)}, "destination": ${JSON.stringify(`${source}/`)}, "permanent": true },`;
 }
 
+function legalRedirectLines() {
+  return publishedLocales('legal').flatMap(({ code }) =>
+    ['privacy', 'terms'].flatMap((routeId) => {
+      const destination = routePath(routeId, code);
+      const cleanPath = destination.replace(/\.html$/, '');
+      return [
+        `    { "source": ${JSON.stringify(cleanPath)}, "destination": ${JSON.stringify(destination)}, "permanent": true },`,
+        `    { "source": ${JSON.stringify(`${cleanPath}/`)}, "destination": ${JSON.stringify(destination)}, "permanent": true },`,
+      ];
+    }),
+  );
+}
+
 export function renderVercelConfig(template) {
-  const markerCount = template.split(MARKER).length - 1;
-  if (markerCount !== 1) {
-    throw new Error(`Vercel template must contain exactly one locale redirect marker; found ${markerCount}`);
+  for (const [marker, label] of [[LOCALE_MARKER, 'locale redirect'], [LEGAL_MARKER, 'legal redirect']]) {
+    const markerCount = template.split(marker).length - 1;
+    if (markerCount !== 1) {
+      throw new Error(`Vercel template must contain exactly one ${label} marker; found ${markerCount}`);
+    }
   }
 
   const sources = publishedLocales('redirect').flatMap(({ code, path: localePath }) => {
@@ -31,7 +47,9 @@ export function renderVercelConfig(template) {
     throw new Error('Generated Vercel locale redirects must have unique source paths');
   }
 
-  const rendered = template.replace(MARKER, sources.map(redirectLine).join('\n'));
+  const rendered = template
+    .replace(LOCALE_MARKER, sources.map(redirectLine).join('\n'))
+    .replace(LEGAL_MARKER, legalRedirectLines().join('\n'));
   JSON.parse(rendered);
   return rendered;
 }
