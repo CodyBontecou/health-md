@@ -1,8 +1,10 @@
 name: CLI CI
 
 on:
-  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
-  # remain path-aware to avoid rebuilding an unaffected component after merge.
+  # Pull requests are path-filtered by the changes job so the stable final gate
+  # still reports a conclusive required context on every PR without running the
+  # heavy jobs for unrelated changes. Main-branch pushes remain path-aware at
+  # the trigger to avoid rebuilding an unaffected component after merge.
   pull_request:
   push:
     branches: [main]
@@ -22,14 +24,43 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: cli-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_INCREMENTAL: '0'
   CARGO_PROFILE_DEV_DEBUG: '0'
   CARGO_PROFILE_TEST_DEBUG: '0'
 
 jobs:
+  changes:
+    name: Detect CLI-affecting changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - name: Check out source for the local composite action
+        uses: actions/checkout@v4
+      - name: Detect whether CLI CI must run
+        id: detect
+        uses: ./.github/actions/component-changes
+        with:
+          component: CLI CI
+          paths: |
+            apps/cli/**
+            packages/contracts/**
+            packages/healthmd-core-rust/**
+            .github/workflows/cli-*.yml
+
   msrv:
     name: Rust 1.85 MSRV
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -49,6 +80,8 @@ jobs:
 
   test:
     name: ${{ matrix.os }}
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -325,6 +358,8 @@ jobs:
 
   dependency-policy:
     name: Dependency policy
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -332,7 +367,21 @@ jobs:
           ref: ${{ inputs.release_sha || github.sha }}
       - uses: dtolnay/rust-toolchain@1.88.0
       - name: Install pinned cargo-deny
-        run: cargo install cargo-deny --version 0.20.2 --locked
+        # Download the official prebuilt static binary instead of compiling the
+        # crate from source on every run. The sha256 matches the release's own
+        # .sha256 asset and pins the exact bytes.
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz"
+          curl --proto '=https' --tlsv1.2 -fsSL \
+            "https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz" \
+            -o "$archive"
+          echo '9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5fc  '"$archive" \
+            | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          install -m 0755 \
+            "$RUNNER_TEMP/cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny" \
+            "$(dirname "$(command -v cargo)")/cargo-deny"
       - name: Check both independently locked workspaces
         run: |
           cargo deny --manifest-path apps/cli/Cargo.toml --config "$GITHUB_WORKSPACE/deny.toml" check
@@ -340,6 +389,8 @@ jobs:
 
   packaged-crates:
     name: Packaged crate smoke
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -370,16 +421,24 @@ jobs:
   gate:
     name: CLI CI
     if: ${{ always() }}
-    needs: [msrv, test, dependency-policy, packaged-crates]
+    needs: [changes, msrv, test, dependency-policy, packaged-crates]
     runs-on: ubuntu-24.04
     steps:
       - name: Require CLI checks
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
           MSRV_RESULT: ${{ needs.msrv.result }}
           TEST_RESULT: ${{ needs.test.result }}
           DEPENDENCY_RESULT: ${{ needs.dependency-policy.result }}
           PACKAGE_RESULT: ${{ needs.packaged-crates.result }}
         run: |
+          set -e
+          test "$CHANGES_RESULT" = success
+          if [ "$CHANGES_RUN" != "true" ]; then
+            echo "No CLI-affecting changes in this pull request; CLI CI skipped."
+            exit 0
+          fi
           test "$MSRV_RESULT" = success
           test "$TEST_RESULT" = success
           test "$DEPENDENCY_RESULT" = success

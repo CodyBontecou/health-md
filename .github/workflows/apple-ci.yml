@@ -5,6 +5,15 @@ on:
     branches:
       - main
       - testing
+    # Path-aware pushes keep unrelated merges off the scarce macOS runner pool;
+    # pull requests are path-filtered by the changes job so the stable gate
+    # still reports a conclusive context on every PR.
+    paths:
+      - 'apps/apple/**'
+      - 'packages/contracts/**'
+      - 'packages/healthmd-core-rust/**'
+      - 'Makefile'
+      - '.github/workflows/apple-ci.yml'
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -19,8 +28,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Apple-affecting changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - name: Check out source for the local composite action
+        uses: actions/checkout@v6
+      - name: Detect whether Apple CI must run
+        id: detect
+        uses: ./.github/actions/component-changes
+        with:
+          component: Apple CI
+          paths: |
+            apps/apple/**
+            packages/contracts/**
+            packages/healthmd-core-rust/**
+            Makefile
+            .github/workflows/apple-ci.yml
+
   prepare-shared-core:
     name: Prepare shared Rust core once
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: macos-26
     timeout-minutes: 20
     defaults:
@@ -78,7 +113,8 @@ jobs:
           retention-days: 1
 
   test-ios:
-    needs: prepare-shared-core
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.run == 'true' }}
     # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
     # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
     runs-on: macos-26
@@ -254,7 +290,8 @@ jobs:
           retention-days: 14
 
   test-macos:
-    needs: prepare-shared-core
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.run == 'true' }}
     # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
     runs-on: macos-26
     timeout-minutes: 75
@@ -333,7 +370,8 @@ jobs:
 
   test-ios-ui:
     name: iOS UI regressions
-    needs: prepare-shared-core
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: macos-26
     timeout-minutes: 60
     defaults:
@@ -522,6 +560,8 @@ jobs:
 
   connectivity-package:
     name: HealthMdConnectivity package
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: macos-14
     timeout-minutes: 15
     steps:
@@ -536,17 +576,31 @@ jobs:
   gate:
     name: Apple CI
     if: ${{ always() }}
-    needs: [prepare-shared-core, test-ios, test-ios-ui, test-macos, connectivity-package]
+    needs:
+      - changes
+      - prepare-shared-core
+      - test-ios
+      - test-ios-ui
+      - test-macos
+      - connectivity-package
     runs-on: ubuntu-24.04
     steps:
       - name: Require Apple checks
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
           PREPARE_RESULT: ${{ needs.prepare-shared-core.result }}
           IOS_RESULT: ${{ needs.test-ios.result }}
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
           CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
         run: |
+          set -e
+          test "$CHANGES_RESULT" = success
+          if [ "$CHANGES_RUN" != "true" ]; then
+            echo "No Apple-affecting changes in this pull request; Apple CI skipped."
+            exit 0
+          fi
           test "$PREPARE_RESULT" = success
           test "$IOS_RESULT" = success
           test "$IOS_UI_RESULT" = success

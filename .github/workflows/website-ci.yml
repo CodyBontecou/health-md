@@ -1,8 +1,9 @@
 name: Website CI
 
 on:
-  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
-  # remain path-aware to avoid rebuilding an unaffected component after merge.
+  # Pull requests are path-filtered by the changes job so the stable final gate
+  # still reports a conclusive required context on every PR without building the
+  # site for unrelated changes. Scheduled and dispatched runs always validate.
   pull_request:
   push:
     branches: [main]
@@ -28,7 +29,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect website-affecting changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - name: Check out source for the local composite action
+        uses: actions/checkout@v4
+      - name: Detect whether Website CI must run
+        id: detect
+        uses: ./.github/actions/component-changes
+        with:
+          component: Website CI
+          paths: |
+            .agents/skills/**
+            apps/website/**
+            apps/apple/docs/reference/**
+            apps/apple/scripts/generated-*-docs.sh
+            packages/contracts/**
+            packages/healthmd-core-rust/**
+            .github/workflows/website-ci.yml
+
   validate:
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -63,17 +92,39 @@ jobs:
             apps/website/docs-src/package-lock.json
             .external/health-md-visualizations/package-lock.json
 
+      - name: Restore validated Obsidian plugin marker
+        # The pinned revision only changes with external-sources.json; skip the
+        # plugin's own install/test/typecheck/build when this exact revision has
+        # already been validated. The source checkout remains because sync and
+        # the website tests bundle directly from the plugin's src directory.
+        id: obsidian
+        uses: actions/cache@v4
+        with:
+          path: apps/website/.external-plugin-validated
+          key: website-obsidian-plugin-validated-${{ steps.external-sources.outputs.obsidian_revision }}
+
       - name: Install dependencies
         run: |
           npm ci
           npm --prefix docs-src ci
-          npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" ci
+
+      - name: Install pinned Obsidian plugin dependencies
+        if: steps.obsidian.outputs.cache-hit != 'true'
+        run: npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" ci
 
       - name: Test pinned Obsidian plugin source
+        if: steps.obsidian.outputs.cache-hit != 'true'
         run: |
           npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" test
           npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" run typecheck
           npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" run build
+
+      - name: Record validated Obsidian plugin marker
+        if: steps.obsidian.outputs.cache-hit != 'true'
+        run: |
+          printf 'revision=%s validated-at=%s\n' \
+            "${{ steps.external-sources.outputs.obsidian_revision }}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .external-plugin-validated
 
       - name: Sync visualizations from external plugin source
         run: npm run visualizations:sync
@@ -115,10 +166,19 @@ jobs:
   gate:
     name: Website CI
     if: ${{ always() }}
-    needs: [validate]
+    needs: [changes, validate]
     runs-on: ubuntu-latest
     steps:
       - name: Require website checks
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
-        run: test "$VALIDATE_RESULT" = success
+        run: |
+          set -e
+          test "$CHANGES_RESULT" = success
+          if [ "$CHANGES_RUN" != "true" ]; then
+            echo "No website-affecting changes in this pull request; Website CI skipped."
+            exit 0
+          fi
+          test "$VALIDATE_RESULT" = success
