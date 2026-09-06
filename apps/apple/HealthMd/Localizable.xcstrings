@@ -39346,6 +39346,16 @@
         }
       }
     },
+    "+%lld more": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld more"
+          }
+        }
+      }
+    },
     "Failed Dates": {
       "localizations": {
         "de": {

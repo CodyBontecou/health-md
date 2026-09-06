@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Export details on iPhone now show the Retry Export action at the top of the sheet, above the overview and any failure lists, so a large failed export no longer requires scrolling through every failed date to reach Retry. The failed-dates list is also capped to the first 8 rows with a "+N more" summary line, matching the Android history detail (Android's two-pane detail likewise places retry directly under the title).
+
 ## [3.3.0] - 2026-09-03
 
 ### Added
