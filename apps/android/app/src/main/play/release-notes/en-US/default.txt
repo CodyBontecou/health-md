@@ -1,6 +1,5 @@
-v1.8.8 — Easier, more reliable desktop exports
+v1.9.0 — Share My Setup
 
-• Pair with the Health.md desktop CLI by scanning its QR code; manual address and 20-digit code entry still work.
-• Direct CLI sessions reconnect automatically after brief desktop disconnects, so exports finish instead of stalling.
-• Desktop wake-window commands wait up to 120 seconds for you to open the app and connect — no push notifications involved.
-• Includes reliability and compatibility fixes for phone and Wear OS.
+• Package your export profiles into one small portable file under Settings → Share My Setup and review or apply them on another device as a reversible Add or Replace; files carry no health data or credentials.
+• Imported profiles stay blocked until you rebind their destination, and older v1 setup files are no longer accepted.
+• History detail now places Retry directly under the title, matching iPhone.

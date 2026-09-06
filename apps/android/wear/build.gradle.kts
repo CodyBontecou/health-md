@@ -19,8 +19,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1_000_037
-        versionName = "1.8.8"
+        versionCode = 1_000_038
+        versionName = "1.9.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
