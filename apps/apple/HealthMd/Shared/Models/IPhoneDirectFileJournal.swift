@@ -16,6 +16,19 @@ struct IPhoneDirectCapturedDay: Codable, Equatable {
     let partialFailureCount: Int
     let integrityWarningCount: Int
     let hadWarnings: Bool
+    /// Warnings that reduce capture completeness. Nil identifies a checkpoint
+    /// written before the informational/degrading split was tracked; consumers
+    /// fall back to `partialFailureCount` so legacy checkpoints keep the
+    /// behavior they were written with.
+    let degradingFailureCount: Int?
+    /// Same contract as `hadWarnings`, excluding informational omissions (for
+    /// example a WorkoutKit plan this device cannot decode) that do not reduce
+    /// the export below full success. Nil falls back to `hadWarnings`.
+    let hadDegradingWarnings: Bool?
+    /// Informational-only warnings surfaced so Export History can show them as
+    /// export notes without degrading the entry's status. Nil or empty means
+    /// the day had none (or predates note tracking).
+    let informationalFailures: [ExportPartialFailure]?
     let failureReason: ExportFailureReason?
     /// False only for checkpoints written before these health-free facts were persisted.
     let historyFactsRecorded: Bool
@@ -33,6 +46,9 @@ struct IPhoneDirectCapturedDay: Codable, Equatable {
         partialFailureCount: Int = 0,
         integrityWarningCount: Int = 0,
         hadWarnings: Bool = false,
+        degradingFailureCount: Int? = nil,
+        hadDegradingWarnings: Bool? = nil,
+        informationalFailures: [ExportPartialFailure]? = nil,
         failureReason: ExportFailureReason? = nil,
         historyFactsRecorded: Bool = false
     ) {
@@ -48,6 +64,9 @@ struct IPhoneDirectCapturedDay: Codable, Equatable {
         self.partialFailureCount = max(partialFailureCount, 0)
         self.integrityWarningCount = max(integrityWarningCount, 0)
         self.hadWarnings = hadWarnings
+        self.degradingFailureCount = degradingFailureCount.map { max($0, 0) }
+        self.hadDegradingWarnings = hadDegradingWarnings
+        self.informationalFailures = informationalFailures
         self.failureReason = failureReason
         self.historyFactsRecorded = historyFactsRecorded
     }
@@ -66,8 +85,23 @@ struct IPhoneDirectCapturedDay: Codable, Equatable {
         partialFailureCount = try container.decodeIfPresent(Int.self, forKey: .partialFailureCount) ?? 0
         integrityWarningCount = try container.decodeIfPresent(Int.self, forKey: .integrityWarningCount) ?? 0
         hadWarnings = try container.decodeIfPresent(Bool.self, forKey: .hadWarnings) ?? false
+        degradingFailureCount = try container.decodeIfPresent(Int.self, forKey: .degradingFailureCount)
+        hadDegradingWarnings = try container.decodeIfPresent(Bool.self, forKey: .hadDegradingWarnings)
+        informationalFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .informationalFailures)
         failureReason = try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason)
         historyFactsRecorded = try container.decodeIfPresent(Bool.self, forKey: .historyFactsRecorded) ?? false
+    }
+
+    /// Degrading warning count, falling back to the total for checkpoints
+    /// written before the split was tracked.
+    var resolvedDegradingFailureCount: Int {
+        degradingFailureCount ?? partialFailureCount
+    }
+
+    /// Whether the day carries warnings that reduce capture completeness,
+    /// falling back to `hadWarnings` for legacy checkpoints.
+    var resolvedHadDegradingWarnings: Bool {
+        hadDegradingWarnings ?? hadWarnings
     }
 }
 

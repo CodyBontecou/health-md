@@ -658,6 +658,8 @@
     "Not connected",
     "Not ready",
     "Not selected",
+    "Note: %@",
+    "Note: %lld export notes, including %@",
     "Number of Falls",
     "Nutrition",
     "OK",

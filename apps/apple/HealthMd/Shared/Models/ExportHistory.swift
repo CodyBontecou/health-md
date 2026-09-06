@@ -454,8 +454,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     /// Returns true if all requested data days completed without retained warnings.
     var isFullSuccess: Bool {
-        success && successCount == totalCount && totalCount > 0 &&
-            partialFailures.isEmpty && operationDetails?.hasWarnings != true
+        success && successCount == totalCount && totalCount > 0
+            && !partialFailures.contains(where: \.degradesSuccess)
+            && operationDetails?.hasWarnings != true
     }
 
     /// Confirmed output remains a partial success even when the operation's terminal flag is

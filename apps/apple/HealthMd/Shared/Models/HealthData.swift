@@ -1364,6 +1364,13 @@ nonisolated struct ExportPartialFailure: Codable, Equatable, Sendable {
     let dataType: String
     let dateRangeDescription: String
     let errorDescription: String
+    /// True when the warning reports an optional attachment that could not be
+    /// captured while every requested sample still exported — for example a
+    /// WorkoutKit structured plan this device cannot decode. Informational
+    /// warnings stay visible in export details but do not degrade an export's
+    /// status below full success. Optional so persisted and synced warnings
+    /// written before this field existed decode unchanged.
+    var isInformational: Bool? = nil
 
     var summary: String {
         "\(dataType) for \(dateRangeDescription): \(errorDescription)"
@@ -1373,6 +1380,12 @@ nonisolated struct ExportPartialFailure: Codable, Equatable, Sendable {
     /// Keep `summary` unchanged for exports, protocols, and query-context consumers.
     var localizedSummary: String {
         String(localized: "\(dataType) for \(dateRangeDescription): \(errorDescription)")
+    }
+
+    /// Warnings that reduce capture completeness or lost data. Informational
+    /// omissions of optional attachments are excluded.
+    var degradesSuccess: Bool {
+        isInformational != true
     }
 }
 

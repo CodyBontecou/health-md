@@ -1054,16 +1054,20 @@ struct MacExportView: View {
 
             if result.isFullSuccess {
                 resultIsError = false
+                // Informational omissions (for example a WorkoutKit plan this
+                // device cannot decode) keep full-success status; surface them
+                // as a note rather than letting them pass unnoticed.
+                let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 if exportSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) daily notes.")
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))."
+                    resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription)).\(noteSuffix)"
                 } else {
-                    resultMessage = result.localizedGeneratedFileAndDataDayDescription
+                    resultMessage = result.localizedGeneratedFileAndDataDayDescription + noteSuffix
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
-                let suffix = result.hasPartialFailures
+                let suffix = result.hasDegradingPartialFailures
                     ? result.localizedPartialFailureSummary
                     : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
                 if exportSettings.dailyNotesOnlyModeEnabled && result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {

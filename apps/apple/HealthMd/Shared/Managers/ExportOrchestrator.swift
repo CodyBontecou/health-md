@@ -177,7 +177,7 @@ struct ExportOrchestrator {
             self.archiveCount = max(archiveCount, 0)
             self.externalRecordFileCount = max(externalRecordFileCount, 0)
             self.externalRecordPayloadCount = max(externalRecordPayloadCount, 0)
-            self.unclassifiedFileCount = Self.saturatingAdd(
+            self.unclassifiedFileCount = ExportOrchestrator.saturatingAdd(
                 max(unclassifiedFileCount, 0),
                 legacyUnclassified
             )
@@ -200,7 +200,7 @@ struct ExportOrchestrator {
             )
             let legacyLooseFileCount = impliedLooseFiles.overflow
                 ? 0 : max(impliedLooseFiles.partialValue, 0)
-            let legacyCategorizedFileCount = Self.saturatingAdd(
+            let legacyCategorizedFileCount = ExportOrchestrator.saturatingAdd(
                 legacyLooseFileCount,
                 payload.externalRecordFileCount
             )
@@ -212,7 +212,7 @@ struct ExportOrchestrator {
                 let difference = payload.totalFilesWritten.subtractingReportingOverflow(knownFiles)
                 unclassifiedGap = difference.overflow ? 0 : max(difference.partialValue, 0)
             }
-            let unclassified = Self.saturatingAdd(
+            let unclassified = ExportOrchestrator.saturatingAdd(
                 breakdown?.unclassifiedFileCount ?? 0,
                 unclassifiedGap
             )
@@ -251,21 +251,39 @@ struct ExportOrchestrator {
             )
         }
 
-        private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
-            let result = lhs.addingReportingOverflow(rhs)
-            return result.overflow ? Int.max : result.partialValue
-        }
-
         var hasPartialFailures: Bool { !partialFailures.isEmpty }
+        /// Warnings that reduce capture completeness or lose data. Informational
+        /// omissions of optional attachments are excluded, so a full-success
+        /// export with notes reports `false` here.
+        var hasDegradingPartialFailures: Bool {
+            partialFailures.contains(where: \.degradesSuccess)
+        }
         var partialFailureSummary: String {
-            guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 { return "Warning: \(first.summary)" }
-            return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
+            guard let first = partialFailures.first(where: \.degradesSuccess) else { return "" }
+            let degradingCount = partialFailures.filter(\.degradesSuccess).count
+            if degradingCount == 1 { return "Warning: \(first.summary)" }
+            return "Warning: \(degradingCount) export warnings, including \(first.summary)"
         }
         var localizedPartialFailureSummary: String {
-            guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 { return String(localized: "Warning: \(first.localizedSummary)") }
-            return String(localized: "Warning: \(partialFailures.count) export warnings, including \(first.localizedSummary)")
+            guard let first = partialFailures.first(where: \.degradesSuccess) else { return "" }
+            let degradingCount = partialFailures.filter(\.degradesSuccess).count
+            if degradingCount == 1 { return String(localized: "Warning: \(first.localizedSummary)") }
+            return String(localized: "Warning: \(degradingCount) export warnings, including \(first.localizedSummary)")
+        }
+        /// Informational omissions that did not reduce the export below full
+        /// success (for example a WorkoutKit plan this device cannot decode).
+        /// Nil when there are none. Surfaced as a note, never a warning.
+        var informationalNoteSummary: String? {
+            let notes = partialFailures.filter { $0.isInformational == true }
+            guard let first = notes.first else { return nil }
+            if notes.count == 1 { return "Note: \(first.summary)" }
+            return "Note: \(notes.count) export notes, including \(first.summary)"
+        }
+        var localizedInformationalNoteSummary: String? {
+            let notes = partialFailures.filter { $0.isInformational == true }
+            guard let first = notes.first else { return nil }
+            if notes.count == 1 { return String(localized: "Note: \(first.localizedSummary)") }
+            return String(localized: "Note: \(notes.count) export notes, including \(first.localizedSummary)")
         }
         var didCompleteAllRequestedDates: Bool {
             completedDateCount == totalCount && totalCount > 0 && !wasCancelled && !hadTerminalRangeFailure
@@ -276,7 +294,8 @@ struct ExportOrchestrator {
             return requestedDates.map { calendar.startOfDay(for: $0) }.filter { !completedDays.contains($0) }
         }
         var isFullSuccess: Bool {
-            successCount == totalCount && didCompleteAllRequestedDates && failedDateDetails.isEmpty && !hasPartialFailures
+            successCount == totalCount && didCompleteAllRequestedDates && failedDateDetails.isEmpty
+                && !partialFailures.contains(where: \.degradesSuccess)
         }
         var isPartialSuccess: Bool {
             guard !isFullSuccess else { return false }
@@ -298,10 +317,10 @@ struct ExportOrchestrator {
                 rollupFileCount,
                 archiveCount,
                 externalRecordFileCount
-            ].reduce(0, Self.saturatingAdd)
+            ].reduce(0, ExportOrchestrator.saturatingAdd)
         }
         var knownFileCount: Int {
-            Self.saturatingAdd(categorizedFileCount, unclassifiedFileCount)
+            ExportOrchestrator.saturatingAdd(categorizedFileCount, unclassifiedFileCount)
         }
         var totalFilesWritten: Int {
             max(authoritativeFileCount ?? 0, max(fileCountLowerBound ?? 0, knownFileCount))
@@ -490,6 +509,9 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var externalRecordFileCount = 0
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
@@ -567,7 +589,11 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
                     externalRecordFileCount: externalRecordFileCount,
+                    isFileCategoryBreakdownComplete: true,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
                     dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
@@ -649,6 +675,9 @@ struct ExportOrchestrator {
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
@@ -715,7 +744,11 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
                     externalRecordFileCount: externalRecordFileCount,
+                    isFileCategoryBreakdownComplete: true,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
                     dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
@@ -780,7 +813,11 @@ struct ExportOrchestrator {
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
                 formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
                 externalRecordFileCount: externalRecordFileCount,
+                isFileCategoryBreakdownComplete: true,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
                 wasCancelled: true,
@@ -811,15 +848,28 @@ struct ExportOrchestrator {
         let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
             : completedDates
+        let authoritativeFileCount = Self.saturatingSum(
+            looseAggregateFileCount,
+            individualEntryFileCount,
+            dataDictionaryFileCount,
+            rollupFileCount,
+            archiveCount,
+            externalRecordFileCount
+        )
         return ExportResult(
             successCount: successCount,
             totalCount: totalDays,
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
+            looseAggregateFileCount: looseAggregateFileCount,
+            individualEntryFileCount: individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
             externalRecordFileCount: externalRecordFileCount,
+            authoritativeFileCount: authoritativeFileCount,
+            isFileCategoryBreakdownComplete: true,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: archiveResult.wasCancelled,
@@ -1041,9 +1091,10 @@ struct ExportOrchestrator {
             }
             if isSummaryOnly {
                 let filesWritten = writeResult.rollupFileCount
+                    + writeResult.dataDictionaryFileCount
                 let isTerminalNoData = filesWritten == 0
                     && failures.isEmpty
-                    && partialFailures.isEmpty
+                    && !partialFailures.contains(where: \.degradesSuccess)
                     && totalCount > 0
                 if isTerminalNoData {
                     failures.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
@@ -1058,18 +1109,30 @@ struct ExportOrchestrator {
                     failedDateDetails: failures,
                     partialFailures: partialFailures,
                     formatsPerDate: 0,
-                    rollupFileCount: filesWritten,
+                    dataDictionaryFileCount: writeResult.dataDictionaryFileCount,
+                    rollupFileCount: writeResult.rollupFileCount,
+                    authoritativeFileCount: filesWritten,
+                    isFileCategoryBreakdownComplete: true,
                     completedDates: completedDates
                 )
             }
             completedDates.append(contentsOf: selectedRecordDates)
+            let authoritativeFileCount = Self.saturatingSum(
+                writeResult.dailyFileCount,
+                writeResult.rollupFileCount,
+                writeResult.dataDictionaryFileCount
+            )
             return ExportResult(
                 successCount: selectedRecordDates.count,
                 totalCount: totalCount,
                 failedDateDetails: failures,
                 partialFailures: partialFailures,
                 formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: writeResult.dailyFileCount,
+                dataDictionaryFileCount: writeResult.dataDictionaryFileCount,
                 rollupFileCount: writeResult.rollupFileCount,
+                authoritativeFileCount: authoritativeFileCount,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: completedDates
             )
         } catch is CancellationError {
@@ -1182,6 +1245,9 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var externalRecordFileCount = 0
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
@@ -1328,6 +1394,9 @@ struct ExportOrchestrator {
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
@@ -1395,6 +1464,10 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
+                    isFileCategoryBreakdownComplete: true,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
                     dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
@@ -1521,6 +1594,10 @@ struct ExportOrchestrator {
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
                 formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                isFileCategoryBreakdownComplete: true,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
                 wasCancelled: true,
@@ -1551,15 +1628,28 @@ struct ExportOrchestrator {
         let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
             : completedDates
+        let authoritativeFileCount = Self.saturatingSum(
+            looseAggregateFileCount,
+            individualEntryFileCount,
+            dataDictionaryFileCount,
+            rollupFileCount,
+            archiveCount,
+            externalRecordFileCount
+        )
         return ExportResult(
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
+            looseAggregateFileCount: looseAggregateFileCount,
+            individualEntryFileCount: individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
             externalRecordFileCount: externalRecordFileCount,
+            authoritativeFileCount: authoritativeFileCount,
+            isFileCategoryBreakdownComplete: true,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: archiveResult.wasCancelled,
@@ -1591,6 +1681,20 @@ struct ExportOrchestrator {
 
     private static func looseFormatsPerDate(settings: AdvancedExportSettings) -> Int {
         settings.looseFormatsPerDate
+    }
+
+    /// Saturating total across every file category so an authoritative
+    /// generated-file count can never overflow from absurd category values.
+    private static func saturatingSum(_ values: Int...) -> Int {
+        values.reduce(0, Self.saturatingAdd)
+    }
+
+    /// Saturating addition shared by `ExportResult` and the local export
+    /// paths: overflow clamps to `Int.max` so summed file counts stay
+    /// non-negative and monotonic instead of trapping or wrapping.
+    static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
+        let result = lhs.addingReportingOverflow(rhs)
+        return result.overflow ? Int.max : result.partialValue
     }
 
     private struct ArchiveWriteResult {
@@ -1755,7 +1859,7 @@ struct ExportOrchestrator {
             && filesWritten == 0
             && totalDays > 0
             && failedDateDetails.isEmpty
-            && partialFailures.isEmpty
+            && !partialFailures.contains(where: \.degradesSuccess)
         if isTerminalNoData {
             failedDateDetails.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
         }
@@ -1766,8 +1870,11 @@ struct ExportOrchestrator {
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: 0,
+            looseAggregateFileCount: 0,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
+            authoritativeFileCount: filesWritten,
+            isFileCategoryBreakdownComplete: true,
             wasCancelled: archiveResult.wasCancelled,
             completedDates: archiveResult.wasCancelled
                 ? []

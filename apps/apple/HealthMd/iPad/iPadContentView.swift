@@ -534,9 +534,10 @@ struct iPadContentView: View {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
+                let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    : result.localizedGeneratedFileAndDataDayDescription
+                    : result.localizedGeneratedFileAndDataDayDescription + noteSuffix
             } else if result.isPartialSuccess {
                 let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
                     && result.dailyNoteSkipCount > 0
@@ -545,7 +546,7 @@ struct iPadContentView: View {
                     partialExportNotice = PartialExportNotice(result: result)
                 }
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                let suffix = result.hasPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
+                let suffix = result.hasDegradingPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
                 if isCompletedDailyNoteSkip {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
                 } else {
