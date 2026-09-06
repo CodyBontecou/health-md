@@ -1087,31 +1087,34 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     func testProductionConnectedMacFactChangesFireOnlyOnDisplayedFacts() throws {
         // The production signal derives purely from the shared sync service's
         // published facts the review rows display — no transport work.
-        // STATIC RETENTION JUSTIFICATION: ObservableObject deinit aborts on
-        // CI's older iOS 26.2 simulator runtime (lifecycle-audit.md).
+        // STATIC RETENTION JUSTIFICATION: both the ObservableObject and the
+        // subscription's AnyCancellable must survive the test: releasing the
+        // cancellable tears down the CombineLatest4 subscription chain over
+        // the service's @Published projections, which aborts CI's older
+        // iOS 26.2 simulator runtime (lifecycle-audit.md).
         let syncService = LifecycleHarness.retain(SyncService())
         let signalCount = SignalCounter()
-        let cancellable = SharedSetupV2CoordinatorAdapter
-            .connectedMacFactChanges(syncService: syncService)
-            .sink { _ in signalCount.value += 1 }
+        let cancellable = LifecycleHarness.retain(
+            SharedSetupV2CoordinatorAdapter
+                .connectedMacFactChanges(syncService: syncService)
+                .sink { _ in signalCount.value += 1 }
+        )
 
-        withExtendedLifetime(cancellable) {
-            // No initial replay of current values fires a signal.
-            XCTAssertEqual(signalCount.value, 0)
+        // No initial replay of current values fires a signal.
+        XCTAssertEqual(signalCount.value, 0)
 
-            syncService.connectionState = .connecting
-            XCTAssertEqual(signalCount.value, 1)
-            syncService.connectionState = .connected
-            XCTAssertEqual(signalCount.value, 2)
-            syncService.connectedPeerName = "Test Mac"
-            XCTAssertEqual(signalCount.value, 3)
+        syncService.connectionState = .connecting
+        XCTAssertEqual(signalCount.value, 1)
+        syncService.connectionState = .connected
+        XCTAssertEqual(signalCount.value, 2)
+        syncService.connectedPeerName = "Test Mac"
+        XCTAssertEqual(signalCount.value, 3)
 
-            // Unrelated published sync-service state never re-renders the
-            // review rows.
-            syncService.lastError = "unrelated"
-            syncService.discoveredPeers = []
-            XCTAssertEqual(signalCount.value, 3)
-        }
+        // Unrelated published sync-service state never re-renders the
+        // review rows.
+        syncService.lastError = "unrelated"
+        syncService.discoveredPeers = []
+        XCTAssertEqual(signalCount.value, 3)
 
         let snapshot = SharedSetupV2ConnectedMacState(syncService: syncService)
         XCTAssertEqual(snapshot.liveConnectionCaption, "Mac connection active (Test Mac)")
