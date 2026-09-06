@@ -121,6 +121,7 @@ final class ExportProfileCoordinator: ObservableObject {
             folderVaultID = destination.id
         }
 
+        var bootstrapAgentDataGatewayBinding: UUID?
         var apiEndpointID: UUID?
         let trimmedURL = apiExportSettings.endpointURLString
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -135,8 +136,8 @@ final class ExportProfileCoordinator: ObservableObject {
         }
 
         // The gateway destination carries no credential in v1; migration
-        // binds the live single-gateway state when one exists.
-        var agentDataGatewayID: UUID?
+        // binds the live single-gateway state when one exists. The binding is
+        // native store state (the ExportProfile payload is unchanged).
         let trimmedGatewayURL = agentDataGatewaySettings.endpointURLString
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedGatewayURL.isEmpty {
@@ -144,16 +145,22 @@ final class ExportProfileCoordinator: ObservableObject {
                 name: String(localized: "Default Gateway", comment: "Name of the Agent Data gateway migrated from existing settings"),
                 endpointURLString: trimmedGatewayURL
             )
-            agentDataGatewayID = gateway.id
+            bootstrapAgentDataGatewayBinding = gateway.id
         }
 
         let didCreate = profileStore.migrateDefaultProfileIfNeeded(
             settings: ExportSettingsSnapshot.from(settings),
             target: initialTarget,
             folderVaultID: folderVaultID,
-            apiEndpointID: apiEndpointID,
-            agentDataGatewayID: agentDataGatewayID
+            apiEndpointID: apiEndpointID
         )
+        if didCreate, let bootstrapAgentDataGatewayBinding,
+           let defaultProfileID = profileStore.activeProfileID {
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: defaultProfileID,
+                gatewayID: bootstrapAgentDataGatewayBinding
+            )
+        }
 
         // Phase 3: an enabled legacy schedule becomes the Default profile's
         // scheduled entry exactly once, then the legacy schedule is disabled
@@ -232,7 +239,7 @@ final class ExportProfileCoordinator: ObservableObject {
     }
 
     private func adoptAgentDataGateway(for profile: ExportProfile) {
-        guard let bindingID = profile.agentDataGatewayID,
+        guard let bindingID = destinationStore.agentDataGatewayBinding(profileID: profile.id),
               let gateway = destinationStore.agentDataGateway(id: bindingID) else { return }
         agentDataGatewaySettings.endpointURLString = gateway.endpointURLString
     }
@@ -504,7 +511,7 @@ final class ExportProfileCoordinator: ObservableObject {
             name: trimmedURL,
             endpointURLString: trimmedURL
         )
-        profileStore.setAgentDataGatewayBinding(profileID: activeID, gatewayID: gateway.id)
+        destinationStore.setAgentDataGatewayBinding(profileID: activeID, gatewayID: gateway.id)
     }
 
     // MARK: - Profile management
@@ -529,9 +536,16 @@ final class ExportProfileCoordinator: ObservableObject {
             settings: newSettings ?? ExportSettingsSnapshot.from(settings),
             target: target,
             folderVaultID: folderVaultID,
-            apiEndpointID: source.apiEndpointID,
-            agentDataGatewayID: agentDataGatewayID ?? source.agentDataGatewayID
+            apiEndpointID: source.apiEndpointID
         )
+        if target == .agentDataGateway {
+            let resolvedGatewayID = agentDataGatewayID
+                ?? destinationStore.agentDataGatewayBinding(profileID: source.id)
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: created.id,
+                gatewayID: resolvedGatewayID
+            )
+        }
         activate(profileID: created.id, adoptVault: folderVaultID != nil)
         return created
     }
@@ -599,9 +613,15 @@ final class ExportProfileCoordinator: ObservableObject {
             settings: ExportSettingsSnapshot.from(settings),
             target: source.target,
             folderVaultID: source.folderVaultID,
-            apiEndpointID: source.apiEndpointID,
-            agentDataGatewayID: source.agentDataGatewayID
+            apiEndpointID: source.apiEndpointID
         )
+        if source.target == .agentDataGateway,
+           let bindingID = destinationStore.agentDataGatewayBinding(profileID: source.id) {
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: copy.id,
+                gatewayID: bindingID
+            )
+        }
         activate(profileID: copy.id, adoptVault: false)
         return copy
     }
@@ -612,7 +632,14 @@ final class ExportProfileCoordinator: ObservableObject {
     @discardableResult
     func duplicateProfile(id: UUID) -> ExportProfile? {
         guard !isProfileExecutionBlocked(id) else { return nil }
-        return profileStore.duplicate(id: id)
+        guard let copy = profileStore.duplicate(id: id) else { return nil }
+        if let bindingID = destinationStore.agentDataGatewayBinding(profileID: id) {
+            destinationStore.setAgentDataGatewayBinding(
+                profileID: copy.id,
+                gatewayID: bindingID
+            )
+        }
+        return copy
     }
 
     /// Deletes a profile (forbidden for the last remaining profile by the
@@ -694,7 +721,7 @@ final class ExportProfileCoordinator: ObservableObject {
             profileID: id,
             endpointID: target == .apiEndpoint ? apiEndpointID : nil
         )
-        _ = profileStore.setAgentDataGatewayBinding(
+        destinationStore.setAgentDataGatewayBinding(
             profileID: id,
             gatewayID: target == .agentDataGateway ? agentDataGatewayID : nil
         )

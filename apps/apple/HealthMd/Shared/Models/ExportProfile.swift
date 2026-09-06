@@ -28,10 +28,6 @@ struct ExportProfile: Codable, Identifiable, Equatable {
     /// Bound API endpoint in `ProfileDestinationStore` when
     /// `target == .apiEndpoint`. Nil keeps the current single-endpoint state.
     var apiEndpointID: UUID?
-    /// Bound Agent Data gateway in `ProfileDestinationStore` when
-    /// `target == .agentDataGateway`. Nil keeps the current single-gateway
-    /// state.
-    var agentDataGatewayID: UUID?
     var createdAt: Date
     var updatedAt: Date
     /// True only for the profile synthesized from legacy live settings during
@@ -46,7 +42,6 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
         apiEndpointID: UUID? = nil,
-        agentDataGatewayID: UUID? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         isMigrationDefault: Bool = false
@@ -57,7 +52,6 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         self.target = target
         self.folderVaultID = folderVaultID
         self.apiEndpointID = apiEndpointID
-        self.agentDataGatewayID = agentDataGatewayID
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isMigrationDefault = isMigrationDefault
@@ -178,8 +172,7 @@ final class ExportProfileStore: ObservableObject {
         settings: ExportSettingsSnapshot,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
-        apiEndpointID: UUID? = nil,
-        agentDataGatewayID: UUID? = nil
+        apiEndpointID: UUID? = nil
     ) -> Bool {
         guard profiles.isEmpty else { return false }
 
@@ -189,7 +182,6 @@ final class ExportProfileStore: ObservableObject {
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID,
-            agentDataGatewayID: agentDataGatewayID,
             createdAt: now(),
             updatedAt: now(),
             isMigrationDefault: true
@@ -208,8 +200,7 @@ final class ExportProfileStore: ObservableObject {
         settings: ExportSettingsSnapshot,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
-        apiEndpointID: UUID? = nil,
-        agentDataGatewayID: UUID? = nil
+        apiEndpointID: UUID? = nil
     ) -> ExportProfile {
         let profile = ExportProfile(
             name: uniquifiedName(name),
@@ -217,7 +208,6 @@ final class ExportProfileStore: ObservableObject {
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID,
-            agentDataGatewayID: agentDataGatewayID,
             createdAt: now(),
             updatedAt: now()
         )
@@ -264,18 +254,6 @@ final class ExportProfileStore: ObservableObject {
         return true
     }
 
-    /// Binds a profile to an Agent Data gateway in `ProfileDestinationStore`.
-    /// Returns false when the profile id is unknown.
-    @discardableResult
-    func setAgentDataGatewayBinding(profileID: UUID, gatewayID: UUID?) -> Bool {
-        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
-        guard profiles[index].agentDataGatewayID != gatewayID else { return true }
-        profiles[index].agentDataGatewayID = gatewayID
-        profiles[index].updatedAt = now()
-        persist()
-        return true
-    }
-
     /// Replaces the export target binding and touches `updatedAt`.
     /// Returns false when the id is unknown.
     @discardableResult
@@ -315,8 +293,7 @@ final class ExportProfileStore: ObservableObject {
             settings: source.settings,
             target: source.target,
             folderVaultID: source.folderVaultID,
-            apiEndpointID: source.apiEndpointID,
-            agentDataGatewayID: source.agentDataGatewayID
+            apiEndpointID: source.apiEndpointID
         )
     }
 

@@ -1134,7 +1134,9 @@ class SchedulingManager: ObservableObject {
             }
             return APIExportSettings().displayName
         case .agentDataGateway:
-            if let gateway = scheduledDestinationStore.agentDataGateway(id: profile?.agentDataGatewayID) {
+            if let gateway = scheduledDestinationStore.agentDataGateway(
+                id: scheduledDestinationStore.agentDataGatewayBinding(profileID: profile?.id)
+            ) {
                 return AgentDataGatewayEndpoint.redactedDescription(
                     gateway.endpointURLString,
                     fallback: ExportTargetSelection.agentDataGateway.title
@@ -2528,7 +2530,7 @@ class SchedulingManager: ObservableObject {
             apiSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
         }
         if let profile,
-           let gatewayID = profile.agentDataGatewayID,
+           let gatewayID = destinationStore.agentDataGatewayBinding(profileID: profile.id),
            let gateway = destinationStore.agentDataGateway(id: gatewayID) {
             let gatewaySettings = AgentDataGatewaySettings()
             gatewaySettings.endpointURLString = gateway.endpointURLString

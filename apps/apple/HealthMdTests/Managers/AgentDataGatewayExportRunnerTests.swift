@@ -8,6 +8,10 @@ import XCTest
 /// remaining artifacts).
 final class AgentDataGatewayExportRunnerTests: XCTestCase {
 
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings is an
+    // ObservableObject with nested observable properties. Static retention
+    // avoids the macOS 26 / Swift 6 deinit crash. See
+    // docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     private func makeIsolatedDefaults() -> UserDefaults {

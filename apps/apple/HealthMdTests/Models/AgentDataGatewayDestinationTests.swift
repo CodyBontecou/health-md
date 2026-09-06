@@ -236,7 +236,7 @@ final class AgentDataGatewayDestinationTests: XCTestCase {
         XCTAssertEqual(reloaded.agentDataGateways.count, 1)
     }
 
-    func testProfileGatewayBindingRoundTripsAndDecodesLegacyPayloads() throws {
+    func testProfileGatewayBindingRoundTripsInDestinationStore() throws {
         let defaults = makeIsolatedDefaults()
         let profileStore = ExportProfileStore(
             userDefaults: defaults,
@@ -248,40 +248,45 @@ final class AgentDataGatewayDestinationTests: XCTestCase {
             name: "Home",
             endpointURLString: "https://gateway.example.com"
         )
+        let other = destinationStore.upsertAgentDataGateway(
+            name: "LAN",
+            endpointURLString: "http://127.0.0.1:8791"
+        )
         let profile = profileStore.add(
             name: "Gateway profile",
             settings: ExportSettingsSnapshot.from(AdvancedExportSettings(userDefaults: makeIsolatedDefaults())),
-            target: .agentDataGateway,
-            agentDataGatewayID: gateway.id
+            target: .agentDataGateway
         )
-        XCTAssertEqual(profile.agentDataGatewayID, gateway.id)
 
-        XCTAssertTrue(profileStore.setAgentDataGatewayBinding(profileID: profile.id, gatewayID: nil))
-        XCTAssertNil(profileStore.profile(id: profile.id)?.agentDataGatewayID)
-        XCTAssertTrue(profileStore.setAgentDataGatewayBinding(profileID: profile.id, gatewayID: gateway.id))
-        XCTAssertEqual(profileStore.profile(id: profile.id)?.agentDataGatewayID, gateway.id)
-
-        // Duplicates carry the binding.
-        let copy = try XCTUnwrap(profileStore.duplicate(id: profile.id))
-        XCTAssertEqual(copy.agentDataGatewayID, gateway.id)
-
-        // A payload persisted before the field existed decodes with nil.
-        var legacyObject = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: JSONEncoder().encode([profile])) as? [[String: Any]]
+        // The binding is native destination-store state; the ExportProfile
+        // payload is unchanged.
+        XCTAssertNil(destinationStore.agentDataGatewayBinding(profileID: profile.id))
+        destinationStore.setAgentDataGatewayBinding(profileID: profile.id, gatewayID: gateway.id)
+        XCTAssertEqual(destinationStore.agentDataGatewayBinding(profileID: profile.id), gateway.id)
+        XCTAssertEqual(
+            destinationStore.agentDataGateway(id: destinationStore.agentDataGatewayBinding(profileID: profile.id))?.name,
+            "Home"
         )
-        legacyObject[0].removeValue(forKey: "agentDataGatewayID")
-        let legacyDefaults = makeIsolatedDefaults()
-        legacyDefaults.set(
-            try JSONSerialization.data(withJSONObject: legacyObject),
-            forKey: "exportProfiles.list"
-        )
-        let legacyStore = ExportProfileStore(userDefaults: legacyDefaults)
-        XCTAssertEqual(legacyStore.profiles.count, 1)
-        XCTAssertNil(legacyStore.profiles.first?.agentDataGatewayID)
+
+        // Rebinding swaps the referenced row; unbinding removes the entry.
+        destinationStore.setAgentDataGatewayBinding(profileID: profile.id, gatewayID: other.id)
+        XCTAssertEqual(destinationStore.agentDataGatewayBinding(profileID: profile.id), other.id)
+        destinationStore.setAgentDataGatewayBinding(profileID: profile.id, gatewayID: nil)
+        XCTAssertNil(destinationStore.agentDataGatewayBinding(profileID: profile.id))
+        destinationStore.setAgentDataGatewayBinding(profileID: profile.id, gatewayID: gateway.id)
+
+        // A fresh store instance reloads the persisted binding.
+        let reloaded = ProfileDestinationStore(userDefaults: defaults)
+        XCTAssertEqual(reloaded.agentDataGatewayBinding(profileID: profile.id), gateway.id)
+
+        // Deleting a gateway removes its bindings.
+        reloaded.deleteAgentDataGateway(id: gateway.id)
+        XCTAssertNil(reloaded.agentDataGatewayBinding(profileID: profile.id))
     }
 
     // MARK: - Shared setup exclusion
 
+    #if os(iOS)
     @MainActor
     func testSharedSetupExportContextExcludesGatewayProfiles() {
         let settings = ExportSettingsSnapshot.from(
@@ -320,6 +325,7 @@ final class AgentDataGatewayDestinationTests: XCTestCase {
         XCTAssertTrue(context.scheduledEntries.isEmpty)
         XCTAssertTrue(context.preservedAndroidExtensions.isEmpty)
     }
+    #endif
 
     // MARK: - Live settings
 

@@ -63,6 +63,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Automation | [Mac CLI iPhone export trigger](./cli-mac-iphone-export.md) | Trigger an export from a connected, open iPhone using the Mac app or CLI. | Drafted | Medium | `SyncPayload.swift`, `HealthMdControlServer.swift`, `scripts/healthmd` |
 | Automation | [Manual IP / Tailscale sync](./manual-ip-sync.md) | Connect iPhone to a Mac destination by address when Multipeer discovery cannot cross a Tailscale network. | Drafted | Low | `SyncMessage`, `MacExportJobExecutor` |
 | Automation | [API Endpoint export](./api-endpoint-export.md) | Send selected Apple Health JSON directly from iPhone to a user-configured HTTP(S) endpoint. | Drafted | Medium | `APIExportSettings`, `APIExportClient`, `ExportTabView` |
+| Automation | [Agent Data gateway export](./agent-data-gateway-export.md) | Upload exact exported artifact files from iPhone to a user-configured Agent Data gateway per ingestion protocol v1. | Drafted | Medium | `AgentDataGatewaySettings`, `AgentDataIngestClient`, `AgentDataGatewayExportRunner` |
 | Automation | [CLI distribution](./cli-distribution.md) | Bundle the CLI in the Mac app while also supporting standalone terminal installs. | Drafted | Medium | `HealthMdCLI`, `HealthMd-macOS`, `scripts/healthmd` |
 | Reliability | [Export history and retry](./export-history-retry.md) | Review recent export results and retry failed dates. | Drafted | Medium | `ExportHistory.swift`, `ScheduleSettingsView.swift` |
 | Mac destination | [iPhone → Mac destination](./mac-sync.md) | Write iPhone-prepared v8 exports to Mac through encrypted, bounded, checksum-validated transfer. | Drafted | High | `SyncService.swift`, `ConnectedTransfer.swift` |
@@ -85,7 +86,8 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 11. **Workout Deep Dive: Complete Public Graph + Readable Notes:** [Workout Details](./workout-details.md)
 12. **Use Your Mac as a Local Destination for iPhone Health.md Exports:** [Mac Destination](./mac-sync.md)
 13. **Send Apple Health Data to Your Own API:** [API Endpoint Export](./api-endpoint-export.md)
-14. **Health.md Privacy Architecture: Where Your Data Goes:** [Privacy and Local-First Design](./privacy-local-first.md)
+14. **Upload Export Artifacts to an Agent Data Gateway:** [Agent Data Gateway Export](./agent-data-gateway-export.md)
+15. **Health.md Privacy Architecture: Where Your Data Goes:** [Privacy and Local-First Design](./privacy-local-first.md)
 
 ## Documentation rules
 

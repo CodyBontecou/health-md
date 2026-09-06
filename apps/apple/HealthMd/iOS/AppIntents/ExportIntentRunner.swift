@@ -199,7 +199,7 @@ enum ExportIntentRunner {
             apiSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
         }
         if let profile,
-           let gatewayID = profile.agentDataGatewayID,
+           let gatewayID = destinationStore.agentDataGatewayBinding(profileID: profile.id),
            let gateway = destinationStore.agentDataGateway(id: gatewayID) {
             let gatewaySettings = AgentDataGatewaySettings()
             gatewaySettings.endpointURLString = gateway.endpointURLString

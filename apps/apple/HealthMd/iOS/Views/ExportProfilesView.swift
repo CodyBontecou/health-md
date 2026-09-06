@@ -231,7 +231,9 @@ struct ExportProfilesView: View {
     private func summary(for profile: ExportProfile) -> ExportProfileCardSummary {
         let vault = destinationStore.vault(id: profile.folderVaultID)
         let endpoint = destinationStore.apiEndpoint(id: profile.apiEndpointID)
-        let gateway = destinationStore.agentDataGateway(id: profile.agentDataGatewayID)
+        let gateway = destinationStore.agentDataGateway(
+            id: destinationStore.agentDataGatewayBinding(profileID: profile.id)
+        )
         let entry = entryStore.entry(profileID: profile.id)
         return ExportProfileCardSummary(
             profile: profile,
@@ -562,7 +564,9 @@ struct ExportProfileDetailView: View {
     private func destinationCard(for profile: ExportProfile) -> some View {
         let vault = destinationStore.vault(id: profile.folderVaultID)
         let endpoint = destinationStore.apiEndpoint(id: profile.apiEndpointID)
-        let gateway = destinationStore.agentDataGateway(id: profile.agentDataGatewayID)
+        let gateway = destinationStore.agentDataGateway(
+            id: destinationStore.agentDataGatewayBinding(profileID: profile.id)
+        )
         return sectionCard(title: String(localized: "Destination", comment: "Profile detail card title")) {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 factRow(
@@ -1010,7 +1014,7 @@ struct ExportProfileEditorSheet: View {
             _target = State(initialValue: profile.target)
             _folderVaultID = State(initialValue: profile.folderVaultID)
             _apiEndpointID = State(initialValue: profile.apiEndpointID)
-            _agentDataGatewayID = State(initialValue: profile.agentDataGatewayID)
+            _agentDataGatewayID = State(initialValue: coordinator.destinationStore.agentDataGatewayBinding(profileID: profile.id))
             _draft = State(initialValue: profile.settings)
         } else {
             // Creation defaults mirror what a plain duplicate would produce,
@@ -1020,7 +1024,9 @@ struct ExportProfileEditorSheet: View {
             let active = coordinator.profileStore.activeProfile
             _folderVaultID = State(initialValue: active?.folderVaultID)
             _apiEndpointID = State(initialValue: active?.apiEndpointID)
-            _agentDataGatewayID = State(initialValue: active?.agentDataGatewayID)
+            _agentDataGatewayID = State(initialValue: active.flatMap {
+                coordinator.destinationStore.agentDataGatewayBinding(profileID: $0.id)
+            })
             _draft = State(initialValue: ExportSettingsSnapshot.from(coordinator.liveSettings))
         }
 
