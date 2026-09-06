@@ -15,12 +15,14 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.healthmd.HealthMdApplication
 import com.healthmd.R
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -53,6 +55,8 @@ internal fun scheduledProfileHistoryTargetLabel(profile: ExportProfile): String 
                 ?: EXPORT_FOLDER_ROOT_TARGET_LABEL
         ExportTarget.API_ENDPOINT ->
             APIExportEndpoint.redactedDescription(profile.apiEndpointUrl.orEmpty())
+        ExportTarget.AGENT_DATA_GATEWAY ->
+            AgentDataGatewayEndpoint.redactedDescription(profile.agentDataGatewayUrl.orEmpty())
     }
 
 internal fun shouldRequireExistingProfileFolderJournal(
@@ -80,6 +84,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val exportRepository: ExportRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner,
+    private val agentDataGatewayExportRunner: AgentDataGatewayExportRunner,
     private val profileRepository: ExportProfileRepository,
     private val entryStore: ScheduledProfileEntryStore,
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
@@ -254,6 +259,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         val durableOperationId = pendingOperationId ?: when (target) {
             ExportTarget.DEVICE_FOLDER -> "profile-folder-${due.pendingExport?.id ?: logicalOperationId}"
             ExportTarget.API_ENDPOINT -> "profile-api-${due.pendingExport?.id ?: logicalOperationId}"
+            ExportTarget.AGENT_DATA_GATEWAY -> "profile-gateway-${due.pendingExport?.id ?: logicalOperationId}"
         }
         // Durable folder journals require a non-legacy engine pin (mirrors ExportWorker's
         // gating); legacy-pin profiles use the plain non-durable export path instead.
@@ -295,6 +301,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                             settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
                             durableOperationId = durableOperationId,
                             durableSettingsSnapshotJson = snapshotJson,
+                        )
+
+                    ExportTarget.AGENT_DATA_GATEWAY ->
+                        agentDataGatewayExportRunner.exportDates(
+                            dates = dates,
+                            settings = settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
                         )
                 }
             }
@@ -417,6 +429,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         settingsSnapshotJson = settingsSnapshotJson,
         target = target,
         apiEndpointUrl = apiEndpointUrl,
+        agentDataGatewayUrl = agentDataGatewayUrl,
         folderUri = folderUri,
         folderDisplayName = folderDisplayName,
     )
@@ -475,6 +488,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 target = profile.target,
                 profileName = profile.name,
                 apiEndpointUrl = profile.apiEndpointUrl,
+                agentDataGatewayUrl = profile.agentDataGatewayUrl,
                 folderUri = profile.folderUri,
                 folderDisplayName = profile.folderDisplayName,
                 durableOperationId = operationID,

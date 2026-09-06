@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/agent-data/v1/agent-query-response.schema.json",
+  "title": "Health.md Agent Query Response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "operation", "items", "next_cursor", "receipt"],
+  "properties": {
+    "schema": { "const": "healthmd.agent_query_response" },
+    "schema_version": { "const": 1 },
+    "operation": { "enum": ["catalog", "records", "record_read", "artifacts", "artifact_read"] },
+    "items": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/catalog_item" },
+          { "$ref": "#/$defs/inline_record" },
+          { "$ref": "#/$defs/deferred_record" },
+          { "$ref": "#/$defs/record_chunk" },
+          { "$ref": "#/$defs/artifact" },
+          { "$ref": "#/$defs/artifact_chunk" }
+        ]
+      }
+    },
+    "next_cursor": { "type": ["string", "null"], "maxLength": 8192 },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index_revision", "returned_items", "source_kind", "policy_enforced"],
+      "properties": {
+        "index_revision": { "$ref": "#/$defs/digest" },
+        "returned_items": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "source_kind": { "enum": ["directory", "database", "object_store"] },
+        "policy_enforced": { "const": true }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "metric_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "source_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "nullable_date": { "type": ["string", "null"], "format": "date" },
+    "nullable_instant": { "type": ["string", "null"], "format": "date-time" },
+    "catalog_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "metric_id", "source_id", "detail_level", "record_count", "coverage"],
+      "properties": {
+        "type": { "const": "metric" },
+        "metric_id": { "$ref": "#/$defs/metric_id" },
+        "source_id": { "$ref": "#/$defs/source_id" },
+        "detail_level": { "enum": ["common", "lossless"] },
+        "record_count": { "type": "integer", "minimum": 1 },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["first_owner_date", "last_owner_date", "first_time", "last_time"],
+          "properties": {
+            "first_owner_date": { "$ref": "#/$defs/nullable_date" },
+            "last_owner_date": { "$ref": "#/$defs/nullable_date" },
+            "first_time": { "$ref": "#/$defs/nullable_instant" },
+            "last_time": { "$ref": "#/$defs/nullable_instant" }
+          }
+        }
+      }
+    },
+    "record_base": {
+      "type": "object",
+      "required": [
+        "type", "record_id", "metric_ids", "source_id", "detail_level", "owner_date",
+        "start_time", "end_time", "capture_status", "artifact", "locator", "inline"
+      ],
+      "properties": {
+        "type": { "const": "record" },
+        "record_id": { "$ref": "#/$defs/digest" },
+        "metric_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 512,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/metric_id" }
+        },
+        "source_id": { "$ref": "#/$defs/source_id" },
+        "detail_level": { "enum": ["common", "lossless"] },
+        "owner_date": { "$ref": "#/$defs/nullable_date" },
+        "start_time": { "$ref": "#/$defs/nullable_instant" },
+        "end_time": { "$ref": "#/$defs/nullable_instant" },
+        "capture_status": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["artifact_id", "schema", "schema_version"],
+          "properties": {
+            "artifact_id": { "$ref": "#/$defs/digest" },
+            "schema": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "schema_version": { "type": ["integer", "null"], "minimum": 1 }
+          }
+        },
+        "locator": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "pointer"],
+              "properties": {
+                "type": { "const": "json_pointer" },
+                "pointer": { "type": "string", "maxLength": 4096 }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "line"],
+              "properties": {
+                "type": { "const": "ndjson_line" },
+                "line": { "type": "integer", "minimum": 1 }
+              }
+            }
+          ]
+        },
+        "inline": { "type": "boolean" }
+      }
+    },
+    "inline_record": {
+      "allOf": [
+        { "$ref": "#/$defs/record_base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type", "record_id", "metric_ids", "source_id", "detail_level", "owner_date",
+            "start_time", "end_time", "capture_status", "artifact", "locator", "inline", "value"
+          ],
+          "properties": {
+            "type": {}, "record_id": {}, "metric_ids": {}, "source_id": {}, "detail_level": {},
+            "owner_date": {}, "start_time": {}, "end_time": {}, "capture_status": {},
+            "artifact": {}, "locator": {}, "inline": { "const": true }, "value": {}
+          }
+        }
+      ]
+    },
+    "deferred_record": {
+      "allOf": [
+        { "$ref": "#/$defs/record_base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type", "record_id", "metric_ids", "source_id", "detail_level", "owner_date",
+            "start_time", "end_time", "capture_status", "artifact", "locator", "inline", "read_with"
+          ],
+          "properties": {
+            "type": {}, "record_id": {}, "metric_ids": {}, "source_id": {}, "detail_level": {},
+            "owner_date": {}, "start_time": {}, "end_time": {}, "capture_status": {},
+            "artifact": {}, "locator": {}, "inline": { "const": false },
+            "read_with": { "const": "healthmd_data_record_read" }
+          }
+        }
+      ]
+    },
+    "record_chunk": {
+      "allOf": [
+        { "$ref": "#/$defs/chunk" },
+        {
+          "required": ["record_id"],
+          "properties": { "type": { "const": "record_chunk" } }
+        }
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type", "artifact_id", "byte_count", "media_type", "physical_format", "schemas",
+        "capture_status", "detail_levels", "record_count"
+      ],
+      "properties": {
+        "type": { "const": "artifact" },
+        "artifact_id": { "$ref": "#/$defs/digest" },
+        "byte_count": { "type": "integer", "minimum": 0 },
+        "media_type": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "physical_format": { "enum": ["json", "ndjson"] },
+        "schemas": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["schema", "schema_version"],
+            "properties": {
+              "schema": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "schema_version": { "type": ["integer", "null"], "minimum": 1 }
+            }
+          }
+        },
+        "capture_status": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "detail_levels": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["common", "lossless"] }
+        },
+        "record_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "artifact_chunk": {
+      "allOf": [
+        { "$ref": "#/$defs/chunk" },
+        {
+          "required": ["artifact_id"],
+          "properties": { "type": { "const": "artifact_chunk" } }
+        }
+      ]
+    },
+    "chunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type", "offset", "byte_count", "total_byte_count", "media_type", "encoding",
+        "data", "complete", "sha256"
+      ],
+      "properties": {
+        "type": { "enum": ["record_chunk", "artifact_chunk"] },
+        "record_id": { "$ref": "#/$defs/digest" },
+        "artifact_id": { "$ref": "#/$defs/digest" },
+        "offset": { "type": "integer", "minimum": 0 },
+        "byte_count": { "type": "integer", "minimum": 0 },
+        "total_byte_count": { "type": "integer", "minimum": 0 },
+        "media_type": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "encoding": { "const": "base64" },
+        "data": { "type": "string", "pattern": "^[A-Za-z0-9_-]*$" },
+        "complete": { "type": "boolean" },
+        "sha256": { "$ref": "#/$defs/digest" }
+      },
+      "oneOf": [
+        { "required": ["record_id"], "not": { "required": ["artifact_id"] } },
+        { "required": ["artifact_id"], "not": { "required": ["record_id"] } }
+      ]
+    }
+  }
+}

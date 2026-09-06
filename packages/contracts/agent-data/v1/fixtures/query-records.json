@@ -1,0 +1,21 @@
+{
+  "schema": "healthmd.agent_data_query",
+  "schema_version": 1,
+  "operation": {
+    "type": "records",
+    "metrics": {
+      "type": "explicit",
+      "metric_ids": ["healthmd.health_data#/activity/steps"]
+    },
+    "sources": { "type": "all_available" },
+    "dates": { "type": "all_available" },
+    "times": { "type": "all_available" },
+    "detail_level": "common"
+  },
+  "page": {
+    "max_items": 250,
+    "max_bytes": 262144,
+    "cursor": null
+  }
+}
+

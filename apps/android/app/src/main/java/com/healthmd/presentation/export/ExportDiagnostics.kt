@@ -20,6 +20,7 @@ enum class ExportDiagnosticGuidance {
     PAYWALL,
     HEALTH_CONNECT,
     API_CONFIGURATION,
+    GATEWAY_FORMAT,
     NETWORK,
     API_REJECTED,
     RAW_PROVIDER,
@@ -123,6 +124,7 @@ private fun ExportFailureReason.toDiagnosticGuidance(): ExportDiagnosticGuidance
         ExportFailureReason.PAYWALL_REQUIRED -> ExportDiagnosticGuidance.PAYWALL
         ExportFailureReason.HEALTH_CONNECT_ERROR -> ExportDiagnosticGuidance.HEALTH_CONNECT
         ExportFailureReason.INVALID_API_ENDPOINT -> ExportDiagnosticGuidance.API_CONFIGURATION
+        ExportFailureReason.GATEWAY_FORMAT_UNSUPPORTED -> ExportDiagnosticGuidance.GATEWAY_FORMAT
         ExportFailureReason.NETWORK_ERROR -> ExportDiagnosticGuidance.NETWORK
         ExportFailureReason.API_REJECTED -> ExportDiagnosticGuidance.API_REJECTED
         ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> ExportDiagnosticGuidance.RAW_PROVIDER

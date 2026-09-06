@@ -66,6 +66,7 @@ import com.healthmd.data.export.APIExportHeaderValidationException
 import com.healthmd.data.export.APIExportHeaderValidationReason
 import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistBreakpoints
@@ -83,6 +84,7 @@ fun ExportTargetSelector(
     apiSubtitle: String,
     onTargetSelected: (ExportTarget) -> Unit,
     modifier: Modifier = Modifier,
+    gatewaySubtitle: String? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -105,6 +107,14 @@ fun ExportTargetSelector(
             selected = selectedTarget == ExportTarget.API_ENDPOINT,
             onClick = { onTargetSelected(ExportTarget.API_ENDPOINT) },
         )
+        if (gatewaySubtitle != null) {
+            ExportTargetRow(
+                title = stringResource(R.string.export_preview_gateway_destination),
+                subtitle = gatewaySubtitle,
+                selected = selectedTarget == ExportTarget.AGENT_DATA_GATEWAY,
+                onClick = { onTargetSelected(ExportTarget.AGENT_DATA_GATEWAY) },
+            )
+        }
     }
 }
 
@@ -708,6 +718,198 @@ private fun APISettingsError(error: APISettingsValidationError) {
         )
         Text(
             text = error.apiExportLocalizedMessage(),
+            style = GeistType.copy13,
+            color = colors.error,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** Minimal single-field settings dialog for the Agent Data gateway destination. */
+@Composable
+fun AgentDataGatewaySettingsDialog(
+    initialEndpointUrl: String,
+    configurationError: String?,
+    onDismiss: () -> Unit,
+    onSave: (endpointUrl: String) -> Unit,
+) {
+    val colors = LocalGeistColors.current
+    val dialogShape = RoundedCornerShape(GeistRadii.medium)
+    var endpointUrl by remember { mutableStateOf(initialEndpointUrl) }
+    var localError by remember { mutableStateOf(false) }
+
+    LaunchedEffect(configurationError) {
+        if (configurationError != null) {
+            localError = true
+        }
+    }
+
+    val saveSettings = {
+        if (!AgentDataGatewayEndpoint.isConfigured(endpointUrl)) {
+            localError = true
+        } else {
+            onSave(endpointUrl)
+            onDismiss()
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = GeistSpacing.space4, vertical = GeistSpacing.space10),
+            contentAlignment = Alignment.Center,
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = GeistBreakpoints.medium.dp),
+                shape = dialogShape,
+                color = colors.background100,
+                border = BorderStroke(1.dp, colors.grayAlpha.c400),
+                tonalElevation = 0.dp,
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    AgentDataGatewayDialogHeader(onDismiss = onDismiss)
+                    HorizontalDivider(color = colors.grayAlpha.c200)
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(GeistSpacing.space6),
+                        verticalArrangement = Arrangement.spacedBy(GeistSpacing.space6),
+                    ) {
+                        APISettingsSection(
+                            title = stringResource(R.string.agent_data_gateway_section_endpoint),
+                        ) {
+                            OutlinedTextField(
+                                value = endpointUrl,
+                                onValueChange = {
+                                    endpointUrl = it
+                                    localError = false
+                                },
+                                label = { Text(stringResource(R.string.agent_data_gateway_url_label)) },
+                                placeholder = { Text(stringResource(R.string.agent_data_gateway_url_example)) },
+                                textStyle = GeistType.copy14Mono,
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Uri,
+                                    imeAction = ImeAction.Done,
+                                ),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Text(
+                                stringResource(R.string.agent_data_gateway_url_help),
+                                style = GeistType.copy13,
+                                color = colors.secondary,
+                            )
+                        }
+
+                        if (localError) {
+                            AgentDataGatewayError()
+                        }
+                    }
+
+                    HorizontalDivider(color = colors.grayAlpha.c200)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(GeistSpacing.space4),
+                        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+                    ) {
+                        SecondaryButton(
+                            text = stringResource(R.string.agent_data_gateway_close_settings),
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f),
+                        )
+                        PrimaryButton(
+                            text = stringResource(R.string.agent_data_gateway_save_settings),
+                            onClick = saveSettings,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgentDataGatewayDialogHeader(onDismiss: () -> Unit) {
+    val colors = LocalGeistColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = GeistSpacing.space6,
+                top = GeistSpacing.space4,
+                end = GeistSpacing.space3,
+                bottom = GeistSpacing.space4,
+            ),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = GeistSpacing.space1),
+            verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
+        ) {
+            Text(
+                text = stringResource(R.string.agent_data_gateway_dialog_title),
+                style = GeistType.heading20,
+                color = colors.primary,
+            )
+            Text(
+                text = stringResource(R.string.agent_data_gateway_dialog_description),
+                style = GeistType.copy13,
+                color = colors.secondary,
+            )
+        }
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier.size(GeistSizes.minimumTouchTarget),
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = stringResource(R.string.agent_data_gateway_close_content_description),
+                tint = colors.secondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AgentDataGatewayError() {
+    val colors = LocalGeistColors.current
+    val shape = RoundedCornerShape(GeistRadii.small)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(colors.red.c100, shape)
+            .border(1.dp, colors.red.c400, shape)
+            .padding(GeistSpacing.space3)
+            .semantics { liveRegion = LiveRegionMode.Assertive },
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space2),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.ErrorOutline,
+            contentDescription = null,
+            tint = colors.error,
+            modifier = Modifier.size(GeistSpacing.space4),
+        )
+        Text(
+            text = stringResource(
+                R.string.agent_data_gateway_error_invalid_endpoint,
+                stringResource(R.string.api_export_literal_http),
+                stringResource(R.string.api_export_literal_https),
+            ),
             style = GeistType.copy13,
             color = colors.error,
             modifier = Modifier.weight(1f),

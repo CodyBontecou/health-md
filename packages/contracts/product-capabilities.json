@@ -394,6 +394,33 @@
       ]
     },
     {
+      "id": "export.agent-data-gateway",
+      "name": "Agent Data gateway export destination",
+      "classification": "shared",
+      "summary": "Upload a profile's exact exported artifacts to a configured self-hosted Agent Data ingestion gateway endpoint per ingestion protocol v1, with health-free per-artifact receipts and bounded retry of transient outcomes.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/agent-data/v1/contract.md",
+        "apps/cli/docs/agent-data.md",
+        "apps/apple/docs/features/agent-data-gateway-export.md",
+        "apps/android/docs/features/agent-data-gateway.md",
+        "apps/apple/HealthMd/Shared/Managers/AgentDataGatewayExportRunner.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/export/AgentDataGatewayExportRunner.kt"
+      ]
+    },
+    {
       "id": "automation.cancel-active-export",
       "name": "Cancel an in-progress automated export",
       "classification": "shared",

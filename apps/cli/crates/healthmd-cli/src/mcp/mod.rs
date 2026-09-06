@@ -1,4 +1,14 @@
+mod data_backend;
+mod data_object;
+mod data_sqlite;
 mod direct_backend;
+mod ingest;
+mod ingest_http;
+
+pub use data_backend::{DataServeOptions, DataStoreOpenError, DirectoryArtifactStore};
+pub use data_object::ObjectStoreArtifactStore;
+pub use data_sqlite::SqliteArtifactStore;
+pub use ingest_http::{IngestServeError, IngestServeOptions, serve_ingest_gateway};
 
 #[cfg(feature = "streamable-http")]
 pub use healthmd_mcp::transport::streamable_http::{HttpServerError, HttpServerOptions};
@@ -113,6 +123,15 @@ pub fn tool_catalog(tool_name: Option<&str>) -> Result<Value, String> {
     healthmd_mcp::tool_catalog(healthmd_mcp::SurfaceProfile::LocalDirect, tool_name)
 }
 
+/// Return the fixed read-only Agent Data tool catalog without opening a data store.
+///
+/// # Errors
+///
+/// Returns a stable message when `tool_name` is not part of the Agent Data surface.
+pub fn data_tool_catalog(tool_name: Option<&str>) -> Result<Value, String> {
+    healthmd_mcp::tool_catalog(healthmd_mcp::SurfaceProfile::DataReadOnly, tool_name)
+}
+
 /// Execute one canonical typed query without an MCP transport envelope.
 ///
 /// CLI and MCP adapters both normalize through the shared operation registry and traverse pages
@@ -177,10 +196,31 @@ async fn execute_query_invocation(
         .map_err(QueryError::Backend)
 }
 
+#[cfg(feature = "streamable-http")]
+#[derive(Debug)]
+pub enum DataHttpServeError {
+    Store(DataStoreOpenError),
+    Http(HttpServerError),
+}
+
+#[cfg(feature = "streamable-http")]
+impl fmt::Display for DataHttpServeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Store(error) => error.fmt(formatter),
+            Self::Http(error) => error.fmt(formatter),
+        }
+    }
+}
+
+#[cfg(feature = "streamable-http")]
+impl std::error::Error for DataHttpServeError {}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum StdioSurface {
     LocalDirect,
     ReadOnly,
+    Data,
 }
 
 impl StdioSurface {
@@ -188,13 +228,14 @@ impl StdioSurface {
         match self {
             Self::LocalDirect => healthmd_mcp::SurfaceProfile::LocalDirect,
             Self::ReadOnly => healthmd_mcp::SurfaceProfile::LocalReadOnly,
+            Self::Data => healthmd_mcp::SurfaceProfile::DataReadOnly,
         }
     }
 
     fn caller(self) -> healthmd_mcp::CallerIdentity {
         match self {
             Self::LocalDirect => healthmd_mcp::CallerIdentity::local(),
-            Self::ReadOnly => healthmd_mcp::CallerIdentity::local_read_only(),
+            Self::ReadOnly | Self::Data => healthmd_mcp::CallerIdentity::local_read_only(),
         }
     }
 }
@@ -239,11 +280,126 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
     serve_stdio(options, StdioSurface::ReadOnly).await
 }
 
-#[allow(clippy::too_many_lines)]
+/// Serve a data-only MCP surface over stdio from an explicitly configured export directory,
+/// an imported Health.md-owned `SQLite` database, or a read-only S3-compatible object store
+/// bucket prefix.
+///
+/// This server never opens mobile pairing state and never modifies stored artifacts. Its grant is
+/// enforced inside the artifact-store backend before records are returned.
+///
+/// # Errors
+///
+/// Returns [`DataStoreOpenError`] when the backing store, grant, or index is invalid.
+pub async fn serve_data(options: DataServeOptions) -> Result<(), DataStoreOpenError> {
+    let backend = open_data_backend(options)?;
+    let dispatcher = stdio_dispatcher(Arc::new(backend), StdioSurface::Data);
+    serve_dispatcher(dispatcher).await;
+    Ok(())
+}
+
+/// Serve the same data-only MCP surface over Streamable HTTP on loopback.
+///
+/// This reuses the transport the direct HTTP surface serves on: the frozen five-tool Agent Data
+/// catalog, grant enforcement, response contracts, session handling, and loopback-only listener
+/// policy are identical to [`serve_data`] over stdio and to the direct `serve-http` surface. The
+/// unauthenticated listener policy is validated before the backing store is opened.
+///
+/// # Errors
+///
+/// Returns a [`DataHttpServeError`] when the listener policy is invalid, the backing store,
+/// grant, or index is invalid, or the HTTP listener cannot start.
+#[cfg(feature = "streamable-http")]
+pub async fn serve_data_http(
+    options: DataServeOptions,
+    http_options: HttpServerOptions,
+) -> Result<(), DataHttpServeError> {
+    http_options
+        .validate_unauthenticated()
+        .map_err(DataHttpServeError::Http)?;
+    let backend = open_data_backend(options).map_err(DataHttpServeError::Store)?;
+    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+        Arc::new(backend),
+        healthmd_mcp::SurfaceProfile::DataReadOnly,
+    ));
+    healthmd_mcp::transport::streamable_http::serve(
+        application,
+        healthmd_mcp::CallerIdentity::loopback(),
+        http_options,
+    )
+    .await
+    .map_err(DataHttpServeError::Http)
+}
+
+fn open_data_backend(
+    options: DataServeOptions,
+) -> Result<healthmd_operations::ArtifactStoreBackend, DataStoreOpenError> {
+    match options {
+        options @ DataServeOptions::Directory { .. } => {
+            Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
+                DirectoryArtifactStore::open(options)?,
+            )))
+        }
+        options @ DataServeOptions::Database { .. } => {
+            Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
+                data_sqlite::SqliteArtifactStore::open(options)?,
+            )))
+        }
+        options @ DataServeOptions::ObjectStore { .. } => {
+            Ok(healthmd_operations::ArtifactStoreBackend::new(Arc::new(
+                data_object::ObjectStoreArtifactStore::open(options)?,
+            )))
+        }
+    }
+}
+
+/// Ingest recognized export artifacts from a directory into a Health.md-owned `SQLite` database.
+///
+/// The import is storage-side and non-destructive: identical bytes are never duplicated and no
+/// stored payload is deleted. Grants apply only when the database is served.
+///
+/// # Errors
+///
+/// Returns a [`DataStoreOpenError`] with a health-free reason when the database or export
+/// directory is invalid.
+pub async fn import_data(
+    database: std::path::PathBuf,
+    directory: std::path::PathBuf,
+) -> Result<Value, DataStoreOpenError> {
+    tokio::task::spawn_blocking(move || data_sqlite::import_data(&database, &directory))
+        .await
+        .map_err(|_| DataStoreOpenError::new("the Agent Data import could not be completed"))?
+}
+
+/// Validate and store one manifest-described artifact upload (Agent Data ingestion protocol v1).
+///
+/// The local half performs strict manifest validation and integrity verification, promotes
+/// accepted bytes atomically into the `SQLite` store, and returns the health-free receipt.
+/// Rejected uploads (`truncated`, `transient`, `checksum_invalid`, `manifest_incomplete`) are
+/// protocol outcomes returned as receipts; grants still apply only when the database is served.
+///
+/// # Errors
+///
+/// Returns a [`DataStoreOpenError`] with a health-free reason when the argument paths or the
+/// database are unusable, so that no receipt could be produced.
+pub async fn ingest_data(
+    database: std::path::PathBuf,
+    manifest: std::path::PathBuf,
+    artifact: std::path::PathBuf,
+) -> Result<Value, DataStoreOpenError> {
+    tokio::task::spawn_blocking(move || ingest::ingest_upload(&database, &manifest, &artifact))
+        .await
+        .map_err(|_| DataStoreOpenError::new("the Agent Data ingest could not be completed"))?
+}
+
 async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(), ServeError> {
     let backend = direct_backend::DirectIphoneBackend::open(&options)?;
     let dispatcher = stdio_dispatcher(Arc::new(backend), surface);
+    serve_dispatcher(dispatcher).await;
+    Ok(())
+}
 
+#[allow(clippy::too_many_lines)]
+async fn serve_dispatcher(dispatcher: Arc<healthmd_mcp::JsonRpcSession>) {
     let (line_sender, mut line_receiver) = mpsc::channel::<Vec<u8>>(32);
     std::thread::spawn(move || {
         let stdin = std::io::stdin();
@@ -396,7 +552,6 @@ async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(),
             }
         }
     }
-    Ok(())
 }
 
 /// Serve the read-only vendor-neutral MCP surface over Streamable HTTP on loopback.
@@ -576,6 +731,29 @@ mod tests {
         assert!(at_capacity(usize::MAX));
     }
 
+    #[cfg(feature = "streamable-http")]
+    #[tokio::test]
+    async fn data_http_rejects_non_loopback_binds_before_opening_a_store() {
+        let options = HttpServerOptions {
+            bind: std::net::SocketAddr::from(([0, 0, 0, 0], 8_787)),
+            ..HttpServerOptions::default()
+        };
+        let error = serve_data_http(
+            DataServeOptions::Directory {
+                directory: "/nonexistent/export-directory".into(),
+                grant: "/nonexistent/grant.json".into(),
+                index: None,
+            },
+            options,
+        )
+        .await
+        .expect_err("non-loopback binds must be refused");
+        assert!(matches!(
+            error,
+            DataHttpServeError::Http(HttpServerError::NonLoopbackBind)
+        ));
+    }
+
     #[tokio::test]
     async fn read_only_stdio_dispatcher_is_fail_closed_and_cloud_free() {
         let dispatcher =
@@ -632,6 +810,50 @@ mod tests {
             hidden.pointer("/error/message"),
             Some(&json!("Unknown tool"))
         );
+    }
+
+    #[tokio::test]
+    async fn data_stdio_dispatcher_exposes_only_the_data_contract() {
+        let dispatcher = stdio_dispatcher(Arc::new(FixtureBackend::default()), StdioSurface::Data);
+        let initialize = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let initialize: Value = serde_json::from_str(&initialize).unwrap();
+        let instructions = initialize["result"]["instructions"].as_str().unwrap();
+        assert!(instructions.contains("healthmd_data_catalog"));
+        assert!(instructions.contains("does not interpret"));
+        assert!(!instructions.contains("pair"));
+
+        let tools = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let tools: Value = serde_json::from_str(&tools).unwrap();
+        let tools = tools["result"]["tools"].as_array().unwrap();
+        assert_eq!(tools.len(), 5);
+        assert!(tools.iter().all(|tool| {
+            tool["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("healthmd_data_"))
+                && tool.pointer("/annotations/readOnlyHint") == Some(&json!(true))
+        }));
+
+        let hidden = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"healthmd_status","arguments":{}}}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let hidden: Value = serde_json::from_str(&hidden).unwrap();
+        assert_eq!(hidden.pointer("/error/code"), Some(&json!(-32_602)));
     }
 
     #[tokio::test]
@@ -726,5 +948,9 @@ mod tests {
             Some(2)
         );
         assert!(tool_catalog(Some("healthmd_not_a_tool")).is_err());
+
+        let data = data_tool_catalog(None).expect("Agent Data schema");
+        assert_eq!(data["tools"].as_array().map(Vec::len), Some(5));
+        assert!(data_tool_catalog(Some("healthmd_status")).is_err());
     }
 }

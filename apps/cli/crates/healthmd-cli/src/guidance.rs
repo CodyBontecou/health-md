@@ -380,6 +380,129 @@ fn query_operation(backend: &'static str, operation: &OperationDefinition) -> Va
     })
 }
 
+/// Reference guidance for `healthmd mcp serve-data`. Mirrors `McpServeDataArgs` exactly: one of
+/// three exclusive backings, backing-specific options, the required grant, and (in builds that
+/// compile it) the Streamable HTTP transport options.
+fn serve_data(backend: &'static str) -> Value {
+    #[allow(unused_mut)]
+    let mut examples = vec![
+        json!({
+            "description": "Export directory backing",
+            "argv": ["healthmd", "mcp", "serve-data", "--directory", "<ABSOLUTE_DIRECTORY>", "--grant", "<ABSOLUTE_GRANT_JSON>"]
+        }),
+        json!({
+            "description": "SQLite database backing created by data import or data ingest",
+            "argv": ["healthmd", "mcp", "serve-data", "--database", "<ABSOLUTE_SQLITE_FILE>", "--grant", "<ABSOLUTE_GRANT_JSON>"]
+        }),
+        json!({
+            "description": "Read-only S3-compatible object store backing",
+            "argv": ["healthmd", "mcp", "serve-data", "--object-store-url", "<URL>", "--bucket", "<NAME>", "--prefix", "<PREFIX>", "--grant", "<ABSOLUTE_GRANT_JSON>"]
+        }),
+    ];
+    #[cfg(feature = "streamable-http")]
+    examples.push(json!({
+        "description": "Directory backing over the loopback Streamable HTTP transport",
+        "argv": ["healthmd", "mcp", "serve-data", "--serve-transport", "streamable-http", "--bind", "127.0.0.1:8787", "--directory", "<ABSOLUTE_DIRECTORY>", "--grant", "<ABSOLUTE_GRANT_JSON>"]
+    }));
+    let mut value = json!({
+        "schema": GUIDANCE_SCHEMA,
+        "schema_version": SCHEMA_VERSION,
+        "status": "guidance",
+        "backend": backend,
+        "command": "healthmd mcp serve-data",
+        "message": "Choose exactly one Agent Data backing store and one grant; no store was opened and no listener was started.",
+        "request_sent": false,
+        "required_choices": [
+            {
+                "name": "data_backing",
+                "exactly_one_of": [
+                    "--directory <ABSOLUTE_DIRECTORY>",
+                    "--database <ABSOLUTE_SQLITE_FILE>",
+                    "--object-store-url <URL> --bucket <NAME>"
+                ]
+            }
+        ],
+        "required": [
+            {
+                "argument": "--grant <ABSOLUTE_GRANT_JSON>",
+                "description": "Absolute path to a version-1 Agent Data grant JSON file outside the backing store."
+            }
+        ],
+        "backings": [
+            {
+                "name": "directory",
+                "description": "Immutable local Health.md JSON or NDJSON exports in an existing absolute directory.",
+                "options": ["[--index <ABSOLUTE_INDEX_JSON>]"]
+            },
+            {
+                "name": "database",
+                "description": "Health.md-owned SQLite database created with `healthmd data import` or `healthmd data ingest`. The database owns its index internally, so --index is refused.",
+                "options": []
+            },
+            {
+                "name": "object_store",
+                "description": "Read-only S3-compatible (Cloudflare R2) bucket prefix laid out like an export directory.",
+                "options": [
+                    "--bucket <NAME>",
+                    "[--prefix <PREFIX>]",
+                    "[--index <ABSOLUTE_INDEX_JSON>]"
+                ]
+            }
+        ],
+        "examples": examples,
+        "next_actions": [
+            {
+                "command": "healthmd mcp serve-data --help",
+                "description": "Read every backing option, transport option, and example."
+            },
+            {
+                "command": "healthmd mcp schema --data",
+                "description": "Inspect the fixed five-tool data-only catalog without opening a store."
+            }
+        ]
+    });
+    if let Some(object) = value.as_object_mut() {
+        object.insert(
+            "transport_options".into(),
+            Value::Array(serve_data_transport_options()),
+        );
+    }
+    value
+}
+
+/// The `--serve-transport`/loopback options for `mcp serve-data`, cfg-gated to match the args
+/// the shipped binary accepts at parse time: default builds advertise only stdio.
+fn serve_data_transport_options() -> Vec<Value> {
+    #[cfg(feature = "streamable-http")]
+    {
+        vec![
+            json!({
+                "argument": "[--serve-transport <stdio|streamable-http>]",
+                "description": "stdio is the default; streamable-http serves the identical five-tool surface on a loopback listener."
+            }),
+            json!({
+                "argument": "[--bind 127.0.0.1:8787]",
+                "description": "Loopback listener address for the streamable-http transport."
+            }),
+            json!({
+                "argument": "[--allowed-host <HOST>]",
+                "description": "Accepted Host header for the streamable-http transport; repeat for a reverse-proxy hostname."
+            }),
+            json!({
+                "argument": "[--allowed-origin <ORIGIN>]",
+                "description": "Accepted browser Origin for the streamable-http transport; repeat for each trusted browser-based MCP client."
+            }),
+        ]
+    }
+    #[cfg(not(feature = "streamable-http"))]
+    {
+        vec![json!({
+            "argument": "[--serve-transport <stdio>]",
+            "description": "stdio is the default and the only transport this build accepts."
+        })]
+    }
+}
+
 pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
     let (description, commands) = match group {
         "direct" => (
@@ -396,7 +519,9 @@ pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
             let mut commands = vec![
                 json!({"command": "healthmd mcp serve", "description": "Serve the complete local MCP surface over stdio."}),
                 json!({"command": "healthmd mcp serve-read-only", "description": "Serve only readiness and query tools over stdio."}),
+                json!({"command": "healthmd mcp serve-data (--directory <ABSOLUTE_DIRECTORY> | --database <ABSOLUTE_SQLITE_FILE> | --object-store-url <URL> --bucket <NAME>) --grant <ABSOLUTE_GRANT_JSON>", "description": "Serve the separate data-only surface from a local exports directory, an imported SQLite database, or a read-only object store prefix."}),
                 json!({"command": "healthmd mcp schema", "description": "Print the fixed operation catalog without contacting a device."}),
+                json!({"command": "healthmd mcp schema --data", "description": "Print the fixed Agent Data operation catalog without opening a store."}),
             ];
             #[cfg(feature = "streamable-http")]
             commands.push(json!({"command": "healthmd mcp serve-http", "description": "Serve the experimental read-only loopback Streamable HTTP profile."}));
@@ -405,6 +530,14 @@ pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
                 commands,
             )
         }
+        "data" => (
+            "Manage the local Health.md Agent Data store.",
+            vec![
+                json!({"command": "healthmd data import --database <ABSOLUTE_SQLITE_FILE> --directory <ABSOLUTE_EXPORTS_DIRECTORY>", "description": "Ingest every recognized export artifact in a directory into the SQLite store."}),
+                json!({"command": "healthmd data ingest --database <ABSOLUTE_SQLITE_FILE> --manifest <ABSOLUTE_MANIFEST_JSON> --artifact <ABSOLUTE_ARTIFACT_FILE>", "description": "Validate and store one manifest-described artifact upload under ingestion protocol v1."}),
+                json!({"command": "healthmd data ingest-serve --database <ABSOLUTE_SQLITE_FILE>", "description": "Serve the self-hosted loopback ingestion gateway for protocol v1 uploads."}),
+            ],
+        ),
         "setup" => (
             "Configure a supported local AI host.",
             vec![json!({
@@ -554,7 +687,7 @@ pub(super) fn command_error(error: &CommandError, context: &ErrorContext) -> Val
             "cancel" => Some(cancel(context.backend)),
             "direct unpair" => Some(unpair(context.backend)),
             "direct reset-trust" => Some(reset_trust(context.backend)),
-            "direct" | "mcp" | "setup" => Some(group(context.backend, context.command)),
+            "direct" | "mcp" | "setup" | "data" => Some(group(context.backend, context.command)),
             _ => None,
         };
         if let (Some(object), Some(reference)) = (payload.as_object_mut(), reference) {
@@ -613,9 +746,10 @@ fn command_reference(backend: &'static str, path: &'static str) -> Value {
         "query" => query(backend, None),
         "resume" => resume(backend),
         "cancel" => cancel(backend),
+        "mcp serve-data" => serve_data(backend),
         "direct unpair" => unpair(backend),
         "direct reset-trust" => reset_trust(backend),
-        "direct" | "mcp" | "setup" => group(backend, path),
+        "direct" | "mcp" | "setup" | "data" => group(backend, path),
         _ => Value::Null,
     }
 }
@@ -685,6 +819,11 @@ fn recovery_actions(code: &str, command: &str) -> Vec<Value> {
             json!({"command_template": "healthmd extract [SAME SCOPE] --allow-partial", "description": "Emit only the explicitly retained partial data when that is acceptable."}),
             help(),
         ],
+        "data_import_failed" | "data_ingest_failed" => vec![
+            json!({"action": "Verify that every path is absolute and points at the intended store and upload files; rejected upload receipts are protocol outcomes, not failures."}),
+            json!({"command": "healthmd data", "description": "List the local Agent Data store commands."}),
+            help(),
+        ],
         "invalid_direct_file_receipt" | "invalid_direct_response" => vec![
             json!({"action": "Do not consume, append, merge, or manually repair the rejected result."}),
             json!({"command_template": "healthmd status --job <JOB_UUID>", "description": "Inspect durable state and resume only when the exact job remains resumable."}),
@@ -741,7 +880,7 @@ fn root_commands() -> Vec<Value> {
 fn available_commands(path: &'static str) -> Value {
     match path {
         "" => Value::Array(root_commands()),
-        "direct" | "mcp" | "setup" => group("direct", path)
+        "direct" | "mcp" | "setup" | "data" => group("direct", path)
             .get("available_commands")
             .cloned()
             .unwrap_or(Value::Null),
@@ -751,6 +890,9 @@ fn available_commands(path: &'static str) -> Value {
 }
 
 fn accepted_arguments(path: &str) -> Value {
+    if path == "mcp serve-data" {
+        return json!(serve_data_accepted_arguments());
+    }
     let arguments: &[&str] = match path {
         "status" => &["--job <JOB_UUID>"],
         "export" => &[
@@ -803,12 +945,52 @@ fn accepted_arguments(path: &str) -> Value {
         ],
         "direct unpair" => &["[DEVICE_UUID]"],
         "direct reset-trust" => &["--confirm"],
-        "mcp schema" => &["[TOOL]"],
+        "mcp schema" => &["[--data]", "[TOOL]"],
         "mcp serve" | "mcp serve-read-only" => &["--timeout-seconds <SECONDS>"],
+        "data import" => &[
+            "--database <ABSOLUTE_SQLITE_FILE>",
+            "--directory <ABSOLUTE_EXPORTS_DIRECTORY>",
+        ],
+        "data ingest" => &[
+            "--database <ABSOLUTE_SQLITE_FILE>",
+            "--manifest <ABSOLUTE_MANIFEST_JSON>",
+            "--artifact <ABSOLUTE_ARTIFACT_FILE>",
+        ],
+        "data ingest-serve" => &[
+            "--database <ABSOLUTE_SQLITE_FILE>",
+            "[--bind 127.0.0.1:8791]",
+            "[--allowed-host <HOST>]",
+            "[--allowed-origin <ORIGIN>]",
+        ],
         "setup codex" => &["--skip-pairing", "--pairing-timeout <SECONDS>"],
         _ => &[],
     };
     json!(arguments)
+}
+
+/// The full honest `mcp serve-data` argument surface, feature-gated to match `McpServeDataArgs`:
+/// the three exclusive backings (with the dispatch-required `--bucket` folded into the
+/// object-store alternative, mirroring how `export` renders its exclusive groups), the required
+/// grant, `--index`, and the `--serve-transport`/loopback options that only builds compiling the
+/// `streamable-http` feature accept at parse time.
+fn serve_data_accepted_arguments() -> Vec<&'static str> {
+    #[allow(unused_mut)]
+    let mut arguments = vec![
+        "--directory <ABSOLUTE_DIRECTORY> | --database <ABSOLUTE_SQLITE_FILE> | --object-store-url <URL> --bucket <NAME>",
+        "[--prefix <PREFIX>]",
+        "--grant <ABSOLUTE_GRANT_JSON>",
+        "[--index <ABSOLUTE_INDEX_JSON>]",
+    ];
+    #[cfg(feature = "streamable-http")]
+    arguments.extend([
+        "[--serve-transport <stdio|streamable-http>]",
+        "[--bind 127.0.0.1:8787]",
+        "[--allowed-host <HOST>]",
+        "[--allowed-origin <ORIGIN>]",
+    ]);
+    #[cfg(not(feature = "streamable-http"))]
+    arguments.push("[--serve-transport <stdio>]");
+    arguments
 }
 
 fn parser_message(kind: ErrorKind) -> &'static str {
@@ -901,6 +1083,7 @@ fn command_path(arguments: &[OsString]) -> &'static str {
                 | "query"
                 | "resume"
                 | "cancel"
+                | "data"
                 | "direct"
                 | "mcp"
                 | "setup"
@@ -910,6 +1093,15 @@ fn command_path(arguments: &[OsString]) -> &'static str {
         return "";
     };
     match command {
+        "data" => values[index + 1..]
+            .iter()
+            .find_map(|value| match *value {
+                "import" => Some("data import"),
+                "ingest" => Some("data ingest"),
+                "ingest-serve" => Some("data ingest-serve"),
+                _ => None,
+            })
+            .unwrap_or("data"),
         "direct" => values[index + 1..]
             .iter()
             .find_map(|value| match *value {
@@ -925,6 +1117,7 @@ fn command_path(arguments: &[OsString]) -> &'static str {
             .find_map(|value| match *value {
                 "serve" => Some("mcp serve"),
                 "serve-read-only" => Some("mcp serve-read-only"),
+                "serve-data" => Some("mcp serve-data"),
                 #[cfg(feature = "streamable-http")]
                 "serve-http" => Some("mcp serve-http"),
                 "schema" => Some("mcp schema"),
@@ -1115,5 +1308,74 @@ mod tests {
     #[test]
     fn command_path_defaults_to_root_for_unknown_input() {
         assert_eq!(command_path(&[OsString::from("unknown")]), "");
+    }
+
+    #[test]
+    fn serve_data_accepted_arguments_cover_every_backing() {
+        let encoded = serde_json::to_string(&accepted_arguments("mcp serve-data")).unwrap();
+        for flag in [
+            "--directory",
+            "--database",
+            "--object-store-url",
+            "--bucket",
+            "--prefix",
+            "--grant",
+            "--index",
+        ] {
+            assert!(
+                encoded.contains(flag),
+                "serve-data accepted arguments must list {flag}"
+            );
+        }
+    }
+
+    #[test]
+    fn serve_data_guidance_documents_every_backing_choice() {
+        let value = serve_data("direct");
+        assert_eq!(value["status"], "guidance");
+        assert_eq!(value["request_sent"], false);
+        let alternatives: Vec<&str> = value
+            .pointer("/required_choices/0/exactly_one_of")
+            .and_then(Value::as_array)
+            .map(|values| values.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+            .unwrap_or_default();
+        assert!(alternatives.contains(&"--directory <ABSOLUTE_DIRECTORY>"));
+        assert!(alternatives.contains(&"--database <ABSOLUTE_SQLITE_FILE>"));
+        assert!(alternatives.contains(&"--object-store-url <URL> --bucket <NAME>"));
+        let encoded = serde_json::to_string(&value).unwrap();
+        assert!(encoded.contains("--grant <ABSOLUTE_GRANT_JSON>"));
+        assert!(encoded.contains("[--index <ABSOLUTE_INDEX_JSON>]"));
+        assert!(encoded.contains("--prefix"));
+        assert!(encoded.contains("healthmd mcp schema --data"));
+    }
+
+    #[test]
+    fn serve_data_guidance_advertises_only_arguments_the_build_accepts() {
+        let accepted = serde_json::to_string(&accepted_arguments("mcp serve-data")).unwrap();
+        let reference = serde_json::to_string(&serve_data("direct")).unwrap();
+        if cfg!(feature = "streamable-http") {
+            assert!(accepted.contains("[--serve-transport <stdio|streamable-http>]"));
+            assert!(accepted.contains("[--bind 127.0.0.1:8787]"));
+            assert!(reference.contains("streamable-http"));
+            assert!(reference.contains("[--allowed-origin <ORIGIN>]"));
+        } else {
+            assert!(accepted.contains("[--serve-transport <stdio>]"));
+            assert!(reference.contains("[--serve-transport <stdio>]"));
+            for forbidden in [
+                "streamable-http",
+                "--bind",
+                "--allowed-host",
+                "--allowed-origin",
+            ] {
+                assert!(
+                    !accepted.contains(forbidden),
+                    "default build must not advertise {forbidden}"
+                );
+                assert!(
+                    !reference.contains(forbidden),
+                    "default build must not advertise {forbidden}"
+                );
+            }
+        }
     }
 }

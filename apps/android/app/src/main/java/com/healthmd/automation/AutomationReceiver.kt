@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
@@ -14,6 +15,7 @@ import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -75,6 +77,7 @@ class AutomationReceiver : BroadcastReceiver() {
     @Inject lateinit var exportProfileRepository: ExportProfileRepository
     @Inject lateinit var profileFolderAdoption: ProfileFolderAdoptionScope
     @Inject lateinit var apiEndpointExportRunner: APIEndpointExportRunner
+    @Inject lateinit var agentDataGatewayExportRunner: AgentDataGatewayExportRunner
     @Inject lateinit var entitlementRepository: EntitlementRepository
     @Inject lateinit var distributionPolicy: DistributionPolicy
 
@@ -330,6 +333,10 @@ class AutomationReceiver : BroadcastReceiver() {
                 dates = dates,
                 settings = settings.copy(exportTarget = target),
             )
+            ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner.exportDates(
+                dates = dates,
+                settings = settings.copy(exportTarget = target),
+            )
         }
         recordHistory(
             context,
@@ -398,6 +405,9 @@ class AutomationReceiver : BroadcastReceiver() {
                             ?: targetLabel(settings)
                     ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(
                         profile?.apiEndpointUrl ?: settings.apiEndpointUrl,
+                    )
+                    ExportTarget.AGENT_DATA_GATEWAY -> AgentDataGatewayEndpoint.redactedDescription(
+                        profile?.agentDataGatewayUrl ?: settings.agentDataGatewayUrl,
                     )
                 },
                 profileName = profile?.name,

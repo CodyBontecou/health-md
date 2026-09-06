@@ -459,6 +459,14 @@ enum SharedSetupV2Mapper {
                 kind: .apiEndpoint,
                 apiEndpoint: endpoint.flatMap { endpointHint($0.endpointURLString) }
             )
+        case .agentDataGateway:
+            // The v2 destination grammar has no gateway kind and must not
+            // approximate one. Export contexts exclude gateway profiles by
+            // construction; reaching this arm means a caller bypassed that
+            // exclusion, so fail closed instead of fabricating intent.
+            throw SharedSetupV2Error.invalid(
+                "Agent Data gateway profiles do not participate in shared setup bundles."
+            )
         }
 
         let trimmedName = nativeProfile.name.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -241,6 +241,8 @@ struct ManualExportActivityBanner: View {
             return String(localized: "Connected Mac")
         case .apiEndpoint:
             return String(localized: "API Endpoint")
+        case .agentDataGateway:
+            return String(localized: "Agent Data gateway")
         }
     }
 
@@ -249,6 +251,7 @@ struct ManualExportActivityBanner: View {
         case .localIPhoneFolder: return "folder.fill"
         case .connectedMac: return "desktopcomputer"
         case .apiEndpoint: return "network"
+        case .agentDataGateway: return "arrow.up.and.down.and.arrow.left.and.right"
         }
     }
 }

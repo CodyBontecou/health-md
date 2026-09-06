@@ -1,0 +1,36 @@
+{
+  "schema": "healthmd.agent_query_response",
+  "schema_version": 1,
+  "operation": "records",
+  "items": [
+    {
+      "type": "record",
+      "record_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "metric_ids": ["healthmd.health_data#/activity/steps"],
+      "source_id": "healthmd.health_data",
+      "detail_level": "common",
+      "owner_date": "2026-03-15",
+      "start_time": null,
+      "end_time": null,
+      "capture_status": "complete",
+      "artifact": {
+        "artifact_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "schema": "healthmd.health_data",
+        "schema_version": 8
+      },
+      "locator": {
+        "type": "json_pointer",
+        "pointer": "/activity/steps"
+      },
+      "inline": true,
+      "value": 12345
+    }
+  ],
+  "next_cursor": null,
+  "receipt": {
+    "index_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "returned_items": 1,
+    "source_kind": "directory",
+    "policy_enforced": true
+  }
+}

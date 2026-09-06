@@ -1133,6 +1133,16 @@ class SchedulingManager: ObservableObject {
                 )
             }
             return APIExportSettings().displayName
+        case .agentDataGateway:
+            if let gateway = scheduledDestinationStore.agentDataGateway(
+                id: scheduledDestinationStore.agentDataGatewayBinding(profileID: profile?.id)
+            ) {
+                return AgentDataGatewayEndpoint.redactedDescription(
+                    gateway.endpointURLString,
+                    fallback: ExportTargetSelection.agentDataGateway.title
+                )
+            }
+            return AgentDataGatewayEndpoint.displayName("")
         case .connectedMac:
             return scheduledSyncService?.macDestinationStatus?.destinationDisplayName
                 ?? scheduledSyncService?.connectedPeerName
@@ -1239,6 +1249,18 @@ class SchedulingManager: ObservableObject {
                 calendarTimeZone: calendarTimeZone,
                 surface: .apiEndpoint
             )
+        case .agentDataGateway:
+            // The gateway materializes artifacts exactly as a folder
+            // destination does over its staging root before uploading, so its
+            // snapshot surface matches the local-folder range surface.
+            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
+                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
+            return await ExportSettingsSnapshot.forNewAppleOperation(
+                settings,
+                calendarTimeZone: calendarTimeZone,
+                surface: .localVaultRangeWithoutSideEffects,
+                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
+            )
         case .connectedMac:
             let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
                 && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
@@ -1293,6 +1315,12 @@ class SchedulingManager: ObservableObject {
                 )
             case .apiEndpoint:
                 result = await performBackgroundAPIEndpointExport(
+                    dates: dates,
+                    settingsSnapshot: settingsSnapshot,
+                    notificationOperationID: notificationOperationID
+                )
+            case .agentDataGateway:
+                result = await performBackgroundAgentDataGatewayExport(
                     dates: dates,
                     settingsSnapshot: settingsSnapshot,
                     notificationOperationID: notificationOperationID
@@ -1362,6 +1390,56 @@ class SchedulingManager: ObservableObject {
                 )
             }
         )
+    }
+
+    @MainActor
+    private func performBackgroundAgentDataGatewayExport(
+        dates: [Date],
+        settingsSnapshot: ExportSettingsSnapshot?,
+        notificationOperationID: UUID?
+    ) async -> ExportOrchestrator.ExportResult {
+        let settings = settingsSnapshot?.makeAdvancedExportSettings() ?? AdvancedExportSettings()
+        let gatewaySettings = AgentDataGatewaySettings()
+        guard let destination = gatewaySettings.destinationSnapshot else {
+            return scheduledFailureResult(
+                dates: dates,
+                reason: .apiEndpointNotConfigured,
+                message: "Configure a valid Agent Data gateway endpoint before exporting."
+            )
+        }
+        let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled
+            ? scheduledExternalIntegrations
+            : nil
+
+        logger.info("Starting scheduled Agent Data gateway export")
+        let outcome = await AgentDataGatewayExportRunner.export(
+            dates: dates,
+            healthKitManager: HealthKitManager.shared,
+            settings: settings,
+            destination: destination,
+            externalIntegrations: externalIntegrations,
+            onProgress: { [weak self] phase in
+                switch phase {
+                case .materializing(_, let processed, let total):
+                    self?.updateNotificationExportActivity(
+                        operationID: notificationOperationID,
+                        phase: .capturing,
+                        processedDays: processed,
+                        totalDays: total,
+                        message: "Preparing export artifacts for the Agent Data gateway…"
+                    )
+                case .uploading(let processed, let total):
+                    self?.updateNotificationExportActivity(
+                        operationID: notificationOperationID,
+                        phase: .transferring,
+                        processedDays: processed,
+                        totalDays: total,
+                        message: "Uploading artifacts to the Agent Data gateway…"
+                    )
+                }
+            }
+        )
+        return outcome.export
     }
 
     @MainActor
@@ -2450,6 +2528,12 @@ class SchedulingManager: ObservableObject {
             let apiSettings = APIExportSettings()
             apiSettings.endpointURLString = endpoint.endpointURLString
             apiSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
+        }
+        if let profile,
+           let gatewayID = destinationStore.agentDataGatewayBinding(profileID: profile.id),
+           let gateway = destinationStore.agentDataGateway(id: gatewayID) {
+            let gatewaySettings = AgentDataGatewaySettings()
+            gatewaySettings.endpointURLString = gateway.endpointURLString
         }
     }
 

@@ -7,6 +7,7 @@ import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.RawSnapshotService
@@ -616,6 +617,7 @@ class ExportWorkerGenerationTest {
                 settingsRepository = settingsRepository,
                 exportHistoryRepository = exportHistoryRepository,
                 apiEndpointExportRunner = apiRunner,
+                agentDataGatewayExportRunner = mockk<AgentDataGatewayExportRunner>(relaxed = true),
                 rawSnapshotExportRunner = mockk<RawSnapshotService>(relaxed = true),
                 apiCredentialStore = apiCredentialStore,
                 runCoordinator = runCoordinator,

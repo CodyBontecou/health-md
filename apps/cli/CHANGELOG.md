@@ -2,6 +2,103 @@
 
 ## Unreleased
 
+- Fail closed on stray `--bucket`/`--prefix` arguments: `healthmd mcp serve-data` now rejects
+  them health-free (exit 2, stable message) when another backing is present, instead of
+  parsing and silently ignoring them; clap's backing-conflict rule previously masked the
+  `requires` enforcement for `--directory … --bucket …` and `--database … --prefix …` shapes.
+- Keep `healthmd data ingest-serve` serving through transient accept failures: a peer
+  resetting before the accept completes (observed from environment port scanners probing
+  freshly bound loopback ports) or a signal-interrupted accept no longer stops the gateway;
+  only a genuinely unusable listener does.
+- Harden the loopback e2e harnesses against shared-machine interference: the ingestion
+  gateway scenarios serialize (parallel execution intermittently tore down established
+  loopback connections mid-exchange with every gateway healthy; serialized runs are 100%
+  stable), the test client boundedly retries transient connection refusals per the
+  contract's phone posture, the synthetic S3 doubles ignore unsigned bare-`GET /` port
+  probes (impossible store shapes) and keep accepting through transient accept errors, and
+  `INGEST_GATEWAY_STDERR_LOG=1` now captures gateway stderr per port for diagnosis.
+- Complete the agent-facing `healthmd mcp serve-data` guidance surface: parse errors now list the
+  full honest argument set (the three exclusive backings `--directory` | `--database` |
+  `--object-store-url` with its dispatch-required `--bucket`, `[--prefix]`, the required
+  `--grant`, `[--index]`, and `[--serve-transport]`) instead of only the directory-backing
+  subset, the single `healthmd mcp` listing entry covers every backing, and serve-data parse
+  errors embed a reference document that examples the directory, SQLite database, and
+  read-only object store backings. Streamable HTTP transport options
+  (`--serve-transport streamable-http`, `--bind`, `--allowed-host`, `--allowed-origin`) are
+  advertised only by builds that compile the `streamable-http` feature, mirroring what the
+  shipped binary accepts at parse time.
+
+- Extend the shared stdio store-parity kit (`tests/agent_data_stdio.rs`) with the object-store
+  backing as a third endpoint: all ten end-to-end scenarios now run unchanged against the
+  directory store, the imported SQLite database, AND the read-only S3-compatible object store,
+  served by an embedded synthetic loopback S3 double (corpus objects under `exports/`, fixed
+  synthetic credentials, `SigV4` verification of every request, only list/head/get traffic,
+  fixed `LastModified` values, loopback ports 48411–48493, and a fresh external index per
+  endpoint). The catalog, record/artifact ids, chunk math, and cursor rules proved identical
+  across backings; the one per-endpoint divergence is the documented misplaced-grant asymmetry,
+  now asserted by the kit: local backings refuse grants inside their private backing, while a
+  grant-shaped bucket object is ignored content that never loads and never refuses.
+
+- Add feature-gated TLS egress for the Agent Data object-store backing: builds with
+  `--features object-store-tls` speak the same hand-written HTTP/1.1 + SigV4 S3 subset over
+  `rustls`/`tokio-rustls` TLS for `https://` endpoints (loopback or remote), while default builds
+  keep the dependency-lean stable `https object-store transport is not available` boundary and
+  the untouched loopback `http://` path. TLS trust is the Mozilla `webpki-roots` root set plus
+  an optional additional PEM CA certificate via the absolute path in
+  `HEALTHMD_OBJECT_STORE_CA_CERT` (environment-only; relative/unreadable/invalid-PEM values fail
+  health-free at open before any network I/O); certificate verification is never disabled in any
+  build or configuration. The new `tests/agent_data_object_tls.rs` proves the full contract over
+  TLS against a synthetic self-signed loopback double (SigV4 verified over the TLS channel,
+  GET/HEAD-only), untrusted-certificate refusal, and CA-file policy failures before any
+  connection; no real R2/S3/Cloudflare endpoint is contacted by this repository's tests.
+- Add the self-hosted reference ingestion gateway: `healthmd data ingest-serve --database`
+  serves Agent Data ingestion protocol v1 on loopback HTTP/1.1 (`POST /v1/ingest`, one
+  manifest line + exact artifact bytes, `application/x-healthmd-agent-data-ingest`, exact
+  `Content-Length`, `Connection: close`) fronting the same SQLite validation and promotion path
+  as `data ingest`, with byte-identical receipts over HTTP 200, health-free transport errors
+  (413/405/404/415/400/403), a receipt-less close for abandoned bodies, and the same loopback
+  `--bind` (default `127.0.0.1:8791`)/`--allowed-host`/`--allowed-origin` policy as the data HTTP
+  surface, validated before the store opens. One documented surface divergence: an unfinalized
+  partial upload is the retryable `transient` class for the gateway (detected before strict
+  validation) while local `data ingest` keeps `manifest_incomplete`; `record_count` stays strictly
+  informational.
+- Add the third Agent Data store backing: `healthmd mcp serve-data --object-store-url
+  <ENDPOINT> --bucket <NAME> [--prefix <PREFIX>] --grant <ABSOLUTE>` serves a BYO S3-compatible
+  (Cloudflare R2) bucket prefix laid out like an export directory with the identical five-tool
+  grant/query/response contract (`object_store` receipts, already contract-sanctioned). The store
+  is strictly read-only (ListObjectsV2/HEAD/GET only, path-style), signs with hand-written AWS
+  SigV4 (UNSIGNED-PAYLOAD, zero new dependencies; RFC 4231 and AWS known-answer tested), takes
+  credentials only from `HEALTHMD_OBJECT_STORE_*` environment variables (fail closed at open),
+  and enforces the URL policy at open (`https://` off loopback, `http://` loopback-only testing).
+  Proven against a SigV4-verifying synthetic loopback double; TLS egress for real R2 endpoints
+  is honestly deferred (stable health-free transport error) until a TLS layer is wired.
+
+- Add the local Rust half of Agent Data ingestion protocol v1: `healthmd data ingest --database
+  --manifest --artifact` validates one manifest-described upload (strict `agent-data-ingest` v1
+  grammar, SHA-256 integrity) and promotes accepted bytes atomically into owner-date partitions of
+  the SQLite store — idempotent, non-destructive, newest-complete-revision-authoritative — and
+  prints the health-free `agent-ingest-response` v1 receipt with the four stable rejection codes
+  (`truncated`, `transient`, `checksum_invalid`, `manifest_incomplete`). The local `transient`
+  mapping covers only unreadable artifact files at dispatch time; the HTTPS transport mapping stays
+  open for the gateway cycle.
+
+- Serve the Agent Data MCP surface over Streamable HTTP as well as stdio:
+  `healthmd mcp serve-data --serve-transport streamable-http` (feature-gated behind
+  `streamable-http`) exposes the identical five-tool grant/query/response contract on a
+  loopback listener using the same transport, `--bind`/`--allowed-host`/`--allowed-origin`
+  options, and loopback-only validation as the direct `mcp serve-http` surface. stdio remains
+  the default with unchanged behavior; the flag is named `--serve-transport` because the root
+  global `--transport` selects the direct mobile connection.
+- Add the Health.md-owned SQLite Agent Data store: `healthmd data import --database --directory`
+  ingests recognized export artifacts into a versioned, non-destructive local database (idempotent
+  re-imports, supersession bookkeeping without deletion, exact stored bytes) and
+  `healthmd mcp serve-data --database` serves the identical five-tool grant/query/response contract
+  with `database` receipts, read-only connections, and SHA-256 verification of every returned byte.
+- Add the first data-only Agent Data vertical slice: versioned metric/source/date/time grants,
+  storage-neutral read-only operations, a verified external index for existing Apple/Android JSON
+  and NDJSON exports, and the separate five-tool `healthmd mcp serve-data` stdio surface. Direct
+  phone behavior and frozen export schemas remain unchanged; hosted sync and service packaging are
+  intentionally deferred.
 - Compile the RFC-0005 P2 wake client into every macOS, Linux, and Windows CLI build, use the
   deployed `healthmd-wake.costream.workers.dev` doorbell by default, and retain explicit local
   opt-out plus graceful P1 fallback. The former `wake-worker` feature is now a compatibility alias,

@@ -419,6 +419,46 @@ discovery, and typed-query tools; all six pairing/export-job tools are absent an
 rejected. It starts no MCP HTTP listener, requires no OAuth or tunnel, and uses no Health.md or
 third-party cloud service. The iPhone must already be paired and remain foreground for each query.
 
+For an agent that should read already-exported data without keeping the phone online, use the
+separate Agent Data surface:
+
+```bash
+healthmd mcp schema --data
+healthmd mcp serve-data \
+  --directory /absolute/path/to/healthmd-exports \
+  --grant /absolute/private/path/agent-data-grant.json
+```
+
+This five-tool surface indexes existing Apple and Android JSON/NDJSON export contracts without
+changing them. One explicit grant filters every catalog and read by metric, source, owner date,
+instant, and common/lossless layer. The export directory is read-only; the rebuildable index and
+grant live outside it. Whole-artifact bytes are available only under an explicit unrestricted bulk
+grant.
+
+The same five-tool surface is also available over loopback Streamable HTTP in builds with the
+`streamable-http` feature: `healthmd mcp serve-data --serve-transport streamable-http --bind
+127.0.0.1:8787 ...` serves the identical catalog and response contracts through the same
+transport and loopback-only listener rules as `mcp serve-http`. stdio stays the default; see
+[Agent Data store](docs/agent-data.md) for the transport section.
+
+The same contract is available from a Health.md-owned SQLite database: ingest exports once with
+`healthmd data import --database <ABSOLUTE_SQLITE_FILE> --directory <ABSOLUTE_EXPORTS_DIRECTORY>`
+(idempotent, non-destructive, supersession bookkeeping without deletion), then serve with
+`healthmd mcp serve-data --database <ABSOLUTE_SQLITE_FILE> --grant <ABSOLUTE_GRANT_JSON>`.
+Stored bytes are SHA-256-verified on every read, and retention stays user-controlled. Single
+manifest-described uploads follow ingestion protocol v1 with
+`healthmd data ingest --database <ABSOLUTE_SQLITE_FILE> --manifest <ABSOLUTE_MANIFEST_JSON>
+--artifact <ABSOLUTE_ARTIFACT_FILE>`, which prints the health-free accepted/rejected receipt and
+never deletes stored revisions. Serve the same store as the self-hosted ingestion gateway with
+`healthmd data ingest-serve --database <ABSOLUTE_SQLITE_FILE>` on loopback `127.0.0.1:8791`. The
+same read-only contract is available from an S3-compatible (Cloudflare R2) bucket prefix laid
+out like an export directory:
+`healthmd mcp serve-data --object-store-url <ENDPOINT> --bucket <NAME> [--prefix <PREFIX>]
+--grant <ABSOLUTE_GRANT_JSON>` (credentials via `HEALTHMD_OBJECT_STORE_*` environment variables;
+list/head/get requests only). See
+[Agent Data store](docs/agent-data.md) for the grant shape, supported artifacts, MCP host
+configuration, and exact trust boundary.
+
 A complete local desktop MCP client can onboard without opening a separate terminal. Call
 `healthmd_pairing_start`, render the returned `image/png`, and ask the user to open Health.md's
 **Sync → Direct CLI Access → Scan Pairing QR** screen and scan it. Health.md starts pairing
@@ -463,7 +503,7 @@ dispatch. Omit all OAuth flags only for loopback development; unauthenticated mo
 non-loopback Host or Origin, so it cannot be exposed through a public reverse proxy. Partial OAuth
 configuration fails closed.
 
-Health.md does not provide a synchronized remote health-data corpus. The optional HTTP mode remains
+The direct-backed HTTP mode does not provide a synchronized remote health-data corpus. It remains
 a live relay to the paired foreground iPhone: it has no synchronization API, health-data database,
 retention store, or server-side fallback. ChatGPT, Claude, Codex, IDEs, and custom MCP clients are
 distribution targets rather than special server modes. See [Remote MCP architecture](docs/remote-mcp.md)
@@ -477,6 +517,7 @@ contacting iPhone:
 healthmd mcp schema healthmd_sleep_sessions
 healthmd mcp schema healthmd_metric_chart
 healthmd mcp schema # all fixed tools
+healthmd mcp schema --data # five data-only tools
 ```
 
 For a seven-night sleep question, call `healthmd_sleep_sessions` directly with concrete inclusive

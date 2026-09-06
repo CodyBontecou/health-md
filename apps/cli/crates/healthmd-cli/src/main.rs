@@ -12,7 +12,7 @@ use std::{
 };
 
 use chrono::{Duration as ChronoDuration, Local, SecondsFormat, Timelike as _, Utc};
-use clap::{Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
+use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
 use healthmd_cli::{
     mcp, onboarding,
     pairing::{LocalAddress, local_ipv4_addresses, pairing_link, preferred_pairing_address},
@@ -38,7 +38,6 @@ use healthmd_protocol::{
 };
 use qrcode::{QrCode, render::unicode};
 use serde_json::{Value, json};
-#[cfg(feature = "streamable-http")]
 use std::net::SocketAddr;
 #[cfg(feature = "oauth-resource-server")]
 use url::Url;
@@ -61,8 +60,8 @@ const WELCOME_TEXT: &str = concat!(
     name = "healthmd",
     version,
     about = "Portable command-line access to Health.md",
-    long_about = "Request health exports from an open, paired iOS or Android device running Health.md. Source health reads always occur on the mobile device.",
-    after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  Inspect sleep arguments locally with `healthmd query healthmd_sleep_sessions`, then\n  rerun it with `--arguments <JSON>`. `healthmd extract` remains a different canonical\n  projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect arguments and examples without contacting iPhone; add --json for full schemas:\n    healthmd query healthmd_sleep_sessions\n    healthmd query healthmd_metric_chart\n    healthmd mcp schema                # fixed operation catalog"
+    long_about = "Request health exports from an open, paired iOS or Android device running Health.md, or expose an explicitly configured local export store through a data-only MCP surface.",
+    after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  Inspect sleep arguments locally with `healthmd query healthmd_sleep_sessions`, then\n  rerun it with `--arguments <JSON>`. `healthmd extract` remains a different canonical\n  projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect arguments and examples without contacting iPhone; add --json for full schemas:\n    healthmd query healthmd_sleep_sessions\n    healthmd query healthmd_metric_chart\n    healthmd mcp schema                # direct-operation catalog\n    healthmd mcp schema --data         # data-only artifact-store catalog"
 )]
 struct Cli {
     /// Execution backend. `direct` is the portable mobile connection; `mac-app` is reserved.
@@ -135,10 +134,86 @@ enum Command {
     Cancel(JobArgs),
     /// Pair and manage direct mobile trust.
     Direct(DirectArgs),
+    /// Import recognized export artifacts into a Health.md-owned local store.
+    Data(DataArgs),
     /// Serve Health.md's fixed Model Context Protocol surface.
     Mcp(McpArgs),
     /// Configure a supported local AI host and pair the iPhone when needed.
     Setup(SetupArgs),
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "DISCOVERY:\n  Run `healthmd data` without a subcommand to list local Agent Data store commands.\n  No file is read or written in discovery mode."
+)]
+struct DataArgs {
+    #[command(subcommand)]
+    command: Option<DataCommand>,
+}
+
+#[derive(Debug, Subcommand)]
+enum DataCommand {
+    /// Ingest recognized export artifacts into a Health.md-owned `SQLite` Agent Data database.
+    Import(DataImportArgs),
+    /// Validate and store one manifest-described artifact upload (ingestion protocol v1).
+    Ingest(DataIngestArgs),
+    /// Serve the self-hosted ingestion gateway for protocol v1 uploads on loopback.
+    IngestServe(DataIngestServeArgs),
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd data import --database /absolute/private/agent-data.sqlite --directory /absolute/path/to/healthmd-exports\n\nThe import is idempotent and non-destructive: identical artifact bytes are never duplicated\nand no stored payload is deleted. Superseded artifacts stay recorded for user-controlled\nretention. Serve the database afterwards with `healthmd mcp serve-data --database ...`."
+)]
+struct DataImportArgs {
+    /// Absolute path of the `SQLite` Agent Data database to create or extend. Must live outside
+    /// the import directory.
+    #[arg(long)]
+    database: PathBuf,
+
+    /// Absolute directory of immutable Health.md JSON or NDJSON exports to ingest.
+    #[arg(long)]
+    directory: PathBuf,
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd data ingest --database /absolute/private/agent-data.sqlite --manifest /absolute/upload/manifest.json --artifact /absolute/upload/day.json\n\nOne upload is one artifact described by one agent-data-ingest v1 manifest. The command prints\nthe health-free agent_ingest_response v1 receipt and exits 0 whenever the protocol completed,\neven for the four stable rejection codes (truncated, transient, checksum_invalid,\nmanifest_incomplete); inspect the outcome field. Promotion is atomic, idempotent by SHA-256,\nand never deletes stored revisions. A partial revision never displaces a complete one."
+)]
+struct DataIngestArgs {
+    /// Absolute path of the `SQLite` Agent Data database to create or extend.
+    #[arg(long)]
+    database: PathBuf,
+
+    /// Absolute path of an `agent-data-ingest` v1 manifest JSON file describing the upload.
+    #[arg(long)]
+    manifest: PathBuf,
+
+    /// Absolute path of the exact artifact bytes referenced by the manifest.
+    #[arg(long)]
+    artifact: PathBuf,
+}
+
+#[derive(Debug, Args)]
+#[command(
+    after_help = "EXAMPLES:\n  healthmd data ingest-serve --database /absolute/private/agent-data.sqlite\n\nServe the self-hosted reference ingestion gateway on loopback. One POST /v1/ingest request\ncarries one newline-terminated agent-data-ingest v1 manifest line followed immediately by the\nexact artifact bytes (Content-Type: application/x-healthmd-agent-data-ingest, exact\nContent-Length, Connection: close). Every validated outcome answers HTTP 200 with the same\nhealth-free agent_ingest_response v1 receipt `data ingest` prints; an unfinalized partial\nupload is the retryable transient class for the gateway. The listener policy matches the data\nHTTP surface: loopback-only bind, loopback Host by default, Origin rejected until allowlisted,\nall validated before the database opens."
+)]
+struct DataIngestServeArgs {
+    /// Absolute path of the `SQLite` Agent Data database to create or extend.
+    #[arg(long)]
+    database: PathBuf,
+
+    /// Loopback address for the ingestion gateway listener.
+    #[arg(long, default_value = "127.0.0.1:8791")]
+    bind: SocketAddr,
+
+    /// Accepted Host header. Repeat for a reverse-proxy hostname during local development.
+    #[arg(long = "allowed-host")]
+    allowed_hosts: Vec<String>,
+
+    /// Accepted browser Origin. Repeat for each trusted browser-based client.
+    #[arg(long = "allowed-origin")]
+    allowed_origins: Vec<String>,
 }
 
 #[derive(Debug, Args)]
@@ -156,6 +231,8 @@ enum McpCommand {
     Serve(McpServeArgs),
     /// Serve only readiness and typed-query tools over local stdio, without pairing or exports.
     ServeReadOnly(McpServeArgs),
+    /// Serve authorized records from a read-only local Agent Data store backing.
+    ServeData(Box<McpServeDataArgs>),
     /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
     #[cfg(feature = "streamable-http")]
     ServeHttp(Box<McpServeHttpArgs>),
@@ -165,11 +242,15 @@ enum McpCommand {
 
 #[derive(Debug, Args)]
 #[command(
-    after_help = "EXAMPLES:\n  healthmd mcp schema healthmd_sleep_sessions\n  healthmd mcp schema healthmd_metric_chart\n  healthmd mcp schema    # complete fixed tool catalog"
+    after_help = "EXAMPLES:\n  healthmd mcp schema healthmd_sleep_sessions\n  healthmd mcp schema healthmd_metric_chart\n  healthmd mcp schema --data healthmd_data_catalog\n  healthmd mcp schema    # complete direct tool catalog\n  healthmd mcp schema --data    # complete Agent Data catalog"
 )]
 struct McpSchemaArgs {
     /// Fixed MCP tool name. Omit to print the complete catalog.
     tool: Option<String>,
+
+    /// Inspect the separate data-only artifact-store surface.
+    #[arg(long)]
+    data: bool,
 }
 
 #[derive(Debug, Args)]
@@ -177,6 +258,87 @@ struct McpServeArgs {
     /// Default timeout for readiness and query operations.
     #[arg(long, default_value_t = 1_200)]
     timeout_seconds: u64,
+}
+
+/// Transport selection for the Agent Data MCP server. `stdio` is the default everywhere; the
+/// Streamable HTTP value exists only in builds that compile the shared HTTP transport.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum DataServeTransport {
+    /// Newline-delimited JSON-RPC over standard input/output.
+    Stdio,
+    /// Streamable HTTP on a loopback listener (requires the `streamable-http` feature).
+    #[cfg(feature = "streamable-http")]
+    StreamableHttp,
+}
+
+#[derive(Debug, Args)]
+#[command(group(
+    ArgGroup::new("data_backing")
+        .required(true)
+        .multiple(false)
+        .args(&["directory", "database", "object_store_url"]),
+))]
+struct McpServeDataArgs {
+    /// Existing absolute directory containing immutable Health.md JSON or NDJSON exports.
+    #[arg(long)]
+    directory: Option<PathBuf>,
+
+    /// Existing absolute `SQLite` Agent Data database created with `healthmd data import`.
+    #[arg(long)]
+    database: Option<PathBuf>,
+
+    /// Bare endpoint URL of a read-only S3-compatible (Cloudflare R2) object store, e.g.
+    /// `https://accountid.r2.cloudflarestorage.com`. `https://` is required for non-loopback
+    /// hosts; `http://` is accepted only for loopback hosts (local testing). Credentials are
+    /// read from `HEALTHMD_OBJECT_STORE_ACCESS_KEY_ID` and
+    /// `HEALTHMD_OBJECT_STORE_SECRET_ACCESS_KEY` and never accepted as flags.
+    #[arg(long = "object-store-url", id = "object_store_url")]
+    object_store_url: Option<String>,
+
+    /// Bucket name under the object store endpoint (path-style addressing).
+    #[arg(long, requires = "object_store_url")]
+    bucket: Option<String>,
+
+    /// Optional key prefix inside the bucket whose layout mirrors an export directory.
+    #[arg(long, requires = "object_store_url")]
+    prefix: Option<String>,
+
+    /// Absolute path to a version-1 Agent Data grant JSON file outside the backing store.
+    #[arg(long)]
+    grant: PathBuf,
+
+    /// Optional absolute path for the rebuildable private index, outside the export directory.
+    /// Applies to `--directory` and `--object-store-url` backing; enforced with `--database`
+    /// in the dispatcher.
+    #[arg(long)]
+    index: Option<PathBuf>,
+
+    /// MCP serving transport for the Agent Data server. `stdio` is the default and stays
+    /// byte-identical; `streamable-http` serves the identical five-tool surface on a loopback
+    /// listener. Named `--serve-transport` because the root global `--transport` selects the
+    /// direct mobile connection (manual-ip/nearby) and clap requires unique long names.
+    #[arg(
+        long = "serve-transport",
+        id = "serve_data_transport",
+        value_enum,
+        default_value_t = DataServeTransport::Stdio
+    )]
+    transport: DataServeTransport,
+
+    /// Loopback address for the Streamable HTTP listener.
+    #[cfg(feature = "streamable-http")]
+    #[arg(long, default_value = "127.0.0.1:8787")]
+    bind: SocketAddr,
+
+    /// Accepted Host header. Repeat for a reverse-proxy hostname during local development.
+    #[cfg(feature = "streamable-http")]
+    #[arg(long = "allowed-host")]
+    allowed_hosts: Vec<String>,
+
+    /// Accepted browser Origin. Repeat for each trusted browser-based MCP client.
+    #[cfg(feature = "streamable-http")]
+    #[arg(long = "allowed-origin")]
+    allowed_origins: Vec<String>,
 }
 
 #[cfg(feature = "streamable-http")]
@@ -684,6 +846,96 @@ fn requested_output_mode(arguments: &[std::ffi::OsString]) -> output::OutputMode
 
 #[allow(clippy::too_many_lines)]
 async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
+    if let Command::Mcp(McpArgs {
+        command: Some(McpCommand::ServeData(options)),
+    }) = &cli.command
+    {
+        if options.object_store_url.is_none()
+            && (options.bucket.is_some() || options.prefix.is_some())
+        {
+            eprintln!("healthmd: --bucket and --prefix apply only to --object-store-url backing");
+            return ExitCode::from(2);
+        }
+        let backing = match (
+            options.directory.clone(),
+            options.database.clone(),
+            options.object_store_url.clone(),
+        ) {
+            (Some(directory), None, None) => mcp::DataServeOptions::Directory {
+                directory,
+                grant: options.grant.clone(),
+                index: options.index.clone(),
+            },
+            (None, Some(database), None) if options.index.is_none() => {
+                mcp::DataServeOptions::Database {
+                    database,
+                    grant: options.grant.clone(),
+                }
+            }
+            (None, Some(_), None) => {
+                eprintln!(
+                    "healthmd: --index applies only to --directory and --object-store-url backing; the database store owns its index internally"
+                );
+                return ExitCode::from(2);
+            }
+            (None, None, Some(url)) => {
+                let Some(bucket) = options.bucket.clone() else {
+                    eprintln!("healthmd: --object-store-url requires --bucket");
+                    return ExitCode::from(2);
+                };
+                mcp::DataServeOptions::ObjectStore {
+                    url,
+                    bucket,
+                    prefix: options.prefix.clone(),
+                    grant: options.grant.clone(),
+                    index: options.index.clone(),
+                }
+            }
+            _ => {
+                eprintln!(
+                    "healthmd: mcp serve-data requires exactly one of --directory, --database, or --object-store-url"
+                );
+                return ExitCode::from(2);
+            }
+        };
+        #[cfg(feature = "streamable-http")]
+        if options.transport == DataServeTransport::StreamableHttp {
+            let http_options = mcp::HttpServerOptions {
+                bind: options.bind,
+                allowed_hosts: options.allowed_hosts.clone(),
+                allowed_origins: options.allowed_origins.clone(),
+            };
+            let result = mcp::serve_data_http(backing, http_options).await;
+            if let Err(error) = result {
+                eprintln!("healthmd: {error}");
+                return ExitCode::from(1);
+            }
+            return ExitCode::SUCCESS;
+        }
+        let result = mcp::serve_data(backing).await;
+        if let Err(error) = result {
+            eprintln!("healthmd: {error}");
+            return ExitCode::from(1);
+        }
+        return ExitCode::SUCCESS;
+    }
+    if let Command::Data(DataArgs {
+        command: Some(DataCommand::IngestServe(options)),
+    }) = &cli.command
+    {
+        let result = mcp::serve_ingest_gateway(mcp::IngestServeOptions {
+            database: options.database.clone(),
+            bind: options.bind,
+            allowed_hosts: options.allowed_hosts.clone(),
+            allowed_origins: options.allowed_origins.clone(),
+        })
+        .await;
+        if let Err(error) = result {
+            eprintln!("healthmd: {error}");
+            return ExitCode::from(1);
+        }
+        return ExitCode::SUCCESS;
+    }
     let stdio_mcp = match &cli.command {
         Command::Mcp(McpArgs {
             command: Some(McpCommand::Serve(options)),
@@ -827,6 +1079,12 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         Command::Direct(DirectArgs {
             command: Some(DirectCommand::ResetTrust { confirm }),
         }) => direct_reset_trust(confirm).await.map(CommandSuccess::json),
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Import(options)),
+        }) if backend == Backend::Direct => data_import(options).await.map(CommandSuccess::json),
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Ingest(options)),
+        }) if backend == Backend::Direct => data_ingest(options).await.map(CommandSuccess::json),
         Command::Setup(SetupArgs {
             command: Some(SetupCommand::Codex(options)),
         }) if backend == Backend::Direct => setup_codex(options, device, port)
@@ -892,6 +1150,7 @@ fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
         Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume(backend)),
         Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel(backend)),
         Command::Direct(DirectArgs { command: None }) => Some(guidance::group(backend, "direct")),
+        Command::Data(DataArgs { command: None }) => Some(guidance::group(backend, "data")),
         Command::Direct(DirectArgs {
             command: Some(DirectCommand::Unpair { device_id: None }),
         }) => Some(guidance::unpair(backend)),
@@ -920,12 +1179,37 @@ fn extract_scope_is_present(options: &SelectionArgs) -> bool {
 }
 
 fn mcp_schema(options: &McpSchemaArgs) -> Result<Value, CommandError> {
-    mcp::tool_catalog(options.tool.as_deref()).map_err(|_| CommandError {
-        backend: "direct",
+    let catalog = if options.data {
+        mcp::data_tool_catalog(options.tool.as_deref())
+    } else {
+        mcp::tool_catalog(options.tool.as_deref())
+    };
+    catalog.map_err(|_| CommandError {
+        backend: if options.data { "data" } else { "direct" },
         code: "invalid_request",
-        message: "The requested fixed MCP tool is unavailable. Run `healthmd mcp schema` to list every supported tool."
+        message: "The requested fixed MCP tool is unavailable. Run `healthmd mcp schema` (or `healthmd mcp schema --data`) to list the supported tools."
             .into(),
     })
+}
+
+async fn data_import(options: DataImportArgs) -> Result<Value, CommandError> {
+    mcp::import_data(options.database, options.directory)
+        .await
+        .map_err(|error| CommandError {
+            backend: "data",
+            code: "data_import_failed",
+            message: error.to_string(),
+        })
+}
+
+async fn data_ingest(options: DataIngestArgs) -> Result<Value, CommandError> {
+    mcp::ingest_data(options.database, options.manifest, options.artifact)
+        .await
+        .map_err(|error| CommandError {
+            backend: "data",
+            code: "data_ingest_failed",
+            message: error.to_string(),
+        })
 }
 
 fn validate_platform_options(cli: &Cli) -> Result<(), CommandError> {
@@ -2454,12 +2738,25 @@ const fn command_name(command: &Command) -> &'static str {
             command: Some(DirectCommand::ResetTrust { .. }),
         }) => "direct reset-trust",
         Command::Direct(DirectArgs { command: None }) => "direct",
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Import(_)),
+        }) => "data import",
+        Command::Data(DataArgs {
+            command: Some(DataCommand::Ingest(_)),
+        }) => "data ingest",
+        Command::Data(DataArgs {
+            command: Some(DataCommand::IngestServe(_)),
+        }) => "data ingest-serve",
+        Command::Data(DataArgs { command: None }) => "data",
         Command::Mcp(McpArgs {
             command: Some(McpCommand::Serve(_)),
         }) => "mcp serve",
         Command::Mcp(McpArgs {
             command: Some(McpCommand::ServeReadOnly(_)),
         }) => "mcp serve-read-only",
+        Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(_)),
+        }) => "mcp serve-data",
         #[cfg(feature = "streamable-http")]
         Command::Mcp(McpArgs {
             command: Some(McpCommand::ServeHttp(_)),
@@ -2814,6 +3111,7 @@ mod tests {
             panic!("expected MCP schema command");
         };
         assert_eq!(options.tool.as_deref(), Some("healthmd_sleep_sessions"));
+        assert!(!options.data);
 
         let setup = Cli::try_parse_from([
             "healthmd",
@@ -2832,6 +3130,257 @@ mod tests {
         };
         assert!(options.skip_pairing);
         assert_eq!(options.pairing_timeout, 240);
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn data_mcp_commands_parse() {
+        let data = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-data",
+            "--directory",
+            "/tmp/healthmd-exports",
+            "--grant",
+            "/tmp/healthmd-grant.json",
+            "--index",
+            "/tmp/healthmd-index.json",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(options)),
+        }) = data.command
+        else {
+            panic!("expected data MCP serve command");
+        };
+        assert_eq!(
+            options.directory.as_deref(),
+            Some(Path::new("/tmp/healthmd-exports"))
+        );
+        assert_eq!(options.database, None);
+        assert_eq!(options.grant, PathBuf::from("/tmp/healthmd-grant.json"));
+        assert_eq!(
+            options.index.as_deref(),
+            Some(Path::new("/tmp/healthmd-index.json"))
+        );
+
+        let database = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-data",
+            "--database",
+            "/tmp/healthmd-agent-data.sqlite",
+            "--grant",
+            "/tmp/healthmd-grant.json",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(options)),
+        }) = database.command
+        else {
+            panic!("expected database MCP serve command");
+        };
+        assert_eq!(options.directory, None);
+        assert_eq!(
+            options.database.as_deref(),
+            Some(Path::new("/tmp/healthmd-agent-data.sqlite"))
+        );
+
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--database",
+                "/tmp/db.sqlite",
+                "--directory",
+                "/tmp/exports",
+                "--grant",
+                "/tmp/grant.json"
+            ])
+            .is_err(),
+            "--database and --directory must be mutually exclusive"
+        );
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--grant",
+                "/tmp/grant.json"
+            ])
+            .is_err(),
+            "exactly one backing store argument is required"
+        );
+        // Parse succeeds; the dispatcher rejects --index with --database at runtime with a
+        // health-free message (covered end-to-end in tests/agent_data_sqlite.rs).
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--database",
+                "/tmp/db.sqlite",
+                "--grant",
+                "/tmp/grant.json",
+                "--index",
+                "/tmp/index.json"
+            ])
+            .is_ok()
+        );
+
+        // Parse succeeds; the dispatcher rejects --bucket/--prefix alongside a
+        // non-object-store backing at runtime with a health-free message (covered
+        // end-to-end in tests/agent_data_object.rs).
+        assert!(
+            Cli::try_parse_from([
+                "healthmd",
+                "mcp",
+                "serve-data",
+                "--directory",
+                "/tmp/exports",
+                "--bucket",
+                "healthmd-test",
+                "--grant",
+                "/tmp/grant.json"
+            ])
+            .is_ok()
+        );
+
+        // --serve-transport defaults to stdio; the streamable-http value and its listener
+        // options exist only in builds that compile the shared HTTP transport (covered
+        // end-to-end in tests/agent_data_http.rs).
+        let default_transport = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "serve-data",
+            "--directory",
+            "/tmp/healthmd-exports",
+            "--grant",
+            "/tmp/healthmd-grant.json",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::ServeData(options)),
+        }) = default_transport.command
+        else {
+            panic!("expected data MCP serve command");
+        };
+        assert_eq!(options.transport, DataServeTransport::Stdio);
+        #[cfg(feature = "streamable-http")]
+        {
+            assert!(
+                Cli::try_parse_from([
+                    "healthmd",
+                    "mcp",
+                    "serve-data",
+                    "--serve-transport",
+                    "streamable-http",
+                    "--bind",
+                    "127.0.0.1:8787",
+                    "--allowed-host",
+                    "localhost:8787",
+                    "--allowed-origin",
+                    "http://127.0.0.1:3000",
+                    "--directory",
+                    "/tmp/healthmd-exports",
+                    "--grant",
+                    "/tmp/healthmd-grant.json"
+                ])
+                .is_ok()
+            );
+        }
+        #[cfg(not(feature = "streamable-http"))]
+        {
+            assert!(
+                Cli::try_parse_from([
+                    "healthmd",
+                    "mcp",
+                    "serve-data",
+                    "--serve-transport",
+                    "streamable-http",
+                    "--grant",
+                    "/tmp/grant.json"
+                ])
+                .is_err(),
+                "the streamable-http transport value requires the streamable-http feature"
+            );
+        }
+
+        let schema = Cli::try_parse_from([
+            "healthmd",
+            "mcp",
+            "schema",
+            "--data",
+            "healthmd_data_catalog",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: Some(McpCommand::Schema(options)),
+        }) = schema.command
+        else {
+            panic!("expected Agent Data MCP schema command");
+        };
+        assert!(options.data);
+        assert_eq!(options.tool.as_deref(), Some("healthmd_data_catalog"));
+    }
+
+    #[test]
+    fn data_import_command_parses() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "data",
+            "import",
+            "--database",
+            "/tmp/healthmd-agent-data.sqlite",
+            "--directory",
+            "/tmp/healthmd-exports",
+        ])
+        .unwrap();
+        let Command::Data(DataArgs {
+            command: Some(DataCommand::Import(options)),
+        }) = parsed.command
+        else {
+            panic!("expected data import command");
+        };
+        assert_eq!(
+            options.database,
+            PathBuf::from("/tmp/healthmd-agent-data.sqlite")
+        );
+        assert_eq!(options.directory, PathBuf::from("/tmp/healthmd-exports"));
+
+        let discovery = Cli::try_parse_from(["healthmd", "data"]).unwrap();
+        let Command::Data(DataArgs { command: None }) = discovery.command else {
+            panic!("expected data discovery command");
+        };
+    }
+
+    #[test]
+    fn data_ingest_command_parses() {
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "data",
+            "ingest",
+            "--database",
+            "/tmp/healthmd-agent-data.sqlite",
+            "--manifest",
+            "/tmp/upload/manifest.json",
+            "--artifact",
+            "/tmp/upload/day.json",
+        ])
+        .unwrap();
+        let Command::Data(DataArgs {
+            command: Some(DataCommand::Ingest(options)),
+        }) = parsed.command
+        else {
+            panic!("expected data ingest command");
+        };
+        assert_eq!(
+            options.database,
+            PathBuf::from("/tmp/healthmd-agent-data.sqlite")
+        );
+        assert_eq!(options.manifest, PathBuf::from("/tmp/upload/manifest.json"));
+        assert_eq!(options.artifact, PathBuf::from("/tmp/upload/day.json"));
     }
 
     #[cfg(not(feature = "streamable-http"))]

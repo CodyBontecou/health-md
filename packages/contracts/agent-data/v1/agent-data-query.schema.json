@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/agent-data/v1/agent-data-query.schema.json",
+  "title": "Health.md Agent Data Query v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "operation", "page"],
+  "properties": {
+    "schema": { "const": "healthmd.agent_data_query" },
+    "schema_version": { "const": 1 },
+    "operation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "catalog" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "metrics", "sources", "dates", "times", "detail_level"],
+          "properties": {
+            "type": { "const": "records" },
+            "metrics": { "$ref": "agent-data-grant.schema.json#/$defs/metric_selection" },
+            "sources": { "$ref": "agent-data-grant.schema.json#/$defs/source_selection" },
+            "dates": { "$ref": "agent-data-grant.schema.json#/$defs/date_selection" },
+            "times": { "$ref": "agent-data-grant.schema.json#/$defs/time_selection" },
+            "detail_level": { "enum": ["common", "lossless"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "record_id"],
+          "properties": {
+            "type": { "const": "record_read" },
+            "record_id": { "$ref": "#/$defs/digest" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "artifacts" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "artifact_id"],
+          "properties": {
+            "type": { "const": "artifact_read" },
+            "artifact_id": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ]
+    },
+    "page": { "$ref": "#/$defs/page" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_items", "max_bytes", "cursor"],
+      "properties": {
+        "max_items": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "max_bytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+        "cursor": { "type": ["string", "null"], "maxLength": 8192 }
+      }
+    }
+  }
+}
+

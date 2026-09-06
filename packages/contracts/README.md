@@ -16,6 +16,7 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`semantic-input/v1`](semantic-input/v1/contract.md) | Internal post-capture semantic envelope, strict schemas, and synthetic cross-language differential corpus |
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
+| [`agent-data/v1`](agent-data/v1/contract.md) | Public read-only grant, query, and response contracts plus phone-to-gateway ingestion manifest and health-free receipt contracts, shared by local and future hosted agent data stores |
 
 ## Typed provider contracts
 

@@ -165,6 +165,41 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
         kind: OperationKind::Export,
         local_only: true,
     },
+    OperationDefinition {
+        name: "healthmd_data_catalog",
+        title: "List authorized Health.md data",
+        description: "Discover only the metrics, sources, data layers, and coverage authorized by the configured Agent Data grant.",
+        kind: OperationKind::Catalog,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_data_records",
+        title: "Read authorized Health.md records",
+        description: "Read bounded, paginated common or lossless records from the configured Agent Data store. Health.md filters data but does not interpret it.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_data_record_read",
+        title: "Read one authorized Health.md record",
+        description: "Read one authorized record as bounded base64-encoded JSON chunks when it is too large to inline in a record page.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_data_artifacts",
+        title: "List authorized Health.md artifacts",
+        description: "List exact stored artifacts only when the configured Agent Data grant explicitly permits unrestricted bulk download.",
+        kind: OperationKind::Catalog,
+        local_only: false,
+    },
+    OperationDefinition {
+        name: "healthmd_data_artifact_read",
+        title: "Read an authorized Health.md artifact",
+        description: "Read exact stored artifact bytes in bounded base64 chunks. This requires an explicit unrestricted bulk-download grant.",
+        kind: OperationKind::Query,
+        local_only: false,
+    },
 ];
 
 pub const fn definitions() -> &'static [OperationDefinition] {
@@ -197,6 +232,10 @@ pub struct QueryInvocation {
 
 pub fn list(profile: SurfaceProfile) -> Vec<Value> {
     let mut tools = base_operation_declarations();
+    tools.retain(|tool| {
+        let name = tool.get("name").and_then(Value::as_str).unwrap_or_default();
+        profile.is_data() == is_data_operation(name)
+    });
     if profile.is_read_only() {
         tools.retain(|tool| {
             tool.get("name")
@@ -228,6 +267,7 @@ fn apply_profile_descriptions(tools: &mut [Value], profile: SurfaceProfile) {
             (SurfaceProfile::RemoteReadOnly, "healthmd_doctor") => Some(
                 "Diagnose paired foreground iPhone query readiness. If unpaired, ask the server operator to pair its source outside MCP; pairing and export jobs are unavailable in this read-only surface.",
             ),
+            (SurfaceProfile::DataReadOnly, _) => None,
             (_, "healthmd_capabilities") => Some(
                 "List read-only direct-query, evidence, visualization, and pagination capabilities. This surface exposes no pairing or export jobs.",
             ),
@@ -246,13 +286,22 @@ fn apply_profile_descriptions(tools: &mut [Value], profile: SurfaceProfile) {
 /// Returns an error when the requested name is absent from the selected surface profile.
 pub fn tool_catalog(profile: SurfaceProfile, tool_name: Option<&str>) -> Result<Value, String> {
     let tools = list(profile);
-    let guidance = json!({
-        "typed_tools_are_preferred": true,
-        "sleep_tool": "healthmd_sleep_sessions",
-        "workout_tool": "healthmd_workouts",
-        "metric_series_tool": "healthmd_metric_chart",
-        "note": "MCP tools and `healthmd query <operation> --arguments <JSON>` use this same registry. The shell `healthmd extract` command returns a different canonical projection."
-    });
+    let guidance = if profile.is_data() {
+        json!({
+            "data_only": true,
+            "discovery_tool": "healthmd_data_catalog",
+            "records_tool": "healthmd_data_records",
+            "note": "This surface exposes only data permitted by one configured Agent Data grant. Health.md does not interpret the returned records."
+        })
+    } else {
+        json!({
+            "typed_tools_are_preferred": true,
+            "sleep_tool": "healthmd_sleep_sessions",
+            "workout_tool": "healthmd_workouts",
+            "metric_series_tool": "healthmd_metric_chart",
+            "note": "MCP tools and `healthmd query <operation> --arguments <JSON>` use this same registry. The shell `healthmd extract` command returns a different canonical projection."
+        })
+    };
     if let Some(name) = tool_name {
         let tool = tools
             .into_iter()
@@ -366,8 +415,137 @@ fn base_input_schema(name: &str) -> Value {
         "healthmd_export_files" => export_files_schema(),
         "healthmd_export_job_status" | "healthmd_export_job_cancel" => job_schema(false),
         "healthmd_export_job_resume" => job_schema(true),
+        "healthmd_data_catalog" | "healthmd_data_artifacts" => data_page_only_schema(),
+        "healthmd_data_records" => data_records_schema(),
+        "healthmd_data_record_read" => data_identifier_schema("record_id"),
+        "healthmd_data_artifact_read" => data_identifier_schema("artifact_id"),
         _ => empty_schema(),
     }
+}
+
+fn is_data_operation(name: &str) -> bool {
+    name.starts_with("healthmd_data_")
+}
+
+fn data_page_only_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+            "page": data_page_schema(),
+            "all_pages": {"type": "boolean"}
+        }
+    })
+}
+
+fn data_identifier_schema(identifier: &str) -> Value {
+    let mut properties = Map::from_iter([
+        (
+            identifier.to_owned(),
+            json!({"type": "string", "pattern": "^[0-9a-f]{64}$"}),
+        ),
+        ("page".to_owned(), data_page_schema()),
+        ("all_pages".to_owned(), json!({"type": "boolean"})),
+    ]);
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": [identifier],
+        "properties": Value::Object(std::mem::take(&mut properties))
+    })
+}
+
+fn data_records_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metrics", "detail_level"],
+        "properties": {
+            "metrics": data_metric_selection_schema(),
+            "sources": data_source_selection_schema(),
+            "dates": data_date_selection_schema(),
+            "times": data_time_selection_schema(),
+            "detail_level": {"type": "string", "enum": ["common", "lossless"]},
+            "page": data_page_schema(),
+            "all_pages": {"type": "boolean"}
+        },
+        "examples": [{
+            "metrics": {"type": "explicit", "metric_ids": ["healthmd.health_data#/activity/steps"]},
+            "detail_level": "common",
+            "dates": {"type": "all_available"},
+            "times": {"type": "all_available"},
+            "sources": {"type": "all_available"},
+            "all_pages": true
+        }]
+    })
+}
+
+fn data_metric_selection_schema() -> Value {
+    json!({
+        "oneOf": [
+            {"type": "object", "additionalProperties": false, "required": ["type"], "properties": {"type": {"type": "string", "enum": ["all_available"]}}},
+            {"type": "object", "additionalProperties": false, "required": ["type", "metric_ids"], "properties": {
+                "type": {"type": "string", "enum": ["explicit"]},
+                "metric_ids": {"type": "array", "minItems": 1, "maxItems": MAXIMUM_METRIC_IDS, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 512}}
+            }}
+        ]
+    })
+}
+
+fn data_source_selection_schema() -> Value {
+    json!({
+        "oneOf": [
+            {"type": "object", "additionalProperties": false, "required": ["type"], "properties": {"type": {"type": "string", "enum": ["all_available"]}}},
+            {"type": "object", "additionalProperties": false, "required": ["type", "source_ids"], "properties": {
+                "type": {"type": "string", "enum": ["explicit"]},
+                "source_ids": {"type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}}
+            }}
+        ],
+        "default": {"type": "all_available"}
+    })
+}
+
+fn data_date_selection_schema() -> Value {
+    json!({
+        "oneOf": [
+            {"type": "object", "additionalProperties": false, "required": ["type"], "properties": {"type": {"type": "string", "enum": ["all_available"]}}},
+            {"type": "object", "additionalProperties": false, "required": ["type", "start_date", "end_date"], "properties": {
+                "type": {"type": "string", "enum": ["exact"]},
+                "start_date": {"type": "string", "format": "date"},
+                "end_date": {"type": "string", "format": "date"}
+            }}
+        ],
+        "default": {"type": "all_available"}
+    })
+}
+
+fn data_time_selection_schema() -> Value {
+    json!({
+        "oneOf": [
+            {"type": "object", "additionalProperties": false, "required": ["type"], "properties": {"type": {"type": "string", "enum": ["all_available"]}}},
+            {"type": "object", "additionalProperties": false, "required": ["type", "start_inclusive", "end_exclusive"], "properties": {
+                "type": {"type": "string", "enum": ["exact"]},
+                "start_inclusive": {"type": "string", "format": "date-time"},
+                "end_exclusive": {"type": "string", "format": "date-time"}
+            }}
+        ],
+        "default": {"type": "all_available"}
+    })
+}
+
+fn data_page_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["max_items", "max_bytes"],
+        "properties": {
+            "max_items": {"type": "integer", "minimum": 1, "maximum": MAXIMUM_PAGE_ITEMS, "default": DEFAULT_PAGE_ITEMS},
+            "max_bytes": {"type": "integer", "minimum": 1, "maximum": MAXIMUM_PAGE_BYTES, "default": DEFAULT_PAGE_BYTES},
+            "cursor": {"type": ["string", "null"], "default": null}
+        },
+        "default": {"max_items": DEFAULT_PAGE_ITEMS, "max_bytes": DEFAULT_PAGE_BYTES, "cursor": null}
+    })
 }
 
 fn empty_schema() -> Value {
@@ -901,6 +1079,27 @@ pub fn query_invocation(tool: &str, arguments: &Value) -> Result<QueryInvocation
                 "detail_ids",
             ],
         )?,
+        "healthmd_data_catalog" | "healthmd_data_artifacts" => {
+            ensure_keys(arguments, &["page", "all_pages"])?;
+        }
+        "healthmd_data_records" => ensure_keys(
+            arguments,
+            &[
+                "metrics",
+                "sources",
+                "dates",
+                "times",
+                "detail_level",
+                "page",
+                "all_pages",
+            ],
+        )?,
+        "healthmd_data_record_read" => {
+            ensure_keys(arguments, &["record_id", "page", "all_pages"])?;
+        }
+        "healthmd_data_artifact_read" => {
+            ensure_keys(arguments, &["artifact_id", "page", "all_pages"])?;
+        }
         _ => {}
     }
 
@@ -1006,11 +1205,53 @@ pub fn query_invocation(tool: &str, arguments: &Value) -> Result<QueryInvocation
                 if has_details { "lossless" } else { "summary" },
             )?
         }
+        "healthmd_data_catalog" => data_query(arguments, &json!({"type": "catalog"}), "common")?,
+        "healthmd_data_records" => {
+            let metrics = arguments
+                .get("metrics")
+                .cloned()
+                .ok_or("metrics are required")?;
+            let detail = arguments
+                .get("detail_level")
+                .and_then(Value::as_str)
+                .ok_or("detail_level is required")?;
+            data_query(
+                arguments,
+                &json!({
+                    "type": "records",
+                    "metrics": metrics,
+                    "sources": arguments.get("sources").cloned().unwrap_or_else(|| json!({"type": "all_available"})),
+                    "dates": arguments.get("dates").cloned().unwrap_or_else(|| json!({"type": "all_available"})),
+                    "times": arguments.get("times").cloned().unwrap_or_else(|| json!({"type": "all_available"})),
+                    "detail_level": detail
+                }),
+                detail,
+            )?
+        }
+        "healthmd_data_record_read" => data_query(
+            arguments,
+            &json!({
+                "type": "record_read",
+                "record_id": arguments.get("record_id").cloned().ok_or("record_id is required")?
+            }),
+            "common",
+        )?,
+        "healthmd_data_artifacts" => {
+            data_query(arguments, &json!({"type": "artifacts"}), "common")?
+        }
+        "healthmd_data_artifact_read" => data_query(
+            arguments,
+            &json!({
+                "type": "artifact_read",
+                "artifact_id": arguments.get("artifact_id").cloned().ok_or("artifact_id is required")?
+            }),
+            "common",
+        )?,
         _ => return Err("unknown query tool"),
     };
 
     let detail_level = match detail_level.as_str() {
-        "summary" => QueryDetailLevel::Summary,
+        "summary" | "common" => QueryDetailLevel::Summary,
         "lossless" => QueryDetailLevel::Lossless,
         _ => return Err("invalid detail level"),
     };
@@ -1019,6 +1260,28 @@ pub fn query_invocation(tool: &str, arguments: &Value) -> Result<QueryInvocation
         detail_level,
         all_pages,
     })
+}
+
+fn data_query(
+    arguments: &Map<String, Value>,
+    operation: &Value,
+    detail_level: &str,
+) -> Result<(Value, String), &'static str> {
+    let page = arguments.get("page").cloned().unwrap_or_else(|| {
+        json!({
+            "max_items": DEFAULT_PAGE_ITEMS,
+            "max_bytes": DEFAULT_PAGE_BYTES,
+            "cursor": null
+        })
+    });
+    let query = json!({
+        "schema": crate::AGENT_DATA_QUERY_SCHEMA,
+        "schema_version": crate::AGENT_DATA_SCHEMA_VERSION,
+        "operation": operation,
+        "page": page
+    });
+    crate::AgentDataQueryRequest::from_value(query.clone())?;
+    Ok((query, detail_level.to_owned()))
 }
 
 /// Normalize a durable-job identifier and optional bounded wait timeout.
@@ -1258,8 +1521,25 @@ mod tests {
                 SurfaceProfile::RemoteReadOnly => {
                     assert!(doctor.contains("server operator"));
                 }
-                SurfaceProfile::LocalDirect => unreachable!(),
+                SurfaceProfile::LocalDirect | SurfaceProfile::DataReadOnly => unreachable!(),
             }
         }
+    }
+
+    #[test]
+    fn data_catalog_is_separate_and_strictly_read_only() {
+        let tools = list(SurfaceProfile::DataReadOnly);
+        assert_eq!(tools.len(), 5);
+        assert!(tools.iter().all(|tool| {
+            tool["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("healthmd_data_"))
+                && tool.pointer("/annotations/readOnlyHint") == Some(&Value::Bool(true))
+        }));
+        assert!(list(SurfaceProfile::LocalDirect).iter().all(|tool| {
+            !tool["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("healthmd_data_"))
+        }));
     }
 }

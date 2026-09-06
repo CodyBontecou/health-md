@@ -8,4 +8,6 @@ adapters. It does not parse shell arguments, implement JSON-RPC, open sockets, a
 or read HealthKit.
 
 The CLI and MCP adapters must translate into these operations rather than implementing parallel
-business behavior.
+business behavior. `ArtifactStore` is the storage-neutral, read-only boundary for Agent Data;
+local directories and future hosted stores use the same versioned grant/query types and the
+separate `DataReadOnly` operation profile.
