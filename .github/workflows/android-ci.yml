@@ -1,8 +1,10 @@
 name: Android CI
 
 on:
-  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
-  # remain path-aware to avoid rebuilding an unaffected component after merge.
+  # Pull requests are path-filtered by the changes job so the stable final gate
+  # still reports a conclusive required context on every PR without running the
+  # heavy jobs for unrelated changes. Main-branch pushes remain path-aware at
+  # the trigger to avoid rebuilding an unaffected component after merge.
   pull_request:
   push:
     branches: [main]
@@ -30,7 +32,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Android-affecting changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - name: Check out source for the local composite action
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Detect whether Android CI must run
+        id: detect
+        uses: ./.github/actions/component-changes
+        with:
+          component: Android CI
+          paths: |
+            apps/android/**
+            apps/cli/**
+            packages/contracts/**
+            packages/healthmd-core-rust/**
+            docs/migration/**
+            .github/workflows/README.md
+            .github/workflows/android-*.yml
+
   test:
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
@@ -176,6 +206,61 @@ jobs:
             app/build/outputs/bundle/playDebug/app-play-debug.aab
           bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh
 
+  instrumentation:
+    name: Emulator instrumentation and direct E2E
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - name: Set up pinned Rust Android toolchain
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.88.0 --profile minimal
+          rustup target add --toolchain 1.88.0 \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android \
+            i686-linux-android
+          rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
+
+      - name: Install pinned Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$android_sdk"
+          sdkmanager "ndk;27.1.12297006"
+          echo "ANDROID_NDK_HOME=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Prepare source-built Rust core before the emulator boots
+        run: ./gradlew --no-daemon :healthmd-core:prepareRustDebug --stacktrace
+
       - name: Enable KVM access
         run: sudo chmod 666 /dev/kvm
 
@@ -193,6 +278,8 @@ jobs:
 
   fdroid:
     name: F-Droid clean build
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
@@ -291,6 +378,8 @@ jobs:
 
   wear-emulator-smoke:
     name: Wear emulator smoke
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -328,6 +417,8 @@ jobs:
 
   rust-kotlin-direct-interop:
     name: Rust/Kotlin direct interop
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -398,17 +489,33 @@ jobs:
   gate:
     name: Android CI
     if: ${{ always() }}
-    needs: [test, fdroid, wear-emulator-smoke, rust-kotlin-direct-interop]
+    needs:
+      - changes
+      - test
+      - fdroid
+      - wear-emulator-smoke
+      - instrumentation
+      - rust-kotlin-direct-interop
     runs-on: ubuntu-24.04
     steps:
       - name: Require Android checks
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
           TEST_RESULT: ${{ needs.test.result }}
           FDROID_RESULT: ${{ needs.fdroid.result }}
           INTEROP_RESULT: ${{ needs.rust-kotlin-direct-interop.result }}
           WEAR_RESULT: ${{ needs.wear-emulator-smoke.result }}
+          INSTRUMENTATION_RESULT: ${{ needs.instrumentation.result }}
         run: |
+          set -e
+          test "$CHANGES_RESULT" = success
+          if [ "$CHANGES_RUN" != "true" ]; then
+            echo "No Android-affecting changes in this pull request; Android CI skipped."
+            exit 0
+          fi
           test "$TEST_RESULT" = success
           test "$FDROID_RESULT" = success
           test "$INTEROP_RESULT" = success
           test "$WEAR_RESULT" = success
+          test "$INSTRUMENTATION_RESULT" = success
