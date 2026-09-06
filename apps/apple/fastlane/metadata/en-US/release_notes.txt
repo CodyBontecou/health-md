@@ -1,8 +1,10 @@
-Health.md 3.3.0 adds wake notifications for Direct CLI Access, one shared pairing code, and a clearer Sync tab.
+Health.md 3.4.0 introduces Share My Setup, makes daily scheduled exports dependable, and reports export results truthfully.
 
 Added
-• Wake requests: turn on “Allow paired computers to send wake requests” under Sync → Direct CLI Access, and a waiting healthmd CLI command can send one visible notification to your iPhone while its wake window holds — tap it and the command completes. Everything is opt-in, and your health data never touches the notifications worker.
-• Direct CLI QR and manual pairing now use the same high-entropy 20-digit code as Android; six-digit pairing remains only as a legacy CLI fallback.
+• Share My Setup (Settings → Configuration): package your export profiles — metric selection, formats, and naming — into one small portable file and hand it to your other device or a friend. Review exactly what will change, apply as a transactional Add or Replace, and Undo once. Files carry no health data or credentials; imported profiles stay blocked until you rebind their destination, and older v1 setup files are no longer accepted.
 
-Improved
-• The Sync tab now separates Mac Destination and CLI setup with a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first.
+Fixed
+• Daily scheduled exports no longer skip every other day — each run now exports the prior day’s data.
+• Export History now shows the real number of generated files for scheduled, Shortcut, and manual runs, and reports truthful outcomes for partial exports.
+• A workout whose optional WorkoutKit plan can’t be decoded no longer marks the whole export “Partial” — all samples still export and the omission appears as an informational note.
+• Retry Export now sits at the top of the export detail sheet, with long failed-date lists capped.

@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.0",
+            items: [
+                .list(
+                    title: "Share My Setup and truthful exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "square.and.arrow.up.on.square.fill",
+                            title: "Share My Setup",
+                            description: "Package your export profiles — metrics, formats, and naming — into one portable file under Settings → Configuration, then review and apply them on your other device as an Add or Replace with one-shot Undo. Files carry no health data or credentials, and imported profiles wait until you rebind their destination."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Daily schedules run every day",
+                            description: "Scheduled daily exports no longer skip the day after a successful run — each occurrence now exports the prior day’s data, and Export History shows the true number of files every run wrote."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal.fill",
+                            title: "Truthful export outcomes",
+                            description: "A workout whose optional plan can’t be decoded no longer marks the whole export “Partial” — samples still export and the omission appears as a plain note. Retry Export also sits at the top of the detail sheet."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.3.0",
             items: [
                 .list(

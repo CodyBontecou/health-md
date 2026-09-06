@@ -2,7 +2,10 @@
 
 All notable changes to Health.md will be documented in this file.
 
-## [Unreleased]
+## [3.4.0] - 2026-09-06
+
+### Added
+- Share My Setup (v2) under Settings → Configuration: package your export profiles — metric selection, formats, and naming/organization choices — into one bounded portable file (≤ 4 MiB, no health data, credentials, device pairings, or runtime state) and hand it to your other device or a friend. A v2 document can carry multiple profiles; the recipient reviews exactly what will change, applies it as a transactional Add or Replace, and can Undo once. Imported profiles land blocked until their destination is rebound locally (concrete folder, verified API endpoint, or confirmed Mac pairing), imported schedules stay off, and endpoints arrive without credentials. In-flow endpoint binding and live connected-Mac confirmation are part of the import flow, deleting a profile compacts the sidecar state, and older v1 shared-setup files are rejected as an unsupported version (the v2 codec is the only writer).
 
 ### Changed
 - Export details on iPhone now show the Retry Export action at the top of the sheet, above the overview and any failure lists, so a large failed export no longer requires scrolling through every failed date to reach Retry. The failed-dates list is also capped to the first 8 rows with a "+N more" summary line, matching the Android history detail (Android's two-pane detail likewise places retry directly under the title).
