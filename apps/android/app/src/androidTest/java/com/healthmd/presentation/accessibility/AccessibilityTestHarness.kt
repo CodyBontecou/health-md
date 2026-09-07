@@ -88,8 +88,8 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
 
     protected fun text(id: Int, vararg arguments: Any): String {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        return context.createConfigurationContext(configuration(context.resources.configuration))
-            .getString(id, *arguments)
+        val resources = context.createConfigurationContext(configuration(context.resources.configuration)).resources
+        return if (arguments.isEmpty()) resources.getString(id) else resources.getString(id, *arguments)
     }
 
     protected fun setContent(content: @Composable () -> Unit) {

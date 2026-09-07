@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.healthmd.R
 import com.healthmd.domain.model.CustomFrontmatterField
@@ -212,10 +213,17 @@ internal fun FrontmatterCustomizationTextField(
     val style = if (identifier) GeistType.copy16.copy(fontFamily = GeistMono) else GeistType.copy16
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    val valueWidth = remember(value, style, measurer, density) {
-        measurer.measure(value, style, softWrap = false).size.width
-    }
     val horizontalPadding = with(density) { Spacing.sm.roundToPx() * 2 }
+    val valueOverflows = remember(value, style, measurer, density, fieldWidth, horizontalPadding) {
+        // Only determine whether a second reading surface is needed. Keep measurement
+        // bounded instead of creating an arbitrarily wide paragraph for a saved value.
+        fieldWidth > 0 && measurer.measure(
+            text = value,
+            style = style,
+            maxLines = 1,
+            constraints = Constraints(maxWidth = (fieldWidth - horizontalPadding).coerceAtLeast(1)),
+        ).hasVisualOverflow
+    }
     val shape = RoundedCornerShape(Radii.card)
     Column(modifier.padding(vertical = Spacing.xxs), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(label, style = GeistType.copy16, color = AppColors.textPrimary,
@@ -242,7 +250,7 @@ internal fun FrontmatterCustomizationTextField(
                 .clip(shape).background(AppColors.bgPrimary)
                 .border(1.dp, if (focused) AppColors.accent else AppColors.borderDefault, shape),
         )
-        if (fieldWidth > 0 && (valueWidth > fieldWidth - horizontalPadding || value.contains('\n'))) {
+        if (fieldWidth > 0 && (valueOverflows || value.contains('\n'))) {
             // A separate wrapping reading surface also exposes long disabled values. It does
             // not make the single-line editing/touch target taller than a short viewport.
             Text(value, style = style, color = AppColors.textSecondary,
