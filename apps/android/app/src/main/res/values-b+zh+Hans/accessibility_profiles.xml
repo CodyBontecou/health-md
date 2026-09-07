@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">配置方案计划</string>
+    <string name="a11y_profiles_empty">尚无导出配置方案。</string>
+    <string name="a11y_profiles_add">根据当前设置创建新配置方案</string>
+    <string name="a11y_profiles_none_enabled">未启用任何配置方案计划。</string>
+    <string name="a11y_profiles_edit">编辑计划</string>
+    <string name="a11y_profiles_edit_named">编辑%1$s的计划</string>
+    <string name="a11y_profiles_delete">删除</string>
+    <string name="a11y_profiles_delete_named">删除配置方案%1$s</string>
+    <string name="a11y_profiles_schedule_named">%1$s的计划</string>
+    <string name="a11y_profiles_save">保存</string>
+    <string name="a11y_profiles_delete_title">删除“%1$s”？</string>
+    <string name="a11y_profiles_delete_body">其保存的设置和计划将被移除。不能删除最后一个配置方案。</string>
+    <string name="a11y_profiles_cadence_unit">重复周期单位</string>
+    <string name="a11y_profiles_days">天</string>
+    <string name="a11y_profiles_weeks">周</string>
+    <string name="a11y_profiles_months">月</string>
+    <string name="a11y_profiles_weekday">星期</string>
+    <string name="a11y_profiles_hour">小时</string>
+    <string name="a11y_profiles_minute">分钟</string>
+    <string name="a11y_profiles_lookback">回溯天数（1–30）</string>
+    <string name="a11y_profiles_every_days">每N天</string>
+    <string name="a11y_profiles_every_weeks">每N周</string>
+    <string name="a11y_profiles_every_months">每N个月</string>
+</resources>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Расписания профилей</string>
+    <string name="a11y_profiles_empty">Профилей экспорта пока нет.</string>
+    <string name="a11y_profiles_add">Новый профиль из текущих настроек</string>
+    <string name="a11y_profiles_none_enabled">Нет включённых расписаний профилей.</string>
+    <string name="a11y_profiles_edit">Изменить расписание</string>
+    <string name="a11y_profiles_edit_named">Изменить расписание для %1$s</string>
+    <string name="a11y_profiles_delete">Удалить</string>
+    <string name="a11y_profiles_delete_named">Удалить профиль %1$s</string>
+    <string name="a11y_profiles_schedule_named">Расписание для %1$s</string>
+    <string name="a11y_profiles_save">Сохранить</string>
+    <string name="a11y_profiles_delete_title">Удалить «%1$s»?</string>
+    <string name="a11y_profiles_delete_body">Сохранённые настройки и расписание будут удалены. Последний оставшийся профиль удалить нельзя.</string>
+    <string name="a11y_profiles_cadence_unit">Единица интервала</string>
+    <string name="a11y_profiles_days">Дни</string>
+    <string name="a11y_profiles_weeks">Недели</string>
+    <string name="a11y_profiles_months">Месяцы</string>
+    <string name="a11y_profiles_weekday">День недели</string>
+    <string name="a11y_profiles_hour">Час</string>
+    <string name="a11y_profiles_minute">Минута</string>
+    <string name="a11y_profiles_lookback">Предыдущие дни (1–30)</string>
+    <string name="a11y_profiles_every_days">Каждые N дней</string>
+    <string name="a11y_profiles_every_weeks">Каждые N недель</string>
+    <string name="a11y_profiles_every_months">Каждые N месяцев</string>
+</resources>
