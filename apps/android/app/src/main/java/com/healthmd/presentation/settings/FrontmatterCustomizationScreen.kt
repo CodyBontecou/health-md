@@ -37,20 +37,19 @@ fun FrontmatterCustomizationScreen(
     val normalizedConfiguration = remember(configuration) { configuration.withDefaultFields() }
 
     Column(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()) {
-        // Back stays reachable while the independently scrolling form accommodates the IME.
-        Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xs)) {
-            SecondaryButton(
-                text = stringResource(R.string.back), onClick = onBack,
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                modifier = Modifier.testTag(FrontmatterCustomizationTags.BACK),
-            )
-        }
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth().testTag(FrontmatterCustomizationTags.BODY)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.md, vertical = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
+            // Back has its own target, separate from the wrapping title. It shares the
+            // scroll area so navigation does not reserve scarce keyboard/landscape height.
+            SecondaryButton(
+                text = stringResource(R.string.back), onClick = onBack,
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                modifier = Modifier.testTag(FrontmatterCustomizationTags.BACK),
+            )
             Text(
                 stringResource(R.string.frontmatter_customization_title),
                 style = MaterialTheme.typography.titleLarge,
