@@ -103,7 +103,8 @@ class FrontmatterCustomizationAccessibilityTest(display: AccessibilityDisplayCas
         replace(Tags.DATE_KEY, "  synthetic_export_date  ")
         expected = expected.copy(customDateKey = "  synthetic_export_date  ")
         expect(fixture, expected, 1)
-        node(Tags.DATE_KEY).performImeAction().assertIsNotFocused()
+        node(Tags.DATE_KEY).performImeAction()
+        node(Tags.DATE_KEY).assertIsNotFocused()
         expect(fixture, expected, 1) // Done/focus loss never introduces another configuration write.
         tap(Tags.DATE_TOGGLE)
         expected = expected.copy(includeDate = false)
@@ -123,7 +124,8 @@ class FrontmatterCustomizationAccessibilityTest(display: AccessibilityDisplayCas
         node(Tags.TYPE_VALUE).performTextReplacement("  synthetic type value  ")
         expected = expected.copy(customTypeValue = "  synthetic type value  ")
         expect(fixture, expected, 5)
-        node(Tags.TYPE_VALUE).performImeAction().assertIsNotFocused()
+        node(Tags.TYPE_VALUE).performImeAction()
+        node(Tags.TYPE_VALUE).assertIsNotFocused()
         tap(Tags.TYPE_TOGGLE)
         expected = expected.copy(includeType = false)
         expect(fixture, expected, 6)
@@ -337,7 +339,8 @@ class FrontmatterCustomizationAccessibilityTest(display: AccessibilityDisplayCas
         node(Tags.BACK).performScrollTo().assertComfortable().assertMinimumTouchTarget().performTouchInput { click() }
         compose.runOnIdle { assertEquals(1, fixture.backCalls) }
         expect(fixture, initial, 2)
-        node(Tags.CUSTOM_VALUE).performImeAction().assertIsNotFocused()
+        node(Tags.CUSTOM_VALUE).performImeAction()
+        node(Tags.CUSTOM_VALUE).assertIsNotFocused()
         expect(fixture, initial, 2)
     }
 

@@ -201,6 +201,7 @@ class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : 
         }
     }
 
+    @OptIn(ExperimentalTestApi::class)
     @Test
     fun focusedTemplateEditingKeepsAllTextAndResetAndPreviewReachableInShortWindows() {
         val initial = syntheticCustomization().copy(
