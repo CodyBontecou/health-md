@@ -84,14 +84,33 @@ struct PrimaryButton: View {
     }
 }
 
-struct SecondaryButton: View {
+/// Shared bordered treatment for secondary buttons and menu triggers.
+struct SecondaryButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var color: Color = .textPrimary
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 14, weight: .medium, design: .default))
+            .foregroundStyle(color)
+            .frame(minHeight: 40)
+            .padding(.horizontal, Spacing.s3)
+            .background(configuration.isPressed ? Color.controlPressed : Color.controlBackground)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
+            )
+            .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.99 : 1.0))
+            .animation(reduceMotion ? nil : AnimationTimings.fast, value: configuration.isPressed)
+    }
+}
+
+struct SecondaryButton: View {
     let title: String
     let icon: String?
     let color: Color
     let action: () -> Void
-
-    @State private var isPressed = false
 
     init(
         _ title: String,
@@ -113,34 +132,12 @@ struct SecondaryButton: View {
                         .accessibilityHidden(true)
                 }
                 Text(LocalizedStringKey(title))
-                    .font(.system(size: 14, weight: .medium, design: .default))
             }
-            .foregroundStyle(color)
-            .frame(minHeight: 40)
-            .padding(.horizontal, Spacing.s3)
-            .background(isPressed ? Color.controlPressed : Color.controlBackground)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
-        .buttonStyle(.plain)
-        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation { isPressed = pressing }
-        }, perform: {})
+        .buttonStyle(SecondaryButtonStyle(color: color))
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Double tap to activate")
-    }
-
-    private func withOptionalMotionAnimation(_ updates: () -> Void) {
-        if reduceMotion {
-            updates()
-        } else {
-            withAnimation(AnimationTimings.fast, updates)
-        }
     }
 }
 

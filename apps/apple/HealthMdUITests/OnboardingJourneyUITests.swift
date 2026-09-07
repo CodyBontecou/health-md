@@ -194,6 +194,10 @@ final class OnboardingJourneyUITests: XCTestCase {
         XCTAssertTrue(use.isHittable)
         XCTAssertTrue(share.exists)
         XCTAssertTrue(share.isHittable)
+        XCTAssertEqual(use.elementType, .button)
+        XCTAssertEqual(share.elementType, .button)
+        XCTAssertGreaterThanOrEqual(use.frame.height, 40)
+        XCTAssertGreaterThanOrEqual(share.frame.height, 40)
         return (use, share)
     }
 
