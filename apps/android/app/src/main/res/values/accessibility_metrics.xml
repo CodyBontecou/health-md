@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">Expand %1$s</string>
+    <string name="a11y_metrics_collapse_category">Collapse %1$s</string>
+    <string name="a11y_metrics_expanded">Expanded</string>
+    <string name="a11y_metrics_collapsed">Collapsed</string>
+    <string name="a11y_metrics_category_selection">All metrics in %1$s</string>
+</resources>

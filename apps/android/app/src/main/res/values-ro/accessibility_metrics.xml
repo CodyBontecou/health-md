@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">Extinde %1$s</string>
+    <string name="a11y_metrics_collapse_category">Restrânge %1$s</string>
+    <string name="a11y_metrics_expanded">Extins</string>
+    <string name="a11y_metrics_collapsed">Restrâns</string>
+    <string name="a11y_metrics_category_selection">Toate valorile din %1$s</string>
+</resources>
