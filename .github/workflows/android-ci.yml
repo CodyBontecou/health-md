@@ -177,6 +177,10 @@ jobs:
       - name: Prepare source-built Rust core
         run: ./gradlew :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
+      - name: Test local accessibility runner safety
+        working-directory: apps/android
+        run: scripts/test-accessibility-ui-runner.sh
+
       - name: Run app variant, wearable contract, Wear, and protocol tests
         shell: bash
         run: |

@@ -43,6 +43,18 @@ The shared outcome is that users can read and edit a schedule at their chosen te
 
 Apple inspection: `apps/apple/HealthMd/iOS/Views/ScheduleSettingsView.swift` uses whole-menu time controls and native steppers, not separately tappable tiny arrows; `apps/apple/HealthMd/iOS/ContentView.swift` puts the configuration-protection explanation outside its native labeled toggle. This pass changes Android native presentation, not schedule meaning, settings defaults, or any producer/consumer wire contract. Apple large-text geometry has not been certified by these Android tests.
 
+### Selector, editor and secondary-control implementation
+
+The remaining targeted Android layouts are implemented locally. **The expanded physical-device matrix and new screenshots are still pending:** the Pixel 7 was disconnected when verification was attempted. This is not an app-wide accessibility certification.
+
+- Metric selection scrolls its title, search, bulk actions and individual rows beneath compact Back/Search navigation. Category expansion and tri-state selection are separate actions; each metric has one labeled checkbox target. Crowded names get full width, with units/indicators below. Search matching, category scope, counts and caller-owned selection remain unchanged.
+- Profile names/summaries have full width and independent edit, delete and enabled controls. Native editor/delete dialogs retain live protection guards. Fields and menus reflow; roomy dialogs keep fixed chrome, while short/IME windows and oversized titles scroll the entire composition so Save/Cancel remain reachable. Defaults, parsing, hour/minute/lookback bounds and the profile-specific positive-Int cadence range are preserved.
+- Format choices/options use one labeled radio/switch action instead of duplicate row/indicator callbacks. Unit descriptions and frontmatter navigation get more reading width. The custom-template editor allocates visible lines from the available height rather than demanding eight lines; all text, examples, help, reset and the existing bounded preview remain available. Customization transformations, including the Android-native-fields/profile implication, are unchanged.
+- Frontmatter inputs use wrapping external labels, reflowing key/value fields, contextual Add/Delete actions and single labeled switches. Long values also have a wrapping reading surface, including disabled fields. Normalization, trimming, sorting, duplicate handling, raw edits and key-style behavior are unchanged. Back joins the scroll surface rather than reserving scarce keyboard height.
+- Date presets grow/stack with explicit selected semantics; custom-date labels sit above full-width values. Schedule's Clear History is a readable 48 dp button that reflows with its heading and still requests the existing protected confirmation. Date mappings, formatting and deletion policy are unchanged.
+
+Apple evidence: `MetricSelectionView.swift` separates scrolling content/native navigation and labels metric actions; `ProfileScheduleSection.swift` has labeled toggles and a native scrolling editor; `FormatCustomizationView.swift` contains native format/frontmatter selections, toggles and editors; `ExportTabView.swift` exposes selected preset state and adaptive actions; `ScheduleSettingsView.swift` has a labeled guarded history action. Android retains its existing search behavior, numeric limits, reset scope, confirmation flow and guards rather than copying different Apple behavior. Apple geometry and VoiceOver remain independently unverified. No exporter, domain/data logic, capability, metric/unit, schema/protocol, shared-core, CLI, website or external-consumer contract changed.
+
 ### Regression coverage
 
 `LargeDisplayAccessibilityTest` uses real Compose measurements and pointer taps on synthetic screens, without granting health permissions, selecting real folders, making purchases, or changing device-wide settings. It traverses onboarding, checks both incomplete and connected setup actions without scrolling, verifies the reading width and unchanged font size/scale, exercises export and paywall actions, and checks that scroll content clears the measured navigation bar. Control bounds, label line widths/heights, and absence of ellipsized labels are checked.
@@ -51,7 +63,26 @@ Schedule coverage additionally checks 12/24-hour adjustments, localized five-dig
 
 The matrix covers 411×720 dp at 100%, 320×480 dp at 130% and 200%, 320×640 dp at 100% (display scaling alone) and 200%, 568×280 and 640×280 dp landscape at 200%, plus German and Arabic/RTL at 200% in dark mode and Japanese at 200% for leading day-period placement. The constrained dp viewports model enlarged display settings independently of text scaling. These tests are included in the existing Android instrumentation CI job. Unit tests cover layout breakpoints and AA contrast for readable secondary copy in both themes.
 
-Local validation on 2026-09-07: Pixel 7 (Android 17), 82/82 instrumentation checks passed (80 matrix checks plus 2 protection regressions); Play debug unit suite, 1,314 passed and 1 skipped; `:app:lintPlayDebug` passed.
+Earlier validation on 2026-09-07, **before the selector/editor integration**: Pixel 7 (Android 17), 82/82 instrumentation checks passed (80 matrix checks plus 2 protection regressions); Play debug unit suite, 1,314 passed and 1 skipped; lint passed. Those device results are not a pass for the newer layouts.
+
+The shared `AccessibilityTestHarness` supports five additional production-composable suites. The compiled inventory is:
+
+| Suite | Methods × displays | Declared cases |
+| --- | --- | --- |
+| `LargeDisplayAccessibilityTest` | 8 × 10 | 80 |
+| `MetricSelectionAccessibilityTest` | 6 × 10 | 60 |
+| `ProfileScheduleAccessibilityTest` | 9 × 10 | 90 |
+| `FormatCustomizationAccessibilityTest` | 7 × 10 | 70 |
+| `FrontmatterCustomizationAccessibilityTest` | 6 × 10 | 60 |
+| `SecondaryControlsAccessibilityTest` | 4 × 10 | 40 |
+| `ConfigurationProtectionTest` | Non-parameterized | 2 |
+| **Total** | | **402** |
+
+New checks cover full labels/scale, bounded targets, selection roles/state, exact callbacks, caller rejection, search, editing, menus, save/cancel and live protection guards. **These are declared/compiled cases, not 402 executed passes.** Native dialogs use their own owner bounds. The format IME test combines real focus/keyboard visibility with an explicitly constrained remaining-height host; it does not reproduce every physical keyboard/window inset.
+
+Current integration validation on 2026-09-07: Play debug app and instrumentation APKs assembled; 188 unit suites, **1,314 passed / 1 skipped**, no failures/errors; `:app:lintPlayDebug` passed. The safe runner's **9 host-only mocked cases** passed. Its real Pixel invocation stopped at device preflight, before installation/instrumentation; no new screenshots were generated. Compilation fixes retained the assertions; the obsolete generic Add resource was removed after contextual actions replaced its last uses, without lint suppression or fixture weakening.
+
+Local receipts: `/tmp/health-md-fleet-loop/cycle-1/integrated-build-unit-lint.log`, `runner-safety.log` and `device-validation.log`. These temporary files are operator receipts, not permanent CI artifacts.
 
 Run on the local Pixel 7, optionally saving screenshots:
 
@@ -61,17 +92,18 @@ ANDROID_SERIAL=2C061FDH200CJN scripts/run-accessibility-ui-tests.sh /tmp/healthm
 ./gradlew :app:testPlayDebugUnitTest :app:lintPlayDebug
 ```
 
-The local runner installs the debug app/test APKs and invokes instrumentation directly. Unlike connected-test cleanup, it does not uninstall the app or erase its data afterward. Screenshots are opt-in, capture production composables with synthetic state, and contain no health measurements. Native popup contents retain the anchor's unchanged density/direction, and tests verify their font scale too. Popup windows themselves use the physical device's window bounds rather than the embedded synthetic viewport; this is not a certification of every OEM/window configuration.
+The local runner verifies the selected device before building, assembles app/test APKs, and installs both explicitly with `adb -s <serial> install -r`. It invokes all seven classes and requires the complete 402-case success summary, rejecting failures, empty filters and partial/stale selections. Unlike connected-test cleanup, it does not uninstall the app or erase its data afterward. `scripts/test-accessibility-ui-runner.sh` tests targeting, failure/selection guards and screenshot transport with disposable fake Gradle/ADB binaries, without real device calls. Screenshots are opt-in, capture production composables with synthetic state, and contain no health measurements. Native popup contents retain the anchor's unchanged density/direction, and tests verify their font scale too. Popup windows themselves use the physical device's window bounds rather than the embedded synthetic viewport; this is not a certification of every OEM/window configuration.
 
 ### Remaining usability opportunities
 
-- **Remaining editors:** audit per-profile schedule dialogs, dense metric rows, date presets, and keyboard-open format/frontmatter editors. The legacy schedule card and Settings entry/lock cards above are covered; other screens are not implicitly certified.
-- **Reading pace and discovery:** validate auto-advance timing, scroll discovery, and the text-only navigation arrangement with users who rely on magnification or TalkBack. The device matrix checks geometry and interaction, not subjective comfort.
+- **Device gate:** reconnect the Pixel, run the complete compiled 402-case matrix, investigate failures, and inspect new synthetic 200% captures in both themes before accepting the new layouts.
+- **Screen reader and keyboard:** follow the [manual QA checklist](accessibility-manual-qa.md) for actual TalkBack traversal, focus, native IME resizing and magnification. Automated semantics/geometry is not a substitute.
+- **Reading pace and discovery:** validate auto-advance timing, scroll discovery and text-only navigation with users. No subjective comfort or reading-pace result is claimed.
 
 ## Known limitations
 
 - Full automated TalkBack traversal still requires device/emulator validation because Compose unit tests cannot fully emulate Android's screen reader.
-- Dense metric rows and other dialogs still require separate checks with OEM-specific font/display combinations; the layout regression matrix above is not a complete app-wide accessibility certification.
+- New selector/editor geometry remains device-unverified. Native calendar picker windows, the export-profile editor's containing metric overlay, other app surfaces and OEM-specific font/display combinations need independently scoped checks; the matrix is not complete app-wide certification.
 - Health Connect's system permission screens are outside the app and inherit Android system accessibility behavior.
 
 ## Home-screen widgets
