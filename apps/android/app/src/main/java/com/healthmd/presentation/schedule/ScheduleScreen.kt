@@ -12,7 +12,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -570,31 +569,11 @@ fun ScheduleScreen(
 
             Spacer(modifier = Modifier.height(Spacing.sm))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.section_export_history),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AppColors.textSecondary,
-                    fontWeight = FontWeight.Medium,
-                )
-                ConfigurationProtectedRegion {
-                    Text(
-                        text = stringResource(R.string.action_clear_history),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = AppColors.textMuted,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(Radii.card))
-                            .clickable {
-                                attemptConfigurationChange { historyViewModel.requestClearHistory() }
-                            }
-                            .padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
-                    )
-                }
-            }
+            ScheduleHistoryHeading(
+                onRequestClearHistory = {
+                    attemptConfigurationChange { historyViewModel.requestClearHistory() }
+                },
+            )
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))

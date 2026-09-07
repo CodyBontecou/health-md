@@ -28,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.outlined.Launch
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
@@ -1212,184 +1211,6 @@ internal fun FloatingExportActionBar(
     }
 }
 
-private enum class DateRangeOption {
-    Today,
-    Yesterday,
-    AllTime,
-    Custom;
-
-    companion object {
-        fun fromDates(
-            startDate: LocalDate,
-            endDate: LocalDate,
-            allTimeSelected: Boolean,
-        ): DateRangeOption {
-            val today = LocalDate.now()
-            val yesterday = today.minusDays(1)
-            return when {
-                allTimeSelected -> AllTime
-                startDate == today && endDate == today -> Today
-                startDate == yesterday && endDate == yesterday -> Yesterday
-                else -> Custom
-            }
-        }
-    }
-}
-
-@Composable
-private fun DateRangeSelectionSection(
-    selectedOption: DateRangeOption,
-    startDate: LocalDate,
-    endDate: LocalDate,
-    onOptionSelected: (DateRangeOption) -> Unit,
-    onStartDateClick: () -> Unit,
-    onEndDateClick: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        SectionLabel(stringResource(R.string.section_date_range))
-        GeistCard(padding = Spacing.md) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                DateRangeOptionButton(
-                    text = stringResource(R.string.date_option_today),
-                    selected = selectedOption == DateRangeOption.Today,
-                    onClick = { onOptionSelected(DateRangeOption.Today) },
-                    modifier = Modifier.weight(1f),
-                )
-                DateRangeOptionButton(
-                    text = stringResource(R.string.date_option_yesterday),
-                    selected = selectedOption == DateRangeOption.Yesterday,
-                    onClick = { onOptionSelected(DateRangeOption.Yesterday) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Spacer(modifier = Modifier.height(Spacing.xs))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            ) {
-                DateRangeOptionButton(
-                    text = stringResource(R.string.date_option_all_time),
-                    selected = selectedOption == DateRangeOption.AllTime,
-                    onClick = { onOptionSelected(DateRangeOption.AllTime) },
-                    modifier = Modifier.weight(1f),
-                )
-                DateRangeOptionButton(
-                    text = stringResource(R.string.date_option_custom),
-                    selected = selectedOption == DateRangeOption.Custom,
-                    onClick = { onOptionSelected(DateRangeOption.Custom) },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            AnimatedVisibility(
-                visible = selectedOption == DateRangeOption.Custom,
-                enter = fadeIn(animationSpec = tween(160)) + expandVertically(animationSpec = tween(180)),
-                exit = fadeOut(animationSpec = tween(120)) + shrinkVertically(animationSpec = tween(160)),
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Spacer(modifier = Modifier.height(Spacing.md))
-                    HorizontalDivider(color = AppColors.borderDefault)
-                    DateRangeDateRow(
-                        label = stringResource(R.string.date_start_label),
-                        date = startDate,
-                        onClick = onStartDateClick,
-                    )
-                    HorizontalDivider(color = AppColors.borderDefault)
-                    DateRangeDateRow(
-                        label = stringResource(R.string.date_end_label),
-                        date = endDate,
-                        onClick = onEndDateClick,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DateRangeOptionButton(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(Radii.badge)
-    Row(
-        modifier = modifier
-            .heightIn(min = 48.dp)
-            .clip(shape)
-            .background(if (selected) AppColors.accentSubtle else Color.Transparent)
-            .then(
-                if (selected) {
-                    Modifier.border(1.dp, AppColors.accentBorder, shape)
-                } else {
-                    Modifier
-                }
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (selected) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(22.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.xs))
-        }
-        Text(
-            text = text,
-            color = if (selected) AppColors.accent else AppColors.textSecondary,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun DateRangeDateRow(
-    label: String,
-    date: LocalDate,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Radii.card))
-            .clickable(onClick = onClick)
-            .padding(vertical = Spacing.md),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleLarge,
-            color = AppColors.textPrimary,
-        )
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(Radii.badge))
-                .background(AppColors.bgSecondary)
-                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = formatCompactDate(date),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-            )
-        }
-    }
-}
-
 @Composable
 private fun ExportResultBadge(
     result: ExportResult,
@@ -2274,12 +2095,6 @@ private fun formatPreviewDateRange(dates: List<LocalDate>): String = when {
         formatPreviewDate(dates.last()),
     )
 }
-
-@Composable
-private fun formatCompactDate(date: LocalDate): String = date.format(
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
-        .withLocale(LocalConfiguration.current.locales[0]),
-)
 
 private fun LocalDate.toDatePickerMillis(): Long =
     atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
