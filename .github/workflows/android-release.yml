@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'android/v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing android/v* release tag to rebuild and publish (recovery after workflow-only fixes; runs the fixed workflow from main against the exact immutable tag)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -13,14 +20,76 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  resolve:
+    name: Resolve exact release identity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.identity.outputs.tag }}
+      release_sha: ${{ steps.identity.outputs.release_sha }}
+    steps:
+      - name: Check out source for identity resolution
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve and validate the immutable release tag
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.release_tag || '' }}" ]]; then
+            if [[ "${{ github.event_name }}" != "workflow_dispatch" ]]; then
+              echo "::error::release_tag input is valid only for manual dispatch recovery"
+              exit 1
+            fi
+            tag="${{ inputs.release_tag }}"
+          else
+            if [[ "${{ github.ref_type }}" != "tag" ]]; then
+              echo "::error::push trigger must be an android/v* tag"
+              exit 1
+            fi
+            tag="${{ github.ref_name }}"
+          fi
+          if [[ "$tag" != android/v* ]]; then
+            echo "::error::release tag must start with 'android/v'; got '$tag'"
+            exit 1
+          fi
+          # Re-fetch the published tag object so the guard below verifies the real
+          # annotated tag rather than the commit-shaped ref a checkout creates.
+          git fetch --force --no-tags origin "+refs/tags/${tag}:refs/tags/${tag}"
+          if [[ "$(git cat-file -t "$tag")" != "tag" ]]; then
+            echo "::error::$tag is not an annotated tag"
+            exit 1
+          fi
+          sha="$(git rev-parse "${tag}^{commit}")"
+          git fetch --force origin "+refs/heads/main:refs/remotes/origin/main"
+          git rev-parse --verify refs/remotes/origin/main >/dev/null
+          if ! git merge-base --is-ancestor "$sha" refs/remotes/origin/main; then
+            echo "::error::$tag commit is not an ancestor of main"
+            exit 1
+          fi
+          {
+            echo "tag=$tag"
+            echo "release_sha=$sha"
+          } >> "$GITHUB_OUTPUT"
+
   qualify:
     name: Qualify exact Android release SHA
+    needs: resolve
+    # android-ci's change-detection job needs pull-requests: read to list PR files.
+    # A reusable call may not escalate beyond what the caller's job grants, so the
+    # permission must be granted here (a bare contents: read at the caller level
+    # leaves the nested job at pull-requests: none and fails the whole call).
+    permissions:
+      contents: read
+      pull-requests: read
     uses: ./.github/workflows/android-ci.yml
     with:
-      release_sha: ${{ github.sha }}
+      release_sha: ${{ needs.resolve.outputs.release_sha }}
 
   publish-internal:
-    needs: qualify
+    needs: [resolve, qualify]
     name: Publish Android internal release
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -32,6 +101,7 @@ jobs:
       - name: Checkout release commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ needs.resolve.outputs.release_sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -106,6 +176,9 @@ jobs:
       - name: Validate tag and committed version
         id: version
         shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
         run: |
           set -euo pipefail
           # actions/checkout fetches the tagged commit into refs/tags/<name>
@@ -113,17 +186,17 @@ jobs:
           # commit-shaped ref in the runner checkout. Re-fetch the published
           # tag object from origin so the guards below verify the real tag.
           git fetch --force --no-tags origin \
-            "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-          version="${GITHUB_REF_NAME#android/v}"
+            "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          version="${RELEASE_TAG#android/v}"
           version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
           version_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)"
           test -n "$version"
-          test "$GITHUB_REF_TYPE" = tag
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag
-          test "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git cat-file -t "$RELEASE_TAG")" = tag
+          test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          git fetch --force origin "+refs/heads/main:refs/remotes/origin/main"
           git rev-parse --verify refs/remotes/origin/main >/dev/null
-          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+          git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
           test "$version_name" = "$version"
           test -n "$version_code"
           test "$version_code" -lt 1000000
@@ -212,6 +285,8 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
           WEAR_VERSION_CODE: ${{ steps.version.outputs.wear_version_code }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
         run: |
           set -euo pipefail
           phone_aab=app/build/outputs/bundle/playRelease/app-play-release.aab
@@ -219,8 +294,8 @@ jobs:
           test -f "$phone_aab" -a -f "$wear_aab"
           jq -n \
             --arg repository "$GITHUB_REPOSITORY" --arg workflow ".github/workflows/android-release.yml" \
-            --arg event "$GITHUB_EVENT_NAME" --arg tag "$GITHUB_REF_NAME" --arg sha "$GITHUB_SHA" \
-            --arg peeled "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" --arg version "$VERSION" \
+            --arg event "$GITHUB_EVENT_NAME" --arg tag "$RELEASE_TAG" --arg sha "$RELEASE_SHA" \
+            --arg peeled "$(git rev-parse "$RELEASE_TAG^{commit}")" --arg version "$VERSION" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
             --argjson phoneCode "$VERSION_CODE" --argjson wearCode "$WEAR_VERSION_CODE" \
             --arg phoneAab "$(sha256sum "$phone_aab" | awk '{print $1}')" \
