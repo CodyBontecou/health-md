@@ -85,7 +85,7 @@ class ReleaseReadinessTest {
         assertTrue(releaseWorkflow.contains("./scripts/upload-google-play-paired-release.sh"))
         assertTrue(releaseWorkflow.contains("wear:internal"))
         assertTrue(releaseWorkflow.contains("RELEASE_TAG^{commit}"))
-        assertTrue(releaseWorkflow.contains("release_sha: ${{ needs.resolve.outputs.release_sha }}"))
+        assertTrue(releaseWorkflow.contains("release_sha: \${{ needs.resolve.outputs.release_sha }}"))
         assertTrue(releaseWorkflow.contains("release_tag"))
         assertTrue(releaseWorkflow.contains("pull-requests: read"))
         assertTrue(releaseWorkflow.contains("qa-upload-receipt.json"))

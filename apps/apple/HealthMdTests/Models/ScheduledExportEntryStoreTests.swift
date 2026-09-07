@@ -264,6 +264,107 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
         )
     }
 
+    func testDailyOccurrenceReexportsFullLookbackAfterYesterdaySucceeded() throws {
+        let store = makeStore()
+        let entry = makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.lookbackDays = 14
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+        }
+        store.upsert(entry)
+
+        // Before today's boundary, yesterday's successful occurrence stays satisfied.
+        XCTAssertTrue(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 10, hour: 7), calendar: calendar
+        ).isEmpty)
+        let due = try XCTUnwrap(store.dueOccurrences(now: fixedNow, calendar: calendar).first)
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.first, makeDate(year: 2026, month: 7, day: 27))
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 8, day: 9))
+
+        store.recordSuccess(profileID: entry.profileID, kind: due.kind, occurrenceDate: due.fireDate)
+        XCTAssertTrue(store.dueOccurrences(now: fixedNow, calendar: calendar).isEmpty)
+        let tomorrow = try XCTUnwrap(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 11, hour: 8), calendar: calendar
+        ).first)
+        XCTAssertEqual(tomorrow.exportDates.count, 14)
+        XCTAssertEqual(tomorrow.exportDates.first, makeDate(year: 2026, month: 7, day: 28))
+        XCTAssertEqual(tomorrow.exportDates.last, makeDate(year: 2026, month: 8, day: 10))
+    }
+
+    func testDelayedWeeklyOccurrenceUsesItsFireDayAndDoesNotRepeatBetweenBoundaries() throws {
+        let store = makeStore()
+        let entry = makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.frequency = .weekly
+            $0.weekday = 1
+            $0.lookbackDays = 14
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 3, hour: 8)
+        }
+        store.upsert(entry)
+        let wednesday = makeDate(year: 2026, month: 8, day: 12, hour: 12)
+        let due = try XCTUnwrap(store.dueOccurrences(now: wednesday, calendar: calendar).first)
+        XCTAssertEqual(due.fireDate, makeDate(year: 2026, month: 8, day: 10, hour: 8))
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.first, makeDate(year: 2026, month: 7, day: 27))
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 8, day: 9))
+        store.recordSuccess(profileID: entry.profileID, kind: due.kind, occurrenceDate: due.fireDate)
+        XCTAssertTrue(store.dueOccurrences(now: wednesday, calendar: calendar).isEmpty)
+    }
+
+    func testCustomCadenceDoesNotReexportLookbackOnAnOffDay() throws {
+        let store = makeStore()
+        store.upsert(makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.frequency = .custom
+            $0.customInterval = 2
+            $0.customUnit = .day
+            $0.customAnchorDate = makeDate(year: 2026, month: 8, day: 10)
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 10, hour: 8)
+            $0.lookbackDays = 14
+        })
+        XCTAssertTrue(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 11, hour: 12), calendar: calendar
+        ).isEmpty)
+        let due = try XCTUnwrap(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 12, hour: 8), calendar: calendar
+        ).first)
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 8, day: 11))
+    }
+
+    func testLookbackRetainsCalendarDaysAcrossDaylightSavingTime() throws {
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let store = makeStore()
+        store.upsert(makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 2, day: 1)
+            $0.lookbackDays = 14
+            $0.lastExportDate = makeDate(year: 2026, month: 3, day: 9, hour: 8)
+        })
+        let due = try XCTUnwrap(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 3, day: 10, hour: 8), calendar: calendar
+        ).first)
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.first, makeDate(year: 2026, month: 2, day: 24))
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 3, day: 9))
+        XCTAssertTrue(due.exportDates.allSatisfy { calendar.startOfDay(for: $0) == $0 })
+    }
+
+    func testCompletingOlderRetryDoesNotRewindOccurrenceMarkers() {
+        let store = makeStore()
+        let entry = makeEntry()
+        store.upsert(entry)
+        for kind in ScheduledExportKind.allCases {
+            store.recordSuccess(profileID: entry.profileID, kind: kind, occurrenceDate: fixedNow)
+            store.recordSuccess(
+                profileID: entry.profileID, kind: kind,
+                occurrenceDate: makeDate(year: 2026, month: 8, day: 9, hour: 8)
+            )
+        }
+        XCTAssertEqual(store.entry(profileID: entry.profileID)?.lastExportDate, fixedNow)
+        XCTAssertEqual(store.entry(profileID: entry.profileID)?.lastTodayRefreshDate, fixedNow)
+    }
+
     func testDueOccurrencesIncludePerEntryTodayRefresh() {
         let store = makeStore()
         let profileID = UUID()

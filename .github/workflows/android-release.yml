@@ -197,6 +197,7 @@ jobs:
           git fetch --force origin "+refs/heads/main:refs/remotes/origin/main"
           git rev-parse --verify refs/remotes/origin/main >/dev/null
           git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
+          echo "release_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
           test "$version_name" = "$version"
           test -n "$version_code"
           test "$version_code" -lt 1000000
@@ -312,7 +313,7 @@ jobs:
       - name: Retain immutable QA upload intent receipt
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          name: healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/qa-upload-receipt.json
           if-no-files-found: error
           retention-days: 90

@@ -5,9 +5,11 @@ import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import java.time.temporal.TemporalAdjusters
 
 /** Cadence unit for a scheduled profile entry, mirroring the iOS entry model. */
 @Serializable
@@ -72,7 +74,7 @@ data class ScheduledProfileEntry(
     /** Hours between same-day refresh runs; Apple exposes the same {3, 6, 12} set. */
     val todayRefreshIntervalHours: Int = DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
     val zoneId: String = "UTC",
-    /** Epoch millis of the most recent successful completed-day occurrence, for catch-up math. */
+    /** Latest satisfied completed-day boundary; deduplicates occurrences, not overlapping dates. */
     val lastSuccessEpochMillis: Long? = null,
     /** Epoch millis of the most recent successful Today Refresh occurrence. */
     val lastRefreshSuccessEpochMillis: Long? = null,
@@ -123,9 +125,9 @@ data class ScheduledProfileEntry(
 }
 
 /**
- * Pure per-entry occurrence math mirroring the shipped single-schedule evaluator's two-layer
- * semantics: a boundary passed **and** catch-up work remaining. Unit-testable without Android
- * instrumentation; the runtime layers (AlarmManager arming, WorkManager execution) consume this.
+ * Each unsatisfied cadence boundary exports its full trailing window, including dates exported
+ * by earlier occurrences. Frozen residuals take priority and Today Refresh stays independent.
+ * Pure date math shared by AlarmManager arming and WorkManager execution.
  */
 object ScheduledProfileOccurrenceMath {
 
@@ -135,17 +137,7 @@ object ScheduledProfileOccurrenceMath {
      * one alarm covers whichever occurrence is earliest.
      */
     fun nextOccurrence(entry: ScheduledProfileEntry, nowMillis: Long): Instant? {
-        val zone = entry.zone
-        val now = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDateTime()
-        val preferred = LocalTime.of(entry.hour, entry.minute)
-        val cadenceNext = when (entry.cadenceUnit) {
-            ScheduledProfileCadenceUnit.DAY ->
-                nextDaily(now = now, preferred = preferred, everyDays = entry.cadenceValue.toLong())
-            ScheduledProfileCadenceUnit.WEEK ->
-                nextWeekly(now = now, preferred = preferred, weekdayIso = entry.weekdayIso, everyWeeks = entry.cadenceValue)
-            ScheduledProfileCadenceUnit.MONTH ->
-                nextMonthly(now = now, preferred = preferred, anchorEpochDay = entry.anchorEpochDay, everyMonths = entry.cadenceValue)
-        }?.atZone(zone)?.toInstant()
+        val cadenceNext = cadenceBoundary(entry, nowMillis, next = true)
         val refreshNext = nextRefreshOccurrence(entry, nowMillis)
         return listOfNotNull(cadenceNext, refreshNext).minOrNull()
     }
@@ -199,20 +191,18 @@ object ScheduledProfileOccurrenceMath {
     }
 
     /**
-     * The most recent boundary at or before [nowMillis] when actionable work remains:
-     * for trailing-window entries, the dates not yet covered by [ScheduledProfileEntry.lastSuccessEpochMillis].
-     * Returns null when no boundary passed or everything is already exported.
+     * The latest unsatisfied boundary at or before [nowMillis], or a frozen residual / today slot.
+     * A new completed-day occurrence always re-exports the full configured lookback ending the
+     * day before its scheduled boundary, even if execution starts after midnight.
      */
     fun dueOccurrence(
         entry: ScheduledProfileEntry,
         nowMillis: Long,
     ): ScheduledProfileEntry.DueOccurrence? {
         if (!entry.isEnabled) return null
-        val boundary = previousBoundary(entry, nowMillis) ?: return null
+        val boundary = cadenceBoundary(entry, nowMillis, next = false)
         val zone = entry.zone
 
-        // Catch-up: dates in the trailing window ending yesterday that were not yet exported.
-        // A successful occurrence at time T covered the window ending the day before T.
         val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         val yesterday = today.minusDays(1)
 
@@ -239,25 +229,19 @@ object ScheduledProfileOccurrenceMath {
             }
             ?.let { return it }
 
-        val oldest = yesterday.minusDays((entry.lookbackDays - 1).toLong())
-
-        val coveredThrough: LocalDate? = entry.lastSuccessEpochMillis?.let { successMillis ->
-            Instant.ofEpochMilli(successMillis).atZone(zone).toLocalDate().minusDays(1)
-        }
-
-        val pending = if (coveredThrough == null || coveredThrough.isBefore(oldest.minusDays(1))) {
-            generateSequence(oldest) { it.plusDays(1) }.takeWhile { !it.isAfter(yesterday) }
-                .filter { coveredThrough == null || it.isAfter(coveredThrough) }
-                .toList()
+        val completedDates = if (boundary != null &&
+            (entry.lastSuccessEpochMillis == null || entry.lastSuccessEpochMillis < boundary.toEpochMilli())
+        ) {
+            val fireDay = boundary.atZone(zone).toLocalDate()
+            (entry.lookbackDays downTo 1).map { fireDay.minusDays(it.toLong()) }
         } else {
             emptyList()
         }
 
-        // Today Refresh joins the regular catch-up branch: one run exports the trailing window
-        // plus today's partial file. A refresh-only occurrence (nothing to catch up) carries the
-        // slot itself as its fire date and never advances the completed-day frontier.
+        // A refresh can join a new completed-day occurrence, but must not replay its lookback
+        // after that boundary succeeded. Refresh-only runs never advance the cadence marker.
         val refreshSlotMillis = dueRefreshSlotMillis(entry, nowMillis)
-        if (pending.isEmpty()) {
+        if (completedDates.isEmpty()) {
             val slot = refreshSlotMillis ?: return null
             return ScheduledProfileEntry.DueOccurrence(
                 entry = entry,
@@ -269,107 +253,51 @@ object ScheduledProfileOccurrenceMath {
 
         return ScheduledProfileEntry.DueOccurrence(
             entry = entry,
-            fireAtMillis = boundary.toEpochMilli(),
+            fireAtMillis = checkNotNull(boundary).toEpochMilli(),
             exportDates = if (refreshSlotMillis == null) {
-                pending
+                completedDates
             } else {
-                pending + today
+                completedDates + today
             },
             refreshSlotMillis = refreshSlotMillis,
         )
     }
 
-    /** Previous boundary at or before now for the entry's cadence. */
-    private fun previousBoundary(entry: ScheduledProfileEntry, nowMillis: Long): Instant? {
-        val zone = entry.zone
-        val now = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDateTime()
-        val preferred = LocalTime.of(entry.hour, entry.minute)
-        return when (entry.cadenceUnit) {
-            ScheduledProfileCadenceUnit.DAY ->
-                previousDaily(now = now, preferred = preferred, everyDays = entry.cadenceValue.toLong())
-            ScheduledProfileCadenceUnit.WEEK ->
-                previousWeekly(now = now, preferred = preferred, weekdayIso = entry.weekdayIso, everyWeeks = entry.cadenceValue)
-            ScheduledProfileCadenceUnit.MONTH ->
-                previousMonthly(now = now, preferred = preferred, anchorEpochDay = entry.anchorEpochDay, everyMonths = entry.cadenceValue)
-        }?.atZone(zone)?.toInstant()
-    }
-
-    private fun nextDaily(now: LocalDateTime, preferred: LocalTime, everyDays: Long): LocalDateTime? {
-        var candidate = now.toLocalDate().atTime(preferred)
-        if (!candidate.isAfter(now)) candidate = candidate.plusDays(everyDays)
-        return candidate
-    }
-
-    private fun previousDaily(now: LocalDateTime, preferred: LocalTime, everyDays: Long): LocalDateTime? {
-        var candidate = now.toLocalDate().atTime(preferred)
-        if (candidate.isAfter(now)) candidate = candidate.minusDays(everyDays)
-        return candidate
-    }
-
-    private fun nextWeekly(
-        now: LocalDateTime,
-        preferred: LocalTime,
-        weekdayIso: Int,
-        everyWeeks: Int,
-    ): LocalDateTime? {
-        val target = DayOfWeek.of(weekdayIso)
-        var date = now.toLocalDate()
-        var daysForward = (target.value - date.dayOfWeek.value + 7) % 7
-        var candidate = date.plusDays(daysForward.toLong()).atTime(preferred)
-        if (!candidate.isAfter(now)) candidate = candidate.plusWeeks(everyWeeks.toLong())
-        return candidate
-    }
-
-    private fun previousWeekly(
-        now: LocalDateTime,
-        preferred: LocalTime,
-        weekdayIso: Int,
-        everyWeeks: Int,
-    ): LocalDateTime? {
-        val target = DayOfWeek.of(weekdayIso)
-        var candidate = now.toLocalDate().atTime(preferred)
-        var daysBack = (now.toLocalDate().dayOfWeek.value - target.value + 7) % 7
-        candidate = candidate.minusDays(daysBack.toLong())
-        if (candidate.isAfter(now)) candidate = candidate.minusDays(7)
-        return candidate
-    }
-
-    private fun nextMonthly(
-        now: LocalDateTime,
-        preferred: LocalTime,
-        anchorEpochDay: Long,
-        everyMonths: Int,
-    ): LocalDateTime? {
-        val anchorDayOfMonth = LocalDate.ofEpochDay(anchorEpochDay).dayOfMonth
-        var candidate = withAnchorDayOfMonth(now.toLocalDate(), anchorDayOfMonth).atTime(preferred)
-        if (!candidate.isAfter(now)) {
-            val nextMonth = candidate.toLocalDate().plusMonths(everyMonths.toLong())
-            candidate = withAnchorDayOfMonth(nextMonth, anchorDayOfMonth).atTime(preferred)
-        }
-        return candidate
-    }
-
-    private fun previousMonthly(
-        now: LocalDateTime,
-        preferred: LocalTime,
-        anchorEpochDay: Long,
-        everyMonths: Int,
-    ): LocalDateTime? {
-        val anchorDayOfMonth = LocalDate.ofEpochDay(anchorEpochDay).dayOfMonth
-        var candidate = withAnchorDayOfMonth(now.toLocalDate(), anchorDayOfMonth).atTime(preferred)
-        if (candidate.isAfter(now)) {
-            val previousMonth = candidate.toLocalDate().minusMonths(everyMonths.toLong())
-            candidate = withAnchorDayOfMonth(previousMonth, anchorDayOfMonth).atTime(preferred)
-        }
-        return candidate
-    }
-
     /**
-     * Calendar-natural monthly anchor day (iOS parity): an anchor like the 31st fires on the
-     * 31st in 31-day months and the last day of shorter months (Jan 31 → Feb 28 → Mar 31).
+     * One anchored calendar calculation for arming and due evaluation. Otherwise every-N
+     * schedules can invent intervening boundaries and replay a full lookback on off-cadence
+     * wake-ups. Monthly addition starts from the original anchor (Jan 31 → Feb 28 → Mar 31).
      */
-    private fun withAnchorDayOfMonth(month: LocalDate, anchorDayOfMonth: Int): LocalDate =
-        month.withDayOfMonth(minOf(anchorDayOfMonth, month.lengthOfMonth()))
+    private fun cadenceBoundary(entry: ScheduledProfileEntry, nowMillis: Long, next: Boolean): Instant? {
+        val now = Instant.ofEpochMilli(nowMillis)
+        val today = now.atZone(entry.zone).toLocalDate()
+        val savedAnchor = LocalDate.ofEpochDay(entry.anchorEpochDay)
+        val anchor = if (entry.cadenceUnit == ScheduledProfileCadenceUnit.WEEK) {
+            savedAnchor.with(TemporalAdjusters.nextOrSame(DayOfWeek.of(entry.weekdayIso)))
+        } else {
+            savedAnchor
+        }
+        val elapsed = when (entry.cadenceUnit) {
+            ScheduledProfileCadenceUnit.DAY -> ChronoUnit.DAYS.between(anchor, today)
+            ScheduledProfileCadenceUnit.WEEK -> Math.floorDiv(ChronoUnit.DAYS.between(anchor, today), 7L)
+            ScheduledProfileCadenceUnit.MONTH -> ChronoUnit.MONTHS.between(YearMonth.from(anchor), YearMonth.from(today))
+        }
+        val stride = entry.cadenceValue.toLong()
+        var index = Math.floorDiv(elapsed, stride).coerceAtLeast(0)
+        fun occurrence(index: Long): Instant {
+            val offset = index * stride
+            val day = when (entry.cadenceUnit) {
+                ScheduledProfileCadenceUnit.DAY -> anchor.plusDays(offset)
+                ScheduledProfileCadenceUnit.WEEK -> anchor.plusWeeks(offset)
+                ScheduledProfileCadenceUnit.MONTH -> anchor.plusMonths(offset)
+            }
+            return day.atTime(entry.hour, entry.minute).atZone(entry.zone).toInstant()
+        }
+        val candidate = occurrence(index)
+        if (next && !candidate.isAfter(now)) index++
+        if (!next && candidate.isAfter(now)) index--
+        return index.takeIf { it >= 0 }?.let(::occurrence)
+    }
 
     private const val HOURS_PER_DAY = 24
 }

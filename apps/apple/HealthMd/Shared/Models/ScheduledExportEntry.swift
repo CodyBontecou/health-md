@@ -239,9 +239,8 @@ final class ScheduledExportEntryStore: ObservableObject {
         return true
     }
 
-    /// Records a successful occurrence so catch-up math skips it, mirroring
-    /// `ExportSchedule.updateLastExport`. Returns false when the entry is
-    /// unknown.
+    /// Records a successful occurrence without rewinding progress when an
+    /// older pending request finishes later. Returns false for unknown entries.
     @discardableResult
     func recordSuccess(
         profileID: UUID,
@@ -251,9 +250,9 @@ final class ScheduledExportEntryStore: ObservableObject {
         update(profileID: profileID) { entry in
             switch kind {
             case .completedDay:
-                entry.lastExportDate = occurrenceDate
+                entry.lastExportDate = max(entry.lastExportDate ?? occurrenceDate, occurrenceDate)
             case .todayRefresh:
-                entry.lastTodayRefreshDate = occurrenceDate
+                entry.lastTodayRefreshDate = max(entry.lastTodayRefreshDate ?? occurrenceDate, occurrenceDate)
             }
         }
     }
@@ -300,10 +299,10 @@ final class ScheduledExportEntryStore: ObservableObject {
     /// `dueOccurrences`, then launches each result concurrently (decision 6)
     /// with per-entry in-flight identity.
     ///
-    /// Mirrors the shipped two-layer semantics: a completed-day occurrence is
-    /// only actionable when the entry also has unexported data days
-    /// (`ScheduleDateMath.catchUpDatesNeeded`), and a Today Refresh occurrence
-    /// is actionable when its slot boundary passed after the last refresh.
+    /// Each new completed-day occurrence re-exports its entire lookback, even
+    /// when those data days were exported by an earlier occurrence. Success
+    /// deduplicates occurrence boundaries, not overlapping data days. Today
+    /// Refresh remains independently due after its last successful slot.
     struct DueEntryOccurrence: Equatable {
         let entryID: UUID
         let profileID: UUID
@@ -314,10 +313,9 @@ final class ScheduledExportEntryStore: ObservableObject {
         let exportDates: [Date]
     }
 
-    /// Evaluates every enabled entry against `now` using the shipped
-    /// occurrence and catch-up rules. Occurrence boundaries that carry no
-    /// work (for example a daily boundary after today's run already covered
-    /// yesterday) are not returned.
+    /// Evaluates enabled entries against `now`, excluding already-satisfied
+    /// occurrence boundaries. Windows are anchored to the scheduled fire day,
+    /// so a delayed wake-up cannot shift a completed-day request after midnight.
     func dueOccurrences(
         now: Date,
         calendar: Calendar = .current
@@ -336,9 +334,12 @@ final class ScheduledExportEntryStore: ObservableObject {
                     let exportDates: [Date]
                     switch occurrence.kind {
                     case .completedDay:
-                        let dates = ScheduleDateMath.catchUpDatesNeeded(
+                        if let lastSuccess = entry.lastExportDate, lastSuccess >= occurrence.fireDate {
+                            return nil
+                        }
+                        let dates = ScheduleDateMath.scheduledExportDates(
                             schedule: projection,
-                            now: now,
+                            fireDate: occurrence.fireDate,
                             calendar: calendar
                         )
                         guard !dates.isEmpty else { return nil }

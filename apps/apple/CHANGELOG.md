@@ -2,6 +2,11 @@
 
 All notable changes to Health.md will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Scheduled export profiles now re-export their full configured lookback on every completed-day occurrence, including API Endpoint targets. A daily 14-day lookback no longer shrinks to only the newest day after a successful run. Today Refresh remains separate; duplicate wake-ups do not repeat successful occurrences, and retries keep only unresolved dates even after schedule edits.
+
 ## [3.4.0] - 2026-09-06
 
 ### Added

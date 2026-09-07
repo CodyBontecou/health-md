@@ -648,6 +648,8 @@ class SchedulingManager: ObservableObject {
                     target: target,
                     settings: request.settingsSnapshot
                         ?? ExportSettingsSnapshot.from(AdvancedExportSettings()),
+                    originalRequestedDates: request.originalRequestedDates,
+                    originalCalendarTimeZoneIdentifier: request.originalCalendarTimeZoneIdentifier,
                     quotaJobID: request.id,
                     notificationOperationID: notificationOperationID
                 )
@@ -2610,6 +2612,8 @@ class SchedulingManager: ObservableObject {
         dates: [Date],
         target: ExportTargetSelection,
         settings: ExportSettingsSnapshot,
+        originalRequestedDates: [Date],
+        originalCalendarTimeZoneIdentifier: String?,
         quotaJobID: UUID?,
         notificationOperationID: UUID?
     ) async -> ExportOrchestrator.ExportResult {
@@ -2621,6 +2625,8 @@ class SchedulingManager: ObservableObject {
             dates: dates,
             target: target,
             settingsSnapshot: settings,
+            originalRequestedDates: originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
             quotaJobID: quotaJobID,
             notificationOperationID: notificationOperationID
         )
@@ -2634,6 +2640,8 @@ class SchedulingManager: ObservableObject {
         dates: [Date],
         target: ExportTargetSelection,
         settings: ExportSettingsSnapshot,
+        originalRequestedDates: [Date],
+        originalCalendarTimeZoneIdentifier: String?,
         quotaJobID: UUID?,
         notificationOperationID: UUID? = nil
     ) async -> ExportOrchestrator.ExportResult {
@@ -2651,6 +2659,8 @@ class SchedulingManager: ObservableObject {
                     dates: dates,
                     target: target,
                     settings: settings,
+                    originalRequestedDates: originalRequestedDates,
+                    originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                     quotaJobID: quotaJobID,
                     notificationOperationID: notificationOperationID
                 )
@@ -2665,6 +2675,8 @@ class SchedulingManager: ObservableObject {
             dates: dates,
             target: target,
             settingsSnapshot: settings,
+            originalRequestedDates: originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
             quotaJobID: quotaJobID,
             notificationOperationID: notificationOperationID
         )
@@ -2704,18 +2716,10 @@ class SchedulingManager: ObservableObject {
             return
         }
 
-        let dates: [Date]
-        switch due.kind {
-        case .completedDay:
-            dates = due.exportDates.isEmpty
-                ? ScheduleDateMath.scheduledExportDates(
-                    schedule: entry.dateMathProjection,
-                    fireDate: due.fireDate
-                )
-                : due.exportDates
-        case .todayRefresh:
-            dates = [Calendar.current.startOfDay(for: now())]
-        }
+        // A queued evaluator result may outlive another trigger's successful
+        // run. Recheck the occurrence after acquiring its in-flight identity.
+        let lastSuccess = due.kind == .completedDay ? entry.lastExportDate : entry.lastTodayRefreshDate
+        guard lastSuccess.map({ $0 < due.fireDate }) ?? true else { return }
 
         let context = ScheduledExportCoordinator.ScheduledProfileRequestContext(
             profileID: profile.id,
@@ -2723,7 +2727,7 @@ class SchedulingManager: ObservableObject {
             target: profile.target,
             settings: profile.settings
         )
-        let pendingRequest: PendingExportRequest?
+        let pendingRequest: PendingExportRequest
         do {
             pendingRequest = try await scheduledExportCoordinator.preparePendingScheduledExport(
                 schedule: entry.dateMathProjection,
@@ -2732,30 +2736,37 @@ class SchedulingManager: ObservableObject {
                 profile: context
             )
         } catch {
+            // Do not fall back to a fresh window if persisted residual work
+            // cannot be read or saved: that could replay already-uploaded days.
             logger.error("Failed to prepare profile scheduled export: \(error.localizedDescription)")
-            pendingRequest = nil
+            return
         }
         cancelPendingExportFallbackNotification(for: pendingRequest)
+        markPendingExportRequestAttempted(pendingRequest)
 
-        let target = context.target
+        // The coordinator creates the full occurrence window once, then reuses
+        // exact unresolved dates on retries, including after lookback edits.
+        let dates = pendingRequest.dates
+        let target = pendingRequest.exportTarget ?? context.target
+        let settings = pendingRequest.settingsSnapshot ?? context.settings
         let result = await runProfileScopedExport(
             profile: profile,
             dates: dates,
             target: target,
-            settings: context.settings,
-            quotaJobID: pendingRequest?.id
+            settings: settings,
+            originalRequestedDates: pendingRequest.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
+            quotaJobID: pendingRequest.id
         )
 
-        if result.didCompleteAllRequestedDates {
+        let completion = await completePendingScheduledExport(pendingRequest, result: result)
+        if completion == .clearedAfterSuccess {
             scheduledEntryStore.recordSuccess(
                 profileID: due.profileID,
                 kind: due.kind,
                 occurrenceDate: due.fireDate
             )
         }
-
-        let completion = await completePendingScheduledExport(pendingRequest, result: result)
-        _ = completion
 
         let rangeStart = dates.first ?? due.fireDate
         let rangeEnd = dates.last ?? due.fireDate
@@ -2776,8 +2787,8 @@ class SchedulingManager: ObservableObject {
                     dateRangeEnd: rangeEnd,
                     targetLabel: scheduledTargetLabel(for: target, profile: profile),
                     exportTarget: target,
-                    appleExportEnginePin: context.settings.appleExportEnginePin,
-                    profileName: profile.name
+                    appleExportEnginePin: settings.appleExportEnginePin,
+                    profileName: pendingRequest.profileName ?? profile.name
                 )
             }
         } else if result.totalCount > 0, !isExportLimitResult(result) {
@@ -2788,8 +2799,8 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: rangeEnd,
                 targetLabel: scheduledTargetLabel(for: target, profile: profile),
                 exportTarget: target,
-                appleExportEnginePin: context.settings.appleExportEnginePin,
-                profileName: profile.name
+                appleExportEnginePin: settings.appleExportEnginePin,
+                profileName: pendingRequest.profileName ?? profile.name
             )
         }
     }

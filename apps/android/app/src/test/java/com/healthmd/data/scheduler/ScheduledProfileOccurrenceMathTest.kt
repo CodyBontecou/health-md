@@ -52,7 +52,7 @@ class ScheduledProfileOccurrenceMathTest {
     )
 
     @Test
-    fun `daily boundary with pending yesterday is due and exports exactly the uncovered dates`() {
+    fun `first daily boundary exports its configured completed-day window`() {
         // Monday 2026-08-10 12:00; boundary Monday 08:00 passed, no prior success.
         val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(12, 0))
         val due = ScheduledProfileOccurrenceMath.dueOccurrence(entry(), now)
@@ -60,6 +60,106 @@ class ScheduledProfileOccurrenceMathTest {
         assertNotNull(due)
         assertEquals(listOf(LocalDate.of(2026, 8, 9)), due!!.exportDates)
         assertEquals(millisOf(LocalDate.of(2026, 8, 10)), due.fireAtMillis)
+    }
+
+    @Test
+    fun `daily occurrence reexports all fourteen days after yesterday succeeded`() {
+        val today = LocalDate.of(2026, 8, 10)
+        val configured = entry(lookbackDays = 14, lastSuccessEpochMillis = millisOf(today.minusDays(1)))
+        assertNull(ScheduledProfileOccurrenceMath.dueOccurrence(configured, millisOf(today, LocalTime.of(7, 0))))
+
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(configured, millisOf(today))
+        assertNotNull(due)
+        assertEquals((14L downTo 1L).map(today::minusDays), due!!.exportDates)
+        val succeeded = configured.copy(lastSuccessEpochMillis = due.fireAtMillis)
+        assertNull(ScheduledProfileOccurrenceMath.dueOccurrence(succeeded, millisOf(today, LocalTime.NOON)))
+        assertEquals(
+            (14L downTo 1L).map(today.plusDays(1)::minusDays),
+            ScheduledProfileOccurrenceMath.dueOccurrence(succeeded, millisOf(today.plusDays(1)))?.exportDates,
+        )
+    }
+
+    @Test
+    fun `today refresh does not replace the rolling lookback after a previous success`() {
+        val today = LocalDate.of(2026, 8, 10)
+        val configured = entry(
+            lookbackDays = 14,
+            lastSuccessEpochMillis = millisOf(today.minusDays(1)),
+            todayRefreshEnabled = true,
+        )
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(configured, millisOf(today))
+        assertEquals((14L downTo 0L).map(today::minusDays), due?.exportDates)
+        assertEquals(millisOf(today), due?.refreshSlotMillis)
+
+        val succeeded = configured.copy(
+            lastSuccessEpochMillis = millisOf(today),
+            lastRefreshSuccessEpochMillis = millisOf(today),
+        )
+        val refresh = ScheduledProfileOccurrenceMath.dueOccurrence(succeeded, millisOf(today, LocalTime.of(11, 0)))
+        assertEquals(listOf(today), refresh?.exportDates)
+    }
+
+    @Test
+    fun `delayed weekly occurrence keeps the full window ending before its fire day`() {
+        val monday = LocalDate.of(2026, 8, 10)
+        val configured = entry(
+            cadenceUnit = ScheduledProfileCadenceUnit.WEEK,
+            lookbackDays = 14,
+            lastSuccessEpochMillis = millisOf(monday.minusWeeks(1)),
+        )
+        val now = millisOf(monday.plusDays(2))
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(configured, now)
+        assertNotNull(due)
+        assertEquals(millisOf(monday), due!!.fireAtMillis)
+        assertEquals((14L downTo 1L).map(monday::minusDays), due.exportDates)
+        assertNull(ScheduledProfileOccurrenceMath.dueOccurrence(configured.copy(lastSuccessEpochMillis = due.fireAtMillis), now))
+    }
+
+    @Test
+    fun `multi-week and multi-month cadences do not resend lookback between boundaries`() {
+        val monday = LocalDate.of(2026, 8, 10)
+        val biweekly = entry(
+            cadenceUnit = ScheduledProfileCadenceUnit.WEEK,
+            cadenceValue = 2,
+            anchorEpochDay = monday.toEpochDay(),
+            lookbackDays = 14,
+            lastSuccessEpochMillis = millisOf(monday),
+        )
+        assertNull(ScheduledProfileOccurrenceMath.dueOccurrence(biweekly, millisOf(monday.plusWeeks(1))))
+        assertEquals(
+            millisOf(monday.plusWeeks(2)),
+            ScheduledProfileOccurrenceMath.nextOccurrence(biweekly, millisOf(monday.plusWeeks(1)))?.toEpochMilli(),
+        )
+        assertEquals(14, ScheduledProfileOccurrenceMath.dueOccurrence(biweekly, millisOf(monday.plusWeeks(2)))?.exportDates?.size)
+
+        val january31 = LocalDate.of(2026, 1, 31)
+        val bimonthly = entry(
+            cadenceUnit = ScheduledProfileCadenceUnit.MONTH,
+            cadenceValue = 2,
+            anchorEpochDay = january31.toEpochDay(),
+            lookbackDays = 14,
+            lastSuccessEpochMillis = millisOf(january31),
+        )
+        assertNull(ScheduledProfileOccurrenceMath.dueOccurrence(bimonthly, millisOf(LocalDate.of(2026, 2, 28))))
+        assertEquals(
+            millisOf(LocalDate.of(2026, 3, 31)),
+            ScheduledProfileOccurrenceMath.nextOccurrence(bimonthly, millisOf(LocalDate.of(2026, 2, 28)))?.toEpochMilli(),
+        )
+        assertEquals(14, ScheduledProfileOccurrenceMath.dueOccurrence(bimonthly, millisOf(LocalDate.of(2026, 3, 31)))?.exportDates?.size)
+    }
+
+    @Test
+    fun `lookback preserves local calendar dates across daylight saving time`() {
+        val localZone = ZoneId.of("America/New_York")
+        val today = LocalDate.of(2026, 3, 10)
+        fun localMillis(day: LocalDate) = day.atTime(8, 0).atZone(localZone).toInstant().toEpochMilli()
+        val configured = entry(
+            anchorEpochDay = LocalDate.of(2026, 2, 1).toEpochDay(),
+            lookbackDays = 14,
+            lastSuccessEpochMillis = localMillis(today.minusDays(1)),
+        ).copy(zoneId = localZone.id)
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(configured, localMillis(today))
+        assertEquals((14L downTo 1L).map(today::minusDays), due?.exportDates)
     }
 
     @Test
@@ -76,7 +176,7 @@ class ScheduledProfileOccurrenceMathTest {
         )
 
         val due = ScheduledProfileOccurrenceMath.dueOccurrence(
-            entry(lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 9))).copy(
+            entry(lookbackDays = 14, lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 9))).copy(
                 pendingExports = listOf(residual),
             ),
             now,
@@ -115,7 +215,7 @@ class ScheduledProfileOccurrenceMathTest {
         assertEquals(LocalDate.of(2026, 8, 9), due.exportDates.last())
 
         // A Sunday entry's most recent boundary (yesterday) has already passed,
-        // so it is due on Monday with the same trailing week.
+        // so it is due on Monday with the window ending before Sunday's fire day.
         val sundayEntry = mondayEntry.copy(weekdayIso = 7)
         val sundayDue = ScheduledProfileOccurrenceMath.dueOccurrence(sundayEntry, now)
         assertNotNull(sundayDue)
@@ -144,6 +244,21 @@ class ScheduledProfileOccurrenceMathTest {
         // Success at Aug 10 08:00 covered Aug 9; next on-cadence boundary is Aug 12, not yet due.
         val afterSuccess = entry.copy(lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10)))
         assertNull(ScheduledProfileOccurrenceMath.dueOccurrence(afterSuccess, now))
+        assertEquals(
+            millisOf(LocalDate.of(2026, 8, 12)),
+            ScheduledProfileOccurrenceMath.nextOccurrence(afterSuccess, now)?.toEpochMilli(),
+        )
+    }
+
+    @Test
+    fun `future anchors do not invent completed-day occurrences before opt-in`() {
+        val anchor = LocalDate.of(2026, 8, 10)
+        val now = millisOf(anchor.minusDays(1), LocalTime.NOON)
+        for (unit in ScheduledProfileCadenceUnit.entries) {
+            val configured = entry(cadenceUnit = unit, anchorEpochDay = anchor.toEpochDay(), lookbackDays = 14)
+            assertNull(ScheduledProfileOccurrenceMath.dueOccurrence(configured, now))
+            assertEquals(millisOf(anchor), ScheduledProfileOccurrenceMath.nextOccurrence(configured, now)?.toEpochMilli())
+        }
     }
 
     @Test
@@ -298,7 +413,7 @@ class ScheduledProfileOccurrenceMathTest {
     }
 
     @Test
-    fun `merged occurrence exports catch-up window plus today and keeps the cadence boundary`() {
+    fun `merged occurrence exports full lookback plus today and keeps the cadence boundary`() {
         // No prior success: yesterday is pending, and the 08:00 refresh slot passed at 09:30.
         val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(9, 30))
         val due = ScheduledProfileOccurrenceMath.dueOccurrence(

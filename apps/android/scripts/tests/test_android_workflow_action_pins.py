@@ -36,9 +36,9 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         release = (ROOT / ".github/workflows/android-release.yml").read_text()
         evidence = (ROOT / ".github/workflows/android-wear-evidence.yml").read_text()
         required_release = (
-            'git cat-file -t "$GITHUB_REF_NAME"',
-            'git rev-parse "$GITHUB_REF_NAME^{commit}"',
-            'healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ github.sha }}-attempt-${{ github.run_attempt }}',
+            'git cat-file -t "$RELEASE_TAG"',
+            'git rev-parse "$RELEASE_TAG^{commit}"',
+            'healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}',
             'phoneAabSha256:$phoneAab',
             'wearAabSha256:$wearAab',
             'uploadPrepared:true',
