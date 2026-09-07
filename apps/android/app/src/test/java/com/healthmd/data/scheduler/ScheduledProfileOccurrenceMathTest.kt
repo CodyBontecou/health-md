@@ -31,6 +31,9 @@ class ScheduledProfileOccurrenceMathTest {
         lookbackDays: Int = 1,
         anchorEpochDay: Long = LocalDate.of(2026, 7, 1).toEpochDay(),
         lastSuccessEpochMillis: Long? = null,
+        todayRefreshEnabled: Boolean = false,
+        todayRefreshIntervalHours: Int = ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+        lastRefreshSuccessEpochMillis: Long? = null,
     ) = ScheduledProfileEntry(
         profileId = "profile-1",
         isEnabled = enabled,
@@ -41,8 +44,11 @@ class ScheduledProfileOccurrenceMathTest {
         cadenceValue = cadenceValue,
         cadenceUnit = cadenceUnit,
         lookbackDays = lookbackDays,
+        todayRefreshEnabled = todayRefreshEnabled,
+        todayRefreshIntervalHours = todayRefreshIntervalHours,
         zoneId = zone.id,
         lastSuccessEpochMillis = lastSuccessEpochMillis,
+        lastRefreshSuccessEpochMillis = lastRefreshSuccessEpochMillis,
     )
 
     @Test
@@ -244,6 +250,179 @@ class ScheduledProfileOccurrenceMathTest {
             due!!.fireAtMillis,
         )
         assertTrue(DayOfWeek.MONDAY == LocalDate.of(2026, 8, 10).dayOfWeek)
+    }
+
+    // MARK: Today Refresh (iOS parity)
+
+    @Test
+    fun `refresh-only occurrence is due after the preferred slot and exports only today`() {
+        // Monday 2026-08-10 10:00, preferred 08:00, interval 3h; yesterday already covered.
+        val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(10, 0))
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(
+            entry(
+                lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10)),
+                todayRefreshEnabled = true,
+            ),
+            now,
+        )
+
+        assertNotNull(due)
+        assertEquals(listOf(LocalDate.of(2026, 8, 10)), due!!.exportDates)
+        assertEquals(millisOf(LocalDate.of(2026, 8, 10)), due.fireAtMillis)
+        assertEquals(millisOf(LocalDate.of(2026, 8, 10)), due.refreshSlotMillis)
+        assertNull(due.pendingExport)
+    }
+
+    @Test
+    fun `satisfied refresh slot is not due again until the next slot`() {
+        // 09:00 with the 08:00 slot already recorded as successful: the next due slot is 11:00.
+        val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(9, 0))
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(
+            entry(
+                lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10)),
+                todayRefreshEnabled = true,
+                lastRefreshSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10)),
+            ),
+            now,
+        )
+        assertNull(due)
+
+        val next = ScheduledProfileOccurrenceMath.nextRefreshOccurrence(
+            entry(
+                todayRefreshEnabled = true,
+                lastRefreshSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10)),
+            ),
+            now,
+        )
+        assertEquals(millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(11, 0)), next?.toEpochMilli())
+    }
+
+    @Test
+    fun `merged occurrence exports catch-up window plus today and keeps the cadence boundary`() {
+        // No prior success: yesterday is pending, and the 08:00 refresh slot passed at 09:30.
+        val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(9, 30))
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(
+            entry(todayRefreshEnabled = true, lookbackDays = 2),
+            now,
+        )
+
+        assertNotNull(due)
+        assertEquals(
+            listOf(LocalDate.of(2026, 8, 8), LocalDate.of(2026, 8, 9), LocalDate.of(2026, 8, 10)),
+            due!!.exportDates,
+        )
+        assertEquals(millisOf(LocalDate.of(2026, 8, 10)), due.fireAtMillis)
+        assertEquals(millisOf(LocalDate.of(2026, 8, 10)), due.refreshSlotMillis)
+    }
+
+    @Test
+    fun `no refresh slot is due before the preferred time and the day rolls over after the last slot`() {
+        // 07:00 before an 08:00 preferred time: nothing due, next slot is today 08:00.
+        val early = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(7, 0))
+        assertNull(
+            ScheduledProfileOccurrenceMath.dueRefreshSlotMillis(
+                entry(
+                    lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10)),
+                    todayRefreshEnabled = true,
+                ),
+                early,
+            ),
+        )
+        assertEquals(
+            millisOf(LocalDate.of(2026, 8, 10)),
+            ScheduledProfileOccurrenceMath.nextRefreshOccurrence(
+                entry(todayRefreshEnabled = true),
+                early,
+            )?.toEpochMilli(),
+        )
+
+        // 23:30 with 3h interval: slots were 08/11/14/17/20/23; the last passed, so next is tomorrow 08:00.
+        val late = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(23, 30))
+        assertEquals(
+            millisOf(LocalDate.of(2026, 8, 11)),
+            ScheduledProfileOccurrenceMath.nextRefreshOccurrence(
+                entry(todayRefreshEnabled = true),
+                late,
+            )?.toEpochMilli(),
+        )
+        // The 23:00 slot itself is still due when unsatisfied.
+        assertEquals(
+            millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(23, 0)),
+            ScheduledProfileOccurrenceMath.dueRefreshSlotMillis(entry(todayRefreshEnabled = true), late),
+        )
+    }
+
+    @Test
+    fun `refresh slots from a previous day never count as due`() {
+        // Last refresh success was yesterday 20:00; today at 09:00 only today's 08:00 slot is due.
+        val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(9, 0))
+        val slot = ScheduledProfileOccurrenceMath.dueRefreshSlotMillis(
+            entry(
+                todayRefreshEnabled = true,
+                lastRefreshSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 9), LocalTime.of(20, 0)),
+            ),
+            now,
+        )
+        assertEquals(millisOf(LocalDate.of(2026, 8, 10)), slot)
+    }
+
+    @Test
+    fun `next occurrence arms the earlier of the cadence boundary and refresh slot`() {
+        // Daily 08:00 entry with 3h refresh; at 10:00 the next boundary would be tomorrow 08:00,
+        // but the next refresh slot is today 11:00 — arming must pick 11:00.
+        val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(10, 0))
+        val next = ScheduledProfileOccurrenceMath.nextOccurrence(
+            entry(
+                lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10)),
+                todayRefreshEnabled = true,
+            ),
+            now,
+        )
+        assertEquals(millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(11, 0)), next?.toEpochMilli())
+
+        // Without refresh, the same moment arms tomorrow's 08:00 boundary.
+        val cadenceOnly = ScheduledProfileOccurrenceMath.nextOccurrence(
+            entry(lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 10))),
+            now,
+        )
+        assertEquals(millisOf(LocalDate.of(2026, 8, 11)), cadenceOnly?.toEpochMilli())
+    }
+
+    @Test
+    fun `residual group is returned without merging a due refresh slot`() {
+        val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(12, 0))
+        val residualDate = LocalDate.of(2026, 8, 2)
+        val residual = ScheduledProfilePendingExport(
+            id = "residual-1",
+            ownerEpochDays = listOf(residualDate.toEpochDay()),
+            fireAtMillis = millisOf(LocalDate.of(2026, 8, 3)),
+            settingsSnapshotJson = "frozen-settings",
+            target = ExportTarget.DEVICE_FOLDER,
+            profileName = "Morning",
+        )
+
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(
+            entry(
+                lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 9)),
+                todayRefreshEnabled = true,
+            ).copy(pendingExports = listOf(residual)),
+            now,
+        )
+
+        assertNotNull(due)
+        assertEquals(listOf(residualDate), due!!.exportDates)
+        assertNull(due.refreshSlotMillis)
+        assertEquals(residual, due.pendingExport)
+    }
+
+    @Test
+    fun `interval options reject unsupported values`() {
+        assertThrows<IllegalArgumentException> {
+            entry(todayRefreshEnabled = true, todayRefreshIntervalHours = 4)
+        }
+        assertEquals(3, ScheduledProfileEntry.clampTodayRefreshInterval(4))
+        assertEquals(6, ScheduledProfileEntry.clampTodayRefreshInterval(5))
+        assertEquals(12, ScheduledProfileEntry.clampTodayRefreshInterval(99))
     }
 
     private inline fun <reified T : Throwable> assertThrows(block: () -> Unit) {

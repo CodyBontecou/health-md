@@ -112,6 +112,14 @@ object ScheduledExportPendingRequests {
                     val lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1)
                     (lookbackDays - 1 downTo 0).map { yesterday.minusDays(it.toLong()) }
                 }
+                ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY -> {
+                    // Trailing complete days plus the run day's partial file, so a daytime run
+                    // also refreshes today (last night's sleep lives in today's file). Today is
+                    // never a pending-retry candidate: `pendingCutoff` below excludes it.
+                    val yesterday = intendedDate.minusDays(1)
+                    val lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1)
+                    (lookbackDays - 1 downTo 0).map { yesterday.minusDays(it.toLong()) } + intendedDate
+                }
                 ScheduleDateWindow.TODAY -> listOf(intendedDate)
             }
         }

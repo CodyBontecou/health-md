@@ -472,6 +472,12 @@
     <string name="schedule_time">Уақыт</string>
     <string name="schedule_date_window">Күндер</string>
     <string name="schedule_date_window_past_complete_days">Өткен толық күндер</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Өткен толық күндер + бүгін</string>
+    <string name="schedule_through_today_summary">Әр іске қосу өткен толық күндерді және бүгінгі ішінара файлды экспорттайды, сондықтан күндізгі іске қосу түнгі ұйқыны да қамтиды. Екі файлды күні бойы жаңартып тұру үшін сағаттық жиілікпен бірге қолданыңыз. Бір күндегі қайталанатын мазмұннан сақтану үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>
+    <string name="profile_schedule_today_refresh">Бүгінгі экспортты жаңарту</string>
+    <string name="profile_schedule_refresh_interval">Жаңарту аралығы</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d сағ</string>
+    <string name="profile_schedule_refresh_summary">Бүгін әр %1$d сағ сайын жаңартады</string>
     <string name="schedule_date_window_today">Бүгін</string>
     <string name="schedule_export_past_days">Өткен күндерді экспорттау</string>
     <string name="schedule_today_summary">Әрбір іске қосу бүгінгі деректерді экспорттайды, осылайша ағымдағы күнделікті файлыңыз жаңартылып отырады. Бір күндік мазмұнның қайталануын болдырмау үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>

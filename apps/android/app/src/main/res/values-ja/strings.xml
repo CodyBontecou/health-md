@@ -462,6 +462,12 @@
     <string name="schedule_time">時間</string>
     <string name="schedule_date_window">日付</string>
     <string name="schedule_date_window_past_complete_days">過去の丸一日</string>
+    <string name="schedule_date_window_past_complete_days_through_today">過去の丸一日 + 今日</string>
+    <string name="schedule_through_today_summary">実行ごとに、過去の丸一日に加えて今日の部分ファイルもエクスポートされるため、日中の実行で昨夜の睡眠も記録されます。毎時の頻度と組み合わせれば、両方のファイルを一日中最新に保てます。同じ日のコンテンツの重複を避けるには、上書きまたは更新の書き込みモードを使用します。</string>
+    <string name="profile_schedule_today_refresh">今日のエクスポートを更新</string>
+    <string name="profile_schedule_refresh_interval">更新間隔</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d 時間</string>
+    <string name="profile_schedule_refresh_summary">今日を %1$d 時間ごとに更新</string>
     <string name="schedule_date_window_today">今日</string>
     <string name="schedule_export_past_days">過去の日をエクスポートする</string>
     <string name="schedule_today_summary">実行ごとに今日のデータがエクスポートされるため、現在の日次ファイルを最新の状態に保つことができます。同じ日のコンテンツの重複を避けるには、上書きまたは更新書き込みモードを使用します。</string>

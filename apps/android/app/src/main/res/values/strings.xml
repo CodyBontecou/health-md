@@ -512,9 +512,15 @@
     <string name="schedule_time">Time</string>
     <string name="schedule_date_window">Dates</string>
     <string name="schedule_date_window_past_complete_days">Past complete days</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Past complete days + today</string>
     <string name="schedule_date_window_today">Today</string>
     <string name="schedule_export_past_days">Export past days</string>
     <string name="schedule_today_summary">Each run exports today’s data so your current daily file can stay up to date. Use Overwrite or Update write mode to avoid duplicate same-day content.</string>
+    <string name="schedule_through_today_summary">Each run exports the trailing complete days plus today’s partial file, so a daytime run also captures last night’s sleep. Combine with an hourly frequency to refresh both files all day. Use Overwrite or Update write mode to avoid duplicate same-day content.</string>
+    <string name="profile_schedule_today_refresh">Refresh today’s export</string>
+    <string name="profile_schedule_refresh_interval">Refresh interval</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
+    <string name="profile_schedule_refresh_summary">Refreshes today every %1$d h</string>
     <string name="schedule_next_export_at_datetime">Next export: %1$s</string>
     <string name="notifications_needed_title">Notifications are off</string>
     <string name="notifications_needed_body">Scheduled exports are still running, but you won’t get notified when they complete until notifications are enabled.</string>

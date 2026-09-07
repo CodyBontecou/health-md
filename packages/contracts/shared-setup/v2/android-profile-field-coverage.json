@@ -1386,6 +1386,22 @@
     },
     {
       "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshEnabled",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "Today Refresh intent has no neutral v2 schedule field yet (Apple carries it only in its typed extension); it stays local until the shared schedule section gains a reviewed refresh field."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
+      "serialized_field": "todayRefreshIntervalHours",
+      "coverage_kind": "descriptor",
+      "disposition": "local_only",
+      "contract_path": null,
+      "evidence": "Today Refresh interval mirrors the Apple 3/6/12-hour set but has no neutral v2 schedule field yet; it stays local until the shared schedule section gains a reviewed refresh field."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
       "serialized_field": "weekdayIso",
       "coverage_kind": "descriptor",
       "disposition": "schedule_intent",

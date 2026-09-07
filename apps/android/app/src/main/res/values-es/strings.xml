@@ -609,6 +609,12 @@
     <string name="schedule_time">Hora</string>
     <string name="schedule_date_window">Fechas</string>
     <string name="schedule_date_window_past_complete_days">Días completos anteriores</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Días completos anteriores + hoy</string>
+    <string name="schedule_through_today_summary">Cada ejecución exporta los días completos anteriores más el archivo parcial de hoy, de modo que una ejecución diurna también captura el sueño de anoche. Combínalo con una frecuencia horaria para refrescar ambos archivos todo el día. Usa el modo de escritura Sobrescribir o Actualizar para evitar contenido duplicado del mismo día.</string>
+    <string name="profile_schedule_today_refresh">Actualizar la exportación de hoy</string>
+    <string name="profile_schedule_refresh_interval">Intervalo de actualización</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
+    <string name="profile_schedule_refresh_summary">Actualiza hoy cada %1$d h</string>
     <string name="schedule_date_window_today">Hoy</string>
     <string name="schedule_export_past_days">Exportar días pasados</string>
     <string name="schedule_today_summary">Cada ejecución exporta los datos de hoy para que su archivo diario actual pueda mantenerse actualizado. Utilice el modo de escritura Sobrescribir o Actualizar para evitar duplicar contenido del mismo día.</string>

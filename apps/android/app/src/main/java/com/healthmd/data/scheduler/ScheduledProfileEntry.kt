@@ -67,6 +67,10 @@ data class ScheduledProfileEntry(
     val dateWindow: ScheduledProfileDateWindow = ScheduledProfileDateWindow.PAST_COMPLETE_DAYS,
     /** Days exported by one completed-day run. */
     val lookbackDays: Int = 1,
+    /** Whether today's partial file is also refreshed during the day (iOS Today Refresh parity). */
+    val todayRefreshEnabled: Boolean = false,
+    /** Hours between same-day refresh runs; Apple exposes the same {3, 6, 12} set. */
+    val todayRefreshIntervalHours: Int = DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
     val zoneId: String = "UTC",
     /** Epoch millis of the most recent successful completed-day occurrence, for catch-up math. */
     val lastSuccessEpochMillis: Long? = null,
@@ -80,6 +84,9 @@ data class ScheduledProfileEntry(
         require(hour in 0..23 && minute in 0..59) { "Preferred time is invalid." }
         require(cadenceValue >= 1) { "Cadence value must be positive." }
         require(weekdayIso in 1..7) { "Weekday must stay within ISO 1..7." }
+        require(todayRefreshIntervalHours in TODAY_REFRESH_INTERVAL_OPTIONS) {
+            "Today Refresh interval must be one of $TODAY_REFRESH_INTERVAL_OPTIONS hours."
+        }
         require(ZoneId.of(zoneId).id == zoneId) { "Zone id must be canonical." }
     }
 
@@ -93,7 +100,26 @@ data class ScheduledProfileEntry(
         val exportDates: List<LocalDate>,
         /** Non-null when this run is retrying one exact frozen residual group. */
         val pendingExport: ScheduledProfilePendingExport? = null,
+        /**
+         * Non-null when a same-day refresh slot is part of this occurrence (the fire date of the
+         * slot, not of the cadence boundary). A successful export of [java.time.LocalDate.now]'s
+         * date advances [lastRefreshSuccessEpochMillis] by exactly this value. When the occurrence
+         * carries no completed-day work, [fireAtMillis] equals this slot and must NOT advance the
+         * completed-day catch-up frontier.
+         */
+        val refreshSlotMillis: Long? = null,
     )
+
+    companion object {
+        /** Same-day refresh interval options, mirroring iOS Today Refresh. */
+        val TODAY_REFRESH_INTERVAL_OPTIONS: List<Int> = listOf(3, 6, 12)
+        const val DEFAULT_TODAY_REFRESH_INTERVAL_HOURS = 3
+
+        /** Nearest supported interval to [hours]; used by legacy-schedule migration. */
+        fun clampTodayRefreshInterval(hours: Int): Int =
+            TODAY_REFRESH_INTERVAL_OPTIONS.minByOrNull { kotlin.math.abs(it - hours) }
+                ?: DEFAULT_TODAY_REFRESH_INTERVAL_HOURS
+    }
 }
 
 /**
@@ -103,12 +129,16 @@ data class ScheduledProfileEntry(
  */
 object ScheduledProfileOccurrenceMath {
 
-    /** Next boundary strictly after [nowMillis] for the entry's cadence and zone. */
+    /**
+     * Next boundary strictly after [nowMillis] for the entry's cadence and zone, or the next
+     * same-day refresh slot when Today Refresh is enabled and comes first. Arming calls this so
+     * one alarm covers whichever occurrence is earliest.
+     */
     fun nextOccurrence(entry: ScheduledProfileEntry, nowMillis: Long): Instant? {
         val zone = entry.zone
         val now = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDateTime()
         val preferred = LocalTime.of(entry.hour, entry.minute)
-        return when (entry.cadenceUnit) {
+        val cadenceNext = when (entry.cadenceUnit) {
             ScheduledProfileCadenceUnit.DAY ->
                 nextDaily(now = now, preferred = preferred, everyDays = entry.cadenceValue.toLong())
             ScheduledProfileCadenceUnit.WEEK ->
@@ -116,6 +146,56 @@ object ScheduledProfileOccurrenceMath {
             ScheduledProfileCadenceUnit.MONTH ->
                 nextMonthly(now = now, preferred = preferred, anchorEpochDay = entry.anchorEpochDay, everyMonths = entry.cadenceValue)
         }?.atZone(zone)?.toInstant()
+        val refreshNext = nextRefreshOccurrence(entry, nowMillis)
+        return listOfNotNull(cadenceNext, refreshNext).minOrNull()
+    }
+
+    /**
+     * Next same-day refresh slot strictly after [nowMillis], mirroring iOS
+     * `ScheduleDateMath.nextTodayRefreshRunDate`: slots run at the preferred time plus whole
+     * intervals while they stay inside the same calendar day; after the last slot, the next is
+     * tomorrow's preferred time (which coincides with the completed-day boundary).
+     */
+    fun nextRefreshOccurrence(entry: ScheduledProfileEntry, nowMillis: Long): Instant? {
+        if (!entry.isEnabled || !entry.todayRefreshEnabled) return null
+        val zone = entry.zone
+        val now = Instant.ofEpochMilli(nowMillis).atZone(zone)
+        val today = now.toLocalDate()
+        val interval = entry.todayRefreshIntervalHours
+        var slotHour = entry.hour
+        while (slotHour < HOURS_PER_DAY) {
+            val candidate = today.atTime(LocalTime.of(slotHour, entry.minute)).atZone(zone)
+            if (candidate.toInstant().isAfter(now.toInstant())) {
+                return candidate.toInstant()
+            }
+            slotHour += interval
+        }
+        return today.plusDays(1).atTime(LocalTime.of(entry.hour, entry.minute)).atZone(zone).toInstant()
+    }
+
+    /**
+     * The latest refresh slot at or before [nowMillis] that has not yet succeeded, mirroring iOS
+     * `ScheduleDateMath.shouldRunScheduledOccurrence` for `.todayRefresh`: slots only count on the
+     * current calendar day, and a slot at or before [ScheduledProfileEntry.lastRefreshSuccessEpochMillis]
+     * already ran. Returns null when refresh is disabled or every slot already succeeded.
+     */
+    fun dueRefreshSlotMillis(entry: ScheduledProfileEntry, nowMillis: Long): Long? {
+        if (!entry.isEnabled || !entry.todayRefreshEnabled) return null
+        val zone = entry.zone
+        val now = Instant.ofEpochMilli(nowMillis).atZone(zone)
+        val today = now.toLocalDate()
+        val interval = entry.todayRefreshIntervalHours
+        var latest: Long? = null
+        var slotHour = entry.hour
+        while (slotHour < HOURS_PER_DAY) {
+            val candidate = today.atTime(LocalTime.of(slotHour, entry.minute)).atZone(zone)
+            if (!candidate.toInstant().isAfter(now.toInstant())) {
+                latest = candidate.toInstant().toEpochMilli()
+            }
+            slotHour += interval
+        }
+        val lastSuccess = entry.lastRefreshSuccessEpochMillis
+        return latest?.takeIf { slot -> lastSuccess == null || slot > lastSuccess }
     }
 
     /**
@@ -138,6 +218,8 @@ object ScheduledProfileOccurrenceMath {
 
         // Finish one frozen residual group before admitting newer profile settings or
         // owner dates. Exact dates and durable operation identity therefore survive profile edits.
+        // Residual groups freeze completed-day owner dates only; a due refresh slot does not join
+        // them and simply waits for its next slot once the residual clears.
         entry.pendingExports
             .sortedWith(
                 compareBy<ScheduledProfilePendingExport> { it.fireAtMillis }
@@ -170,12 +252,30 @@ object ScheduledProfileOccurrenceMath {
         } else {
             emptyList()
         }
-        if (pending.isEmpty()) return null
+
+        // Today Refresh joins the regular catch-up branch: one run exports the trailing window
+        // plus today's partial file. A refresh-only occurrence (nothing to catch up) carries the
+        // slot itself as its fire date and never advances the completed-day frontier.
+        val refreshSlotMillis = dueRefreshSlotMillis(entry, nowMillis)
+        if (pending.isEmpty()) {
+            val slot = refreshSlotMillis ?: return null
+            return ScheduledProfileEntry.DueOccurrence(
+                entry = entry,
+                fireAtMillis = slot,
+                exportDates = listOf(today),
+                refreshSlotMillis = slot,
+            )
+        }
 
         return ScheduledProfileEntry.DueOccurrence(
             entry = entry,
             fireAtMillis = boundary.toEpochMilli(),
-            exportDates = pending,
+            exportDates = if (refreshSlotMillis == null) {
+                pending
+            } else {
+                pending + today
+            },
+            refreshSlotMillis = refreshSlotMillis,
         )
     }
 
@@ -270,6 +370,8 @@ object ScheduledProfileOccurrenceMath {
      */
     private fun withAnchorDayOfMonth(month: LocalDate, anchorDayOfMonth: Int): LocalDate =
         month.withDayOfMonth(minOf(anchorDayOfMonth, month.lengthOfMonth()))
+
+    private const val HOURS_PER_DAY = 24
 }
 
 /** Coalescing helper shared with the push scheduler mirror (earliest preferred time wins). */

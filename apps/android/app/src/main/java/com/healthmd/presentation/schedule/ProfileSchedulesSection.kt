@@ -29,8 +29,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
+import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.presentation.common.ConfigurationProtectedRegion
@@ -181,7 +183,14 @@ private fun ProfileScheduleRow(
                 color = AppColors.textPrimary,
             )
             Text(
-                text = cadenceSummary(entry),
+                text = cadenceSummary(
+                    entry,
+                    stringResource(
+                        R.string.profile_schedule_refresh_summary,
+                        entry?.todayRefreshIntervalHours
+                            ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+                    ),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textSecondary,
             )
@@ -191,11 +200,11 @@ private fun ProfileScheduleRow(
     }
 }
 
-internal fun cadenceSummary(entry: ScheduledProfileEntry?): String {
+internal fun cadenceSummary(entry: ScheduledProfileEntry?, refreshSummary: String? = null): String {
     if (entry == null || !entry.isEnabled) return "Not scheduled. Tap to configure."
     val time = LocalTime.of(entry.hour, entry.minute)
         .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
-    return when (entry.cadenceUnit) {
+    val base = when (entry.cadenceUnit) {
         ScheduledProfileCadenceUnit.DAY -> "Every ${entry.cadenceValue} day(s) at $time"
         ScheduledProfileCadenceUnit.WEEK -> {
             val weekday = java.time.DayOfWeek.of(entry.weekdayIso).name.lowercase().replaceFirstChar { it.uppercase() }
@@ -203,6 +212,7 @@ internal fun cadenceSummary(entry: ScheduledProfileEntry?): String {
         }
         ScheduledProfileCadenceUnit.MONTH -> "Every ${entry.cadenceValue} month(s) at $time"
     }
+    return if (entry.todayRefreshEnabled && refreshSummary != null) "$base · $refreshSummary" else base
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -226,6 +236,7 @@ internal fun ProfileCadenceEditorDialog(
     }
     var cadenceMenuOpen by remember { mutableStateOf(false) }
     var weekdayMenuOpen by remember { mutableStateOf(false) }
+    var refreshIntervalMenuOpen by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -338,6 +349,63 @@ internal fun ProfileCadenceEditorDialog(
                     value = draft.cadenceValue,
                     onValue = { draft = draft.copy(cadenceValue = it.coerceAtLeast(1)) },
                 )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.profile_schedule_today_refresh),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AppColors.textPrimary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = draft.todayRefreshEnabled,
+                        onCheckedChange = { draft = draft.copy(todayRefreshEnabled = it) },
+                    )
+                }
+
+                if (draft.todayRefreshEnabled) {
+                    ExposedDropdownMenuBox(
+                        expanded = refreshIntervalMenuOpen,
+                        onExpandedChange = { refreshIntervalMenuOpen = it },
+                    ) {
+                        OutlinedTextField(
+                            value = stringResource(
+                                R.string.profile_schedule_refresh_interval_hours,
+                                draft.todayRefreshIntervalHours,
+                            ),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(stringResource(R.string.profile_schedule_refresh_interval)) },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = refreshIntervalMenuOpen)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(),
+                        )
+                        ExposedDropdownMenu(
+                            expanded = refreshIntervalMenuOpen,
+                            onDismissRequest = { refreshIntervalMenuOpen = false },
+                        ) {
+                            ScheduledProfileEntry.TODAY_REFRESH_INTERVAL_OPTIONS.forEach { hours ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            stringResource(
+                                                R.string.profile_schedule_refresh_interval_hours,
+                                                hours,
+                                            ),
+                                        )
+                                    },
+                                    onClick = {
+                                        draft = draft.copy(todayRefreshIntervalHours = hours)
+                                        refreshIntervalMenuOpen = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {

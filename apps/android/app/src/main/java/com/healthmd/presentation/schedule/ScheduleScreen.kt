@@ -526,6 +526,9 @@ fun ScheduleScreen(
                         uiState.lookbackDays,
                         uiState.lookbackDays,
                     )
+                    ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY -> stringResource(
+                        R.string.schedule_through_today_summary,
+                    )
                     ScheduleDateWindow.TODAY -> stringResource(R.string.schedule_today_summary)
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -767,7 +770,7 @@ private fun ScheduleSettingsCard(
             )
         }
 
-        if (uiState.dateWindow == ScheduleDateWindow.PAST_COMPLETE_DAYS) {
+        if (uiState.dateWindow != ScheduleDateWindow.TODAY) {
             ScheduleDivider()
 
             Row(
@@ -811,6 +814,10 @@ private fun DateWindowRow(
         DateWindowOption(
             value = ScheduleDateWindow.PAST_COMPLETE_DAYS,
             label = stringResource(R.string.schedule_date_window_past_complete_days),
+        ),
+        DateWindowOption(
+            value = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY,
+            label = stringResource(R.string.schedule_date_window_past_complete_days_through_today),
         ),
         DateWindowOption(
             value = ScheduleDateWindow.TODAY,

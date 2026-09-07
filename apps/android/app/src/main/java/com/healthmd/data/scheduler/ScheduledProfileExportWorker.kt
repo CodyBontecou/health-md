@@ -43,6 +43,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
 import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -203,6 +204,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         val dates = due.exportDates
+        // Today Refresh bookkeeping: the occurrence may carry today's partial file alongside
+        // completed-day catch-up. Refresh-only runs must not advance the completed-day frontier.
+        val refreshSlotMillis = due.refreshSlotMillis
+        val refreshDate = refreshSlotMillis
+            ?.let { slot -> Instant.ofEpochMilli(slot).atZone(entry.zone).toLocalDate() }
+        val hasCompletedDayWork = refreshDate == null || dates.any { it != refreshDate }
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
@@ -320,15 +327,21 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
         if (result.wasCancelled) {
             val remainingDates = cancellationRemainingDates(dates, target, result)
-            val replacements = residualPendingExports(
-                profile = profile,
-                due = due,
-                remainingDates = remainingDates,
-                result = result,
-            )
+            val replacements = if (hasCompletedDayWork) {
+                residualPendingExports(
+                    profile = profile,
+                    due = due,
+                    remainingDates = remainingDates,
+                    result = result,
+                )
+            } else {
+                // Refresh-only cancellations keep no residual: the slot is still unsatisfied, so
+                // the next refresh slot (or tomorrow's completed-day run) retries naturally.
+                emptyList()
+            }
             val cancellationPersisted = entryStore.recordCancellation(
                 profileId = profileId,
-                fireAtMillis = due.fireAtMillis,
+                fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
                 attemptedPendingID = due.pendingExport?.id,
                 replacements = replacements,
             )
@@ -339,6 +352,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     durableOperationId,
                 )
                 return Result.retry()
+            }
+            if (refreshSlotMillis != null && refreshDate != null && refreshDate !in remainingDates) {
+                // Cancellation preserved exact unresolved dates; today's file already written
+                // before the stop satisfies its slot and must not re-run at the next one.
+                entryStore.recordRefreshSuccess(profileId, refreshSlotMillis)
             }
             if (result.successCount > 0) {
                 recordHistory(
@@ -365,23 +383,33 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         if (result.isFullSuccess) {
             entryStore.recordSuccess(
                 profileId = profileId,
-                fireAtMillis = due.fireAtMillis,
+                fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
                 completedPendingID = due.pendingExport?.id,
             )
+        }
+        val failedDates = result.failedDateDetails.mapTo(hashSetOf()) { it.date }
+        if (refreshSlotMillis != null && refreshDate != null && refreshDate !in failedDates) {
+            // Today's file exported (even in a partial run): the slot is satisfied. Remaining
+            // completed-day failures stay retryable through their own residual groups.
+            entryStore.recordRefreshSuccess(profileId, refreshSlotMillis)
         }
 
         if (!result.isFullSuccess) {
             val remainingDates = cancellationRemainingDates(dates, target, result)
-            val replacements = residualPendingExports(
-                profile = profile,
-                due = due,
-                remainingDates = remainingDates,
-                result = result,
-                fallbackDurableOperationId = durableOperationId,
-            )
+            val replacements = if (hasCompletedDayWork) {
+                residualPendingExports(
+                    profile = profile,
+                    due = due,
+                    remainingDates = remainingDates,
+                    result = result,
+                    fallbackDurableOperationId = durableOperationId,
+                )
+            } else {
+                emptyList()
+            }
             val retryPersisted = entryStore.recordRetry(
                 profileId = profileId,
-                fireAtMillis = due.fireAtMillis,
+                fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
                 attemptedPendingID = due.pendingExport?.id,
                 replacements = replacements,
             )

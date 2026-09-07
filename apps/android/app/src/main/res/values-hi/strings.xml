@@ -491,6 +491,12 @@
     <string name="schedule_time">समय</string>
     <string name="schedule_date_window">तारीखें</string>
     <string name="schedule_date_window_past_complete_days">पिछले पूरे दिन</string>
+    <string name="schedule_date_window_past_complete_days_through_today">पिछले पूरे दिन + आज</string>
+    <string name="schedule_through_today_summary">हर रन पिछले पूरे दिनों के साथ आज की आंशिक फ़ाइल भी निर्यात करता है, इसलिए दिन के समय चलने पर पिछली रात की नींद भी शामिल हो जाती है। दोनों फ़ाइलों को पूरे दिन ताज़ा रखने के लिए इसे प्रति घंटे आवृत्ति के साथ जोड़ें। उसी दिन की डुप्लिकेट सामग्री से बचने के लिए ओवरराइट या अपडेट राइट मोड का उपयोग करें।</string>
+    <string name="profile_schedule_today_refresh">आज का निर्यात रिफ्रेश करें</string>
+    <string name="profile_schedule_refresh_interval">रिफ्रेश अंतराल</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d घंटे</string>
+    <string name="profile_schedule_refresh_summary">आज हर %1$d घंटे में रिफ्रेश करता है</string>
     <string name="schedule_date_window_today">आज</string>
     <string name="schedule_export_past_days">पिछले दिनों निर्यात करें</string>
     <string name="schedule_today_summary">हर बार आज का डेटा निर्यात होता है, ताकि मौजूदा दैनिक फ़ाइल अप-टू-डेट रहे। एक ही दिन की सामग्री दो बार जुड़ने से बचाने के लिए Overwrite या Update लेखन मोड का उपयोग करें।</string>

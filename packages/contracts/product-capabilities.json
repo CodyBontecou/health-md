@@ -394,6 +394,30 @@
       ]
     },
     {
+      "id": "export.scheduled-today-refresh",
+      "name": "Scheduled exports refresh today's file",
+      "classification": "shared",
+      "summary": "A scheduled export keeps the current day's partial file fresh alongside completed-day trailing windows, so a daytime run captures last night's sleep in addition to yesterday. The user outcome is unified; the native mechanism differs: Apple runs best-effort same-day refresh occurrences (3, 6, or 12 hours) beside the completed-day schedule, Android profile schedules mirror those refresh slots exactly, and the Android single schedule offers a 'past complete days + today' window that pairs with its sub-day cadence. Shared Setup v2 carries Today Refresh only in the Apple typed extension today; the neutral schedule section remains review-pending.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Utilities/ScheduleDateMath.swift",
+        "apps/apple/HealthMd/Shared/Models/ExportSchedule.swift",
+        "apps/apple/HealthMd/iOS/Views/ScheduleSettingsView.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileEntry.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledExportPendingRequests.kt",
+        "apps/android/app/src/test/java/com/healthmd/data/scheduler/ScheduledProfileOccurrenceMathTest.kt",
+        "apps/android/docs/features/scheduled-exports.md"
+      ]
+    },
+    {
       "id": "automation.cancel-active-export",
       "name": "Cancel an in-progress automated export",
       "classification": "shared",

@@ -279,4 +279,6 @@ enum class ScheduleCadenceUnit {
 enum class ScheduleDateWindow {
     PAST_COMPLETE_DAYS,
     TODAY,
+    /** Trailing complete days ending yesterday plus the current calendar day's partial file. */
+    PAST_COMPLETE_DAYS_THROUGH_TODAY,
 }

@@ -619,6 +619,12 @@
     <string name="schedule_time">Час</string>
     <string name="schedule_date_window">Дати</string>
     <string name="schedule_date_window_past_complete_days">Повні минулі дні</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Повні минулі дні + сьогодні</string>
+    <string name="schedule_through_today_summary">Кожен запуск експортує повні минулі дні та сьогоднішній частковий файл, тому денний запуск охоплює й минулу ніч. Поєднуйте з погодинною частотою, щоб обидва файли залишалися актуальними цілий день. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту за той самий день.</string>
+    <string name="profile_schedule_today_refresh">Оновлювати сьогоднішній експорт</string>
+    <string name="profile_schedule_refresh_interval">Інтервал оновлення</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d год</string>
+    <string name="profile_schedule_refresh_summary">Оновлює сьогодні кожні %1$d год</string>
     <string name="schedule_date_window_today">Сьогодні</string>
     <string name="schedule_export_past_days">Експортувати минулі дні</string>
     <string name="schedule_today_summary">Кожен запуск експортує сьогоднішні дані, щоб ваш поточний щоденний файл залишався актуальним. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту того ж дня.</string>

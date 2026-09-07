@@ -462,6 +462,12 @@
     <string name="schedule_time">时间</string>
     <string name="schedule_date_window">日期</string>
     <string name="schedule_date_window_past_complete_days">过去的完整天数</string>
+    <string name="schedule_date_window_past_complete_days_through_today">过去的完整天数 + 今天</string>
+    <string name="schedule_through_today_summary">每次运行会导出过去的完整天数以及今天的部分文件，因此白天运行也能记录昨晚的睡眠。结合每小时的频率可在全天保持两个文件最新。使用覆盖或更新写入模式，避免同一天内容重复。</string>
+    <string name="profile_schedule_today_refresh">刷新今天的导出</string>
+    <string name="profile_schedule_refresh_interval">刷新间隔</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d 小时</string>
+    <string name="profile_schedule_refresh_summary">今天每 %1$d 小时刷新一次</string>
     <string name="schedule_date_window_today">今天</string>
     <string name="schedule_export_past_days">导出过去几天</string>
     <string name="schedule_today_summary">每次运行都会导出今天的数据，以便您当前的每日文件可以保持最新。使用覆盖或更新写入模式以避免重复的当天内容。</string>

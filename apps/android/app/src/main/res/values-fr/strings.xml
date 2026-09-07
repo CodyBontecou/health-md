@@ -609,6 +609,12 @@
     <string name="schedule_time">Heure</string>
     <string name="schedule_date_window">Dates</string>
     <string name="schedule_date_window_past_complete_days">Jours complets passés</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Jours complets passés + aujourd’hui</string>
+    <string name="schedule_through_today_summary">Chaque exécution exporte les derniers jours complets ainsi que le fichier partiel d’aujourd’hui, de sorte qu’une exécution en journée capture aussi le sommeil de la nuit dernière. Combinée à une fréquence horaire, elle garde les deux fichiers à jour toute la journée. Utilisez le mode d’écriture Écraser ou Mettre à jour pour éviter le contenu dupliqué d’une même journée.</string>
+    <string name="profile_schedule_today_refresh">Actualiser l’export du jour</string>
+    <string name="profile_schedule_refresh_interval">Intervalle d’actualisation</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
+    <string name="profile_schedule_refresh_summary">Actualise aujourd’hui toutes les %1$d h</string>
     <string name="schedule_date_window_today">Aujourd\'hui</string>
     <string name="schedule_export_past_days">Exporter les jours passés</string>
     <string name="schedule_today_summary">Chaque exécution exporte les données du jour afin que votre fichier quotidien actuel reste à jour. Utilisez le mode d\'écriture Remplacer ou Mettre à jour pour éviter de dupliquer le contenu du jour même.</string>

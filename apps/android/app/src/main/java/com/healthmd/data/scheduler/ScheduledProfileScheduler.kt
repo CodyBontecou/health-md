@@ -63,6 +63,17 @@ internal fun legacyMigrationEntry(
         },
         dateWindow = ScheduledProfileDateWindow.PAST_COMPLETE_DAYS,
         lookbackDays = settings.scheduleLookbackDays.coerceIn(1, 30),
+        // A legacy window that included the current day maps onto Today Refresh instead of being
+        // dropped: TODAY-window users keep today's file refreshing during the day (now alongside
+        // the completed-day run), and sub-day hourly cadence maps to the nearest supported
+        // refresh interval, mirroring how iOS migrates its legacy Today Refresh settings.
+        todayRefreshEnabled = settings.scheduleDateWindow != ScheduleDateWindow.PAST_COMPLETE_DAYS,
+        todayRefreshIntervalHours = when (settings.scheduleCadenceUnit) {
+            ScheduleCadenceUnit.HOURS -> ScheduledProfileEntry.clampTodayRefreshInterval(
+                settings.scheduleCadenceValue,
+            )
+            else -> ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS
+        },
         zoneId = zone.id,
     )
 }

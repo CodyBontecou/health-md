@@ -491,6 +491,12 @@
     <string name="schedule_time">ਸਮਾਂ</string>
     <string name="schedule_date_window">ਮਿਤੀਆਂ</string>
     <string name="schedule_date_window_past_complete_days">ਪਿਛਲੇ ਪੂਰੇ ਦਿਨ</string>
+    <string name="schedule_date_window_past_complete_days_through_today">ਪਿਛਲੇ ਪੂਰੇ ਦਿਨ + ਅੱਜ</string>
+    <string name="schedule_through_today_summary">ਹਰੇਕ ਰਨ ਪਿਛਲੇ ਪੂਰੇ ਦਿਨਾਂ ਨਾਲ ਅੱਜ ਦੀ ਅੰਸ਼ਕ ਫਾਈਲ ਵੀ ਨਿਰਯਾਤ ਕਰਦਾ ਹੈ, ਇਸ ਲਈ ਦਿਨ ਵੇਲੇ ਚਲਾਉਣ ਨਾਲ ਪਿਛਲੀ ਰਾਤ ਦੀ ਨੀਂਦ ਵੀ ਸ਼ਾਮਲ ਹੁੰਦੀ ਹੈ। ਦੋਵਾਂ ਫਾਈਲਾਂ ਨੂੰ ਸਾਰਾ ਦਿਨ ਤਾਜ਼ਾ ਰੱਖਣ ਲਈ ਇਸ ਨੂੰ ਹਰ ਘੰਟੇ ਦੀ ਬਾਰੰਬਾਰਤਾ ਨਾਲ ਜੋੜੋ। ਉਸੇ ਦਿਨ ਦੀ ਡੁਪਲੀਕੇਟ ਸਮੱਗਰੀ ਤੋਂ ਬਚਣ ਲਈ ਓਵਰਰਾਈਟ ਜਾਂ ਅੱਪਡੇਟ ਰਾਈਟ ਮੋਡ ਵਰਤੋ।</string>
+    <string name="profile_schedule_today_refresh">ਅੱਜ ਦਾ ਨਿਰਯਾਤ ਰਿਫਰੈਸ਼ ਕਰੋ</string>
+    <string name="profile_schedule_refresh_interval">ਰਿਫਰੈਸ਼ ਅੰਤਰਾਲ</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d ਘੰਟੇ</string>
+    <string name="profile_schedule_refresh_summary">ਅੱਜ ਹਰ %1$d ਘੰਟੇ ਬਾਅਦ ਰਿਫਰੈਸ਼ ਕਰਦਾ ਹੈ</string>
     <string name="schedule_date_window_today">ਅੱਜ</string>
     <string name="schedule_export_past_days">ਪਿਛਲੇ ਦਿਨਾਂ ਨੂੰ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="schedule_today_summary">ਹਰ ਵਾਰ ਅੱਜ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ, ਤਾਂ ਜੋ ਮੌਜੂਦਾ ਰੋਜ਼ਾਨਾ ਫਾਈਲ ਅੱਪ-ਟੂ-ਡੇਟ ਰਹੇ। ਇੱਕੋ ਦਿਨ ਦੀ ਸਮੱਗਰੀ ਦੋ ਵਾਰ ਜੁੜਨ ਤੋਂ ਬਚਾਉਣ ਲਈ Overwrite ਜਾਂ Update ਲਿਖਣ ਮੋਡ ਵਰਤੋ।</string>

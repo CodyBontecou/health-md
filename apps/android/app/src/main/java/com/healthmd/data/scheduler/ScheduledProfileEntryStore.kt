@@ -122,18 +122,39 @@ class ScheduledProfileEntryStore @Inject constructor(
         }
     }
 
-    /** Records a successful occurrence and clears only the residual group it completed. */
+    /** Records a successful occurrence and clears only the residual group it completed.
+     *
+     * A null [fireAtMillis] records a Today Refresh-only success: the completed-day catch-up
+     * frontier must not move, because that run exported only today's partial file.
+     */
     suspend fun recordSuccess(
         profileId: String,
-        fireAtMillis: Long,
+        fireAtMillis: Long?,
         completedPendingID: String? = null,
     ) {
         update(profileId) { current ->
             current.copy(
-                lastSuccessEpochMillis = latest(current.lastSuccessEpochMillis, fireAtMillis),
+                lastSuccessEpochMillis = fireAtMillis?.let { latest(current.lastSuccessEpochMillis, it) }
+                    ?: current.lastSuccessEpochMillis,
                 pendingExports = completedPendingID?.let { completedID ->
                     current.pendingExports.filterNot { it.id == completedID }
                 } ?: current.pendingExports,
+            )
+        }
+    }
+
+    /**
+     * Records a successful same-day refresh slot so its occurrence is not re-run. Refresh
+     * success is independent of the completed-day frontier: a merged run may satisfy its slot
+     * while other dates still fail and stay retryable.
+     */
+    suspend fun recordRefreshSuccess(profileId: String, slotMillis: Long) {
+        update(profileId) { current ->
+            current.copy(
+                lastRefreshSuccessEpochMillis = latest(
+                    current.lastRefreshSuccessEpochMillis,
+                    slotMillis,
+                ),
             )
         }
     }
@@ -145,7 +166,7 @@ class ScheduledProfileEntryStore @Inject constructor(
      */
     suspend fun recordCancellation(
         profileId: String,
-        fireAtMillis: Long,
+        fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
     ): Boolean = recordResiduals(
@@ -158,7 +179,7 @@ class ScheduledProfileEntryStore @Inject constructor(
     /** Freezes unresolved work before a WorkManager backoff retry can observe profile edits. */
     suspend fun recordRetry(
         profileId: String,
-        fireAtMillis: Long,
+        fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
     ): Boolean = recordResiduals(
@@ -170,7 +191,7 @@ class ScheduledProfileEntryStore @Inject constructor(
 
     private suspend fun recordResiduals(
         profileId: String,
-        fireAtMillis: Long,
+        fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
     ): Boolean = update(profileId) { current ->
@@ -186,7 +207,8 @@ class ScheduledProfileEntryStore @Inject constructor(
                     .thenBy { it.id },
             )
         current.copy(
-            lastSuccessEpochMillis = latest(current.lastSuccessEpochMillis, fireAtMillis),
+            lastSuccessEpochMillis = fireAtMillis?.let { latest(current.lastSuccessEpochMillis, it) }
+                ?: current.lastSuccessEpochMillis,
             pendingExports = normalized,
         )
     }

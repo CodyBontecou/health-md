@@ -45,11 +45,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
@@ -358,7 +360,14 @@ private fun ProfileCard(
                     color = AppColors.textSecondary,
                 )
                 Text(
-                    text = cadenceSummary(row.entry),
+                    text = cadenceSummary(
+                        row.entry,
+                        stringResource(
+                            R.string.profile_schedule_refresh_summary,
+                            row.entry?.todayRefreshIntervalHours
+                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+                        ),
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (row.entry?.isEnabled == true) {
                         AppColors.accent
@@ -493,7 +502,17 @@ private fun ProfileDetailDialog(
                         )
                     }
                 }
-                FactRow("Schedule", cadenceSummary(row.entry))
+                FactRow(
+                    "Schedule",
+                    cadenceSummary(
+                        row.entry,
+                        stringResource(
+                            R.string.profile_schedule_refresh_summary,
+                            row.entry?.todayRefreshIntervalHours
+                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+                        ),
+                    ),
+                )
                 val snapshot = row.snapshot
                 if (snapshot != null) {
                     FactRow(

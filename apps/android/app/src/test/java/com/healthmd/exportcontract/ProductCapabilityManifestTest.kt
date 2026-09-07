@@ -106,6 +106,7 @@ class ProductCapabilityManifestTest {
             "export.completed-workouts",
             "export.mobility-and-performance",
             "export.profiles",
+            "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
             "direct-cli.shared-qr-pairing",
