@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">%1$s uitklappen</string>
+    <string name="a11y_metrics_collapse_category">%1$s inklappen</string>
+    <string name="a11y_metrics_expanded">Uitgeklapt</string>
+    <string name="a11y_metrics_collapsed">Ingeklapt</string>
+    <string name="a11y_metrics_category_selection">Alle meetwaarden in %1$s</string>
+</resources>

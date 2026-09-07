@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">%1$s को फैलाएँ</string>
+    <string name="a11y_metrics_collapse_category">%1$s को समेटें</string>
+    <string name="a11y_metrics_expanded">विस्तृत</string>
+    <string name="a11y_metrics_collapsed">संक्षिप्त</string>
+    <string name="a11y_metrics_category_selection">%1$s के सभी मेट्रिक्स</string>
+</resources>

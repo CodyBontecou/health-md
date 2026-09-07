@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">Expandir %1$s</string>
+    <string name="a11y_metrics_collapse_category">Contraer %1$s</string>
+    <string name="a11y_metrics_expanded">Expandido</string>
+    <string name="a11y_metrics_collapsed">Contraído</string>
+    <string name="a11y_metrics_category_selection">Todas las métricas de %1$s</string>
+</resources>

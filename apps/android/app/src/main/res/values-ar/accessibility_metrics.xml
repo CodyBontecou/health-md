@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">توسيع %1$s</string>
+    <string name="a11y_metrics_collapse_category">طيّ %1$s</string>
+    <string name="a11y_metrics_expanded">موسّع</string>
+    <string name="a11y_metrics_collapsed">مطويّ</string>
+    <string name="a11y_metrics_category_selection">كل المقاييس في %1$s</string>
+</resources>
