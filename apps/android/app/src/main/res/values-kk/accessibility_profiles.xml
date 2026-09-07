@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Профиль кестелері</string>
+    <string name="a11y_profiles_empty">Әзірге экспорт профильдері жоқ.</string>
+    <string name="a11y_profiles_add">Ағымдағы параметрлерден жаңа профиль</string>
+    <string name="a11y_profiles_none_enabled">Қосылған профиль кестелері жоқ.</string>
+    <string name="a11y_profiles_edit">Кестені өңдеу</string>
+    <string name="a11y_profiles_edit_named">%1$s кестесін өңдеу</string>
+    <string name="a11y_profiles_delete">Жою</string>
+    <string name="a11y_profiles_delete_named">%1$s профилін жою</string>
+    <string name="a11y_profiles_schedule_named">%1$s кестесі</string>
+    <string name="a11y_profiles_save">Сақтау</string>
+    <string name="a11y_profiles_delete_title">«%1$s» жойылсын ба?</string>
+    <string name="a11y_profiles_delete_body">Оның сақталған параметрлері мен кестесі жойылады. Соңғы қалған профильді жою мүмкін емес.</string>
+    <string name="a11y_profiles_cadence_unit">Қайталану бірлігі</string>
+    <string name="a11y_profiles_days">Күндер</string>
+    <string name="a11y_profiles_weeks">Апталар</string>
+    <string name="a11y_profiles_months">Айлар</string>
+    <string name="a11y_profiles_weekday">Апта күні</string>
+    <string name="a11y_profiles_hour">Сағат</string>
+    <string name="a11y_profiles_minute">Минут</string>
+    <string name="a11y_profiles_lookback">Өткен күндер (1–30)</string>
+    <string name="a11y_profiles_every_days">Әр N күн сайын</string>
+    <string name="a11y_profiles_every_weeks">Әр N апта сайын</string>
+    <string name="a11y_profiles_every_months">Әр N ай сайын</string>
+</resources>

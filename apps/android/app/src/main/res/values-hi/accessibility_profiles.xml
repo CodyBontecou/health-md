@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">प्रोफ़ाइल शेड्यूल</string>
+    <string name="a11y_profiles_empty">अभी कोई एक्सपोर्ट प्रोफ़ाइल नहीं है।</string>
+    <string name="a11y_profiles_add">मौजूदा सेटिंग से नई प्रोफ़ाइल</string>
+    <string name="a11y_profiles_none_enabled">कोई प्रोफ़ाइल शेड्यूल चालू नहीं है।</string>
+    <string name="a11y_profiles_edit">शेड्यूल संपादित करें</string>
+    <string name="a11y_profiles_edit_named">%1$s का शेड्यूल संपादित करें</string>
+    <string name="a11y_profiles_delete">हटाएँ</string>
+    <string name="a11y_profiles_delete_named">प्रोफ़ाइल %1$s हटाएँ</string>
+    <string name="a11y_profiles_schedule_named">%1$s का शेड्यूल</string>
+    <string name="a11y_profiles_save">सहेजें</string>
+    <string name="a11y_profiles_delete_title">“%1$s” हटाएँ?</string>
+    <string name="a11y_profiles_delete_body">इसकी सहेजी गई सेटिंग और शेड्यूल हटा दिए जाएँगे। आखिरी बची प्रोफ़ाइल को हटाया नहीं जा सकता।</string>
+    <string name="a11y_profiles_cadence_unit">आवृत्ति की इकाई</string>
+    <string name="a11y_profiles_days">दिन</string>
+    <string name="a11y_profiles_weeks">सप्ताह</string>
+    <string name="a11y_profiles_months">महीने</string>
+    <string name="a11y_profiles_weekday">सप्ताह का दिन</string>
+    <string name="a11y_profiles_hour">घंटा</string>
+    <string name="a11y_profiles_minute">मिनट</string>
+    <string name="a11y_profiles_lookback">पिछले दिन (1–30)</string>
+    <string name="a11y_profiles_every_days">हर N दिन</string>
+    <string name="a11y_profiles_every_weeks">हर N सप्ताह</string>
+    <string name="a11y_profiles_every_months">हर N महीने</string>
+</resources>
