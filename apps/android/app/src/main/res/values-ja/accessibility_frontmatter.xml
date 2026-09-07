@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">カスタムフィールドを追加</string>
+    <string name="a11y_frontmatter_add_placeholder_field">プレースホルダーフィールドを追加</string>
+    <string name="a11y_frontmatter_delete_custom_field">カスタムフィールド %1$s を削除</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">プレースホルダーフィールド %1$s を削除</string>
+</resources>
