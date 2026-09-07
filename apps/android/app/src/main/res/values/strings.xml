@@ -7,7 +7,6 @@
     <string name="back">Back</string>
     <string name="close">Close</string>
     <string name="refresh">Refresh</string>
-    <string name="add">Add</string>
     <string name="action_cancel_export">Cancel Export</string>
     <string name="action_close_options">Close Options</string>
     <string name="action_set_start_date">Set Start Date</string>

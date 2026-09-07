@@ -450,7 +450,6 @@
     <string name="bullet_display_plus">Sinal de mais (+)</string>
 
     <!-- Completed localization from canonical translatable resources -->
-    <string name="add">Adicionar</string>
     <string name="action_cancel_export">Cancelar exportação</string>
     <string name="action_close_options">Fechar opções</string>
     <string name="action_set_start_date">Definir data inicial</string>

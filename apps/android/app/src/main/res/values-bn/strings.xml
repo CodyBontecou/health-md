@@ -6,7 +6,6 @@
     <string name="back">ফিরে যান</string>
     <string name="close">বন্ধ করুন</string>
     <string name="refresh">রিফ্রেশ করুন</string>
-    <string name="add">যোগ করুন</string>
     <string name="action_cancel_export">রপ্তানি বাতিল করুন</string>
     <string name="action_close_options">বিকল্প বন্ধ করুন</string>
     <string name="action_set_start_date">শুরুর তারিখ সেট করুন</string>

@@ -442,7 +442,6 @@
     <string name="bullet_display_plus">Plus (+)</string>
 
     <!-- Completed localization from canonical translatable resources -->
-    <string name="add">Hinzufügen</string>
     <string name="action_cancel_export">Export abbrechen</string>
     <string name="action_close_options">Optionen schließen</string>
     <string name="action_set_start_date">Startdatum festlegen</string>

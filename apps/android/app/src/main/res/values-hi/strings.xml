@@ -6,7 +6,6 @@
     <string name="back">वापस</string>
     <string name="close">बंद करें</string>
     <string name="refresh">ताज़ा करें</string>
-    <string name="add">जोड़ें</string>
     <string name="action_cancel_export">निर्यात रद्द करें</string>
     <string name="action_close_options">विकल्प बंद करें</string>
     <string name="action_set_start_date">आरंभ तिथि निर्धारित करें</string>

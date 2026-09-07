@@ -5,7 +5,6 @@
     <string name="back">返回</string>
     <string name="close">关闭</string>
     <string name="refresh">刷新</string>
-    <string name="add">添加</string>
     <string name="action_cancel_export">取消导出</string>
     <string name="action_close_options">关闭选项</string>
     <string name="action_set_start_date">设置开始日期</string>

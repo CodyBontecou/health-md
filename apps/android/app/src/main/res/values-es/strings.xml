@@ -450,7 +450,6 @@
     <string name="bullet_display_plus">Más (+)</string>
 
     <!-- Complete localization resources -->
-    <string name="add">Agregar</string>
     <string name="action_cancel_export">Cancelar exportación</string>
     <string name="action_close_options">Cerrar opciones</string>
     <string name="action_set_start_date">Establecer fecha de inicio</string>

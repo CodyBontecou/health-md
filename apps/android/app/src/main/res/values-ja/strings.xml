@@ -5,7 +5,6 @@
     <string name="back">戻る</string>
     <string name="close">閉じる</string>
     <string name="refresh">更新</string>
-    <string name="add">追加</string>
     <string name="action_cancel_export">エクスポートのキャンセル</string>
     <string name="action_close_options">オプションを閉じる</string>
     <string name="action_set_start_date">開始日の設定</string>

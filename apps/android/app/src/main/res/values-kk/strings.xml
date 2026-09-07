@@ -5,7 +5,6 @@
     <string name="back">Артқа</string>
     <string name="close">Жабу</string>
     <string name="refresh">Жаңарту</string>
-    <string name="add">Қосу</string>
     <string name="action_cancel_export">Экспорттан бас тарту</string>
     <string name="action_close_options">Параметрлерді жабу</string>
     <string name="action_set_start_date">Басталу күнін орнату</string>
