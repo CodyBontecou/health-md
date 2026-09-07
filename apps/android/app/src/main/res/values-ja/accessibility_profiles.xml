@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">プロファイルのスケジュール</string>
+    <string name="a11y_profiles_empty">エクスポートプロファイルはまだありません。</string>
+    <string name="a11y_profiles_add">現在の設定から新しいプロファイルを作成</string>
+    <string name="a11y_profiles_none_enabled">有効なプロファイルスケジュールはありません。</string>
+    <string name="a11y_profiles_edit">スケジュールを編集</string>
+    <string name="a11y_profiles_edit_named">%1$sのスケジュールを編集</string>
+    <string name="a11y_profiles_delete">削除</string>
+    <string name="a11y_profiles_delete_named">プロファイル%1$sを削除</string>
+    <string name="a11y_profiles_schedule_named">%1$sのスケジュール</string>
+    <string name="a11y_profiles_save">保存</string>
+    <string name="a11y_profiles_delete_title">「%1$s」を削除しますか？</string>
+    <string name="a11y_profiles_delete_body">保存された設定とスケジュールが削除されます。最後に残ったプロファイルは削除できません。</string>
+    <string name="a11y_profiles_cadence_unit">繰り返しの単位</string>
+    <string name="a11y_profiles_days">日</string>
+    <string name="a11y_profiles_weeks">週</string>
+    <string name="a11y_profiles_months">か月</string>
+    <string name="a11y_profiles_weekday">曜日</string>
+    <string name="a11y_profiles_hour">時</string>
+    <string name="a11y_profiles_minute">分</string>
+    <string name="a11y_profiles_lookback">過去の日数（1～30）</string>
+    <string name="a11y_profiles_every_days">N日ごと</string>
+    <string name="a11y_profiles_every_weeks">N週ごと</string>
+    <string name="a11y_profiles_every_months">Nか月ごと</string>
+</resources>
