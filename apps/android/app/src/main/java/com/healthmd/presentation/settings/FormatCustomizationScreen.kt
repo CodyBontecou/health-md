@@ -1,35 +1,31 @@
 package com.healthmd.presentation.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Dataset
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.healthmd.R
 import com.healthmd.domain.model.*
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.i18n.localizedDescription
 import com.healthmd.presentation.i18n.localizedDisplayName
-import com.healthmd.presentation.theme.AppColors
-import com.healthmd.presentation.theme.GeistMono
-import com.healthmd.presentation.theme.Radii
-import com.healthmd.presentation.theme.Spacing
-import androidx.compose.ui.res.stringResource
-import com.healthmd.R
+import com.healthmd.presentation.theme.*
 
 @Composable
 fun FormatCustomizationScreen(
@@ -38,346 +34,234 @@ fun FormatCustomizationScreen(
     onNavigateToFrontmatter: () -> Unit = {},
     onBack: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.bgPrimary)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        // Top bar
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
-            }
-            Text(
-                stringResource(R.string.format_customization_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        // Date Format
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_date_format))
-            DateFormatPreference.entries.forEach { format ->
-                val selected = customization.dateFormat == format
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radii.card))
-                        .background(if (selected) AppColors.accentSubtle else Color.Transparent)
-                        .clickable { onCustomizationChanged(customization.copy(dateFormat = format)) }
-                        .padding(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(
-                        selected = selected,
-                        onClick = { onCustomizationChanged(customization.copy(dateFormat = format)) },
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = AppColors.accent,
-                            unselectedColor = AppColors.textMuted,
-                        ),
-                    )
-                    Text(
-                        format.localizedDisplayName(),
-                        color = if (selected) AppColors.textPrimary else AppColors.textSecondary,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = Spacing.xs),
-                    )
-                }
-            }
-        }
-
-        // Time Format
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_time_format))
-            TimeFormatPreference.entries.forEach { format ->
-                val selected = customization.timeFormat == format
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radii.card))
-                        .background(if (selected) AppColors.accentSubtle else Color.Transparent)
-                        .clickable { onCustomizationChanged(customization.copy(timeFormat = format)) }
-                        .padding(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(
-                        selected = selected,
-                        onClick = { onCustomizationChanged(customization.copy(timeFormat = format)) },
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = AppColors.accent,
-                            unselectedColor = AppColors.textMuted,
-                        ),
-                    )
-                    Text(
-                        format.localizedDisplayName(),
-                        color = if (selected) AppColors.textPrimary else AppColors.textSecondary,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = Spacing.xs),
-                    )
-                }
-            }
-        }
-
-        // Unit System
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_unit_system))
+    BoxWithConstraints(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()) {
+        // Allocate space, never change the font size/scale. The editor scrolls internally
+        // after at most half the available height, including when the IME is showing.
+        val lineHeight = with(LocalDensity.current) { MaterialTheme.typography.bodySmall.lineHeight.toDp() }
+        val editorMaxLines = ((maxHeight / 2 - Spacing.md * 2) / lineHeight).toInt().coerceIn(1, 16)
+        Column(
+            modifier = Modifier.fillMaxSize().testTag(FormatCustomizationTags.SCROLL)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.md, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             ) {
-                UnitPreference.entries.forEach { pref ->
-                    val selected = customization.unitPreference == pref
-                    val shape = RoundedCornerShape(Radii.badge)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(shape)
-                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, shape)
-                            .clickable { onCustomizationChanged(customization.copy(unitPreference = pref)) }
-                            .padding(vertical = Spacing.sm),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                pref.localizedDisplayName(),
-                                color = if (selected) AppColors.accent else AppColors.textSecondary,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            )
-                            Text(
-                                pref.localizedDescription(),
-                                color = AppColors.textMuted,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(GeistSizes.minimumTouchTarget).testTag(FormatCustomizationTags.BACK),
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
                 }
-            }
-        }
-
-        GeistCardClickable(onClick = onNavigateToFrontmatter) {
-            Icon(
-                Icons.Outlined.Dataset,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.frontmatter_customization_title),
-                    style = MaterialTheme.typography.bodyLarge,
+                    stringResource(R.string.format_customization_title),
+                    style = MaterialTheme.typography.titleLarge,
                     color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    stringResource(R.string.frontmatter_customization_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f).semantics { heading() },
                 )
             }
-            Icon(Icons.AutoMirrored.Outlined.ArrowForwardIos, contentDescription = null, tint = AppColors.textMuted)
-        }
 
-        // Markdown Template
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_markdown_template))
-            MarkdownTemplateStyle.entries.forEach { style ->
-                val selected = customization.markdownTemplate.style == style
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(Radii.card))
-                        .background(if (selected) AppColors.accentSubtle else Color.Transparent)
-                        .clickable {
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.section_date_format))
+                Column(Modifier.selectableGroup().testTag(FormatCustomizationTags.DATE)) {
+                    DateFormatPreference.entries.forEach { format ->
+                        FormatCustomizationChoice(
+                            label = format.localizedDisplayName(), selected = customization.dateFormat == format,
+                            onClick = { onCustomizationChanged(customization.copy(dateFormat = format)) },
+                            tag = FormatCustomizationTags.choice(FormatCustomizationTags.DATE, format),
+                        )
+                    }
+                }
+            }
+
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.section_time_format))
+                Column(Modifier.selectableGroup().testTag(FormatCustomizationTags.TIME)) {
+                    TimeFormatPreference.entries.forEach { format ->
+                        FormatCustomizationChoice(
+                            label = format.localizedDisplayName(), selected = customization.timeFormat == format,
+                            onClick = { onCustomizationChanged(customization.copy(timeFormat = format)) },
+                            tag = FormatCustomizationTags.choice(FormatCustomizationTags.TIME, format),
+                        )
+                    }
+                }
+            }
+
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.section_unit_system))
+                FormatCustomizationChoices(
+                    options = UnitPreference.entries, selected = customization.unitPreference,
+                    onSelected = { pref -> onCustomizationChanged(customization.copy(unitPreference = pref)) },
+                    group = FormatCustomizationTags.UNIT,
+                    label = { it.localizedDisplayName() }, description = { it.localizedDescription() },
+                )
+            }
+
+            SettingsNavigationCard(
+                title = stringResource(R.string.frontmatter_customization_title),
+                subtitle = stringResource(R.string.frontmatter_customization_subtitle),
+                icon = Icons.Outlined.Dataset,
+                onClick = onNavigateToFrontmatter,
+                modifier = Modifier.testTag(FormatCustomizationTags.FRONTMATTER),
+            )
+
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.section_markdown_template))
+                Column(Modifier.selectableGroup().testTag(FormatCustomizationTags.TEMPLATE)) {
+                    MarkdownTemplateStyle.entries.forEach { style ->
+                        FormatCustomizationChoice(
+                            label = style.localizedDisplayName(),
+                            selected = customization.markdownTemplate.style == style,
+                            onClick = {
+                                onCustomizationChanged(
+                                    customization.copy(markdownTemplate = customization.markdownTemplate.copy(style = style))
+                                )
+                            },
+                            tag = FormatCustomizationTags.choice(FormatCustomizationTags.TEMPLATE, style),
+                        )
+                    }
+                }
+
+                if (customization.markdownTemplate.style == MarkdownTemplateStyle.CUSTOM) {
+                    FormatCustomizationTemplateEditor(
+                        template = customization.markdownTemplate.customTemplate,
+                        maxLines = editorMaxLines,
+                        onTemplateChanged = { template ->
                             onCustomizationChanged(
-                                customization.copy(markdownTemplate = customization.markdownTemplate.copy(style = style))
+                                customization.copy(
+                                    markdownTemplate = customization.markdownTemplate.copy(customTemplate = template),
+                                )
                             )
-                        }
-                        .padding(Spacing.sm),
-                    verticalAlignment = Alignment.CenterVertically,
+                        },
+                        onReset = {
+                            onCustomizationChanged(
+                                customization.copy(
+                                    markdownTemplate = customization.markdownTemplate.copy(
+                                        customTemplate = MarkdownTemplateConfig.DEFAULT_TEMPLATE,
+                                    ),
+                                )
+                            )
+                        },
+                    )
+                }
+            }
+
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.section_bullet_style))
+                FormatCustomizationChoices(
+                    options = BulletStyle.entries, selected = customization.markdownTemplate.bulletStyle,
+                    onSelected = { style ->
+                        onCustomizationChanged(
+                            customization.copy(markdownTemplate = customization.markdownTemplate.copy(bulletStyle = style))
+                        )
+                    },
+                    group = FormatCustomizationTags.BULLET,
+                    label = { "${it.symbol} ${it.localizedDisplayName()}" },
+                )
+            }
+
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.section_header_level))
+                FormatCustomizationChoices(
+                    options = (1..3).toList(), selected = customization.markdownTemplate.sectionHeaderLevel,
+                    onSelected = { level ->
+                        onCustomizationChanged(
+                            customization.copy(markdownTemplate = customization.markdownTemplate.copy(sectionHeaderLevel = level))
+                        )
+                    },
+                    group = FormatCustomizationTags.HEADER,
+                    label = { "${"#".repeat(it)} H$it" },
+                )
+            }
+
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.section_options))
+                FormatCustomizationToggle(
+                    stringResource(R.string.toggle_emoji_headers), customization.markdownTemplate.useEmoji,
+                    FormatCustomizationTags.EMOJI,
                 ) {
-                    RadioButton(
-                        selected = selected,
-                        onClick = {
-                            onCustomizationChanged(
-                                customization.copy(markdownTemplate = customization.markdownTemplate.copy(style = style))
-                            )
-                        },
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = AppColors.accent,
-                            unselectedColor = AppColors.textMuted,
-                        ),
+                    onCustomizationChanged(
+                        customization.copy(markdownTemplate = customization.markdownTemplate.copy(useEmoji = it))
                     )
-                    Text(
-                        style.localizedDisplayName(),
-                        color = if (selected) AppColors.textPrimary else AppColors.textSecondary,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = Spacing.xs),
+                }
+                FormatCustomizationToggle(
+                    stringResource(R.string.toggle_include_summary), customization.markdownTemplate.includeSummary,
+                    FormatCustomizationTags.SUMMARY,
+                ) {
+                    onCustomizationChanged(
+                        customization.copy(markdownTemplate = customization.markdownTemplate.copy(includeSummary = it))
                     )
+                }
+                FormatCustomizationToggle(
+                    stringResource(R.string.toggle_android_native_fields), customization.includeAndroidNativeFields,
+                    FormatCustomizationTags.NATIVE_FIELDS,
+                ) {
+                    onCustomizationChanged(
+                        customization.copy(
+                            includeAndroidNativeFields = it,
+                            compatibilitySchemaProfile = if (it) {
+                                CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
+                            } else {
+                                customization.compatibilitySchemaProfile
+                            },
+                        )
+                    )
+                }
+                FormatCustomizationToggle(
+                    stringResource(R.string.toggle_legacy_android_aliases), customization.includeLegacyAndroidAliases,
+                    FormatCustomizationTags.LEGACY_ALIASES,
+                ) {
+                    onCustomizationChanged(customization.copy(includeLegacyAndroidAliases = it))
                 }
             }
 
-            if (customization.markdownTemplate.style == MarkdownTemplateStyle.CUSTOM) {
-                CustomTemplateEditor(
-                    template = customization.markdownTemplate.customTemplate,
-                    onTemplateChanged = { template ->
-                        onCustomizationChanged(
-                            customization.copy(
-                                markdownTemplate = customization.markdownTemplate.copy(customTemplate = template),
-                            )
-                        )
-                    },
-                    onReset = {
-                        onCustomizationChanged(
-                            customization.copy(
-                                markdownTemplate = customization.markdownTemplate.copy(
-                                    customTemplate = MarkdownTemplateConfig.DEFAULT_TEMPLATE,
-                                ),
-                            )
-                        )
-                    },
-                )
-            }
+            Spacer(modifier = Modifier.height(Spacing.xl))
         }
-
-        // Bullet Style
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_bullet_style))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                BulletStyle.entries.forEach { style ->
-                    val selected = customization.markdownTemplate.bulletStyle == style
-                    val shape = RoundedCornerShape(Radii.badge)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(shape)
-                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, shape)
-                            .clickable {
-                                onCustomizationChanged(
-                                    customization.copy(markdownTemplate = customization.markdownTemplate.copy(bulletStyle = style))
-                                )
-                            }
-                            .padding(vertical = Spacing.sm),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "${style.symbol} ${style.localizedDisplayName()}",
-                            color = if (selected) AppColors.accent else AppColors.textSecondary,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
-            }
-        }
-
-        // Header Level
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_header_level))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                (1..3).forEach { level ->
-                    val selected = customization.markdownTemplate.sectionHeaderLevel == level
-                    val shape = RoundedCornerShape(Radii.badge)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(shape)
-                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, shape)
-                            .clickable {
-                                onCustomizationChanged(
-                                    customization.copy(markdownTemplate = customization.markdownTemplate.copy(sectionHeaderLevel = level))
-                                )
-                            }
-                            .padding(vertical = Spacing.sm),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            "${"#".repeat(level)} H$level",
-                            color = if (selected) AppColors.accent else AppColors.textSecondary,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                }
-            }
-        }
-
-        // Toggles
-        GeistCard {
-            SectionLabel(stringResource(R.string.section_options))
-            SettingsToggle(stringResource(R.string.toggle_emoji_headers), customization.markdownTemplate.useEmoji) {
-                onCustomizationChanged(
-                    customization.copy(markdownTemplate = customization.markdownTemplate.copy(useEmoji = it))
-                )
-            }
-            SettingsToggle(stringResource(R.string.toggle_include_summary), customization.markdownTemplate.includeSummary) {
-                onCustomizationChanged(
-                    customization.copy(markdownTemplate = customization.markdownTemplate.copy(includeSummary = it))
-                )
-            }
-            SettingsToggle(
-                stringResource(R.string.toggle_android_native_fields),
-                customization.includeAndroidNativeFields,
-            ) {
-                onCustomizationChanged(
-                    customization.copy(
-                        includeAndroidNativeFields = it,
-                        compatibilitySchemaProfile = if (it) {
-                            CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5
-                        } else {
-                            customization.compatibilitySchemaProfile
-                        },
-                    )
-                )
-            }
-            SettingsToggle(
-                stringResource(R.string.toggle_legacy_android_aliases),
-                customization.includeLegacyAndroidAliases,
-            ) {
-                onCustomizationChanged(customization.copy(includeLegacyAndroidAliases = it))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.xl))
     }
 }
 
 @Composable
-private fun CustomTemplateEditor(
+private fun FormatCustomizationTemplateEditor(
     template: String,
+    maxLines: Int,
     onTemplateChanged: (String) -> Unit,
     onReset: () -> Unit,
 ) {
     Spacer(modifier = Modifier.height(Spacing.sm))
     Text(
         text = stringResource(R.string.custom_markdown_template_help),
-        color = AppColors.textMuted,
+        color = AppColors.textSecondary,
         style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.fillMaxWidth(),
     )
     Spacer(modifier = Modifier.height(Spacing.sm))
+    val label = stringResource(R.string.custom_markdown_template_label)
+    // An external label can wrap without being shrunk into an outlined field's floating label.
+    Text(label, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
+        modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.label(FormatCustomizationTags.TEMPLATE_FIELD)))
+    Spacer(modifier = Modifier.height(Spacing.xs))
+    if (template.isEmpty()) {
+        // Keep the full multiline example outside the bounded editor too. A placeholder
+        // paragraph must not force an empty field to grow beyond the keyboard window.
+        Text(
+            stringResource(R.string.custom_markdown_template_placeholder),
+            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = GeistMono),
+            color = AppColors.textSecondary,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(Spacing.xs))
+    }
     OutlinedTextField(
         value = template,
         onValueChange = onTemplateChanged,
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 180.dp),
-        label = { Text(stringResource(R.string.custom_markdown_template_label)) },
-        placeholder = { Text(stringResource(R.string.custom_markdown_template_placeholder)) },
-        minLines = 8,
-        maxLines = 16,
+        modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
+            .testTag(FormatCustomizationTags.TEMPLATE_FIELD).semantics { contentDescription = label },
+        minLines = 1,
+        maxLines = maxLines,
         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = AppColors.accent,
@@ -389,19 +273,13 @@ private fun CustomTemplateEditor(
         shape = RoundedCornerShape(Radii.card),
     )
     Spacer(modifier = Modifier.height(Spacing.xs))
-    Text(
-        text = stringResource(R.string.custom_markdown_template_tokens),
-        color = AppColors.textMuted,
-        style = MaterialTheme.typography.bodySmall,
+    // Keep reset immediately after the editor, rather than beyond a long token reference.
+    SecondaryButton(
+        text = stringResource(R.string.custom_markdown_template_reset),
+        onClick = onReset,
+        modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.TEMPLATE_RESET),
     )
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
-    ) {
-        TextButton(onClick = onReset) {
-            Text(stringResource(R.string.custom_markdown_template_reset), color = AppColors.accent)
-        }
-    }
+    Spacer(modifier = Modifier.height(Spacing.sm))
     GeistCard(padding = Spacing.md) {
         SectionLabel(stringResource(R.string.custom_markdown_template_preview))
         Text(
@@ -411,8 +289,16 @@ private fun CustomTemplateEditor(
             ),
             color = AppColors.textSecondary,
             style = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),
+            modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.TEMPLATE_PREVIEW),
         )
     }
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    Text(
+        text = stringResource(R.string.custom_markdown_template_tokens),
+        color = AppColors.textSecondary,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 private fun renderCustomTemplatePreview(template: String, emptyPreview: String): String {
@@ -461,28 +347,4 @@ private fun renderCustomTemplatePreview(template: String, emptyPreview: String):
         rendered = rendered.replace("{{$key}}", value)
     }
     return rendered.trim().ifBlank { emptyPreview }.take(1_500)
-}
-
-@Composable
-private fun SettingsToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = AppColors.onAccent,
-                checkedTrackColor = AppColors.accent,
-                uncheckedThumbColor = AppColors.textMuted,
-                uncheckedTrackColor = AppColors.bgSecondary,
-                uncheckedBorderColor = AppColors.borderDefault,
-            ),
-        )
-    }
 }
