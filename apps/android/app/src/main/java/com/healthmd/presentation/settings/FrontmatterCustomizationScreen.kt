@@ -1,36 +1,27 @@
 package com.healthmd.presentation.settings
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
 import com.healthmd.R
 import com.healthmd.domain.model.CustomFrontmatterField
 import com.healthmd.domain.model.FrontmatterConfiguration
-import com.healthmd.domain.model.FrontmatterKeyStyle
 import com.healthmd.domain.model.HealthDataFields
 import com.healthmd.presentation.common.GeistCard
-import com.healthmd.presentation.common.GeistIconButton
+import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.SectionLabel
 import com.healthmd.presentation.theme.AppColors
-import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
-import androidx.compose.ui.res.stringResource
 
 @Composable
 fun FrontmatterCustomizationScreen(
@@ -45,97 +36,96 @@ fun FrontmatterCustomizationScreen(
 
     val normalizedConfiguration = remember(configuration) { configuration.withDefaultFields() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.bgPrimary)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
-            }
+    Column(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()) {
+        // Back stays reachable while the independently scrolling form accommodates the IME.
+        Box(Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xs)) {
+            SecondaryButton(
+                text = stringResource(R.string.back), onClick = onBack,
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                modifier = Modifier.testTag(FrontmatterCustomizationTags.BACK),
+            )
+        }
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().testTag(FrontmatterCustomizationTags.BODY)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.md, vertical = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
             Text(
                 stringResource(R.string.frontmatter_customization_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth(),
             )
-        }
 
-        GeistCard {
-            SectionLabel(stringResource(R.string.frontmatter_key_style_section))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.fillMaxWidth()) {
-                FrontmatterKeyStyle.entries.forEach { style ->
-                    val selected = normalizedConfiguration.keyStyle == style
-                    val label = when (style) {
-                        FrontmatterKeyStyle.SNAKE_CASE -> "snake_case"
-                        FrontmatterKeyStyle.CAMEL_CASE -> "camelCase"
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(Radii.badge))
-                            .background(if (selected) AppColors.accentSubtle else AppColors.bgSecondary)
-                            .border(1.dp, if (selected) AppColors.accentBorder else AppColors.borderDefault, RoundedCornerShape(Radii.badge))
-                            .clickable { onConfigurationChanged(normalizedConfiguration.withKeyStyle(style)) }
-                            .padding(vertical = Spacing.sm),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(label, color = if (selected) AppColors.accent else AppColors.textSecondary)
-                    }
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.frontmatter_key_style_section))
+                FrontmatterCustomizationKeyStyles(normalizedConfiguration.keyStyle) { style ->
+                    onConfigurationChanged(normalizedConfiguration.withKeyStyle(style))
                 }
             }
-        }
 
-        GeistCard {
-            SectionLabel(stringResource(R.string.frontmatter_date_type_section))
-            FrontmatterToggleRow(stringResource(R.string.frontmatter_include_date), normalizedConfiguration.includeDate) {
-                onConfigurationChanged(normalizedConfiguration.copy(includeDate = it))
-            }
-            if (normalizedConfiguration.includeDate) {
-                FrontmatterTextField(
-                    label = stringResource(R.string.frontmatter_date_key),
-                    value = normalizedConfiguration.customDateKey,
-                    onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customDateKey = it)) },
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.frontmatter_date_type_section))
+                FrontmatterCustomizationToggle(
+                    label = stringResource(R.string.frontmatter_include_date), checked = normalizedConfiguration.includeDate,
+                    tag = FrontmatterCustomizationTags.DATE_TOGGLE,
+                    onCheckedChange = { onConfigurationChanged(normalizedConfiguration.copy(includeDate = it)) },
                 )
-            }
-            FrontmatterToggleRow(stringResource(R.string.frontmatter_include_type), normalizedConfiguration.includeType) {
-                onConfigurationChanged(normalizedConfiguration.copy(includeType = it))
-            }
-            if (normalizedConfiguration.includeType) {
-                FrontmatterTextField(
-                    label = stringResource(R.string.frontmatter_type_key),
-                    value = normalizedConfiguration.customTypeKey,
-                    onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customTypeKey = it)) },
+                if (normalizedConfiguration.includeDate) {
+                    FrontmatterCustomizationTextField(
+                        label = stringResource(R.string.frontmatter_date_key),
+                        value = normalizedConfiguration.customDateKey,
+                        onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customDateKey = it)) },
+                        tag = FrontmatterCustomizationTags.DATE_KEY,
+                    )
+                }
+                FrontmatterCustomizationToggle(
+                    label = stringResource(R.string.frontmatter_include_type), checked = normalizedConfiguration.includeType,
+                    tag = FrontmatterCustomizationTags.TYPE_TOGGLE,
+                    onCheckedChange = { onConfigurationChanged(normalizedConfiguration.copy(includeType = it)) },
                 )
-                FrontmatterTextField(
-                    label = stringResource(R.string.frontmatter_type_value),
-                    value = normalizedConfiguration.customTypeValue,
-                    onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customTypeValue = it)) },
-                )
+                if (normalizedConfiguration.includeType) {
+                    FrontmatterCustomizationTextField(
+                        label = stringResource(R.string.frontmatter_type_key),
+                        value = normalizedConfiguration.customTypeKey,
+                        onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customTypeKey = it)) },
+                        tag = FrontmatterCustomizationTags.TYPE_KEY, imeAction = ImeAction.Next,
+                    )
+                    FrontmatterCustomizationTextField(
+                        label = stringResource(R.string.frontmatter_type_value),
+                        value = normalizedConfiguration.customTypeValue,
+                        onValueChange = { onConfigurationChanged(normalizedConfiguration.copy(customTypeValue = it)) },
+                        tag = FrontmatterCustomizationTags.TYPE_VALUE,
+                    )
+                }
             }
-        }
 
-        GeistCard {
-            SectionLabel(stringResource(R.string.frontmatter_custom_fields_section))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
-                FrontmatterTextField(
-                    label = stringResource(R.string.frontmatter_field_key),
-                    value = customFieldKey,
-                    onValueChange = { customFieldKey = it },
-                    modifier = Modifier.weight(1f),
+            GeistCard(padding = Spacing.md) {
+                val group = stringResource(R.string.frontmatter_custom_fields_section)
+                SectionLabel(group)
+                FrontmatterCustomizationInputPair(
+                    keyField = { modifier ->
+                        FrontmatterCustomizationTextField(
+                            label = stringResource(R.string.frontmatter_field_key),
+                            value = customFieldKey, onValueChange = { customFieldKey = it },
+                            modifier = modifier, context = group, tag = FrontmatterCustomizationTags.CUSTOM_KEY,
+                            imeAction = ImeAction.Next,
+                        )
+                    },
+                    valueField = { modifier ->
+                        FrontmatterCustomizationTextField(
+                            label = stringResource(R.string.frontmatter_field_value),
+                            value = customFieldValue, onValueChange = { customFieldValue = it },
+                            modifier = modifier, context = group, tag = FrontmatterCustomizationTags.CUSTOM_VALUE,
+                        )
+                    },
                 )
-                FrontmatterTextField(
-                    label = stringResource(R.string.frontmatter_field_value),
-                    value = customFieldValue,
-                    onValueChange = { customFieldValue = it },
-                    modifier = Modifier.weight(1f),
-                )
-                GeistIconButton(
-                    icon = Icons.Outlined.Add,
+                Spacer(Modifier.height(Spacing.xs))
+                SecondaryButton(
+                    text = stringResource(R.string.a11y_frontmatter_add_custom_field),
+                    modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.CUSTOM_ADD),
                     onClick = {
                         val key = customFieldKey.trim()
                         if (key.isNotEmpty()) {
@@ -148,31 +138,32 @@ fun FrontmatterCustomizationScreen(
                             customFieldValue = ""
                         }
                     },
-                    contentDescription = stringResource(R.string.add),
                 )
+                normalizedConfiguration.customFields.toSortedMap().forEach { (key, value) ->
+                    FrontmatterCustomizationEntry(
+                        title = key, subtitle = value,
+                        tag = FrontmatterCustomizationTags.custom(key),
+                        deleteDescription = stringResource(R.string.a11y_frontmatter_delete_custom_field, key),
+                        onDelete = {
+                            onConfigurationChanged(normalizedConfiguration.copy(customFields = normalizedConfiguration.customFields - key))
+                        },
+                    )
+                }
             }
-            normalizedConfiguration.customFields.toSortedMap().forEach { (key, value) ->
-                EditableChipRow(
-                    title = key,
-                    subtitle = value,
-                    onDelete = {
-                        onConfigurationChanged(normalizedConfiguration.copy(customFields = normalizedConfiguration.customFields - key))
-                    },
-                )
-            }
-        }
 
-        GeistCard {
-            SectionLabel(stringResource(R.string.frontmatter_placeholder_fields_section))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
-                FrontmatterTextField(
+            GeistCard(padding = Spacing.md) {
+                val group = stringResource(R.string.frontmatter_placeholder_fields_section)
+                SectionLabel(group)
+                FrontmatterCustomizationTextField(
                     label = stringResource(R.string.frontmatter_field_key),
-                    value = placeholderKey,
-                    onValueChange = { placeholderKey = it },
-                    modifier = Modifier.weight(1f),
+                    value = placeholderKey, onValueChange = { placeholderKey = it },
+                    context = group, tag = FrontmatterCustomizationTags.PLACEHOLDER_KEY,
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                GeistIconButton(
-                    icon = Icons.Outlined.Add,
+                Spacer(Modifier.height(Spacing.xs))
+                SecondaryButton(
+                    text = stringResource(R.string.a11y_frontmatter_add_placeholder_field),
+                    modifier = Modifier.fillMaxWidth().testTag(FrontmatterCustomizationTags.PLACEHOLDER_ADD),
                     onClick = {
                         val key = placeholderKey.trim()
                         if (key.isNotEmpty() && key !in normalizedConfiguration.placeholderFields) {
@@ -184,148 +175,48 @@ fun FrontmatterCustomizationScreen(
                             placeholderKey = ""
                         }
                     },
-                    contentDescription = stringResource(R.string.add),
                 )
+                normalizedConfiguration.placeholderFields.sorted().forEach { key ->
+                    FrontmatterCustomizationEntry(
+                        title = key, subtitle = stringResource(R.string.frontmatter_placeholder_value),
+                        tag = FrontmatterCustomizationTags.placeholder(key),
+                        deleteDescription = stringResource(R.string.a11y_frontmatter_delete_placeholder_field, key),
+                        onDelete = {
+                            onConfigurationChanged(normalizedConfiguration.copy(placeholderFields = normalizedConfiguration.placeholderFields - key))
+                        },
+                    )
+                }
             }
-            normalizedConfiguration.placeholderFields.sorted().forEach { key ->
-                EditableChipRow(
-                    title = key,
-                    subtitle = stringResource(R.string.frontmatter_placeholder_value),
-                    onDelete = {
-                        onConfigurationChanged(normalizedConfiguration.copy(placeholderFields = normalizedConfiguration.placeholderFields - key))
-                    },
+
+            GeistCard(padding = Spacing.md) {
+                SectionLabel(stringResource(R.string.frontmatter_metric_fields_section))
+                FrontmatterCustomizationTextField(
+                    label = stringResource(R.string.search), value = search, onValueChange = { search = it },
+                    context = stringResource(R.string.frontmatter_metric_fields_section),
+                    tag = FrontmatterCustomizationTags.SEARCH, identifier = false,
+                    modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                val filteredFields = normalizedConfiguration.fields.filter { field ->
+                    search.isBlank() || field.originalKey.contains(search, ignoreCase = true) || field.customKey.contains(search, ignoreCase = true)
+                }
+                filteredFields.forEach { field ->
+                    key(field.originalKey) {
+                        FrontmatterCustomizationMetric(
+                            field = field,
+                            onEnabledChanged = { enabled ->
+                                onConfigurationChanged(normalizedConfiguration.updateField(field.originalKey) { it.copy(isEnabled = enabled) })
+                            },
+                            onCustomKeyChanged = { key ->
+                                onConfigurationChanged(normalizedConfiguration.updateField(field.originalKey) { it.copy(customKey = key) })
+                            },
+                        )
+                        HorizontalDivider(color = AppColors.borderSubtle)
+                    }
+                }
             }
-        }
 
-        GeistCard {
-            SectionLabel(stringResource(R.string.frontmatter_metric_fields_section))
-            FrontmatterTextField(
-                label = stringResource(R.string.search),
-                value = search,
-                onValueChange = { search = it },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            val filteredFields = normalizedConfiguration.fields.filter { field ->
-                search.isBlank() || field.originalKey.contains(search, ignoreCase = true) || field.customKey.contains(search, ignoreCase = true)
-            }
-            filteredFields.forEach { field ->
-                MetricFieldRow(
-                    field = field,
-                    onEnabledChanged = { enabled ->
-                        onConfigurationChanged(normalizedConfiguration.updateField(field.originalKey) { it.copy(isEnabled = enabled) })
-                    },
-                    onCustomKeyChanged = { key ->
-                        onConfigurationChanged(normalizedConfiguration.updateField(field.originalKey) { it.copy(customKey = key) })
-                    },
-                )
-                HorizontalDivider(color = AppColors.borderSubtle)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.xl))
-    }
-}
-
-@Composable
-private fun MetricFieldRow(
-    field: CustomFrontmatterField,
-    onEnabledChanged: (Boolean) -> Unit,
-    onCustomKeyChanged: (String) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(field.originalKey, color = AppColors.textPrimary, style = MaterialTheme.typography.bodyMedium)
-                Text(if (field.isEnabled) stringResource(R.string.enabled) else stringResource(R.string.disabled), color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
-            }
-            Switch(
-                checked = field.isEnabled,
-                onCheckedChange = onEnabledChanged,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = AppColors.onAccent,
-                    checkedTrackColor = AppColors.accent,
-                    uncheckedThumbColor = AppColors.textMuted,
-                    uncheckedTrackColor = AppColors.bgSecondary,
-                ),
-            )
-        }
-        FrontmatterTextField(
-            label = stringResource(R.string.frontmatter_output_key),
-            value = field.customKey,
-            onValueChange = onCustomKeyChanged,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = field.isEnabled,
-        )
-    }
-}
-
-@Composable
-private fun FrontmatterToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, color = AppColors.textPrimary, style = MaterialTheme.typography.bodyLarge)
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = AppColors.onAccent,
-                checkedTrackColor = AppColors.accent,
-                uncheckedThumbColor = AppColors.textMuted,
-                uncheckedTrackColor = AppColors.bgSecondary,
-            ),
-        )
-    }
-}
-
-@Composable
-private fun FrontmatterTextField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.padding(vertical = Spacing.xxs),
-        label = { Text(label) },
-        enabled = enabled,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = AppColors.accent,
-            unfocusedBorderColor = AppColors.borderDefault,
-            focusedTextColor = AppColors.textPrimary,
-            unfocusedTextColor = AppColors.textPrimary,
-            disabledTextColor = AppColors.textMuted,
-            cursorColor = AppColors.accent,
-        ),
-        shape = RoundedCornerShape(Radii.card),
-        singleLine = true,
-    )
-}
-
-@Composable
-private fun EditableChipRow(title: String, subtitle: String, onDelete: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = AppColors.textPrimary, style = MaterialTheme.typography.bodyMedium)
-            Text(subtitle, color = AppColors.textMuted, style = MaterialTheme.typography.bodySmall)
-        }
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.action_delete_field), tint = AppColors.textMuted)
+            Spacer(modifier = Modifier.height(Spacing.xl))
         }
     }
 }

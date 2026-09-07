@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">Add Custom Field</string>
+    <string name="a11y_frontmatter_add_placeholder_field">Add Placeholder Field</string>
+    <string name="a11y_frontmatter_delete_custom_field">Delete custom field %1$s</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">Delete placeholder field %1$s</string>
+</resources>

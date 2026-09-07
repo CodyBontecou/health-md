@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">Añadir campo personalizado</string>
+    <string name="a11y_frontmatter_add_placeholder_field">Añadir campo de marcador de posición</string>
+    <string name="a11y_frontmatter_delete_custom_field">Eliminar campo personalizado %1$s</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">Eliminar campo de marcador de posición %1$s</string>
+</resources>
