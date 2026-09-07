@@ -3,6 +3,8 @@ package com.healthmd.presentation.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,8 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -56,7 +58,9 @@ import com.healthmd.sharedsetup.SharedSetupCoordinator
 import com.healthmd.sharedsetup.SharedSetupScreen
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistBreakpoints
+import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
@@ -96,9 +100,6 @@ fun HealthMdNavigation(
 
     // Adaptive navigation: bottom bar on compact screens, navigation rail on larger layouts.
     val showMainNav = currentRoute in NavDestination.entries.map { it.route }
-    val useNavigationRail = LocalConfiguration.current.screenWidthDp >= GeistBreakpoints.medium
-    val showBottomNav = showMainNav && !useNavigationRail
-    val showNavigationRail = showMainNav && useNavigationRail
 
     // Wait until the explicit completion state has loaded or the legacy-folder state has been
     // migrated. The saved decision survives activity recreation and remains stable for this entry.
@@ -225,15 +226,23 @@ fun HealthMdNavigation(
             },
         )
 
+        AppNavigationLayout(
+            destinations = if (showMainNav) NavDestination.entries else emptyList(),
+            currentRoute = currentRoute,
+            onNavigate = { dest ->
+                navController.navigate(dest.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+        ) { contentModifier ->
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = if (showNavigationRail) 80.dp else 0.dp,
-                    bottom = if (showBottomNav) 88.dp else 0.dp,
-                ),
+            modifier = contentModifier,
         ) {
             // Onboarding
             composable(SubRoutes.ONBOARDING) {
@@ -424,6 +433,7 @@ fun HealthMdNavigation(
                 }
             }
         }
+        }
 
         if (shouldShowReleaseNotes && releaseNotes != null) {
             ReleaseNotesDialog(
@@ -469,42 +479,6 @@ fun HealthMdNavigation(
                 .statusBarsPadding()
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         )
-
-        // Navigation rail (main tabs on tablets/foldables)
-        if (showNavigationRail) {
-            AdaptiveNavigationRail(
-                destinations = NavDestination.entries,
-                currentRoute = currentRoute,
-                onNavigate = { dest ->
-                    navController.navigate(dest.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                modifier = Modifier.align(Alignment.CenterStart),
-            )
-        }
-
-        // Bottom navigation bar (only on compact main tabs)
-        if (showBottomNav) {
-            FloatingNavBar(
-                destinations = NavDestination.entries,
-                currentRoute = currentRoute,
-                onNavigate = { dest ->
-                    navController.navigate(dest.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
     }
     }
 }
@@ -652,6 +626,47 @@ private fun localizedRecoveryDate(date: LocalDate): String {
         .format(Date.from(instant))
 }
 
+/** Reserve the measured navigation size, including wrapped labels, rather than a fixed inset. */
+@Composable
+internal fun AppNavigationLayout(
+    destinations: List<NavDestination>,
+    currentRoute: String?,
+    onNavigate: (NavDestination) -> Unit,
+    content: @Composable (Modifier) -> Unit,
+) {
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize().safeDrawingPadding(),
+    ) {
+        val useNavigationRail = maxWidth >= GeistBreakpoints.medium.dp
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (destinations.isNotEmpty() && useNavigationRail) {
+                AdaptiveNavigationRail(
+                    destinations = destinations,
+                    currentRoute = currentRoute,
+                    onNavigate = onNavigate,
+                )
+            }
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                containerColor = AppColors.bgPrimary,
+                // The outer layout consumes system bars/cutouts for all routes.
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                bottomBar = {
+                    if (destinations.isNotEmpty() && !useNavigationRail) {
+                        FloatingNavBar(
+                            destinations = destinations,
+                            currentRoute = currentRoute,
+                            onNavigate = onNavigate,
+                        )
+                    }
+                },
+            ) { padding ->
+                content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
+            }
+        }
+    }
+}
+
 @Composable
 private fun AdaptiveNavigationRail(
     destinations: List<NavDestination>,
@@ -665,7 +680,8 @@ private fun AdaptiveNavigationRail(
             .fillMaxHeight()
             .width(80.dp)
             .background(colors.background100)
-            .border(width = 1.dp, color = colors.grayAlpha.c400),
+            .border(width = 1.dp, color = colors.grayAlpha.c400)
+            .verticalScroll(rememberScrollState()),
         containerColor = colors.background100,
         contentColor = colors.primary,
     ) {
@@ -704,23 +720,39 @@ private fun FloatingNavBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
-    Row(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .background(colors.background100)
             .border(width = 1.dp, color = colors.grayAlpha.c400)
             .navigationBarsPadding()
             .heightIn(min = 64.dp)
-            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(Spacing.xs),
     ) {
-        destinations.forEach { destination ->
-            NavBarTab(
-                destination = destination,
-                selected = currentRoute == destination.route,
-                onClick = { onNavigate(destination) },
-                modifier = Modifier.weight(1f),
-            )
+        val wrapTabs = GeistAdaptiveLayout.wrapNavigation(
+            maxWidth.value, LocalDensity.current.fontScale, destinations.size,
+        )
+        // Widen the reading/touch area instead of turning each label into a narrow
+        // stack of syllables. Scaffold still measures the resulting bar height.
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            val rows = if (wrapTabs) destinations.chunked(2) else listOf(destinations)
+            rows.forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    row.forEach { destination ->
+                        NavBarTab(
+                            destination = destination,
+                            selected = currentRoute == destination.route,
+                            onClick = { onNavigate(destination) },
+                            modifier = Modifier.weight(1f),
+                            textOnly = wrapTabs,
+                        )
+                    }
+                    if (wrapTabs && row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -731,6 +763,7 @@ private fun NavBarTab(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    textOnly: Boolean = false,
 ) {
     val colors = LocalGeistColors.current
     val contentColor = if (selected) colors.primary else colors.secondary
@@ -739,23 +772,32 @@ private fun NavBarTab(
 
     Column(
         modifier = modifier
-            .height(48.dp)
+            .fillMaxHeight()
+            .heightIn(min = GeistSizes.minimumTouchTarget)
             .background(background, RoundedCornerShape(GeistRadii.small))
             .selectable(
                 selected = selected,
                 onClick = onClick,
                 role = Role.Tab,
-            ),
+            )
+            .padding(vertical = Spacing.xxs),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(
-            destination.icon,
-            contentDescription = label,
-            tint = if (selected) colors.accent else contentColor,
-            modifier = Modifier.size(20.dp),
+        if (!textOnly) {
+            Icon(
+                destination.icon,
+                contentDescription = null,
+                tint = if (selected) colors.accent else contentColor,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.height(Spacing.xxs))
+        }
+        Text(
+            label,
+            color = contentColor,
+            style = GeistType.button12,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(Spacing.xxs))
-        Text(label, color = contentColor, style = GeistType.button12)
     }
 }

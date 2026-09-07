@@ -1123,7 +1123,7 @@ fun ExportScreen(
 }
 
 @Composable
-private fun FloatingExportActionBar(
+internal fun FloatingExportActionBar(
     isPurchased: Boolean,
     freeExportsRemaining: Int,
     hasSelectedFormat: Boolean,
@@ -1165,7 +1165,7 @@ private fun FloatingExportActionBar(
                 Text(
                     text = reason,
                     style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
+                    color = AppColors.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1179,34 +1179,35 @@ private fun FloatingExportActionBar(
                         freeExportsRemaining,
                     ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
+                    color = AppColors.textSecondary,
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                SecondaryButton(
-                    text = stringResource(R.string.export_preview_button),
-                    onClick = onPreview,
-                    icon = Icons.Outlined.Visibility,
-                    enabled = canPreview,
-                    modifier = Modifier.weight(1f),
-                )
-                PrimaryButton(
-                    text = if (hitExportLimit) {
-                        stringResource(R.string.unlock_button)
-                    } else {
-                        stringResource(R.string.export_button)
-                    },
-                    onClick = onExport,
-                    icon = Icons.Outlined.UploadFile,
-                    enabled = canExport,
-                    isLoading = isExporting,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            AdaptiveActionPair(
+                primaryAction = { actionModifier ->
+                    PrimaryButton(
+                        text = if (hitExportLimit) {
+                            stringResource(R.string.unlock_button)
+                        } else {
+                            stringResource(R.string.export_button)
+                        },
+                        onClick = onExport,
+                        icon = Icons.Outlined.UploadFile,
+                        enabled = canExport,
+                        isLoading = isExporting,
+                        modifier = actionModifier,
+                    )
+                },
+                secondaryAction = { actionModifier ->
+                    SecondaryButton(
+                        text = stringResource(R.string.export_preview_button),
+                        onClick = onPreview,
+                        icon = Icons.Outlined.Visibility,
+                        enabled = canPreview,
+                        modifier = actionModifier,
+                    )
+                },
+            )
         }
     }
 }

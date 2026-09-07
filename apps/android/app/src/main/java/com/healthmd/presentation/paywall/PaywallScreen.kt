@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +28,7 @@ import com.healthmd.R
 import com.healthmd.domain.billing.BillingError
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
 
@@ -78,6 +80,10 @@ fun PaywallScreen(
         }
     }
 
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    val readingLayout = GeistAdaptiveLayout.readingFirst(
+        maxWidth.value, maxHeight.value, LocalDensity.current.fontScale,
+    )
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -108,22 +114,25 @@ fun PaywallScreen(
             Spacer(modifier = Modifier.height(Spacing.lg))
         }
 
-        Image(
-            painter = painterResource(id = R.drawable.app_icon),
-            contentDescription = stringResource(R.string.app_name),
-            modifier = Modifier
-                .size(96.dp)
-                .clip(RoundedCornerShape(Radii.card))
-                .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card)),
-            contentScale = ContentScale.Crop,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.lg))
+        if (!readingLayout) {
+            Image(
+                painter = painterResource(id = R.drawable.app_icon),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(Radii.card))
+                    .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card)),
+                contentScale = ContentScale.Crop,
+            )
+            Spacer(modifier = Modifier.height(Spacing.lg))
+        }
 
         Text(
             text = stringResource(R.string.paywall_title),
             style = MaterialTheme.typography.headlineLarge,
             color = AppColors.textPrimary,
+            textAlign = if (readingLayout) TextAlign.Start else TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(Spacing.xs))
@@ -132,27 +141,28 @@ fun PaywallScreen(
             text = subtitle,
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.textSecondary,
-            textAlign = TextAlign.Center,
+            textAlign = if (readingLayout) TextAlign.Start else TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(Spacing.lg))
 
-        // Feature list
-        GeistCard {
-            FeatureRow(Icons.Outlined.AllInclusive, stringResource(R.string.paywall_unlimited_exports))
+        // Keep the type scale and all product information, but give the words more width.
+        GeistCard(padding = if (readingLayout) Spacing.sm else Spacing.lg) {
+            FeatureRow(Icons.Outlined.AllInclusive, stringResource(R.string.paywall_unlimited_exports), !readingLayout)
             Spacer(modifier = Modifier.height(Spacing.sm))
-            FeatureRow(Icons.Outlined.Schedule, stringResource(R.string.paywall_scheduled_exports))
+            FeatureRow(Icons.Outlined.Schedule, stringResource(R.string.paywall_scheduled_exports), !readingLayout)
             Spacer(modifier = Modifier.height(Spacing.sm))
-            FeatureRow(Icons.Outlined.AutoAwesome, stringResource(R.string.paywall_future_features))
+            FeatureRow(Icons.Outlined.AutoAwesome, stringResource(R.string.paywall_future_features), !readingLayout)
             Spacer(modifier = Modifier.height(Spacing.sm))
             if (fullAccessIncluded) {
-                FeatureRow(Icons.Outlined.CheckCircle, stringResource(R.string.fdroid_full_access_included))
+                FeatureRow(Icons.Outlined.CheckCircle, stringResource(R.string.fdroid_full_access_included), !readingLayout)
             } else {
-                FeatureRow(Icons.Outlined.Payment, stringResource(R.string.paywall_one_time))
+                FeatureRow(Icons.Outlined.Payment, stringResource(R.string.paywall_one_time), !readingLayout)
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(Spacing.md))
 
         // Error message
         if (errorMessage != null) {
@@ -237,18 +247,21 @@ fun PaywallScreen(
 
         Spacer(modifier = Modifier.height(Spacing.md))
     }
+    }
 }
 
 @Composable
-private fun FeatureRow(icon: ImageVector, text: String) {
+private fun FeatureRow(icon: ImageVector, text: String, showIcon: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = AppColors.accent,
-            modifier = Modifier.size(24.dp),
-        )
-        Spacer(modifier = Modifier.width(Spacing.sm))
+        if (showIcon) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+        }
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,

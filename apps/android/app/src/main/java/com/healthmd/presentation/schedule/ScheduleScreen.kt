@@ -14,32 +14,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -57,15 +44,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -81,7 +64,6 @@ import com.healthmd.data.health.grantedAllRequestedHealthPermissions
 import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportTarget
-import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.presentation.common.APIExportSettingsDialog
 import com.healthmd.presentation.common.ConfigurationProtectedRegion
@@ -96,7 +78,6 @@ import com.healthmd.presentation.theme.Spacing
 import com.healthmd.util.runCatchingCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.text.DateFormatSymbols
 import java.text.NumberFormat
 import java.text.ParsePosition
 import java.util.Date
@@ -348,6 +329,7 @@ fun ScheduleScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.md, vertical = Spacing.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -717,530 +699,6 @@ private fun GeistSwitch(
 }
 
 @Composable
-private fun ScheduleSettingsCard(
-    uiState: ScheduleUiState,
-    onFrequencyValueChange: (Int) -> Unit,
-    onFrequencyUnitSelected: (ScheduleCadenceUnit) -> Unit,
-    onHourDelta: (Int) -> Unit,
-    onMinuteDelta: (Int) -> Unit,
-    onTogglePeriod: () -> Unit,
-    onDateWindowSelected: (ScheduleDateWindow) -> Unit,
-    onLookbackDelta: (Int) -> Unit,
-) {
-    val shape = RoundedCornerShape(Radii.card)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, shape)
-            .padding(Spacing.md),
-    ) {
-        FrequencyRow(
-            value = uiState.cadenceValue,
-            unit = uiState.cadenceUnit,
-            onValueChange = onFrequencyValueChange,
-            onUnitSelected = onFrequencyUnitSelected,
-        )
-
-        ScheduleDivider()
-
-        DateWindowRow(
-            dateWindow = uiState.dateWindow,
-            onDateWindowSelected = onDateWindowSelected,
-        )
-
-        if (uiState.cadenceUnit == ScheduleCadenceUnit.DAYS || uiState.cadenceUnit == ScheduleCadenceUnit.WEEKS) {
-            ScheduleDivider()
-
-            Text(
-                text = stringResource(R.string.schedule_time),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.sm))
-
-            TimeRow(
-                hour = uiState.hour,
-                minute = uiState.minute,
-                onHourDelta = onHourDelta,
-                onMinuteDelta = onMinuteDelta,
-                onTogglePeriod = onTogglePeriod,
-            )
-        }
-
-        if (uiState.dateWindow != ScheduleDateWindow.TODAY) {
-            ScheduleDivider()
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.schedule_export_past_days),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = AppColors.textPrimary,
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                ) {
-                    Text(
-                        text = localizedInteger(uiState.lookbackDays),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = AppColors.textSecondary,
-                    )
-                    SegmentedStepper(
-                        onDecrease = { onLookbackDelta(-1) },
-                        onIncrease = { onLookbackDelta(1) },
-                        decreaseDescription = stringResource(R.string.schedule_decrease_lookback_days),
-                        increaseDescription = stringResource(R.string.schedule_increase_lookback_days),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DateWindowRow(
-    dateWindow: ScheduleDateWindow,
-    onDateWindowSelected: (ScheduleDateWindow) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = listOf(
-        DateWindowOption(
-            value = ScheduleDateWindow.PAST_COMPLETE_DAYS,
-            label = stringResource(R.string.schedule_date_window_past_complete_days),
-        ),
-        DateWindowOption(
-            value = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY,
-            label = stringResource(R.string.schedule_date_window_past_complete_days_through_today),
-        ),
-        DateWindowOption(
-            value = ScheduleDateWindow.TODAY,
-            label = stringResource(R.string.schedule_date_window_today),
-        ),
-    )
-    val selectedLabel = options.firstOrNull { it.value == dateWindow }?.label.orEmpty()
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.schedule_date_window),
-            style = MaterialTheme.typography.titleLarge,
-            color = AppColors.textPrimary,
-        )
-        Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(Radii.card))
-                    .clickable { expanded = true }
-                    .padding(horizontal = Spacing.xxs, vertical = Spacing.xxs),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = selectedLabel,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = AppColors.accentHover,
-                )
-                Spacer(modifier = Modifier.width(Spacing.xxs))
-                Column {
-                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
-                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
-                }
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option.label) },
-                        onClick = {
-                            expanded = false
-                            onDateWindowSelected(option.value)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FrequencyRow(
-    value: Int,
-    unit: ScheduleCadenceUnit,
-    onValueChange: (Int) -> Unit,
-    onUnitSelected: (ScheduleCadenceUnit) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.schedule_frequency),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                FrequencyValueField(
-                    value = value,
-                    unit = unit,
-                    onValueChange = onValueChange,
-                )
-                FrequencyUnitDropdown(
-                    value = value,
-                    unit = unit,
-                    onUnitSelected = onUnitSelected,
-                )
-            }
-        }
-
-        if (unit == ScheduleCadenceUnit.MINUTES) {
-            Spacer(modifier = Modifier.height(Spacing.xs))
-            Text(
-                text = stringResource(R.string.cadence_minutes_minimum),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textMuted,
-                textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-
-@Composable
-private fun FrequencyValueField(
-    value: Int,
-    unit: ScheduleCadenceUnit,
-    onValueChange: (Int) -> Unit,
-) {
-    val locale = LocalConfiguration.current.locales[0]
-    var text by rememberSaveable(locale) { mutableStateOf(formatInteger(value, locale)) }
-    var isFocused by remember { mutableStateOf(false) }
-    val minimumValue = minimumCadenceValue(unit)
-
-    LaunchedEffect(value, unit, isFocused) {
-        if (!isFocused) {
-            text = formatInteger(value, locale)
-        }
-    }
-
-    fun commitValue() {
-        val committed = parseLocalizedInteger(text, locale)?.coerceAtLeast(minimumValue) ?: minimumValue
-        text = formatInteger(committed, locale)
-        onValueChange(committed)
-    }
-
-    Box(
-        modifier = Modifier
-            .width(76.dp)
-            .height(48.dp)
-            .clip(RoundedCornerShape(Radii.card))
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, RoundedCornerShape(Radii.card))
-            .padding(horizontal = Spacing.xs),
-        contentAlignment = Alignment.Center,
-    ) {
-        BasicTextField(
-            value = text,
-            onValueChange = { raw ->
-                val digits = raw.filter { it.isDigit() }.take(MAX_FREQUENCY_DIGITS)
-                text = digits
-                parseLocalizedInteger(digits, locale)
-                    ?.takeIf { it >= minimumValue }
-                    ?.let(onValueChange)
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            textStyle = MaterialTheme.typography.titleLarge.copy(
-                color = AppColors.textPrimary,
-                textAlign = TextAlign.Center,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    val wasFocused = isFocused
-                    isFocused = focusState.isFocused
-                    if (wasFocused && !focusState.isFocused) {
-                        commitValue()
-                    }
-                },
-        )
-    }
-}
-
-@Composable
-private fun FrequencyUnitDropdown(
-    value: Int,
-    unit: ScheduleCadenceUnit,
-    onUnitSelected: (ScheduleCadenceUnit) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val options = listOf(
-        ScheduleCadenceUnit.MINUTES to pluralStringResource(
-            R.plurals.schedule_cadence_unit_minutes,
-            value,
-        ),
-        ScheduleCadenceUnit.HOURS to pluralStringResource(
-            R.plurals.schedule_cadence_unit_hours,
-            value,
-        ),
-        ScheduleCadenceUnit.DAYS to pluralStringResource(
-            R.plurals.schedule_cadence_unit_days,
-            value,
-        ),
-        ScheduleCadenceUnit.WEEKS to pluralStringResource(
-            R.plurals.schedule_cadence_unit_weeks,
-            value,
-        ),
-    )
-    val selectedLabel = options.firstOrNull { it.first == unit }?.second.orEmpty()
-
-    Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(Radii.card))
-                .clickable { expanded = true }
-                .padding(horizontal = Spacing.xxs, vertical = Spacing.xxs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = selectedLabel,
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.accentHover,
-            )
-            Spacer(modifier = Modifier.width(Spacing.xxs))
-            Column {
-                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = AppColors.accentHover, modifier = Modifier.size(18.dp))
-            }
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            options.forEach { (option, label) ->
-                DropdownMenuItem(
-                    text = { Text(label) },
-                    onClick = {
-                        expanded = false
-                        onUnitSelected(option)
-                    },
-                )
-            }
-        }
-    }
-}
-
-private fun minimumCadenceValue(unit: ScheduleCadenceUnit): Int = when (unit) {
-    ScheduleCadenceUnit.MINUTES -> 15
-    ScheduleCadenceUnit.HOURS,
-    ScheduleCadenceUnit.DAYS,
-    ScheduleCadenceUnit.WEEKS -> 1
-}
-
-@Composable
-private fun TimeRow(
-    hour: Int,
-    minute: Int,
-    onHourDelta: (Int) -> Unit,
-    onMinuteDelta: (Int) -> Unit,
-    onTogglePeriod: () -> Unit,
-) {
-    val context = LocalContext.current
-    val locale = LocalConfiguration.current.locales[0]
-    val use24HourTime = DateFormat.is24HourFormat(context)
-    val hourCycle = localizedHourCycle(locale, use24HourTime)
-    val displayHour = localizedDisplayHour(hour, hourCycle)
-    val period = DateFormatSymbols.getInstance(locale).amPmStrings[if (hour < 12) 0 else 1]
-    val periodPrecedesTime = !use24HourTime && localizedDayPeriodPrecedesHour(locale)
-    val hourFormat = remember(locale, use24HourTime) {
-        NumberFormat.getIntegerInstance(locale).apply {
-            isGroupingUsed = false
-            minimumIntegerDigits = localizedHourMinimumDigits(locale, use24HourTime)
-        }
-    }
-    val minuteFormat = remember(locale) {
-        NumberFormat.getIntegerInstance(locale).apply {
-            isGroupingUsed = false
-            minimumIntegerDigits = 2
-        }
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (periodPrecedesTime) {
-            PickerPill(
-                label = period,
-                onIncrement = onTogglePeriod,
-                onDecrement = onTogglePeriod,
-                incrementDescription = stringResource(R.string.schedule_toggle_time_period),
-                decrementDescription = stringResource(R.string.schedule_toggle_time_period),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        PickerPill(
-            label = hourFormat.format(displayHour),
-            onIncrement = { onHourDelta(1) },
-            onDecrement = { onHourDelta(-1) },
-            incrementDescription = stringResource(R.string.schedule_increase_hour),
-            decrementDescription = stringResource(R.string.schedule_decrease_hour),
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = localizedTimeSeparator(locale, use24HourTime),
-            style = MaterialTheme.typography.headlineMedium,
-            color = AppColors.textSecondary,
-        )
-        PickerPill(
-            label = minuteFormat.format(minute),
-            onIncrement = { onMinuteDelta(1) },
-            onDecrement = { onMinuteDelta(-1) },
-            incrementDescription = stringResource(R.string.schedule_increase_minute),
-            decrementDescription = stringResource(R.string.schedule_decrease_minute),
-            modifier = Modifier.weight(1f),
-        )
-        if (!use24HourTime && !periodPrecedesTime) {
-            PickerPill(
-                label = period,
-                onIncrement = onTogglePeriod,
-                onDecrement = onTogglePeriod,
-                incrementDescription = stringResource(R.string.schedule_toggle_time_period),
-                decrementDescription = stringResource(R.string.schedule_toggle_time_period),
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun PickerPill(
-    label: String,
-    onIncrement: () -> Unit,
-    onDecrement: () -> Unit,
-    incrementDescription: String,
-    decrementDescription: String,
-    modifier: Modifier = Modifier,
-) {
-    val shape = RoundedCornerShape(Radii.card)
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .clip(shape)
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, shape)
-            .padding(horizontal = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleLarge,
-            color = AppColors.textPrimary,
-        )
-        Spacer(modifier = Modifier.width(Spacing.xxs))
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                Icons.Filled.KeyboardArrowUp,
-                contentDescription = incrementDescription,
-                tint = AppColors.accentHover,
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onIncrement() },
-            )
-            Icon(
-                Icons.Filled.KeyboardArrowDown,
-                contentDescription = decrementDescription,
-                tint = AppColors.accentHover,
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable { onDecrement() },
-            )
-        }
-    }
-}
-
-@Composable
-private fun SegmentedStepper(
-    onDecrease: () -> Unit,
-    onIncrease: () -> Unit,
-    decreaseDescription: String,
-    increaseDescription: String,
-) {
-    val shape = RoundedCornerShape(Radii.card)
-    Row(
-        modifier = Modifier
-            .height(48.dp)
-            .clip(shape)
-            .background(AppColors.bgPrimary)
-            .border(1.dp, AppColors.borderDefault, shape),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        StepperIcon(Icons.Filled.Remove, decreaseDescription, onDecrease)
-        Box(
-            modifier = Modifier
-                .width(1.dp)
-                .height(32.dp)
-                .background(AppColors.borderDefault),
-        )
-        StepperIcon(Icons.Filled.Add, increaseDescription, onIncrease)
-    }
-}
-
-@Composable
-private fun StepperIcon(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .width(48.dp)
-            .height(48.dp)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            icon,
-            contentDescription = contentDescription,
-            tint = AppColors.textPrimary,
-            modifier = Modifier.size(24.dp),
-        )
-    }
-}
-
-@Composable
-private fun ScheduleDivider() {
-    Spacer(modifier = Modifier.height(Spacing.md))
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(AppColors.borderDefault),
-    )
-    Spacer(modifier = Modifier.height(Spacing.md))
-}
-
-@Composable
 private fun WarningCard(
     title: String,
     body: String,
@@ -1290,10 +748,6 @@ private fun WarningCard(
 private fun ScheduleUiMessage.localizedText(): String = when (this) {
     is ScheduleUiMessage.Text -> stringResource(resourceId, *arguments.toTypedArray())
 }
-
-@Composable
-private fun localizedInteger(value: Int): String =
-    formatInteger(value, LocalConfiguration.current.locales[0])
 
 internal fun formatInteger(value: Int, locale: Locale): String =
     NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }.format(value)
@@ -1393,13 +847,6 @@ private data class TimePatternRun(
 ) {
     val length: Int get() = endExclusive - start
 }
-
-private const val MAX_FREQUENCY_DIGITS = 5
-
-private data class DateWindowOption(
-    val value: ScheduleDateWindow,
-    val label: String,
-)
 
 private fun hasPostNotificationsPermission(context: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
