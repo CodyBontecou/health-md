@@ -244,12 +244,22 @@ private fun FormatCustomizationTemplateEditor(
     Text(label, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
         modifier = Modifier.fillMaxWidth().testTag(FormatCustomizationTags.label(FormatCustomizationTags.TEMPLATE_FIELD)))
     Spacer(modifier = Modifier.height(Spacing.xs))
+    if (template.isEmpty()) {
+        // Keep the full multiline example outside the bounded editor too. A placeholder
+        // paragraph must not force an empty field to grow beyond the keyboard window.
+        Text(
+            stringResource(R.string.custom_markdown_template_placeholder),
+            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = GeistMono),
+            color = AppColors.textSecondary,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(modifier = Modifier.height(Spacing.xs))
+    }
     OutlinedTextField(
         value = template,
         onValueChange = onTemplateChanged,
         modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
             .testTag(FormatCustomizationTags.TEMPLATE_FIELD).semantics { contentDescription = label },
-        placeholder = { Text(stringResource(R.string.custom_markdown_template_placeholder)) },
         minLines = 1,
         maxLines = maxLines,
         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),

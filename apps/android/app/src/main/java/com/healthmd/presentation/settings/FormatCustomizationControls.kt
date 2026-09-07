@@ -102,7 +102,7 @@ internal fun FormatCustomizationChoice(
 /** Weighted choices only share a row when there is enough reading width at the user's scale. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun <T> FormatCustomizationChoices(
+internal fun <T : Any> FormatCustomizationChoices(
     options: List<T>,
     selected: T,
     onSelected: (T) -> Unit,
