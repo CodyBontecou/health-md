@@ -77,11 +77,11 @@ struct PaywallView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             Color.bgPrimary.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: Spacing.s8) {
+            OnboardingPaywallLayout(onDismiss: { dismiss() }, dismissIdentifier: AccessibilityID.Paywall.dismissButton) {
+                VStack(spacing: Spacing.s6) {
                     header
 
                     VStack(spacing: Spacing.s3) {
@@ -100,32 +100,7 @@ struct PaywallView: View {
 
                     ctaSection
                 }
-                .padding(.horizontal, Spacing.s6)
-                .padding(.top, Spacing.s16)
-                .padding(.bottom, Spacing.s10)
-                .frame(maxWidth: .infinity)
             }
-
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.textSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(Color.bgPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                    )
-                    .accessibilityHidden(true)
-            }
-            .buttonStyle(.plain)
-            .padding(.top, Spacing.s4)
-            .padding(.trailing, Spacing.s4)
-            .accessibilityIdentifier(AccessibilityID.Paywall.dismissButton)
-            .accessibilityLabel("Dismiss")
         }
         .accessibilityIdentifier(AccessibilityID.Paywall.view)
         .onAppear { trackPaywallShownOnce() }
@@ -136,34 +111,12 @@ struct PaywallView: View {
     }
 
     private var header: some View {
-        VStack(spacing: Spacing.s6) {
-            Image("AppIconImage")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 72, height: 72)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-                .accessibilityHidden(true)
-
-            VStack(spacing: Spacing.s2) {
-                Text(titleText)
-                    .font(Typography.displayLarge())
-                    .foregroundStyle(Color.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .tracking(-1)
-                    .accessibilityIdentifier(AccessibilityID.Paywall.title)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text(subtitleText)
-                    .font(Typography.bodyLarge())
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier(AccessibilityID.Paywall.subtitle)
-            }
-        }
+        OnboardingPaywallHeader(
+            title: titleText,
+            subtitle: subtitleText,
+            titleIdentifier: AccessibilityID.Paywall.title,
+            subtitleIdentifier: AccessibilityID.Paywall.subtitle
+        )
     }
 
     @ViewBuilder
@@ -172,27 +125,24 @@ struct PaywallView: View {
             if let error = purchaseManager.purchaseError {
                 Text(error)
                     .font(Typography.caption())
-                    .foregroundStyle(error.contains("cody@isolated.tech") ? Color.textMuted : Color.error)
-                    .multilineTextAlignment(.center)
+                    .foregroundStyle(error.contains("cody@isolated.tech") ? Color.textSecondary : Color.errorText)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, Spacing.s3)
                     .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
             } else if let productLoadError = purchaseManager.productLoadError, !purchaseManager.isLoadingProducts {
                 VStack(spacing: Spacing.s2) {
                     Text(productLoadError)
                         .font(Typography.caption())
-                        .foregroundStyle(Color.error)
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(Color.errorText)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, Spacing.s3)
                         .accessibilityIdentifier(AccessibilityID.Paywall.errorMessage)
 
-                    Button {
+                    OnboardingTextAction(title: "Try Again") {
                         Task { await purchaseManager.loadProductsIfNeeded(force: true) }
-                    } label: {
-                        Text("Try Again")
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.accent)
                     }
-                    .buttonStyle(.plain)
                     .accessibilityLabel("Try loading purchase options again")
                 }
             }
@@ -239,26 +189,15 @@ struct PaywallView: View {
                 }
             }
 
-            Button {
+            OnboardingTextAction(
+                title: "Restore Purchase",
+                isLoading: purchaseManager.isRestoring,
+                isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring
+            ) {
                 Task {
                     await purchaseManager.restore(source: .paywall(context))
                 }
-            } label: {
-                HStack(spacing: Spacing.s2) {
-                    if purchaseManager.isRestoring {
-                        ProgressView()
-                            .controlSize(.mini)
-                            .accessibilityHidden(true)
-                    }
-                    Text("Restore Purchase")
-                        .font(Typography.bodyEmphasis())
-                }
-                .foregroundStyle(Color.textSecondary)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 40)
             }
-            .buttonStyle(.plain)
-            .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
             .accessibilityIdentifier(AccessibilityID.Paywall.restoreButton)
             .accessibilityLabel("Restore previous purchase")
 
@@ -269,23 +208,7 @@ struct PaywallView: View {
     }
 
     private var purchaseDisclosure: some View {
-        VStack(spacing: Spacing.s2) {
-            Text("Lifetime plans are one-time purchases charged to your Apple ID.")
-                .font(Typography.caption())
-                .foregroundStyle(Color.textMuted)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: Spacing.s4) {
-                Link("Terms", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-                Link("Privacy", destination: URL(string: "https://healthmd.app/privacy-policy.html")!)
-            }
-            .font(Typography.caption())
-            .foregroundStyle(Color.textSecondary)
-        }
-        .padding(.top, Spacing.s1)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Lifetime plans are one-time purchases charged to your Apple ID. Terms and Privacy links are available.")
+        OnboardingPurchaseDisclosure()
     }
 
     private func displayPrice(for option: HealthMdPurchaseOption) -> String? {
@@ -357,22 +280,26 @@ struct PaywallView: View {
 // MARK: - Current Plan
 
 private struct PaywallCurrentPlanCard: View {
+    @Environment(\.onboardingReadingLayout) private var reading
     let title: String
     let detail: String
     let icon: String
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.s3) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
-                .frame(width: 28, height: 28)
-                .accessibilityHidden(true)
+            if !reading {
+                Image(systemName: icon)
+                    .font(Typography.scaled(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.accent)
+                    .frame(minWidth: 28, minHeight: 28)
+                    .accessibilityHidden(true)
+            }
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
                     .font(Typography.headline())
                     .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(detail)
                     .font(Typography.body())
@@ -380,7 +307,7 @@ private struct PaywallCurrentPlanCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer(minLength: Spacing.s2)
+            Spacer(minLength: 0)
         }
         .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
         .accessibilityElement(children: .combine)
@@ -415,35 +342,11 @@ private struct PaywallPricingAudiencePicker: View {
     @Binding var selection: PaywallPricingAudience
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(PaywallPricingAudience.allCases) { audience in
-                Button {
-                    withAnimation(AnimationTimings.fast) {
-                        selection = audience
-                    }
-                } label: {
-                    Text(audience.title)
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(selection == audience ? Color.bgPrimary : Color.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(selection == audience ? Color.geistGray1000 : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(audience.title)
-                .accessibilityAddTraits(selection == audience ? .isSelected : [])
+        OnboardingAudienceChoices(choices: PaywallPricingAudience.allCases, selection: selection, title: { $0.title }) { audience in
+            withAnimation(AnimationTimings.fast) {
+                selection = audience
             }
         }
-        .padding(4)
-        .background(Color.bgPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Plan type")
     }
 }
 
@@ -455,7 +358,8 @@ private struct PaywallPlanSection<Content: View>: View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             Text(title)
                 .font(Typography.label())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .textCase(.uppercase)
                 .tracking(0.4)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -468,120 +372,29 @@ private struct PaywallPlanSection<Content: View>: View {
     }
 }
 
-// MARK: - Purchase Option
-
-private struct PaywallPurchaseOptionButton: View {
-    let title: String
-    let subtitle: String
-    let priceLabel: String?
-    let icon: String
-    let badge: String?
-    let isPrimary: Bool
-    let isLoading: Bool
-    let isDisabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.s3) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold, design: .default))
-                    .foregroundStyle(isPrimary ? Color.bgPrimary : Color.accent)
-                    .frame(width: 28, height: 28)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    HStack(spacing: Spacing.s2) {
-                        Text(title)
-                            .font(Typography.headline())
-                            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
-
-                        if let badge {
-                            Text(badge)
-                                .font(Typography.monoCaptionEmphasis())
-                                .foregroundStyle(isPrimary ? Color.bgPrimary : Color.accent)
-                                .padding(.horizontal, Spacing.s2)
-                                .padding(.vertical, 2)
-                                .background((isPrimary ? Color.bgPrimary : Color.accent).opacity(0.12), in: Capsule())
-                        }
-                    }
-
-                    Text(subtitle)
-                        .font(Typography.body())
-                        .foregroundStyle(isPrimary ? Color.bgPrimary.opacity(0.78) : Color.textSecondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: Spacing.s2)
-
-                if isLoading {
-                    HStack(spacing: Spacing.s2) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
-                            .scaleEffect(0.85)
-                            .accessibilityHidden(true)
-                        Text(priceLabel ?? "Loading…")
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                    }
-                } else {
-                    Text(priceLabel ?? "—")
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-            }
-            .padding(Spacing.s4)
-            .frame(maxWidth: .infinity)
-            .background(isPrimary ? Color.geistGray1000 : Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(isPrimary ? Color.geistGray1000 : Color.borderSubtle, lineWidth: 1)
-            )
-            .opacity(isDisabled ? 0.58 : 1)
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityHint(accessibilityHint)
-    }
-
-    private var accessibilityHint: String {
-        if !isDisabled { return "Double tap to purchase" }
-        return isLoading ? "Purchase options are loading" : "Purchase is currently unavailable"
-    }
-
-    private var accessibilityText: String {
-        if let priceLabel { return "\(title), \(subtitle), \(priceLabel)" }
-        return "\(title), \(subtitle)"
-    }
-}
-
 // MARK: - Feature Row
 
 private struct PaywallFeatureRow: View {
+    @Environment(\.onboardingReadingLayout) private var reading
     let icon: String
     let text: String
 
     var body: some View {
-        HStack(spacing: Spacing.s3) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold, design: .default))
-                .foregroundStyle(Color.accent)
-                .frame(width: 28)
-                .accessibilityHidden(true)
+        HStack(alignment: .top, spacing: Spacing.s3) {
+            if !reading {
+                Image(systemName: icon)
+                    .font(Typography.scaled(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.accent)
+                    .frame(minWidth: 28)
+                    .accessibilityHidden(true)
+            }
 
             Text(text)
                 .font(Typography.body())
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s4)
         .accessibilityElement(children: .combine)

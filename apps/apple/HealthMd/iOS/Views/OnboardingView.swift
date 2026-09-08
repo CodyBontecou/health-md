@@ -66,38 +66,16 @@ struct OnboardingView: View {
         ZStack {
             Color.bgPrimary.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                topBar
-                    .padding(.horizontal, Spacing.s6)
-                    .padding(.top, Spacing.s4)
-
-                OnboardingProgressBar(current: currentStep, total: totalSteps)
-                    .padding(.horizontal, Spacing.s6)
-                    .padding(.top, Spacing.s4)
-
-                if step == .sampleExport {
-                    stepContent
-                        .id(currentStep)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, Spacing.s6)
-                        .padding(.top, Spacing.s4)
-                        .padding(.bottom, Spacing.s6)
-                } else {
-                    ScrollView {
-                        stepContent
-                            .id(currentStep)
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, Spacing.s6)
-                            .padding(.top, Spacing.s6)
-                            .padding(.bottom, step == .unlock ? Spacing.s8 : Spacing.s6)
-                    }
-                    .scrollIndicators(.hidden)
-                    .scrollBounceBehavior(.basedOnSize)
+            OnboardingPageLayout(pageID: currentStep) {
+                VStack(spacing: Spacing.s4) {
+                    topBar
+                    OnboardingProgressBar(current: currentStep, total: totalSteps)
                 }
-
+            } content: {
+                stepContent
+                    .id(currentStep)
+            } footer: {
                 footerControls
-                    .padding(.horizontal, Spacing.s6)
-                    .padding(.bottom, Spacing.s6)
                     .transition(.opacity)
             }
         }
@@ -127,47 +105,13 @@ struct OnboardingView: View {
     }
 
     private var topBar: some View {
-        HStack(spacing: Spacing.s3) {
-            if canGoBack {
-                Button(action: goBack) {
-                    HStack(spacing: Spacing.s1) {
-                        Image(systemName: "chevron.left")
-                            .font(.caption.weight(.semibold))
-                            .accessibilityHidden(true)
-                        Text("Back")
-                            .font(Typography.label())
-                    }
-                    .foregroundStyle(Color.textSecondary)
-                    .padding(.horizontal, Spacing.s3)
-                    .padding(.vertical, Spacing.s2)
-                    .background(Color.bgPrimary, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Back")
-            } else {
-                Color.clear.frame(width: 68, height: 34)
-                    .accessibilityHidden(true)
-            }
-
-            Spacer()
-
-            Text("Step \(currentStep + 1) of \(totalSteps)")
-                .font(Typography.label())
-                .foregroundStyle(Color.textMuted)
-                .monospacedDigit()
-
-            Spacer()
-
-            if step == .welcome {
-                Color.clear.frame(width: 68, height: 34)
-                    .accessibilityHidden(true)
-            } else {
-                AppIconMark(icon: "heart.text.square.fill", size: 34, symbolSize: 14, usesAppIcon: true)
-                    .frame(width: 68, height: 34, alignment: .trailing)
-                    .accessibilityHidden(true)
-            }
-        }
+        OnboardingNavigationHeader(
+            current: currentStep,
+            total: totalSteps,
+            canGoBack: canGoBack,
+            showsMark: step != .welcome,
+            onBack: goBack
+        )
     }
 
     @ViewBuilder
@@ -606,9 +550,8 @@ private struct SampleExportStep: View {
             )
 
             SampleExportInlinePreview(selectedFormat: $selectedFormat)
-                .frame(maxHeight: .infinity)
         }
-        .frame(maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 }
 
@@ -660,9 +603,16 @@ private struct ObsidianPluginVisualizationCard: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: 286)
+            .frame(height: 260)
             .accessibilityLabel("Swipe through Health.md Obsidian plugin visualization previews")
+            .accessibilityValue(selectedVisualization.title)
             .accessibilityHint("Shows example plugin charts rendered from Health.md exports")
+
+            Text(selectedVisualization.title)
+                .font(Typography.label())
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: Spacing.s2) {
                 ForEach(visualizations) { visualization in
@@ -683,7 +633,7 @@ private struct ObsidianPluginVisualizationCard: View {
         Text("Swipe to preview activity, heart, and workout dashboards rendered from your local Health.md files.")
             .font(Typography.body())
             .foregroundStyle(Color.textSecondary)
-            .multilineTextAlignment(.center)
+            .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -697,8 +647,12 @@ private struct ObsidianPluginVisualizationCard: View {
             }
             .font(Typography.label())
             .foregroundStyle(Color.textPrimary)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, Spacing.s3)
             .padding(.vertical, Spacing.s2)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
             .background(Color.bgSecondary, in: Capsule())
             .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
         }
@@ -710,17 +664,10 @@ private struct ObsidianPluginPreviewPage: View {
     let visualization: ObsidianPluginPreviewVisualization
 
     var body: some View {
-        VStack(spacing: Spacing.s2) {
-            ObsidianPluginVisualizationWebPreview(visualizationID: visualization.rawValue)
-                .frame(height: 260)
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                .accessibilityHidden(true)
-
-            Text(visualization.title)
-                .font(Typography.label())
-                .foregroundStyle(Color.textSecondary)
-                .accessibilityHidden(true)
-        }
+        ObsidianPluginVisualizationWebPreview(visualizationID: visualization.rawValue)
+            .frame(height: 260)
+            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .accessibilityHidden(true)
     }
 }
 
@@ -901,47 +848,34 @@ private struct UnlockStep: View {
                 if let error = purchaseManager.purchaseError {
                     Text(error)
                         .font(Typography.caption())
-                        .foregroundStyle(error.contains("cody@isolated.tech") ? Color.textMuted : Color.error)
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(error.contains("cody@isolated.tech") ? Color.textSecondary : Color.errorText)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, Spacing.s3)
                         .accessibilityLabel(error)
                 } else if let productLoadError = purchaseManager.productLoadError, !purchaseManager.isLoadingProducts {
                     VStack(spacing: Spacing.s2) {
                         Text(productLoadError)
                             .font(Typography.caption())
-                            .foregroundStyle(Color.error)
-                            .multilineTextAlignment(.center)
+                            .foregroundStyle(Color.errorText)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, Spacing.s3)
                             .accessibilityLabel(productLoadError)
 
-                        Button {
+                        OnboardingTextAction(title: "Try Again") {
                             Task { await purchaseManager.loadProductsIfNeeded(force: true) }
-                        } label: {
-                            Text("Try Again")
-                                .font(Typography.bodyEmphasis())
-                                .foregroundStyle(Color.accent)
                         }
-                        .buttonStyle(.plain)
                         .accessibilityLabel("Try loading purchase options again")
                     }
                 }
 
-                Button(action: onRestore) {
-                    HStack(spacing: Spacing.s2) {
-                        if purchaseManager.isRestoring {
-                            ProgressView()
-                                .controlSize(.mini)
-                                .accessibilityHidden(true)
-                        }
-                        Text("Restore Purchase")
-                            .font(Typography.bodyEmphasis())
-                    }
-                    .foregroundStyle(Color.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 40)
-                }
-                .buttonStyle(.plain)
-                .disabled(purchaseManager.isPurchasing || purchaseManager.isRestoring)
+                OnboardingTextAction(
+                    title: "Restore Purchase",
+                    isLoading: purchaseManager.isRestoring,
+                    isDisabled: purchaseManager.isPurchasing || purchaseManager.isRestoring,
+                    action: onRestore
+                )
                 .accessibilityLabel("Restore previous purchase")
             }
         }
@@ -1027,99 +961,21 @@ private struct ReadyStep: View {
 
 // MARK: - Shared Onboarding Components
 
-private struct OnboardingHeader: View {
-    let eyebrow: String
-    let title: String
-    let description: String
-    let icon: String
-    var usesAppIcon = false
-    var showsIcon = true
-
-    var body: some View {
-        VStack(spacing: showsIcon ? Spacing.s4 : Spacing.s2) {
-            if showsIcon {
-                AppIconMark(icon: icon, size: 64, symbolSize: 24, usesAppIcon: usesAppIcon)
-            }
-
-            VStack(spacing: Spacing.s2) {
-                Text(eyebrow)
-                    .font(Typography.labelUppercase())
-                    .foregroundStyle(Color.textMuted)
-                    .tracking(1.4)
-
-                Text(title)
-                    .font(Typography.displayMedium())
-                    .foregroundStyle(Color.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(1)
-                    .tracking(-0.6)
-                    .accessibilityAddTraits(.isHeader)
-
-                Text(description)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-}
-
-private struct AppIconMark: View {
-    let icon: String
-    var size: CGFloat = 84
-    var symbolSize: CGFloat = 30
-    var usesAppIcon = false
-
-    var body: some View {
-        Group {
-            if usesAppIcon {
-                Image("AppIconImage")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                            .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
-            } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                        .fill(Color.bgPrimary)
-                        .frame(width: size, height: size)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: GeistRadius.lg, style: .continuous)
-                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                        )
-                        .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
-                        .accessibilityHidden(true)
-
-                    Image(systemName: icon)
-                        .font(.system(size: symbolSize, weight: .semibold, design: .default))
-                        .foregroundStyle(Color.accent)
-                        .accessibilityHidden(true)
-                }
-            }
-        }
-        .accessibilityHidden(true)
-    }
-}
-
 private struct OnboardingFeatureRow: View {
+    @Environment(\.onboardingReadingLayout) private var reading
     let icon: String
     let title: String
     let description: String
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.s3) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold, design: .default))
-                .foregroundStyle(Color.primary)
-                .frame(width: 32, height: 32)
-                .accessibilityHidden(true)
+            if !reading {
+                Image(systemName: icon)
+                    .font(Typography.scaled(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                    .frame(minWidth: 32, minHeight: 32)
+                    .accessibilityHidden(true)
+            }
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
@@ -1155,17 +1011,20 @@ private struct OnboardingMiniFeatureList<Content: View>: View {
 }
 
 private struct OnboardingMiniFeatureRow: View {
+    @Environment(\.onboardingReadingLayout) private var reading
     let icon: String
     let title: String
     let description: String
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.s2) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold, design: .default))
-                .foregroundStyle(Color.primary)
-                .frame(width: 28, height: 28)
-                .accessibilityHidden(true)
+            if !reading {
+                Image(systemName: icon)
+                    .font(Typography.scaled(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                    .frame(minWidth: 28, minHeight: 28)
+                    .accessibilityHidden(true)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -1191,15 +1050,14 @@ private struct OnboardingInfoChip: View {
     var body: some View {
         HStack(spacing: Spacing.s2) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold, design: .default))
+                .font(Typography.scaled(size: 14, weight: .semibold))
                 .foregroundStyle(Color.accent)
                 .accessibilityHidden(true)
 
             Text(title)
                 .font(Typography.bodyEmphasis())
                 .foregroundStyle(Color.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.s3)
@@ -1216,13 +1074,17 @@ private struct OnboardingInfoChip: View {
 }
 
 private struct FolderPickerCard: View {
+    @Environment(\.onboardingReadingLayout) private var reading
+
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.s3) {
-            Image(systemName: "folder.badge.plus")
-                .font(.system(size: 16, weight: .semibold, design: .default))
-                .foregroundStyle(Color.primary)
-                .frame(width: 36, height: 36)
-                .accessibilityHidden(true)
+            if !reading {
+                Image(systemName: "folder.badge.plus")
+                    .font(Typography.scaled(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                    .frame(minWidth: 36, minHeight: 36)
+                    .accessibilityHidden(true)
+            }
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text("Select Folder Now")
@@ -1241,6 +1103,7 @@ private struct FolderPickerCard: View {
 }
 
 private struct OnboardingStatusCard: View {
+    @Environment(\.onboardingReadingLayout) private var reading
     let icon: String
     let title: String
     let description: String
@@ -1248,13 +1111,15 @@ private struct OnboardingStatusCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Spacing.s3) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold, design: .default))
-                .foregroundStyle(tint)
-                .frame(width: 34, height: 34)
-                .background(tint.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                .accessibilityHidden(true)
+            if !reading {
+                Image(systemName: icon)
+                    .font(Typography.scaled(size: 18, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(minWidth: 34, minHeight: 34)
+                    .background(tint.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+                    .accessibilityHidden(true)
+            }
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text(title)
@@ -1281,6 +1146,8 @@ private struct OnboardingStatusCard: View {
 }
 
 private struct SampleExportInlinePreview: View {
+    @Environment(\.onboardingReadingLayout) private var reading
+    @Environment(\.onboardingPreviewHeight) private var previewHeight
     @Binding var selectedFormat: SampleExportPreviewFormat
 
     var body: some View {
@@ -1288,12 +1155,12 @@ private struct SampleExportInlinePreview: View {
             VStack(spacing: Spacing.s3) {
                 fileHeader
 
-                Picker("Export format", selection: $selectedFormat) {
-                    ForEach(SampleExportPreviewFormat.allCases) { format in
-                        Text(format.pickerTitle).tag(format)
-                    }
-                }
-                .pickerStyle(.segmented)
+                OnboardingAudienceChoices(
+                    choices: SampleExportPreviewFormat.allCases,
+                    selection: selectedFormat,
+                    title: { $0.pickerTitle },
+                    onSelect: { selectedFormat = $0 }
+                )
                 .accessibilityLabel("Export format")
             }
             .padding(.horizontal, Spacing.s3)
@@ -1315,10 +1182,11 @@ private struct SampleExportInlinePreview: View {
                     .padding(Spacing.s4)
             }
             .id(selectedFormat)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(height: previewHeight)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .scrollBounceBehavior(.basedOnSize)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, alignment: .top)
         .background(Color.bgPrimary)
         .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
         .overlay(
@@ -1331,11 +1199,13 @@ private struct SampleExportInlinePreview: View {
 
     private var fileHeader: some View {
         HStack(spacing: Spacing.s3) {
-            Image(systemName: selectedFormat.icon)
-                .font(.system(size: 18, weight: .semibold, design: .default))
-                .foregroundStyle(Color.primary)
-                .frame(width: 36, height: 36)
-                .accessibilityHidden(true)
+            if !reading {
+                Image(systemName: selectedFormat.icon)
+                    .font(Typography.scaled(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                    .frame(minWidth: 36, minHeight: 36)
+                    .accessibilityHidden(true)
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(selectedFormat.fileName)
@@ -1352,13 +1222,16 @@ private struct SampleExportInlinePreview: View {
 
             Spacer(minLength: 0)
 
-            Text(selectedFormat.fileExtension)
-                .font(Typography.monoCaptionEmphasis())
-                .foregroundStyle(Color.textMuted)
-                .padding(.horizontal, Spacing.s2)
-                .padding(.vertical, Spacing.s1)
-                .background(Color.bgSecondary, in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+            if !reading {
+                // The full filename above also retains the extension in reading layout.
+                Text(selectedFormat.fileExtension)
+                    .font(Typography.monoCaptionEmphasis())
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(.horizontal, Spacing.s2)
+                    .padding(.vertical, Spacing.s1)
+                    .background(Color.bgSecondary, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Example file: \(selectedFormat.fileName). \(selectedFormat.subtitle)")
@@ -1665,128 +1538,6 @@ private enum SampleExportPreviewFormat: String, CaseIterable, Identifiable {
     }
 }
 
-private struct OnboardingChecklistRow: View {
-    let title: String
-    let detail: String
-    let isComplete: Bool
-    var actionTitle: String? = nil
-    var action: (() -> Void)? = nil
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s3) {
-            HStack(spacing: Spacing.s3) {
-                Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 18, weight: .semibold, design: .default))
-                    .foregroundStyle(isComplete ? Color.success : Color.textMuted)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text(title)
-                        .font(Typography.headline())
-                        .foregroundStyle(Color.textPrimary)
-                    Text(detail)
-                        .font(Typography.body())
-                        .foregroundStyle(Color.textSecondary)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(title). \(detail)")
-                .accessibilityValue(isComplete ? "Complete" : "Not complete")
-
-                Spacer(minLength: 0)
-            }
-
-            if let actionTitle, let action {
-                Button(action: action) {
-                    Text(actionTitle)
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 36)
-                        .background(Color.bgSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(actionTitle)
-            }
-        }
-        .geistCard(cornerRadius: GeistRadius.md, padding: Spacing.s3)
-    }
-}
-
-private struct OnboardingPrimaryButton: View {
-    let title: String
-    var icon: String? = nil
-    var imageAsset: String? = nil
-    var accessibilityHint: String = "Double tap to continue"
-    var isDisabled: Bool = false
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.s2) {
-                Text(title)
-                    .font(.system(size: 16, weight: .medium, design: .default))
-                if let imageAsset {
-                    Image(imageAsset)
-                        .resizable()
-                        .renderingMode(.original)
-                        .interpolation(.high)
-                        .frame(width: 22, height: 22)
-                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
-                        .accessibilityHidden(true)
-                } else if let icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold, design: .default))
-                        .accessibilityHidden(true)
-                }
-            }
-            .foregroundStyle(Color.bgPrimary)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 48)
-            .background(Color.geistGray1000)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .opacity(isDisabled ? 0.65 : 1)
-        .accessibilityLabel(title)
-        .accessibilityHint(accessibilityHint)
-    }
-}
-
-private struct OnboardingSecondaryButton: View {
-    let title: String
-    let icon: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .accessibilityHidden(true)
-                Text(title)
-                    .font(.system(size: 14, weight: .medium, design: .default))
-            }
-            .foregroundStyle(Color.textPrimary)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 40)
-            .background(Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-    }
-}
-
 private enum OnboardingPricingAudience: String, CaseIterable, Identifiable {
     case individual
     case family
@@ -1812,35 +1563,11 @@ private struct OnboardingPricingAudiencePicker: View {
     @Binding var selection: OnboardingPricingAudience
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(OnboardingPricingAudience.allCases) { audience in
-                Button {
-                    withAnimation(AnimationTimings.fast) {
-                        selection = audience
-                    }
-                } label: {
-                    Text(audience.title)
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(selection == audience ? Color.bgPrimary : Color.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 40)
-                        .background(selection == audience ? Color.geistGray1000 : Color.clear)
-                        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(audience.title)
-                .accessibilityAddTraits(selection == audience ? .isSelected : [])
+        OnboardingAudienceChoices(choices: OnboardingPricingAudience.allCases, selection: selection, title: { $0.title }) { audience in
+            withAnimation(AnimationTimings.fast) {
+                selection = audience
             }
         }
-        .padding(4)
-        .background(Color.bgPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Plan type")
     }
 }
 
@@ -1852,7 +1579,8 @@ private struct OnboardingPlanSection<Content: View>: View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             Text(title)
                 .font(Typography.label())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .textCase(.uppercase)
                 .tracking(0.4)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1861,92 +1589,5 @@ private struct OnboardingPlanSection<Content: View>: View {
                 content()
             }
         }
-    }
-}
-
-private struct OnboardingPurchaseButton: View {
-    let title: String
-    let subtitle: String
-    let priceLabel: String?
-    let icon: String
-    var badge: String? = nil
-    let isPrimary: Bool
-    let isLoading: Bool
-    let isDisabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.s3) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold, design: .default))
-                    .foregroundStyle(isPrimary ? Color.bgPrimary : Color.accent)
-                    .frame(width: 28, height: 28)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    HStack(spacing: Spacing.s2) {
-                        Text(title)
-                            .font(Typography.headline())
-                            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
-                        if let badge {
-                            Text(badge)
-                                .font(Typography.monoCaptionEmphasis())
-                                .foregroundStyle(isPrimary ? Color.bgPrimary : Color.accent)
-                                .padding(.horizontal, Spacing.s2)
-                                .padding(.vertical, 2)
-                                .background((isPrimary ? Color.bgPrimary : Color.accent).opacity(0.12), in: Capsule())
-                        }
-                    }
-                    Text(subtitle)
-                        .font(Typography.caption())
-                        .foregroundStyle(isPrimary ? Color.bgPrimary.opacity(0.78) : Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: Spacing.s2)
-
-                if isLoading {
-                    HStack(spacing: Spacing.s2) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: isPrimary ? Color.bgPrimary : Color.accent))
-                            .accessibilityHidden(true)
-                        Text(priceLabel ?? "Loading…")
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
-                            .lineLimit(1)
-                    }
-                } else {
-                    Text(priceLabel ?? "—")
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(isPrimary ? Color.bgPrimary : Color.textPrimary)
-                        .lineLimit(1)
-                }
-            }
-            .padding(Spacing.s3)
-            .background(isPrimary ? Color.geistGray1000 : Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .strokeBorder(isPrimary ? Color.geistGray1000 : Color.borderSubtle, lineWidth: 1)
-            )
-            .opacity(isDisabled ? 0.6 : 1)
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityHint(accessibilityHint)
-    }
-
-    private var accessibilityHint: String {
-        if !isDisabled { return "Double tap to purchase" }
-        return isLoading ? "Purchase options are loading" : "Purchase is currently unavailable"
-    }
-
-    private var accessibilityText: String {
-        if let priceLabel {
-            return "\(title), \(subtitle), \(priceLabel)"
-        }
-        return "\(title), \(subtitle)"
     }
 }
