@@ -88,24 +88,10 @@ struct FormatSelectionControl<Value: Hashable>: View {
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // The closed value has its own full-width reading surface. Native menu
-            // presentation remains native; its window is not the page's scroll viewport.
-            Menu {
-                ForEach(options, id: \.self) { option in
-                    Button {
-                        onSelect(option)
-                    } label: {
-                        HStack {
-                            Text(optionTitle(option))
-                            if selection == option {
-                                Image(systemName: "checkmark")
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                    }
-                    .accessibilityValue(selection == option ? "Selected" : "Not selected")
-                }
-            } label: {
+            // Both the closed value and native popover options keep their full
+            // reading width. The popover owns its own bounded scrolling window.
+            A11ySelectionMenu(selection: selection, options: options,
+                              optionLabel: { Text(optionTitle($0)) }, onSelect: onSelect) {
                 FormatSelectionValueLabel(value: optionTitle(selection))
             }
             .accessibilityLabel(title)
@@ -166,6 +152,7 @@ struct FormatToggleControl: View {
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
+            .toggleStyle(A11ySwitchToggleStyle())
             .tint(Color.accent)
             .accessibilityLabel(accessibilityLabel)
             .accessibilityValue(isOn ? "Enabled" : "Disabled")
@@ -224,6 +211,9 @@ struct FormatTextFieldControl: View {
                         .strokeBorder(Color.borderSubtle, lineWidth: 1)
                 )
                 .contentShape(Rectangle())
+                // The native glyph editor keeps its intrinsic height. The entire
+                // padded 44pt-or-larger control must also acquire editing focus.
+                .simultaneousGesture(TapGesture().onEnded { isFocused = true })
                 .accessibilityLabel(accessibilityLabel)
                 .accessibilityValue(text.isEmpty ? defaultValue : text)
                 .accessibilityIdentifier("format.input.\(title)")
@@ -290,6 +280,7 @@ struct FormatFrontmatterFieldContent<RenameButton: View>: View {
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
+            .toggleStyle(A11ySwitchToggleStyle())
             .tint(Color.accent)
             .accessibilityLabel(renamed ? "\(originalKey) renamed to \(customKey)" : originalKey)
             .accessibilityValue(isEnabled ? "Enabled" : "Disabled")

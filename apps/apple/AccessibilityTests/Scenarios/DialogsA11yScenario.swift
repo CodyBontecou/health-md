@@ -1,10 +1,11 @@
 import SwiftUI
+import UIKit
 
 /// Register as `dialogs` in the central isolated host. Uses the actual production
 /// overlay/card/fields; all drafts and callbacks below are synthetic in-memory state.
 /// No settings, configuration-protection, billing or HealthKit behavior is simulated.
 struct DialogsA11yScenario: View {
-    private enum Example { case message, fields, singleField, manyActions, noCancel, secondaryFields }
+    private enum Example { case message, fields, singleField, manyActions, noCancel, secondaryFields, nativeEscape }
 
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -17,6 +18,7 @@ struct DialogsA11yScenario: View {
     @State private var removes = 0
     @State private var dismissals = 0
     @State private var events: [String] = []
+    @State private var nativeEscapeResult = "not invoked"
 
     var body: some View {
         ScrollView {
@@ -27,6 +29,8 @@ struct DialogsA11yScenario: View {
                 opener("Open Many Actions", id: "many", example: .manyActions)
                 opener("Open Without Cancel", id: "no-cancel", example: .noCancel)
                 opener("Open Secondary Fields", id: "secondary-fields", example: .secondaryFields)
+                opener("Open Native Escape Probe", id: "native-escape", example: .nativeEscape)
+                Text(verbatim: nativeEscapeResult).accessibilityIdentifier("a11y.dialogs.native-escape-result")
                 Text(verbatim: "s\(saves) c\(cancels) r\(removes) d\(dismissals)")
                     .accessibilityIdentifier("a11y.dialogs.counts")
                 Text(verbatim: events.joined(separator: "|"))
@@ -104,6 +108,12 @@ struct DialogsA11yScenario: View {
                     .cancel("Other Cancel", accessibilityIdentifier: "a11y.dialogs.other-cancel") {
                         cancels += 10; events.append("other-cancel:\(presented)")
                     }]
+        case .nativeEscape:
+            return [cancel, .action("Invoke Accessibility Escape", accessibilityIdentifier: "a11y.dialogs.invoke-escape") {
+                // XCUI has initialized the native AX hierarchy before this tap.
+                // Invoke the actual UIKit escape action, not the cancel closure.
+                nativeEscapeResult = performNativeEscape()
+            }]
         case .noCancel: return [save]
         case .secondaryFields: return [cancel]
         case .fields, .singleField: return [cancel, save]
@@ -112,7 +122,7 @@ struct DialogsA11yScenario: View {
 
     private var fields: [GeistDialogField] {
         switch example {
-        case .message, .manyActions, .noCancel: return []
+        case .message, .manyActions, .noCancel, .nativeEscape: return []
         case .singleField:
             return [GeistDialogField(placeholder: "Field Name", text: $first)]
         case .fields, .secondaryFields:
@@ -121,6 +131,28 @@ struct DialogsA11yScenario: View {
                 GeistDialogField(placeholder: "Field Value With a Different External Label", text: $second)
             ]
         }
+    }
+
+    private func performNativeEscape() -> String {
+        var pending: [NSObject] = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        var seen: Set<ObjectIdentifier> = []
+        while let object = pending.popLast() {
+            guard seen.insert(ObjectIdentifier(object)).inserted else { continue }
+            if object.accessibilityViewIsModal {
+                let modal = object.accessibilityViewIsModal
+                let handled = object.accessibilityPerformEscape()
+                return "modal:\(modal) handled:\(handled)"
+            }
+            if let view = object as? UIView { pending.append(contentsOf: view.subviews) }
+            if let children = object.accessibilityElements as? [NSObject] { pending.append(contentsOf: children) }
+            let count = object.accessibilityElementCount()
+            if count != NSNotFound && count > 0 {
+                for index in 0..<count {
+                    if let child = object.accessibilityElement(at: index) as? NSObject { pending.append(child) }
+                }
+            }
+        }
+        return "missing native modal accessibility object"
     }
 
     private var messageTitle: String {

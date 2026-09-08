@@ -1,18 +1,30 @@
 import SwiftUI
 
-/// Separate test application. It does not link HealthKit, stores, billing,
-/// destinations, pairing, analytics, scheduling or the Health.md app bootstrap.
+/// Separate test application. No HealthKit, production stores, billing,
+/// destinations, pairing, analytics, scheduling or Health.md app bootstrap.
+/// The real configuration guard uses only a uniquely named synthetic defaults suite.
 @main
 struct A11ySyntheticApp: App {
     var body: some Scene {
         WindowGroup {
-            A11yScenarioContainer { A11yFoundationScenario() }
+            A11yScenarioContainer { scenario }
+        }
+    }
+
+    @ViewBuilder private var scenario: some View {
+        switch ProcessInfo.processInfo.environment["A11Y_SCENARIO"] ?? "foundation" {
+        case "foundation": A11yFoundationScenario()
+        case "dialogs": DialogsA11yScenario()
+        case "format": FormatA11yScenario()
+        case "reading": ReadingA11yScenario()
+        case "scheduling": SchedulingA11yScenario()
+        case "onboarding": OnboardingA11yScenario()
+        default: Text("Unknown accessibility scenario").accessibilityIdentifier("a11y.unknown-scenario")
         }
     }
 }
 
 /// Environment/viewport only, never a replacement for production controls.
-/// Lanes provide their own named scenario; central integration registers routing.
 struct A11yScenarioContainer<Content: View>: View {
     @ViewBuilder var content: () -> Content
     private var environment: [String: String] { ProcessInfo.processInfo.environment }

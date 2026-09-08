@@ -106,15 +106,13 @@ final class FormatA11yUITests: A11yUITestCase {
             let input = app.textFields["format.input.Date Field Name"]
             reveal(input, in: app)
             assertMinimumTarget(input)
-            input.tap()
+            tapEdge(input, in: app)
             XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
             let exact = "  synthetic_date  "
             input.typeText(exact)
             XCTAssertEqual(input.value as? String, exact)
-            let done = app.keyboards.buttons.matching(NSPredicate(format: "label IN %@", ["Done", "done"] as NSArray)).firstMatch
-            XCTAssertTrue(done.waitForExistence(timeout: 5))
-            // Keyboard keys belong to the keyboard window, not the page scroll view.
-            assertInsideOwningWindow(done, app: app)
+            let done = keyboardKey("Done", in: app)
+            assertKeyboardTarget(done, in: app)
             done.tap()
             waitForKeyboardDismissal(app)
             XCTAssertEqual(input.value as? String, exact)
@@ -126,7 +124,11 @@ final class FormatA11yUITests: A11yUITestCase {
             XCTAssertEqual(valueInput.value as? String, fullValue)
             let readingValue = app.staticTexts.matching(NSPredicate(format: "label == %@", fullValue)).firstMatch
             reveal(readingValue, in: app)
-            XCTAssertGreaterThanOrEqual(readingValue.frame.width, valueInput.frame.width - 17)
+            XCTAssertEqual(readingValue.label, fullValue)
+            // AX reports tight glyph bounds, not the VStack's allocated width.
+            // Require wrapping and containment, not near-full-width last glyphs.
+            XCTAssertLessThanOrEqual(readingValue.frame.width, valueInput.frame.width - 16 + 1)
+            XCTAssertGreaterThan(readingValue.frame.height, app.staticTexts["Current Value"].firstMatch.frame.height)
             saveScreenshot(app, name: "format-input-full-value-\(size)")
             app.terminate()
         }

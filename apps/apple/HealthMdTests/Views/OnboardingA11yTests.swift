@@ -85,7 +85,10 @@ final class OnboardingA11yTests: XCTestCase {
 
     func testLongAudienceLabelsGrowAsSeparateMinimumTargets() {
         struct Choice: Hashable, Identifiable { let id: Int; let title: String }
-        let choices = [Choice(id: 0, title: "Individual Lifetime Access"), Choice(id: 1, title: "Family Sharing Lifetime Access")]
+        // Long enough to wrap even at default: shorter labels legitimately stay
+        // inside the 44pt minimum at both default and standard enlarged sizes.
+        let choices = [Choice(id: 0, title: "Individual Lifetime Access For A Complete Private Health Archive"),
+                       Choice(id: 1, title: "Family Sharing Lifetime Access For Everyone In The Household")]
         var previousHeight: CGFloat = 0
         for size in sizes {
             let picker = OnboardingAudienceChoices(choices: choices, selection: choices[1], title: { $0.title }, onSelect: { _ in })

@@ -46,10 +46,9 @@ final class SchedulingA11yTests: XCTestCase {
         ], selection: 1, onSelect: { _ in }))),
         ("date", AnyView(SchedulingLabeledControl(title: "Start Date", value: Text(Date(timeIntervalSince1970: 0), style: .date)) {
             DatePicker("Start Date", selection: .constant(Date(timeIntervalSince1970: 0)), displayedComponents: .date)
-                .datePickerStyle(.compact)
         })),
         ("actions", AnyView(actions)),
-        ("footer", AnyView(SchedulingExportFooter(freeExportsRemaining: 3, freeExportsIdentifier: "test.free") { actions }))
+        ("footer", AnyView(SchedulingExportFooter(freeExportsRemaining: 3, freeExportsIdentifier: "test.free") { self.actions }))
     ] }
 
     func testProductionComponentsFitNarrowAndLandscapeReadingWidths() {

@@ -448,7 +448,6 @@ struct ExportTabView: View {
                                 in: ...endDate,
                                 displayedComponents: .date
                             )
-                            .datePickerStyle(.compact)
                             .tint(Color.accent)
                             .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
                             .accessibilityHint("Select the start date for your export range")
@@ -463,7 +462,6 @@ struct ExportTabView: View {
                                 in: startDate...Date(),
                                 displayedComponents: .date
                             )
-                            .datePickerStyle(.compact)
                             .tint(Color.accent)
                             .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
                             .accessibilityHint("Select the end date for your export range")

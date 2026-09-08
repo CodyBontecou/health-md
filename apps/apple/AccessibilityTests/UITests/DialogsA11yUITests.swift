@@ -2,6 +2,7 @@ import XCTest
 
 /// ADDED / NOT RUN. The coordinator must register `dialogs` and this suite.
 /// Keyboard checks require the actual software keyboard, not only a short host.
+@objc(DialogsA11yUITests)
 final class DialogsA11yUITests: A11yUITestCase {
     func testShortOverlayAndLongCopyKeepBothActionsReachableAcrossTextSizesAndThemes() {
         for size in ["large", "xxxLarge", "accessibility1", "accessibility5"] {
@@ -47,15 +48,17 @@ final class DialogsA11yUITests: A11yUITestCase {
         app.typeText("alpha")
         XCTAssertEqual(app.textFields["geist-dialog.field.0"].value as? String, "alpha")
         XCTAssertNotEqual(app.textFields["geist-dialog.field.1"].value as? String, "alpha")
-        let next = app.keyboards.buttons["Next"]
-        XCTAssertTrue(next.exists)
+        let next = keyboardKey("Next", in: app)
+        assertKeyboardTarget(next, in: app)
         next.tap()
         XCTAssertTrue(dialogScroll(in: app).exists, "Next must not submit/dismiss")
         app.typeText("beta")
         XCTAssertEqual(app.textFields["geist-dialog.field.0"].value as? String, "alpha")
         XCTAssertEqual(app.textFields["geist-dialog.field.1"].value as? String, "beta")
         assertAboveKeyboard(app.textFields["geist-dialog.field.1"], in: app)
-        app.keyboards.buttons["Done"].tap()
+        let done = keyboardKey("Done", in: app)
+        assertKeyboardTarget(done, in: app)
+        done.tap()
         assertDismissed(app, counts: "s1 c0 r0 d1", events: "save:true|dismiss")
         XCTAssertEqual(app.staticTexts["a11y.dialogs.first-value"].label, "First: alpha")
         XCTAssertEqual(app.staticTexts["a11y.dialogs.second-value"].label, "Second: beta")
@@ -94,7 +97,7 @@ final class DialogsA11yUITests: A11yUITestCase {
             let app = open("fields", size: "accessibility5", theme: "dark", width: 320, height: height)
             XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
             app.typeText("alpha")
-            app.keyboards.buttons["Next"].tap()
+            keyboardKey("Next", in: app).tap()
             app.typeText("beta")
             let target = app.buttons["a11y.dialogs.\(action)"]
             revealInDialog(target, in: app)
@@ -115,8 +118,7 @@ final class DialogsA11yUITests: A11yUITestCase {
         let app = open("single", width: 320)
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         app.typeText("synthetic")
-        XCTAssertTrue(app.keyboards.buttons["Done"].exists)
-        app.keyboards.buttons["Done"].tap()
+        keyboardKey("Done", in: app).tap()
         assertDismissed(app, counts: "s1 c0 r0 d1", events: "save:true|dismiss")
         XCTAssertEqual(app.staticTexts["a11y.dialogs.first-value"].label, "First: synthetic")
     }
@@ -125,9 +127,9 @@ final class DialogsA11yUITests: A11yUITestCase {
         let app = open("secondary-fields", width: 320)
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         app.typeText("alpha")
-        app.keyboards.buttons["Next"].tap()
+        keyboardKey("Next", in: app).tap()
         app.typeText("beta")
-        app.keyboards.buttons["Done"].tap()
+        keyboardKey("Done", in: app).tap()
         XCTAssertTrue(dialogScroll(in: app).exists)
         XCTAssertEqual(app.textFields["geist-dialog.field.1"].value as? String, "beta")
         tapDialogEdge(app.buttons["a11y.dialogs.cancel"], in: app)
@@ -138,7 +140,7 @@ final class DialogsA11yUITests: A11yUITestCase {
         let app = open("fields", width: 320)
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         app.typeText("alpha")
-        app.keyboards.buttons["Next"].tap()
+        keyboardKey("Next", in: app).tap()
         app.typeText("beta")
         for _ in 0..<8 where app.keyboards.firstMatch.exists {
             let viewport = dialogViewport(in: app)
@@ -165,7 +167,7 @@ final class DialogsA11yUITests: A11yUITestCase {
         let raw = " synthetic_identifier_that_must_not_be_trimmed_or_truncated "
         app.typeText(raw)
         XCTAssertEqual(app.textFields["geist-dialog.field.0"].value as? String, raw)
-        app.keyboards.buttons["Next"].tap()
+        keyboardKey("Next", in: app).tap()
         app.typeText("value")
         // The reading surface is intentionally hidden from AX to avoid repeating the
         // editable value. Native hierarchy screenshots, not AX metadata, cover its look.
@@ -196,12 +198,20 @@ final class DialogsA11yUITests: A11yUITestCase {
             let app = open(variant, width: 320, height: 200)
             let overlay = app.otherElements["geist-dialog.overlay"]
             let point = CGPoint(x: overlay.frame.minX + 2, y: overlay.frame.minY + 2)
-            XCTAssertFalse(app.otherElements["geist-dialog.card"].frame.contains(point))
+            XCTAssertFalse(dialogScroll(in: app).frame.contains(point))
             overlay.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 2, dy: 2)).tap()
             assertDismissed(app, counts: variant == "many" ? "s0 c1 r0 d1" : "s0 c0 r0 d1",
                             events: variant == "many" ? "cancel:true|dismiss" : "dismiss")
             app.terminate()
         }
+    }
+
+    func testNativeAccessibilityEscapeInvokesTheActualOverlayCancelRoute() {
+        let app = open("native-escape", width: 320, height: 280)
+        tapDialogEdge(app.buttons["a11y.dialogs.invoke-escape"], in: app)
+        XCTAssertEqual(app.staticTexts["a11y.dialogs.native-escape-result"].label, "modal:true handled:true")
+        assertDismissed(app, counts: "s0 c1 r0 d1", events: "cancel:true|dismiss")
+        // Public native action dispatch, not a physical VoiceOver gesture claim.
     }
 
     func testModalHidesBackgroundAccessibilityAndRestoresItAfterDismissal() {
@@ -248,7 +258,6 @@ final class DialogsA11yUITests: A11yUITestCase {
         let scroll = dialogScroll(in: app)
         let window = app.windows.containing(.scrollView, identifier: "geist-dialog.scroll").firstMatch
         var viewport = scroll.frame.intersection(window.frame)
-            .intersection(app.otherElements["geist-dialog.card"].frame)
         let keyboard = app.keyboards.firstMatch
         if keyboard.exists && keyboard.frame.intersects(viewport) {
             viewport.size.height = max(0, keyboard.frame.minY - viewport.minY)
@@ -264,7 +273,7 @@ final class DialogsA11yUITests: A11yUITestCase {
             guard viewport.height > 16 else { XCTFail("No actual modal reading viewport: \(viewport)"); return }
             let moveDown = target.frame.minY < viewport.minY
             let start = scroll.coordinate(withNormalizedOffset: .zero).withOffset(
-                CGVector(dx: viewport.midX - scroll.frame.minX,
+                CGVector(dx: viewport.minX - scroll.frame.minX + 2,
                          dy: viewport.minY - scroll.frame.minY + viewport.height * (moveDown ? 0.2 : 0.8)))
             start.press(forDuration: 0.05, thenDragTo: start.withOffset(
                 CGVector(dx: 0, dy: viewport.height * (moveDown ? 0.6 : -0.6))))
@@ -287,7 +296,7 @@ final class DialogsA11yUITests: A11yUITestCase {
 
     private func assertDialogBounds(in app: XCUIApplication, maximumWidth: CGFloat, maximumHeight: CGFloat? = nil) {
         let overlay = app.otherElements["geist-dialog.overlay"]
-        let card = app.otherElements["geist-dialog.card"]
+        let card = app.otherElements["geist-dialog.card"].firstMatch
         XCTAssertTrue(overlay.exists)
         XCTAssertTrue(card.exists)
         XCTAssertLessThanOrEqual(overlay.frame.width, maximumWidth + 1)

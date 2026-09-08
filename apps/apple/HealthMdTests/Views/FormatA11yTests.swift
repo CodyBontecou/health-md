@@ -10,7 +10,9 @@ import XCTest
 final class FormatA11yTests: XCTestCase {
     private let sizes: [DynamicTypeSize] = [.large, .xxxLarge, .accessibility1, .accessibility5]
     private let widths: [CGFloat] = [240, 288, 320, 568]
-    private let longKey = "synthetic_original_output_key_with_a_long_unbroken_identifier"
+    // Exceed even the 568pt/default-font case; a 44pt native Toggle otherwise
+    // correctly masks a one-line label's height difference.
+    private let longKey = String(repeating: "synthetic_original_output_key_with_a_long_unbroken_identifier_", count: 2)
     private let renamedKey = "synthetic_renamed_output_key_preserved_without_truncation"
     private let longValue = "Synthetic metadata only: this complete value remains readable without changing spaces, punctuation, or export settings."
 
@@ -102,10 +104,11 @@ final class FormatA11yTests: XCTestCase {
         }
     }
 
-    func testNativeInputKeepsExactTextAndMinimumEditingBounds() throws {
+    func testNativeInputKeepsExactTextAndScalesWithinItsPaddedControl() throws {
         let value = "  \(longKey)  "
-        for size in sizes {
-            for width in [CGFloat(240), 320] {
+        for width in [CGFloat(240), 320] {
+            var previousPointSize: CGFloat = 0
+            for size in sizes {
                 let host = A11yHosting(
                     FormatTextFieldControl(title: "Type Field Value", placeholder: "health-data", text: .constant(value),
                                            defaultValue: "health-data", accessibilityLabel: "Type field value")
@@ -115,8 +118,13 @@ final class FormatA11yTests: XCTestCase {
                 defer { host.close() }
                 let input = try XCTUnwrap(descendants(of: host.controller.view, type: UITextField.self).first)
                 XCTAssertEqual(input.text, value)
-                // The native editor itself, not only its decorative background, grows.
-                XCTAssertGreaterThanOrEqual(input.bounds.height, 44)
+                // UIKit's intrinsic glyph editor is not the padded SwiftUI hit
+                // target. Verify the actual native font grows here; the native
+                // UI suite separately asserts >=44pt AX bounds and taps the edge.
+                let font = try XCTUnwrap(input.font)
+                XCTAssertGreaterThan(font.pointSize, previousPointSize)
+                previousPointSize = font.pointSize
+                XCTAssertGreaterThanOrEqual(input.bounds.height, font.lineHeight - 1)
                 XCTAssertLessThanOrEqual(input.bounds.width, width)
                 XCTAssertGreaterThanOrEqual(host.measured(proposal: CGSize(width: width, height: 10000)).height, 44)
             }

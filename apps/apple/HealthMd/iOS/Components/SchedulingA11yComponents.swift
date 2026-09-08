@@ -104,19 +104,14 @@ struct SchedulingValueMenu<Value: Hashable>: View {
     private var value: String { selectedTitle ?? choices.first { $0.value == selection }?.title ?? "" }
 
     var body: some View {
-        Menu {
-            ForEach(choices) { choice in
-                // Unlike a Picker, the legacy time/unit menus also dispatch
-                // when the current option is tapped. Keep that callback path.
-                Button { selection = choice.value } label: {
-                    if choice.value == selection {
-                        Label(LocalizedStringKey(choice.title), systemImage: "checkmark")
-                    } else {
-                        Text(LocalizedStringKey(choice.title))
-                    }
-                }
-            }
-        } label: {
+        A11ySelectionMenu(
+            selection: selection,
+            options: choices.map(\.value),
+            optionLabel: { option in Text(LocalizedStringKey(choices.first { $0.value == option }?.title ?? "")) },
+            // Unlike a Picker, the legacy time/unit menus also dispatch when
+            // the current option is tapped. Keep that exact callback path.
+            onSelect: { selection = $0 }
+        ) {
             SchedulingMenuLabel(title: title, value: value, monospaced: monospaced)
         }
         .buttonStyle(.plain)
@@ -316,6 +311,7 @@ struct SchedulingProfileRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(minHeight: 44, alignment: .leading)
             }
+            .toggleStyle(A11ySwitchToggleStyle())
             .tint(Color.accent)
             .accessibilityLabel(Text("Schedule \(name)"))
             .accessibilityIdentifier(identifier + ".enabled")
@@ -463,8 +459,9 @@ struct SchedulingDatePresets<Value: Hashable>: View {
     }
 }
 
-/// Full reading labels above the existing native compact date control. The
-/// caller constructs the DatePicker with its original binding and date bounds.
+/// Full reading labels above a native date/time wheel control. The compact
+/// iOS opener has a 34.5pt target that outer padding does not make tappable.
+/// Wheels retain native editing and the caller's exact binding/date bounds.
 struct SchedulingLabeledControl<Control: View>: View {
     let title: String
     var value: Text? = nil
@@ -482,9 +479,17 @@ struct SchedulingLabeledControl<Control: View>: View {
                     .foregroundStyle(Color.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            control()
-                .labelsHidden()
-                .frame(minHeight: 44, alignment: .leading)
+            // Native date wheels have a non-compressible intrinsic width.
+            // Horizontal scrolling keeps every column reachable in narrow
+            // windows; the complete current value above remains wrapping copy.
+            ScrollView(.horizontal) {
+                control()
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(minHeight: 44, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

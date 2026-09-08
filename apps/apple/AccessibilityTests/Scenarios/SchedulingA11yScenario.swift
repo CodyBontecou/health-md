@@ -142,12 +142,10 @@ struct SchedulingA11yScenario: View {
                 if preset == "custom" {
                     SchedulingLabeledControl(title: "Start Date", value: Text(start, style: .date)) {
                         DatePicker("Start Date", selection: $start, in: ...end, displayedComponents: .date)
-                            .datePickerStyle(.compact)
                             .accessibilityIdentifier("scheduling.date.start")
                     }
                     SchedulingLabeledControl(title: "End Date", value: Text(end, style: .date)) {
                         DatePicker("End Date", selection: $end, in: start...Date(timeIntervalSince1970: 1_751_328_000), displayedComponents: .date)
-                            .datePickerStyle(.compact)
                             .accessibilityIdentifier("scheduling.date.end")
                     }
                 }

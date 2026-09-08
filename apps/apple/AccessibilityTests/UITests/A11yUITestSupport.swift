@@ -3,6 +3,39 @@ import XCTest
 /// Shared by isolated production-component UI suites. All targets use synthetic
 /// state; this does not launch the shipping Health.md app or change OS settings.
 class A11yUITestCase: XCTestCase {
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        continueAfterFailure = false
+    }
+
+    /// Use the real software keyboard's AX key spelling (iOS 26 uses "next",
+    /// identifier "Next:"). Dismiss only its known first-run typing tutorial.
+    func keyboardKey(_ label: String, in app: XCUIApplication) -> XCUIElement {
+        let introduction = app.otherElements["UIContinuousPathIntroductionView"]
+        if introduction.exists {
+            let continuation = introduction.buttons["Continue"]
+            XCTAssertTrue(continuation.isHittable)
+            continuation.tap()
+        }
+        let key = app.keyboards.buttons.matching(NSPredicate(format: "label ==[c] %@", label)).firstMatch
+        XCTAssertTrue(key.waitForExistence(timeout: 5))
+        return key
+    }
+
+    func assertKeyboardTarget(_ key: XCUIElement, in app: XCUIApplication) {
+        let keyboard = app.keyboards.firstMatch
+        guard let window = app.windows.allElementsBoundByIndex.first(where: { $0.keyboards.firstMatch.exists }) else {
+            XCTFail("No native keyboard owner window")
+            return
+        }
+        // Native bottom-row AX hit slop extends 7pt below the SE window on iOS
+        // 26.5. Require an actual visible >=44pt target, not the offscreen slop.
+        let visible = key.frame.intersection(keyboard.frame).intersection(window.frame)
+        XCTAssertGreaterThanOrEqual(visible.width, 44)
+        XCTAssertGreaterThanOrEqual(visible.height, 44)
+        XCTAssertTrue(key.isHittable)
+    }
+
     func launchScenario(
         _ scenario: String = "foundation",
         size: String = "large",
@@ -29,8 +62,10 @@ class A11yUITestCase: XCTestCase {
             if element.isHittable && viewport.contains(element.frame) { return }
             // Window bounds alone are insufficient: a row can be behind chrome.
             let downward = element.frame.minY < viewport.minY
-            let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: downward ? 0.7 : 0.3))
+            // Drag the outer gutter: its center may be a native wheel/editor
+            // that correctly consumes gestures instead of scrolling the page.
+            let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
+            let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: downward ? 0.7 : 0.3))
             start.press(forDuration: 0.05, thenDragTo: end)
         }
         XCTFail("Target not fully reachable in scroll viewport: \(element)")

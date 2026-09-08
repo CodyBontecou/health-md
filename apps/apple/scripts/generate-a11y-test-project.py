@@ -41,17 +41,30 @@ manifest["sources"].append({"path": status_path, "sha256": hashlib.sha256(status
                            "excerptSha256": hashlib.sha256(excerpt.encode()).hexdigest()})
 ids_path = "HealthMd/Shared/AccessibilityIdentifiers.swift"
 ids = (APPLE / ids_path).read_text()
-start = ids.index("    enum Status {")
-end = ids.index("\n    }", start) + len("\n    }")
-ids_excerpt = ids[start:end]
-(out / "StatusIdentifiers.generated.swift").write_text("enum AccessibilityID {\n" + ids_excerpt + "\n}\n")
-manifest["sources"].append({"path": ids_path, "sha256": hashlib.sha256(ids.encode()).hexdigest(),
-                           "mode": "Status enum with namespace wrapper", "startLine": ids[:start].count("\n") + 1,
-                           "endLine": ids[:end].count("\n") + 1, "excerptSha256": hashlib.sha256(ids_excerpt.encode()).hexdigest()})
+ids_excerpts = []
+for namespace in ("Status", "ConfigurationProtection"):
+    start = ids.index(f"    enum {namespace} {{")
+    end = ids.index("\n    }", start) + len("\n    }")
+    excerpt = ids[start:end]
+    ids_excerpts.append(excerpt)
+    manifest["sources"].append({"path": ids_path, "sha256": hashlib.sha256(ids.encode()).hexdigest(),
+                               "mode": f"{namespace} enum with namespace wrapper", "startLine": ids[:start].count("\n") + 1,
+                               "endLine": ids[:end].count("\n") + 1, "excerptSha256": hashlib.sha256(excerpt.encode()).hexdigest()})
+(out / "AccessibilityIdentifiers.generated.swift").write_text("enum AccessibilityID {\n" + "\n".join(ids_excerpts) + "\n}\n")
 shared = source("HealthMd/Shared/Theme/DesignSystem.swift")
+dialogs = [source(f"HealthMd/Shared/Views/{name}.swift") for name in ("GeistDialog", "DialogsA11yComponents")]
+lanes = ("Dialogs", "Format", "Reading", "Scheduling", "Onboarding")
+components = [source(f"HealthMd/iOS/Components/{lane}A11yComponents.swift") for lane in lanes if lane != "Dialogs"]
+scenarios = [source(f"AccessibilityTests/Scenarios/{lane}A11yScenario.swift") for lane in lanes]
+lane_tests = [source(f"HealthMdTests/Views/{lane}A11yTests.swift") for lane in lanes]
+lane_ui_tests = [source(f"AccessibilityTests/UITests/{lane}A11yUITests.swift") for lane in lanes]
+protection = [source("HealthMd/Shared/Models/ConfigurationProtection.swift"), source("HealthMd/Shared/TestMode.swift")]
 tests = source("HealthMdTests/Views/A11yFoundationTests.swift")
 helper = source("HealthMdTests/Support/A11yHosting.swift")
 fonts = [source(str(p.relative_to(APPLE))) for p in sorted((APPLE / "HealthMd/Shared/Theme/Fonts").glob("*.ttf"))]
+assets = APPLE / "HealthMd/Assets.xcassets"
+for asset in sorted(p for p in assets.rglob("*") if p.is_file()):
+    source(str(asset.relative_to(APPLE)))
 base = {"CODE_SIGNING_ALLOWED": "NO", "CODE_SIGNING_REQUIRED": "NO", "CODE_SIGN_IDENTITY": "", "DEVELOPMENT_TEAM": "", "SWIFT_VERSION": "5.0", "GENERATE_INFOPLIST_FILE": "YES"}
 spec = {
     "name": "HealthMdA11y",
@@ -60,16 +73,18 @@ spec = {
     "targets": {
         "HealthMd": {"type": "application", "platform": "iOS",
             "sources": [shared, source("HealthMd/iOS/Components/AnimatedButton.swift"),
-                        str(out / "StatusIdentifiers.generated.swift"), str(out / "StatusComponents.generated.swift"),
-                        source("AccessibilityTests/Host/A11ySyntheticApp.swift")] + fonts,
+                        source("HealthMd/iOS/Components/A11ySwitchToggleStyle.swift"),
+                        source("HealthMd/iOS/Components/A11ySelectionMenu.swift"),
+                        str(out / "AccessibilityIdentifiers.generated.swift"), str(out / "StatusComponents.generated.swift"),
+                        source("AccessibilityTests/Host/A11ySyntheticApp.swift"), str(assets)] + fonts + dialogs + components + scenarios + protection,
             "info": {"path": str(out / "Info.plist"), "properties": {
                 "UIAppFonts": [Path(p).name for p in fonts], "UILaunchScreen": {},
                 "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"]}},
             "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.synthetic", "PRODUCT_MODULE_NAME": "HealthMd", "TARGETED_DEVICE_FAMILY": "1,2"}},
-        "A11yTests": {"type": "bundle.unit-test", "platform": "iOS", "sources": [tests, helper], "dependencies": [{"target": "HealthMd"}], "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.tests"}},
-        "A11yUITests": {"type": "bundle.ui-testing", "platform": "iOS", "sources": [source("AccessibilityTests/UITests/A11yFoundationUITests.swift"), source("AccessibilityTests/UITests/A11yUITestSupport.swift")], "dependencies": [{"target": "HealthMd"}], "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.uitests", "TEST_TARGET_NAME": "HealthMd"}},
-        "HealthMdMac": {"type": "framework", "platform": "macOS", "sources": [shared], "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.mac"}},
-        "A11yMacTests": {"type": "bundle.unit-test", "platform": "macOS", "sources": [tests, helper], "dependencies": [{"target": "HealthMdMac"}], "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.mac.tests", "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "$(inherited) A11Y_ISOLATED_MAC"}}
+        "A11yTests": {"type": "bundle.unit-test", "platform": "iOS", "sources": [tests, helper] + lane_tests, "dependencies": [{"target": "HealthMd"}], "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.tests"}},
+        "A11yUITests": {"type": "bundle.ui-testing", "platform": "iOS", "sources": [source("AccessibilityTests/UITests/A11yFoundationUITests.swift"), source("AccessibilityTests/UITests/A11yUITestSupport.swift")] + lane_ui_tests, "dependencies": [{"target": "HealthMd"}], "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.uitests", "TEST_TARGET_NAME": "HealthMd"}},
+        "HealthMdMac": {"type": "framework", "platform": "macOS", "sources": [shared] + dialogs, "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.mac"}},
+        "A11yMacTests": {"type": "bundle.unit-test", "platform": "macOS", "sources": [tests, helper, source("HealthMdTests/Views/A11yMacDialogTests.swift")], "dependencies": [{"target": "HealthMdMac"}], "settings": {"PRODUCT_BUNDLE_IDENTIFIER": "org.healthmd.a11y.mac.tests", "SWIFT_ACTIVE_COMPILATION_CONDITIONS": "$(inherited) A11Y_ISOLATED_MAC"}}
     },
     "schemes": {
         "HealthMd-A11y-iOS": {"build": {"targets": {"HealthMd": "all"}}, "test": {"targets": ["A11yTests", "A11yUITests"]}},

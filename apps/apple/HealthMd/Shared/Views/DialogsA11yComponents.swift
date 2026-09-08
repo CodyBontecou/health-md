@@ -159,9 +159,15 @@ struct GeistDialogCard: View {
     }
 
     var body: some View {
-        // A separate accessibility container keeps card and native-scroll identities distinct.
-        VStack(spacing: 0) {
+        // A real native modal boundary owns Escape and contains the scroll's
+        // distinct accessibility node; a single-child SwiftUI VStack coalesces
+        // its modal metadata/identifier with the scroll on iOS.
+        Group {
+            #if os(iOS)
+            GeistDialogAccessibilityHost(onCancel: onCancel) { scrollingContent }
+            #else
             scrollingContent
+            #endif
         }
         .frame(height: min(contentHeight ?? maximumHeight, max(0, maximumHeight)))
         .frame(maxWidth: 420)
@@ -179,10 +185,6 @@ struct GeistDialogCard: View {
         #endif
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("geist-dialog.card")
-        #if os(iOS)
-        .accessibilityAddTraits(.isModal)
-        .accessibilityAction(.escape, onCancel)
-        #endif
         .onAppear {
             #if os(iOS)
             UIAccessibility.post(notification: .screenChanged, argument: nil)
@@ -229,6 +231,68 @@ struct GeistDialogCard: View {
         }
     }
 }
+
+#if os(iOS)
+/// UIKit's public modal/escape boundary, not a replacement for the SwiftUI
+/// fields or actions. The complete live view environment crosses this boundary.
+private struct GeistDialogAccessibilityHost<Content: View>: UIViewControllerRepresentable {
+    let onCancel: () -> Void
+    @ViewBuilder var content: () -> Content
+
+    func makeUIViewController(context: Context) -> GeistDialogAccessibilityController {
+        GeistDialogAccessibilityController(content: AnyView(content().environment(\.self, context.environment)), onCancel: onCancel)
+    }
+
+    func updateUIViewController(_ controller: GeistDialogAccessibilityController, context: Context) {
+        controller.host.rootView = AnyView(content().environment(\.self, context.environment))
+        controller.modalView.onCancel = onCancel
+    }
+}
+
+private final class GeistDialogAccessibilityView: UIView {
+    var onCancel: () -> Void = {}
+
+    override func accessibilityPerformEscape() -> Bool {
+        onCancel()
+        return true
+    }
+}
+
+private final class GeistDialogAccessibilityController: UIViewController {
+    let host: UIHostingController<AnyView>
+    let modalView = GeistDialogAccessibilityView()
+
+    init(content: AnyView, onCancel: @escaping () -> Void) {
+        host = UIHostingController(rootView: content)
+        super.init(nibName: nil, bundle: nil)
+        modalView.onCancel = onCancel
+        modalView.accessibilityViewIsModal = true
+        modalView.isAccessibilityElement = false
+        modalView.accessibilityIdentifier = "geist-dialog.card"
+        host.safeAreaRegions = []
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unavailable") }
+
+    override func loadView() { view = modalView }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        addChild(host)
+        host.view.backgroundColor = .clear
+        host.view.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(host.view)
+        NSLayoutConstraint.activate([
+            host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            host.view.topAnchor.constraint(equalTo: view.topAnchor),
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        host.didMove(toParent: self)
+    }
+}
+#endif
 
 /// A stateless native field used by the production card, with a persistent full
 /// label. Editing remains single-line to retain native Return/Next semantics.

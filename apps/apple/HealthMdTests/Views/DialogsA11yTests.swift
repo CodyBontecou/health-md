@@ -148,11 +148,29 @@ final class DialogsA11yTests: XCTestCase {
     }
 
     func testRealFieldsKeepExactValuesAndGrowAfterLiveTextSizeChange() throws {
-        let values = ["  synthetic_key_without_any_normalization  ", "Synthetic first line\nSynthetic second line"]
-        let fields = [
-            GeistDialogField(placeholder: "Field name with a complete external explanation", text: .constant(values[0])),
-            GeistDialogField(placeholder: "Value with a different external explanation", text: .constant(values[1]))
-        ]
+        let originals = ["  synthetic_key_without_any_normalization  ", "Synthetic first line\nSynthetic second line"]
+        var values = originals
+        var writes = 0
+        let fields = originals.indices.map { index in
+            GeistDialogField(placeholder: index == 0 ? "Field name with a complete external explanation" : "Value with a different external explanation",
+                             text: Binding(get: { values[index] }, set: {
+                                 // Native focus may echo the unchanged value. Count
+                                 // actual text changes, not identical round-trips.
+                                 if values[index] != $0 { writes += 1 }
+                                 values[index] = $0
+                             }))
+        }
+        // Native single-line TextField renders newlines as spaces. Compare the
+        // production editor with that actual native control, while separately
+        // proving raw bindings are never rewritten during layout/reflow.
+        let reference = A11yHosting(VStack {
+            ForEach(originals.indices, id: \.self) { index in
+                TextField("Reference", text: .constant(originals[index]))
+            }
+        })
+        defer { reference.close() }
+        let nativeValues = subviews(of: reference.controller.view).compactMap { ($0 as? UITextField)?.text }
+        XCTAssertEqual(nativeValues.count, 2)
         func view(_ size: DynamicTypeSize) -> some View {
             card(maximumHeight: 400, fields: fields).frame(width: 304).environment(\.dynamicTypeSize, size)
         }
@@ -161,14 +179,18 @@ final class DialogsA11yTests: XCTestCase {
         _ = host.measured()
         let before = subviews(of: host.controller.view).compactMap { $0 as? UITextField }
         XCTAssertEqual(before.count, 2)
-        XCTAssertEqual(before.compactMap(\.text), values)
+        XCTAssertEqual(before.compactMap(\.text), nativeValues)
+        XCTAssertEqual(values, originals)
+        XCTAssertEqual(writes, 0)
         let oldFontSize = try XCTUnwrap(before.first?.font?.pointSize)
         let scroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
         let oldContentHeight = scroll.contentSize.height
         host.update(view(.accessibility5))
         _ = host.measured()
         let after = subviews(of: host.controller.view).compactMap { $0 as? UITextField }
-        XCTAssertEqual(after.compactMap(\.text), values)
+        XCTAssertEqual(after.compactMap(\.text), nativeValues)
+        XCTAssertEqual(values, originals)
+        XCTAssertEqual(writes, 0)
         XCTAssertGreaterThan(try XCTUnwrap(after.first?.font?.pointSize), oldFontSize)
         XCTAssertGreaterThan(scroll.contentSize.height, oldContentHeight)
     }
@@ -217,10 +239,12 @@ final class DialogsA11yTests: XCTestCase {
         ))
         defer { host.close() }
         _ = host.measured()
-        let card = try XCTUnwrap(accessibilityObjects(in: host.controller.view).first {
-            ($0 as? UIAccessibilityIdentification)?.accessibilityIdentifier == "geist-dialog.card"
-        })
-        XCTAssertTrue(card.accessibilityTraits.contains(.isModal))
+        // SwiftUI owns AX identifiers on its representable wrapper. Locate the
+        // genuine UIKit modal boundary by its public semantic property instead.
+        let modals = accessibilityObjects(in: host.window).filter { $0.accessibilityViewIsModal }
+        XCTAssertEqual(modals.count, 1)
+        let card = try XCTUnwrap(modals.first)
+        XCTAssertTrue(card.accessibilityViewIsModal)
         XCTAssertTrue(card.accessibilityPerformEscape())
         XCTAssertFalse(presented)
         XCTAssertEqual(cancels, 1)
@@ -258,6 +282,7 @@ final class DialogsA11yTests: XCTestCase {
             guard seen.insert(ObjectIdentifier(object)).inserted else { continue }
             result.append(object)
             if let view = object as? UIView { pending.append(contentsOf: view.subviews) }
+            if let children = object.accessibilityElements as? [NSObject] { pending.append(contentsOf: children) }
             let count = object.accessibilityElementCount()
             if count != NSNotFound && count > 0 {
                 for index in 0..<count {

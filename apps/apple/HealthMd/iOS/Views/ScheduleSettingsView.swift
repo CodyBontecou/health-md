@@ -549,7 +549,6 @@ struct ScheduleSettingsView: View {
                     selection: customAnchorDateBinding,
                     displayedComponents: .date
                 )
-                .datePickerStyle(.compact)
                 .tint(Color.accent)
                 .accessibilityIdentifier(AccessibilityID.Schedule.customStartDatePicker)
                 .accessibilityHint("Sets the first day and repeating phase of the custom schedule")

@@ -1,6 +1,6 @@
 # iOS accessibility implementation status
 
-2026-09-08. **In progress; foundation verified, screen repairs and full integration matrix pending.** The [September 7 audit](accessibility-ios-audit.md) remains unchanged historical evidence. Android's separately blocked 402-case device gate is not an Apple pass.
+2026-09-08. **In progress; all five repair lanes merged, component gates passed, full screen/journey matrix pending.** The [September 7 audit](accessibility-ios-audit.md) remains unchanged historical evidence. Android's separately blocked 402-case device gate is not an Apple pass.
 
 The shared outcome is full readable essential labels, explanations and values with operable native controls at the user's chosen text size. This repairs existing UI presentation; no settings/defaults, HealthKit semantics, contracts, schemas, metric identities/units, export bytes or Android implementation change.
 
@@ -23,14 +23,30 @@ Local command/log/result receipts: `/tmp/health-md-ios-a11y-fleet-loop/cycle-1`,
 
 Failures were investigated before accepting results: palette green900 and warning text failed on tinted pressed/selected surfaces; text tokens were corrected without changing fills or reducing the 4.5:1 threshold. UI tests initially compared localized synthetic counters against ungrouped integers and checked window rather than scroll bounds; diagnostics now use verbatim counters and stricter viewport reachability. Initial standalone dependency/module wiring failures were corrected. One failed-run diagnostic collection exceeded the harness timeout; that incomplete bundle is not green evidence. The final native result bundles confirm complete, nonzero successful runs.
 
+## Integrated repairs and central diagnostics
+
+All five source-only lanes were merged serially after clean-head, ancestry and ownership checks. The integrated changes cover dialogs; format/frontmatter/template editing; metric/Settings/Sync reading; scheduling/export/profile controls; and onboarding/paywall. Their actual production components are registered in the isolated host. No lane's static checks were counted as runtime tests.
+
+Central execution found issues that source parsing could not establish:
+
+- A padded native switch label was not a physical row target. The production `A11ySwitchToggleStyle` now supplies one actual full-row action with native switch accessibility. Label-edge/thumb-side dispatch, unavailable state and the real isolated configuration-protection manager's block/unlock paths passed native UI tests.
+- Compact date openers measured 34.5pt and did not respond to a padded-edge tap. The affected date/time controls now use native wheels with the original bindings/ranges, full wrapping readback and horizontal scrolling for narrow columns. Native wheel targets and value-preserving adjustments passed; page scrolling uses the outer gutter, not the wheel.
+- UIKit Menu options measured 42pt and ignored minimum frames on SwiftUI action labels. `A11ySelectionMenu` retains native popover presentation but owns growing, scrolling >=44pt option Buttons. Native tests passed full date/time/unit choices, repeated current-option dispatch and independent hour/minute/period callbacks.
+- The iOS dialog now has a real UIKit modal/escape boundary containing the production SwiftUI content and its complete live environment. Unit and native UI tests passed Escape dispatch, first-secondary cancellation before dismissal, initial field focus and Next/Done progression. This does not certify physical VoiceOver gestures.
+- Test assumptions were corrected rather than reducing text or thresholds: native single-line newline rendering is compared against an actual native control while raw binding values remain unchanged; deliberately long fixtures exceed the 44pt minimum-height plateau; tight AX glyph bounds are not confused with allocated reading width; keyboard/wheel overscan is excluded from visible target measurements. One zero-test UI run was rejected, followed by explicit test enumeration and actual execution.
+
+Current component result `integrated-components-current-1.xcresult`: **52 passed, 0 failed/skipped**. Actual-source hostless Mac result `integrated-mac-components-1.xcresult`: **5 passed, 0 failed/skipped**, including bounded shared dialogs, desktop 40pt action sizing, native font metrics and desktop dispatch policy. Shipping result `integrated-app-build-2.xcresult` compiled the iOS app, full unit-test target and Mac dependency graph; it is **not hosted-suite execution**. Targeted native UI passes are recorded separately under `integrated-switches-1`, `integrated-popovers-1`, `integrated-date-native-1`, `integrated-components-and-native-1`, `integrated-native-controls-1` and `integrated-lane-smoke-1`; some of those exploratory bundles also contain earlier failing cases and are not whole-suite green evidence. Commands, logs, source manifests, raw result summaries and failure history remain under the local cycle directory.
+
+See the [integrated native-control contract](../../AccessibilityTests/README.md#integrated-native-control-details). These are component and targeted native-dispatch results, not whole-app completion.
+
 ## Remaining before delivery
 
 | Findings | Status |
 | --- | --- |
-| IOS-A1 | Shared typography foundation verified; caller reflow still needs integration |
-| IOS-A2/A3 | Format/frontmatter/dialog repairs pending |
-| IOS-A4/A5 | Shared tokens/controls repaired; screen-specific enabled copy/targets pending |
-| IOS-A6/A7/A8 | Metric/Settings/Sync, scheduling/export/profile, onboarding/paywall lanes pending |
-| IOS-A9 | Foundation regression infrastructure executed; integrated screen matrix pending |
+| IOS-A1 | Shared typography and caller component reflow passed; full screen matrix pending |
+| IOS-A2/A3 | Format/frontmatter/dialog repairs merged; broad editor/dialog journeys pending |
+| IOS-A4/A5 | Readable tokens and real target fixes tested; remaining screen target matrix pending |
+| IOS-A6/A7/A8 | All corresponding lanes merged; full metric/settings/scheduling/onboarding journeys pending |
+| IOS-A9 | 52 iOS + 5 Mac component tests passed; integrated UI matrix not yet complete |
 
-Required integration work includes actual native menus, dialog card/overlay bounds and focus/cancel/submit, keyboard paths, configuration-protection guards, short landscape/narrow width, German/Arabic RTL/Japanese and both themes. The full macOS host is unsafe to launch under this run's data boundaries; build plus isolated actual-source equivalents must remain explicitly distinct from that unavailable full-host gate. Actual VoiceOver traversal, physical Display Zoom/IME/magnification and reading comfort remain separate human gates. No platform or app-wide accessibility certification is claimed.
+Remaining integration work includes the complete native popover/dialog, keyboard, protected shipping-host and screen matrix: short landscape/narrow width, German/Arabic RTL/Japanese, both themes, runtime Reduce Motion, and date/selection/domain preservation. Targeted passes above do not replace those remaining gates. The full macOS host is unsafe to launch under this run's data boundaries; build plus isolated actual-source equivalents must remain explicitly distinct from that unavailable full-host gate. Actual VoiceOver traversal, physical Display Zoom/IME/magnification and reading comfort remain separate human gates. No platform or app-wide accessibility certification is claimed.

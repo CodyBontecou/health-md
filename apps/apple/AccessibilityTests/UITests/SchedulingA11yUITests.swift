@@ -172,14 +172,37 @@ final class SchedulingA11yUITests: A11yUITestCase {
         for id in ["scheduling.date.start", "scheduling.date.end"] {
             let date = app.datePickers[id]
             XCTAssertTrue(date.exists)
-            reveal(date, in: app)
-            XCTAssertGreaterThanOrEqual(date.frame.width, 44)
-            XCTAssertGreaterThanOrEqual(date.frame.height, 44)
-            XCTAssertNotNil(date.value)
+            // The native wheel columns are independent adjustable targets;
+            // DatePicker itself is a group, not a compact 34.5pt opener.
+            let owners = app.scrollViews.containing(.datePicker, identifier: id).allElementsBoundByIndex
+            guard let owner = owners.min(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }) else {
+                XCTFail("No native date scroll owner"); return
+            }
+            reveal(owner, in: app)
+            let wheels = date.pickerWheels.allElementsBoundByIndex
+            XCTAssertEqual(wheels.count, 3)
+            for wheel in wheels {
+                for _ in 0..<8 {
+                    if wheel.frame.minX >= owner.frame.minX && wheel.frame.maxX <= owner.frame.maxX { break }
+                    if wheel.frame.minX < owner.frame.minX { owner.swipeRight() } else { owner.swipeLeft() }
+                }
+                XCTAssertTrue(wheel.isHittable)
+                // UIKit wheel AX bounds include overscan rows (291pt versus
+                // the 216pt viewport). Require the actual visible target and
+                // selected-row center, not offscreen wheel rows, to be reachable.
+                let visible = owner.frame.intersection(wheel.frame)
+                XCTAssertTrue(visible.contains(CGPoint(x: wheel.frame.midX, y: wheel.frame.midY)))
+                XCTAssertGreaterThanOrEqual(visible.width, 44)
+                XCTAssertGreaterThanOrEqual(visible.height, 44)
+                let original = wheel.value as? String ?? ""
+                XCTAssertFalse(original.isEmpty)
+                wheel.adjust(toPickerWheelValue: original)
+                XCTAssertEqual(wheel.value as? String, original)
+            }
         }
         saveScreenshot(app, name: "scheduling-native-date-anchors")
-        // Native calendar selection/dismissal, keyboard and live protected
-        // binding rejection need a screen integration test, not a fake guard.
+        // Exact date adjustments and live protected binding rejection also
+        // need screen integration, not a fake guard.
     }
 
     func testShortLandscapeFooterScrollsWithContentAtDefaultAndLargeText() {

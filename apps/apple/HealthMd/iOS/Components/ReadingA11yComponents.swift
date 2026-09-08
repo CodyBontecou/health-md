@@ -16,7 +16,7 @@ struct ReadingMetricToggle: View {
                 .padding(.vertical, Spacing.s3)
                 .frame(minWidth: 44, minHeight: 44)
         }
-        .toggleStyle(.switch)
+        .toggleStyle(A11ySwitchToggleStyle())
         .tint(Color.success)
         .padding(.horizontal, Spacing.s4)
         .contentShape(Rectangle())
@@ -307,7 +307,7 @@ struct ReadingProtectionRow: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(minWidth: 44, minHeight: 44, alignment: .leading)
             }
-            .toggleStyle(.switch)
+            .toggleStyle(A11ySwitchToggleStyle())
             .tint(Color.accent)
             .accessibilityLabel("Prevent Accidental Changes")
             .accessibilityValue(isEnabled ? "On" : "Off")
