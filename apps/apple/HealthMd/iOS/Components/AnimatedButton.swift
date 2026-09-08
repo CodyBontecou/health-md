@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Geist Buttons
+// MARK: - Native Buttons
 
 struct PrimaryButton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -10,8 +10,6 @@ struct PrimaryButton: View {
     let isLoading: Bool
     let isDisabled: Bool
     let action: () -> Void
-
-    @State private var isPressed = false
 
     init(
         _ title: String,
@@ -38,7 +36,7 @@ struct PrimaryButton: View {
                             .accessibilityHidden(true)
                     } else {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color.bgPrimary))
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .scaleEffect(0.82)
                             .accessibilityHidden(true)
                     }
@@ -48,39 +46,18 @@ struct PrimaryButton: View {
                 }
 
                 Text(LocalizedStringKey(isLoading ? "Exporting…" : title))
-                    .font(.system(size: 16, weight: .medium, design: .default))
-                    .lineLimit(1)
+                    .font(.body.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .foregroundStyle(Color.bgPrimary)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 48)
+            .frame(maxWidth: .infinity, minHeight: 44)
             .padding(.horizontal, Spacing.s4)
-            .background(isDisabled ? Color.geistGray300 : (isPressed ? Color.geistGray900 : Color.geistGray1000))
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .opacity(isDisabled ? 0.7 : 1)
-            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
-        .buttonStyle(.plain)
+        .modifier(HealthGlassActionStyle(prominent: true))
         .disabled(isDisabled || isLoading)
-        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation { isPressed = pressing }
-        }, perform: {})
         .accessibilityLabel(isLoading ? "Exporting" : title)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(isDisabled ? "Button disabled" : "Double tap to activate")
         .accessibilityValue(isLoading ? "In progress" : "")
-    }
-
-    private func withOptionalMotionAnimation(_ updates: () -> Void) {
-        if reduceMotion {
-            updates()
-        } else {
-            withAnimation(AnimationTimings.fast, updates)
-        }
     }
 }
 
@@ -134,7 +111,8 @@ struct SecondaryButton: View {
                 Text(LocalizedStringKey(title))
             }
         }
-        .buttonStyle(SecondaryButtonStyle(color: color))
+        .modifier(HealthGlassActionStyle())
+        .tint(color)
         .accessibilityLabel(title)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Double tap to activate")

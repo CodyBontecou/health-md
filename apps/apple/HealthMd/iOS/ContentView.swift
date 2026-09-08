@@ -48,6 +48,7 @@ struct ContentView: View {
     @State private var showExportFolderBrowser = false
     @State private var showPaywall = false
     @State private var showExportProfiles = false
+    @State private var showConnectionSettings = false
     @State private var showClinicianReport = false
     @State private var showMarketingMetricSelection = false
     @State private var showMarketingFormatCustomization = false
@@ -122,17 +123,7 @@ struct ContentView: View {
             Color.bgPrimary.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                if !discordPromoDismissed {
-                    DiscordPromoBanner {
-                        withOptionalMotionAnimation(AnimationTimings.standard) {
-                            discordPromoDismissed = true
-                        }
-                    }
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.sm)
-                    .padding(.bottom, Spacing.sm)
-                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
-                }
+
 
                 TabView(selection: $selectedTab) {
                     ExportTabView(
@@ -153,10 +144,13 @@ struct ContentView: View {
                         showFolderPicker: $showFolderPicker,
                         presentFirstExportPreview: $presentFirstExportPreview,
                         canExport: canExport,
-                        onExportTapped: exportData
+                        onExportTapped: exportData,
+                        profileCoordinator: profileCoordinator,
+                        onManageProfiles: { showExportProfiles = true },
+                        onViewActivity: { selectedTab = .schedule }
                     )
                     .tabItem {
-                        Label("Export", systemImage: "arrow.up.doc.fill")
+                        Label("Home", systemImage: "house")
                     }
                     .tag(NavTab.export)
 
@@ -165,36 +159,44 @@ struct ContentView: View {
                         advancedSettings: advancedSettings,
                         apiExportSettings: apiExportSettings,
                         showFolderPicker: $showFolderPicker,
-                        profileCoordinator: profileCoordinator
+                        profileCoordinator: profileCoordinator,
+                        showsHistoryOnly: true
                     )
                     .environmentObject(schedulingManager)
                     .environmentObject(healthKitManager)
                         .tabItem {
-                            Label("Schedule", systemImage: "clock.fill")
+                            Label("Activity", systemImage: "clock.arrow.circlepath")
                         }
                         .tag(NavTab.schedule)
 
                     NavigationStack {
                         SyncSettingsView()
+                            .toolbar {
+                                ToolbarItem(placement: .topBarTrailing) {
+                                    Button("Settings", systemImage: "gearshape") {
+                                        showConnectionSettings = true
+                                    }
+                                    .accessibilityIdentifier("connections.settings")
+                                }
+                            }
+                            .navigationDestination(isPresented: $showConnectionSettings) {
+                                SettingsTabView(
+                                    vaultManager: vaultManager,
+                                    advancedSettings: advancedSettings,
+                                    externalIntegrationManager: externalIntegrationManager,
+                                    profileCoordinator: profileCoordinator,
+                                    showFolderPicker: $showFolderPicker,
+                                    showExportProfiles: $showExportProfiles,
+                                    showClinicianReport: $showClinicianReport
+                                )
+                                .navigationTitle("Settings")
+                                .navigationBarTitleDisplayMode(.inline)
+                            }
                     }
                     .tabItem {
-                        Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        Label("Connections", systemImage: "cable.connector")
                     }
                     .tag(NavTab.sync)
-
-                    SettingsTabView(
-                        vaultManager: vaultManager,
-                        advancedSettings: advancedSettings,
-                        externalIntegrationManager: externalIntegrationManager,
-                        profileCoordinator: profileCoordinator,
-                        showFolderPicker: $showFolderPicker,
-                        showExportProfiles: $showExportProfiles,
-                        showClinicianReport: $showClinicianReport
-                    )
-                    .tabItem {
-                        Label("Settings", systemImage: "gearshape.fill")
-                    }
-                    .tag(NavTab.settings)
                 }
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
@@ -218,7 +220,17 @@ struct ContentView: View {
                     if pairingLink != nil { selectedTab = .sync }
                 }
                 .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
-                    if requestID != nil { selectedTab = .settings }
+                    if requestID != nil {
+                        selectedTab = .sync
+                        showConnectionSettings = true
+                    }
+                }
+                .onChange(of: selectedTab) { _, tab in
+                    // Preserve existing debug/notification settings routes.
+                    if tab == .settings {
+                        selectedTab = .sync
+                        showConnectionSettings = true
+                    }
                 }
             }
 
@@ -323,7 +335,7 @@ struct ContentView: View {
         .sheet(isPresented: $showExportProfiles) {
             if let profileCoordinator {
                 NavigationStack {
-                    ExportProfilesView(coordinator: profileCoordinator)
+                    ExportProfilesView(coordinator: profileCoordinator, onClose: { showExportProfiles = false })
                 }
                 // The sheet covers the app-level toast, so blocked profile
                 // mutations surface a sheet-local one that stays visible over
@@ -332,7 +344,8 @@ struct ContentView: View {
                 .overlay(alignment: .top) {
                     ConfigurationProtectionToast(configurationProtection: configurationProtection)
                         .padding(.horizontal, Spacing.md)
-                        .padding(.top, Spacing.s2)
+                        // Keep Back and Done reachable while the notice is visible.
+                        .padding(.top, 64)
                 }
                 .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
                     if requestID != nil {
@@ -2538,6 +2551,7 @@ struct ScheduleTabView: View {
     @ObservedObject var apiExportSettings: APIExportSettings
     @Binding var showFolderPicker: Bool
     var profileCoordinator: ExportProfileCoordinator? = nil
+    var showsHistoryOnly = false
 
     var body: some View {
         NavigationStack {
@@ -2546,7 +2560,8 @@ struct ScheduleTabView: View {
                 advancedSettings: advancedSettings,
                 apiExportSettings: apiExportSettings,
                 showFolderPicker: $showFolderPicker,
-                profileCoordinator: profileCoordinator
+                profileCoordinator: profileCoordinator,
+                showsHistoryOnly: showsHistoryOnly
             )
         }
     }

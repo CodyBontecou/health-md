@@ -170,14 +170,7 @@ final class OnboardingJourneyUITests: XCTestCase {
             XCTAssertTrue(settingsSidebarItem.waitForExistence(timeout: 10))
             settingsSidebarItem.tap()
         } else {
-            let identifiedSettingsTab = app.buttons[UITestLaunchHelper.Tab.settings]
-            if identifiedSettingsTab.waitForExistence(timeout: 3) {
-                identifiedSettingsTab.tap()
-            } else {
-                let labeledSettingsTab = app.buttons["Settings"]
-                XCTAssertTrue(labeledSettingsTab.waitForExistence(timeout: 7))
-                labeledSettingsTab.tap()
-            }
+            UITestLaunchHelper.openSettings(in: app)
         }
 
         let configurationCard = app.descendants(matching: .any)[

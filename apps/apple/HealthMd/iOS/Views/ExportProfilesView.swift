@@ -116,14 +116,8 @@ struct ExportProfileCardSummary: Equatable {
 
 // MARK: - Management view
 
-/// Dedicated management surface for export profiles (see
-/// `docs/features/export-profiles.md`): every profile at a glance with its
-/// destination, schedule status, formats, and metric count; a read-only
-/// detail view of the frozen snapshot with the copyable profile ID used by
-/// the CLI and automation references; and activate / rename / duplicate /
-/// delete management. Editing output settings stays in the Export tab by
-/// activating the profile first (feature decision 1: single editing
-/// authority), so this view never mutates a frozen snapshot in place.
+/// Selecting a profile applies it through the coordinator and closes the
+/// selector. The separate Edit action inspects its settings without activation.
 struct ExportProfilesView: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var profileStore: ExportProfileStore
@@ -131,11 +125,15 @@ struct ExportProfilesView: View {
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let onClose: () -> Void
 
     @State private var showCreationSheet = false
+    @State private var showActivationFailure = false
 
-    init(coordinator: ExportProfileCoordinator) {
+    init(coordinator: ExportProfileCoordinator, onClose: @escaping () -> Void) {
         self.coordinator = coordinator
+        self.onClose = onClose
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
         _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
@@ -149,15 +147,7 @@ struct ExportProfilesView: View {
                 if profileStore.profiles.isEmpty {
                     emptyStateCard
                 } else {
-                    ForEach(profileStore.profiles) { profile in
-                        NavigationLink {
-                            ExportProfileDetailView(coordinator: coordinator, profileID: profile.id)
-                        } label: {
-                            profileCard(summary(for: profile))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("export.profiles.row.\(profile.name)")
-                    }
+                    ForEach(profileStore.profiles) { profile in profileCard(summary(for: profile)) }
                 }
             }
             .padding(.horizontal, Spacing.md)
@@ -169,6 +159,10 @@ struct ExportProfilesView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Done", action: onClose)
+                    .accessibilityIdentifier("export.profiles.done")
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     // Creating a profile is a configuration mutation, so the
@@ -188,14 +182,19 @@ struct ExportProfilesView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .alert("Profile unavailable", isPresented: $showActivationFailure) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("This profile couldn’t be activated. Review its destination and configuration, then try again.")
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
-            Text("Export Profiles")
+            Text("Choose a profile")
                 .font(Typography.displayMedium())
                 .foregroundStyle(Color.textPrimary)
-            Text("Every saved export configuration in one place. Activate a profile to edit it in the Export tab; schedules run even when this screen is closed.")
+            Text("Tap a profile to make it active. Use Edit to review or change its settings.")
                 .font(.footnote)
                 .foregroundStyle(Color.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -240,60 +239,84 @@ struct ExportProfilesView: View {
     }
 
     private func profileCard(_ summary: ExportProfileCardSummary) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s3) {
-            HStack(alignment: .top, spacing: Spacing.s3) {
-                Image(systemName: "square.and.arrow.down.on.square")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(summary.isActive ? Color.accent : Color.textMuted)
-                    .frame(width: 32, height: 32)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: Spacing.s2) {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 0))
+        return layout {
+            Button { selectProfile(summary.profile) } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: summary.isActive ? "checkmark.circle.fill" : "circle")
+                        .font(.title2)
+                        .foregroundStyle(summary.isActive ? Color.accent : Color.textMuted)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 5) {
                         Text(summary.profile.name)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.textPrimary)
-                            .lineLimit(1)
-
+                            .font(.headline).foregroundStyle(Color.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
                         if summary.isActive {
-                            Text("Active")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.accent)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(Color.accent.opacity(0.14)))
+                            Text("Active profile").font(.caption.weight(.semibold)).foregroundStyle(Color.accent)
+                        }
+                        Text(destinationLine(summary.destination))
+                            .font(.subheadline).foregroundStyle(Color.textSecondary)
+                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+                        Text(formatsLine(summary))
+                            .font(.caption).foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if summary.scheduleStatus != .notConfigured {
+                            Text(scheduleLine(summary))
+                                .font(.caption).foregroundStyle(scheduleColor(summary.scheduleStatus))
                         }
                     }
-
-                    Text(destinationLine(summary.destination))
-                        .font(.footnote)
-                        .foregroundStyle(Color.textSecondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-
-                    Text(scheduleLine(summary))
-                        .font(.footnote)
-                        .foregroundStyle(scheduleColor(summary.scheduleStatus))
-                        .lineLimit(2)
-
-                    Text(formatsLine(summary))
-                        .font(.caption)
-                        .foregroundStyle(Color.textMuted)
-                        .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textMuted)
+                .padding(16)
+                .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+                .contentShape(.rect)
             }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(summary.isActive ? .isSelected : [])
+            .accessibilityHint(summary.isActive ? "Closes the profile selector" : "Makes this profile active and closes the selector")
+            .accessibilityIdentifier("export.profiles.select.\(summary.profile.name)")
+
+            NavigationLink {
+                ExportProfileDetailView(coordinator: coordinator, profileID: summary.profile.id, onProfileSelected: onClose)
+            } label: {
+                Text("Edit")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, 18)
+                    .frame(minHeight: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain).foregroundStyle(Color.accent)
+            .padding(.trailing, 6)
+            .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 36 : 0)
+            .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 12 : 0)
+            .accessibilityLabel("Edit \(summary.profile.name)")
+            .accessibilityHint("Opens settings without changing the active profile")
+            .accessibilityIdentifier("export.profiles.row.\(summary.profile.name)")
         }
-        .padding(Spacing.s4)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.bgSecondary)
-        )
-        .accessibilityHint(String(localized: "Opens profile details", comment: "Accessibility hint for an export profile row"))
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 20))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(summary.isActive ? Color.accent.opacity(0.45) : .clear, lineWidth: 1.5)
+                .allowsHitTesting(false)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func selectProfile(_ profile: ExportProfile) {
+        if profile.id == profileStore.activeProfileID {
+            onClose()
+            return
+        }
+        configurationProtection.performConfigurationChange {
+            guard coordinator.activate(profileID: profile.id) else {
+                showActivationFailure = true
+                return
+            }
+            onClose()
+        }
     }
 
     private func destinationLine(_ destination: ExportProfileDestinationSummary) -> String {
@@ -305,7 +328,7 @@ struct ExportProfilesView: View {
                     comment: "Profile row destination line for a bound vault folder"
                 )
             }
-            return String(localized: "Folder: from Export tab", comment: "Profile row destination line for an unbound folder")
+            return String(localized: "Current export folder", comment: "Profile row destination line for an unbound folder")
         case .connectedMac:
             return String(localized: "Connected Mac", comment: "Profile row destination line for the Mac target")
         case .apiEndpoint(let url):
@@ -360,8 +383,8 @@ struct ExportProfilesView: View {
 
 // MARK: - Detail view
 
-/// Read-only inspection of one profile's frozen configuration plus
-/// management actions. The stable profile ID is copyable for
+/// Editable facts and management actions for a saved profile. Activation
+/// stays visible above the bottom safe area. The stable profile ID is copyable for
 /// `healthmd export --profile` and automation references.
 struct ExportProfileDetailView: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
@@ -373,20 +396,23 @@ struct ExportProfileDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let profileID: UUID
+    let onProfileSelected: () -> Void
 
     @State private var showRenameAlert = false
     @State private var renameText = ""
     @State private var showDeleteConfirmation = false
     @State private var showScheduleEditor = false
-    @State private var showSettingsEditor = false
+    @State private var editorPresentation: ProfileEditorPresentation?
     @State private var idCopied = false
+    @State private var showActivationFailure = false
     /// Pending overlap warning for a just-duplicated profile; undo deletes
     /// the copy (the source profile stays untouched and active).
     @State private var duplicateOverlapWarning: (copyID: UUID, names: [String])?
 
-    init(coordinator: ExportProfileCoordinator, profileID: UUID) {
+    init(coordinator: ExportProfileCoordinator, profileID: UUID, onProfileSelected: @escaping () -> Void) {
         self.coordinator = coordinator
         self.profileID = profileID
+        self.onProfileSelected = onProfileSelected
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
         _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
@@ -434,11 +460,33 @@ struct ExportProfileDetailView: View {
             .padding(.top, Spacing.md)
             .padding(.bottom, Spacing.lg)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if profile.id != profileStore.activeProfileID {
+                Button {
+                    configurationProtection.performConfigurationChange {
+                        guard coordinator.activate(profileID: profile.id) else {
+                            showActivationFailure = true
+                            return
+                        }
+                        onProfileSelected()
+                    }
+                } label: {
+                    Label("Make active", systemImage: "checkmark.circle")
+                        .font(.headline).frame(maxWidth: .infinity, minHeight: 32)
+                }
+                .modifier(HealthGlassActionStyle(prominent: true))
+                .controlSize(.large)
+                .accessibilityIdentifier(AccessibilityID.ExportProfiles.makeActiveButton)
+                .accessibilityHint("Uses this profile for your next export and closes the selector")
+                .padding(.horizontal, 24).padding(.vertical, 12)
+                .background(Color.bgPrimary)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     configurationProtection.performConfigurationChange {
-                        showSettingsEditor = true
+                        openEditor()
                     }
                 } label: {
                     Image(systemName: "square.and.pencil")
@@ -447,10 +495,15 @@ struct ExportProfileDetailView: View {
                 .accessibilityIdentifier("export.profiles.edit.button")
             }
         }
-        .sheet(isPresented: $showSettingsEditor) {
-            ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
+        .sheet(item: $editorPresentation) { editor in
+            ExportProfileEditorSheet(coordinator: coordinator, editing: editor.profile, focusedSection: editor.section)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .alert("Profile unavailable", isPresented: $showActivationFailure) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("This profile couldn’t be activated. Review its destination and configuration, then try again.")
         }
         .geistDialog(
             isPresented: Binding(
@@ -537,7 +590,7 @@ struct ExportProfileDetailView: View {
         Group {
             if profile.id == profileStore.activeProfileID {
                 Label(
-                    String(localized: "Active profile — edit it in the Export tab", comment: "Banner on the active profile's detail"),
+                    String(localized: "Active profile", comment: "Banner on the active profile's detail"),
                     systemImage: "checkmark.circle.fill"
                 )
                 .font(.footnote.weight(.semibold))
@@ -555,19 +608,22 @@ struct ExportProfileDetailView: View {
         return sectionCard(title: String(localized: "Destination", comment: "Profile detail card title")) {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 factRow(
+                    editor: .destination,
                     title: String(localized: "Target", comment: "Profile detail target row"),
                     value: profile.target.title
                 )
                 switch ExportProfileDestinationSummary.from(profile: profile, vault: vault, endpoint: endpoint) {
                 case .localFolder(let vaultName):
                     factRow(
+                        editor: .destination,
                         title: String(localized: "Folder", comment: "Profile detail folder row"),
-                        value: vaultName ?? String(localized: "Selected in Export tab", comment: "Unbound folder fallback")
+                        value: vaultName ?? String(localized: "Current export folder", comment: "Unbound folder fallback")
                     )
                 case .connectedMac:
                     EmptyView()
                 case .apiEndpoint(let url):
                     factRow(
+                        editor: .destination,
                         title: String(localized: "Endpoint", comment: "Profile detail endpoint row"),
                         value: url ?? String(localized: "Not configured", comment: "Missing endpoint fallback")
                     )
@@ -586,17 +642,20 @@ struct ExportProfileDetailView: View {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 if settings.dailyNotesOnlyModeEnabled {
                     factRow(
+                        editor: .notes,
                         title: String(localized: "Mode", comment: "Profile detail mode row"),
                         value: String(localized: "Daily Notes only", comment: "Daily-notes-only mode value")
                     )
                 } else {
                     factRow(
+                        editor: .formats,
                         title: String(localized: "Formats", comment: "Profile detail formats row"),
                         value: ExportProfileCardSummary.sortedFormats(settings.exportFormats)
                             .map(\.localizedDisplayName)
                             .joined(separator: " · ")
                     )
                     factRow(
+                        editor: .metrics,
                         title: String(localized: "Metrics", comment: "Profile detail metrics row"),
                         value: String(
                             localized: "\(enabledCount) of \(totalMetricCount) enabled",
@@ -604,6 +663,7 @@ struct ExportProfileDetailView: View {
                         )
                     )
                     factRow(
+                        editor: .detail,
                         title: String(localized: "Data Detail", comment: "Profile detail data-detail row"),
                         value: AppleExportDetailPreset(
                             policy: settings.detailPolicy
@@ -611,43 +671,51 @@ struct ExportProfileDetailView: View {
                     )
                     rollupRow(settings)
                     factRow(
+                        editor: .archive,
                         title: String(localized: "Zip archive", comment: "Profile detail zip row"),
                         value: settings.archiveExportFiles
                             ? String(localized: "On", comment: "Enabled state")
                             : String(localized: "Off", comment: "Disabled state")
                     )
                     factRow(
+                        editor: .dictionary,
                         title: String(localized: "Data dictionary", comment: "Profile detail data dictionary row"),
                         value: settings.includeDataDictionary
                             ? String(localized: "On", comment: "Enabled state")
                             : String(localized: "Off", comment: "Disabled state")
                     )
                     factRow(
+                        editor: .writeMode,
                         title: String(localized: "When file exists", comment: "Profile detail write mode row"),
                         value: settings.writeMode.localizedDisplayName
                     )
                     factRow(
+                        editor: .naming,
                         title: String(localized: "Filename format", comment: "Profile detail filename row"),
                         value: settings.filenameFormat
                     )
                     factRow(
+                        editor: .naming,
                         title: String(localized: "Folder structure", comment: "Profile detail folder structure row"),
                         value: settings.folderStructure
                     )
                     if let subfolder = settings.healthSubfolder, !subfolder.isEmpty {
                         factRow(
+                            editor: .naming,
                             title: String(localized: "Subfolder", comment: "Profile detail subfolder row"),
                             value: subfolder
                         )
                     }
                 }
                 factRow(
+                    editor: .notes,
                     title: String(localized: "Daily Note injection", comment: "Profile detail daily note injection row"),
                     value: settings.dailyNoteInjection.enabled
                         ? String(localized: "On", comment: "Enabled state")
                         : String(localized: "Off", comment: "Disabled state")
                 )
                 factRow(
+                    editor: .entries,
                     title: String(localized: "Individual entries", comment: "Profile detail individual tracking row"),
                     value: settings.individualTracking.globalEnabled
                         ? String(localized: "On", comment: "Enabled state")
@@ -667,6 +735,7 @@ struct ExportProfileDetailView: View {
                 ? periods.joined(separator: " · ") + String(localized: " (summary only)", comment: "Summary-only roll-up suffix")
                 : periods.joined(separator: " · "))
         return factRow(
+            editor: .rollup,
             title: String(localized: "Roll-up summaries", comment: "Profile detail rollup row"),
             value: value
         )
@@ -791,25 +860,6 @@ struct ExportProfileDetailView: View {
     private func actionsCard(for profile: ExportProfile) -> some View {
         sectionCard(title: String(localized: "Actions", comment: "Profile detail card title")) {
             VStack(spacing: 0) {
-                if profile.id != profileStore.activeProfileID {
-                    Button {
-                        configurationProtection.performConfigurationChange {
-                            coordinator.activate(profileID: profile.id)
-                            dismiss()
-                        }
-                    } label: {
-                        actionRowLabel(
-                            icon: "checkmark.circle.fill",
-                            title: String(localized: "Make Active & Edit", comment: "Action activating this profile"),
-                            isDestructive: false
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier(AccessibilityID.ExportProfiles.makeActiveButton)
-
-                    rowDivider()
-                }
-
                 Button {
                     configurationProtection.performConfigurationChange {
                         renameText = profile.name
@@ -911,19 +961,20 @@ struct ExportProfileDetailView: View {
         )
     }
 
-    private func factRow(title: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            Text(title)
-                .font(.footnote)
-                .foregroundStyle(Color.textMuted)
-                .frame(width: 110, alignment: .leading)
-            Text(value.isEmpty ? "—" : value)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private func openEditor(_ section: ProfileEditorSection? = nil) {
+        guard let currentProfile = profileStore.profile(id: profileID) else { return }
+        // Each presentation gets the latest saved snapshot and fresh draft state.
+        editorPresentation = ProfileEditorPresentation(profile: currentProfile, section: section)
+    }
+
+    private func factRow(editor: ProfileEditorSection? = nil, title: String, value: String) -> some View {
+        Button {
+            openEditor(editor)
+        } label: {
+            ProfileSettingRow(title: title, value: value)
         }
-        .accessibilityElement(children: .combine)
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("export.profiles.fact.\(editor?.rawValue ?? "profile").\(title)")
     }
 
     private func actionRowLabel(icon: String, title: String, isDestructive: Bool) -> some View {
@@ -956,6 +1007,31 @@ struct ExportProfileDetailView: View {
 /// Individual Entries all edit a draft, with the live overlap warning
 /// recomputing against the draft — so nothing is saved until Create/Save,
 /// and overlap is visible while choices can still change.
+private struct ProfileEditorPresentation: Identifiable {
+    let id = UUID()
+    let profile: ExportProfile
+    let section: ProfileEditorSection?
+}
+
+enum ProfileEditorSection: String {
+    case destination, formats, metrics, detail, rollup, archive, dictionary, writeMode, naming, notes, entries
+    var title: String {
+        switch self {
+        case .destination: "Destination"
+        case .formats: "Formats"
+        case .metrics: "Metrics"
+        case .detail: "Data detail"
+        case .rollup: "Roll-up summaries"
+        case .archive: "Zip archive"
+        case .dictionary: "Data dictionary"
+        case .writeMode: "When a file exists"
+        case .naming: "Names & folders"
+        case .notes: "Daily notes"
+        case .entries: "Individual entries"
+        }
+    }
+}
+
 struct ExportProfileEditorSheet: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var profileStore: ExportProfileStore
@@ -965,6 +1041,9 @@ struct ExportProfileEditorSheet: View {
 
     /// Nil = creation mode; the profile being edited otherwise.
     private let editingProfileID: UUID?
+    private let focusedSection: ProfileEditorSection?
+    @StateObject private var noteDraft: DailyNoteInjectionSettings
+    @StateObject private var entryDraft: IndividualTrackingSettings
 
     @State private var name: String
     @State private var target: ExportTargetSelection
@@ -979,12 +1058,21 @@ struct ExportProfileEditorSheet: View {
 
     init(
         coordinator: ExportProfileCoordinator,
-        editing profile: ExportProfile? = nil
+        editing profile: ExportProfile? = nil,
+        focusedSection: ProfileEditorSection? = nil
     ) {
         self.coordinator = coordinator
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
         editingProfileID = profile?.id
+        self.focusedSection = focusedSection
+        let source = profile?.settings ?? ExportSettingsSnapshot.from(coordinator.liveSettings)
+        let notes = DailyNoteInjectionSettings()
+        source.dailyNoteInjection.apply(to: notes)
+        _noteDraft = StateObject(wrappedValue: notes)
+        let entries = IndividualTrackingSettings()
+        source.individualTracking.apply(to: entries)
+        _entryDraft = StateObject(wrappedValue: entries)
 
         if let profile {
             _name = State(initialValue: profile.name)
@@ -1018,8 +1106,9 @@ struct ExportProfileEditorSheet: View {
     }
 
     private var canSave: Bool {
-        !trimmedName.isEmpty
-            && (draft.dailyNoteInjection.dailyNotesOnly || !draft.exportFormats.isEmpty)
+        let snapshot = savedSnapshot()
+        return !trimmedName.isEmpty
+            && (snapshot.dailyNoteInjection.dailyNotesOnly || !snapshot.exportFormats.isEmpty)
     }
 
     private var overlappingNames: [String] {
@@ -1035,22 +1124,15 @@ struct ExportProfileEditorSheet: View {
     private func savedSnapshot() -> ExportSettingsSnapshot {
         var snapshot = draft
         snapshot.metricSelection = MetricSelectionSnapshot.from(metricState)
+        if focusedSection == .notes { snapshot.dailyNoteInjection = DailyNoteInjectionSnapshot.from(noteDraft) }
+        if focusedSection == .entries { snapshot.individualTracking = IndividualTrackingSnapshot.from(entryDraft) }
         return snapshot
     }
 
     var body: some View {
         NavigationStack {
-            Form {
-                identitySection
-                destinationSection
-                outputSection
-                rollupSection
-                metricsSection
-                dailyNotesSection
-                individualTrackingSection
-                overlapSection
-            }
-            .navigationTitle(Text(editingProfile == nil ? "New Profile" : "Edit Profile"))
+            editorContent
+            .navigationTitle(Text(focusedSection?.title ?? (editingProfile == nil ? "New Profile" : "Edit Profile")))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1118,6 +1200,82 @@ struct ExportProfileEditorSheet: View {
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {
                 dismiss()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var editorContent: some View {
+        switch focusedSection {
+        case .metrics:
+            MetricSelectionView(selectionState: metricState, healthKitManager: HealthKitManager.shared)
+        case .notes:
+            DailyNoteInjectionView(settings: noteDraft, metricSelection: metricState,
+                                   healthSubfolder: draft.healthSubfolder ?? "")
+        case .entries:
+            IndividualTrackingView(settings: entryDraft, metricSelection: metricState) { metricID, enabled in
+                entryDraft.setTrackIndividually(metricID, enabled: enabled)
+                if enabled { metricState.setMetric(metricID, enabled: true) }
+            }
+        default:
+            Form {
+                switch focusedSection {
+                case .destination: destinationSection
+                case .formats:
+                    Section {
+                        ForEach(ExportFormat.allCases, id: \.rawValue) { format in
+                            Toggle(format.localizedDisplayName, isOn: Binding(
+                                get: { draft.exportFormats.contains(format) },
+                                set: { enabled in
+                                    if enabled { draft.exportFormats.insert(format) }
+                                    else { draft.exportFormats.remove(format) }
+                                }))
+                        }
+                    }
+                case .archive:
+                    Toggle("Zip archive", isOn: $draft.archiveExportFiles)
+                case .dictionary:
+                    Toggle("Data dictionary", isOn: $draft.includeDataDictionary)
+                case .writeMode:
+                    Picker("When a file exists", selection: $draft.writeMode) {
+                        ForEach(WriteMode.allCases, id: \.rawValue) { Text($0.localizedDisplayName).tag($0) }
+                    }.pickerStyle(.inline)
+                case .naming:
+                    Section("Names & folders") {
+                        TextField("Filename template", text: $draft.filenameFormat)
+                        TextField("Folder template", text: $draft.folderStructure)
+                        TextField("Subfolder", text: Binding(
+                            get: { draft.healthSubfolder ?? "" }, set: { draft.healthSubfolder = $0 }))
+                        Toggle("Format folders", isOn: $draft.organizeFormatsIntoFolders)
+                    }
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                case .detail:
+                    Picker("Data detail", selection: Binding(
+                        get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
+                        set: { draft.detailPolicy = $0.policy }
+                    )) {
+                        ForEach([AppleExportDetailPreset.summary, .detailedTimeSeries, .losslessHealthRecords], id: \.self) {
+                            Text($0.localizedTitle).tag($0)
+                        }
+                        if draft.detailPolicy == .archiveOnly {
+                            Text(AppleExportDetailPreset.archiveOnly.localizedTitle).tag(AppleExportDetailPreset.archiveOnly)
+                        }
+                    }.pickerStyle(.inline)
+                    Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
+                        .font(.footnote).foregroundStyle(.secondary)
+                case .rollup:
+                    rollupSection
+                    Toggle("Summary only", isOn: $draft.summaryOnlyExport)
+                default:
+                    identitySection
+                    destinationSection
+                    outputSection
+                    rollupSection
+                    metricsSection
+                    dailyNotesSection
+                    individualTrackingSection
+                    overlapSection
+                }
             }
         }
     }

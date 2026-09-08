@@ -2,6 +2,27 @@
 import Foundation
 
 enum UITestHealthKitFixtures {
+    /// Varied, explicitly injected simulator readings for checking chart layout
+    /// and selection. Normal phone launches never call this fixture.
+    static func overviewHealthData(for date: Date, now: Date = .now) -> HealthData {
+        let calendar = Calendar.current
+        let offset = calendar.dateComponents([.day], from: calendar.startOfDay(for: now),
+                                             to: calendar.startOfDay(for: date)).day ?? 0
+        let index = ((offset + 6) % 7 + 7) % 7
+        var data = HealthData(date: date)
+        data.activity.steps = [7_630, 10_250, 8_950, 13_420, 6_880, 11_810, 12_500][index]
+        data.activity.activeCalories = [340, 520, 410, 680, 290, 580, 520][index]
+        data.activity.exerciseMinutes = [24, 42, 32, 65, 18, 51, 45][index]
+        data.sleep.totalDuration = [7.1, 7.7, 6.4, 8.2, 7.4, 6.9, 6.5][index] * 3_600
+        data.sleep.remSleep = [1.7, 1.9, 1.3, 2.1, 1.8, 1.5, 1.6][index] * 3_600
+        data.sleep.deepSleep = [1.1, 1.3, 0.9, 1.4, 1.2, 1.0, 1.2][index] * 3_600
+        data.sleep.coreSleep = data.sleep.totalDuration - data.sleep.remSleep - data.sleep.deepSleep
+        data.heart.restingHeartRate = [62, 60, 64, 61, 59, 60, 58][index]
+        data.heart.hrv = [42, 48, 39, 46, 54, 50, 56][index]
+        data.vitals.respiratoryRateAvg = [15.2, 14.8, 15.5, 14.6, 14.9, 14.5, 14.4][index]
+        return data
+    }
+
     static func exportPreviewHealthData(for date: Date, includeGranularData: Bool) -> HealthData {
         let calendar = Calendar.current
         let day = calendar.startOfDay(for: date)

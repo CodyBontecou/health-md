@@ -93,7 +93,7 @@ struct ScheduleRetryExportPolicy {
     }
 }
 
-/// Inline schedule configuration surface used by the Schedule tab.
+/// Schedule configuration and export activity share the same history services.
 /// Binds directly to `SchedulingManager.schedule` so edits persist as they happen.
 struct ScheduleSettingsView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
@@ -107,6 +107,8 @@ struct ScheduleSettingsView: View {
     /// Built by ContentView when the main UI appears; forwarded so
     /// `ProfileScheduleSection` observes the shared profile stores.
     var profileCoordinator: ExportProfileCoordinator? = nil
+    /// Activity uses the same history, detail, retry, and recovery services.
+    var showsHistoryOnly = false
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -306,21 +308,23 @@ struct ScheduleSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
-                heroHeader
-                scheduleAutomationCard
+                if !showsHistoryOnly {
+                    heroHeader
+                    scheduleAutomationCard
 #if os(iOS)
-                if let profileCoordinator {
-                    // Per-profile schedule toggles and cadence editors mutate
-                    // profile automation, so the whole card stays inspectable
-                    // but is intercepted by the shared lock.
-                    ProfileScheduleSection(coordinator: profileCoordinator)
-                        .configurationChangesProtected()
-                }
+                    if let profileCoordinator {
+                        // Per-profile schedule toggles and cadence editors mutate
+                        // profile automation, so the whole card stays inspectable
+                        // but is intercepted by the shared lock.
+                        ProfileScheduleSection(coordinator: profileCoordinator)
+                            .configurationChangesProtected()
+                    }
 #endif
-                if schedulingManager.schedule.isEnabled {
-                    scheduledDestinationSection
-                        .configurationChangesProtected()
-                    scheduleConfigurationCard
+                    if schedulingManager.schedule.isEnabled {
+                        scheduledDestinationSection
+                            .configurationChangesProtected()
+                        scheduleConfigurationCard
+                    }
                 }
                 exportHistoryCard
             }
@@ -329,7 +333,8 @@ struct ScheduleSettingsView: View {
             .padding(.bottom, 132)
         }
         .background(Color.bgSecondary.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle(showsHistoryOnly ? "Activity" : "Schedule")
+        .navigationBarTitleDisplayMode(.large)
         .sheet(item: $selectedEntry) { entry in
             ExportHistoryDetailView(entry: entry, onRetry: retryExport)
         }
@@ -1054,7 +1059,7 @@ struct ScheduleSettingsView: View {
             }
             .padding(Spacing.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.bgPrimary)
+            .background(Color.bgTertiary)
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
@@ -1097,7 +1102,7 @@ struct ScheduleSettingsView: View {
             }
             .padding(Spacing.s4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.bgPrimary)
+            .background(Color.bgTertiary)
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
@@ -1507,7 +1512,7 @@ struct RetryProgressOverlay: View {
                     .accessibilityHidden(true)
             }
             .padding(Spacing.s6)
-            .background(Color.bgPrimary)
+            .background(Color.bgTertiary)
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
@@ -2012,7 +2017,7 @@ struct ExportHistoryDetailView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Color.bgPrimary)
+            .background(Color.bgTertiary)
             .navigationTitle("Export Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

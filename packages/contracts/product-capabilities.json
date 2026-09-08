@@ -799,6 +799,28 @@
       "evidence": [
         "docs/architecture/adr-0001-shared-rust-uniffi-core.md"
       ]
+    },
+    {
+      "id": "mobile.health-and-export-feed",
+      "name": "Health trends and export activity feed",
+      "classification": "planned",
+      "summary": "Inspect movement, sleep composition, heart and respiratory trends, and retained export-run history over the same selected local calendar dates. Default to seven days; offer 30 days, custom inclusive ranges of 1–90 days, earlier/next periods, and a return to the latest dates. Visualization dates do not change export settings. Preserve missing readings, platform-specific sleep stages, exercise definitions, HRV statistics, and documented daily reducers.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Mobile profile feed milestone: implement movement, sleep composition, heart/respiratory trends and export history with shared 7-day, 30-day and custom 1–90-day date navigation before the mobile redesign graduates from device testing to a shared release. Retain Health Connect RMSSD, exercise-session duration and Light sleep labels; do not alias these to Apple SDNN, Apple Exercise Time or Core sleep."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/design/liquid-glass-mobile.md",
+        "apps/apple/HealthMd/iOS/Views/HealthInsightsFeed.swift",
+        "apps/android/app/src/main/java/com/healthmd/widget/data/WidgetHealthDataSource.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/health/HealthConnectManager.kt"
+      ]
     }
   ]
 }

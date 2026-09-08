@@ -5,16 +5,16 @@ import UIKit
 import AppKit
 #endif
 
-// MARK: - Geist Design Tokens
-// Tokens are sourced from DESIGN.md and design.dark.md. iOS and macOS share the
-// same Geist vocabulary so the app presents one visual system across platforms.
+// MARK: - Platform Design Tokens
+// iOS uses native system surfaces and Dynamic Type; macOS retains Geist.
+// Existing token names keep shared components source compatible.
 
 extension Color {
     #if os(iOS)
     // Backgrounds
-    static let bgPrimary = adaptiveColor(light: "FFFFFF", dark: "000000")
-    static let bgSecondary = adaptiveColor(light: "FAFAFA", dark: "000000")
-    static let bgTertiary = adaptiveColor(light: "FFFFFF", dark: "1A1A1A")
+    static let bgPrimary = Color(uiColor: .systemGroupedBackground)
+    static let bgSecondary = Color(uiColor: .systemGroupedBackground)
+    static let bgTertiary = Color(uiColor: .secondarySystemGroupedBackground)
 
     // Geist gray scale
     static let geistGray100 = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
@@ -34,12 +34,14 @@ extension Color {
     static let borderStrong = adaptiveColor(light: "A8A8A8", dark: "878787")
 
     // Text hierarchy
-    static let textPrimary = adaptiveColor(light: "171717", dark: "EDEDED")
-    static let textSecondary = adaptiveColor(light: "4D4D4D", dark: "A0A0A0")
-    static let textMuted = adaptiveColor(light: "8F8F8F", dark: "8F8F8F")
+    static let textPrimary = Color.primary
+    static let textSecondary = Color.secondary
+    static let textMuted = Color.secondary
 
     // Accent and semantic states
-    static let accent = adaptiveColor(light: "8A66AA", dark: "A37DBD")
+    static let accent = adaptiveColor(light: "793ACC", dark: "C8A0FF")
+    /// Prominent glass uses white labels, so its fill needs a deeper purple in Dark Mode.
+    static let actionAccent = adaptiveColor(light: "793ACC", dark: "864BD1")
     static let accentHover = adaptiveColor(light: "7D50A3", dark: "BFA4D4")
     static let accentSubtle = adaptiveColor(light: "F8F3FB", dark: "1E1439")
     static let success = adaptiveColor(light: "28A948", dark: "00AC3A")
@@ -47,7 +49,7 @@ extension Color {
     static let warning = adaptiveColor(light: "AA4D00", dark: "FF9300")
 
     // Component surfaces
-    static let controlBackground = adaptiveColor(light: "FFFFFF", dark: "000000")
+    static let controlBackground = Color(uiColor: .secondarySystemGroupedBackground)
     static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
     static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
 
@@ -222,10 +224,17 @@ struct Spacing {
 // MARK: - Radii
 
 struct GeistRadius {
+    #if os(iOS)
+    static let sm: CGFloat = 12
+    static let md: CGFloat = 24
+    static let lg: CGFloat = 28
+    static let full: CGFloat = 9999
+    #else
     static let sm: CGFloat = 6
     static let md: CGFloat = 12
     static let lg: CGFloat = 16
     static let full: CGFloat = 9999
+    #endif
 }
 
 // MARK: - Typography
@@ -233,6 +242,27 @@ struct GeistRadius {
 // Type behavior while preserving the token names used in DESIGN.md.
 
 struct Typography {
+    #if os(iOS)
+    static func hero() -> Font { .largeTitle.bold() }
+    static func displayLarge() -> Font { .largeTitle.bold() }
+    static func displayMedium() -> Font { .title.weight(.semibold) }
+    static func heading24() -> Font { .title2.weight(.semibold) }
+    static func heading20() -> Font { .title3.weight(.semibold) }
+    static func headline() -> Font { .headline }
+    static func headlineEmphasis() -> Font { .headline }
+    static func bodyLarge() -> Font { .title3 }
+    static func body() -> Font { .body }
+    static func bodyEmphasis() -> Font { .body.weight(.medium) }
+    static func caption() -> Font { .subheadline }
+    static func label() -> Font { .footnote.weight(.medium) }
+    static func labelUppercase() -> Font { .footnote.weight(.medium) }
+    static func mono() -> Font { .body.monospaced() }
+    static func monoEmphasis() -> Font { .body.monospaced().weight(.medium) }
+    static func monoCaption() -> Font { .caption.monospaced() }
+    static func monoCaptionEmphasis() -> Font { .caption.monospaced().weight(.medium) }
+    static func monoLabel() -> Font { .caption.monospaced().weight(.medium) }
+    static func bodyMono() -> Font { mono() }
+    #else
     static func hero() -> Font { .system(size: 32, weight: .semibold, design: .default) }
     static func displayLarge() -> Font { .system(size: 32, weight: .semibold, design: .default) }
     static func displayMedium() -> Font { .system(size: 24, weight: .semibold, design: .default) }
@@ -252,6 +282,7 @@ struct Typography {
     static func monoCaptionEmphasis() -> Font { .system(size: 12, weight: .medium, design: .monospaced) }
     static func monoLabel() -> Font { .system(size: 12, weight: .medium, design: .monospaced) }
     static func bodyMono() -> Font { mono() }
+    #endif
 }
 
 // MARK: - Branded Page Header
@@ -365,7 +396,14 @@ struct GeistCardModifier: ViewModifier {
     var padding: CGFloat = Spacing.s6
     var outlined: Bool = true
 
+    @ViewBuilder
     func body(content: Content) -> some View {
+        #if os(iOS)
+        content
+            .padding(padding)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        #else
         content
             .padding(padding)
             .background(Color.bgPrimary)
@@ -377,6 +415,7 @@ struct GeistCardModifier: ViewModifier {
                 }
             }
             .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
+        #endif
     }
 }
 

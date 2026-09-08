@@ -406,6 +406,11 @@ components:
 
 # Geist
 
+The iOS app now follows the [Liquid Glass mobile workspace specification](docs/design/liquid-glass-mobile.md).
+For iOS, that specification takes precedence for navigation, system materials,
+rounded content surfaces, buttons, and Dynamic Type. The Geist tokens below remain
+the desktop specification and compatibility vocabulary for existing components.
+
 ## Overview
 
 Geist is Vercel’s design system for building consistent, developer-focused interfaces. The aesthetic is minimal and high-contrast: plenty of whitespace, restrained color, and content set on near-neutral surfaces. Prioritize readability and accessibility, and use color to signal state or hierarchy rather than decoration.

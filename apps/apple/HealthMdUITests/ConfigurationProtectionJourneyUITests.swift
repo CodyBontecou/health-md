@@ -61,9 +61,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
     }
 
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
+        UITestLaunchHelper.openSettings(in: app)
 
         let profilesRow = app.buttons["export.profiles.entry"]
         XCTAssertTrue(profilesRow.waitForExistence(timeout: 5), "Export Profiles row should exist in Settings")
@@ -92,6 +90,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         XCTAssertTrue(exportButton.isHittable, "Manual export must remain available while configuration is protected")
 
+        UITestLaunchHelper.openWorkspace("review", in: app)
         let protectedControl = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
         scrollUntilExists(protectedControl, in: app)
         XCTAssertTrue(protectedControl.waitForExistence(timeout: 5))
@@ -157,6 +156,8 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
+        UITestLaunchHelper.openWorkspace("files", in: app)
+        app.segmentedControls.buttons["Names & folders"].tap()
         let filenameEditor = app.buttons[UITestLaunchHelper.Export.filenameEditorButton]
         for _ in 0..<10 where !filenameEditor.exists {
             app.swipeUp()
@@ -284,9 +285,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        UITestLaunchHelper.openWorkspace("schedule", in: app)
 
         let card = app.staticTexts["Profile Schedules"]
         XCTAssertTrue(card.waitForExistence(timeout: 5), "Profile Schedules card should exist")
@@ -314,17 +313,13 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
+        UITestLaunchHelper.openSettings(in: app)
 
         let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         toggle.tap()
 
-        let exportTab = app.tabBars.buttons["Export"]
-        XCTAssertTrue(exportTab.waitForExistence(timeout: 5))
-        exportTab.tap()
+        UITestLaunchHelper.openWorkspace("review", in: app)
 
         let yesterday = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
         scrollUntilExists(yesterday, in: app)

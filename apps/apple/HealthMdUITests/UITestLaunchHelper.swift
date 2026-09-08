@@ -118,6 +118,53 @@ enum UITestLaunchHelper {
         static let fileContent = "exportPreview.fileContent"
     }
 
+    // MARK: - Mobile Workspace Navigation
+
+    static func openExportHome(in app: XCUIApplication) {
+        let tab = app.tabBars.buttons["Home"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+        for _ in 0..<5 where !app.descendants(matching: .any)["home.overview"].exists {
+            let back = app.navigationBars.buttons.firstMatch
+            guard back.exists else { break }
+            back.tap()
+        }
+        XCTAssertTrue(app.buttons["home.editExport"].waitForExistence(timeout: 5))
+    }
+
+    static func openWorkspace(_ route: String, in app: XCUIApplication) {
+        openExportHome(in: app)
+        app.buttons["home.editExport"].tap()
+        XCTAssertTrue(app.buttons["export.workspace.files"].waitForExistence(timeout: 5))
+        let row = app.buttons["export.workspace.\(route)"]
+        // SwiftUI can mark a clipped row hittable even when its center is
+        // behind the export controls. Bring its center into the scroll area.
+        let scrollView = app.scrollViews.firstMatch
+        for _ in 0..<8 {
+            let viewport = scrollView.frame.insetBy(dx: 0, dy: 32)
+            let center = CGPoint(x: row.frame.midX, y: row.frame.midY)
+            if row.isHittable && viewport.contains(center) { break }
+            if row.exists && center.y < viewport.minY {
+                scrollView.swipeDown()
+            } else {
+                scrollView.swipeUp()
+            }
+        }
+        XCTAssertTrue(row.isHittable, "The \(route) editor should be reachable")
+        row.tap()
+    }
+
+    static func openSettings(in app: XCUIApplication) {
+        let tab = app.tabBars.buttons["Connections"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 5))
+        tab.tap()
+        if app.navigationBars["Settings"].exists { return }
+        let gear = app.buttons["connections.settings"]
+        XCTAssertTrue(gear.waitForExistence(timeout: 5))
+        gear.tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+    }
+
     // MARK: - Scenario Configuration
 
     /// Configures the app for a specific UI test scenario.

@@ -18,6 +18,8 @@ final class ExportJourneyUITests: XCTestCase {
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible on launch")
 
+        UITestLaunchHelper.openWorkspace("data", in: app)
+
         // Verify health badge shows connected (CompactStatusBadge is a Button)
         let healthBadge = app.buttons[UITestLaunchHelper.Export.healthBadge]
         XCTAssertTrue(healthBadge.waitForExistence(timeout: 3), "Health badge should be visible")
@@ -25,6 +27,8 @@ final class ExportJourneyUITests: XCTestCase {
         // Verify vault badge shows connected
         let vaultBadge = app.buttons[UITestLaunchHelper.Export.vaultBadge]
         XCTAssertTrue(vaultBadge.waitForExistence(timeout: 3), "Vault badge should be visible")
+
+        UITestLaunchHelper.openExportHome(in: app)
 
         // Tap export button — in test mode, simulateTestExport runs immediately.
         exportButton.tap()
@@ -382,6 +386,7 @@ final class ExportJourneyUITests: XCTestCase {
     func testExportTargetSelector_visible() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         XCTAssertTrue(app.staticTexts["Export Target"].waitForExistence(timeout: 5), "Export target section should be visible")
         XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.localTargetOption].waitForExistence(timeout: 3), "Local target row should be visible")
@@ -396,6 +401,7 @@ final class ExportJourneyUITests: XCTestCase {
             syncState: "disconnected"
         )
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
         XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
@@ -416,6 +422,7 @@ final class ExportJourneyUITests: XCTestCase {
             macExportStatus: "noFolder"
         )
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
         XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
@@ -436,6 +443,7 @@ final class ExportJourneyUITests: XCTestCase {
             macExportStatus: "ready"
         )
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
         XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
@@ -452,6 +460,7 @@ final class ExportJourneyUITests: XCTestCase {
             macDestinationPath: "/tmp/ReadyMacVault"
         )
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         let pathPreview = app.descendants(matching: .any)[UITestLaunchHelper.Export.pathPreview]
         scrollUntilExists(pathPreview, in: app)
@@ -479,12 +488,14 @@ final class ExportJourneyUITests: XCTestCase {
             macExportStatus: "ready"
         )
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
         XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
         XCTAssertTrue(waitForEnabled(macTarget), "Mac target should be enabled")
         macTarget.tap()
 
+        UITestLaunchHelper.openExportHome(in: app)
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
         XCTAssertTrue(previewButton.waitForExistence(timeout: 5), "Preview button should be visible")
         XCTAssertTrue(previewButton.isEnabled, "Preview should remain available for Mac-only export without a local folder")
@@ -499,12 +510,14 @@ final class ExportJourneyUITests: XCTestCase {
             macExportStatus: "ready"
         )
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
         XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
         XCTAssertTrue(waitForEnabled(macTarget), "Mac target should be enabled")
         macTarget.tap()
 
+        UITestLaunchHelper.openExportHome(in: app)
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible")
         XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
@@ -525,12 +538,14 @@ final class ExportJourneyUITests: XCTestCase {
             remoteConfig: "offline"
         )
         app.launch()
+        UITestLaunchHelper.openWorkspace("destination", in: app)
 
         let macTarget = app.buttons[UITestLaunchHelper.Export.macTargetOption]
         XCTAssertTrue(macTarget.waitForExistence(timeout: 5), "Mac target row should be visible")
         XCTAssertTrue(waitForEnabled(macTarget), "Mac target should be enabled")
         macTarget.tap()
 
+        UITestLaunchHelper.openExportHome(in: app)
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible")
         XCTAssertTrue(exportButton.isEnabled, "Mac target should satisfy export readiness even without local folder")
@@ -545,6 +560,7 @@ final class ExportJourneyUITests: XCTestCase {
     func testDateRangePresets_visibleAndCustomPickersHiddenByDefault() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
+        UITestLaunchHelper.openWorkspace("review", in: app)
 
         XCTAssertTrue(app.staticTexts["Date Range"].waitForExistence(timeout: 5), "Date Range section should be visible")
         let todayPreset = app.buttons[UITestLaunchHelper.Export.datePresetTodayButton]
@@ -570,6 +586,7 @@ final class ExportJourneyUITests: XCTestCase {
     func testDateRangePresets_customRevealsStartAndEndPickers() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
+        UITestLaunchHelper.openWorkspace("review", in: app)
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
         scrollUntilHittable(customPreset, in: app, swipingUp: true)
@@ -600,44 +617,15 @@ final class ExportJourneyUITests: XCTestCase {
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
 
-        // Navigate to schedule tab
-        let scheduleTab = tabButton(
-            in: app,
-            identifier: UITestLaunchHelper.Tab.schedule,
-            label: "Schedule"
-        )
-        XCTAssertTrue(scheduleTab.exists, "Schedule tab should exist")
-        scheduleTab.tap()
-
-        // Schedule controls are inline on the tab — the toggle is the anchor
-        let scheduleToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
-        XCTAssertTrue(scheduleToggle.waitForExistence(timeout: 3), "Schedule toggle should appear inline")
-
-        // Navigate to sync tab
-        let syncTab = tabButton(
-            in: app,
-            identifier: UITestLaunchHelper.Tab.sync,
-            label: "Sync"
-        )
-        syncTab.tap()
-
-        // Navigate back to export
-        let exportTab = tabButton(
-            in: app,
-            identifier: UITestLaunchHelper.Tab.export,
-            label: "Export"
-        )
-        exportTab.tap()
+        app.tabBars.buttons["Activity"].tap()
+        XCTAssertTrue(app.navigationBars["Activity"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Connections"].tap()
+        XCTAssertTrue(app.switches[UITestLaunchHelper.Sync.syncToggle].waitForExistence(timeout: 5))
+        UITestLaunchHelper.openExportHome(in: app)
         XCTAssertTrue(exportButton.waitForExistence(timeout: 3))
     }
 
     // MARK: - Helpers
-
-    private func tabButton(in app: XCUIApplication, identifier: String, label: String) -> XCUIElement {
-        let identified = app.buttons[identifier]
-        if identified.exists { return identified }
-        return app.buttons[label]
-    }
 
     private func accessibilityText(of element: XCUIElement) -> String {
         let value = element.value as? String ?? ""

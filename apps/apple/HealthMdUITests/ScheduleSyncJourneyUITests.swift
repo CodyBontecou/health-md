@@ -20,10 +20,8 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        // Navigate to schedule tab — the schedule controls now live inline on the tab
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        // Open the schedule editor from the export profile.
+        UITestLaunchHelper.openWorkspace("schedule", in: app)
 
         // Toggle the schedule on directly — no sheet to drill into
         let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
@@ -43,9 +41,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()
 
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        UITestLaunchHelper.openWorkspace("schedule", in: app)
 
         let frequencyPicker = app.segmentedControls[UITestLaunchHelper.Schedule.frequencyPicker]
         for _ in 0..<4 where !frequencyPicker.exists {
@@ -69,10 +65,8 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()
 
-        // Navigate to schedule tab
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        // Open the profile schedule editor.
+        UITestLaunchHelper.openWorkspace("schedule", in: app)
 
         // The toggle should be ON since configureTestMode saved to UserDefaults
         // and SchedulingManager loads from UserDefaults
@@ -87,10 +81,8 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.scheduleEnabledApp()
         app.launch()
 
-        // Navigate to schedule tab
-        let scheduleTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        // Open the profile schedule editor.
+        UITestLaunchHelper.openWorkspace("schedule", in: app)
 
         let enableToggle = app.switches[UITestLaunchHelper.Schedule.enableToggle]
         XCTAssertTrue(enableToggle.waitForExistence(timeout: 5))
@@ -103,9 +95,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app2 = UITestLaunchHelper.scheduleEnabledApp()
         app2.launch()
 
-        let scheduleTab2 = tabButton(in: app2, identifier: UITestLaunchHelper.Tab.schedule, label: "Schedule")
-        XCTAssertTrue(scheduleTab2.waitForExistence(timeout: 5))
-        scheduleTab2.tap()
+        UITestLaunchHelper.openWorkspace("schedule", in: app2)
 
         let enableToggle2 = app2.switches[UITestLaunchHelper.Schedule.enableToggle]
         XCTAssertTrue(enableToggle2.waitForExistence(timeout: 5))
@@ -120,7 +110,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Connections")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -134,7 +124,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Connections")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -155,7 +145,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Connections")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -168,7 +158,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.syncApp(state: "disconnected")
         app.launch()
 
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Connections")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -193,7 +183,7 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         app.launch()
 
         // Navigate to sync tab
-        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Connections")
         XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
         syncTab.tap()
 
@@ -238,11 +228,7 @@ extension ScheduleSyncJourneyUITests {
             macDestinationPath: "/Users/cody/Health.md"
         )
         app.launch()
-        let scheduleTab: XCUIElement = app.buttons[UITestLaunchHelper.Tab.schedule].exists
-            ? app.buttons[UITestLaunchHelper.Tab.schedule]
-            : app.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        UITestLaunchHelper.openWorkspace("schedule", in: app)
         XCTAssertTrue(app.switches[UITestLaunchHelper.Schedule.enableToggle].waitForExistence(timeout: 5))
 
         func keep(_ name: String) {

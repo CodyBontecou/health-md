@@ -68,7 +68,8 @@ struct SyncSettingsView: View {
         .background(Color.bgPrimary.ignoresSafeArea())
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .toolbar(.hidden, for: .navigationBar)
+        .navigationTitle("Connections")
+        .navigationBarTitleDisplayMode(.large)
         .onAppear {
             if directCLIService.pendingPairingLink != nil {
                 configurationTarget = .cli

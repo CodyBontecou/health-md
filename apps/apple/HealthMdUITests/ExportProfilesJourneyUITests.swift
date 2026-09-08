@@ -21,9 +21,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     }
 
     private func openSettingsTab(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        UITestLaunchHelper.openSettings(in: app)
     }
 
     /// Opens the Export Profiles management sheet from Settings.
@@ -159,9 +157,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 10))
-        scheduleTab.tap()
+        UITestLaunchHelper.openWorkspace("schedule", in: app)
 
         // Profile Schedules card appears below the legacy schedule card.
         let card = app.staticTexts["Profile Schedules"]
@@ -261,12 +257,14 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         copy.tap()
         wait(for: [copied], timeout: 5)
 
-        // Activate the profile: detail pops and the active banner reflects it.
+        // Activation closes the selector and applies the profile to the workspace.
         app.buttons["export.profiles.makeActive"].tap()
         XCTAssertTrue(
-            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
-            "activating from detail should return to the management list"
+            app.navigationBars["Export Profiles"].waitForNonExistence(timeout: 10),
+            "activating from detail should close the selector"
         )
+        app.buttons["export.profiles.entry"].tap()
+        XCTAssertTrue(app.navigationBars["Export Profiles"].waitForExistence(timeout: 5))
         app.buttons["export.profiles.row.Default 2"].tap()
         XCTAssertTrue(
             app.staticTexts

@@ -265,21 +265,13 @@ struct HealthMdApp: App {
     }
 
     private func configureTransparentTabBarAppearance() {
-        // Intentional: the bottom tab bar should remain transparent in both
-        // light and dark mode. UIKit's default/material tab bar background can
-        // appear as a grey footer, especially in light mode, so keep every
-        // appearance slot clear and shadowless.
+        // Keep the system-owned material and scroll-edge behavior. Clearing the
+        // background effect removes Liquid Glass on iOS 26.
+        if #available(iOS 26, *) { return }
         let appearance = UITabBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundColor = .clear
-        appearance.backgroundEffect = nil
-        appearance.shadowColor = .clear
-
-        let tabBar = UITabBar.appearance()
-        tabBar.standardAppearance = appearance
-        tabBar.scrollEdgeAppearance = appearance
-        tabBar.backgroundColor = .clear
-        tabBar.isTranslucent = true
+        appearance.configureWithDefaultBackground()
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 
     #if DEBUG

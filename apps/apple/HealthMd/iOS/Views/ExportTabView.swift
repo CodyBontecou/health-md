@@ -3,7 +3,7 @@ import UIKit
 import os.log
 
 // MARK: - Export Tab View
-// Single scrollable home for all iOS export configuration plus the export action.
+// Health overview and profile editing share the existing export actions and services.
 
 private struct ExportSizeEstimateConfiguration: Equatable {
     let startDate: Date
@@ -42,6 +42,12 @@ struct ExportTabView: View {
     @Binding var presentFirstExportPreview: Bool
     let canExport: Bool
     let onExportTapped: () -> Void
+    var profileCoordinator: ExportProfileCoordinator? = nil
+    var onManageProfiles: () -> Void = {}
+    var onViewActivity: () -> Void = {}
+    @State private var navigationPath: [ExportWorkspaceRoute] = []
+    @State private var feedRefreshID = UUID()
+    @State private var fileEditorSection: HealthFileEditorSection = .formats
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -77,31 +83,20 @@ struct ExportTabView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: Spacing.md) {
-                    heroHeader
-                    statusBadges
-                        .configurationChangesProtected()
-                    exportTargetSection
-                        .configurationChangesProtected()
-                    dateRangeSection
-                    healthDataSection
-                        .id("marketing-export-health-data")
-                    formatsSection
-                    automationSection
-                    formatOptionsSection
-                    outputSection
-                    pathPreviewSection
-                    resetButton
-                        .configurationChangesProtected()
+                    profileHomeHeader
+                    HealthInsightsFeed(healthKitManager: healthKitManager, refreshID: feedRefreshID,
+                        onConnectHealth: { navigationPath.append(.data) }, onViewActivity: onViewActivity)
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.lg)
             }
             .scrollIndicators(.hidden)
+            .refreshable { feedRefreshID = UUID() }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if !isExporting {
                     floatingExportBar
@@ -109,7 +104,25 @@ struct ExportTabView: View {
                         .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .toolbar(.hidden, for: .navigationBar)
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("Health.md")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(value: ExportWorkspaceRoute.profile) {
+                        Label("Edit export", systemImage: "slider.horizontal.3")
+                    }
+                    .accessibilityIdentifier("home.editExport")
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Profiles", action: onManageProfiles)
+                        .disabled(profileCoordinator == nil)
+                        .accessibilityIdentifier("export.profiles")
+                }
+            }
+            .navigationDestination(for: ExportWorkspaceRoute.self) { route in
+                workspaceDestination(route)
+            }
             .onChange(of: exportStatusMessage) { oldValue, newValue in
                 if !newValue.isEmpty && newValue != oldValue {
                     UIAccessibility.post(notification: .announcement, argument: newValue)
@@ -274,13 +287,247 @@ struct ExportTabView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Profile workspace
 
-    private var heroHeader: some View {
-        HealthMdPageHeader(
-            title: "Export",
-            subtitle: "Choose what Health.md writes from Apple Health"
-        )
+    private var profileHomeHeader: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(Date.now, format: .dateTime.weekday(.wide).month(.wide).day())
+                .font(.subheadline).foregroundStyle(.secondary)
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Your health").font(.largeTitle.bold())
+                    Text("Daily insights · Apple Health")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 12) {
+                Button(action: onManageProfiles) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accent)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Active profile").font(.caption).foregroundStyle(.secondary)
+                            HStack(spacing: 8) {
+                                if let profileCoordinator {
+                                    ExportWorkspaceProfileHeader(coordinator: profileCoordinator, compact: true)
+                                }
+                                Image(systemName: "chevron.down").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            }
+                            Text("\(advancedSettings.exportFormats.sorted { $0.rawValue < $1.rawValue }.map(\.rawValue).joined(separator: " · ")) · \(advancedSettings.metricSelection.totalEnabledCount) metrics")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .disabled(profileCoordinator == nil)
+                .accessibilityLabel("Switch export profile")
+                .accessibilityValue(profileCoordinator?.activeProfileName ?? "")
+                .accessibilityIdentifier("home.profile.selector")
+                NavigationLink("Edit", value: ExportWorkspaceRoute.profile)
+                    .font(.subheadline.weight(.medium))
+                    .frame(minWidth: 44, minHeight: 44)
+                    .accessibilityLabel("Edit export profile")
+            }
+            .padding(.vertical, 13)
+            .padding(.horizontal, 16)
+            .background(Color.accent.opacity(0.055), in: .rect(cornerRadius: 18))
+        }
+        .padding(.bottom, 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home.overview")
+    }
+
+    private var profileOverview: some View {
+        VStack(alignment: .leading, spacing: 30) {
+            profileSection("Destination") {
+                profileRow("Target", value: exportTargetSelection.title, route: .destination)
+                profileRow(exportTargetSelection == .apiEndpoint ? "Endpoint" : "Folder",
+                    value: exportTargetSelection == .localIPhoneFolder ? vaultManager.vaultName : previewDestinationLabel,
+                    route: .destination, identifier: "export.profile.folder")
+            }
+            profileSection("Output") {
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    profileRow("Mode", value: "Daily notes only", route: .notes, identifier: "export.profile.mode")
+                } else if advancedSettings.summaryOnlyModeEnabled {
+                    profileRow("Mode", value: "Summary only", route: .rollup, identifier: "export.profile.mode")
+                }
+                profileRow("Formats", value: advancedSettings.exportFormats.sorted { $0.rawValue < $1.rawValue }.map(\.rawValue).joined(separator: " · "), route: .files)
+                profileRow("Metrics", value: "\(advancedSettings.metricSelection.totalEnabledCount) of \(advancedSettings.metricSelection.totalMetricCount) enabled", route: .metrics)
+                profileRow("Data detail", value: AppleExportDetailPreset(policy: advancedSettings.detailPolicy).localizedTitle, route: .detail)
+                profileRow("Roll-up summaries", value: advancedSettings.dailyNotesOnlyModeEnabled ? "Paused" : advancedSettings.rollupSummariesEnabled ? (advancedSettings.summaryOnlyModeEnabled ? "Summary only" : "On") : "Off", route: .rollup)
+                profileRow("Zip archive", value: advancedSettings.archiveExportFiles ? "On" : "Off", route: .archive)
+                profileRow("Data dictionary", value: advancedSettings.includeDataDictionary ? "On" : "Off", route: .dictionary)
+                profileRow("When file exists", value: healthFileOperationSummary, route: .writeMode)
+                Button { showFilenameEditor = true } label: {
+                    ProfileSettingRow(title: "Filename format", value: advancedSettings.filenameFormat)
+                }
+                .accessibilityIdentifier(AccessibilityID.Export.filenameEditorButton)
+                Button { showFolderStructureEditor = true } label: {
+                    ProfileSettingRow(title: "Folder structure", value: advancedSettings.folderStructure)
+                }
+                .accessibilityIdentifier("export.profile.folderStructure")
+                Button { showSubfolderEditor = true } label: {
+                    ProfileSettingRow(title: "Subfolder", value: vaultManager.healthSubfolder)
+                }
+                .accessibilityIdentifier("export.profile.subfolder")
+                profileRow("Daily notes", value: advancedSettings.summaryOnlyModeEnabled ? "Paused" : advancedSettings.dailyNoteInjection.enabled ? "On" : "Off", route: .notes)
+                profileRow("Individual entries", value: advancedSettings.dailyNotesOnlyModeEnabled || advancedSettings.summaryOnlyModeEnabled ? "Paused" : advancedSettings.individualTracking.globalEnabled ? "On" : "Off", route: .entries)
+                profileRow("Format & fields", value: formatCustomizationSummary, route: .formatting)
+            }
+            profileSection("Schedule") {
+                profileRow("Runs", value: activeScheduleSummary, route: .schedule)
+                profileRow("Date range", value: "\(previewDateRange.startDate.formatted(date: .abbreviated, time: .omitted)) – \(previewDateRange.endDate.formatted(date: .abbreviated, time: .omitted))", route: .review)
+            }
+            profileSection("Access") {
+                profileRow("Apple Health", value: healthKitManager.isAuthorized ? "Connected" : "Set up", route: .data)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("export.profile.summary")
+    }
+
+    private func profileSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(title)).font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary).padding(.bottom, 10)
+                .accessibilityAddTraits(.isHeader)
+            content()
+        }
+    }
+
+    private func profileRow(_ title: String, value: String, route: ExportWorkspaceRoute,
+                            identifier: String? = nil) -> some View {
+        NavigationLink(value: route) { ProfileSettingRow(title: title, value: value) }
+            .accessibilityIdentifier(identifier ?? "export.workspace.\(route.rawValue)")
+    }
+
+    private var activeScheduleSummary: String {
+        guard let coordinator = profileCoordinator,
+              let id = coordinator.profileStore.activeProfileID,
+              let entry = coordinator.scheduledEntryStore.entry(profileID: id) else { return "Off" }
+        guard entry.isEnabled else { return "Paused" }
+        let cadence = ExportProfileCadenceSummary.from(entry)
+        var parts = [cadence.frequencyDescription]
+        if let weekday = cadence.weekdayIndex {
+            parts.append(ExportProfileCadenceSummary.weekdayName(weekday))
+        } else if let interval = cadence.customInterval, let unit = cadence.customUnit {
+            parts.append("\(interval) \(unit.rawValue.lowercased())")
+        }
+        parts.append(cadence.timeLabel)
+        return parts.joined(separator: " · ")
+    }
+
+    private var healthFileOperationSummary: String {
+        if advancedSettings.dailyNotesOnlyModeEnabled { return "Paused" }
+        if advancedSettings.summaryOnlyModeEnabled { return "Summary only" }
+        if advancedSettings.writeMode == .update,
+           advancedSettings.exportFormats.contains(where: { $0 != .markdown }) {
+            return advancedSettings.exportFormats.contains(.markdown) ? "Update / replace" : "Replace"
+        }
+        return advancedSettings.writeMode.rawValue
+    }
+
+    @ViewBuilder
+    private func workspaceDestination(_ route: ExportWorkspaceRoute) -> some View {
+        switch route {
+        case .profile:
+            ScrollView {
+                profileOverview.padding(.horizontal, 28).padding(.top, 24).padding(.bottom, 32)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(profileCoordinator?.activeProfileName ?? "Edit export")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Manage profiles", systemImage: "person.crop.rectangle.stack", action: onManageProfiles)
+                }
+            }
+        case .metrics:
+            MetricSelectionView(selectionState: advancedSettings.metricSelection, healthKitManager: healthKitManager)
+        case .notes:
+            DailyNoteInjectionView(settings: advancedSettings.dailyNoteInjection,
+                metricSelection: advancedSettings.metricSelection, healthSubfolder: vaultManager.healthSubfolder)
+        case .entries:
+            IndividualTrackingView(settings: advancedSettings.individualTracking,
+                metricSelection: advancedSettings.metricSelection,
+                setIndividuallyTracked: { advancedSettings.setIndividuallyTracked($0, enabled: $1) })
+        case .formatting:
+            FormatCustomizationView(customization: advancedSettings.formatCustomization)
+        case .schedule:
+            ScheduleSettingsView(vaultManager: vaultManager, advancedSettings: advancedSettings,
+                apiExportSettings: apiExportSettings, showFolderPicker: $showFolderPicker,
+                profileCoordinator: profileCoordinator)
+        default:
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    switch route {
+                    case .detail:
+                        dataDetailInlineRow.configurationChangesProtected()
+                    case .rollup:
+                        rollupInlineControls
+                    case .writeMode:
+                        writeModeInlineRow.configurationChangesProtected()
+                    case .archive:
+                        Toggle("Zip archive", isOn: $advancedSettings.archiveExportFiles)
+                            .configurationChangesProtected()
+                        Text("Combine the generated files into a ZIP archive.").font(.subheadline).foregroundStyle(.secondary)
+                    case .dictionary:
+                        Toggle("Data dictionary", isOn: $advancedSettings.includeDataDictionary)
+                            .configurationChangesProtected()
+                        Text("Include definitions and units with your exported metrics.").font(.subheadline).foregroundStyle(.secondary)
+                    case .data:
+                        statusBadges.configurationChangesProtected()
+                        healthDataSection
+                    case .files:
+                        Picker("Health file settings", selection: $fileEditorSection) {
+                            ForEach(HealthFileEditorSection.allCases) { section in
+                                Text(LocalizedStringKey(section.rawValue)).tag(section)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        if advancedSettings.dailyNotesOnlyModeEnabled {
+                            Text("Daily Notes Only is active. These settings are saved, but health files are paused.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
+                        switch fileEditorSection {
+                        case .formats:
+                            formatsSection
+                            sectionCard(title: "Range summaries") { rollupInlineControls }
+                        case .paths:
+                            outputSection
+                            pathPreviewSection
+                        case .existing:
+                            sectionCard(title: "When a file exists") {
+                                writeModeInlineRow.configurationChangesProtected()
+                            }
+                            Label("Update preserves custom Markdown sections. JSON, CSV, and Obsidian Bases files are replaced. Daily notes use their own merge settings.", systemImage: "info.circle")
+                                .font(.callout).foregroundStyle(.secondary)
+                            Button("Preview selected output", systemImage: "eye", action: handlePreviewTapped)
+                                .modifier(HealthGlassActionStyle())
+                        }
+                    case .destination:
+                        exportTargetSection.configurationChangesProtected()
+                        pathPreviewSection
+                        resetButton.configurationChangesProtected()
+                    case .review:
+                        dateRangeSection
+                        pathPreviewSection
+                        Button("Preview files & contents", systemImage: "eye", action: handlePreviewTapped)
+                            .modifier(HealthGlassActionStyle())
+                        pearlExportButton
+                    default:
+                        EmptyView()
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(LocalizedStringKey(route.title))
+            .navigationBarTitleDisplayMode(.large)
+        }
     }
 
     // MARK: - Status Badges
@@ -778,55 +1025,6 @@ struct ExportTabView: View {
 
     // MARK: - Automation
 
-    private var automationSection: some View {
-        sectionCard(title: "Automation") {
-            VStack(spacing: 0) {
-                rollupInlineControls
-
-                rowDivider()
-
-                NavigationLink {
-                    DailyNoteInjectionView(
-                        settings: advancedSettings.dailyNoteInjection,
-                        metricSelection: advancedSettings.metricSelection,
-                        healthSubfolder: vaultManager.healthSubfolder
-                    )
-                } label: {
-                    inlineNavigationRowLabel(
-                        icon: "note.text",
-                        title: "Daily Note Injection",
-                        subtitle: dailyNoteInjectionSummary,
-                        isActive: advancedSettings.dailyNoteInjection.enabled,
-                        badgeCount: nil
-                    )
-                }
-                .buttonStyle(.plain)
-
-                rowDivider()
-
-                NavigationLink {
-                    IndividualTrackingView(
-                        settings: advancedSettings.individualTracking,
-                        metricSelection: advancedSettings.metricSelection,
-                        setIndividuallyTracked: { metricID, enabled in
-                            advancedSettings.setIndividuallyTracked(metricID, enabled: enabled)
-                        }
-                    )
-                } label: {
-                    inlineNavigationRowLabel(
-                        icon: "doc.on.doc",
-                        title: "Individual Entry Tracking",
-                        subtitle: individualTrackingSummary,
-                        isActive: advancedSettings.individualTracking.globalEnabled,
-                        badgeCount: nil
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-            }
-        }
-    }
-
     private var rollupInlineControls: some View {
         VStack(alignment: .leading, spacing: Spacing.s3) {
             HStack(alignment: .top, spacing: Spacing.s3) {
@@ -881,24 +1079,6 @@ struct ExportTabView: View {
     }
 
     // MARK: - Format Options
-
-    private var formatOptionsSection: some View {
-        sectionCard(title: "Format Options") {
-            VStack(spacing: 0) {
-                inlineNavigationRow(
-                    icon: "slider.horizontal.3",
-                    title: "Format Customization",
-                    subtitle: formatCustomizationSummary,
-                    destination: { FormatCustomizationView(customization: advancedSettings.formatCustomization) }
-                )
-
-                rowDivider()
-
-                writeModeInlineRow
-                    .configurationChangesProtected()
-            }
-        }
-    }
 
     private var writeModeInlineRow: some View {
         VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -1036,15 +1216,6 @@ struct ExportTabView: View {
             }
         }
         .padding(Spacing.s2)
-        .background(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .fill(Color.bgPrimary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
         .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         .padding(.horizontal, Spacing.md)
         .padding(.top, Spacing.s3)
@@ -1157,21 +1328,10 @@ struct ExportTabView: View {
                 Text("Export Data")
                     .font(.callout.weight(.semibold))
             }
-            .foregroundStyle(Color.bgPrimary)
-            .frame(minWidth: 132)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.textPrimary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.textPrimary.opacity(0.08), lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.horizontal, 8)
         }
-        .buttonStyle(.plain)
+        .modifier(HealthGlassActionStyle(prominent: true))
         .accessibilityIdentifier(AccessibilityID.Export.exportButton)
         .accessibilityLabel("Export Health Data")
         .accessibilityHint(canExport
@@ -1187,20 +1347,10 @@ struct ExportTabView: View {
                 Text("Preview")
                     .font(.callout.weight(.semibold))
             }
-            .foregroundStyle(Color.textPrimary)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.bgSecondary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.horizontal, 8)
         }
-        .buttonStyle(.plain)
+        .modifier(HealthGlassActionStyle())
         .accessibilityIdentifier(AccessibilityID.Export.previewButton)
         .accessibilityLabel("Preview Export")
         .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
@@ -1372,7 +1522,7 @@ struct ExportTabView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                    .fill(Color.bgPrimary)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
