@@ -440,6 +440,17 @@ Geist Sans sets UI and prose; Geist Mono sets code, data, and tabular figures. B
 
 `copy-14` and `label-14` cover most text. The `-mono` tokens pair Geist Mono with the same metrics; prefer tabular figures when numbers need to align.
 
+## Native Apple accessibility
+
+The values above are base design sizes, not fixed text or touch bounds. iOS uses the bundled OFL-licensed Geist Sans/Mono faces via `Font.custom(_:size:relativeTo:)`; the 19 existing `Typography` methods keep their base sizes and weights. SwiftUI resolves these fonts in each view's Dynamic Type environment, including live changes. This replaces the former fixed-size SF implementation without relying on private system font names. `Typography.scaled(size:weight:relativeTo:monospaced:)` supports existing bespoke base sizes; prefer named tokens. Fonts and their license/source are in `HealthMd/Shared/Theme/Fonts` and are registered by `UIAppFonts`.
+
+macOS retains native SF/SF Mono base sizes and desktop control conventions. iOS text-size and touch defaults are not imposed on desktop. Shared-source compilation and isolated desktop component tests accompany changes; they do not certify every Mac window or system accessibility setting.
+
+- iOS actions have **at least 44 × 44 pt** interactive regions, including secondary, icon, menu, dismissal and destructive actions. The generic 32/40 px recipes below are not iOS target sizes. Apply padding/minimum bounds inside the interactive label and let controls grow vertically.
+- Wrap full essential labels, descriptions, selected values and identifiers. Reflow label/value and action rows when crowded; reduce decorative gutters and indentation before taking width from text. Scroll bounded short-window/keyboard content. Do not shrink text, cap Dynamic Type, truncate essential copy, or substitute transform scaling for layout.
+- Enabled copy uses `textPrimary` (gray1000) or `textSecondary` (gray900). `textMuted`/gray700 is reserved for disabled/decorative content. `successText` uses green1000 (`#003a00`) so it also passes on tinted pressed/selected surfaces; `errorText` uses red900 (`#d8001b`). These text variants do not change `success`/`error` fills. Check actual composited/tinted surfaces as well as page/card backgrounds for 4.5:1 text contrast.
+- Use native labeled controls and separate independent actions. Preserve focus, submit/cancel, VoiceOver modal/escape and reduced-motion semantics. Geometry/automated callbacks are evidence, not a substitute for human VoiceOver, physical Display Zoom/IME and reading-comfort QA.
+
 ## Layout
 
 Spacing follows a 4px scale: 4, 8, 12, 16, 24, 32, 40, 64, 96px. Keep a three-step rhythm: 8px inside a group, 16px between groups, 32–40px between sections. Cards use 24px padding, 16px when compact and 32px for hero areas. Center content in a 1200px column with side padding that grows at wider breakpoints, and make every layout work on mobile and desktop. Breakpoints are `sm` 401px, `md` 601px, `lg` 961px, `xl` 1200px, and `2xl` 1400px.

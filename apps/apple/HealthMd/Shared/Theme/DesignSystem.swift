@@ -98,6 +98,12 @@ extension Color {
     static let dialogScrim = adaptiveColor(light: "00000070", dark: "000000B3")
     #endif
 
+    // Readable text variants keep existing semantic fills unchanged. Green1000
+    // in light mode also clears AA over the tinted pill on pressed/selected cards.
+    // textMuted/gray700 are for disabled or decorative content, not enabled copy.
+    static let successText = adaptiveColor(light: "003A00", dark: "00CA50")
+    static let errorText = adaptiveColor(light: "D8001B", dark: "FF565F")
+
     private static func adaptiveColor(light: String, dark: String) -> Color {
         #if canImport(UIKit)
         return Color(UIColor { traitCollection in
@@ -229,29 +235,57 @@ struct GeistRadius {
 }
 
 // MARK: - Typography
-// Geist Sans/Mono are represented with SF Pro/SF Mono on iOS for native Dynamic
-// Type behavior while preserving the token names used in DESIGN.md.
+// iOS uses the bundled, OFL-licensed Geist faces and SwiftUI's public relative
+// font API (available on our iOS 17 minimum). Resolution happens in the VIEW's
+// Dynamic Type environment, including changes while that view remains mounted.
+// Do not replace this with a cached UIFontMetrics value or private SF font name.
+// macOS deliberately retains its native SF base sizes and desktop conventions;
+// iOS Dynamic Type and touch geometry are not desktop defaults.
 
 struct Typography {
-    static func hero() -> Font { .system(size: 32, weight: .semibold, design: .default) }
-    static func displayLarge() -> Font { .system(size: 32, weight: .semibold, design: .default) }
-    static func displayMedium() -> Font { .system(size: 24, weight: .semibold, design: .default) }
-    static func heading24() -> Font { .system(size: 24, weight: .semibold, design: .default) }
-    static func heading20() -> Font { .system(size: 20, weight: .semibold, design: .default) }
-    static func headline() -> Font { .system(size: 16, weight: .semibold, design: .default) }
-    static func headlineEmphasis() -> Font { .system(size: 16, weight: .semibold, design: .default) }
-    static func bodyLarge() -> Font { .system(size: 18, weight: .regular, design: .default) }
-    static func body() -> Font { .system(size: 14, weight: .regular, design: .default) }
-    static func bodyEmphasis() -> Font { .system(size: 14, weight: .medium, design: .default) }
-    static func caption() -> Font { .system(size: 13, weight: .regular, design: .default) }
-    static func label() -> Font { .system(size: 12, weight: .medium, design: .default) }
-    static func labelUppercase() -> Font { .system(size: 12, weight: .medium, design: .default) }
-    static func mono() -> Font { .system(size: 14, weight: .regular, design: .monospaced) }
-    static func monoEmphasis() -> Font { .system(size: 14, weight: .medium, design: .monospaced) }
-    static func monoCaption() -> Font { .system(size: 12, weight: .regular, design: .monospaced) }
-    static func monoCaptionEmphasis() -> Font { .system(size: 12, weight: .medium, design: .monospaced) }
-    static func monoLabel() -> Font { .system(size: 12, weight: .medium, design: .monospaced) }
+    static func hero() -> Font { scaled(size: 32, weight: .semibold, relativeTo: .largeTitle) }
+    static func displayLarge() -> Font { hero() }
+    static func displayMedium() -> Font { heading24() }
+    static func heading24() -> Font { scaled(size: 24, weight: .semibold, relativeTo: .title2) }
+    static func heading20() -> Font { scaled(size: 20, weight: .semibold, relativeTo: .title3) }
+    static func headline() -> Font { scaled(size: 16, weight: .semibold, relativeTo: .headline) }
+    static func headlineEmphasis() -> Font { headline() }
+    static func bodyLarge() -> Font { scaled(size: 18, relativeTo: .body) }
+    static func body() -> Font { scaled(size: 14, relativeTo: .body) }
+    static func bodyEmphasis() -> Font { scaled(size: 14, weight: .medium, relativeTo: .body) }
+    static func caption() -> Font { scaled(size: 13, relativeTo: .footnote) }
+    static func label() -> Font { scaled(size: 12, weight: .medium, relativeTo: .caption) }
+    static func labelUppercase() -> Font { label() }
+    static func mono() -> Font { scaled(size: 14, relativeTo: .body, monospaced: true) }
+    static func monoEmphasis() -> Font { scaled(size: 14, weight: .medium, relativeTo: .body, monospaced: true) }
+    static func monoCaption() -> Font { scaled(size: 12, relativeTo: .caption, monospaced: true) }
+    static func monoCaptionEmphasis() -> Font { scaled(size: 12, weight: .medium, relativeTo: .caption, monospaced: true) }
+    static func monoLabel() -> Font { monoCaptionEmphasis() }
     static func bodyMono() -> Font { mono() }
+
+    /// For existing bespoke base sizes. Prefer a named token when one fits.
+    static func scaled(
+        size: CGFloat,
+        weight: Font.Weight = .regular,
+        relativeTo style: Font.TextStyle = .body,
+        monospaced: Bool = false
+    ) -> Font {
+        #if os(iOS)
+        let face: String
+        if monospaced {
+            face = weight == .medium ? "GeistMono-Medium" : "GeistMono-Regular"
+        } else {
+            switch weight {
+            case .semibold: face = "Geist-SemiBold"
+            case .medium: face = "Geist-Medium"
+            default: face = "Geist-Regular"
+            }
+        }
+        return .custom(face, size: size, relativeTo: style).weight(weight)
+        #else
+        return .system(size: size, weight: weight, design: monospaced ? .monospaced : .default)
+        #endif
+    }
 }
 
 // MARK: - Branded Page Header

@@ -48,9 +48,11 @@ struct PrimaryButton: View {
                 }
 
                 Text(LocalizedStringKey(isLoading ? "Exporting…" : title))
-                    .font(.system(size: 16, weight: .medium, design: .default))
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
             }
+            .font(Typography.scaled(size: 16, weight: .medium))
+            .padding(.vertical, Spacing.s2)
             .foregroundStyle(Color.bgPrimary)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 48)
@@ -91,9 +93,12 @@ struct SecondaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .medium, design: .default))
+            .font(Typography.bodyEmphasis())
+            .fixedSize(horizontal: false, vertical: true)
+            .multilineTextAlignment(.center)
             .foregroundStyle(color)
-            .frame(minHeight: 40)
+            .padding(.vertical, Spacing.s2)
+            .frame(minWidth: 44, minHeight: 44)
             .padding(.horizontal, Spacing.s3)
             .background(configuration.isPressed ? Color.controlPressed : Color.controlBackground)
             .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
@@ -150,6 +155,7 @@ struct IconButton: View {
     let action: () -> Void
 
     @State private var isPressed = false
+    @ScaledMetric(relativeTo: .body) private var glyphSize: CGFloat = 15
 
     init(
         icon: String,
@@ -168,9 +174,9 @@ struct IconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .medium, design: .default))
+                .font(.system(size: glyphSize, weight: .medium, design: .default))
                 .foregroundStyle(color)
-                .frame(width: size, height: size)
+                .frame(width: max(44, size, glyphSize + 16), height: max(44, size, glyphSize + 16))
                 .background(isPressed ? Color.controlPressed : Color.controlBackground)
                 .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
                 .overlay(
@@ -208,9 +214,12 @@ struct DestructiveButton: View {
     var body: some View {
         Button(role: .destructive, action: action) {
             Text(LocalizedStringKey(title))
-                .font(.system(size: 14, weight: .medium, design: .default))
-                .foregroundStyle(Color.error)
-                .frame(minHeight: 40)
+                .font(Typography.bodyEmphasis())
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.errorText)
+                .padding(.vertical, Spacing.s2)
+                .frame(minWidth: 44, minHeight: 44)
                 .padding(.horizontal, Spacing.s3)
                 .background(isPressed ? Color.controlPressed : Color.controlBackground)
                 .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
