@@ -79,7 +79,7 @@ struct ExportTabView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-            ScrollView {
+            SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
                     heroHeader
                     statusBadges
@@ -100,14 +100,10 @@ struct ExportTabView: View {
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.lg)
-            }
-            .scrollIndicators(.hidden)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if !isExporting {
-                    floatingExportBar
-                        .zIndex(1)
-                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-                }
+            } footer: {
+                floatingExportBar
+                    .zIndex(1)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
             .toolbar(.hidden, for: .navigationBar)
             .onChange(of: exportStatusMessage) { oldValue, newValue in
@@ -429,12 +425,15 @@ struct ExportTabView: View {
     private var dateRangeSection: some View {
         sectionCard(title: "Date Range") {
             VStack(spacing: Spacing.md) {
-                LazyVGrid(
-                    columns: [GridItem(.flexible()), GridItem(.flexible())],
-                    spacing: Spacing.sm
-                ) {
-                    ForEach(ExportDateRangePreset.allCases) { preset in
-                        dateRangePresetButton(preset)
+                SchedulingDatePresets(
+                    options: ExportDateRangePreset.allCases.map {
+                        SchedulingDatePreset(value: $0, title: $0.title, hint: $0.accessibilityHint,
+                                             identifier: accessibilityIdentifier(for: $0))
+                    },
+                    selection: dateRangePreset
+                ) { preset in
+                    configurationProtection.performConfigurationChange {
+                        selectDateRangePreset(preset)
                     }
                 }
 
@@ -442,29 +441,33 @@ struct ExportTabView: View {
                     Divider().background(Color.borderSubtle)
 
                     VStack(spacing: Spacing.md) {
-                        DatePicker(
-                            "Start Date",
-                            selection: configurationProtection.protecting($startDate),
-                            in: ...endDate,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.compact)
-                        .tint(Color.accent)
-                        .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
-                        .accessibilityHint("Select the start date for your export range")
+                        SchedulingLabeledControl(title: "Start Date", value: Text(startDate, style: .date)) {
+                            DatePicker(
+                                "Start Date",
+                                selection: configurationProtection.protecting($startDate),
+                                in: ...endDate,
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.compact)
+                            .tint(Color.accent)
+                            .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
+                            .accessibilityHint("Select the start date for your export range")
+                        }
 
                         Divider().background(Color.borderSubtle)
 
-                        DatePicker(
-                            "End Date",
-                            selection: configurationProtection.protecting($endDate),
-                            in: startDate...Date(),
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.compact)
-                        .tint(Color.accent)
-                        .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
-                        .accessibilityHint("Select the end date for your export range")
+                        SchedulingLabeledControl(title: "End Date", value: Text(endDate, style: .date)) {
+                            DatePicker(
+                                "End Date",
+                                selection: configurationProtection.protecting($endDate),
+                                in: startDate...Date(),
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.compact)
+                            .tint(Color.accent)
+                            .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
+                            .accessibilityHint("Select the end date for your export range")
+                        }
                     }
                 }
             }
@@ -473,42 +476,6 @@ struct ExportTabView: View {
 
     private var previewDateRange: (startDate: Date, endDate: Date) {
         (startDate, endDate)
-    }
-
-    private func dateRangePresetButton(_ preset: ExportDateRangePreset) -> some View {
-        let isSelected = dateRangePreset == preset
-        return Button {
-            configurationProtection.performConfigurationChange {
-                selectDateRangePreset(preset)
-            }
-        } label: {
-            HStack(spacing: Spacing.xs) {
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(Typography.headline())
-                }
-                Text(LocalizedStringKey(preset.title))
-                    .font(.footnote.weight(.semibold))
-            }
-            .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.sm)
-            .background(
-                Capsule()
-                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.bgSecondary)
-            )
-            .overlay(
-                Capsule()
-                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.borderSubtle, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(accessibilityIdentifier(for: preset))
-        .accessibilityLabel(preset.title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint(preset.accessibilityHint)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
@@ -1011,53 +978,24 @@ struct ExportTabView: View {
     // MARK: - Floating Export Bar
 
     private var floatingExportBar: some View {
-        VStack(spacing: Spacing.s2) {
-            if !purchaseManager.isUnlocked && canExport {
-                let remaining = purchaseManager.freeExportsRemaining
-                Text(remaining == 1
-                     ? "1 free export remaining"
-                     : "\(remaining) free exports remaining")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.textMuted)
-                    .accessibilityIdentifier(AccessibilityID.Export.freeExportsLabel)
-                    .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining before purchase required")
-            }
-
-            Group {
-                if usesAccessibilityLayout {
-                    VStack(spacing: Spacing.s2) {
-                        floatingBarButtons
-                    }
-                } else {
-                    HStack(spacing: Spacing.s2) {
-                        floatingBarButtons
-                    }
-                }
-            }
-        }
-        .padding(Spacing.s2)
-        .background(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .fill(Color.bgPrimary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.s3)
-        .padding(.bottom, Spacing.s2)
-        .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                colors: [Color.bgPrimary.opacity(0), Color.bgPrimary],
-                startPoint: .top,
-                endPoint: .bottom
+        SchedulingExportFooter(
+            freeExportsRemaining: !purchaseManager.isUnlocked && canExport ? purchaseManager.freeExportsRemaining : nil,
+            freeExportsIdentifier: AccessibilityID.Export.freeExportsLabel
+        ) {
+            SchedulingExportActions(
+                previewIdentifier: AccessibilityID.Export.previewButton,
+                exportIdentifier: AccessibilityID.Export.exportButton,
+                previewHint: healthKitManager.isAuthorized
+                    ? "Shows the files and contents that will be exported"
+                    : "Prompts to connect Apple Health before showing preview",
+                exportHint: canExport
+                    ? "Exports the selected health data"
+                    : "Opens the setup step required before exporting",
+                onPreview: handlePreviewTapped,
+                onExport: handleExportButtonTapped
             )
-            .ignoresSafeArea()
-        )
+        }
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
     }
 
     private var exportDateCount: Int {
@@ -1141,69 +1079,6 @@ struct ExportTabView: View {
                 calendar: calendar
             ).count
         )
-    }
-
-    @ViewBuilder
-    private var floatingBarButtons: some View {
-        previewPillButton
-        pearlExportButton
-    }
-
-    private var pearlExportButton: some View {
-        Button(action: handleExportButtonTapped) {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: "arrow.up")
-                    .font(.footnote.weight(.semibold))
-                Text("Export Data")
-                    .font(.callout.weight(.semibold))
-            }
-            .foregroundStyle(Color.bgPrimary)
-            .frame(minWidth: 132)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.textPrimary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.textPrimary.opacity(0.08), lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(AccessibilityID.Export.exportButton)
-        .accessibilityLabel("Export Health Data")
-        .accessibilityHint(canExport
-            ? "Exports the selected health data"
-            : "Opens the setup step required before exporting")
-    }
-
-    private var previewPillButton: some View {
-        Button { handlePreviewTapped() } label: {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: "eye")
-                    .font(.footnote.weight(.semibold))
-                Text("Preview")
-                    .font(.callout.weight(.semibold))
-            }
-            .foregroundStyle(Color.textPrimary)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.bgSecondary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(AccessibilityID.Export.previewButton)
-        .accessibilityLabel("Preview Export")
-        .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
     }
 
     private var previewNeedsHealthPermission: Bool {
