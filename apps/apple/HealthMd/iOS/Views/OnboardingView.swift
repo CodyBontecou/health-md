@@ -66,7 +66,7 @@ struct OnboardingView: View {
         ZStack {
             Color.bgPrimary.ignoresSafeArea()
 
-            OnboardingPageLayout {
+            OnboardingPageLayout(pageID: currentStep) {
                 VStack(spacing: Spacing.s4) {
                     topBar
                     OnboardingProgressBar(current: currentStep, total: totalSteps)

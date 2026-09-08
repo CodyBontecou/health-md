@@ -26,6 +26,9 @@ final class OnboardingA11yUITests: A11yUITestCase {
     private func openOffers(in app: XCUIApplication) {
         tapEdge(app.buttons["a11y.onboarding.skip"], in: app)
         count(128, in: app)
+        let back = app.buttons["Back"]
+        XCTAssertTrue(back.isHittable, "A new page must start at its navigation/explanation, not the old footer offset")
+        XCTAssertTrue(app.scrollViews.firstMatch.frame.contains(back.frame))
     }
 
     func testSetupActionsGrowAndInvokeOnlyTheirOwnCallbacks() {

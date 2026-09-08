@@ -34,6 +34,7 @@ enum OnboardingReadingLayout {
 /// the scroll at crowded sizes; they cannot consume the whole reading viewport.
 struct OnboardingPageLayout<Header: View, Content: View, Footer: View>: View {
     @Environment(\.dynamicTypeSize) private var textSize
+    var pageID: Int? = nil
     @ViewBuilder let header: () -> Header
     @ViewBuilder let content: () -> Content
     @ViewBuilder let footer: () -> Footer
@@ -48,19 +49,27 @@ struct OnboardingPageLayout<Header: View, Content: View, Footer: View>: View {
                         .padding(.horizontal, gutter)
                         .padding(.top, Spacing.s4)
                 }
-                ScrollView {
-                    VStack(spacing: reading ? Spacing.s4 : Spacing.s6) {
-                        if reading { header() }
-                        content()
-                            .frame(maxWidth: .infinity)
-                        if reading { footer() }
+                ScrollViewReader { scroll in
+                    ScrollView {
+                        VStack(spacing: reading ? Spacing.s4 : Spacing.s6) {
+                            if reading { header() }
+                            content()
+                                .frame(maxWidth: .infinity)
+                            if reading { footer() }
+                        }
+                        .padding(.horizontal, gutter)
+                        .padding(.top, Spacing.s4)
+                        .padding(.bottom, Spacing.s6)
+                        .id("onboarding.page.top")
                     }
-                    .padding(.horizontal, gutter)
-                    .padding(.top, Spacing.s4)
-                    .padding(.bottom, Spacing.s6)
+                    .scrollBounceBehavior(.basedOnSize)
+                    .accessibilityIdentifier("onboarding.page.scroll")
+                    .onChange(of: pageID) { _, _ in
+                        // A footer reached by scrolling must open the next page at
+                        // its explanation, not inherit the previous bottom offset.
+                        scroll.scrollTo("onboarding.page.top", anchor: .top)
+                    }
                 }
-                .scrollBounceBehavior(.basedOnSize)
-                .accessibilityIdentifier("onboarding.page.scroll")
                 if !reading {
                     footer()
                         .padding(.horizontal, gutter)

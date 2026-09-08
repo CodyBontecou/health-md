@@ -36,7 +36,7 @@ struct OnboardingA11yScenario: View {
             if page == 2 {
                 paywall
             } else {
-                OnboardingPageLayout {
+                OnboardingPageLayout(pageID: page) {
                     OnboardingNavigationHeader(current: page + 1, total: 7, canGoBack: true, showsMark: true) {
                         count += 16384
                         page = 0
