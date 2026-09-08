@@ -303,8 +303,10 @@ struct SyncSettingsView: View {
                     .accessibilityHidden(true)
                 Text("Cancel Active Mac Export")
                     .font(.body.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
+            .frame(minWidth: 44, minHeight: 44)
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, 14)
             .contentShape(Rectangle())
@@ -330,21 +332,26 @@ struct SyncSettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
 
                         VStack(spacing: Spacing.sm) {
-                            HStack(spacing: Spacing.sm) {
+                            ReadingConnectionEntry(
+                                title: "Mac IP address or hostname",
+                                value: manualMacHost,
+                                identifier: "reading.sync.mac-host"
+                            ) {
                                 TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
                                     .keyboardType(.URL)
-                                    .textFieldStyle(.roundedBorder)
                                     .focused($focusedManualIPField, equals: .host)
-                                    .accessibilityLabel("Mac IP address or hostname")
+                            }
 
+                            ReadingConnectionEntry(
+                                title: "Manual IP port",
+                                value: manualMacPort,
+                                identifier: "reading.sync.mac-port"
+                            ) {
                                 TextField("Port", text: $manualMacPort)
                                     .keyboardType(.numberPad)
-                                    .textFieldStyle(.roundedBorder)
-                                    .frame(width: 82)
                                     .focused($focusedManualIPField, equals: .port)
-                                    .accessibilityLabel("Manual IP port")
                             }
 
                             SecureField(
@@ -368,25 +375,18 @@ struct SyncSettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        HStack(spacing: Spacing.sm) {
-                            Button {
+                        ReadingConnectionActions(
+                            primaryTitle: manualIPButtonTitle,
+                            primaryIcon: manualIPButtonIcon,
+                            isEnabled: canAttemptManualIPConnection,
+                            onPrimary: {
                                 configurationProtection.performConfigurationChange {
                                     connectByManualIP()
                                 }
-                            } label: {
-                                Label(manualIPButtonTitle, systemImage: manualIPButtonIcon)
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!canAttemptManualIPConnection)
-
-                            if syncService.activeTransport == .manualIP {
-                                Button("Disconnect") {
-                                    syncService.disconnect()
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                        }
+                            },
+                            secondaryTitle: syncService.activeTransport == .manualIP ? "Disconnect" : nil,
+                            onSecondary: { syncService.disconnect() }
+                        )
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, 14)
@@ -470,7 +470,8 @@ struct SyncSettingsView: View {
                             }
                         } label: {
                             Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
-                                .frame(maxWidth: .infinity)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(directCLIService.isConnecting)
@@ -502,13 +503,18 @@ struct SyncSettingsView: View {
                                 directCLIService.retryPendingPairingLink()
                             } label: {
                                 Label("Retry QR pairing", systemImage: "arrow.clockwise")
-                                    .frame(maxWidth: .infinity)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
                             }
                             .buttonStyle(.borderedProminent)
                         }
 
-                        Button("Cancel", role: .cancel) {
+                        Button(role: .cancel) {
                             directCLIService.cancelPendingPairingLink()
+                        } label: {
+                            Text("Cancel")
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.bordered)
                     }
@@ -544,17 +550,26 @@ struct SyncSettingsView: View {
                             .pickerStyle(.segmented)
 
                             if directCLITransport == DirectTransportKind.manualIP.rawValue {
-                                HStack(spacing: Spacing.sm) {
-                                    TextField("Mac IP or Tailscale address", text: $directCLIHost)
-                                        .textInputAutocapitalization(.never)
-                                        .autocorrectionDisabled()
-                                        .keyboardType(.URL)
-                                        .textFieldStyle(.roundedBorder)
+                                VStack(alignment: .leading, spacing: Spacing.sm) {
+                                    ReadingConnectionEntry(
+                                        title: "Mac IP or Tailscale address",
+                                        value: directCLIHost,
+                                        identifier: "reading.sync.cli-host"
+                                    ) {
+                                        TextField("Mac IP or Tailscale address", text: $directCLIHost)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                            .keyboardType(.URL)
+                                    }
 
-                                    TextField("Port", text: $directCLIPort)
-                                        .keyboardType(.numberPad)
-                                        .textFieldStyle(.roundedBorder)
-                                        .frame(width: 82)
+                                    ReadingConnectionEntry(
+                                        title: "Port",
+                                        value: directCLIPort,
+                                        identifier: "reading.sync.cli-port"
+                                    ) {
+                                        TextField("Port", text: $directCLIPort)
+                                            .keyboardType(.numberPad)
+                                    }
                                 }
                                 .configurationChangesProtected()
                             } else {
@@ -571,16 +586,16 @@ struct SyncSettingsView: View {
                                 .font(.footnote)
                                 .foregroundStyle(Color.textSecondary)
 
-                            Button {
-                                configurationProtection.performConfigurationChange {
-                                    connectDirectCLI()
+                            ReadingConnectionActions(
+                                primaryTitle: "Pair with healthmd",
+                                primaryIcon: "link",
+                                isEnabled: canConnectDirectCLI,
+                                onPrimary: {
+                                    configurationProtection.performConfigurationChange {
+                                        connectDirectCLI()
+                                    }
                                 }
-                            } label: {
-                                Label("Pair with healthmd", systemImage: "link")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!canConnectDirectCLI)
+                            )
                         } else {
                             Label(
                                 "Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(directCLITransportLabel). Commands connect on demand while access is enabled.",
