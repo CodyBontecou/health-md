@@ -1,0 +1,43 @@
+{
+  "sourceRevision": "a5fbf59f8f3cde73af12bafd6a09dde33db39b98",
+  "sources": [
+    {
+      "source": "apps/apple/HealthMd/Shared/Theme/DesignSystem.swift",
+      "sha256": "1d227526760976edb27e3cbe5d369dad7031040d87099bfd9843e57317129a67",
+      "originalByteCount": 24356,
+      "appendOnlyAuditAccessShim": false
+    },
+    {
+      "source": "apps/apple/HealthMd/iOS/Components/AnimatedButton.swift",
+      "sha256": "9323a39a8849b19711bfaf87c27555f58ef49554458a5c5cb81e197b90cc6e76",
+      "originalByteCount": 8579,
+      "appendOnlyAuditAccessShim": false
+    },
+    {
+      "source": "apps/apple/HealthMd/Shared/Views/GeistDialog.swift",
+      "sha256": "e0e9c83da50e8fc874c28466160fa07d5392857195f277c57673ced125f2cebd",
+      "originalByteCount": 12909,
+      "appendOnlyAuditAccessShim": true
+    }
+  ],
+  "rowSources": [
+    {
+      "source": "apps/apple/HealthMd/iOS/Views/FormatCustomizationView.swift",
+      "blockSHA256": "024bf3b35582792a162994c502971ec6877380e98cc24e59bff32378dbb4fb7a",
+      "firstLine": 947,
+      "lineCount": 113
+    },
+    {
+      "source": "apps/apple/HealthMd/iOS/ContentView.swift",
+      "blockSHA256": "0cebf8672dc66d795ab130c7bfe696e056d3e1bfef16b0e4d242bf9627568b45",
+      "firstLine": 2939,
+      "lineCount": 217
+    }
+  ],
+  "runtime": "iOS 26.5 (23F77)",
+  "device": "dedicated iPhone SE (3rd generation) simulator",
+  "fontCapture": "ImageRenderer, actual production tokens",
+  "rowCapture": "UIHostingController + drawHierarchy of synthetic content only, safe-area inheritance disabled and layout remeasured after attachment",
+  "scope": "Diagnostic rendering/measurement; not full-app, pointer, keyboard or VoiceOver tests",
+  "probeDirectory": "apps/apple/build/ios-accessibility-audit.4jR9ET"
+}

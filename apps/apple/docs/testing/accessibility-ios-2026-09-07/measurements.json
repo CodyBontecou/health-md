@@ -1,0 +1,1038 @@
+{
+  "controls" : [
+    {
+      "category" : "large",
+      "control" : "PrimaryButton",
+      "size" : {
+        "height" : 48,
+        "width" : 320
+      }
+    },
+    {
+      "category" : "large",
+      "control" : "SecondaryButton",
+      "size" : {
+        "height" : 40,
+        "width" : 76.5
+      }
+    },
+    {
+      "category" : "large",
+      "control" : "IconButton.default",
+      "size" : {
+        "height" : 40,
+        "width" : 40
+      }
+    },
+    {
+      "category" : "large",
+      "control" : "DestructiveButton",
+      "size" : {
+        "height" : 40,
+        "width" : 67
+      }
+    },
+    {
+      "category" : "xxxLarge",
+      "control" : "PrimaryButton",
+      "size" : {
+        "height" : 48,
+        "width" : 320
+      }
+    },
+    {
+      "category" : "xxxLarge",
+      "control" : "SecondaryButton",
+      "size" : {
+        "height" : 40,
+        "width" : 76.5
+      }
+    },
+    {
+      "category" : "xxxLarge",
+      "control" : "IconButton.default",
+      "size" : {
+        "height" : 40,
+        "width" : 40
+      }
+    },
+    {
+      "category" : "xxxLarge",
+      "control" : "DestructiveButton",
+      "size" : {
+        "height" : 40,
+        "width" : 67
+      }
+    },
+    {
+      "category" : "accessibility1",
+      "control" : "PrimaryButton",
+      "size" : {
+        "height" : 48,
+        "width" : 320
+      }
+    },
+    {
+      "category" : "accessibility1",
+      "control" : "SecondaryButton",
+      "size" : {
+        "height" : 40,
+        "width" : 76.5
+      }
+    },
+    {
+      "category" : "accessibility1",
+      "control" : "IconButton.default",
+      "size" : {
+        "height" : 40,
+        "width" : 40
+      }
+    },
+    {
+      "category" : "accessibility1",
+      "control" : "DestructiveButton",
+      "size" : {
+        "height" : 40,
+        "width" : 67
+      }
+    },
+    {
+      "category" : "accessibility5",
+      "control" : "PrimaryButton",
+      "size" : {
+        "height" : 56,
+        "width" : 320
+      }
+    },
+    {
+      "category" : "accessibility5",
+      "control" : "SecondaryButton",
+      "size" : {
+        "height" : 40,
+        "width" : 76.5
+      }
+    },
+    {
+      "category" : "accessibility5",
+      "control" : "IconButton.default",
+      "size" : {
+        "height" : 40,
+        "width" : 40
+      }
+    },
+    {
+      "category" : "accessibility5",
+      "control" : "DestructiveButton",
+      "size" : {
+        "height" : 40,
+        "width" : 67
+      }
+    }
+  ],
+  "dialogs" : [
+    {
+      "availableCardHeight" : 652,
+      "availableCardWidth" : 342,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 342
+      },
+      "category" : "large",
+      "hostHeight" : 700,
+      "hostWidth" : 390
+    },
+    {
+      "availableCardHeight" : 652,
+      "availableCardWidth" : 342,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 342
+      },
+      "category" : "xxxLarge",
+      "hostHeight" : 700,
+      "hostWidth" : 390
+    },
+    {
+      "availableCardHeight" : 652,
+      "availableCardWidth" : 342,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 342
+      },
+      "category" : "accessibility1",
+      "hostHeight" : 700,
+      "hostWidth" : 390
+    },
+    {
+      "availableCardHeight" : 652,
+      "availableCardWidth" : 342,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 342
+      },
+      "category" : "accessibility5",
+      "hostHeight" : 700,
+      "hostWidth" : 390
+    },
+    {
+      "availableCardHeight" : 232,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "large",
+      "hostHeight" : 280,
+      "hostWidth" : 320
+    },
+    {
+      "availableCardHeight" : 232,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "xxxLarge",
+      "hostHeight" : 280,
+      "hostWidth" : 320
+    },
+    {
+      "availableCardHeight" : 232,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "accessibility1",
+      "hostHeight" : 280,
+      "hostWidth" : 320
+    },
+    {
+      "availableCardHeight" : 232,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "accessibility5",
+      "hostHeight" : 280,
+      "hostWidth" : 320
+    },
+    {
+      "availableCardHeight" : 152,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "large",
+      "hostHeight" : 200,
+      "hostWidth" : 320
+    },
+    {
+      "availableCardHeight" : 152,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "xxxLarge",
+      "hostHeight" : 200,
+      "hostWidth" : 320
+    },
+    {
+      "availableCardHeight" : 152,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "accessibility1",
+      "hostHeight" : 200,
+      "hostWidth" : 320
+    },
+    {
+      "availableCardHeight" : 152,
+      "availableCardWidth" : 272,
+      "cardSize" : {
+        "height" : 277,
+        "width" : 280
+      },
+      "category" : "accessibility5",
+      "hostHeight" : 200,
+      "hostWidth" : 320
+    }
+  ],
+  "fonts" : [
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "hero"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "hero"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "hero"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "hero"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "displayLarge"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "displayLarge"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "displayLarge"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 38.5,
+        "width" : 208.5
+      },
+      "token" : "displayLarge"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "displayMedium"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "displayMedium"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "displayMedium"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "displayMedium"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "heading24"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "heading24"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "heading24"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 29,
+        "width" : 156.5
+      },
+      "token" : "heading24"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 24,
+        "width" : 132
+      },
+      "token" : "heading20"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 24,
+        "width" : 132
+      },
+      "token" : "heading20"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 24,
+        "width" : 132
+      },
+      "token" : "heading20"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 24,
+        "width" : 132
+      },
+      "token" : "heading20"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headline"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headline"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headline"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headline"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headlineEmphasis"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headlineEmphasis"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headlineEmphasis"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 19.5,
+        "width" : 109
+      },
+      "token" : "headlineEmphasis"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 21.5,
+        "width" : 115
+      },
+      "token" : "bodyLarge"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 21.5,
+        "width" : 115
+      },
+      "token" : "bodyLarge"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 21.5,
+        "width" : 115
+      },
+      "token" : "bodyLarge"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 21.5,
+        "width" : 115
+      },
+      "token" : "bodyLarge"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 17,
+        "width" : 93
+      },
+      "token" : "body"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 17,
+        "width" : 93
+      },
+      "token" : "body"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 17,
+        "width" : 93
+      },
+      "token" : "body"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 17,
+        "width" : 93
+      },
+      "token" : "body"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 17,
+        "width" : 95.5
+      },
+      "token" : "bodyEmphasis"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 17,
+        "width" : 95.5
+      },
+      "token" : "bodyEmphasis"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 17,
+        "width" : 95.5
+      },
+      "token" : "bodyEmphasis"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 17,
+        "width" : 95.5
+      },
+      "token" : "bodyEmphasis"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 16,
+        "width" : 87
+      },
+      "token" : "caption"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 16,
+        "width" : 87
+      },
+      "token" : "caption"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 16,
+        "width" : 87
+      },
+      "token" : "caption"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 16,
+        "width" : 87
+      },
+      "token" : "caption"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "label"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "label"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "label"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "label"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "labelUppercase"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "labelUppercase"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "labelUppercase"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 14.5,
+        "width" : 83.5
+      },
+      "token" : "labelUppercase"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "mono"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "mono"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "mono"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "mono"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "monoEmphasis"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "monoEmphasis"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "monoEmphasis"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "monoEmphasis"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaption"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaption"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaption"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaption"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaptionEmphasis"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaptionEmphasis"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaptionEmphasis"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoCaptionEmphasis"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoLabel"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoLabel"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoLabel"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 14.5,
+        "width" : 104
+      },
+      "token" : "monoLabel"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "bodyMono"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "bodyMono"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "bodyMono"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 17,
+        "width" : 121.5
+      },
+      "token" : "bodyMono"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 20.5,
+        "width" : 109
+      },
+      "token" : "native.body"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 27.5,
+        "width" : 142
+      },
+      "token" : "native.body"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 33.5,
+        "width" : 173
+      },
+      "token" : "native.body"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 63.5,
+        "width" : 321
+      },
+      "token" : "native.body"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 20.5,
+        "width" : 114.5
+      },
+      "token" : "native.headline"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 27.5,
+        "width" : 150
+      },
+      "token" : "native.headline"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 33.5,
+        "width" : 183
+      },
+      "token" : "native.headline"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 63.5,
+        "width" : 340
+      },
+      "token" : "native.headline"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 14.5,
+        "width" : 81.5
+      },
+      "token" : "native.caption"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 21.5,
+        "width" : 115
+      },
+      "token" : "native.caption"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 26.5,
+        "width" : 136
+      },
+      "token" : "native.caption"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 51.5,
+        "width" : 262
+      },
+      "token" : "native.caption"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 16,
+        "width" : 87
+      },
+      "token" : "native.footnote"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 23,
+        "width" : 121
+      },
+      "token" : "native.footnote"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 27.5,
+        "width" : 142
+      },
+      "token" : "native.footnote"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 53,
+        "width" : 268
+      },
+      "token" : "native.footnote"
+    },
+    {
+      "category" : "large",
+      "size" : {
+        "height" : 19.5,
+        "width" : 104
+      },
+      "token" : "native.callout"
+    },
+    {
+      "category" : "xxxLarge",
+      "size" : {
+        "height" : 26.5,
+        "width" : 136
+      },
+      "token" : "native.callout"
+    },
+    {
+      "category" : "accessibility1",
+      "size" : {
+        "height" : 31.5,
+        "width" : 160.5
+      },
+      "token" : "native.callout"
+    },
+    {
+      "category" : "accessibility5",
+      "size" : {
+        "height" : 61,
+        "width" : 309.5
+      },
+      "token" : "native.callout"
+    }
+  ],
+  "os" : "26.5",
+  "scope" : "Isolated production typography\/button\/dialog measurement, not full app or VoiceOver QA"
+}
