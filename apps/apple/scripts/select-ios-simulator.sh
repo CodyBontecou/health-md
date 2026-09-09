@@ -1,33 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-available_devices=$(xcrun simctl list devices available iOS)
+script_dir=$(cd "$(dirname "$0")" && pwd)
+sdk_version=$(xcrun --sdk iphonesimulator --show-sdk-version)
 
-device_line=$(
-    printf '%s\n' "$available_devices" \
-        | grep -E "iPhone (17 Pro|17|16 Pro|16|15 Pro|15)" \
-        | head -n 1 \
-        || true
-)
-
-if [[ -z "$device_line" ]]; then
-    device_line=$(
-        printf '%s\n' "$available_devices" \
-            | grep -E "iPhone" \
-            | head -n 1 \
-            || true
-    )
-fi
-
-if [[ -z "$device_line" ]]; then
-    echo "error: no available iOS Simulator device found" >&2
-    exit 1
-fi
-
-device_id=$(printf '%s\n' "$device_line" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
-if [[ -z "$device_id" ]]; then
-    echo "error: could not parse iOS Simulator identifier from: $device_line" >&2
-    exit 1
-fi
-
-printf 'platform=iOS Simulator,id=%s\n' "$device_id"
+# GitHub's macOS images retain several simulator runtimes. Selecting the first
+# listed device can pair a current Xcode with an old runtime and trigger
+# framework crashes. Choose the newest runtime supported by the active SDK and
+# exclude newer beta runtimes that may also be installed on developer hosts.
+xcrun simctl list devices available -j \
+    | python3 "$script_dir/select_ios_simulator.py" --sdk-version "$sdk_version"

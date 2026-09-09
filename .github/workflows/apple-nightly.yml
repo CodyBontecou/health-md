@@ -34,44 +34,13 @@ jobs:
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
-      - name: Select iOS Simulator
+      - name: Select newest compatible iOS Simulator
         id: simulator
         shell: bash
         run: |
           set -euo pipefail
-
-          IOS_DEVICE_LINE=$(
-            xcrun simctl list devices available iOS \
-              | grep -E "iPhone (17 Pro|17|16 Pro|16|15 Pro|15)" \
-              | head -n 1 \
-              || true
-          )
-
-          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
-            IOS_DEVICE_LINE=$(
-              xcrun simctl list devices available iOS \
-                | grep -E "iPhone" \
-                | head -n 1 \
-                || true
-            )
-          fi
-
-          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
-            echo "::error::No available iOS Simulator device found"
-            exit 1
-          fi
-
-          IOS_DEVICE=$(echo "${IOS_DEVICE_LINE}" | sed -E 's/^[[:space:]]*([^()]*) .*/\1/' | xargs)
-          IOS_UDID=$(echo "${IOS_DEVICE_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
-          SIM_ARCH=$(uname -m)
-          [[ "${SIM_ARCH}" == "aarch64" ]] && SIM_ARCH="arm64"
-
-          IOS_DESTINATION="platform=iOS Simulator,name=${IOS_DEVICE},arch=${SIM_ARCH}"
-          if [[ -n "${IOS_UDID}" ]]; then
-            IOS_DESTINATION="platform=iOS Simulator,id=${IOS_UDID},arch=${SIM_ARCH}"
-          fi
-
-          echo "Using simulator: ${IOS_DEVICE} (${IOS_UDID:-no-udid}), arch=${SIM_ARCH}"
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
 
       - name: Run iOS unit tests

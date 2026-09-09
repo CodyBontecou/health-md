@@ -484,7 +484,6 @@ final class CIQualityGateTests: XCTestCase {
             "HealthMd/iOS/Components/StatusIndicator.swift": 3,
             "HealthMd/iOS/Components/SectionCard.swift": 6,
             "HealthMd/iOS/Components/ExportModal.swift": 12,
-            "HealthMd/iOS/Views/OnboardingView.swift": 12,
             "HealthMd/iPad/iPadSidebar.swift": 3,
         ]
 
@@ -497,6 +496,20 @@ final class CIQualityGateTests: XCTestCase {
                 "\(relativePath) must hide decorative icons, status dots, and glow layers from VoiceOver"
             )
         }
+
+        // Onboarding's production surface is split between the page and its
+        // extracted accessibility components; preserve the original combined guard.
+        let onboardingHiddenCount = try [
+            "HealthMd/iOS/Views/OnboardingView.swift",
+            "HealthMd/iOS/Components/OnboardingA11yComponents.swift",
+        ].reduce(into: 0) { count, relativePath in
+            count += try source(relativePath).components(separatedBy: ".accessibilityHidden(true)").count - 1
+        }
+        XCTAssertGreaterThanOrEqual(
+            onboardingHiddenCount,
+            12,
+            "Onboarding must hide decorative icons and progress layers from VoiceOver"
+        )
     }
 
     private func source(_ relativePath: String) throws -> String {

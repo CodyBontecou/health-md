@@ -246,7 +246,10 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
 
         // Schedule editing never opens the cadence sheet.
         let editSchedule = app.buttons["Edit Schedule…"]
-        XCTAssertTrue(waitHittable(editSchedule))
+        XCTAssertTrue(
+            scrollUntilHittable(editSchedule, in: app),
+            "The Edit Schedule action should be reachable in the scrollable profile detail"
+        )
         editSchedule.tap()
         XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.switches["Enabled"].waitForExistence(timeout: 1))
