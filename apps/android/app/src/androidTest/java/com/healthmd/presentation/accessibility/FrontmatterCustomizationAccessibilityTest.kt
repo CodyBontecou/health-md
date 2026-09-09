@@ -351,7 +351,7 @@ class FrontmatterCustomizationAccessibilityTest(display: AccessibilityDisplayCas
     }
 
     private fun show(initial: FrontmatterConfiguration): Fixture = Fixture(initial).also { fixture ->
-        setContent {
+        setContent(suppressSoftwareKeyboard = true) {
             FrontmatterCustomizationScreen(
                 configuration = fixture.state.value,
                 onConfigurationChanged = { fixture.updates += it; fixture.state.value = it },

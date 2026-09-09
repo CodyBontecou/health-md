@@ -266,7 +266,7 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
 
     private fun render(initial: MetricSelectionState = MetricSelectionState(), acceptChanges: Boolean = true): SelectionFixture {
         val fixture = SelectionFixture(initial)
-        setContent {
+        setContent(suppressSoftwareKeyboard = true) {
             MetricSelectionScreen(
                 metricSelection = fixture.selection.value,
                 onSelectionChanged = {

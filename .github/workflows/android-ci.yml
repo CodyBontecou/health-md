@@ -215,7 +215,10 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # The complete accessibility matrix now contributes 402 of 440 device tests before
+    # the shared-core, Play-flavor, and direct CLI checks. Preserve enough time to finish
+    # the full gate on a cold hosted runner rather than cancelling a passing tail.
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: apps/android

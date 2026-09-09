@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -33,6 +35,7 @@ import com.healthmd.presentation.theme.HealthMdTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.awaitCancellation
 import org.junit.Before
 import org.junit.Rule
 import java.io.File
@@ -92,8 +95,26 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
         return if (arguments.isEmpty()) resources.getString(id) else resources.getString(id, *arguments)
     }
 
-    protected fun setContent(content: @Composable () -> Unit) {
-        compose.setContent { TestViewport(content) }
+    @OptIn(ExperimentalComposeUiApi::class)
+    protected fun setContent(
+        suppressSoftwareKeyboard: Boolean = false,
+        content: @Composable () -> Unit,
+    ) {
+        compose.setContent {
+            TestViewport {
+                if (suppressSoftwareKeyboard) {
+                    // The fitted dp matrix is intentionally independent of the physical
+                    // emulator window. A real IME belongs to that outer owner and otherwise
+                    // double-shrinks synthetic landscape viewports to zero height.
+                    InterceptPlatformTextInput(
+                        interceptor = { _, _ -> awaitCancellation() },
+                        content = content,
+                    )
+                } else {
+                    content()
+                }
+            }
+        }
         waitForViewport()
     }
 
