@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isPreparedForSharedSetupRelease() {
+    fun appVersion_isPreparedForDependableSchedulingRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 38"))
-        assertTrue(buildGradle.contains("versionName = \"1.9.0\""))
+        assertTrue(buildGradle.contains("versionCode = 39"))
+        assertTrue(buildGradle.contains("versionName = \"1.9.1\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeSharedSetupRelease() {
+    fun playStoreReleaseNotes_describeDependableSchedulingRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -41,12 +41,12 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.9.0"))
+            assertTrue(releaseNotes.contains("v1.9.1"))
             assertTrue(releaseNotes.contains("Share My Setup"))
-            assertTrue(releaseNotes.contains("portable file"))
-            assertTrue(releaseNotes.contains("Add or Replace"))
             assertTrue(releaseNotes.contains("no health data or credentials"))
-            assertTrue(releaseNotes.contains("Retry"))
+            assertTrue(releaseNotes.contains("full lookback"))
+            assertTrue(releaseNotes.contains("Today Refresh"))
+            assertTrue(releaseNotes.contains("TalkBack"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }

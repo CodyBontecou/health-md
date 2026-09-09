@@ -1,5 +1,5 @@
-v1.9.0 — Share My Setup
+v1.9.1 — Safer setup sharing and dependable exports
 
-• Package your export profiles into one small portable file under Settings → Share My Setup and review or apply them on another device as a reversible Add or Replace; files carry no health data or credentials.
-• Imported profiles stay blocked until you rebind their destination, and older v1 setup files are no longer accepted.
-• History detail now places Retry directly under the title, matching iPhone.
+• Move export profiles between devices with Share My Setup. Review changes before applying them; shared files contain no health data or credentials.
+• Scheduled profiles now refresh the full lookback chosen on every run, with optional Today Refresh every 3, 6, or 12 hours.
+• Improved TalkBack, keyboard focus, touch targets, scrolling, and large-text layouts across setup, export, metrics, schedules, and connection screens.
