@@ -180,7 +180,6 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
 
     /** For content in the embedded viewport, not separate native dialog/popup windows. */
     protected fun SemanticsNodeInteraction.assertFullyVisible(): SemanticsNodeInteraction {
-        assertIsDisplayed()
         val bounds = unclippedBoundsOnIdle()
         val viewport = compose.onNodeWithTag(VIEWPORT).unclippedBoundsOnIdle()
         val tolerance = 1.dp

@@ -289,8 +289,25 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     private fun node(tag: String, unmerged: Boolean = false) = compose.onNodeWithTag(tag, useUnmergedTree = unmerged)
 
     private fun scrollTo(tag: String): SemanticsNodeInteraction {
-        node(MetricSelectionTags.LIST).performScrollToNode(hasTestTag(tag))
-        return node(tag).performScrollTo().assertFullyVisible().assertInsideList()
+        val itemKey = when (tag) {
+            MetricSelectionTags.COUNT, MetricSelectionTags.PROGRESS -> MetricSelectionTags.HEADER
+            MetricSelectionTags.SEARCH_LABEL -> MetricSelectionTags.SEARCH_FIELD
+            MetricSelectionTags.SELECT_ALL, MetricSelectionTags.DESELECT_ALL -> MetricSelectionTags.BULK_ACTIONS
+            else -> tag
+        }
+        val list = node(MetricSelectionTags.LIST)
+        val listNode = list.fetchSemanticsNode("Metric list is unavailable.")
+        compose.runOnIdle {
+            val index = listNode.config[SemanticsProperties.IndexForKey](itemKey)
+            require(index >= 0) { "No metric-list item has key $itemKey" }
+            check(listNode.config[SemanticsActions.ScrollToIndex].action?.invoke(index) == true) {
+                "Metric list rejected scroll to $itemKey at index $index"
+            }
+        }
+        compose.waitForIdle()
+        // performScrollToNode synchronously measures LazyColumn content on the instrumentation
+        // thread and can race AndroidPrefetchScheduler's main-thread premeasure on slow runners.
+        return node(tag).assertFullyVisible().assertInsideList()
     }
 
     private fun SemanticsNodeInteraction.assertInsideList(): SemanticsNodeInteraction {
