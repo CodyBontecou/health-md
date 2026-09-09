@@ -222,8 +222,10 @@ class A11yUITestCase: XCTestCase {
 
     func tapEdge(_ element: XCUIElement, in app: XCUIApplication) {
         reveal(element, in: app)
-        XCTAssertGreaterThanOrEqual(element.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(element.frame.height, 44)
+        // XCUI can report an exact 44pt pixel-aligned frame as
+        // 43.99999999999997 after coordinate conversion.
+        XCTAssertGreaterThanOrEqual(element.frame.width + 0.001, 44)
+        XCTAssertGreaterThanOrEqual(element.frame.height + 0.001, 44)
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
             .withOffset(CGVector(dx: 0, dy: 3)).tap()
     }
@@ -231,8 +233,8 @@ class A11yUITestCase: XCTestCase {
     func tapDisabledEdge(_ element: XCUIElement, in app: XCUIApplication) {
         reveal(element, in: app, requiresHittable: false)
         XCTAssertFalse(element.isEnabled)
-        XCTAssertGreaterThanOrEqual(element.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(element.frame.height, 44)
+        XCTAssertGreaterThanOrEqual(element.frame.width + 0.001, 44)
+        XCTAssertGreaterThanOrEqual(element.frame.height + 0.001, 44)
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
             .withOffset(CGVector(dx: 0, dy: 3)).tap()
     }

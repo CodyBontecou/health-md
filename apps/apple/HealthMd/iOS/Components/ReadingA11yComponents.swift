@@ -157,14 +157,20 @@ enum SettingsStatusTone {
 }
 
 struct SettingsStatusPill: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let text: String
     let tone: SettingsStatusTone
+
+    private var usesExpandedLayout: Bool {
+        dynamicTypeSize >= .xxxLarge
+    }
 
     var body: some View {
         Text(text)
             .font(.caption.weight(.semibold))
             .foregroundStyle(tone.foreground)
-            .fixedSize(horizontal: false, vertical: true)
+            .lineLimit(usesExpandedLayout ? nil : 1)
+            .fixedSize(horizontal: false, vertical: usesExpandedLayout)
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
             .background(Capsule().fill(tone.background))
@@ -172,9 +178,11 @@ struct SettingsStatusPill: View {
     }
 }
 
-/// Both essential text blocks get the full inner row width, independent of the
-/// decorative/status rail. This is also the production label used by native tests.
+/// Preserve the compact Settings rail at standard text sizes. At XXXL and
+/// accessibility sizes, essential copy receives the full row width and the
+/// decorative/status rail moves below it instead of compressing the text.
 struct ReadingSettingsRowLabel: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let icon: String
     let title: String
     let subtitle: String
@@ -182,7 +190,60 @@ struct ReadingSettingsRowLabel: View {
     let statusTone: SettingsStatusTone
     var identifier: String? = nil
 
+    private var usesExpandedLayout: Bool {
+        dynamicTypeSize >= .xxxLarge
+    }
+
     var body: some View {
+        Group {
+            if usesExpandedLayout {
+                expandedLayout
+            } else {
+                compactLayout
+            }
+        }
+        .multilineTextAlignment(.leading)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 14)
+        .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+
+    private var compactLayout: some View {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: icon)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Color.primary)
+                .frame(width: 36, height: 36)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(LocalizedStringKey(title))
+                    .font(Typography.headline())
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(LocalizedStringKey(subtitle))
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .lineLimit(2)
+                    .modifier(ReadingRowIdentifier(identifier: identifier.map { "\($0).description" }))
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: Spacing.sm)
+
+            if let status {
+                SettingsStatusPill(text: status, tone: statusTone)
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.textMuted)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var expandedLayout: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             Text(LocalizedStringKey(title))
                 .font(Typography.headline())
@@ -210,11 +271,6 @@ struct ReadingSettingsRowLabel: View {
                     .accessibilityHidden(true)
             }
         }
-        .multilineTextAlignment(.leading)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 14)
-        .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        .contentShape(Rectangle())
     }
 }
 
@@ -261,6 +317,7 @@ struct SettingsRow: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(isPressed ? Color.bgSecondary : Color.clear)
                 )
+                .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
         }
         .buttonStyle(.plain)
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
@@ -293,12 +350,52 @@ private struct ReadingRowIdentifier: ViewModifier {
 }
 
 /// No guard lives here: Settings supplies the real manager's setEnabled binding.
-/// The explanation is separate from the one native, named switch action.
+/// Expanded text sizes move the explanation below the one native switch action.
 struct ReadingProtectionRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Binding var isEnabled: Bool
     let accessibilityIdentifier: String
 
+    private var usesExpandedLayout: Bool {
+        dynamicTypeSize >= .xxxLarge
+    }
+
     var body: some View {
+        Group {
+            if usesExpandedLayout {
+                expandedControl
+            } else {
+                compactControl
+            }
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 14)
+    }
+
+    private var compactControl: some View {
+        Toggle(isOn: $isEnabled) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Lock Configuration Changes")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.textPrimary)
+                Text(isEnabled
+                     ? "Configuration changes are blocked on this device."
+                     : "Configuration can be edited normally.")
+                    .font(.footnote)
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("reading.protection.description")
+            }
+        }
+        .toggleStyle(A11ySwitchToggleStyle())
+        .tint(Color.accent)
+        .accessibilityLabel("Prevent Accidental Changes")
+        .accessibilityValue(isEnabled ? "On" : "Off")
+        .accessibilityHint("Double tap to \(isEnabled ? "allow" : "prevent") configuration changes")
+        .accessibilityIdentifier(accessibilityIdentifier)
+    }
+
+    private var expandedControl: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
             Toggle(isOn: $isEnabled) {
                 Text("Lock Configuration Changes")
@@ -323,8 +420,6 @@ struct ReadingProtectionRow: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("reading.protection.description")
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 14)
     }
 }
 

@@ -81,25 +81,43 @@ final class ReadingA11yTests: XCTestCase {
         }
     }
 
-    func testSettingsDescriptionKeepsFullCopyAndNaturalHeight() {
+    func testSettingsDescriptionUsesCompactDefaultAndFullExpandedCopy() {
         for display in displays {
             let label = ReadingSettingsRowLabel(icon: "hand.raised.fill", title: "Privacy Policy", subtitle: descriptionText, status: "Configured", statusTone: .success)
             let bounds = measured(label, display: display)
-            let required = textHeight("Privacy Policy", font: Typography.headline(), display: display, width: display.width - 32)
+            let fullCopyHeight = textHeight("Privacy Policy", font: Typography.headline(), display: display, width: display.width - 32)
                 + textHeight(descriptionText, font: Typography.caption(), display: display, width: display.width - 32) + 28
-            XCTAssertGreaterThanOrEqual(bounds.height, required - 1, "All privacy copy must contribute to measured height")
+            if display.size >= .xxxLarge {
+                XCTAssertGreaterThanOrEqual(bounds.height, fullCopyHeight - 1, "Expanded Settings copy must contribute its full natural height")
+            } else {
+                XCTAssertLessThan(bounds.height, fullCopyHeight - 1, "Default Settings rows must retain the compact two-line rail")
+                XCTAssertGreaterThanOrEqual(bounds.height, 44)
+            }
             XCTAssertLessThanOrEqual(bounds.width, display.width + 1)
         }
     }
 
-    func testProtectionDescriptionAndSwitchGrowInBothStates() {
+    func testProtectionDescriptionAndSwitchUseAdaptiveLayoutInBothStates() {
         for display in displays {
             for enabled in [false, true] {
                 let row = ReadingProtectionRow(isEnabled: .constant(enabled), accessibilityIdentifier: "reading.test.protection")
                 let bounds = measured(row, display: display)
                 let text = enabled ? "Configuration changes are blocked on this device." : "Configuration can be edited normally."
-                let required = textHeight(text, font: .footnote, display: display, width: display.width - 32) + 44 + 28 + Spacing.s2
-                XCTAssertGreaterThanOrEqual(bounds.height, required - 1)
+                let expandedHeight = textHeight(text, font: .footnote, display: display, width: display.width - 32) + 44 + 28 + Spacing.s2
+                if display.size >= .xxxLarge {
+                    XCTAssertGreaterThanOrEqual(bounds.height, expandedHeight - 1)
+                } else {
+                    let expandedDisplay = Display(
+                        size: .xxxLarge,
+                        width: display.width,
+                        height: display.height,
+                        locale: display.locale,
+                        dark: display.dark
+                    )
+                    let expandedBounds = measured(row, display: expandedDisplay)
+                    XCTAssertGreaterThanOrEqual(bounds.height, 44 + 28)
+                    XCTAssertLessThan(bounds.height, expandedBounds.height)
+                }
                 XCTAssertLessThanOrEqual(bounds.width, display.width + 1)
             }
         }

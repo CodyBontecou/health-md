@@ -160,6 +160,18 @@ final class SchedulingA11yUITests: A11yUITestCase {
         let options = [("today", "Today"), ("yesterday", "Yesterday"), ("allTime", "All Time"), ("custom", "Custom")]
         for display in displays {
             let app = open("Dates", display: display)
+            if display.size == "large" {
+                let today = app.buttons["scheduling.date.today"]
+                let yesterday = app.buttons["scheduling.date.yesterday"]
+                let allTime = app.buttons["scheduling.date.allTime"]
+                let custom = app.buttons["scheduling.date.custom"]
+                XCTAssertEqual(today.frame.width, yesterday.frame.width, accuracy: 1)
+                XCTAssertEqual(allTime.frame.width, custom.frame.width, accuracy: 1)
+                XCTAssertEqual(today.frame.minX, allTime.frame.minX, accuracy: 1)
+                XCTAssertEqual(yesterday.frame.minX, custom.frame.minX, accuracy: 1)
+                XCTAssertEqual(today.frame.midY, yesterday.frame.midY, accuracy: 1)
+                XCTAssertEqual(allTime.frame.midY, custom.frame.midY, accuracy: 1)
+            }
             for (index, option) in options.enumerated() {
                 let button = app.buttons["scheduling.date.\(option.0)"]
                 XCTAssertEqual(button.label, option.1)
@@ -178,8 +190,8 @@ final class SchedulingA11yUITests: A11yUITestCase {
         }
     }
 
-    func testNativeDateAnchorsAndFullReadingValuesRemainReachable() {
-        let app = open("Dates", display: displays[0])
+    func testExpandedNativeDateAnchorsAndFullReadingValuesRemainReachable() {
+        let app = open("Dates", display: displays[2])
         tapEdge(app.buttons["scheduling.date.custom"], in: app)
         for id in ["scheduling.date.start", "scheduling.date.end"] {
             let date = app.datePickers[id]
@@ -217,8 +229,8 @@ final class SchedulingA11yUITests: A11yUITestCase {
         // need screen integration, not a fake guard.
     }
 
-    func testNativeDateChangesClampAndUseTheActualProtectionBinding() throws {
-        let app = open("Guarded Dates", display: displays[0])
+    func testExpandedNativeDateChangesClampAndUseTheActualProtectionBinding() throws {
+        let app = open("Guarded Dates", display: displays[2])
         try guardedDateWheel("start", value: "1", in: app).adjust(toPickerWheelValue: "2")
         assertState("1748822400/1/1", id: "scheduling.guarded.start.state", in: app)
         assertState("1749945600/0/0", id: "scheduling.guarded.end.state", in: app)

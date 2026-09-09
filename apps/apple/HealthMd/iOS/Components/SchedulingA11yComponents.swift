@@ -406,31 +406,75 @@ struct SchedulingDatePreset<Value: Hashable>: Identifiable {
 }
 
 struct SchedulingDatePresets<Value: Hashable>: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let options: [SchedulingDatePreset<Value>]
     let selection: Value
     let onSelect: (Value) -> Void
 
+    private var usesExpandedLayout: Bool {
+        dynamicTypeSize >= .xxxLarge
+    }
+
     var body: some View {
-        // Each pair measures its complete labels at the current locale/size.
-        // Width-only constraints trigger exactly the same one-column fallback.
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            ForEach(Array(stride(from: 0, to: options.count, by: 2)), id: \.self) { index in
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: Spacing.s2) {
-                        presetButton(options[index])
-                        if index + 1 < options.count { presetButton(options[index + 1]) }
+        Group {
+            if usesExpandedLayout {
+                // Each pair measures its complete labels at the current locale/size.
+                // Width-only constraints trigger exactly the same one-column fallback.
+                VStack(alignment: .leading, spacing: Spacing.s2) {
+                    ForEach(Array(stride(from: 0, to: options.count, by: 2)), id: \.self) { index in
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: Spacing.s2) {
+                                expandedPresetButton(options[index])
+                                if index + 1 < options.count { expandedPresetButton(options[index + 1]) }
+                            }
+                            .fixedSize(horizontal: true, vertical: false)
+                            VStack(spacing: Spacing.s2) {
+                                expandedPresetButton(options[index])
+                                if index + 1 < options.count { expandedPresetButton(options[index + 1]) }
+                            }
+                        }
                     }
-                    .fixedSize(horizontal: true, vertical: false)
-                    VStack(spacing: Spacing.s2) {
-                        presetButton(options[index])
-                        if index + 1 < options.count { presetButton(options[index + 1]) }
+                }
+            } else {
+                LazyVGrid(
+                    columns: [GridItem(.flexible()), GridItem(.flexible())],
+                    spacing: 0
+                ) {
+                    ForEach(options) { option in
+                        compactPresetButton(option)
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func presetButton(_ option: SchedulingDatePreset<Value>) -> some View {
+    private func compactPresetButton(_ option: SchedulingDatePreset<Value>) -> some View {
+        let selected = selection == option.value
+        return Button { onSelect(option.value) } label: {
+            HStack(spacing: Spacing.s1) {
+                if selected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(Typography.headline())
+                        .accessibilityHidden(true)
+                }
+                Text(LocalizedStringKey(option.title))
+                    .font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(selected ? Color.accent : Color.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, Spacing.s2)
+            .padding(.vertical, Spacing.s2)
+            .background(selected ? Color.accent.opacity(0.18) : Color.bgSecondary, in: Capsule())
+            .overlay(Capsule().strokeBorder(selected ? Color.accent.opacity(0.45) : Color.borderSubtle, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+        .modifier(SchedulingDatePresetAccessibility(option: option, selected: selected))
+    }
+
+    private func expandedPresetButton(_ option: SchedulingDatePreset<Value>) -> some View {
         let selected = selection == option.value
         return Button { onSelect(option.value) } label: {
             HStack(spacing: Spacing.s1) {
@@ -451,47 +495,72 @@ struct SchedulingDatePresets<Value: Hashable>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier(option.identifier)
-        .accessibilityLabel(LocalizedStringKey(option.title))
-        .accessibilityValue(selected ? "Selected" : "Not selected")
-        .accessibilityHint(LocalizedStringKey(option.hint))
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .modifier(SchedulingDatePresetAccessibility(option: option, selected: selected))
     }
 }
 
-/// Full reading labels above a native date/time wheel control. The compact
-/// iOS opener has a 34.5pt target that outer padding does not make tappable.
-/// Wheels retain native editing and the caller's exact binding/date bounds.
+private struct SchedulingDatePresetAccessibility<Value: Hashable>: ViewModifier {
+    let option: SchedulingDatePreset<Value>
+    let selected: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .accessibilityIdentifier(option.identifier)
+            .accessibilityLabel(LocalizedStringKey(option.title))
+            .accessibilityValue(selected ? "Selected" : "Not selected")
+            .accessibilityHint(LocalizedStringKey(option.hint))
+            .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// Standard sizes retain the native compact date/time presentation. At XXXL
+/// and accessibility sizes, full readback labels sit above native wheels so
+/// every value can grow while preserving the caller's binding and bounds.
 struct SchedulingLabeledControl<Control: View>: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let title: String
     var value: Text? = nil
     @ViewBuilder var control: () -> Control
 
+    private var usesExpandedLayout: Bool {
+        dynamicTypeSize >= .xxxLarge
+    }
+
+    @ViewBuilder
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            Text(LocalizedStringKey(title))
-                .font(Typography.body())
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let value {
-                value
-                    .font(Typography.bodyEmphasis())
+        if usesExpandedLayout {
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                Text(LocalizedStringKey(title))
+                    .font(Typography.body())
                     .foregroundStyle(Color.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
+                if let value {
+                    value
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                // Native date wheels have a non-compressible intrinsic width.
+                // Horizontal scrolling keeps every column reachable in narrow
+                // windows; the complete current value above remains wrapping copy.
+                ScrollView(.horizontal) {
+                    control()
+                        .datePickerStyle(.wheel)
+                        .labelsHidden()
+                        .frame(minHeight: 44, alignment: .leading)
+                }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                .fixedSize(horizontal: false, vertical: true)
             }
-            // Native date wheels have a non-compressible intrinsic width.
-            // Horizontal scrolling keeps every column reachable in narrow
-            // windows; the complete current value above remains wrapping copy.
-            ScrollView(.horizontal) {
-                control()
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .frame(minHeight: 44, alignment: .leading)
-            }
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            // Keep the native compact presentation used by the standard UI.
+            // The containing row is still allocated a 44pt interaction height.
+            control()
+                .datePickerStyle(.compact)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

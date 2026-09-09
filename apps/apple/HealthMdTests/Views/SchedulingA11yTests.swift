@@ -65,6 +65,35 @@ final class SchedulingA11yTests: XCTestCase {
         }
     }
 
+    func testDefaultDateControlsKeepTheirCompactPresentation() {
+        let presets = SchedulingDatePresets(options: [
+            SchedulingDatePreset(value: 0, title: "Today", hint: "Today", identifier: "test.today"),
+            SchedulingDatePreset(value: 1, title: "Yesterday", hint: "Yesterday", identifier: "test.yesterday"),
+            SchedulingDatePreset(value: 2, title: "All Time", hint: "All available health data", identifier: "test.allTime"),
+            SchedulingDatePreset(value: 3, title: "Custom", hint: "Custom export range", identifier: "test.custom")
+        ], selection: 0, onSelect: { _ in })
+        let date = SchedulingLabeledControl(title: "Start Date", value: Text(Date(timeIntervalSince1970: 0), style: .date)) {
+            DatePicker("Start Date", selection: .constant(Date(timeIntervalSince1970: 0)), displayedComponents: .date)
+        }
+
+        let compactPresets = A11yHosting(presets.environment(\.dynamicTypeSize, .large))
+        let compactDate = A11yHosting(date.environment(\.dynamicTypeSize, .large))
+        let expandedDate = A11yHosting(date.environment(\.dynamicTypeSize, .xxxLarge))
+        defer {
+            compactPresets.close()
+            compactDate.close()
+            expandedDate.close()
+        }
+
+        let width: CGFloat = 320
+        let presetBounds = compactPresets.measured(proposal: CGSize(width: width, height: 2_000))
+        let compactDateBounds = compactDate.measured(proposal: CGSize(width: width, height: 2_000))
+        let expandedDateBounds = expandedDate.measured(proposal: CGSize(width: width, height: 2_000))
+        XCTAssertEqual(presetBounds.width, width, accuracy: 1, "Default date preset grid must retain the compact row width")
+        XCTAssertLessThan(compactDateBounds.height, 80, "Default dates must retain the native compact presentation")
+        XCTAssertGreaterThan(expandedDateBounds.height, compactDateBounds.height * 3, "XXXL dates must retain the complete wheel/readback layout")
+    }
+
     func testProductionActionsHaveMinimumBounds() {
         for size in sizes {
             for component in [

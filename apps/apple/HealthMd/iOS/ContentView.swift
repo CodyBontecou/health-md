@@ -2564,6 +2564,7 @@ struct SettingsTabView: View {
     @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
         @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @Binding var showExportProfiles: Bool
@@ -2694,13 +2695,26 @@ struct SettingsTabView: View {
             title: "Settings",
             subtitle: "Manage access, storage, and support for Health.md."
         ) {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
-                SettingsStatusPill(text: vaultManager.vaultAvailabilityText, tone: vaultManager.vaultURL == nil ? .warning : .success)
+            Group {
+                if dynamicTypeSize >= .xxxLarge {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        settingsHeaderStatusPills
+                    }
+                } else {
+                    HStack(spacing: Spacing.sm) {
+                        settingsHeaderStatusPills
+                    }
+                }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Purchase status: \(purchaseManager.isUnlocked ? "full access" : "free plan"). Vault status: \(vaultStatusLabel.lowercased()).")
         }
+    }
+
+    @ViewBuilder
+    private var settingsHeaderStatusPills: some View {
+        SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
+        SettingsStatusPill(text: vaultManager.vaultAvailabilityText, tone: vaultManager.vaultURL == nil ? .warning : .success)
     }
 
     private var configurationProtectionSection: some View {
@@ -2963,10 +2977,13 @@ private struct SettingsSectionCard<Content: View>: View {
 }
 
 private struct SettingsRowDivider: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         Divider()
             .overlay(Color.borderSubtle)
-            .padding(.horizontal, Spacing.md)
+            .padding(.leading, dynamicTypeSize >= .xxxLarge ? Spacing.md : Spacing.s16)
+            .padding(.trailing, dynamicTypeSize >= .xxxLarge ? Spacing.md : 0)
     }
 }
 

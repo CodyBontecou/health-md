@@ -82,17 +82,25 @@ final class ReadingA11yUITests: A11yUITestCase {
         }
     }
 
-    func testSettingsDescriptionUsesFullInnerWidthAcrossDisplayMatrix() {
+    func testSettingsDescriptionUsesCompactDefaultAndFullExpandedWidthAcrossDisplayMatrix() {
         for display in displays {
             let app = app(display)
             app.tabBars.buttons["Settings"].tap()
             let description = app.staticTexts["reading.settings.probe.description"]
             captureReadingSlices(description, name: "settings-copy-\(display.size)-\(display.locale)-\(display.theme)-\(display.width)x\(display.height)", in: app)
             XCTAssertTrue(description.label.hasSuffix("It is not used for advertising or cross-app tracking."))
-            assertFullWidthReading(description, reference: app.staticTexts["reading.settings.description-reference"], in: app)
+            let descriptionReference = app.staticTexts["reading.settings.description-reference"]
             let protectionDescription = app.staticTexts["reading.protection.description"]
+            let protectionReference = app.staticTexts["reading.protection.description-reference"]
+            if display.size == "large" {
+                XCTAssertLessThan(description.frame.width, descriptionReference.frame.width)
+                XCTAssertLessThan(description.frame.height, descriptionReference.frame.height)
+                XCTAssertEqual(protectionDescription.label, "Configuration can be edited normally.")
+            } else {
+                assertFullWidthReading(description, reference: descriptionReference, in: app)
+                assertFullWidthReading(protectionDescription, reference: protectionReference, in: app)
+            }
             captureReadingSlices(protectionDescription, name: "protection-copy-\(display.size)-\(display.locale)-\(display.theme)", in: app)
-            assertFullWidthReading(protectionDescription, reference: app.staticTexts["reading.protection.description-reference"], in: app)
             XCTAssertEqual(app.switches.matching(identifier: "configurationProtection.toggle").count, 1)
             app.terminate()
         }
