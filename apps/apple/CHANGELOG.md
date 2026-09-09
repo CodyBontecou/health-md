@@ -4,6 +4,15 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.1] - 2026-09-09
+
+### Added
+- Export-profile schedules can optionally refresh the current day's in-progress export every 3, 6, or 12 hours while keeping completed-day runs separate.
+
+### Changed
+- Improved VoiceOver semantics, keyboard focus, touch targets, scrolling, and large-text reflow throughout onboarding, export setup, metric selection, schedules, formatting, and connection screens.
+- Export history presents generated-file totals, retries, and informational workout-plan notes more clearly.
+
 ### Fixed
 - Scheduled export profiles now re-export their full configured lookback on every completed-day occurrence, including API Endpoint targets. A daily 14-day lookback no longer shrinks to only the newest day after a successful run. Today Refresh remains separate; duplicate wake-ups do not repeat successful occurrences, and retries keep only unresolved dates even after schedule edits.
 

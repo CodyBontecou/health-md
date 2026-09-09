@@ -27,6 +27,36 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.1",
+            items: [
+                .list(
+                    title: "Safer setup sharing and dependable exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "square.and.arrow.up.on.square.fill",
+                            title: "Share My Setup",
+                            description: "Move export profiles between devices in one small file, review changes before applying them, and undo once. Shared files contain no health data or credentials."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Schedules keep your full lookback",
+                            description: "Scheduled profiles now refresh the full lookback you chose on every run. Optional Today Refresh can update today’s in-progress export every 3, 6, or 12 hours."
+                        ),
+                        .init(
+                            symbolSystemName: "list.bullet.rectangle.fill",
+                            title: "Clearer Export History",
+                            description: "Generated files and outcomes are easier to understand, with retries and informational notes easier to reach."
+                        ),
+                        .init(
+                            symbolSystemName: "accessibility",
+                            title: "More accessible throughout",
+                            description: "VoiceOver, keyboard focus, touch targets, scrolling, and large-text layouts are improved across onboarding, export setup, metrics, schedules, and connection screens."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.4.0",
             items: [
                 .list(
