@@ -66,6 +66,7 @@ import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -123,6 +124,9 @@ fun HealthMdNavigation(
             // background thread half-applies a back-stack entry that later crashes
             // activity destroy ("State must be at least CREATED to move to DESTROYED").
             withContext(Dispatchers.Main.immediate) {
+                // A retained import StateFlow can emit before NavHost installs its graph on a
+                // cold launch. Wait for the first graph-backed entry before navigating.
+                navController.currentBackStackEntryFlow.first()
                 // Reuse a retained Shared Setup back-stack entry instead of pushing a second
                 // ViewModel. The coordinator keeps the request until Finish/Cancel, so an inactive
                 // entry cannot consume a warm ACTION_VIEW before navigation observes it.

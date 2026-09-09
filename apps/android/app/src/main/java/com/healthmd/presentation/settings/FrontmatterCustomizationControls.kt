@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.onSizeChanged
@@ -209,6 +210,9 @@ internal fun FrontmatterCustomizationTextField(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(enabled, focused) {
+        if (!enabled && focused) focusManager.clearFocus()
+    }
     var fieldWidth by remember { mutableIntStateOf(0) }
     val style = if (identifier) GeistType.copy16.copy(fontFamily = GeistMono) else GeistType.copy16
     val measurer = rememberTextMeasurer()
@@ -244,6 +248,7 @@ internal fun FrontmatterCustomizationTextField(
                 Box(Modifier.padding(Spacing.sm), contentAlignment = Alignment.CenterStart) { innerField() }
             },
             modifier = Modifier.fillMaxWidth().heightIn(min = GeistSizes.minimumTouchTarget)
+                .focusProperties { canFocus = enabled }
                 .testTag(tag).semantics { contentDescription = description }
                 .onSizeChanged { fieldWidth = it.width }
                 .onFocusChanged { focused = it.isFocused }
