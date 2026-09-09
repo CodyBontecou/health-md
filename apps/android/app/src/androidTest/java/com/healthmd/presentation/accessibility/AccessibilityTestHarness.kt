@@ -21,10 +21,13 @@ import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -153,7 +156,7 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
         val results = mutableListOf<TextLayoutResult>()
         node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
         assertTrue("Expected measured text", results.isNotEmpty())
-        val visibleWidth = node.fetchSemanticsNode().boundsInRoot.width
+        val visibleWidth = node.readLayoutOnIdle { it.boundsInRoot.width }
         results.forEach { result ->
             assertEquals("Respect the chosen font scale", display.fontScale, result.layoutInput.density.fontScale)
             if (expectedFontSize != null) assertEquals(expectedFontSize, result.layoutInput.style.fontSize)
@@ -169,7 +172,7 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
     }
 
     protected fun SemanticsNodeInteraction.assertMinimumTouchTarget(): SemanticsNodeInteraction {
-        val bounds = getUnclippedBoundsInRoot()
+        val bounds = unclippedBoundsOnIdle()
         assertTrue("Touch target narrower than 48 dp: $bounds", bounds.right - bounds.left >= 47.dp)
         assertTrue("Touch target shorter than 48 dp: $bounds", bounds.bottom - bounds.top >= 47.dp)
         return this
@@ -178,8 +181,8 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
     /** For content in the embedded viewport, not separate native dialog/popup windows. */
     protected fun SemanticsNodeInteraction.assertFullyVisible(): SemanticsNodeInteraction {
         assertIsDisplayed()
-        val bounds = getUnclippedBoundsInRoot()
-        val viewport = compose.onNodeWithTag(VIEWPORT).getUnclippedBoundsInRoot()
+        val bounds = unclippedBoundsOnIdle()
+        val viewport = compose.onNodeWithTag(VIEWPORT).unclippedBoundsOnIdle()
         val tolerance = 1.dp
         assertTrue("Control has no width: $bounds", bounds.right > bounds.left)
         assertTrue("Control has no height: $bounds", bounds.bottom > bounds.top)
@@ -188,6 +191,31 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
         assertTrue("Control is clipped vertically: $bounds in $viewport",
             bounds.top >= viewport.top - tolerance && bounds.bottom <= viewport.bottom + tolerance)
         return this
+    }
+
+    /** Read live layout coordinates on the owner thread after Compose reaches idle. */
+    protected fun <T> SemanticsNodeInteraction.readLayoutOnIdle(
+        block: (SemanticsNode) -> T,
+    ): T {
+        val semanticsNode = fetchSemanticsNode("Failed to read layout for the node.")
+        return compose.runOnIdle { block(semanticsNode) }
+    }
+
+    protected fun SemanticsNodeInteraction.unclippedBoundsOnIdle(): DpRect = readLayoutOnIdle { node ->
+        if (!node.layoutInfo.isPlaced) {
+            DpRect(Dp.Unspecified, Dp.Unspecified, Dp.Unspecified, Dp.Unspecified)
+        } else {
+            with(node.layoutInfo.density) {
+                val position = node.positionInRoot
+                val size = node.size
+                DpRect(
+                    position.x.toDp(),
+                    position.y.toDp(),
+                    (position.x + size.width).toDp(),
+                    (position.y + size.height).toDp(),
+                )
+            }
+        }
     }
 
     /**

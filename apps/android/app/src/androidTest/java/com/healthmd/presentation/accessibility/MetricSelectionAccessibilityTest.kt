@@ -53,8 +53,8 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         val deselect = scrollTo(MetricSelectionTags.DESELECT_ALL).assertMinimumTouchTarget()
         assertButtonLabel(MetricSelectionTags.DESELECT_ALL, R.string.deselect_all)
         if (GeistAdaptiveLayout.stackActions(display.width - 32f, display.fontScale)) {
-            val selectBounds = select.getUnclippedBoundsInRoot()
-            val deselectBounds = deselect.getUnclippedBoundsInRoot()
+            val selectBounds = select.unclippedBoundsOnIdle()
+            val deselectBounds = deselect.unclippedBoundsOnIdle()
             assertEquals("Stacked actions use the same full width", selectBounds.left, deselectBounds.left)
             assertEquals(selectBounds.right, deselectBounds.right)
             assertTrue("Select All is first when stacked", selectBounds.bottom <= deselectBounds.top)
@@ -129,8 +129,8 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         unit.assertFullyVisible().assertInsideList()
         assertTextFits(name, GeistType.copy16.fontSize)
         assertTextFits(unit, GeistType.copy13.fontSize)
-        val rowBounds = row.getUnclippedBoundsInRoot()
-        val nameBounds = name.getUnclippedBoundsInRoot()
+        val rowBounds = row.unclippedBoundsOnIdle()
+        val nameBounds = name.unclippedBoundsOnIdle()
         if (GeistAdaptiveLayout.stackDetailedControls(display.width - 32f, display.fontScale)) {
             assertTrue("The reading label gets the full inner row width, not a checkbox column",
                 nameBounds.right - nameBounds.left >= rowBounds.right - rowBounds.left - 17.dp)
@@ -294,8 +294,8 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     private fun SemanticsNodeInteraction.assertInsideList(): SemanticsNodeInteraction {
-        val bounds = getUnclippedBoundsInRoot()
-        val list = node(MetricSelectionTags.LIST).getUnclippedBoundsInRoot()
+        val bounds = unclippedBoundsOnIdle()
+        val list = node(MetricSelectionTags.LIST).unclippedBoundsOnIdle()
         assertTrue("A whole target must fit in the remaining list height, not just have a tappable center: $bounds in $list",
             bounds.top >= list.top - 1.dp && bounds.bottom <= list.bottom + 1.dp)
         assertTrue("Reading content must fit the list width: $bounds in $list",
@@ -338,8 +338,8 @@ class MetricSelectionAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         count.assertTextEquals(text(R.string.metrics_enabled_category,
             selection.enabledCountForCategory(category), HealthMetrics.metricsForCategory(category).size))
         assertTextFits(count, GeistType.copy13.fontSize)
-        val nameBounds = name.getUnclippedBoundsInRoot()
-        val expansionBounds = expansion.getUnclippedBoundsInRoot()
+        val nameBounds = name.unclippedBoundsOnIdle()
+        val expansionBounds = expansion.unclippedBoundsOnIdle()
         assertTrue("Category names get the full inner width, separate from checkbox and chevron",
             nameBounds.right - nameBounds.left >= expansionBounds.right - expansionBounds.left - 17.dp)
         val tag = MetricSelectionTags.categorySelection(category)
