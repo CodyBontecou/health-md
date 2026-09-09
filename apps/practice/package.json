@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@cloudflare/workers-types": "5.20260804.1",
+    "@cloudflare/workers-types": "5.20260908.1",
     "@playwright/test": "1.62.1",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
@@ -48,6 +48,6 @@
     "typescript": "5.9.3",
     "vitest": "4.1.11",
     "vitest-axe": "0.1.0",
-    "wrangler": "4.119.0"
+    "wrangler": "4.130.0"
   }
 }
