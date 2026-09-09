@@ -281,7 +281,9 @@ class FrontmatterCustomizationAccessibilityTest(display: AccessibilityDisplayCas
         node(Tags.metric(METRIC)).assertIsOff()
         node(output).performScrollTo().assertComfortable().assertIsNotEnabled()
             .assertEditableValue(LONG_OUTPUT).performTouchInput { click() }
-        node(output).assertIsNotFocused()
+        // Compose removes focus semantics entirely when BasicTextField is disabled; absence,
+        // rather than a synthetic Focused=false property, proves it cannot retain focus.
+        node(output).assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Focused))
         expect(fixture, expected, 1)
         assertReadingText(Tags.currentValue(output), LONG_OUTPUT, GeistType.copy16.fontSize)
         compose.runOnIdle { assertEquals(null, fixture.state.value.outputKey(METRIC)) }
