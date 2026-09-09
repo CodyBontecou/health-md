@@ -1,0 +1,726 @@
+{
+  "recordedAt": "2026-09-09T06:18:07.811084+00:00",
+  "verifiedImplementationCommit": "97cb60e800148afbf106900ccee516e23f711939",
+  "scope": "Production-backed isolated native components/UI, hostless Mac components, and shipping build-for-testing only. Not full shipping-host/service/physical VoiceOver certification.",
+  "localReceiptRoot": "/tmp/health-md-ios-a11y-fleet-loop/cycle-1",
+  "localResultRoot": "apps/apple/build/ios-a11y-c1",
+  "environment": {
+    "simulator": "BD07FC16-9F6F-43A5-A42A-59949A553A20",
+    "device": "NEW owned iPhone SE (3rd generation)",
+    "iOS": "26.5 (23F77)",
+    "Xcode": "26.6 (17F113)"
+  },
+  "runs": {
+    "ios": {
+      "run": "integrated-clean-matrix-5",
+      "gate": {
+        "accepted": true,
+        "xcodeExit": 0,
+        "expectedTestCount": "103",
+        "observedTestCount": 103,
+        "staleSources": [],
+        "result": "Passed"
+      },
+      "summary": {
+        "totalTestCount": 103,
+        "passedTests": 103,
+        "failedTests": 0,
+        "skippedTests": 0,
+        "expectedFailures": 0,
+        "result": "Passed"
+      },
+      "receipts": [
+        {
+          "file": "integrated-clean-matrix-5.command.json",
+          "sha256": "49a00fbf01f1472f920da988cb450f6878af032b727fc75f81ae305ac929187e"
+        },
+        {
+          "file": "integrated-clean-matrix-5.summary.json",
+          "sha256": "ba69713a3fb65e4ec259289034144372c17684e9884e579adad47a48b3d7ecd3"
+        },
+        {
+          "file": "integrated-clean-matrix-5.gate.json",
+          "sha256": "f76000d9b286fa76c75c15e579aff8defed9c422ba6c6aca4efad4b55687923e"
+        },
+        {
+          "file": "integrated-clean-matrix-5.source-manifest.json",
+          "sha256": "214833ef1000f90f8e031080fdc49ee50f79d3e3612858bd381dd317faec0c93"
+        },
+        {
+          "file": "integrated-clean-matrix-5.tests.json",
+          "sha256": "21e4562306376942cebd45dfa515852f6046de7d7994ecbd0c4fe13eba6cec0a"
+        },
+        {
+          "file": "integrated-clean-matrix-5.case-counts.json",
+          "sha256": "ba018552026a18e8eee2e26b81bc322f541ebb466e2ac7aba409da737e960deb"
+        }
+      ],
+      "caseInventory": {
+        "accepted": true,
+        "uniquePassedCases": 103,
+        "suiteCounts": {
+          "A11yFoundationTests": 7,
+          "DialogsA11yTests": 15,
+          "FormatA11yTests": 10,
+          "OnboardingA11yTests": 8,
+          "ReadingA11yTests": 8,
+          "SchedulingA11yTests": 5,
+          "A11yFoundationUITests": 4,
+          "DialogsA11yUITests": 14,
+          "FormatA11yUITests": 8,
+          "OnboardingA11yUITests": 6,
+          "ReadingA11yUITests": 8,
+          "SchedulingA11yUITests": 10
+        }
+      }
+    },
+    "mac": {
+      "run": "integrated-clean-mac-5",
+      "gate": {
+        "accepted": true,
+        "xcodeExit": 0,
+        "expectedTestCount": "6",
+        "observedTestCount": 6,
+        "staleSources": [],
+        "result": "Passed"
+      },
+      "summary": {
+        "totalTestCount": 6,
+        "passedTests": 6,
+        "failedTests": 0,
+        "skippedTests": 0,
+        "expectedFailures": 0,
+        "result": "Passed"
+      },
+      "receipts": [
+        {
+          "file": "integrated-clean-mac-5.command.json",
+          "sha256": "d115c64ded952b9bd2b106b1654897e020ec558354dc3e48091ea788ca5cd870"
+        },
+        {
+          "file": "integrated-clean-mac-5.summary.json",
+          "sha256": "8888732bb2fdd032be929763bfc13e286d9be93b46138f4f3e759b440caa2250"
+        },
+        {
+          "file": "integrated-clean-mac-5.gate.json",
+          "sha256": "caef09a731f03786aef224f9e1bfbf50cb8d02d34621e5bb7a12c16e923571ec"
+        },
+        {
+          "file": "integrated-clean-mac-5.source-manifest.json",
+          "sha256": "214833ef1000f90f8e031080fdc49ee50f79d3e3612858bd381dd317faec0c93"
+        }
+      ]
+    },
+    "shippingBuild": {
+      "run": "integrated-clean-shipping-build-4",
+      "gate": {
+        "accepted": true,
+        "xcodeExit": 0,
+        "targetedWarningGateExit": 0,
+        "sourceCommit": "97cb60e800148afbf106900ccee516e23f711939",
+        "cleanAtEnd": true,
+        "packagedFonts": [
+          {
+            "file": "geist_regular.ttf",
+            "sha256": "85a1c6b18a6b0a06dfe9fd4f6d6a5d4979f74ec861eaef4bc7868b5492b8a117",
+            "packagedMatch": true
+          },
+          {
+            "file": "geist_medium.ttf",
+            "sha256": "3a3b36f0d0b981f4857f7f00eeef4a5ee123605575d362ab31ee7c19e3d11f2f",
+            "packagedMatch": true
+          },
+          {
+            "file": "geist_semibold.ttf",
+            "sha256": "b9f52322d6d20a7ff1e7fe1310ff12ec851aebb83d24f8b4f1d4149298f489b2",
+            "packagedMatch": true
+          },
+          {
+            "file": "geist_mono_regular.ttf",
+            "sha256": "5a0de4b3d54ab272f76a1d8c84b7fb24c67bbec6591d5300e61c7bc10094b6c8",
+            "packagedMatch": true
+          },
+          {
+            "file": "geist_mono_medium.ttf",
+            "sha256": "6fa6a795c17a11bcbef410f52a853e8503f8e25d92762d202d907c54f5c0c0fb",
+            "packagedMatch": true
+          }
+        ],
+        "scope": "Shipping iOS app/full unit-test target and Mac dependency graph compilation; NOT hosted execution"
+      },
+      "receipts": [
+        {
+          "file": "integrated-clean-shipping-build-4.gate.json",
+          "sha256": "d00c2911ac388feac6c14d3c4b52242e55b1b87d553d8af6a554406d97f626b2"
+        },
+        {
+          "file": "integrated-clean-shipping-build-4.command.json",
+          "sha256": "177fb0a0efedc02542366e6eb59c15190fd26572fea8c2b0775a37f88e5c9c5b"
+        }
+      ]
+    }
+  },
+  "sourceBase": "apps/apple",
+  "sources": [
+    {
+      "path": "HealthMd/iOS/Components/StatusIndicator.swift",
+      "sha256": "41f8117a8a30d74cec7657adfc2843495042062146d9b50d8d54d6a5ca87d4cb",
+      "mode": "prefix",
+      "startLine": 1,
+      "endLine": 300,
+      "excerptSha256": "47c4c6133841b2696df26da30d272f8602cc7a135fdb101b054f736655c69c9e"
+    },
+    {
+      "path": "HealthMd/Shared/AccessibilityIdentifiers.swift",
+      "sha256": "76bc0cbb3c60a2407f83053ef48e663797640e319896deb9f111ef62edf840b8",
+      "mode": "Status enum with namespace wrapper",
+      "startLine": 176,
+      "endLine": 178,
+      "excerptSha256": "d429c8a49ddc74c9eefe045bdb2a8ea2cb5cb41ed92dafaa314b581feae7ed6b"
+    },
+    {
+      "path": "HealthMd/Shared/AccessibilityIdentifiers.swift",
+      "sha256": "76bc0cbb3c60a2407f83053ef48e663797640e319896deb9f111ef62edf840b8",
+      "mode": "ConfigurationProtection enum with namespace wrapper",
+      "startLine": 168,
+      "endLine": 173,
+      "excerptSha256": "37fc804bd0b235ede658d89f8403180bde7d5b2e5acc9bf95c419b00717a885c"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/DesignSystem.swift",
+      "sha256": "9b32d8336048baf43fe9db28dba7a3179395cff6434913722b570e6cebc6164d",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Views/GeistDialog.swift",
+      "sha256": "c706a746d52b89f221aba1fe9ef2113b5f5c040aa2fc455e4fa4339bc1618d00",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Views/DialogsA11yComponents.swift",
+      "sha256": "d15593d733d377f9a7bcd8ae53ef284dd7687465fdf6fc0de40d7ec18795bc98",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/FormatA11yComponents.swift",
+      "sha256": "353b1a4e325b081726316a5df41281ef159df3f2a5e36ebf46d69fa061289bdf",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/ReadingA11yComponents.swift",
+      "sha256": "9de8bf2a2bd00cc037f83cfb2aa6b9b68a96be4edc33a36f8b14714216b9d193",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/SchedulingA11yComponents.swift",
+      "sha256": "13006caa42c518429ae5c3d41de45b0a6e377061aa2a159188b11add771e0ce2",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/OnboardingA11yComponents.swift",
+      "sha256": "2a9b5dc84df772cc0da082c66e6806e7d6971d8cc0e2f88a6de4081af3ee6c58",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/Scenarios/DialogsA11yScenario.swift",
+      "sha256": "20e112e7c8737742ca4ec68b116b70a6cb1c7b2c37d233194cf5a610d6b5a929",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/Scenarios/FormatA11yScenario.swift",
+      "sha256": "0682006c4fd8a7fa9b98bb8a601c08959b303599ff35e501c74f077b27c6cc5e",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/Scenarios/ReadingA11yScenario.swift",
+      "sha256": "f1a8a50f7c1cb450dd7341700fe9ad5a2b7bad1246ee8a49e3793753c21200ca",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/Scenarios/SchedulingA11yScenario.swift",
+      "sha256": "fd1a7dc5c8ff466d8464a0a6627ca708678d81d58c8c9a9d8a8d0268fe3c9a38",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/Scenarios/OnboardingA11yScenario.swift",
+      "sha256": "a858b913a165cc424f249c987288d5e7d6eccf2a4a8a00c3b544a06b67aebce9",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/DialogsA11yTests.swift",
+      "sha256": "9531a3c015a3851e3fe76f8766641116ffbb83db153a32de6cf73c91fd834caf",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/FormatA11yTests.swift",
+      "sha256": "efcee69ad4d417c66683b29598b62e1a9afa74b5e72cfc2f913d376b0578acee",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/ReadingA11yTests.swift",
+      "sha256": "6fa78c327ded420d9f081de1ea59c3fbfeb968ea9cb015dc0d35934c8fc13c6d",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/SchedulingA11yTests.swift",
+      "sha256": "c4f0c556da3a482494226a5557a450866cb92c6612a29a2a97e04bbce26d6d1b",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/OnboardingA11yTests.swift",
+      "sha256": "d2799a8754a914524269cabfb281ab8e967d87e39a25e36a5893e61777bda322",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/DialogsA11yUITests.swift",
+      "sha256": "a1cf06a74579a527f1731bfadcd7ead58e4fe302ca61836954be0dfc981ce745",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/FormatA11yUITests.swift",
+      "sha256": "dc331e0323b74f0a4e9d4a711f1c642f933e7d425077774b28d35c591c01bd70",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/ReadingA11yUITests.swift",
+      "sha256": "7c89e43e030c0e1a22dd724fe5cd71a46d86851d7db5d6ff2570aa1fe2788e8c",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/SchedulingA11yUITests.swift",
+      "sha256": "b87e555138e0c0f1a3d61dc3737c42f9591581b4d956f93a0bc43d3de84c591e",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/OnboardingA11yUITests.swift",
+      "sha256": "e65f9ad32f72e9fd8366931048a66bea0d854a20b48d19fae1d6ab097b882593",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Models/ConfigurationProtection.swift",
+      "sha256": "46cd5546d4b14898f1ebd05ecc85c95c2de4d8e75ae8d94a06e9bb6b2c469dc2",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/TestMode.swift",
+      "sha256": "8a8e5dd33ca7ad9657150cf21f10eeb33fc9fa1fd43c0a1d27549babf280bdd0",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/A11yFoundationTests.swift",
+      "sha256": "ce03071a91f71d9752775839da98c0a8e2893f4f4d9e3b09dc42270dc779589b",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Support/A11yHosting.swift",
+      "sha256": "00a2b23fbf4251ce2da60b8f30c7f98c1533b1ea603189c33ca4238aabda9897",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_medium.ttf",
+      "sha256": "3a3b36f0d0b981f4857f7f00eeef4a5ee123605575d362ab31ee7c19e3d11f2f",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_mono_medium.ttf",
+      "sha256": "6fa6a795c17a11bcbef410f52a853e8503f8e25d92762d202d907c54f5c0c0fb",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_mono_regular.ttf",
+      "sha256": "5a0de4b3d54ab272f76a1d8c84b7fb24c67bbec6591d5300e61c7bc10094b6c8",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_regular.ttf",
+      "sha256": "85a1c6b18a6b0a06dfe9fd4f6d6a5d4979f74ec861eaef4bc7868b5492b8a117",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_semibold.ttf",
+      "sha256": "b9f52322d6d20a7ff1e7fe1310ff12ec851aebb83d24f8b4f1d4149298f489b2",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AccentColor.colorset/Contents.json",
+      "sha256": "9af65086fa30b49252fae1a1225731691de794f7775af74d71befeb507d12b7c",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "sha256": "97e74ed8e27c1f39f15d8e265600b11d8e036d36cd95b8892f72ebf7c3e1f85c",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_1024x1024.png",
+      "sha256": "e982645156e1a02083bc46a2463b25c8504a7d1e7d496ca68f23ed0a24f4fca3",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_120x120.png",
+      "sha256": "3c5a2ab0d08bdd72b1c2be07b3fc3ba6f6b7c567126efbbaa99c0f39eabf6524",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_128x128.png",
+      "sha256": "eb25adff473a062fd27c7d770e230a07220ddfb3e205592d20236016933612cf",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_152x152.png",
+      "sha256": "41cfbee54aa52b6f01fba8f26aa07b091b2684891d04b972aa2c1ff90977e475",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_167x167.png",
+      "sha256": "77dd795cb0f439d292ceb49a49e2ea6bcb576682fab2556fd3319130b34b0864",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_16x16.png",
+      "sha256": "8f236c48a861327e85760a71001fd5f43f560fabdb323185c267d65748c16eaf",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_180x180.png",
+      "sha256": "e22ec10e450b7ced4d2cb4447ed42b979de413105a8c13898a6193e1558773a1",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_20x20.png",
+      "sha256": "04e096806a3926110da4c9a31fc0503dbaa9b11b2b13f3fc21c62adb25dddd7f",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_256x256.png",
+      "sha256": "bf6dd4fab609f2420a98645c1c24fc83620f94022bffa4c3f95222c54e606211",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_29x29.png",
+      "sha256": "4726764d669897dc2a8ccc142fcb88d29f21f8d93258264552929467c45d29ca",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_32x32.png",
+      "sha256": "f58fb45c80a1c31f16a6c1b3d2b7c3a923c4a098cbe1ea97564ed777c1ee8f0c",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_40x40.png",
+      "sha256": "b3d355bb190c7a6eeeaa4c186734db87f40f3cbb8bd18294791ebd663193dd8b",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_512x512.png",
+      "sha256": "57ff27a6a334c85c2324c3ce1dbaf9157b51c5acf3912e10efaae24ddff7fde1",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_58x58.png",
+      "sha256": "938cb89abf93ea76a3654b353ba1cf9609eea43dd38e13ed281fe83e8ea97bb1",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_60x60.png",
+      "sha256": "00bfe8dd97338f19644d33f2c3886b94ef2c98ea30d86bb7fed4c428883d53f2",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_64x64.png",
+      "sha256": "a1f40d77d0425e8e877af507bb89ba07978f8c9080984a1da9c8fbccae17cbb4",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_76x76.png",
+      "sha256": "807bff5f48f18535e70e2b2082cde165dd9fbbd0c4f14b9e3def19461dc70ea9",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_80x80.png",
+      "sha256": "9c0f139f552e8663393ea199156dc9d3720837cf27c1ee71bc8ee251986c1153",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIcon.appiconset/icon_87x87.png",
+      "sha256": "7b7c28bf4278fcbe9ec50aa03b0f085e8acb56a0f46d902eb334e6dad2900a3f",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIconImage.imageset/Contents.json",
+      "sha256": "55085683f31f4d56addf8d3ed5fe1266f4e4af6e81ef80a2efaac4d1ee96b958",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIconImage.imageset/icon_120x120.png",
+      "sha256": "3c5a2ab0d08bdd72b1c2be07b3fc3ba6f6b7c567126efbbaa99c0f39eabf6524",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIconImage.imageset/icon_180x180.png",
+      "sha256": "e22ec10e450b7ced4d2cb4447ed42b979de413105a8c13898a6193e1558773a1",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppIconImage.imageset/icon_80x80.png",
+      "sha256": "9c0f139f552e8663393ea199156dc9d3720837cf27c1ee71bc8ee251986c1153",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppleHealthIcon.imageset/Contents.json",
+      "sha256": "67c4ac8fa2cd7ad25b42108d6477155c9956bad0fd539ad302e96e6b79ada224",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppleHealthIcon.imageset/apple-health-24.png",
+      "sha256": "cb004709340ecedca0f569bf49c83efe6d8b499dca1b14bae06b418947959c81",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppleHealthIcon.imageset/apple-health-48.png",
+      "sha256": "28d7859edeb31a1bfbf791cf5b6502d49448bbb212685bc477e09746605f4f16",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/AppleHealthIcon.imageset/apple-health-72.png",
+      "sha256": "53e24dc32c863e64da1cd4134e907ef8eeda23de3a02b0ad886623ae2465ad50",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/BrandAccent.colorset/Contents.json",
+      "sha256": "77ca69f3ea63b7b8824053143847c06b8106d7dab6609a1096c60698b954a073",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/Contents.json",
+      "sha256": "0fd49ba3c3585c709678e0046a821c3c60685ec7063720d30d3a3448be3a208b",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/HealthCrystalHeart.imageset/Contents.json",
+      "sha256": "187ab41e29725c500c6bc2e2ad0a9d299e423447de040ef3b414e887c2c40d98",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/HealthCrystalHeart.imageset/heart_120.png",
+      "sha256": "3862d17e928f918c86f98d56ba0e8fac07bc1f44f9373c3af5cba7533a9f2cec",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/HealthCrystalHeart.imageset/heart_180.png",
+      "sha256": "0f09327891314d0d6e55bae3c8651fbad3e37e2fbe47453af729041aa05fcae2",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Assets.xcassets/HealthCrystalHeart.imageset/heart_60.png",
+      "sha256": "d8465a66af402341510d0f87cd2d6631d7d90d70a6defd01cab56ec172c80276",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/AnimatedButton.swift",
+      "sha256": "32e68dc37cc5f91bf41a8fd81bef944c08506501712c900aa8affb794b08a9aa",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/A11ySwitchToggleStyle.swift",
+      "sha256": "ddfb661423e9ce10f1c9b83b83f952852879332c8bff2f1eedf3c70cc7dfc70e",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/A11ySelectionMenu.swift",
+      "sha256": "f48c87f3c0eda85f20d3c4a71e615344deaf7084fce1f2b090a64931769c4bc3",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/Host/A11ySyntheticApp.swift",
+      "sha256": "1f85872e69fb2f312653695bde1cc89161e978b1bc22a168c90b916f9349011d",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/A11yFoundationUITests.swift",
+      "sha256": "078857c9d7f0212253f8dfa5c084a39e129d439b6431d39e70a8c96ac56b8ef4",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/A11yUITestSupport.swift",
+      "sha256": "d410fe53381877fad0d4f35523e6a3fd570e9a68d59c374ff2460be052f8bfda",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/A11yMacDialogTests.swift",
+      "sha256": "07216b4aa018f3346c4473c411cdb783ec6b73cc34139dc4addb774f77e0d903",
+      "mode": "direct"
+    }
+  ],
+  "changedShippingFilesAtVerifiedCommit": [
+    {
+      "path": "apps/apple/HealthMd/Info.plist",
+      "sha256": "ca259ddffec2e1c8edcd7316fd1932838bc9f1099905e6b0a1bb36e8ef37d74a"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/DesignSystem.swift",
+      "sha256": "9b32d8336048baf43fe9db28dba7a3179395cff6434913722b570e6cebc6164d"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/Fonts/geist-ofl.txt",
+      "sha256": "e5e56b793839774266243b8dd89c618f2962f098a2076757a5f2839c27eaaabd"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/Fonts/geist-source.txt",
+      "sha256": "ae42717742455616ad8622cad1f67498261ef7fe5cbfb2a5a59709ecc14798d6"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/Fonts/geist_medium.ttf",
+      "sha256": "3a3b36f0d0b981f4857f7f00eeef4a5ee123605575d362ab31ee7c19e3d11f2f"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/Fonts/geist_mono_medium.ttf",
+      "sha256": "6fa6a795c17a11bcbef410f52a853e8503f8e25d92762d202d907c54f5c0c0fb"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/Fonts/geist_mono_regular.ttf",
+      "sha256": "5a0de4b3d54ab272f76a1d8c84b7fb24c67bbec6591d5300e61c7bc10094b6c8"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/Fonts/geist_regular.ttf",
+      "sha256": "85a1c6b18a6b0a06dfe9fd4f6d6a5d4979f74ec861eaef4bc7868b5492b8a117"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Theme/Fonts/geist_semibold.ttf",
+      "sha256": "b9f52322d6d20a7ff1e7fe1310ff12ec851aebb83d24f8b4f1d4149298f489b2"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Views/DialogsA11yComponents.swift",
+      "sha256": "d15593d733d377f9a7bcd8ae53ef284dd7687465fdf6fc0de40d7ec18795bc98"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Views/GeistDialog.swift",
+      "sha256": "c706a746d52b89f221aba1fe9ef2113b5f5c040aa2fc455e4fa4339bc1618d00"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/A11ySelectionMenu.swift",
+      "sha256": "f48c87f3c0eda85f20d3c4a71e615344deaf7084fce1f2b090a64931769c4bc3"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/A11ySwitchToggleStyle.swift",
+      "sha256": "ddfb661423e9ce10f1c9b83b83f952852879332c8bff2f1eedf3c70cc7dfc70e"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/AnimatedButton.swift",
+      "sha256": "32e68dc37cc5f91bf41a8fd81bef944c08506501712c900aa8affb794b08a9aa"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/FormatA11yComponents.swift",
+      "sha256": "353b1a4e325b081726316a5df41281ef159df3f2a5e36ebf46d69fa061289bdf"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/OnboardingA11yComponents.swift",
+      "sha256": "2a9b5dc84df772cc0da082c66e6806e7d6971d8cc0e2f88a6de4081af3ee6c58"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/ReadingA11yComponents.swift",
+      "sha256": "9de8bf2a2bd00cc037f83cfb2aa6b9b68a96be4edc33a36f8b14714216b9d193"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/SchedulingA11yComponents.swift",
+      "sha256": "13006caa42c518429ae5c3d41de45b0a6e377061aa2a159188b11add771e0ce2"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Components/StatusIndicator.swift",
+      "sha256": "41f8117a8a30d74cec7657adfc2843495042062146d9b50d8d54d6a5ca87d4cb"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/ContentView.swift",
+      "sha256": "c018fcf74d7577b6a6a4aeb161e54313aa8f5bd87e50478e27a502ff7363e2ad"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/ExportProfilesView.swift",
+      "sha256": "9e7ad7755f65108525a3da2f08b6322458eda2c7bfa2be8f805f1e5ba5bd288b"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/ExportTabView.swift",
+      "sha256": "2b220a6eb2cc4627203607dd3fb176c574e9564c487dc9bf4daa18d0d9f5589b"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/FormatCustomizationView.swift",
+      "sha256": "66ae29070dbe78c536a55c33c679367cddc07befa86c827a00c868f050e4fba9"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/MetricSelectionView.swift",
+      "sha256": "93ea2fb39caafa220bdab58b394c6468bbabe5401cb9bcebdf2e63eb5e1c2f74"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/OnboardingView.swift",
+      "sha256": "37ba4e73bd9057b4df4ce0e8a94b11a0c3dcac84ec30d4c20a9fc6bced6a4e0a"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/PaywallView.swift",
+      "sha256": "ff73b61ac580997f713d8d7032ba0f6e1d0ffb2a57a3bfce0b12c8a04f9f7eab"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/ProfileScheduleSection.swift",
+      "sha256": "21bcb400ca72bb5b9878492735abfb9345251ba569a04cd70282093114c96d60"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/ScheduleSettingsView.swift",
+      "sha256": "246c289866c2b1840050f01119fa9f49025f24d39b699afc96239f7717f81000"
+    },
+    {
+      "path": "apps/apple/HealthMd/iOS/Views/SyncSettingsView.swift",
+      "sha256": "29483e661219cd9c499219ec9efa5ee59698a0bbace026856feb7980e0f109ae"
+    }
+  ],
+  "captures": [
+    {
+      "file": "reading-host-native-keyboard.png",
+      "sha256": "a74c49711aa08200c412f3e50529d4c4675c188b0d25b0d55ec1ef95be766ee7",
+      "sourceAttachment": "7D4ED5BB-EF14-4CB3-863C-7224FE30690C.png",
+      "run": "integrated-clean-matrix-5",
+      "case": "ReadingA11yUITests/testNativeKeyboardEditingKeepsCompleteReadbackAndReachableAction"
+    },
+    {
+      "file": "reading-connection-after-keyboard-dismissal.png",
+      "sha256": "1dfcd2d4ae5df287c8525397dbabffe8e733df49316fb3dcdd0995d3367899a8",
+      "sourceAttachment": "BA8209E4-330E-4F32-A554-3CC79F4539B9.png",
+      "run": "integrated-clean-matrix-5",
+      "case": "ReadingA11yUITests/testNativeKeyboardEditingKeepsCompleteReadbackAndReachableAction"
+    }
+  ],
+  "reduceMotion": {
+    "originalNativeValue": "0",
+    "runtimeNativeValue": "1",
+    "restoredNativeValue": "0",
+    "endScreen": "Settings root",
+    "enableNonEchoPassed": 9,
+    "restoreNonEchoPassed": 13,
+    "enableReceipt": {
+      "file": "owned-settings-matrix-5-enable-2.json",
+      "sha256": "478521749ad44d1f05cb85d1e411f95acfea6c504e24696ce9ecf3cc777e7cc3"
+    },
+    "restoreReceipt": {
+      "file": "owned-settings-matrix-5-restore-1.json",
+      "sha256": "f5a11bccf2055cbbd78bf689e10e8302efa70bb7c22a5ab702ef402b6d392dca"
+    },
+    "earlierCompleteRoundtripReceipt": {
+      "file": "owned-settings-composite-roundtrip-replay-1.json",
+      "sha256": "b73ea791f4a88edc0be87b92d98f86a1d6b99afcc2b5de97b8c789c5fd72c180"
+    },
+    "scope": "Recorded native AX checks/point exceptions for system Settings; not portable QA-flow certification. Owned-only AX bootstrap after XCTest; no explicit shared-server stop/restart."
+  },
+  "preservation": {
+    "receipt": {
+      "file": "integrated-focus-checkpoint-readonly-gates-1.json",
+      "sha256": "97dcdf67857017fa5222f8820ec561e791bc4ea470e7a2836748c97c3383a272"
+    },
+    "allElevenChecksPassed": true,
+    "coreSourceDigest": "e0b98193d40bbb1c13d44f8753a98f25611a474100524b956f8f21ed14161c26",
+    "copiedArtifactFilesMatch": 10,
+    "mainUnownedDirtyFilesPreserved": 3
+  },
+  "remainingScopes": [
+    "Shipping iOS/macOS host startup and HealthKit/StoreKit/analytics/scheduling/pairing/folder/history services were not run; unsuppressed runtime initialization remains unsafe under this run boundary.",
+    "Physical VoiceOver gestures/traversal, Display Zoom, IME variants, magnification and human reading comfort remain manual.",
+    "No Android device gate, contract/export changes, push, signing, store or release operation is represented."
+  ],
+  "historicalFailures": "Red matrices1\u20133, zero-test/mistargeted/interrupted invocations, original native padded-edge probe and diagnostic setup failures remain in local receipts. Matrix4 passed before the extra focus defect was found; matrix5 includes its real correction and stronger existing regression."
+}
