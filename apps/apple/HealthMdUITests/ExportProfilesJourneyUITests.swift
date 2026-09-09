@@ -196,21 +196,19 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         )
         snap("08-schedule-enabled-daily")
 
-        // Open the cadence editor by tapping the row.
-        app.staticTexts["Default"].firstMatch.tap()
+        // Open the cadence editor through the row's dedicated action. The
+        // profile name is intentionally read-only after the accessibility split.
+        let editSchedule = app.buttons["Edit schedule for Default"]
+        XCTAssertTrue(editSchedule.waitForExistence(timeout: 5))
+        editSchedule.tap()
         let enabledToggle = app.switches["Enabled"]
         XCTAssertTrue(enabledToggle.waitForExistence(timeout: 5), "cadence editor sheet should open")
         snap("09-cadence-editor")
 
-        // Frequency is a menu-style picker: open it on the current value
-        // ("Daily"), then pick Weekly from the menu it presents.
-        let frequencyButton = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH 'Frequency'")
-        ).firstMatch
-        XCTAssertTrue(frequencyButton.waitForExistence(timeout: 5))
-        frequencyButton.tap()
+        // The standard-width editor keeps its three native cadence buttons;
+        // constrained widths use the separately covered adaptive menu fallback.
         let weekly = app.buttons["Weekly"].firstMatch
-        XCTAssertTrue(weekly.waitForExistence(timeout: 5), "weekly option should appear in the frequency menu")
+        XCTAssertTrue(weekly.waitForExistence(timeout: 5), "weekly cadence should be available")
         weekly.tap()
         app.buttons["Save"].firstMatch.tap()
         XCTAssertTrue(
