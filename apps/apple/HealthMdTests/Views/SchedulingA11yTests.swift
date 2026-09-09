@@ -3,7 +3,7 @@ import XCTest
 import SwiftUI
 @testable import HealthMd
 
-/// ADDED / NOT RUN by the source-only scheduling lane. These are actual
+/// Isolated layout and binding regressions exercise the actual
 /// production components with synthetic bindings, not a scheduling/guard gate.
 @MainActor
 final class SchedulingA11yTests: XCTestCase {

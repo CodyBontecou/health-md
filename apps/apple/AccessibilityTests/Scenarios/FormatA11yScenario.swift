@@ -140,14 +140,20 @@ private struct FormatFrontmatterScenarioContent: View {
 
 private struct FormatTemplateScenarioContent: View {
     @State private var template = "# Synthetic {{date}}\n{{metrics}}\n"
+    @State private var templateWrites = 0
 
     var body: some View {
         FormatPageScroll { height in
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                FormatTemplateEditor(text: $template, availableHeight: height)
+                FormatTemplateEditor(text: Binding(get: { template }, set: {
+                    template = $0
+                    templateWrites += 1
+                }), availableHeight: height)
                 FormatSectionCard(title: "Synthetic Bound Text", subtitle: "Raw editing evidence, not a renderer preview.") {
                     FormatCodeBlock(text: template)
                         .accessibilityIdentifier("a11y.format.template.echo")
+                    Text(verbatim: "writes:\(templateWrites)")
+                        .accessibilityIdentifier("a11y.format.template.writes")
                 }
             }
         }

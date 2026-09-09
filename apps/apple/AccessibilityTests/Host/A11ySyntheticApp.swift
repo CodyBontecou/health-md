@@ -27,6 +27,7 @@ struct A11ySyntheticApp: App {
 /// Environment/viewport only, never a replacement for production controls.
 struct A11yScenarioContainer<Content: View>: View {
     @ViewBuilder var content: () -> Content
+    @State private var viewport = CGRect.zero
     private var environment: [String: String] { ProcessInfo.processInfo.environment }
     private var size: DynamicTypeSize {
         switch environment["A11Y_SIZE"] {
@@ -43,11 +44,31 @@ struct A11yScenarioContainer<Content: View>: View {
             content()
                 .frame(width: min(CGFloat(Double(environment["A11Y_WIDTH"] ?? "") ?? Double(geometry.size.width)), geometry.size.width),
                        height: min(CGFloat(Double(environment["A11Y_HEIGHT"] ?? "") ?? Double(geometry.size.height)), geometry.size.height))
+                .background {
+                    GeometryReader { allocated in
+                        Color.clear.preference(key: A11yViewportPreference.self, value: allocated.frame(in: .global))
+                    }
+                }
+                .onPreferenceChange(A11yViewportPreference.self) { viewport = $0 }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("a11y.scenario.viewport")
+                .accessibilityValue(Text(verbatim: "\(viewport.minX),\(viewport.minY),\(viewport.width),\(viewport.height)"))
                 .environment(\.dynamicTypeSize, size)
                 .environment(\.locale, Locale(identifier: environment["A11Y_LOCALE"] ?? "en_US"))
                 .environment(\.layoutDirection, (environment["A11Y_LOCALE"] ?? "").hasPrefix("ar") ? .rightToLeft : .leftToRight)
                 .preferredColorScheme(theme)
+                // Match the shipping iOS root's native button environment
+                // (HealthMdApp.swift), rather than the OS's default capsule.
+                .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
         }
+    }
+}
+
+private struct A11yViewportPreference: PreferenceKey {
+    static let defaultValue = CGRect.zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next.width > 0 && next.height > 0 { value = next }
     }
 }
 

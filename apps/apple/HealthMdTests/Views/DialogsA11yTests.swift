@@ -4,10 +4,22 @@ import UIKit
 import XCTest
 @testable import HealthMd
 
-/// ADDED / NOT RUN in the source-only lane. These host production components,
+/// Isolated tests host the actual production components,
 /// not the app bootstrap. Native keyboard/VoiceOver journeys are separate gates.
 @MainActor
 final class DialogsA11yTests: XCTestCase {
+    func testScrimResolvesToDocumentedBlackAlphaInBothThemes() {
+        for (style, alpha) in [(UIUserInterfaceStyle.light, CGFloat(112.0 / 255)), (.dark, CGFloat(179.0 / 255))] {
+            let color = UIColor(Color.dialogScrim).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            XCTAssertTrue(color.getRed(&r, green: &g, blue: &b, alpha: &a))
+            XCTAssertEqual(r, 0, accuracy: 0.002)
+            XCTAssertEqual(g, 0, accuracy: 0.002)
+            XCTAssertEqual(b, 0, accuracy: 0.002)
+            XCTAssertEqual(a, alpha, accuracy: 0.002, "A transparent scrim neither dims nor receives native taps")
+        }
+    }
+
     func testActionRunsExactlyOnceBeforeClearingPresentation() {
         var presented = true
         var events: [String] = []
@@ -116,6 +128,8 @@ final class DialogsA11yTests: XCTestCase {
                 let scroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
                 assertBounded(scroll, in: host)
                 XCTAssertGreaterThan(scroll.contentSize.height, scroll.bounds.height)
+                XCTAssertTrue([UIScrollView.KeyboardDismissMode.interactive, .interactiveWithAccessory].contains(scroll.keyboardDismissMode),
+                              "Actual native dismissal mode: \(scroll.keyboardDismissMode.rawValue)")
                 // Exercise the production scroll view all the way to the action end.
                 scroll.setContentOffset(CGPoint(x: 0, y: scroll.contentSize.height - scroll.bounds.height), animated: false)
                 XCTAssertGreaterThan(scroll.contentOffset.y, 0)

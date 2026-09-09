@@ -1,6 +1,6 @@
 import XCTest
 
-/// ADDED / NOT RUN in the source-only lane. This launches the isolated component
+/// Native regression coverage launches only the production-backed isolated
 /// gallery only; callback counters do not certify HealthKit, StoreKit or analytics.
 final class OnboardingA11yUITests: A11yUITestCase {
     override func setUpWithError() throws {
@@ -114,7 +114,7 @@ final class OnboardingA11yUITests: A11yUITestCase {
         count(128, in: app)
         let restore = app.buttons["a11y.onboarding.restore"]
         XCTAssertFalse(restore.isEnabled)
-        tapEdge(restore, in: app)
+        tapDisabledEdge(restore, in: app)
         count(128, in: app)
         tapEdge(app.buttons["a11y.onboarding.busy"], in: app)
         XCTAssertTrue(purchase.isEnabled)

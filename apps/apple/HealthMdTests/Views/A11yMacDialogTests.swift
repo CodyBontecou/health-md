@@ -12,6 +12,19 @@ import XCTest
 /// Mac app bootstrap, persistent stores, cleanup, transport or scheduling.
 @MainActor
 final class A11yMacDialogTests: XCTestCase {
+    func testDesktopScrimRetainsDocumentedBlackAlpha() throws {
+        for (name, alpha) in [(NSAppearance.Name.aqua, CGFloat(112.0 / 255)), (.darkAqua, CGFloat(179.0 / 255))] {
+            let appearance = try XCTUnwrap(NSAppearance(named: name))
+            appearance.performAsCurrentDrawingAppearance {
+                let color = NSColor(Color.dialogScrim).usingColorSpace(.sRGB)!
+                XCTAssertEqual(color.redComponent, 0, accuracy: 0.002)
+                XCTAssertEqual(color.greenComponent, 0, accuracy: 0.002)
+                XCTAssertEqual(color.blueComponent, 0, accuracy: 0.002)
+                XCTAssertEqual(color.alphaComponent, alpha, accuracy: 0.002)
+            }
+        }
+    }
+
     func testDesktopDialogRemainsBoundedInShortReadingWindows() {
         for width: CGFloat in [240, 320, 420] {
             let host = NSHostingView(rootView: GeistDialogCard(

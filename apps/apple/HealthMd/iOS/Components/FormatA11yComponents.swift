@@ -389,17 +389,24 @@ struct FormatTemplateEditor: View {
             .padding(.vertical, Spacing.sm)
         }
         .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
+            ToolbarItem(placement: .keyboard) {
                 if isFocused {
-                    Spacer()
-                    Button { isFocused = false } label: {
-                        Image(systemName: "keyboard.chevron.compact.down")
-                            .font(.body)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
+                    // A custom toolbar view keeps the real Button's growing
+                    // target; native bar-item extraction shrinks its AX/hit
+                    // control to 36pt on iOS 26 despite the label's 44pt frame.
+                    HStack(spacing: 0) {
+                        Spacer()
+                        Button { isFocused = false } label: {
+                            Image(systemName: "keyboard.chevron.compact.down")
+                                .font(.body)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Dismiss keyboard")
+                        .accessibilityIdentifier("format.template.dismiss-keyboard")
                     }
-                    .accessibilityLabel("Dismiss keyboard")
-                    .accessibilityIdentifier("format.template.dismiss-keyboard")
+                    .frame(maxWidth: .infinity)
                 }
             }
         }

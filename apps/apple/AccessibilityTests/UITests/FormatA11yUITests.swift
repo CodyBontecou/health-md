@@ -1,7 +1,7 @@
 #if os(iOS)
 import XCTest
 
-/// ADDED / NOT RUN in the source-only lane. These exercise production components
+/// Isolated native regression tests exercise the actual production components
 /// with synthetic bindings, never the shipping screen's configuration protection.
 final class FormatA11yUITests: A11yUITestCase {
     private let original = "synthetic_original_output_key_with_a_long_unbroken_identifier"
@@ -166,21 +166,42 @@ final class FormatA11yUITests: A11yUITestCase {
         }
     }
 
-    func testTemplateSupportsInteractiveKeyboardDismissalWithoutAWrite() {
+    func testTemplateSupportsInteractiveKeyboardDismissalWithoutAWrite() throws {
         let app = launchScenario("format", size: "accessibility5", width: 320)
         tapEdge(app.buttons["a11y.format.template"], in: app)
         let editor = app.textViews["format.template.editor"]
         reveal(editor, in: app)
-        let originalText = editor.value as? String
         editor.tap()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
-        let scroll = app.scrollViews.firstMatch
-        // Drag in the outer scroll gutter, not the TextEditor's nested scroll region.
-        let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.2))
-        let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.9))
-        start.press(forDuration: 0.05, thenDragTo: end)
+        // Native typing establishes a real editing session, including the
+        // software keyboard. Focus alone can leave its AX shell offscreen.
+        editor.typeText(" synthetic_draft")
+        let keyboardVisible = XCTNSPredicateExpectation(predicate: NSPredicate { [self] _, _ in
+            app.keyboards.allElementsBoundByIndex.contains { keyboard in
+                let visible = keyboard.frame.intersection(owningWindow(keyboard, in: app).frame)
+                return visible.width >= 44 && visible.height >= 44
+            }
+        }, object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [keyboardVisible], timeout: 5), .completed)
+        let originalText = editor.value as? String
+        XCTAssertTrue(originalText?.contains("synthetic_draft") == true)
+        let writes = app.staticTexts["a11y.format.template.writes"].label
+        XCTAssertNotEqual(writes, "writes:0")
+        let scroll = try XCTUnwrap(owningScroll(editor, in: app))
+        let viewport = readingViewport(scroll, in: app)
+        let window = owningWindow(scroll, in: app)
+        // Use actual reading content in the editor's page, not transparent
+        // padding, the native editor, or keyboard prediction scrolling.
+        let reading = scroll.staticTexts["Use placeholders to control the Markdown body."].frame.intersection(viewport)
+        XCTAssertGreaterThanOrEqual(reading.height, 8, "A real page-pan anchor must be visible")
+        let start = scroll.coordinate(withNormalizedOffset: .zero).withOffset(
+            CGVector(dx: reading.midX - scroll.frame.minX, dy: reading.midY - scroll.frame.minY))
+        let end = window.coordinate(withNormalizedOffset: .zero).withOffset(
+            CGVector(dx: reading.midX - window.frame.minX, dy: window.frame.height - 3))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.15)
         waitForKeyboardDismissal(app)
         XCTAssertEqual(editor.value as? String, originalText)
+        XCTAssertEqual(app.staticTexts["a11y.format.template.writes"].label, writes,
+                       "The dismissal gesture must not write the binding, even an identical value")
     }
 
     func testLongLocaleAndRTLNativeValueCaptures() {
@@ -254,25 +275,19 @@ final class FormatA11yUITests: A11yUITestCase {
     }
 
     private func revealAboveKeyboard(_ element: XCUIElement, app: XCUIApplication) {
-        let scroll = app.scrollViews.firstMatch
-        for _ in 0..<20 {
-            var viewport = scroll.frame
-            let keyboard = app.keyboards.firstMatch.frame
-            if keyboard.intersects(viewport) {
-                viewport.size.height = max(0, keyboard.minY - viewport.minY)
-            }
-            if element.isHittable && viewport.insetBy(dx: 0, dy: 1).contains(element.frame) { return }
-            let towardTop = element.frame.minY < viewport.minY
-            let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5))
-            let end = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: towardTop ? 0.75 : 0.25))
-            start.press(forDuration: 0.05, thenDragTo: end)
-        }
-        XCTFail("Editor is not reachable above the actual keyboard")
+        reveal(element, in: app)
     }
 
     private func waitForKeyboardDismissal(_ app: XCUIApplication) {
-        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)
+        // Interactive dismissal can retain a native AX keyboard entirely below
+        // its window (observed y711 on a 667pt window). Existence is not visibility.
+        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate { [self] _, _ in
+            app.keyboards.allElementsBoundByIndex.allSatisfy { keyboard in
+                keyboard.frame.intersection(owningWindow(keyboard, in: app).frame).isEmpty
+            }
+        }, object: app)
         XCTAssertEqual(XCTWaiter.wait(for: [hidden], timeout: 5), .completed)
+        saveScreenshot(app, name: "format-native-keyboard-offscreen-or-removed")
     }
 }
 #endif

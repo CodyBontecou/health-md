@@ -51,8 +51,8 @@ extension Color {
     static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
     static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
 
-    // Overlay scrim for Geist dialogs (light: gray-alpha-700)
-    static let dialogScrim = adaptiveColor(light: "00000070", dark: "000000B3")
+    // Overlay scrim (light: gray-alpha-700). The hex parser uses AARRGGBB.
+    static let dialogScrim = adaptiveColor(light: "70000000", dark: "B3000000")
     #elseif os(macOS)
     // Backgrounds
     static let bgPrimary = adaptiveColor(light: "FFFFFF", dark: "000000")
@@ -94,8 +94,8 @@ extension Color {
     static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
     static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
 
-    // Overlay scrim for Geist dialogs (light: gray-alpha-700)
-    static let dialogScrim = adaptiveColor(light: "00000070", dark: "000000B3")
+    // Overlay scrim (light: gray-alpha-700). The hex parser uses AARRGGBB.
+    static let dialogScrim = adaptiveColor(light: "70000000", dark: "B3000000")
     #endif
 
     // Readable text variants keep existing semantic fills unchanged. Green1000

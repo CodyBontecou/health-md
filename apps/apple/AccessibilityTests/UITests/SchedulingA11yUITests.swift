@@ -1,7 +1,7 @@
 import XCTest
 
-/// ADDED / NOT RUN. Native synthetic-component tests, not proof of scheduling,
-/// HealthKit, billing, live configuration protection or history deletion.
+/// Native production-component tests, not shipping scheduling, HealthKit,
+/// billing or history deletion. Guarded dates use the real isolated manager.
 final class SchedulingA11yUITests: A11yUITestCase {
     private struct Display {
         let size: String
@@ -31,9 +31,17 @@ final class SchedulingA11yUITests: A11yUITestCase {
         let d = display ?? displays[4]
         let app = launchScenario("scheduling", size: d.size, theme: d.theme, locale: d.locale, width: d.width, height: d.height)
         let link = app.buttons[page].firstMatch
-        XCTAssertTrue(link.waitForExistence(timeout: 10))
+        let routes = app.collectionViews["a11y.scheduling.routes"]
+        XCTAssertTrue(routes.waitForExistence(timeout: 10))
+        // Native List virtualizes offscreen links; waiting for a never-scrolled
+        // Footer/Date row cannot make it appear in a short window.
+        for _ in 0..<12 where !link.exists {
+            dragPage(routes, viewport: readingViewport(routes, in: app), downward: false)
+        }
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        reveal(link, in: app)
         link.tap()
-        XCTAssertTrue(app.scrollViews.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars[page].waitForExistence(timeout: 5), "The actual destination must be presented")
         return app
     }
 
@@ -127,7 +135,11 @@ final class SchedulingA11yUITests: A11yUITestCase {
             XCTAssertTrue(name.waitForExistence(timeout: 5))
             XCTAssertFalse(name.label.contains("…"))
             let edit = app.buttons["scheduling.profile.edit"]
-            XCTAssertEqual(edit.label, "Edit schedule for \(name.label)")
+            // SwiftUI correctly isolates interpolated RTL text. Preserve those
+            // native direction controls; compare the complete spoken content.
+            let spokenLabel = edit.label.replacingOccurrences(of: "\u{2068}", with: "")
+                .replacingOccurrences(of: "\u{2069}", with: "")
+            XCTAssertEqual(spokenLabel, "Edit schedule for \(name.label)")
             tapEdge(edit, in: app)
             assertState("edits:1 enables:0 enabled:true deletes:0 clears:0", id: "scheduling.profile.state", in: app)
             tapEdge(app.switches["scheduling.profile.enabled"], in: app)
@@ -205,6 +217,55 @@ final class SchedulingA11yUITests: A11yUITestCase {
         // need screen integration, not a fake guard.
     }
 
+    func testNativeDateChangesClampAndUseTheActualProtectionBinding() throws {
+        let app = open("Guarded Dates", display: displays[0])
+        try guardedDateWheel("start", value: "1", in: app).adjust(toPickerWheelValue: "2")
+        assertState("1748822400/1/1", id: "scheduling.guarded.start.state", in: app)
+        assertState("1749945600/0/0", id: "scheduling.guarded.end.state", in: app)
+
+        let lock = app.switches["scheduling.guarded.lock"]
+        tapEdge(lock, in: app)
+        XCTAssertEqual(lock.value as? String, "On")
+        try guardedDateWheel("start", value: "2", in: app).adjust(toPickerWheelValue: "3")
+        // A real native attempt reaches the actual production guard, but not
+        // the original date binding. No guard stand-in or persistence is used.
+        assertState("1748822400/1/2", id: "scheduling.guarded.start.state", in: app)
+        XCTAssertEqual(try guardedDateWheel("start", value: "2", in: app).value as? String, "2")
+        tapEdge(lock, in: app)
+        XCTAssertEqual(lock.value as? String, "Off")
+        try guardedDateWheel("start", value: "2", in: app).adjust(toPickerWheelValue: "3")
+        assertState("1748908800/2/3", id: "scheduling.guarded.start.state", in: app)
+
+        // June 15 -> July must clamp to the caller's July 1 maximum. Moving
+        // back to June must clamp that day 1 to the updated June 3 minimum.
+        try guardedDateWheel("end", value: "June", in: app).adjust(toPickerWheelValue: "July")
+        assertState("1751328000/1/1", id: "scheduling.guarded.end.state", in: app)
+        try guardedDateWheel("end", value: "July", in: app).adjust(toPickerWheelValue: "June")
+        assertState("1748908800/2/2", id: "scheduling.guarded.end.state", in: app)
+        assertState("1748908800/2/3", id: "scheduling.guarded.start.state", in: app)
+        saveScreenshot(app, name: "scheduling-native-date-range-and-real-guard")
+    }
+
+    private func guardedDateWheel(_ field: String, value: String, in app: XCUIApplication) throws -> XCUIElement {
+        let id = "scheduling.guarded.\(field)"
+        let date = app.datePickers[id]
+        let owners = app.scrollViews.containing(.datePicker, identifier: id).allElementsBoundByIndex
+        let owner = try XCTUnwrap(owners.min(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }))
+        reveal(owner, in: app)
+        let wheel = date.pickerWheels.matching(NSPredicate(format: "value == %@", value)).firstMatch
+        XCTAssertTrue(wheel.waitForExistence(timeout: 5), "Native wheel value \(value)")
+        for _ in 0..<8 {
+            if owner.frame.contains(CGPoint(x: wheel.frame.midX, y: wheel.frame.midY)) { break }
+            if wheel.frame.midX < owner.frame.minX { owner.swipeRight() } else { owner.swipeLeft() }
+        }
+        let visible = owner.frame.intersection(wheel.frame)
+        XCTAssertTrue(visible.contains(CGPoint(x: wheel.frame.midX, y: wheel.frame.midY)))
+        XCTAssertGreaterThanOrEqual(visible.width, 44)
+        XCTAssertGreaterThanOrEqual(visible.height, 44)
+        XCTAssertTrue(wheel.isHittable)
+        return wheel
+    }
+
     func testShortLandscapeFooterScrollsWithContentAtDefaultAndLargeText() {
         XCUIDevice.shared.orientation = .landscapeLeft
         for size in ["large", "xxxLarge", "accessibility5"] {
@@ -226,10 +287,14 @@ final class SchedulingA11yUITests: A11yUITestCase {
     func testPortraitFooterReservesItsActualHeightAndKeepsIndependentActions() {
         let app = open("Footer", display: displays[0])
         let last = app.staticTexts["scheduling.footer.lastContent"]
-        reveal(last, in: app)
+        let footer = app.otherElements["scheduling.footer.container"]
+        XCTAssertTrue(footer.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(footer.frame.height, 44)
+        reveal(last, in: app, above: footer)
         let preview = app.buttons["scheduling.footer.preview"]
         let export = app.buttons["scheduling.footer.export"]
-        XCTAssertLessThanOrEqual(last.frame.maxY, min(preview.frame.minY, export.frame.minY))
+        XCTAssertLessThanOrEqual(last.frame.maxY, footer.frame.minY,
+                                 "Read the complete final explanation above the whole pinned footer, not just its actions")
         // Pinned footer actions are outside the scroll viewport. Use the
         // containing native window, not reveal()/the first scroll's bounds.
         tapWindowEdge(preview, in: app)

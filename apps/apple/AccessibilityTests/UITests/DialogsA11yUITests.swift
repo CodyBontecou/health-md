@@ -1,6 +1,6 @@
 import XCTest
 
-/// ADDED / NOT RUN. The coordinator must register `dialogs` and this suite.
+/// Production-backed isolated dialog suite; execution receipts live in the implementation report.
 /// Keyboard checks require the actual software keyboard, not only a short host.
 @objc(DialogsA11yUITests)
 final class DialogsA11yUITests: A11yUITestCase {
@@ -142,16 +142,20 @@ final class DialogsA11yUITests: A11yUITestCase {
         app.typeText("alpha")
         keyboardKey("Next", in: app).tap()
         app.typeText("beta")
+        let label = app.staticTexts["geist-dialog.field-label.1"]
+        revealInDialog(label, in: app)
         for _ in 0..<8 where app.keyboards.firstMatch.exists {
             let viewport = dialogViewport(in: app)
             let owner = dialogScroll(in: app)
+            let window = owningWindow(owner, in: app)
+            let visibleLabel = label.frame.intersection(viewport)
             let start = owner.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: viewport.midX - owner.frame.minX, dy: viewport.maxY - owner.frame.minY - 8))
-            // Track from the real scroll owner through the native keyboard's own
-            // bounds, rather than treating a shorter host as keyboard evidence.
-            let end = app.keyboards.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
-                .withOffset(CGVector(dx: 0, dy: -3))
-            start.press(forDuration: 0.05, thenDragTo: end)
+                .withOffset(CGVector(dx: visibleLabel.midX - owner.frame.minX, dy: visibleLabel.midY - owner.frame.minY))
+            // Start on actual readable scroll content, not a native editor or
+            // transparent padding; release inside the real keyboard window.
+            let end = window.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: visibleLabel.midX - window.frame.minX, dy: window.frame.height - 3))
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.15)
         }
         XCTAssertFalse(app.keyboards.firstMatch.exists, "Exercise actual interactive keyboard dismissal")
         XCTAssertTrue(dialogScroll(in: app).exists)
@@ -179,6 +183,8 @@ final class DialogsA11yUITests: A11yUITestCase {
     }
 
     func testStackedIndependentActionsDispatchOnlyTheirOwnCallbacksInShortViewport() {
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
         for (action, counts, event) in [
             ("cancel", "s0 c1 r0 d1", "cancel"),
             ("other-cancel", "s0 c10 r0 d1", "other-cancel"),
@@ -197,9 +203,13 @@ final class DialogsA11yUITests: A11yUITestCase {
         for variant in ["many", "no-cancel"] {
             let app = open(variant, width: 320, height: 200)
             let overlay = app.otherElements["geist-dialog.overlay"]
-            let point = CGPoint(x: overlay.frame.minX + 2, y: overlay.frame.minY + 2)
+            let reading = scenarioViewport(in: app)
+            // The topmost points can belong to the native status bar. Use the
+            // actual side scrim, outside the card and away from system chrome.
+            let point = CGPoint(x: reading.minX + 2, y: reading.midY)
             XCTAssertFalse(dialogScroll(in: app).frame.contains(point))
-            overlay.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 2, dy: 2)).tap()
+            overlay.coordinate(withNormalizedOffset: .zero).withOffset(
+                CGVector(dx: point.x - overlay.frame.minX, dy: point.y - overlay.frame.minY)).tap()
             assertDismissed(app, counts: variant == "many" ? "s0 c1 r0 d1" : "s0 c0 r0 d1",
                             events: variant == "many" ? "cancel:true|dismiss" : "dismiss")
             app.terminate()
@@ -255,30 +265,12 @@ final class DialogsA11yUITests: A11yUITestCase {
 
     /// The modal's own scroll and native owner window, never the background scroll.
     private func dialogViewport(in app: XCUIApplication) -> CGRect {
-        let scroll = dialogScroll(in: app)
-        let window = app.windows.containing(.scrollView, identifier: "geist-dialog.scroll").firstMatch
-        var viewport = scroll.frame.intersection(window.frame)
-        let keyboard = app.keyboards.firstMatch
-        if keyboard.exists && keyboard.frame.intersects(viewport) {
-            viewport.size.height = max(0, keyboard.frame.minY - viewport.minY)
-        }
-        return viewport.insetBy(dx: 0, dy: 1)
+        readingViewport(dialogScroll(in: app), in: app)
     }
 
     private func revealInDialog(_ target: XCUIElement, in app: XCUIApplication) {
-        let scroll = dialogScroll(in: app)
-        for _ in 0..<100 {
-            let viewport = dialogViewport(in: app)
-            if target.isHittable && viewport.insetBy(dx: -1, dy: -1).contains(target.frame) { return }
-            guard viewport.height > 16 else { XCTFail("No actual modal reading viewport: \(viewport)"); return }
-            let moveDown = target.frame.minY < viewport.minY
-            let start = scroll.coordinate(withNormalizedOffset: .zero).withOffset(
-                CGVector(dx: viewport.minX - scroll.frame.minX + 2,
-                         dy: viewport.minY - scroll.frame.minY + viewport.height * (moveDown ? 0.2 : 0.8)))
-            start.press(forDuration: 0.05, thenDragTo: start.withOffset(
-                CGVector(dx: 0, dy: viewport.height * (moveDown ? 0.6 : -0.6))))
-        }
-        XCTFail("Target not fully reachable in its actual modal/keyboard viewport: \(target)")
+        XCTAssertEqual(owningScroll(target, in: app)?.identifier, "geist-dialog.scroll")
+        reveal(target, in: app)
     }
 
     private func tapDialogEdge(_ target: XCUIElement, in app: XCUIApplication) {
@@ -299,8 +291,12 @@ final class DialogsA11yUITests: A11yUITestCase {
         let card = app.otherElements["geist-dialog.card"].firstMatch
         XCTAssertTrue(overlay.exists)
         XCTAssertTrue(card.exists)
-        XCTAssertLessThanOrEqual(overlay.frame.width, maximumWidth + 1)
-        if let maximumHeight { XCTAssertLessThanOrEqual(overlay.frame.height, maximumHeight + 1) }
+        let reading = scenarioViewport(in: app)
+        XCTAssertLessThanOrEqual(reading.width, maximumWidth + 1)
+        if let maximumHeight { XCTAssertLessThanOrEqual(reading.height, maximumHeight + 1) }
+        // The scrim intentionally extends into unsafe areas; its AX union was
+        // 20pt taller on the SE. The card must fit the actual reading allocation.
+        XCTAssertTrue(reading.insetBy(dx: -1, dy: -1).contains(card.frame), "Card \(card.frame), reading \(reading)")
         XCTAssertTrue(overlay.frame.insetBy(dx: -1, dy: -1).contains(card.frame))
         XCTAssertLessThanOrEqual(card.frame.width, 420)
         XCTAssertGreaterThan(card.frame.height, 0)

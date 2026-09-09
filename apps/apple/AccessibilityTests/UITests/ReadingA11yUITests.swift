@@ -1,6 +1,6 @@
 import XCTest
 
-/// ADDED / NOT RUN. All launches use the isolated `reading` scenario.
+/// All launches use the production-backed isolated `reading` scenario.
 /// Counter assertions are component dispatch evidence, not HealthKit or pairing proof.
 final class ReadingA11yUITests: A11yUITestCase {
     private struct Display {
@@ -89,10 +89,10 @@ final class ReadingA11yUITests: A11yUITestCase {
             let description = app.staticTexts["reading.settings.probe.description"]
             captureReadingSlices(description, name: "settings-copy-\(display.size)-\(display.locale)-\(display.theme)-\(display.width)x\(display.height)", in: app)
             XCTAssertTrue(description.label.hasSuffix("It is not used for advertising or cross-app tracking."))
-            XCTAssertEqual(description.frame.width, app.scrollViews.firstMatch.frame.width - 64, accuracy: 2, "Only page and row padding may narrow the explanation")
+            assertFullWidthReading(description, reference: app.staticTexts["reading.settings.description-reference"], in: app)
             let protectionDescription = app.staticTexts["reading.protection.description"]
             captureReadingSlices(protectionDescription, name: "protection-copy-\(display.size)-\(display.locale)-\(display.theme)", in: app)
-            XCTAssertEqual(protectionDescription.frame.width, app.scrollViews.firstMatch.frame.width - 64, accuracy: 2)
+            assertFullWidthReading(protectionDescription, reference: app.staticTexts["reading.protection.description-reference"], in: app)
             XCTAssertEqual(app.switches.matching(identifier: "configurationProtection.toggle").count, 1)
             app.terminate()
         }
@@ -154,7 +154,7 @@ final class ReadingA11yUITests: A11yUITestCase {
                 exposeEdge(field, bottom: false, in: app)
                 XCTAssertGreaterThanOrEqual(field.frame.width, 44)
                 XCTAssertGreaterThanOrEqual(field.frame.height, 44)
-                XCTAssertEqual(field.frame.width, app.scrollViews.firstMatch.frame.width - 32, accuracy: 2)
+                XCTAssertEqual(field.frame.width, (owningScroll(field, in: app)?.frame.width ?? 0) - 32, accuracy: 2)
                 XCTAssertEqual(field.value as? String, value)
                 XCTAssertLessThanOrEqual(app.staticTexts["\(id).label"].frame.maxY, field.frame.minY)
                 let readingValue = app.staticTexts["\(id).value"]
@@ -217,24 +217,24 @@ final class ReadingA11yUITests: A11yUITestCase {
         assertCount("reading.disconnect-calls", 1, in: app)
     }
 
-    // Tall reading rows legitimately span a short viewport. Inspect/capture both
-    // ends instead of asking the common reveal() to fit an impossible full row.
-    // These helpers use only the synthetic main scroll and the actual keyboard;
-    // they must not be reused for native dialog/menu windows.
-    private func readingViewport(in app: XCUIApplication) -> CGRect {
-        var bounds = app.scrollViews.firstMatch.frame.intersection(app.windows.firstMatch.frame).insetBy(dx: 0, dy: 4)
-        let keyboard = app.keyboards.firstMatch
-        if keyboard.exists && bounds.intersects(keyboard.frame) {
-            bounds.size.height = max(0, keyboard.frame.minY - bounds.minY - 4)
-        }
-        return bounds
+    private func assertFullWidthReading(_ text: XCUIElement, reference: XCUIElement, in app: XCUIApplication) {
+        XCTAssertEqual(text.label, reference.label)
+        // AX gives glyph bounds, not allocated width. Compare real full-width
+        // native text at the same font, locale and parent width instead of
+        // requiring the last glyph to fill an arbitrary percentage of a row.
+        XCTAssertEqual(text.frame.width, reference.frame.width, accuracy: 1)
+        XCTAssertEqual(text.frame.height, reference.frame.height, accuracy: 1)
+        XCTAssertLessThanOrEqual(text.frame.width, (owningScroll(text, in: app)?.frame.width ?? 0) - 64 + 1)
     }
+
+    // Tall reading rows legitimately span a short viewport. Inspect/capture both
+    // ends using their actual ancestor, measured allocation and keyboard chrome.
 
     private func exposeEdge(_ element: XCUIElement, bottom: Bool, in app: XCUIApplication) {
         XCTAssertTrue(element.waitForExistence(timeout: 5))
-        let scroll = app.scrollViews.firstMatch
-        for _ in 0..<50 {
-            let viewport = readingViewport(in: app)
+        guard let scroll = owningScroll(element, in: app) else { XCTFail("No actual reading scroll owner"); return }
+        for _ in 0..<80 {
+            let viewport = readingViewport(scroll, in: app)
             let frame = element.frame
             let y = bottom ? frame.maxY - 4 : frame.minY + 4
             if viewport.contains(CGPoint(x: frame.midX, y: y)) && element.isHittable {
@@ -245,19 +245,18 @@ final class ReadingA11yUITests: A11yUITestCase {
                 return
             }
             XCTAssertGreaterThan(viewport.height, 44, "Not enough native reading space")
-            let origin = scroll.coordinate(withNormalizedOffset: .zero)
-            let start = origin.withOffset(CGVector(dx: viewport.midX - scroll.frame.minX, dy: viewport.midY - scroll.frame.minY))
-            let delta = viewport.height * (y < viewport.minY ? 0.3 : -0.3)
-            start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: delta)))
+            dragPage(scroll, viewport: viewport, downward: y < viewport.minY)
         }
         XCTFail("Reading edge not reachable inside the real scroll/keyboard viewport: \(element)")
     }
 
     private func tapReadingEdge(_ element: XCUIElement, in app: XCUIApplication) {
-        exposeEdge(element, bottom: false, in: app)
+        reveal(element, in: app)
         XCTAssertGreaterThanOrEqual(element.frame.width, 44)
         XCTAssertGreaterThanOrEqual(element.frame.height, 44)
-        element.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 4, dy: 4)).tap()
+        // A rounded native button's bounding-box corner is not its painted
+        // edge. Tap the real top edge, as the other native action suites do.
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0)).withOffset(CGVector(dx: 0, dy: 3)).tap()
     }
 
     private func captureReadingSlices(_ element: XCUIElement, name: String, in app: XCUIApplication) {

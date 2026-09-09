@@ -4,7 +4,7 @@ import UIKit
 import XCTest
 @testable import HealthMd
 
-/// ADDED / NOT RUN in the source-only lane. These host production components;
+/// Isolated tests host the actual production components;
 /// reference Text measurements are typography baselines, not copied row layouts.
 @MainActor
 final class ReadingA11yTests: XCTestCase {

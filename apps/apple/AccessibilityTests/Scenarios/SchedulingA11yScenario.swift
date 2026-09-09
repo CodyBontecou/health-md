@@ -37,7 +37,9 @@ struct SchedulingA11yScenario: View {
                 NavigationLink("Profiles") { profilesPage }
                 NavigationLink("Dates") { datesPage }
                 NavigationLink("Footer") { footerPage }
+                NavigationLink("Guarded Dates") { SchedulingGuardedDatesScenario() }
             }
+            .accessibilityIdentifier("a11y.scheduling.routes")
             .navigationTitle("Scheduling")
         }
     }
@@ -181,8 +183,73 @@ struct SchedulingA11yScenario: View {
                     onPreview: { previews += 1 }, onExport: { exports += 1 }
                 )
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("scheduling.footer.container")
         }
         .navigationTitle("Footer")
+    }
+}
+
+/// Actual native date controls and the same production protecting(Binding)
+/// boundary as ExportTabView. UTC and synthetic dates make UI receipts stable;
+/// this is not a shipping export or scheduling service journey.
+private struct SchedulingGuardedDatesScenario: View {
+    @StateObject private var protection: ConfigurationProtectionManager
+    @State private var suite: String
+    @State private var start = Date(timeIntervalSince1970: 1_748_736_000)
+    @State private var end = Date(timeIntervalSince1970: 1_749_945_600)
+    @State private var startWrites = 0
+    @State private var endWrites = 0
+    @State private var startAttempts = 0
+    @State private var endAttempts = 0
+    private let upper = Date(timeIntervalSince1970: 1_751_328_000)
+
+    init() {
+        let suite = "org.healthmd.a11y.scheduling.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        _suite = State(initialValue: suite)
+        _protection = StateObject(wrappedValue: ConfigurationProtectionManager(userDefaults: defaults))
+    }
+
+    private var startBinding: Binding<Date> {
+        let guarded = protection.protecting(Binding(get: { start }, set: { start = $0; startWrites += 1 }))
+        return Binding(get: { guarded.wrappedValue }, set: { startAttempts += 1; guarded.wrappedValue = $0 })
+    }
+
+    private var endBinding: Binding<Date> {
+        let guarded = protection.protecting(Binding(get: { end }, set: { end = $0; endWrites += 1 }))
+        return Binding(get: { guarded.wrappedValue }, set: { endAttempts += 1; guarded.wrappedValue = $0 })
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.s4) {
+                ReadingProtectionRow(isEnabled: Binding(get: { protection.isEnabled }, set: { protection.setEnabled($0) }), accessibilityIdentifier: "scheduling.guarded.lock")
+                SchedulingLabeledControl(title: "Start Date", value: Text(start, style: .date)) {
+                    DatePicker("Start Date", selection: startBinding, in: ...end, displayedComponents: .date)
+                        .accessibilityIdentifier("scheduling.guarded.start")
+                }
+                SchedulingLabeledControl(title: "End Date", value: Text(end, style: .date)) {
+                    DatePicker("End Date", selection: endBinding, in: start...upper, displayedComponents: .date)
+                        .accessibilityIdentifier("scheduling.guarded.end")
+                }
+                Text(verbatim: "\(Int(start.timeIntervalSince1970))/\(startWrites)/\(startAttempts)")
+                    .accessibilityIdentifier("scheduling.guarded.start.state")
+                Text(verbatim: "\(Int(end.timeIntervalSince1970))/\(endWrites)/\(endAttempts)")
+                    .accessibilityIdentifier("scheduling.guarded.end.state")
+                Text(verbatim: "locked:\(protection.isEnabled) blocked:\(protection.blockedChangeToastID != nil)")
+                    .accessibilityIdentifier("scheduling.guarded.protection.state")
+            }
+            .padding(Spacing.s4)
+        }
+        .environment(\.timeZone, TimeZone(secondsFromGMT: 0)!)
+        .environment(\.calendar, Calendar(identifier: .gregorian))
+        .navigationTitle("Guarded Dates")
+        .onDisappear {
+            protection.dismissBlockedChangeToast()
+            UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite)
+        }
     }
 }
 #endif

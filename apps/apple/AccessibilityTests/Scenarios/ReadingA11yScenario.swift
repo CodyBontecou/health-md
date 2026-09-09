@@ -151,6 +151,21 @@ struct ReadingA11yScenario: View {
                 // The same label used inside SettingsRow, exposed without a combined
                 // button so native frame checks can inspect its full reading width.
                 ReadingSettingsRowLabel(icon: "folder.fill", title: "Synthetic Settings Label", subtitle: settingsDescription, status: "A long current destination status", statusTone: .success, identifier: "reading.settings.probe")
+
+                // Native full-width text controls distinguish actual line wrapping
+                // from AX's tight glyph rectangle (which need not fill the row).
+                Text(LocalizedStringKey(settingsDescription))
+                    .font(Typography.caption())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("reading.settings.description-reference")
+                    .padding(.horizontal, Spacing.md)
+                Text(protection.isEnabled ? "Configuration changes are blocked on this device." : "Configuration can be edited normally.")
+                    .font(.footnote)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("reading.protection.description-reference")
+                    .padding(.horizontal, Spacing.md)
             }
             .padding(Spacing.s4)
         }

@@ -148,9 +148,12 @@ struct GeistDialogCard: View {
             .onChange(of: focusedField) { _, index in
                 if let index { proxy.scrollTo(GeistDialogScrollTarget.field(index), anchor: .center) }
             }
-            .onChange(of: maximumHeight) { _, _ in
-                // A real keyboard inset arrives after focus. Re-reveal that exact input,
-                // not the whole labeled group (whose reading copy can be much taller).
+            .onChange(of: maximumHeight) { previous, current in
+                // Reveal only when space is lost (keyboard arrival/shorter window).
+                // Re-scrolling on every expanding interactive-dismissal frame
+                // fights the native keyboard gesture. Extra space needs no move.
+                guard current < previous else { return }
+                // Target the exact input, not its potentially much taller label.
                 if let focusedField {
                     proxy.scrollTo(GeistDialogScrollTarget.field(focusedField), anchor: .center)
                 }
