@@ -233,6 +233,8 @@ final class ReadingA11yUITests: A11yUITestCase {
     private func exposeEdge(_ element: XCUIElement, bottom: Bool, in app: XCUIApplication) {
         XCTAssertTrue(element.waitForExistence(timeout: 5))
         guard let scroll = owningScroll(element, in: app) else { XCTFail("No actual reading scroll owner"); return }
+        var previousFrame: CGRect?
+        var stalledDrags = 0
         for _ in 0..<80 {
             let viewport = readingViewport(scroll, in: app)
             let frame = element.frame
@@ -245,7 +247,12 @@ final class ReadingA11yUITests: A11yUITestCase {
                 return
             }
             XCTAssertGreaterThan(viewport.height, 44, "Not enough native reading space")
-            dragPage(scroll, viewport: viewport, downward: y < viewport.minY)
+            stalledDrags = previousFrame == frame ? stalledDrags + 1 : 0
+            previousFrame = frame
+            let downward = y < viewport.minY
+            let remaining = downward ? viewport.minY - y : y - viewport.maxY
+            dragPage(scroll, viewport: viewport, downward: downward,
+                     distance: max(0, remaining) + min(CGFloat(stalledDrags) * 20, 100))
         }
         XCTFail("Reading edge not reachable inside the real scroll/keyboard viewport: \(element)")
     }

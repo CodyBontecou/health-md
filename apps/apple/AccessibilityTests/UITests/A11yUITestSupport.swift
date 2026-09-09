@@ -137,7 +137,9 @@ class A11yUITestCase: XCTestCase {
     }
 
     func dragPage(_ scroll: XCUIElement, viewport: CGRect, downward: Bool, distance: CGFloat? = nil) {
-        let preferredY = viewport.minY + viewport.height * (downward ? 0.2 : 0.8)
+        let panRegion = viewport.insetBy(dx: 3, dy: min(44, viewport.height * 0.2))
+        let preferredY = min(panRegion.maxY, max(panRegion.minY,
+            viewport.minY + viewport.height * (downward ? 0.2 : 0.8)))
         // Start on actual reading content, not the screen-edge back gesture or
         // transparent padding. A date picker's whole native surface can consume
         // a pan, including gaps outside its individual AX wheel columns.
@@ -146,7 +148,10 @@ class A11yUITestCase: XCTestCase {
         let buttons = scroll.buttons.allElementsBoundByIndex.map(\.frame)
         let anchors = scroll.staticTexts.allElementsBoundByIndex.compactMap { text -> (point: CGPoint, priority: Int)? in
             let frame = text.frame
-            let visible = frame.intersection(viewport.insetBy(dx: 3, dy: 3))
+            // Partly visible glyphs beside system chrome can report valid AX
+            // frames while repeated drags there move nothing (observed y34.5).
+            // Start farther inside the reading region, not on that clipped edge.
+            let visible = frame.intersection(panRegion)
             guard visible.width >= 8, visible.height >= 8 else { return nil }
             let point = CGPoint(x: visible.midX, y: visible.midY)
             guard !embedded.contains(where: { $0.contains(point) }),

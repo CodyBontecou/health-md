@@ -174,34 +174,43 @@ final class OnboardingA11yUITests: A11yUITestCase {
     /// bottom edge. Never demand that tall text fit/shrink into a single screen.
     private func inspectAndTapOffer(_ offer: XCUIElement, in app: XCUIApplication, name: String) {
         XCTAssertTrue(offer.waitForExistence(timeout: 5))
-        let scroll = app.scrollViews.firstMatch
-        func viewport() -> CGRect {
-            scroll.frame.intersection(app.windows.firstMatch.frame).insetBy(dx: 0, dy: 4)
+        guard let scroll = owningScroll(offer, in: app) else { XCTFail("No native offer scroll owner"); return }
+        func viewport() -> CGRect { readingViewport(scroll, in: app) }
+        func bottomTarget() -> CGRect {
+            let frame = offer.frame
+            return CGRect(x: frame.minX, y: frame.maxY - 44, width: frame.width, height: 44)
         }
-        func drag(down: Bool) {
-            scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-                .press(forDuration: 0.05, thenDragTo: scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: down ? 0.7 : 0.3)))
-        }
-        for _ in 0..<60 {
-            let visible = viewport()
-            if offer.frame.minY >= visible.minY && offer.frame.minY < visible.maxY - 44 { break }
-            drag(down: offer.frame.minY < visible.minY)
-        }
-        XCTAssertGreaterThanOrEqual(offer.frame.minY, viewport().minY)
-        XCTAssertLessThan(offer.frame.minY, viewport().maxY - 44)
+        let label = offer.label
+        let enabled = offer.isEnabled
+        reveal(offer, in: app, requiresHittable: enabled)
+        XCTAssertGreaterThanOrEqual(offer.frame.minY, viewport().minY - 1)
+        XCTAssertLessThanOrEqual(offer.frame.minY + 44, viewport().maxY + 1)
         XCTAssertGreaterThanOrEqual(offer.frame.width, 44)
         XCTAssertGreaterThanOrEqual(offer.frame.height, 44)
         XCTAssertGreaterThanOrEqual(offer.frame.minX, viewport().minX)
         XCTAssertLessThanOrEqual(offer.frame.maxX, viewport().maxX)
         saveScreenshot(app, name: "\(name)-title")
-        var slice = 0
-        while offer.frame.maxY > viewport().maxY && slice < 60 {
-            drag(down: false)
-            slice += 1
+        for slice in 0..<60 {
+            let visible = viewport()
+            let target = bottomTarget()
+            if visible.insetBy(dx: -1, dy: -1).contains(target) { break }
+            let downward = target.minY < visible.minY
+            let remaining = downward ? visible.minY - target.minY : target.maxY - visible.maxY
+            let before = offer.frame.minY
+            // Settled, bounded pans preserve overlapping reading captures. The
+            // old non-stationary fling could send the entire price above the
+            // short window, then mistake that overshoot for reaching its end.
+            dragPage(scroll, viewport: visible, downward: downward,
+                     distance: min(max(0, remaining), visible.height * 0.4))
+            XCTAssertLessThanOrEqual(abs(offer.frame.minY - before), visible.height - 44 + 1,
+                                     "Consecutive offer captures must overlap by at least 44pt")
             saveScreenshot(app, name: "\(name)-slice-\(slice)")
         }
-        XCTAssertLessThanOrEqual(offer.frame.maxY, viewport().maxY)
-        XCTAssertGreaterThan(offer.frame.maxY, viewport().minY + 4)
+        XCTAssertTrue(viewport().insetBy(dx: -1, dy: -1).contains(bottomTarget()),
+                      "The actual bottom 44pt must be inside the offer's reading viewport")
+        XCTAssertEqual(offer.label, label, "Scrolling must keep the full title, subtitle and price")
+        XCTAssertEqual(offer.isEnabled, enabled)
+        if enabled { XCTAssertTrue(offer.isHittable) }
         offer.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
             .withOffset(CGVector(dx: 0, dy: -3)).tap()
     }
