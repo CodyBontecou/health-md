@@ -176,10 +176,18 @@ final class ReadingA11yUITests: A11yUITestCase {
         let app = app()
         app.tabBars.buttons["Connection"].tap()
         let host = app.textFields["reading.host"]
-        reveal(host, in: app)
-        host.tap()
+        tapReadingEdge(host, in: app)
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
-        host.typeText("qa")
+        // Send keys to the CURRENT native responder. Naming a field in typeText
+        // must not repair a failed padded-edge focus tap behind this assertion.
+        app.typeText("qa")
+        let keyboardVisible = XCTNSPredicateExpectation(predicate: NSPredicate { [self] _, _ in
+            app.keyboards.allElementsBoundByIndex.contains { keyboard in
+                let visible = keyboard.frame.intersection(owningWindow(keyboard, in: app).frame)
+                return visible.width >= 44 && visible.height >= 44
+            }
+        }, object: app)
+        XCTAssertEqual(XCTWaiter.wait(for: [keyboardVisible], timeout: 5), .completed)
         let editedHost = host.value as? String
         XCTAssertTrue(editedHost?.contains("qa") == true)
         XCTAssertEqual(app.staticTexts["reading.host.value"].label, editedHost)
@@ -188,12 +196,16 @@ final class ReadingA11yUITests: A11yUITestCase {
         // Remaining space is bounded by the actual native keyboard, not by a
         // guessed IME height or the synthetic container's first scroll alone.
         let port = app.textFields["reading.port"]
-        exposeEdge(port, bottom: false, in: app)
-        port.tap()
+        let originalPort = port.value as? String
+        tapReadingEdge(port, in: app)
         XCTAssertTrue(app.keyboards.firstMatch.exists)
-        port.typeText("7")
+        app.typeText("7")
+        XCTAssertNotEqual(port.value as? String, originalPort)
+        XCTAssertEqual((port.value as? String)?.count, (originalPort?.count ?? 0) + 1)
+        XCTAssertEqual(host.value as? String, editedHost)
         XCTAssertEqual(app.staticTexts["reading.port.value"].label, port.value as? String)
         assertCount("reading.connect-calls", 0, in: app)
+        assertCount("reading.disconnect-calls", 0, in: app)
         tapReadingEdge(app.buttons["reading.connection.primary"], in: app)
         assertCount("reading.connect-calls", 1, in: app)
         let keyboardGone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.keyboards.firstMatch)

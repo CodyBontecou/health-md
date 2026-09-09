@@ -25,6 +25,7 @@ struct SyncSettingsView: View {
     @State private var showDirectCLIPairingScanner = false
     @State private var configurationTarget: ConfigurationTarget = .macDestination
     @FocusState private var focusedManualIPField: ManualIPField?
+    @FocusState private var focusedDirectCLIField: ManualIPField?
 
     private enum ManualIPField: Hashable {
         case host
@@ -335,7 +336,8 @@ struct SyncSettingsView: View {
                             ReadingConnectionEntry(
                                 title: "Mac IP address or hostname",
                                 value: manualMacHost,
-                                identifier: "reading.sync.mac-host"
+                                identifier: "reading.sync.mac-host",
+                                focusEditor: { focusedManualIPField = .host }
                             ) {
                                 TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
                                     .textInputAutocapitalization(.never)
@@ -347,7 +349,8 @@ struct SyncSettingsView: View {
                             ReadingConnectionEntry(
                                 title: "Manual IP port",
                                 value: manualMacPort,
-                                identifier: "reading.sync.mac-port"
+                                identifier: "reading.sync.mac-port",
+                                focusEditor: { focusedManualIPField = .port }
                             ) {
                                 TextField("Port", text: $manualMacPort)
                                     .keyboardType(.numberPad)
@@ -554,21 +557,25 @@ struct SyncSettingsView: View {
                                     ReadingConnectionEntry(
                                         title: "Mac IP or Tailscale address",
                                         value: directCLIHost,
-                                        identifier: "reading.sync.cli-host"
+                                        identifier: "reading.sync.cli-host",
+                                        focusEditor: { focusedDirectCLIField = .host }
                                     ) {
                                         TextField("Mac IP or Tailscale address", text: $directCLIHost)
                                             .textInputAutocapitalization(.never)
                                             .autocorrectionDisabled()
                                             .keyboardType(.URL)
+                                            .focused($focusedDirectCLIField, equals: .host)
                                     }
 
                                     ReadingConnectionEntry(
                                         title: "Port",
                                         value: directCLIPort,
-                                        identifier: "reading.sync.cli-port"
+                                        identifier: "reading.sync.cli-port",
+                                        focusEditor: { focusedDirectCLIField = .port }
                                     ) {
                                         TextField("Port", text: $directCLIPort)
                                             .keyboardType(.numberPad)
+                                            .focused($focusedDirectCLIField, equals: .port)
                                     }
                                 }
                                 .configurationChangesProtected()

@@ -138,7 +138,7 @@ final class ReadingA11yTests: XCTestCase {
     func testConnectionEntriesAndActionsKeepLongValuesAndMinimumBounds() {
         for display in displays {
             for (title, value) in [("Mac IP address or hostname", longHost), ("Manual IP port", "65535")] {
-                let entry = ReadingConnectionEntry(title: title, value: value, identifier: "reading.test.entry") {
+                let entry = ReadingConnectionEntry(title: title, value: value, identifier: "reading.test.entry", focusEditor: {}) {
                     TextField("", text: .constant(value))
                 }
                 let bounds = measured(entry, display: display)

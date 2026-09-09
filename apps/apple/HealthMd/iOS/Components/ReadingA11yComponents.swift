@@ -337,6 +337,7 @@ struct ReadingConnectionEntry<Editor: View>: View {
     let title: String
     let value: String
     let identifier: String
+    let focusEditor: () -> Void
     @ViewBuilder var editor: () -> Editor
 
     var body: some View {
@@ -351,6 +352,10 @@ struct ReadingConnectionEntry<Editor: View>: View {
                 // Retain the native field's 17 pt body base size while scaling.
                 .font(Typography.scaled(size: 17, monospaced: true))
                 .textFieldStyle(ReadingConnectionTextFieldStyle())
+                // Native editor glyph bounds do not own the style's padding.
+                // Use the caller's existing focus binding, not a competing
+                // private FocusState that could break submission/dismissal.
+                .simultaneousGesture(TapGesture().onEnded { focusEditor() })
                 .accessibilityLabel(title)
                 .accessibilityIdentifier(identifier)
             if !value.isEmpty {

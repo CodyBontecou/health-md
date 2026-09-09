@@ -177,14 +177,14 @@ struct ReadingA11yScenario: View {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 receipt("reading.connect-calls", connectCalls)
                 receipt("reading.disconnect-calls", disconnectCalls)
-                ReadingConnectionEntry(title: "Mac IP address or hostname", value: host, identifier: "reading.host") {
+                ReadingConnectionEntry(title: "Mac IP address or hostname", value: host, identifier: "reading.host", focusEditor: { focusedField = .host }) {
                     TextField("Mac Tailscale IP or hostname", text: $host)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
                         .focused($focusedField, equals: .host)
                 }
-                ReadingConnectionEntry(title: "Manual IP port", value: port, identifier: "reading.port") {
+                ReadingConnectionEntry(title: "Manual IP port", value: port, identifier: "reading.port", focusEditor: { focusedField = .port }) {
                     TextField("Port", text: $port)
                         .keyboardType(.numberPad)
                         .focused($focusedField, equals: .port)
