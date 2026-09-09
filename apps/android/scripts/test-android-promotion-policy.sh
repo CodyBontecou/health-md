@@ -155,9 +155,13 @@ fi
 release_workflow="$repo/.github/workflows/android-release.yml"
 grep -q 'environment: google-play-qa' "$release_workflow" \
   || fail 'QA upload does not use a production-separated Play environment'
-grep -q 'git rev-parse "$GITHUB_REF_NAME^{commit}"' "$release_workflow" \
-  || fail 'QA upload is not bound to the peeled annotated tag commit'
-grep -q 'healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ github.sha }}-attempt-${{ github.run_attempt }}' "$release_workflow" \
+grep -q 'sha="$(git rev-parse "${tag}^{commit}")"' "$release_workflow" \
+  || fail 'release identity does not peel the annotated QA tag'
+grep -q 'RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}' "$release_workflow" \
+  || fail 'QA upload does not consume the resolved peeled tag commit'
+grep -q 'test "$(git rev-parse HEAD)" = "$RELEASE_SHA"' "$release_workflow" \
+  || fail 'QA upload checkout is not bound to the peeled annotated tag commit'
+grep -q 'healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}' "$release_workflow" \
   || fail 'QA upload does not retain a SHA/run-attempt-bound intent receipt'
 grep -q 'healthmd-android-${{ steps.version.outputs.version }}-attempt-${{ github.run_attempt }}' "$release_workflow" \
   || fail 'QA AAB pair is not retained under an attempt-specific artifact name'
