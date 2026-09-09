@@ -29,7 +29,8 @@
     "react-dom": "19.2.8"
   },
   "overrides": {
-    "undici": "7.29.0"
+    "undici": "7.29.0",
+    "sharp": "0.35.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
@@ -45,7 +46,7 @@
     "esbuild": "0.28.1",
     "jsdom": "26.1.0",
     "typescript": "5.9.3",
-    "vitest": "4.1.10",
+    "vitest": "4.1.11",
     "vitest-axe": "0.1.0",
     "wrangler": "4.119.0"
   }
