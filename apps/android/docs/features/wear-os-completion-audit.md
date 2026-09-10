@@ -1,5 +1,7 @@
 # Wear OS phases 1–7 completion audit
 
+> **Deferred release scope:** Wear OS is not part of Android `1.9.1`. The current Google Play phone artifact does not advertise Wear capabilities, start synchronization, or expose Wear settings. This audit is retained for the targeted `1.10.0` requalification cycle; every physical-device, signer, screenshot, battery, and independent-review gate remains mandatory before reactivation.
+
 This is the prompt-to-artifact audit for the Wear OS implementation worktree. A passing build,
 manifest count, validator, emulator run, or substitute signature is scoped evidence only. The
 project is not complete while any row is `BLOCKED` or `UNVERIFIED`.
@@ -30,7 +32,7 @@ project is not complete while any row is `BLOCKED` or `UNVERIFIED`.
 | 1 / blank Wear module | `settings.gradle.kts`, `wear/build.gradle.kts`, Wear manifest/application/activity | `:wear:testDebugUnitTest`, lint, debug and release bundle builds pass | PASS |
 | 1 / private module boundary | `:wearable-contract`; Wear does not depend on phone app/Health Connect | Gradle dependencies and contract tests inspected | PASS |
 | 1 / one Tile and packaging spike | Production evolved to two Tiles; `validate-wear-artifact.sh` | AAPT2 protobuf verifier accepts the Gradle-derived expected identity rather than hard-coding this release, parses both paired AAB manifests, and checks package/version/SDK plus Wear watch/standalone/components/permissions/path; positive and tampered negative checks pass | PASS |
-| 1 / Data Layer round trip | `WearPhoneSync.kt`, `WearDataLayerService.kt`, static `android_wear_capabilities`, paths/ACK codec | Phone and Wear advertise their opposite-side capabilities through retained `res/values/wear.xml` arrays. The packaged phone listener subscribes separately to message paths and background `CAPABILITY_CHANGED`; deterministic producer/listener/delivery/ACK tests and paired protobuf-manifest validation pass | PASS (policy); physical transport below |
+| 1 / Data Layer round trip | `WearPhoneSync.kt`, `WearDataLayerService.kt`, capability paths/ACK codec | The transport implementation and deterministic tests remain in source for future qualification. The shipping phone manifest/resource set intentionally removes its listener and static capability while Wear is deferred. | DEFERRED; reactivate only with the full release gate |
 | 2 / wearable DTO | `WearHealthSnapshot.kt`, schema v1 fixture | Codec bounds/version/order/range/malformed/future-skew tests pass | PASS |
 | 2 / oxygen read and mapping | Phone producer, focused Health Connect selection, `percentageFraction` mapping | Producer and oxygen mapping tests prove one conversion and partial permission state | PASS |
 | 2 / validation fixtures | `wear-health-snapshot-v1.json`, codec tests | Checked-in v1 fixture and negative cases inspected | PASS |

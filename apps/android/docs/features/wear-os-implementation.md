@@ -1,8 +1,10 @@
 # Wear OS implementation checklist
 
+> **Deferred release scope:** Wear OS is excluded from Android `1.9.1`. The Play phone app currently hides Wear settings and does not advertise or start Data Layer synchronization. The implementation below is unpublished preview work targeted for requalification in `1.10.0`; this document is not a gate for the current phone-only release.
+
 The expanded evidence-based audit is maintained in [`wear-os-completion-audit.md`](wear-os-completion-audit.md). It is authoritative for remaining manual, hardware, CI, signing, and Play gates; passing local proxies must not override it.
 
-Health.md for Wear OS is a non-standalone **Google Play channel** companion. Phone Health Connect is authoritative; the watch performs no Health Connect reads and no Health Services sensing. Wear settings, services, Data Layer dependencies, and manifest capabilities are absent from the F-Droid phone variant. The private `:wearable-contract` is not an export/direct-protocol change.
+The planned Health.md for Wear OS app is a non-standalone **Google Play channel** companion. Phone Health Connect is authoritative; the watch performs no Health Connect reads and no Health Services sensing. While publication is deferred, Wear settings, active services, and manifest capabilities are absent from every shipping phone variant. Dormant Play-only transport source and the private `:wearable-contract` remain for future qualification; they are not an export/direct-protocol change.
 
 ## Prompt-to-artifact checklist
 
@@ -22,7 +24,9 @@ The phone reads only Steps, Active Calories, Exercise Sessions, Sleep Sessions, 
 
 Freshness is 0–4 hours current, 4–24 hours stale with age, and over 24 hours hidden. Tiles/complications are local-cache-only and never claim real-time data. Eligible health synchronization cadence is 30 minutes and platform-inexact. If a foreground publication represents aggregates while background Health Connect reads are ineligible, a separate 30-minute WorkManager audit checks only permission names—never records—and publishes an aggregate-free replacement if any represented grant disappears; full eligibility reconciliation cancels that audit once normal synchronization becomes eligible or retained aggregate state is removed. Tiles include local timeline entries for stale-age, 24-hour expiry, and captured-zone midnight transitions in addition to a one-hour host refresh request; complication polling is push-only with native validity/timeline transitions, including cross-midnight hourly stale entries only for bounded Recovery/Sleep/HRV values.
 
-## Release/runbook
+## Future reactivation runbook
+
+Do not use this runbook for the current phone-only release. Before targeting Wear again, first change `release-scope.json` in an independently reviewed release commit and restore the phone capability/runtime only when all steps below can pass.
 
 1. Keep phone and Wear `versionName` equal; maintain globally unique version codes (phone below 1,000,000; Wear from 1,000,000).
 2. Configure the same release keystore in `local.properties` for both modules.

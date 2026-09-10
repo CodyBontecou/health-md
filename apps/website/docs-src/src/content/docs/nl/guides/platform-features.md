@@ -12,6 +12,8 @@ description: Wat Health.md biedt op iPhone, iPad, Mac, Android, Wear OS en in de
   </div>
 </div>
 
+**De Wear OS-vermeldingen zijn geplande functies en zitten niet in de huidige Google Play-release.**
+
 Legenda: ✓ beschikbaar · ◐ beschikbaar met platformverschillen die per rij zijn benoemd · △ gepland of in QA · ? beschikbaarheid niet geclaimd · — niet beschikbaar op dat platform.
 
 De CLI is geen aparte kolom voor een gezondheidsgegevensplatform: CLI-functies staan in de automatiseringsrijen en behouden de semantiek van hun iPhone- of Android-bron.
@@ -72,7 +74,7 @@ Sommige gegevens worden bewust **niet als gelijkwaardig behandeld** tussen platf
 |---|---|---|---|---|
 | Widgets op het startscherm | ✓ samenvatting, activiteitsringen, hartslagbereik, slaap | — | ✓ samenvatting, activiteit, hartslagbereik, slaap (stappen vervangen sta-uren) | — |
 | Exportvoortgang via Live Activity | ✓ | — | — | — |
-| Oppervlakken op het horloge | ✓ horloge-app + 10 complicaties | — | — | ✓ tiles + 10 complicaties |
+| Oppervlakken op het horloge | ✓ horloge-app + 10 complicaties | — | — | △ gepland voor 1.10.0 |
 | Mac als exportbestemming (versleutelde lokale overdracht) | ✓ iPhone verstuurt | ✓ ontvangt | — | — |
 
 ## Aankoop en privacy
@@ -81,7 +83,7 @@ Sommige gegevens worden bewust **niet als gelijkwaardig behandeld** tussen platf
 |---|---|---|---|---|
 | Gratis laag | ✓ 10 handmatige of geplande exportacties | — | ✓ 10 handmatige exportacties | — |
 | Ontgrendeling | ✓ eenmalige aankoop voor levenslang (individueel / gezin) | ◐ dezelfde Apple-ontgrendeling | ✓ eenmalige aankoop voor levenslang, planning inbegrepen | — |
-| Privacy met lokale verwerking | ✓ geen Health.md-cloud voor gezondheidsgegevens | ✓ | ✓ | ✓ |
+| Privacy met lokale verwerking | ✓ geen Health.md-cloud voor gezondheidsgegevens | ✓ | ✓ | △ gepland |
 | Verslag voor de zorgverlener (één PDF voor afspraken) | ✓ | — | ✓ | — |
 
 Health.md beheert geen cloud voor gezondheidsgegevens. Gezondheidsgegevens kunnen bestaan in bestemmingen die je zelf kiest, in versleutelde lokale context en in een afgebakende privé-overdrachtstoestand. Elke map, Mac, API-endpoint of CLI-bestemming wordt expliciet geconfigureerd. Profielen en planningen blijven lokaal op het apparaat waar ze zijn aangemaakt. Voor de workflow van elk platform: zie [Exportprofielen](/nl/docs/export-profiles/), de [Android-handleiding](/nl/docs/android/) en de [iPhone-exportgids](/nl/docs/export/).

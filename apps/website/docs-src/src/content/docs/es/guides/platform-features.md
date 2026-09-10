@@ -12,6 +12,8 @@ description: Qué ofrece Health.md en iPhone, iPad, Mac, Android, Wear OS y la C
   </div>
 </div>
 
+**Las entradas de Wear OS son funciones previstas, no incluidas en la versión actual de Google Play.**
+
 Leyenda: ✓ disponible · ◐ disponible con diferencias de plataforma indicadas en la fila · △ planificado o en pruebas de calidad · ? no se afirma su disponibilidad · — no disponible en esa plataforma.
 
 La CLI no es una columna aparte de plataforma de datos de salud: las funciones de la CLI aparecen en las filas de automatización y conservan la semántica de su origen en iPhone o Android.
@@ -72,7 +74,7 @@ Algunos datos deliberadamente **no se tratan como equivalentes** entre plataform
 |---|---|---|---|---|
 | Widgets de pantalla de inicio | ✓ resumen, anillos de actividad, rango cardíaco, sueño | — | ✓ resumen, actividad, rango cardíaco, sueño (los pasos sustituyen a las horas de pie) | — |
 | Progreso de exportación en Actividad en vivo | ✓ | — | — | — |
-| Superficies del reloj | ✓ app de reloj + 10 complicaciones | — | — | ✓ mosaicos + 10 complicaciones |
+| Superficies del reloj | ✓ app de reloj + 10 complicaciones | — | — | △ previsto para 1.10.0 |
 | Mac como destino de exportación (transferencia local cifrada) | ✓ el iPhone envía | ✓ recibe | — | — |
 
 ## Compra y privacidad
@@ -81,7 +83,7 @@ Algunos datos deliberadamente **no se tratan como equivalentes** entre plataform
 |---|---|---|---|---|
 | Nivel gratuito | ✓ 10 acciones de exportación manuales o programadas | — | ✓ 10 acciones de exportación manuales | — |
 | Desbloqueo | ✓ compra vitalicia única (individual / familiar) | ◐ mismo desbloqueo de Apple | ✓ compra vitalicia única, con programación incluida | — |
-| Privacidad con procesamiento local | ✓ sin nube de datos de salud de Health.md | ✓ | ✓ | ✓ |
+| Privacidad con procesamiento local | ✓ sin nube de datos de salud de Health.md | ✓ | ✓ | △ previsto |
 | Informe para el médico (un PDF para las citas) | ✓ | — | ✓ | — |
 
 Health.md no opera una nube de datos de salud. Los datos de salud pueden existir en destinos que elijas, en contexto local cifrado y en un estado de transferencia privada acotado. Cada carpeta, Mac, endpoint de API o destino de la CLI se configura de forma explícita. Los perfiles y las programaciones permanecen en el dispositivo donde se crearon. Consulta los [perfiles de exportación](/es/docs/export-profiles/), la [guía de Android](/es/docs/android/) y la [guía de exportación de iPhone](/es/docs/export/) para el flujo de trabajo de cada plataforma.

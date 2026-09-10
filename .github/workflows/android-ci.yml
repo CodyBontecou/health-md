@@ -103,7 +103,7 @@ jobs:
       - name: Validate Google Play listing metadata
         run: ./scripts/validate-play-listing.sh
 
-      - name: Validate paired Android promotion policy
+      - name: Validate phone-only Android release policy
         run: ./scripts/test-android-promotion-policy.sh
 
       - name: Validate Wear audit evidence links
@@ -138,7 +138,7 @@ jobs:
           if [[ -f play-store/wear/screenshots/wear-app.png || -f play-store/wear/screenshots/wear-tile.png ]]; then
             python3 ./scripts/validate-wear-play-assets.py
           else
-            echo "Manual Wear Play screenshots are pending; release workflow enforces them."
+            echo "Manual Wear Play screenshots are pending for the deferred companion qualification."
           fi
 
       - name: Set up pinned Rust Android toolchain

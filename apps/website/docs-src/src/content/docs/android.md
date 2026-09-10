@@ -125,7 +125,7 @@ Daily step totals use exact zoned-local-day boundaries. Health.md clips and spli
 
 ## Distribution, pricing, and switching
 
-- **Google Play:** 10 free manual export actions, followed by one lifetime purchase through Google Play Billing. There is no subscription. Restore Purchase uses the purchasing Google account.
+- **Google Play:** 10 free manual export actions, followed by one lifetime purchase through Google Play Billing. There is no subscription. Restore Purchase uses the purchasing Google account. The current release is phone-only; the Wear OS companion is deferred to a later qualification cycle.
 - **F-Droid:** unlimited access is included. There is no free counter, Billing dependency, paywall, purchase, or restore action.
 - **F-Droid scope:** Health Connect only, with no Wear OS integration, direct cloud-provider OAuth, Play review, attribution, or Health.md onboarding telemetry.
 - **Shared outcome:** both channels use the same Health Connect capture, exporters, schemas, automation actions, and direct-device protocol.

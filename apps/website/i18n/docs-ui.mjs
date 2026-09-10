@@ -91,7 +91,7 @@ export const docsSidebar = Object.freeze([
     items: Object.freeze([
       item(text('Visualization catalog', 'Catálogo de visualizaciones', 'Visualisierungskatalog', 'Catalogue de visualisations', 'Catálogo de visualizações', 'Catalogo delle visualizzazioni', 'Visualisatiecatalogus', '可視化カタログ', '시각화 카탈로그', '可视化目录'), 'visualizations-roadmap'),
       item(text('Unlock & plans', 'Desbloqueo y planes', 'Freischaltung & Pläne', 'Déverrouillage et offres', 'Desbloqueio e planos', 'Sblocco e piani', 'Ontgrendelen en opties', 'ロック解除とプラン', '잠금 해제 및 요금제', '解锁与方案'), 'paywall'),
-      item(text('Wear OS companion', 'Complemento de Wear OS', 'Wear-OS-Begleiter', 'Compagnon Wear OS', 'Complemento Wear OS', 'Compagno Wear OS', 'Wear OS-compagnon', 'Wear OSコンパニオン', 'Wear OS 컴패니언', 'Wear OS 配套应用'), 'guides/wear-os'),
+      item(text('Wear OS roadmap', 'Hoja de ruta de Wear OS', 'Wear-OS-Roadmap', 'Feuille de route Wear OS', 'Roteiro do Wear OS', 'Roadmap Wear OS', 'Wear OS-roadmap', 'Wear OSロードマップ', 'Wear OS 로드맵', 'Wear OS 路线图'), 'guides/wear-os'),
     ]),
   }),
 ]);

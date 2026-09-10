@@ -1,3 +1,7 @@
-# Android release lanes
+# Android validation lanes
 
-`validate_wear_release` builds and validates both AABs without publication. The legacy Fastlane upload lanes are not used for Wear publication because Supply models one default track and cannot assign the phone and Wear bundles to distinct form-factor tracks. The protected release workflow uses `scripts/upload-google-play-paired-release.sh` to upload both bundles in one edit while assigning phone to `qa` and Wear to `wear:internal`. Exact-release Wear screenshots are captured from the later Play-generated closed-track installation and replaced only by protected `.github/workflows/android-wear-screenshots.yml`, which invokes the evidence-bound implementation script; requiring them during initial upload would be circular. Production promotion similarly updates `production` and `wear:production` in one edit. Run credentialed mutation only from protected workflows after approval.
+`validate_wear_release` is a non-publishing development lane retained for the deferred Wear OS implementation. It builds and validates both candidate AABs without Play credentials or mutation.
+
+The current Android `1.9.1` publication path is phone-only and does not invoke Fastlane. `.github/workflows/android-release.yml` uploads the exact tagged phone artifact to Internal Testing, and `.github/workflows/android-promote-production.yml` promotes that exact version code and submits it for review. Wear upload, screenshots, and paired-track automation remain dormant until the planned `1.10.0` requalification cycle.
+
+Never run credentialed Play mutation from Fastlane or a developer workstation.

@@ -29,7 +29,8 @@ data class DistributionPolicy(
             reviewPromptAvailable = true,
             campaignAttributionEnabled = true,
             onboardingAnalyticsEnabled = true,
-            wearSyncAvailable = true,
+            // Wear OS publication is deferred; do not expose setup UI until the companion ships.
+            wearSyncAvailable = false,
             directCloudProvidersAvailable = true,
         )
 

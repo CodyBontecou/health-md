@@ -19,7 +19,7 @@ public final class WearBundleManifestVerifier {
 
     public static void main(String[] args) throws Exception {
         if (args.length != 7) {
-            fail("usage: WearBundleManifestVerifier <wear|phone> app.aab package versionCode versionName minSdk targetSdk");
+            fail("usage: WearBundleManifestVerifier <wear|phone|phone-deferred> app.aab package versionCode versionName minSdk targetSdk");
         }
         String formFactor = args[0];
         Path bundle = Path.of(args[1]);
@@ -28,15 +28,20 @@ public final class WearBundleManifestVerifier {
         String expectedVersionName = args[4];
         String expectedMinSdk = args[5];
         String expectedTargetSdk = args[6];
-        require("wear".equals(formFactor) || "phone".equals(formFactor), "unknown form factor");
+        require("wear".equals(formFactor) || "phone".equals(formFactor) ||
+            "phone-deferred".equals(formFactor), "unknown form factor");
         require(!expectedPackage.isBlank() && !expectedVersionCode.isBlank() &&
             !expectedVersionName.isBlank() && !expectedMinSdk.isBlank() && !expectedTargetSdk.isBlank(),
             "expected identity values must be nonblank");
 
         XmlElement manifest = readManifest(bundle, formFactor);
         require("manifest".equals(manifest.getName()), "root is not manifest");
-        verifyStaticCapability(bundle, expectedPackage,
-            "wear".equals(formFactor) ? "healthmd_watch_sync" : "healthmd_phone_sync");
+        if ("phone-deferred".equals(formFactor)) {
+            verifyNoStaticCapability(bundle, expectedPackage);
+        } else {
+            verifyStaticCapability(bundle, expectedPackage,
+                "wear".equals(formFactor) ? "healthmd_watch_sync" : "healthmd_phone_sync");
+        }
         require(expectedPackage.equals(attr(manifest, "package")), "wrong package");
         require(expectedVersionCode.equals(attr(manifest, ANDROID, "versionCode")), "wrong packaged versionCode");
         require(expectedVersionName.equals(attr(manifest, ANDROID, "versionName")), "wrong packaged versionName");
@@ -45,11 +50,18 @@ public final class WearBundleManifestVerifier {
         require(expectedMinSdk.equals(attr(sdk, ANDROID, "minSdkVersion")), "wrong packaged minSdk");
         require(expectedTargetSdk.equals(attr(sdk, ANDROID, "targetSdkVersion")), "wrong packaged targetSdk");
         XmlElement app = one(manifest, "application");
-        if ("phone".equals(formFactor)) {
+        if ("phone".equals(formFactor) || "phone-deferred".equals(formFactor)) {
             List<XmlElement> services = elements(app, "service");
             List<XmlElement> listeners = services.stream()
                 .filter(e -> "com.healthmd.wear.WearPhoneDataLayerService".equals(attr(e, ANDROID, "name")))
                 .toList();
+            if ("phone-deferred".equals(formFactor)) {
+                require(listeners.isEmpty(), "deferred phone still packages the Wear listener");
+                require(dataLayerListenerServices(services).isEmpty(),
+                    "deferred phone still packages a Wear Data Layer listener");
+                System.out.println("Packaged phone protobuf manifest has no advertised Wear runtime");
+                return;
+            }
             require(listeners.size() == 1, "phone Data Layer listener inventory differs");
             XmlElement listener = listeners.get(0);
             require("true".equals(attr(listener, ANDROID, "exported")), "phone Data Layer listener missing");
@@ -184,6 +196,25 @@ public final class WearBundleManifestVerifier {
             "wear".equals(attr(data, ANDROID, "scheme")) &&
             "*".equals(attr(data, ANDROID, "host")) &&
             expectedPathPrefix.equals(attr(data, ANDROID, "pathPrefix"));
+    }
+
+    private static void verifyNoStaticCapability(Path bundle, String expectedPackage) throws Exception {
+        com.android.aapt.Resources.ResourceTable table;
+        try (ZipFile zip = new ZipFile(bundle.toFile())) {
+            var entry = zip.getEntry("base/resources.pb");
+            require(entry != null, "compiled resources table missing");
+            try (InputStream input = zip.getInputStream(entry)) {
+                table = com.android.aapt.Resources.ResourceTable.parseFrom(input);
+            }
+        }
+        long entries = table.getPackageList().stream()
+            .filter(pkg -> expectedPackage.equals(pkg.getPackageName()))
+            .flatMap(pkg -> pkg.getTypeList().stream())
+            .filter(type -> "array".equals(type.getName()))
+            .flatMap(type -> type.getEntryList().stream())
+            .filter(entry -> "android_wear_capabilities".equals(entry.getName()))
+            .count();
+        require(entries == 0, "deferred phone still advertises android_wear_capabilities");
     }
 
     private static void verifyStaticCapability(Path bundle, String expectedPackage, String expectedCapability)

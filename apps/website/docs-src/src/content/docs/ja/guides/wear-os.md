@@ -1,45 +1,24 @@
 ---
-title: Wear OSコンパニオン
-description: Health.md for Wear OSは、ウォッチにアクティビティとリカバリーのタイルに加え、10種類のヘルスコンプリケーションを追加します。電話はHealth Connectの唯一の権威であり続けます。
+title: Wear OS コンパニオン（予定）
+description: Wear OS コンパニオンは延期され、現在の Google Play リリースには含まれていません。
 ---
 
 <div class="docs-hero">
-  <p class="docs-eyebrow">Android · Wear OS</p>
-  <p>Health.mdは、電話アプリと同じGoogle Play掲載情報の下でWear OSコンパニオンを提供します。電話がHealth Connectの唯一の権威であり続けながら、ウォッチに一目でわかるヘルス画面を追加できます。</p>
+  <p class="docs-eyebrow">Android · Wear OS ロードマップ</p>
+  <p>Wear OS コンパニオンは現在の Google Play リリースには含まれていません。</p>
   <div class="docs-actions">
-    <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Playで入手</a>
-    <a class="docs-button-secondary" href="/ja/docs/android/">Androidアプリガイド</a>
+    <a class="docs-button-secondary" href="/ja/docs/android/">Android アプリガイド</a>
   </div>
 </div>
 
-## ウォッチに表示されるもの
+## 現在の状況
 
-| 画面 | 内容 |
-|---|---|
-| デイリーアクティビティタイル | 今日のアクティビティサマリーを文字盤タイルとして表示 |
-| リカバリータイル | 今日のリカバリーサマリーを文字盤タイルとして表示 |
-| コンプリケーション（10種） | アクティビティ、リカバリー、ステップ、ムーブ、エクササイズ、睡眠、安静時心拍数、平均心拍数、HRV、血中酸素を文字盤コンプリケーションとして表示 |
+- 現在 Google Play からインストールされるのは、スマートフォン向け Health.md アプリのみです。
+- スマートフォンアプリは Wear 機能を公開せず、Data Layer 同期を実行せず、Wear 設定も表示しません。
+- ウォッチモジュールは未公開のプレビューとしてソースツリーに残っています。
 
-コンプリケーションはほとんどの文字盤で文字盤エディタから追加でき、タイルはウォッチのタイルカルーセルに表示されます。
+## 目標
 
-## 仕組み
+Wear は Android 1.10.0 の検証サイクルを目標としています。Play 署名済みの正確なビルドについて、Pixel Watch と Samsung Galaxy Watch の実機確認、バッテリーテスト、インストール・更新・再接続シナリオ、スクリーンショット確認、独立したリリース承認が完了した後にのみ公開します。
 
-- ウォッチアプリは、電話アプリと同じPlay掲載情報と署名IDで配布されます。
-- ヘルスデータは、Wear OSデータレイヤーを通じて電話からウォッチへ、非公開の集約スナップショットとして流れます。ウォッチは**Health ConnectやHealth Servicesを直接センシングせず**、すべてのメトリックで電話が権威であり続けます。
-- ウォッチ画面は、電話アプリが最後に送信したスナップショットから更新されます。アカウントもクラウドもなく、ヘルスデータが端末の外に出ることはありません。
-
-## 要件
-
-- Health.mdをインストールしたAndroid電話と、ペアリングしたWear OSウォッチ。
-- 表示したいメトリックの、電話上のHealth Connectデータ。
-- ウォッチのPlay Storeか、コンパニオン電話のPlay Store掲載情報から、ウォッチにHealth.mdをインストール。
-
-## セットアップ
-
-1. ウォッチのPlay Store（または電話のPlay Storeのウォッチ欄）を開き、Health.mdをインストールします。
-2. 電話アプリを一度開き、スナップショットが同期できるようにします。
-3. 文字盤を長押し → **カスタマイズ** → Health.mdコンプリケーションを追加するか、タイルカルーセルまでスワイプしてHealth.mdタイルをピン留めします。
-
-## プライバシーと検証
-
-コンパニオンは純粋な非公開集約トランスポートコントラクトを使用するため、生のレコードがウォッチへ送信されることはありません。リリース品質は、Wear OSアーティファクトを出荷する前に、エミュレータスイートと、物理的なペアリング端末でのバッテリーおよびOEM QAエビデンスによってゲートされます。完全な手順書は[Wear OS実装チェックリスト](https://github.com/CodyBontecou/health-md/blob/main/apps/android/docs/features/wear-os-implementation.md)を参照してください。
+それまでは、Health Connect のエクスポート、スケジュール、ウィジェット、Direct CLI ペアリングにはスマートフォン向け Android アプリをご利用ください。

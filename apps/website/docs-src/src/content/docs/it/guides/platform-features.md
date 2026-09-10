@@ -12,6 +12,8 @@ description: Che cosa offre Health.md su iPhone, iPad, Mac, Android, Wear OS e c
   </div>
 </div>
 
+**Le voci Wear OS sono funzionalità previste, non incluse nella versione Google Play attuale.**
+
 Legenda: ✓ disponibile · ◐ disponibile con differenze di piattaforma indicate nella riga · △ pianificato o in QA · ? disponibilità non dichiarata · — non disponibile su quella piattaforma.
 
 La CLI non è una colonna separata di piattaforma dati sanitari: le funzioni della CLI compaiono nelle righe di automazione e conservano la semantica della loro origine iPhone o Android.
@@ -72,7 +74,7 @@ Alcuni dati non vengono volutamente **trattati come equivalenti** tra piattaform
 |---|---|---|---|---|
 | Widget nella schermata Home | ✓ riepilogo, anelli di attività, fascia cardiaca, sonno | — | ✓ riepilogo, attività, fascia cardiaca, sonno (i passi sostituiscono le ore in piedi) | — |
 | Avanzamento dell'esportazione in Attività in tempo reale | ✓ | — | — | — |
-| Superfici dell'orologio | ✓ app orologio + 10 complicazioni | — | — | ✓ tile + 10 complicazioni |
+| Superfici dell'orologio | ✓ app orologio + 10 complicazioni | — | — | △ previsto per 1.10.0 |
 | Mac come destinazione di esportazione (trasferimento locale cifrato) | ✓ l'iPhone invia | ✓ riceve | — | — |
 
 ## Acquisto e privacy
@@ -81,7 +83,7 @@ Alcuni dati non vengono volutamente **trattati come equivalenti** tra piattaform
 |---|---|---|---|---|
 | Livello gratuito | ✓ 10 azioni di esportazione manuali o pianificate | — | ✓ 10 azioni di esportazione manuali | — |
 | Sblocco | ✓ acquisto a vita una tantum (individuale / famiglia) | ◐ stesso sblocco Apple | ✓ acquisto a vita una tantum, pianificazione inclusa | — |
-| Privacy con elaborazione locale | ✓ nessun cloud di dati sanitari di Health.md | ✓ | ✓ | ✓ |
+| Privacy con elaborazione locale | ✓ nessun cloud di dati sanitari di Health.md | ✓ | ✓ | △ previsto |
 | Referto per il clinico (un PDF per gli appuntamenti) | ✓ | — | ✓ | — |
 
 Health.md non gestisce alcun cloud di dati sanitari. I dati sanitari possono esistere nelle destinazioni che scegli, in contesto locale cifrato e in uno stato di trasferimento privato limitato. Ogni cartella, Mac, endpoint API o destinazione CLI viene configurata esplicitamente. I profili e le pianificazioni restano locali al dispositivo in cui sono stati creati. Per il flusso di lavoro di ciascuna piattaforma, vedi i [profili di esportazione](/it/docs/export-profiles/), la [guida Android](/it/docs/android/) e la [guida all'esportazione su iPhone](/it/docs/export/).

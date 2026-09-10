@@ -12,6 +12,8 @@ description: Was Health.md auf iPhone, iPad, Mac, Android, Wear OS und der CLI b
   </div>
 </div>
 
+**Die Wear-OS-Einträge sind geplante Funktionen und nicht Teil der aktuellen Google-Play-Version.**
+
 Legende: ✓ verfügbar · ◐ verfügbar mit den in der Zeile genannten Plattformunterschieden · △ geplant oder in Qualitätssicherung · ? Verfügbarkeit wird nicht beansprucht · — auf dieser Plattform nicht verfügbar.
 
 Die CLI ist keine eigene Spalte für eine Gesundheitsdatenplattform: CLI-Funktionen erscheinen in den Zeilen zur Automatisierung und behalten die Semantik ihrer iPhone- oder Android-Quelle.
@@ -72,7 +74,7 @@ Einige Daten werden plattformübergreifend bewusst **nicht als gleichwertig beha
 |---|---|---|---|---|
 | Widgets auf dem Startbildschirm | ✓ Zusammenfassung, Aktivitätsringe, Herzfrequenzbereich, Schlaf | — | ✓ Zusammenfassung, Aktivität, Herzfrequenzbereich, Schlaf (Schritte ersetzen Stehen-Stunden) | — |
 | Live-Aktivität für den Exportfortschritt | ✓ | — | — | — |
-| Uhrenflächen | ✓ Watch-App + 10 Komplikationen | — | — | ✓ Kacheln + 10 Komplikationen |
+| Uhrenflächen | ✓ Watch-App + 10 Komplikationen | — | — | △ für 1.10.0 geplant |
 | Mac als Exportziel (verschlüsselte lokale Übertragung) | ✓ iPhone sendet | ✓ empfängt | — | — |
 
 ## Kauf und Datenschutz
@@ -81,7 +83,7 @@ Einige Daten werden plattformübergreifend bewusst **nicht als gleichwertig beha
 |---|---|---|---|---|
 | Kostenloses Kontingent | ✓ 10 manuelle oder geplante Exportaktionen | — | ✓ 10 manuelle Exportaktionen | — |
 | Freischaltung | ✓ einmaliger Lebenszeitkauf (Einzeln / Familie) | ◐ gleiche Apple-Freischaltung | ✓ einmaliger Lebenszeitkauf, Zeitplanung inklusive | — |
-| Datenschutz mit lokaler Verarbeitung | ✓ keine Health.md-Cloud für Gesundheitsdaten | ✓ | ✓ | ✓ |
+| Datenschutz mit lokaler Verarbeitung | ✓ keine Health.md-Cloud für Gesundheitsdaten | ✓ | ✓ | △ geplant |
 | Arztbericht (ein PDF für Termine) | ✓ | — | ✓ | — |
 
 Health.md betreibt keine Cloud für Gesundheitsdaten. Gesundheitsdaten können in Zielen Ihrer Wahl, in verschlüsseltem lokalem Kontext und in begrenztem privaten Übertragungszustand existieren. Jedes Ziel — Ordner, Mac, API-Endpunkt oder CLI — wird explizit konfiguriert. Profile und Zeitpläne bleiben lokal auf dem Gerät, auf dem sie erstellt wurden. Die Workflows der einzelnen Plattformen finden Sie in den [Exportprofilen](/de/docs/export-profiles/), im [Android-Leitfaden](/de/docs/android/) und im [iPhone-Export-Leitfaden](/de/docs/export/).

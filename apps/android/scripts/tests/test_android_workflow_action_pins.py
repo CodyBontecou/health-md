@@ -32,28 +32,24 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])
 
-    def test_initial_qa_upload_is_exact_annotated_tag_and_retains_sha_bound_receipt(self) -> None:
+    def test_phone_upload_is_exact_annotated_tag_and_retains_sha_bound_receipt(self) -> None:
         release = (ROOT / ".github/workflows/android-release.yml").read_text()
-        evidence = (ROOT / ".github/workflows/android-wear-evidence.yml").read_text()
-        required_release = (
+        required = (
             'git cat-file -t "$RELEASE_TAG"',
             'git rev-parse "$RELEASE_TAG^{commit}"',
-            'healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}',
-            'phoneAabSha256:$phoneAab',
-            'wearAabSha256:$wearAab',
+            'healthmd-android-phone-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}',
+            'phoneAabSha256:$aab',
+            'wearIncluded:false',
             'uploadPrepared:true',
-            'Retain immutable QA upload intent receipt',
+            'Retain immutable phone upload intent receipt',
         )
-        required_evidence = (
+        self.assertEqual([], [needle for needle in required if needle not in release])
+
+    def test_deferred_wear_evidence_workflow_retains_its_own_provenance_guards(self) -> None:
+        evidence = (ROOT / ".github/workflows/android-wear-evidence.yml").read_text()
+        required = (
             'qa_upload_run_id:',
             'path == ".github/workflows/android-release.yml"',
-            'healthmd-android-qa-upload-${{ inputs.version }}-${{ inputs.release_sha }}-attempt-${{ steps.qa-run.outputs.attempt }}',
-            'healthmd-android-${{ inputs.version }}-attempt-${{ steps.qa-run.outputs.attempt }}',
-            'qaUploadRunId:$qaUpload',
-            'qaUploadRunAttempt:$qaAttempt',
-            'screenshotUploadRunId:$screenshotUpload',
-            'screenshotUploadRunAttempt:$screenshotAttempt',
-            'screenshotSubmissionRunAttempt:$screenshotSubmissionAttempt',
             'submission_run_attempt:',
             'path == ".github/workflows/android-wear-screenshots.yml"',
             'attempts/${run_attempt}',
@@ -63,8 +59,7 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
             'qaWearAabSha256:$wearAab',
             'qa-upload/jobs.json',
         )
-        self.assertEqual([], [needle for needle in required_release if needle not in release])
-        self.assertEqual([], [needle for needle in required_evidence if needle not in evidence])
+        self.assertEqual([], [needle for needle in required if needle not in evidence])
 
     def test_screenshot_mutation_is_protected_exact_tag_and_attempt_bound(self) -> None:
         workflow = (ROOT / ".github/workflows/android-wear-screenshots.yml").read_text()
@@ -86,7 +81,7 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
             'test "$GITHUB_REF_NAME" = "android/v$VERSION"',
             'git cat-file -t "$GITHUB_REF_NAME"',
             'git rev-parse "$GITHUB_REF_NAME^{commit}"',
-            'git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main',
+            'git merge-base --is-ancestor "$tagged_sha" refs/remotes/origin/main',
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])
         self.assertNotIn("ops/android-production-", workflow)
@@ -94,10 +89,10 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
     def test_play_credential_is_materialized_only_after_build_and_artifact_retention(self) -> None:
         workflow = (ROOT / ".github/workflows/android-release.yml").read_text()
         play = workflow.index("Configure ephemeral Google Play credential")
-        build = workflow.index("Build signed phone and Wear app bundles")
+        build = workflow.index("Build signed phone app bundle")
         cleanup = workflow.index("Remove ephemeral signing credentials after inspection")
-        retain = workflow.index("Retain signed bundle with native debug symbols")
-        upload = workflow.index("Upload phone/Wear bundles to their form-factor tracks")
+        retain = workflow.index("Retain signed phone bundle with native debug symbols")
+        upload = workflow.index("Upload phone bundle to Internal Testing")
         self.assertLess(build, cleanup)
         self.assertLess(cleanup, retain)
         self.assertLess(retain, play)

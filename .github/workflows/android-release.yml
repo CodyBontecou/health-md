@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Existing android/v* release tag to rebuild and publish (recovery after workflow-only fixes; runs the fixed workflow from main against the exact immutable tag)'
+        description: 'Existing android/v* tag to rebuild/publish after a workflow-only fix'
         required: false
         default: ''
         type: string
@@ -39,36 +39,26 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -n "${{ inputs.release_tag || '' }}" ]]; then
-            if [[ "${{ github.event_name }}" != "workflow_dispatch" ]]; then
-              echo "::error::release_tag input is valid only for manual dispatch recovery"
-              exit 1
-            fi
+            [[ "${{ github.event_name }}" == workflow_dispatch ]] || {
+              echo '::error::release_tag is valid only for manual recovery'; exit 1;
+            }
             tag="${{ inputs.release_tag }}"
           else
-            if [[ "${{ github.ref_type }}" != "tag" ]]; then
-              echo "::error::push trigger must be an android/v* tag"
-              exit 1
-            fi
+            [[ "${{ github.ref_type }}" == tag ]] || {
+              echo '::error::push trigger must be an android/v* tag'; exit 1;
+            }
             tag="${{ github.ref_name }}"
           fi
-          if [[ "$tag" != android/v* ]]; then
-            echo "::error::release tag must start with 'android/v'; got '$tag'"
-            exit 1
-          fi
-          # Re-fetch the published tag object so the guard below verifies the real
-          # annotated tag rather than the commit-shaped ref a checkout creates.
+          [[ "$tag" == android/v* ]] || { echo "::error::invalid Android release tag: $tag"; exit 1; }
           git fetch --force --no-tags origin "+refs/tags/${tag}:refs/tags/${tag}"
-          if [[ "$(git cat-file -t "$tag")" != "tag" ]]; then
-            echo "::error::$tag is not an annotated tag"
-            exit 1
-          fi
+          [[ "$(git cat-file -t "$tag")" == tag ]] || {
+            echo "::error::$tag is not an annotated tag"; exit 1;
+          }
           sha="$(git rev-parse "${tag}^{commit}")"
-          git fetch --force origin "+refs/heads/main:refs/remotes/origin/main"
-          git rev-parse --verify refs/remotes/origin/main >/dev/null
-          if ! git merge-base --is-ancestor "$sha" refs/remotes/origin/main; then
-            echo "::error::$tag commit is not an ancestor of main"
-            exit 1
-          fi
+          git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$sha" refs/remotes/origin/main || {
+            echo "::error::$tag does not point to a main-reachable commit"; exit 1;
+          }
           {
             echo "tag=$tag"
             echo "release_sha=$sha"
@@ -77,10 +67,6 @@ jobs:
   qualify:
     name: Qualify exact Android release SHA
     needs: resolve
-    # android-ci's change-detection job needs pull-requests: read to list PR files.
-    # A reusable call may not escalate beyond what the caller's job grants, so the
-    # permission must be granted here (a bare contents: read at the caller level
-    # leaves the nested job at pull-requests: none and fails the whole call).
     permissions:
       contents: read
       pull-requests: read
@@ -90,10 +76,10 @@ jobs:
 
   publish-internal:
     needs: [resolve, qualify]
-    name: Publish Android internal release
+    name: Publish phone internal release
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    environment: google-play-qa
+    environment: google-play
     defaults:
       run:
         working-directory: apps/android
@@ -111,34 +97,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up pinned Ruby and Fastlane
-        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1
-        with:
-          ruby-version: '3.3'
-          bundler-cache: true
-          working-directory: apps/android
-
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
 
-      - name: Install pinned Google Play CLI
+      - name: Install pinned Google Play metadata validator
         shell: bash
         run: |
           set -euo pipefail
           download="$RUNNER_TEMP/gplay-download"
-          curl -fsSL \
-            https://github.com/tamtom/play-console-cli/releases/download/v0.8.0/gplay-linux-amd64 \
-            -o "$download"
-          echo "ea9d812878dcc61faa0401a306f3f648ab6779d87358e07afb8590e9c96a313a  $download" \
+          curl -fsSL https://github.com/tamtom/play-console-cli/releases/download/v0.8.0/gplay-linux-amd64 -o "$download"
+          echo 'ea9d812878dcc61faa0401a306f3f648ab6779d87358e07afb8590e9c96a313a  '"$download" \
             | sha256sum --check --strict
           install -m 0755 "$download" "$RUNNER_TEMP/gplay"
           echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
-      - name: Validate Google Play listing metadata
-        run: |
-          ./scripts/validate-play-listing.sh
-          # Wear screenshots are intentionally post-upload: they must come from the exact
-          # Play-generated, Play-signed closed-track installation produced by this AAB upload.
+      - name: Validate phone listing metadata
+        run: ./scripts/validate-play-listing.sh
 
       - name: Set up pinned Rust Android toolchain
         working-directory: ${{ github.workspace }}
@@ -147,10 +121,7 @@ jobs:
           set -euo pipefail
           rustup toolchain install 1.88.0 --profile minimal
           rustup target add --toolchain 1.88.0 \
-            aarch64-linux-android \
-            armv7-linux-androideabi \
-            x86_64-linux-android \
-            i686-linux-android
+            aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
           rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
 
       - name: Install pinned Android NDK
@@ -159,7 +130,7 @@ jobs:
           set -euo pipefail
           android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
           test -n "$android_sdk"
-          sdkmanager "ndk;27.1.12297006"
+          sdkmanager 'ndk;27.1.12297006'
           echo "ANDROID_NDK_HOME=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
 
@@ -173,7 +144,7 @@ jobs:
         with:
           min-wrapper-count: 1
 
-      - name: Validate tag and committed version
+      - name: Validate tag, phone-only scope, and committed version
         id: version
         shell: bash
         env:
@@ -181,34 +152,32 @@ jobs:
           RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
         run: |
           set -euo pipefail
-          # actions/checkout fetches the tagged commit into refs/tags/<name>
-          # ("+<sha>:refs/tags/<name>"), which flattens an annotated tag to a
-          # commit-shaped ref in the runner checkout. Re-fetch the published
-          # tag object from origin so the guards below verify the real tag.
-          git fetch --force --no-tags origin \
-            "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          git fetch --force --no-tags origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
           version="${RELEASE_TAG#android/v}"
           version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
           version_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)"
-          test -n "$version"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test "$(git cat-file -t "$RELEASE_TAG")" = tag
           test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
-          git fetch --force origin "+refs/heads/main:refs/remotes/origin/main"
-          git rev-parse --verify refs/remotes/origin/main >/dev/null
+          git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
           git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
-          echo "release_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
           test "$version_name" = "$version"
-          test -n "$version_code"
-          test "$version_code" -lt 1000000
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          wear_version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -1)"
-          wear_version_code="$(sed -n 's/.*versionCode = \([0-9_][0-9_]*\).*/\1/p' wear/build.gradle.kts | head -1 | tr -d '_')"
-          test "$wear_version_name" = "$version"
-          test "$wear_version_code" -ge 1000000
-          test "$wear_version_code" != "$version_code"
-          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
-          echo "wear_version_code=$wear_version_code" >> "$GITHUB_OUTPUT"
+          [[ "$version_code" =~ ^[1-9][0-9]*$ ]]
+          (( version_code < 1000000 ))
+          jq -e --arg version "$version" --argjson code "$version_code" '
+            .schemaVersion == 1 and .releaseVersionName == $version and
+            .googlePlay.phone.status == "release_candidate" and
+            .googlePlay.phone.versionCode == $code and
+            .googlePlay.phone.testingTrack == "internal" and
+            .googlePlay.wear.status == "deferred" and
+            .googlePlay.wear.published == false and
+            .googlePlay.wear.runtimeAdvertisedByPhone == false
+          ' release-scope.json >/dev/null
+          {
+            echo "release_sha=$RELEASE_SHA"
+            echo "version=$version"
+            echo "version_code=$version_code"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Configure ephemeral signing credentials
         shell: bash
@@ -219,18 +188,12 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for name in \
-            ANDROID_RELEASE_KEYSTORE_BASE64 \
-            RELEASE_STORE_PASSWORD \
-            RELEASE_KEY_ALIAS \
-            RELEASE_KEY_PASSWORD; do
+          for name in ANDROID_RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
             test -n "${!name:-}"
           done
-
           signing_key="$RUNNER_TEMP/health-md-release.jks"
           printf '%s' "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$signing_key"
           chmod 600 "$signing_key"
-
           {
             printf 'RELEASE_STORE_FILE=%s\n' "$signing_key"
             printf 'RELEASE_STORE_PASSWORD=%s\n' "$RELEASE_STORE_PASSWORD"
@@ -246,75 +209,58 @@ jobs:
           :healthmd-core:prepareRustRelease
           --stacktrace
 
-      - name: Build signed phone and Wear app bundles
+      - name: Build signed phone app bundle
         env:
           CAMPAIGN_ATTRIBUTION_ENDPOINT_URL: ${{ secrets.CAMPAIGN_ATTRIBUTION_ENDPOINT_URL }}
           CAMPAIGN_ATTRIBUTION_INGEST_TOKEN: ${{ secrets.CAMPAIGN_ATTRIBUTION_INGEST_TOKEN }}
-        run: ./gradlew --no-daemon :app:bundlePlayRelease :wear:bundleRelease --stacktrace
+        run: ./gradlew --no-daemon :app:bundlePlayRelease --stacktrace
 
-      - name: Inspect packaged ABIs, identities, components, and signing
-        env:
-          RELEASE_STORE_FILE: ${{ runner.temp }}/health-md-release.jks
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          WEAR_REQUIRE_SIGNING_ATTESTATION: 'true'
+      - name: Inspect phone bundle ABIs, identity, and deferred-Wear boundary
         run: |
           ../../packages/healthmd-core-rust/scripts/inspect-android-aab.sh app/build/outputs/bundle/playRelease/app-play-release.aab
-          ./scripts/validate-wear-artifact.sh wear/build/outputs/bundle/release/wear-release.aab app/build/outputs/bundle/playRelease/app-play-release.aab
+          ./scripts/verify-phone-only-artifact.sh app/build/outputs/bundle/playRelease/app-play-release.aab
 
       - name: Remove ephemeral signing credentials after inspection
         shell: bash
         run: rm -f local.properties "$RUNNER_TEMP/health-md-release.jks"
 
-      - name: Retain signed bundle with native debug symbols
+      - name: Retain signed phone bundle with native debug symbols
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: healthmd-android-${{ steps.version.outputs.version }}-attempt-${{ github.run_attempt }}
+          name: healthmd-android-phone-${{ steps.version.outputs.version }}-attempt-${{ github.run_attempt }}
           retention-days: 90
           if-no-files-found: error
-          path: |
-            apps/android/app/build/outputs/bundle/playRelease/app-play-release.aab
-            apps/android/wear/build/outputs/bundle/release/wear-release.aab
+          path: apps/android/app/build/outputs/bundle/playRelease/app-play-release.aab
 
-      # Retain every deterministic input before opening a Play edit. Protected ingest later proves
-      # this run's upload and cleanup steps succeeded, so no mandatory artifact write remains after
-      # a version code has been consumed by Play.
-      - name: Create immutable QA upload intent receipt
+      - name: Create immutable phone upload intent receipt
         shell: bash
         env:
           VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
-          WEAR_VERSION_CODE: ${{ steps.version.outputs.wear_version_code }}
           RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
           RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
         run: |
           set -euo pipefail
-          phone_aab=app/build/outputs/bundle/playRelease/app-play-release.aab
-          wear_aab=wear/build/outputs/bundle/release/wear-release.aab
-          test -f "$phone_aab" -a -f "$wear_aab"
-          jq -n \
-            --arg repository "$GITHUB_REPOSITORY" --arg workflow ".github/workflows/android-release.yml" \
-            --arg event "$GITHUB_EVENT_NAME" --arg tag "$RELEASE_TAG" --arg sha "$RELEASE_SHA" \
+          aab=app/build/outputs/bundle/playRelease/app-play-release.aab
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow '.github/workflows/android-release.yml' \
+            --arg tag "$RELEASE_TAG" --arg sha "$RELEASE_SHA" \
             --arg peeled "$(git rev-parse "$RELEASE_TAG^{commit}")" --arg version "$VERSION" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
-            --argjson phoneCode "$VERSION_CODE" --argjson wearCode "$WEAR_VERSION_CODE" \
-            --arg phoneAab "$(sha256sum "$phone_aab" | awk '{print $1}')" \
-            --arg wearAab "$(sha256sum "$wear_aab" | awk '{print $1}')" \
+            --argjson code "$VERSION_CODE" --arg aab "$(sha256sum "$aab" | awk '{print $1}')" \
             --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
-              schemaVersion:1, repository:$repository, workflow:$workflow, event:$event,
-              runId:$runId, runAttempt:$runAttempt, tag:$tag, headSha:$sha, tagPeeledSha:$peeled,
-              versionName:$version, phoneVersionCode:$phoneCode, wearVersionCode:$wearCode,
-              phoneTrack:"qa", wearTrack:"wear:internal", releaseStatus:"completed",
-              phoneAabSha256:$phoneAab, wearAabSha256:$wearAab,
-              uploadPrepared:true, preparedAtUtc:$preparedAt
-            }' >"$RUNNER_TEMP/qa-upload-receipt.json"
+              schemaVersion:1,repository:$repository,workflow:$workflow,runId:$runId,
+              runAttempt:$runAttempt,tag:$tag,headSha:$sha,tagPeeledSha:$peeled,
+              versionName:$version,phoneVersionCode:$code,phoneTrack:"internal",
+              releaseStatus:"completed",phoneAabSha256:$aab,wearIncluded:false,
+              uploadPrepared:true,preparedAtUtc:$preparedAt
+            }' > "$RUNNER_TEMP/phone-upload-intent.json"
 
-      - name: Retain immutable QA upload intent receipt
+      - name: Retain immutable phone upload intent receipt
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/qa-upload-receipt.json
+          name: healthmd-android-phone-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/phone-upload-intent.json
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
@@ -331,22 +277,34 @@ jobs:
           chmod 600 "$play_key"
           echo "PLAY_CONSOLE_KEY_PATH=$play_key" >> "$GITHUB_ENV"
 
-      - name: Upload phone/Wear bundles to their form-factor tracks in one Play edit
+      - name: Upload phone bundle to Internal Testing
         env:
-          CONFIRM_PLAY_PAIRED_UPLOAD: com.healthmd.android:qa:wear:internal:${{ steps.version.outputs.version_code }}:${{ steps.version.outputs.wear_version_code }}
+          CONFIRM_PLAY_PHONE_UPLOAD: com.healthmd.android:internal:${{ steps.version.outputs.version_code }}
           PHONE_VERSION_CODE: ${{ steps.version.outputs.version_code }}
-          WEAR_VERSION_CODE: ${{ steps.version.outputs.wear_version_code }}
-          PHONE_PLAY_TRACK: qa
-          WEAR_PLAY_TRACK: wear:internal
+          PHONE_PLAY_TRACK: internal
           PLAY_RELEASE_STATUS: completed
-        run: ./scripts/upload-google-play-paired-release.sh
+          PLAY_UPLOAD_RECEIPT_PATH: ${{ runner.temp }}/phone-upload-receipt.json
+        run: ./scripts/upload-google-play-phone-release.sh
 
-      - name: Remove ephemeral credentials after QA upload
+      - name: Remove ephemeral credential after phone upload
+        if: ${{ always() }}
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/play-console-key.json"
+
+      - name: Retain verified phone upload receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: healthmd-android-phone-upload-result-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/phone-upload-receipt.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Remove ephemeral credentials
         if: ${{ always() }}
         shell: bash
         run: |
-          rm -f local.properties
-          rm -f "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/health-md-release.jks"
+          rm -f local.properties "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/health-md-release.jks"
 
       - name: Release summary
         if: ${{ !cancelled() }}
@@ -354,14 +312,13 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
-          WEAR_VERSION_CODE: ${{ steps.version.outputs.wear_version_code }}
         run: |
           {
-            echo "## Android internal release"
+            echo '## Android phone internal release'
             echo
             echo "- Version: $VERSION"
             echo "- Version code: $VERSION_CODE"
-            echo "- Wear version code: $WEAR_VERSION_CODE"
-            echo "- Tracks: qa (phone) + wear:internal (Wear), same listing/edit"
-            echo "- Binary destination: Google Play only"
+            echo '- Track: internal (phone)'
+            echo '- Wear OS artifact: deferred and not uploaded'
+            echo '- Binary destination: Google Play only'
           } >> "$GITHUB_STEP_SUMMARY"
