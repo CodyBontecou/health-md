@@ -98,6 +98,18 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         self.assertLess(retain, play)
         self.assertLess(play, upload)
 
+    def test_instrumentation_declares_a_ready_software_ime_before_accessibility_tests(self) -> None:
+        workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
+        setting = "settings put secure show_ime_with_hard_keyboard 1"
+        readiness = "settings get secure default_input_method"
+        enabled = "shell ime list -s"
+        instrumentation = ":app:connectedFdroidDebugAndroidTest"
+        for requirement in (setting, readiness, enabled, instrumentation):
+            self.assertIn(requirement, workflow)
+        self.assertLess(workflow.index(setting), workflow.index(instrumentation))
+        self.assertLess(workflow.index(readiness), workflow.index(instrumentation))
+        self.assertLess(workflow.index(enabled), workflow.index(instrumentation))
+
 
 if __name__ == "__main__":
     unittest.main()

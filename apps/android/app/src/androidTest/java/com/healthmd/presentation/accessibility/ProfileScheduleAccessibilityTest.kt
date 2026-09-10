@@ -14,7 +14,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.espresso.Espresso.pressBack
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -290,7 +291,9 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
         captureContent("profiles-editor-cancel", ProfileScheduleTags.DIALOG)
-        pressBack()
+        // Espresso selects the activity root even while this separate native dialog owns focus.
+        // Inject the real system Back key without requiring the obscured activity window to focus.
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
         compose.waitForIdle()
         compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
         assertEquals(2, dismisses)
