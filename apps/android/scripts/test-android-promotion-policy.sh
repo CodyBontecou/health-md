@@ -215,6 +215,14 @@ grep -q 'Verify retained exact-SHA Android qualification' "$release" \
 grep -q 'recoveryQualificationRunId:$qualificationRunId' "$release" \
   || fail 'release intent omits retained qualification provenance'
 grep -q 'Build signed phone app bundle' "$release" || fail 'release does not build the phone bundle'
+grep -q 'environment: google-play-qa' "$release" \
+  || fail 'release does not isolate upload signing in the protected signing environment'
+grep -q "registered_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'" "$release" \
+  || fail 'release does not bind the AAB to the registered Play upload certificate'
+grep -q 'signingEnvironment:"google-play-qa",mutationEnvironment:"google-play"' "$release" \
+  || fail 'release intent does not attest the split signing and mutation boundaries'
+grep -q 'actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16' "$release" \
+  || fail 'release does not transfer the signed artifact through a pinned action'
 grep -q '.release-tooling/apps/android/scripts/upload-google-play-phone-release.sh' "$release" \
   || fail 'release bypasses the SHA-bound phone uploader'
 grep -q 'PLAY_RELEASE_ROOT: ${{ github.workspace }}/apps/android' "$release" \
@@ -222,7 +230,7 @@ grep -q 'PLAY_RELEASE_ROOT: ${{ github.workspace }}/apps/android' "$release" \
 grep -q 'wearIncluded:false' "$release" || fail 'release intent does not record phone-only scope'
 grep -q 'workflowSha:$workflowSha' "$release" || fail 'release intent omits workflow-tooling provenance'
 grep -q 'uploadToolSha256:$uploadToolSha256' "$release" || fail 'release intent omits uploader digest'
-grep -q 'healthmd-android-phone-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}' "$release" \
+grep -q 'healthmd-android-phone-upload-${{ needs.build-signed-phone.outputs.version }}-${{ needs.build-signed-phone.outputs.release_sha }}-attempt-${{ github.run_attempt }}' "$release" \
   || fail 'phone upload intent is not SHA/attempt bound'
 intent_line=$(grep -n 'Retain immutable phone upload intent receipt' "$release" | head -1 | cut -d: -f1)
 credential_line=$(grep -n 'Authenticate to Google Play with protected Workload Identity' "$release" | head -1 | cut -d: -f1)

@@ -22,20 +22,20 @@ The final gate jobs fail unless every job in their component workflow succeeds (
 
 Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
 
-`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA, reconstructs signing material only under `$RUNNER_TEMP`, builds and inspects the signed phone AAB, and retains both the AAB and a SHA/tag/run-attempt/AAB-digest-bound intent before opening a Play edit. It uploads the phone artifact to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
+`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
 
 After Internal Testing succeeds, dispatch `.github/workflows/android-promote-production.yml` **from the exact annotated release tag** with the semantic version and phone version code. It requires the same tag/main/version bindings, retains a pre-mutation intent, verifies that the exact code is active on `internal` and that production has no newer code, applies the reviewed English listing while promoting that artifact to `production`, and submits the single edit for review. Success requires Google Play to report `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED`. The workflow retains an attempt-qualified production receipt.
 
-Both mutation workflows use the tag-restricted `google-play` environment and exchange GitHub's job-scoped OIDC assertion for a short-lived Google access token. No long-lived Google service-account key is materialized. Configure these protected environment variables:
+Both mutation workflows use the tag-restricted `google-play` environment and exchange GitHub's job-scoped OIDC assertion for a short-lived Google access token. No long-lived Google service-account key is materialized. Configure these protected `google-play` environment variables:
 
 | Variable | Used for |
 | --- | --- |
 | `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` | Fully qualified Google Workload Identity provider resource |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT` | App-scoped Play publisher service account impersonated by the provider |
 
-The environment contains only the upload-signing secrets needed by the release build:
+The separately tag-restricted `google-play-qa` environment contains the upload-signing secrets used only by the release build job. The Play-mutation job cannot read them:
 
-| Secret | Used for |
+| `google-play-qa` secret | Used for |
 | --- | --- |
 | `ANDROID_RELEASE_KEYSTORE_BASE64` | Existing Play upload keystore |
 | `RELEASE_STORE_PASSWORD` | Upload-keystore password |
@@ -44,7 +44,7 @@ The environment contains only the upload-signing secrets needed by the release b
 
 The normal execution ref is the exact `android/v<version>` release tag. If an already-created immutable release needs a workflow-infrastructure-only recovery, an administrator may add and retain an annotated, main-reachable `android/recovery/*` tag for the fixed workflow revision and pass the original `release_tag` plus a successful exact-SHA Android CI run ID/attempt. The recovery verifies every required job in that retained CI attempt instead of spending a second run on unchanged product source. It still checks out and builds only the original release tag's source. Intent and result receipts bind the release SHA, qualification run, and recovery workflow SHA. Recovery tags must never contain product or artifact changes.
 
-`.github/workflows/android-google-play-access-audit.yml` is a protected diagnostic for this boundary. It retains intent, verifies an Internal-track read, inserts and immediately deletes one empty Play edit without committing it, and retains a receipt. It has no artifact upload, track/listing update, edit-commit, or review-submission operation.
+`.github/workflows/android-google-play-access-audit.yml` is a protected diagnostic for these boundaries. Its `google-play` job retains intent, records exact Internal/generated-artifact state, inserts and immediately deletes one empty Play edit without committing it, and retains a receipt. Its `google-play-qa` job exposes only public certificate digests and proves the protected keystore matches the registered upload certificate before deleting the temporary key file. It has no artifact upload, track/listing update, edit-commit, or review-submission operation.
 
 Campaign-attribution build values remain repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`.
 

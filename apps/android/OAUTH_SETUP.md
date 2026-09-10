@@ -23,7 +23,7 @@ Do not print token contents while checking cleanup.
 
 ## Supported authentication model
 
-The current phone-only release path uses GitHub OIDC with Google Workload Identity Federation in the tag-restricted `google-play` environment. `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` identifies a provider constrained to this repository, the `google-play` environment subject, and Android tags; `GOOGLE_PLAY_SERVICE_ACCOUNT` identifies the app-scoped Play publisher. The workflows request only a short-lived `androidpublisher` access token after retaining pre-mutation intent evidence. No Google private key is downloaded or written.
+The current phone-only release path uses GitHub OIDC with Google Workload Identity Federation in the tag-restricted `google-play` environment. `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` identifies a provider constrained to this repository, the `google-play` environment subject, and Android tags; `GOOGLE_PLAY_SERVICE_ACCOUNT` identifies the app-scoped Play publisher. A separate tag-restricted `google-play-qa` job signs the AAB with the registered upload certificate, deletes the temporary keystore, and transfers only the exact signed artifact to `google-play`. The mutation job requests a short-lived `androidpublisher` access token only after re-verifying that artifact and retaining pre-mutation intent evidence. No Google authentication private key is downloaded or written.
 
 Keep other duties separated:
 
@@ -31,7 +31,7 @@ Keep other duties separated:
 - `google-play-announce` uses a dedicated app-level read-only account.
 - Optional local readiness inspection uses a separate app-level read-only account passed through `PLAY_CONSOLE_KEY_PATH`.
 
-Upload-signing material is removed before Play access is requested. Never copy a QA or production mutation key to a developer workstation.
+Upload-signing material never enters the Play-mutation job and is removed before Play access is requested. Never copy an upload keystore or QA/production mutation key to a developer workstation.
 
 ## Safe local verification
 

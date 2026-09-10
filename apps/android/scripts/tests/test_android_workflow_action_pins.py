@@ -37,7 +37,7 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         required = (
             'git cat-file -t "$RELEASE_TAG"',
             'git rev-parse "$RELEASE_TAG^{commit}"',
-            'healthmd-android-phone-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}',
+            'healthmd-android-phone-upload-${{ needs.build-signed-phone.outputs.version }}-${{ needs.build-signed-phone.outputs.release_sha }}-attempt-${{ github.run_attempt }}',
             'phoneAabSha256:$aab',
             'wearIncluded:false',
             'uploadPrepared:true',
@@ -121,6 +121,10 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         self.assertLess(cleanup, retain)
         self.assertLess(retain, auth)
         self.assertLess(auth, upload)
+        self.assertIn("environment: google-play-qa", workflow)
+        self.assertIn("environment: google-play", workflow)
+        self.assertIn("actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16", workflow)
+        self.assertIn("registered_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'", workflow)
         self.assertIn("id-token: write", workflow)
         self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
 

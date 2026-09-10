@@ -147,18 +147,23 @@ jobs:
             all($required[]; . as $name | $passed | index($name) != null)
           ' "$RUNNER_TEMP/jobs.json" >/dev/null
 
-  publish-internal:
+  build-signed-phone:
     needs: [resolve, qualify, verify-recovery-qualification]
     if: >-
       always() && needs.resolve.result == 'success' &&
       (needs.qualify.result == 'success' || needs.verify-recovery-qualification.result == 'success')
-    name: Publish phone internal release
+    name: Build registered-signer phone bundle
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    environment: google-play
+    environment: google-play-qa
     permissions:
       contents: read
-      id-token: write
+    outputs:
+      release_sha: ${{ steps.version.outputs.release_sha }}
+      version: ${{ steps.version.outputs.version }}
+      version_code: ${{ steps.version.outputs.version_code }}
+      aab_sha256: ${{ steps.artifact.outputs.aab_sha256 }}
+      upload_certificate_sha1: ${{ steps.artifact.outputs.upload_certificate_sha1 }}
     defaults:
       run:
         working-directory: apps/android
@@ -169,17 +174,6 @@ jobs:
           ref: ${{ needs.resolve.outputs.release_sha }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Checkout trusted release tooling revision
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ github.sha }}
-          path: .release-tooling
-          persist-credentials: false
-          sparse-checkout: |
-            apps/android/scripts/google-play-phone-policy.sh
-            apps/android/scripts/upload-google-play-phone-release.sh
-          sparse-checkout-cone-mode: false
 
       - name: Set up Java
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
@@ -310,9 +304,39 @@ jobs:
           ../../packages/healthmd-core-rust/scripts/inspect-android-aab.sh app/build/outputs/bundle/playRelease/app-play-release.aab
           ./scripts/verify-phone-only-artifact.sh app/build/outputs/bundle/playRelease/app-play-release.aab
 
-      - name: Remove ephemeral signing credentials after inspection
+      - name: Verify AAB uses the registered Play upload certificate
+        id: artifact
         shell: bash
-        run: rm -f local.properties "$RUNNER_TEMP/health-md-release.jks"
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          aab=app/build/outputs/bundle/playRelease/app-play-release.aab
+          keystore="$RUNNER_TEMP/health-md-release.jks"
+          signer_der="$RUNNER_TEMP/phone-aab-signer.der"
+          expected_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'
+          keystore_sha1=$(keytool -exportcert -keystore "$keystore" \
+            -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" \
+            -keypass "$RELEASE_KEY_PASSWORD" 2>/dev/null | sha1sum | awk '{print $1}')
+          jarsigner -verify "$aab" >/dev/null 2>&1
+          keytool -printcert -jarfile "$aab" -rfc 2>/dev/null \
+            | awk '/-----BEGIN CERTIFICATE-----/{capture=1} capture{print} /-----END CERTIFICATE-----/{exit}' \
+            | openssl x509 -outform DER 2>/dev/null > "$signer_der"
+          aab_signer_sha1=$(sha1sum "$signer_der" | awk '{print $1}')
+          test "$keystore_sha1" = "$expected_sha1"
+          test "$aab_signer_sha1" = "$expected_sha1"
+          {
+            echo "aab_sha256=$(sha256sum "$aab" | awk '{print $1}')"
+            echo "upload_certificate_sha1=$aab_signer_sha1"
+          } >> "$GITHUB_OUTPUT"
+          rm -f "$signer_der"
+
+      - name: Remove ephemeral signing credentials after inspection
+        if: ${{ always() }}
+        shell: bash
+        run: rm -f local.properties "$RUNNER_TEMP/health-md-release.jks" "$RUNNER_TEMP/phone-aab-signer.der"
 
       - name: Retain signed phone bundle with native debug symbols
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -322,11 +346,114 @@ jobs:
           if-no-files-found: error
           path: apps/android/app/build/outputs/bundle/playRelease/app-play-release.aab
 
-      - name: Create immutable phone upload intent receipt
+      - name: Signed phone bundle summary
         shell: bash
         env:
           VERSION: ${{ steps.version.outputs.version }}
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          AAB_SHA256: ${{ steps.artifact.outputs.aab_sha256 }}
+        run: |
+          {
+            echo '## Registered-signer Android phone bundle'
+            echo
+            echo "- Version: $VERSION"
+            echo "- Version code: $VERSION_CODE"
+            echo "- AAB SHA-256: $AAB_SHA256"
+            echo '- Signing boundary: protected google-play-qa environment'
+            echo '- Wear OS artifact: not built'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish-internal:
+    needs: [resolve, build-signed-phone]
+    if: >-
+      always() && needs.resolve.result == 'success' && needs.build-signed-phone.result == 'success'
+    name: Publish phone internal release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: google-play
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.resolve.outputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Checkout trusted release tooling revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout: |
+            apps/android/scripts/google-play-phone-policy.sh
+            apps/android/scripts/upload-google-play-phone-release.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Java certificate tools
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download exact signed phone bundle
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: healthmd-android-phone-${{ needs.build-signed-phone.outputs.version }}-attempt-${{ github.run_attempt }}
+          path: apps/android/app/build/outputs/bundle/playRelease
+
+      - name: Verify transferred artifact, signer, source, and phone-only scope
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
+          VERSION: ${{ needs.build-signed-phone.outputs.version }}
+          VERSION_CODE: ${{ needs.build-signed-phone.outputs.version_code }}
+          EXPECTED_AAB_SHA256: ${{ needs.build-signed-phone.outputs.aab_sha256 }}
+          EXPECTED_UPLOAD_CERTIFICATE_SHA1: ${{ needs.build-signed-phone.outputs.upload_certificate_sha1 }}
+        run: |
+          set -euo pipefail
+          aab=app/build/outputs/bundle/playRelease/app-play-release.aab
+          signer_der="$RUNNER_TEMP/phone-aab-signer.der"
+          registered_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'
+          [[ "$EXPECTED_AAB_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_UPLOAD_CERTIFICATE_SHA1" =~ ^[0-9a-f]{40}$ ]]
+          test "$(sha256sum "$aab" | awk '{print $1}')" = "$EXPECTED_AAB_SHA256"
+          test "$EXPECTED_UPLOAD_CERTIFICATE_SHA1" = "$registered_sha1"
+          jarsigner -verify "$aab" >/dev/null 2>&1
+          keytool -printcert -jarfile "$aab" -rfc 2>/dev/null \
+            | awk '/-----BEGIN CERTIFICATE-----/{capture=1} capture{print} /-----END CERTIFICATE-----/{exit}' \
+            | openssl x509 -outform DER 2>/dev/null > "$signer_der"
+          test "$(sha1sum "$signer_der" | awk '{print $1}')" = "$registered_sha1"
+          rm -f "$signer_der"
+          git fetch --force --no-tags origin "+refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$(git cat-file -t "$RELEASE_TAG")" = tag
+          test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          test "$RELEASE_SHA" = "${{ needs.build-signed-phone.outputs.release_sha }}"
+          jq -e --arg version "$VERSION" --argjson code "$VERSION_CODE" '
+            .schemaVersion == 1 and .releaseVersionName == $version and
+            .googlePlay.phone.status == "release_candidate" and
+            .googlePlay.phone.versionCode == $code and
+            .googlePlay.phone.testingTrack == "internal" and
+            .googlePlay.wear.status == "deferred" and
+            .googlePlay.wear.published == false and
+            .googlePlay.wear.runtimeAdvertisedByPhone == false
+          ' release-scope.json >/dev/null
+
+      - name: Create immutable phone upload intent receipt
+        shell: bash
+        env:
+          VERSION: ${{ needs.build-signed-phone.outputs.version }}
+          VERSION_CODE: ${{ needs.build-signed-phone.outputs.version_code }}
+          AAB_SHA256: ${{ needs.build-signed-phone.outputs.aab_sha256 }}
+          UPLOAD_CERTIFICATE_SHA1: ${{ needs.build-signed-phone.outputs.upload_certificate_sha1 }}
           RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
           RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
           WORKFLOW_SHA: ${{ github.sha }}
@@ -335,7 +462,6 @@ jobs:
           QUALIFICATION_RUN_ATTEMPT: ${{ inputs.qualification_run_attempt || 'null' }}
         run: |
           set -euo pipefail
-          aab=app/build/outputs/bundle/playRelease/app-play-release.aab
           upload_tool="$GITHUB_WORKSPACE/.release-tooling/apps/android/scripts/upload-google-play-phone-release.sh"
           test -f "$upload_tool"
           jq -n --arg repository "$GITHUB_REPOSITORY" \
@@ -347,7 +473,8 @@ jobs:
             --arg tag "$RELEASE_TAG" --arg sha "$RELEASE_SHA" \
             --arg peeled "$(git rev-parse "$RELEASE_TAG^{commit}")" --arg version "$VERSION" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
-            --argjson code "$VERSION_CODE" --arg aab "$(sha256sum "$aab" | awk '{print $1}')" \
+            --argjson code "$VERSION_CODE" --arg aab "$AAB_SHA256" \
+            --arg uploadCertificateSha1 "$UPLOAD_CERTIFICATE_SHA1" \
             --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
               schemaVersion:1,repository:$repository,workflow:$workflow,
               workflowSha:$workflowSha,workflowRef:$workflowRef,uploadToolSha256:$uploadToolSha256,
@@ -356,13 +483,15 @@ jobs:
               runId:$runId,runAttempt:$runAttempt,tag:$tag,headSha:$sha,tagPeeledSha:$peeled,
               versionName:$version,phoneVersionCode:$code,phoneTrack:"internal",
               releaseStatus:"completed",phoneAabSha256:$aab,wearIncluded:false,
+              signingEnvironment:"google-play-qa",mutationEnvironment:"google-play",
+              uploadCertificateSha1:$uploadCertificateSha1,
               uploadPrepared:true,preparedAtUtc:$preparedAt
             }' > "$RUNNER_TEMP/phone-upload-intent.json"
 
       - name: Retain immutable phone upload intent receipt
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: healthmd-android-phone-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          name: healthmd-android-phone-upload-${{ needs.build-signed-phone.outputs.version }}-${{ needs.build-signed-phone.outputs.release_sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/phone-upload-intent.json
           if-no-files-found: error
           retention-days: 90
@@ -380,8 +509,8 @@ jobs:
 
       - name: Upload phone bundle to Internal Testing
         env:
-          CONFIRM_PLAY_PHONE_UPLOAD: com.healthmd.android:internal:${{ steps.version.outputs.version_code }}
-          PHONE_VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          CONFIRM_PLAY_PHONE_UPLOAD: com.healthmd.android:internal:${{ needs.build-signed-phone.outputs.version_code }}
+          PHONE_VERSION_CODE: ${{ needs.build-signed-phone.outputs.version_code }}
           PHONE_PLAY_TRACK: internal
           PLAY_RELEASE_STATUS: completed
           PLAY_UPLOAD_RECEIPT_PATH: ${{ runner.temp }}/phone-upload-receipt.json
@@ -393,31 +522,31 @@ jobs:
       - name: Retain verified phone upload receipt
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: healthmd-android-phone-upload-result-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          name: healthmd-android-phone-upload-result-${{ needs.build-signed-phone.outputs.version }}-${{ needs.build-signed-phone.outputs.release_sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/phone-upload-receipt.json
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
 
-      - name: Remove ephemeral credentials
+      - name: Remove temporary signer material
         if: ${{ always() }}
         shell: bash
-        run: |
-          rm -f local.properties "$RUNNER_TEMP/health-md-release.jks"
+        run: rm -f "$RUNNER_TEMP/phone-aab-signer.der"
 
       - name: Release summary
         if: ${{ !cancelled() }}
         continue-on-error: true
         env:
-          VERSION: ${{ steps.version.outputs.version }}
-          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+          VERSION: ${{ needs.build-signed-phone.outputs.version }}
+          VERSION_CODE: ${{ needs.build-signed-phone.outputs.version_code }}
         run: |
           {
             echo '## Android phone internal release'
             echo
             echo "- Version: $VERSION"
             echo "- Version code: $VERSION_CODE"
+            echo '- Signing boundary: google-play-qa (registered upload certificate)'
+            echo '- Mutation boundary: google-play (short-lived Workload Identity token)'
             echo '- Track: internal (phone)'
             echo '- Wear OS artifact: deferred and not uploaded'
-            echo '- Binary destination: Google Play only'
           } >> "$GITHUB_STEP_SUMMARY"

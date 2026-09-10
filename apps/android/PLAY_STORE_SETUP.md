@@ -6,12 +6,12 @@ Health.md currently publishes the Android phone app only. The Wear OS companion 
 
 Repository administrators—not local release operators—maintain the `google-play` GitHub environment:
 
-1. Allow deployments from annotated tags matching `android/v*`. A narrowly scoped `android/recovery/*` tag rule may be added only for a retained, main-reachable workflow-infrastructure recovery.
-2. Configure `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` with the fully qualified provider resource and `GOOGLE_PLAY_SERVICE_ACCOUNT` with the app-scoped publisher identity.
-3. Store the existing upload-signing values: `ANDROID_RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`.
+1. Restrict both `google-play` and `google-play-qa` to annotated tags matching `android/v*`. A narrowly scoped `android/recovery/*` tag rule may be added only for a retained, main-reachable workflow-infrastructure recovery.
+2. In `google-play`, configure `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` with the fully qualified provider resource and `GOOGLE_PLAY_SERVICE_ACCOUNT` with the app-scoped publisher identity.
+3. In `google-play-qa`, store the registered upload-signing values: `ANDROID_RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`. The current certificate SHA-1 is `80:5F:26:EA:FD:9E:D5:C3:7F:C7:2A:65:63:6C:FF:A4:D1:01:81:2F`.
 4. Configure the Google provider to accept only this GitHub repository, the `google-play` environment subject, and `refs/tags/android/*`; grant its principal only `roles/iam.workloadIdentityUser` on the publisher service account.
 5. Keep the service account app-scoped in Play Console and grant only the permissions required to upload bundles, update the reviewed English listing, manage testing/production releases, and submit changes for review.
-6. Never copy a Play mutation credential or upload keystore onto a developer workstation.
+6. Never copy a Play mutation credential or upload keystore onto a developer workstation. The signed AAB, never the private key, crosses from the signing job to the mutation job through an exact-digest GitHub artifact.
 
 The Android Publisher OAuth scope is broad. Short-lived GitHub OIDC exchange, app-level Play Console grants, the tag-restricted GitHub environment, and exact-source workflow checks provide the practical boundary. The canonical workflows do not consume a long-lived Google service-account JSON key.
 
@@ -45,9 +45,9 @@ The deferred `:wear` module retains its independent 1,000,000+ code range, but i
 - accepts only an annotated `android/v<version>` tag whose peeled commit is reachable from `origin/main`;
 - re-runs the complete Android CI workflow for that exact commit;
 - verifies `release-scope.json` declares phone release and deferred Wear scope;
-- materializes signing inputs only under `$RUNNER_TEMP`;
-- builds and inspects only `app-play-release.aab`;
-- retains the signed AAB and a tag/SHA/run-attempt/AAB-digest-bound intent before requesting a short-lived Workload Identity token;
+- materializes signing inputs only under `$RUNNER_TEMP` in `google-play-qa` and rejects a certificate other than the registered Play upload key;
+- builds and inspects only `app-play-release.aab`, then deletes the private-key material;
+- transfers only the signed AAB into `google-play`, re-verifies its exact digest and signer, and retains a tag/SHA/run-attempt/AAB-digest-bound intent before requesting a short-lived Workload Identity token;
 - uploads the phone AAB and exact release notes to `internal` in one validated Play edit;
 - issues the non-idempotent commit once and reconciles exact track state if the response is lost.
 
@@ -78,7 +78,7 @@ See `PLAY_STORE_COMMANDS.md` for the checklist and `PLAY_CONSOLE_BROWSER_PROMPT.
 
 ### Workload Identity or service account not authorized
 
-Verify the protected environment's provider/service-account variables, the provider's repository/environment/tag condition, and its `roles/iam.workloadIdentityUser` binding. In Play Console, verify the service account has app-level permission to view the app, upload bundles, release to testing tracks and production, update the store presence, and submit changes for review. Baseline track-read and empty-edit access does not prove bundle-upload authority. Do not create or copy a JSON mutation key locally. The uploader reports bounded authentication, exact-track, edit-creation, and bundle-upload failures without printing access tokens.
+Verify the protected environment's provider/service-account variables, the provider's repository/environment/tag condition, and its `roles/iam.workloadIdentityUser` binding. In Play Console, verify the service account has app-level permission to view the app, upload bundles, release to testing tracks and production, update the store presence, and submit changes for review. Baseline track-read and empty-edit access does not prove bundle-upload authority. Also verify the `google-play-qa` keystore matches the registered upload certificate; a substitute or stale key is rejected before Play mutation. Do not create or copy a JSON mutation key locally. The uploader reports bounded authentication, exact-track, edit-creation, and bundle-upload failures without printing access tokens.
 
 ### Invalid version code
 
