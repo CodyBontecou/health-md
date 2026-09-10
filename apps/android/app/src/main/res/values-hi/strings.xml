@@ -533,7 +533,7 @@
     <string name="release_notes_highlight_feedback">डेस्कटॉप के छोटे कनेक्शन टूटने के बाद Direct CLI सेशन अपने आप फिर जुड़ जाते हैं, इसलिए निर्यात भरोसेमंद ढंग से पूरे होते हैं।</string>
     <string name="release_notes_highlight_export_parity">डेस्कटॉप की वेक विंडो कमांड आपके ऐप खोलकर कनेक्ट होने तक 120 सेकंड तक प्रतीक्षा करती हैं, बिना किसी पुश नोटिफिकेशन के।</string>
     <string name="release_notes_highlight_templates">पता, पोर्ट और 20-अंकों वाले कोड से मैनुअल पेयरिंग अब भी काम करती है, पुराने CLI वर्शन के साथ भी।</string>
-    <string name="release_notes_highlight_workouts">फ़ोन और Wear OS के लिए विश्वसनीयता और अनुकूलता सुधार शामिल हैं।</string>
+    <string name="release_notes_highlight_workouts">सेटअप, एक्सपोर्ट, शेड्यूल और कनेक्शन में विश्वसनीयता और संगतता सुधार शामिल हैं।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">निर्धारित निर्यात</string>
     <string name="notification_channel_scheduled_exports_description">जब निर्धारित स्वास्थ्य निर्यात पूरे हों या विफल हों तो सूचनाएं</string>

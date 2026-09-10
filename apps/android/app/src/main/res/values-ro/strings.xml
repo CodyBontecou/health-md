@@ -647,7 +647,7 @@
     <string name="release_notes_highlight_feedback">Sesiunile CLI direct se reconectează automat după deconectări scurte ale desktopului, astfel încât exporturile se finalizează fiabil.</string>
     <string name="release_notes_highlight_export_parity">Comenzile cu fereastră de activare de pe desktop așteaptă până la 120 de secunde să deschizi aplicația și să te conectezi, fără notificări push.</string>
     <string name="release_notes_highlight_templates">Asocierea manuală cu adresă, port și cod din 20 de cifre funcționează în continuare, inclusiv cu versiuni CLI mai vechi.</string>
-    <string name="release_notes_highlight_workouts">Include remedieri de fiabilitate și compatibilitate pentru telefon și Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Include remedieri de fiabilitate și compatibilitate pentru configurare, exporturi, programări și conexiuni.</string>
     <string name="export_notification_background_permission_required">Exporturile programate necesită acces în fundal la Health Connect. Deschideți Health.md &gt; Programare pentru a-l activa.</string>
     <string name="paywall_unlock_button_price">Deblocați pentru %s</string>
     <string name="paywall_purchasing">Se procesează\u2026</string>

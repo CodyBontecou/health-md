@@ -184,6 +184,10 @@ grep -A12 'fun play()' "$distribution_policy" | grep -q 'wearSyncAvailable = fal
 if grep -Eqi 'WEAR OS COMPANION|Health\.md watch app' "$listing"; then
   fail 'reviewed Play listing still advertises the deferred watch app'
 fi
+if grep -R -E '<string name="release_notes_highlight_workouts">.*Wear OS' \
+    "$(dirname "$0")/../app/src/main/res" >/dev/null; then
+  fail 'localized in-app release notes still advertise Wear OS'
+fi
 
 grep -Fq "'.github/workflows/android-*.yml'" "$repo/.github/workflows/android-ci.yml" \
   || fail 'Android workflow changes do not trigger main-push Android CI'

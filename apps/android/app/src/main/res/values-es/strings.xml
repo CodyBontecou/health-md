@@ -647,7 +647,7 @@
     <string name="release_notes_highlight_feedback">Las sesiones de CLI directa se reconectan automáticamente tras breves desconexiones del escritorio, así que las exportaciones terminan de forma fiable.</string>
     <string name="release_notes_highlight_export_parity">Los comandos de ventana de activación del escritorio esperan hasta 120 segundos a que abras la app y te conectes, sin notificaciones push.</string>
     <string name="release_notes_highlight_templates">El emparejamiento manual con dirección, puerto y código de 20 dígitos sigue funcionando, incluso con versiones anteriores de la CLI.</string>
-    <string name="release_notes_highlight_workouts">Incluye correcciones de fiabilidad y compatibilidad para el teléfono y Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Incluye correcciones de fiabilidad y compatibilidad en la configuración, las exportaciones, los horarios y las conexiones.</string>
     <string name="export_notification_background_permission_required">Las exportaciones programadas necesitan acceso en segundo plano a Health Connect. Abra Health.md &gt; Programación para habilitarlo.</string>
     <string name="paywall_unlock_button_price">Desbloquear por %s</string>
     <string name="paywall_purchasing">Procesando\u2026</string>

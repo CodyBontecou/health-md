@@ -636,7 +636,7 @@
     <string name="release_notes_highlight_feedback">Direct CLI-sessies maken automatisch opnieuw verbinding na korte desktoponderbrekingen, zodat exports betrouwbaar voltooid worden.</string>
     <string name="release_notes_highlight_export_parity">Wake-window-opdrachten op de desktop wachten tot 120 seconden tot je de app opent en verbindt, zonder pushmeldingen.</string>
     <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>
-    <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor telefoon en Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor configuratie, exports, planningen en verbindingen.</string>
     <string name="export_notification_background_permission_required">Geplande exports hebben achtergrondtoegang voor Health Connect nodig. Open Health.md &gt; Planning om dit in te schakelen.</string>
     <string name="paywall_unlock_button_price">Ontgrendel voor %s</string>
     <string name="paywall_purchasing">Verwerken\u2026</string>

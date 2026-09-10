@@ -513,7 +513,7 @@
     <string name="release_notes_highlight_feedback">Десктоптың қысқа үзілістерінен кейін Direct CLI сессиялары автоматты түрде қайта қосылады, сондықтан экспорттар сенімді аяқталады.</string>
     <string name="release_notes_highlight_export_parity">Десктоптың ояну терезесі командалары қосымшаны ашып, қосылуыңызды 120 секундқа дейін күтеді, push-хабарламаларсыз.</string>
     <string name="release_notes_highlight_templates">Мекенжай, порт және 20 таңбалы код арқылы қолмен жұптау әлі жұмыс істейді, ескі CLI нұсқаларымен де.</string>
-    <string name="release_notes_highlight_workouts">Телефон мен Wear OS үшін сенімділік және үйлесімділік түзетулері қамтылған.</string>
+    <string name="release_notes_highlight_workouts">Баптау, экспорттар, кестелер және қосылымдар үшін сенімділік пен үйлесімділік түзетулері қамтылған.</string>
     <string name="notification_channel_scheduled_exports_name">Жоспарланған экспорттар</string>
     <string name="notification_channel_scheduled_exports_description">Жоспарланған денсаулық экспорттары аяқталғанда немесе сәтсіз болғанда көрсетілетін хабарландырулар</string>
     <string name="export_notification_title_complete">Экспорт аяқталды</string>

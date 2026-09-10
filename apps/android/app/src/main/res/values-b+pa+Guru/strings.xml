@@ -533,7 +533,7 @@
     <string name="release_notes_highlight_feedback">ਡੈਸਕਟਾਪ ਦੇ ਛੋਟੇ ਕੁਨੈਕਸ਼ਨ ਟੁੱਟਣ ਤੋਂ ਬਾਅਦ Direct CLI ਸੈਸ਼ਨ ਆਪਣੇ ਆਪ ਦੁਬਾਰਾ ਜੁੜ ਜਾਂਦੇ ਹਨ, ਇਸ ਲਈ ਨਿਰਯਾਤ ਭਰੋਸੇਯੋਗ ਢੰਗ ਨਾਲ ਪੂਰੇ ਹੁੰਦੇ ਹਨ।</string>
     <string name="release_notes_highlight_export_parity">ਡੈਸਕਟਾਪ ਦੀਆਂ ਵੇਕ ਵਿੰਡੋ ਕਮਾਂਡਾਂ ਤੁਹਾਡੇ ਐਪ ਖੋਲ੍ਹ ਕੇ ਜੁੜਨ ਤੱਕ 120 ਸਕਿੰਟ ਉਡੀਕ ਕਰਦੀਆਂ ਹਨ, ਬਿਨਾਂ ਕਿਸੇ ਪੁਸ਼ ਨੋਟੀਫਿਕੇਸ਼ਨ ਤੋਂ।</string>
     <string name="release_notes_highlight_templates">ਐਡਰੈਸ, ਪੋਰਟ ਅਤੇ 20-ਅੰਕਾਂ ਵਾਲੇ ਕੋਡ ਨਾਲ ਦਸਤੀ ਪੇਅਰਿੰਗ ਹਾਲੇ ਵੀ ਕੰਮ ਕਰਦੀ ਹੈ, ਪੁਰਾਣੀਆਂ CLI ਵਰਜਨਾਂ ਨਾਲ ਵੀ।</string>
-    <string name="release_notes_highlight_workouts">ਫੋਨ ਅਤੇ Wear OS ਲਈ ਭਰੋਸੇਯੋਗਤਾ ਅਤੇ ਅਨੁਕੂਲਤਾ ਸੁਧਾਰ ਸ਼ਾਮਲ ਹਨ।</string>
+    <string name="release_notes_highlight_workouts">ਸੈੱਟਅੱਪ, ਐਕਸਪੋਰਟਾਂ, ਸਮਾਂ-ਸਾਰਣੀਆਂ ਅਤੇ ਕਨੈਕਸ਼ਨਾਂ ਲਈ ਭਰੋਸੇਯੋਗਤਾ ਅਤੇ ਅਨੁਕੂਲਤਾ ਸੁਧਾਰ ਸ਼ਾਮਲ ਹਨ।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
     <string name="notification_channel_scheduled_exports_description">ਅਨੁਸੂਚਿਤ ਸਿਹਤ ਨਿਰਯਾਤ ਪੂਰੇ ਹੋਣ ਜਾਂ ਅਸਫਲ ਹੋਣ ’ਤੇ ਸੂਚਨਾਵਾਂ</string>

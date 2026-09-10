@@ -533,7 +533,7 @@
     <string name="release_notes_highlight_feedback">ডেস্কটপ সংযোগ সংক্ষিপ্তভাবে বিচ্ছিন্ন হলে Direct CLI সেশন স্বয়ংক্রিয়ভাবে পুনরায় সংযুক্ত হয়, তাই রপ্তানি নির্ভরযোগ্যভাবে সম্পন্ন হয়।</string>
     <string name="release_notes_highlight_export_parity">ডেস্কটপের ওয়েক উইন্ডো কমান্ড আপনার অ্যাপ খুলে সংযোগ করার জন্য ১২০ সেকেন্ড পর্যন্ত অপেক্ষা করে, কোনো পুশ নোটিফিকেশন ছাড়াই।</string>
     <string name="release_notes_highlight_templates">ঠিকানা, পোর্ট এবং ২০-সংখ্যার কোড দিয়ে ম্যানুয়াল জুড়ি এখনও কাজ করে, পুরোনো CLI সংস্করণেও।</string>
-    <string name="release_notes_highlight_workouts">ফোন ও Wear OS-এর নির্ভরযোগ্যতা এবং সামঞ্জস্যের সংশোধন অন্তর্ভুক্ত।</string>
+    <string name="release_notes_highlight_workouts">সেটআপ, এক্সপোর্ট, সময়সূচি ও সংযোগজুড়ে নির্ভরযোগ্যতা এবং সামঞ্জস্যের সংশোধন অন্তর্ভুক্ত।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">নির্ধারিত রপ্তানি</string>
     <string name="notification_channel_scheduled_exports_description">নির্ধারিত স্বাস্থ্য রপ্তানি সম্পূর্ণ বা ব্যর্থ হলে বিজ্ঞপ্তি</string>

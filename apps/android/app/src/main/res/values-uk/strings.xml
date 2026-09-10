@@ -658,7 +658,7 @@
     <string name="release_notes_highlight_feedback">Сесії Direct CLI автоматично перепід\'єднуються після коротких розривів зв\'язку з комп\'ютером, тому експорти надійно завершуються.</string>
     <string name="release_notes_highlight_export_parity">Команди вікна пробудження на комп\'ютері чекають до 120 секунд, поки ви відкриєте застосунок і під\'єднаєтесь, — без push-сповіщень.</string>
     <string name="release_notes_highlight_templates">Ручне з\'єднання за адресою, портом і 20-значним кодом досі працює, зокрема зі старішими версіями CLI.</string>
-    <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для телефона й Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для налаштування, експорту, розкладів і підключень.</string>
     <string name="export_notification_background_permission_required">Для запланованого експорту потрібен фоновий доступ Health Connect. Відкрийте Health.md &gt; Розклад, щоб увімкнути його.</string>
     <string name="paywall_unlock_button_price">Розблокувати за %s</string>
     <string name="paywall_purchasing">Обробка\u2026</string>

@@ -556,7 +556,7 @@
     <string name="release_notes_highlight_feedback">Direct CLI sessions reconnect automatically after brief desktop disconnects, so exports finish reliably.</string>
     <string name="release_notes_highlight_export_parity">Desktop wake-window commands wait up to 120 seconds for you to open the app and connect — no push notifications involved.</string>
     <string name="release_notes_highlight_templates">Manual pairing still works with the computer address, port, and 20-digit code, including older CLI versions.</string>
-    <string name="release_notes_highlight_workouts">Includes reliability and compatibility fixes for phone and Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Includes reliability and compatibility fixes across setup, exports, schedules, and connections.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Scheduled Exports</string>

@@ -680,7 +680,7 @@
     <string name="release_notes_highlight_feedback">تعيد جلسات Direct CLI الاتصال تلقائيًا بعد انقطاعات قصيرة لسطح المكتب، فتكتمل عمليات التصدير بموثوقية.</string>
     <string name="release_notes_highlight_export_parity">تنتظر أوامر نافذة الاستيقاظ من سطح المكتب حتى 120 ثانية لتفتح التطبيق وتتصل، دون أي إشعارات فورية.</string>
     <string name="release_notes_highlight_templates">لا يزال الربط اليدوي عبر العنوان والمنفذ والرمز المكوّن من 20 رقمًا يعمل، بما في ذلك مع إصدارات CLI الأقدم.</string>
-    <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق على الهاتف وWear OS.</string>
+    <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق في الإعداد والتصدير والجداول والاتصالات.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
     <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
     <string name="paywall_purchasing">جارٍ إتمام الشراء\u2026</string>

@@ -636,7 +636,7 @@
     <string name="release_notes_highlight_feedback">Direct-CLI-Sitzungen verbinden sich nach kurzen Verbindungsabbrüchen am Desktop automatisch neu, sodass Exporte zuverlässig abgeschlossen werden.</string>
     <string name="release_notes_highlight_export_parity">Wake-Window-Befehle des Desktops warten bis zu 120 Sekunden, bis Sie die App öffnen und sich verbinden — ganz ohne Push-Benachrichtigungen.</string>
     <string name="release_notes_highlight_templates">Manuelles Koppeln mit Computeradresse, Port und 20-stelligem Code funktioniert weiterhin, auch mit älteren CLI-Versionen.</string>
-    <string name="release_notes_highlight_workouts">Enthält Zuverlässigkeits- und Kompatibilitätskorrekturen für Smartphone und Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Enthält Zuverlässigkeits- und Kompatibilitätskorrekturen für Einrichtung, Exporte, Zeitpläne und Verbindungen.</string>
     <string name="export_notification_background_permission_required">Geplante Exporte benötigen Health Connect-Hintergrundzugriff. Öffnen Sie Health.md &gt; Zeitplan, um ihn zu aktivieren.</string>
     <string name="paywall_unlock_button_price">Für %s freischalten</string>
     <string name="paywall_purchasing">Verarbeitung…</string>

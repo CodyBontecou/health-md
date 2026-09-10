@@ -647,7 +647,7 @@
     <string name="release_notes_highlight_feedback">As sessões de CLI direto reconectam automaticamente após quedas breves do desktop, então as exportações terminam de forma confiável.</string>
     <string name="release_notes_highlight_export_parity">Os comandos de janela de ativação do desktop esperam até 120 segundos você abrir o app e conectar, sem notificações push.</string>
     <string name="release_notes_highlight_templates">O pareamento manual com endereço, porta e código de 20 dígitos continua funcionando, inclusive com versões mais antigas da CLI.</string>
-    <string name="release_notes_highlight_workouts">Inclui correções de confiabilidade e compatibilidade para telefone e Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Inclui correções de confiabilidade e compatibilidade na configuração, nas exportações, nos agendamentos e nas conexões.</string>
     <string name="export_notification_background_permission_required">As exportações agendadas precisam de acesso em segundo plano do Health Connect. Abra Health.md &gt; Agendamento para ativá-lo.</string>
     <string name="paywall_unlock_button_price">Desbloquear por %s</string>
     <string name="paywall_purchasing">Processando…</string>

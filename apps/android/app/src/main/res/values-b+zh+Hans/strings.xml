@@ -502,7 +502,7 @@
     <string name="release_notes_highlight_feedback">Direct CLI 会话在桌面短暂断开后会自动重新连接，因此导出能够可靠完成。</string>
     <string name="release_notes_highlight_export_parity">桌面唤醒窗口命令最多等待 120 秒，供您打开应用并连接，不使用任何推送通知。</string>
     <string name="release_notes_highlight_templates">通过地址、端口和 20 位配对码手动配对仍然可用，旧版 CLI 同样支持。</string>
-    <string name="release_notes_highlight_workouts">包含适用于手机和 Wear OS 的可靠性与兼容性修复。</string>
+    <string name="release_notes_highlight_workouts">包含针对设置、导出、计划和连接的可靠性与兼容性修复。</string>
     <string name="notification_channel_scheduled_exports_name">计划导出</string>
     <string name="notification_channel_scheduled_exports_description">计划的健康导出完成或失败时的通知</string>
     <string name="export_notification_title_complete">导出完成</string>
