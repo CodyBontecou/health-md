@@ -95,10 +95,14 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/android-google-play-access-audit.yml").read_text()
         required = (
             "environment: google-play",
+            "environment: google-play-qa",
             '[[ "$GITHUB_REF_NAME" == android/v* || "$GITHUB_REF_NAME" == android/recovery/* ]]',
             'git cat-file -t "$tag"',
             'git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main',
             "emptyEditInsertDeleteVerified:true",
+            "registeredUploadCertificateMatched:true",
+            "expected_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'",
+            "privateKeyRetained:false",
             "noPlayEditCommit:true",
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])

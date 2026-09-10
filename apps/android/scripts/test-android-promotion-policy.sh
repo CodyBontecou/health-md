@@ -290,6 +290,12 @@ if grep -Eq -- '--retry [0-9]+.*:commit|:commit.*--retry [0-9]+' "$promotion"; t
 fi
 
 grep -q 'environment: google-play' "$access_audit" || fail 'Play access audit is not protected'
+grep -q 'environment: google-play-qa' "$access_audit" \
+  || fail 'upload-signer audit does not use the protected signing environment'
+grep -q "expected_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'" "$access_audit" \
+  || fail 'upload-signer audit is not bound to the registered Play certificate'
+grep -q 'privateKeyRetained:false' "$access_audit" \
+  || fail 'upload-signer audit does not attest key cleanup'
 grep -q 'google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093' "$access_audit" \
   || fail 'Play access audit does not use pinned Workload Identity'
 grep -q 'noPlayEditCommit:true' "$access_audit" || fail 'Play access audit omits its no-commit receipt'

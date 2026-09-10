@@ -227,3 +227,121 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
+
+  audit-upload-signer:
+    name: Audit protected Play upload signer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: google-play-qa
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout workflow revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate audit and release identities
+        id: identity
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_TYPE" = tag
+          [[ "$GITHUB_REF_NAME" == android/v* || "$GITHUB_REF_NAME" == android/recovery/* ]]
+          [[ "$RELEASE_TAG" =~ ^android/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          for tag in "$GITHUB_REF_NAME" "$RELEASE_TAG"; do
+            git fetch --force --no-tags origin "+refs/tags/${tag}:refs/tags/${tag}"
+            test "$(git cat-file -t "$tag")" = tag
+          done
+          workflow_sha=$(git rev-parse "$GITHUB_REF_NAME^{commit}")
+          release_sha=$(git rev-parse "$RELEASE_TAG^{commit}")
+          test "$workflow_sha" = "$GITHUB_SHA"
+          git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$workflow_sha" refs/remotes/origin/main
+          git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main
+          {
+            echo "workflow_sha=$workflow_sha"
+            echo "release_sha=$release_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java certificate tools
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify protected keystore matches the registered Play upload certificate
+        id: signer
+        shell: bash
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            test -n "${!name:-}"
+          done
+          keystore="$RUNNER_TEMP/play-upload-keystore.jks"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          sha1=$(keytool -exportcert -keystore "$keystore" -storepass "$RELEASE_STORE_PASSWORD" \
+            -alias "$RELEASE_KEY_ALIAS" -keypass "$RELEASE_KEY_PASSWORD" 2>/dev/null \
+            | sha1sum | awk '{print $1}')
+          sha256=$(keytool -exportcert -keystore "$keystore" -storepass "$RELEASE_STORE_PASSWORD" \
+            -alias "$RELEASE_KEY_ALIAS" -keypass "$RELEASE_KEY_PASSWORD" 2>/dev/null \
+            | sha256sum | awk '{print $1}')
+          expected_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'
+          test "$sha1" = "$expected_sha1" || {
+            echo "::error::Protected google-play-qa signer does not match the registered Play upload certificate"; exit 1;
+          }
+          {
+            echo "sha1=$sha1"
+            echo "sha256=$sha256"
+          } >> "$GITHUB_OUTPUT"
+          rm -f "$keystore"
+          trap - EXIT
+
+      - name: Retain upload-signer audit receipt
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_SHA: ${{ steps.identity.outputs.release_sha }}
+          WORKFLOW_SHA: ${{ steps.identity.outputs.workflow_sha }}
+          CERTIFICATE_SHA1: ${{ steps.signer.outputs.sha1 }}
+          CERTIFICATE_SHA256: ${{ steps.signer.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow '.github/workflows/android-google-play-access-audit.yml' \
+            --arg workflowRef "$GITHUB_REF" --arg workflowSha "$WORKFLOW_SHA" \
+            --arg releaseTag "$RELEASE_TAG" --arg releaseSha "$RELEASE_SHA" \
+            --arg sha1 "$CERTIFICATE_SHA1" --arg sha256 "$CERTIFICATE_SHA256" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              workflowRef:$workflowRef,workflowSha:$workflowSha,releaseTag:$releaseTag,
+              releaseSha:$releaseSha,runId:$runId,runAttempt:$runAttempt,
+              signingEnvironment:"google-play-qa",registeredUploadCertificateMatched:true,
+              uploadCertificateSha1:$sha1,uploadCertificateSha256:$sha256,
+              privateKeyRetained:false,verifiedAtUtc:$verifiedAt
+            }' > "$RUNNER_TEMP/google-play-upload-signer-audit.json"
+
+      - name: Upload upload-signer audit receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-google-play-upload-signer-audit-${{ steps.identity.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/google-play-upload-signer-audit.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Remove protected keystore material
+        if: ${{ always() }}
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/play-upload-keystore.jks"
