@@ -11,6 +11,16 @@ on:
         required: false
         default: ''
         type: string
+      qualification_run_id:
+        description: 'Successful exact-SHA Android CI run used only for workflow recovery'
+        required: false
+        default: ''
+        type: string
+      qualification_run_attempt:
+        description: 'Exact successful Android CI run attempt used only for workflow recovery'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -27,6 +37,7 @@ jobs:
     outputs:
       tag: ${{ steps.identity.outputs.tag }}
       release_sha: ${{ steps.identity.outputs.release_sha }}
+      recovery: ${{ steps.identity.outputs.recovery }}
     steps:
       - name: Check out source for identity resolution
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -43,6 +54,9 @@ jobs:
               echo '::error::release_tag is valid only for manual recovery'; exit 1;
             }
             tag="${{ inputs.release_tag }}"
+            recovery=true
+            [[ "${{ inputs.qualification_run_id }}" =~ ^[1-9][0-9]*$ ]]
+            [[ "${{ inputs.qualification_run_attempt }}" =~ ^[1-9][0-9]*$ ]]
             [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == android/recovery/* ]] || {
               echo '::error::workflow-only recovery must run from an android/recovery/* tag'; exit 1;
             }
@@ -58,6 +72,9 @@ jobs:
               echo '::error::push trigger must be an android/v* tag'; exit 1;
             }
             tag="${{ github.ref_name }}"
+            recovery=false
+            [[ -z "${{ inputs.qualification_run_id || '' }}" ]]
+            [[ -z "${{ inputs.qualification_run_attempt || '' }}" ]]
           fi
           [[ "$tag" == android/v* ]] || { echo "::error::invalid Android release tag: $tag"; exit 1; }
           git fetch --force --no-tags origin "+refs/tags/${tag}:refs/tags/${tag}"
@@ -75,10 +92,12 @@ jobs:
           {
             echo "tag=$tag"
             echo "release_sha=$sha"
+            echo "recovery=$recovery"
           } >> "$GITHUB_OUTPUT"
 
   qualify:
     name: Qualify exact Android release SHA
+    if: needs.resolve.outputs.recovery != 'true'
     needs: resolve
     permissions:
       contents: read
@@ -87,8 +106,52 @@ jobs:
     with:
       release_sha: ${{ needs.resolve.outputs.release_sha }}
 
+  verify-recovery-qualification:
+    name: Verify retained exact-SHA Android qualification
+    if: needs.resolve.outputs.recovery == 'true'
+    needs: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Verify successful complete Android CI attempt
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.qualification_run_id }}
+          RUN_ATTEMPT: ${{ inputs.qualification_run_attempt }}
+          RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[1-9][0-9]*$ && "$RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          base="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/attempts/${RUN_ATTEMPT}"
+          for pair in "$base $RUNNER_TEMP/run.json" "$base/jobs?per_page=100 $RUNNER_TEMP/jobs.json"; do
+            url=${pair% *}; destination=${pair##* }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' "$url" -o "$destination"
+          done
+          jq -e --arg repository "$GITHUB_REPOSITORY" --arg sha "$RELEASE_SHA" \
+            --argjson attempt "$RUN_ATTEMPT" '
+            .repository.full_name == $repository and .path == ".github/workflows/android-ci.yml" and
+            .event == "push" and .head_branch == "main" and .head_sha == $sha and
+            .run_attempt == $attempt and .status == "completed" and .conclusion == "success"
+          ' "$RUNNER_TEMP/run.json" >/dev/null
+          jq -e --argjson attempt "$RUN_ATTEMPT" '
+            ["test","F-Droid clean build","Rust/Kotlin direct interop","Wear emulator smoke",
+             "Emulator instrumentation and direct E2E","Android CI"] as $required |
+            ([.jobs[] | select(.run_attempt == $attempt and .status == "completed" and
+              .conclusion == "success") | .name] | unique) as $passed |
+            all($required[]; . as $name | $passed | index($name) != null)
+          ' "$RUNNER_TEMP/jobs.json" >/dev/null
+
   publish-internal:
-    needs: [resolve, qualify]
+    needs: [resolve, qualify, verify-recovery-qualification]
+    if: >-
+      always() && needs.resolve.result == 'success' &&
+      (needs.qualify.result == 'success' || needs.verify-recovery-qualification.result == 'success')
     name: Publish phone internal release
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -268,6 +331,8 @@ jobs:
           RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
           WORKFLOW_SHA: ${{ github.sha }}
           WORKFLOW_REF: ${{ github.ref }}
+          QUALIFICATION_RUN_ID: ${{ inputs.qualification_run_id || 'null' }}
+          QUALIFICATION_RUN_ATTEMPT: ${{ inputs.qualification_run_attempt || 'null' }}
         run: |
           set -euo pipefail
           aab=app/build/outputs/bundle/playRelease/app-play-release.aab
@@ -277,6 +342,8 @@ jobs:
             --arg workflow '.github/workflows/android-release.yml' \
             --arg workflowSha "$WORKFLOW_SHA" --arg workflowRef "$WORKFLOW_REF" \
             --arg uploadToolSha256 "$(sha256sum "$upload_tool" | awk '{print $1}')" \
+            --argjson qualificationRunId "$QUALIFICATION_RUN_ID" \
+            --argjson qualificationRunAttempt "$QUALIFICATION_RUN_ATTEMPT" \
             --arg tag "$RELEASE_TAG" --arg sha "$RELEASE_SHA" \
             --arg peeled "$(git rev-parse "$RELEASE_TAG^{commit}")" --arg version "$VERSION" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
@@ -284,6 +351,8 @@ jobs:
             --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
               schemaVersion:1,repository:$repository,workflow:$workflow,
               workflowSha:$workflowSha,workflowRef:$workflowRef,uploadToolSha256:$uploadToolSha256,
+              recoveryQualificationRunId:$qualificationRunId,
+              recoveryQualificationRunAttempt:$qualificationRunAttempt,
               runId:$runId,runAttempt:$runAttempt,tag:$tag,headSha:$sha,tagPeeledSha:$peeled,
               versionName:$version,phoneVersionCode:$code,phoneTrack:"internal",
               releaseStatus:"completed",phoneAabSha256:$aab,wearIncluded:false,

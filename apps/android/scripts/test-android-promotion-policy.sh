@@ -180,6 +180,10 @@ grep -q 'test "$(git rev-parse HEAD)" = "$RELEASE_SHA"' "$release" \
   || fail 'release checkout is not bound to the exact SHA'
 grep -q 'uses: ./.github/workflows/android-ci.yml' "$release" \
   || fail 'release does not requalify the exact source through Android CI'
+grep -q 'Verify retained exact-SHA Android qualification' "$release" \
+  || fail 'workflow-only recovery cannot verify retained exact-source CI'
+grep -q 'recoveryQualificationRunId:$qualificationRunId' "$release" \
+  || fail 'release intent omits retained qualification provenance'
 grep -q 'Build signed phone app bundle' "$release" || fail 'release does not build the phone bundle'
 grep -q '.release-tooling/apps/android/scripts/upload-google-play-phone-release.sh' "$release" \
   || fail 'release bypasses the SHA-bound phone uploader'

@@ -41,6 +41,8 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
             'phoneAabSha256:$aab',
             'wearIncluded:false',
             'uploadPrepared:true',
+            'Verify retained exact-SHA Android qualification',
+            'recoveryQualificationRunId:$qualificationRunId',
             'Retain immutable phone upload intent receipt',
         )
         self.assertEqual([], [needle for needle in required if needle not in release])

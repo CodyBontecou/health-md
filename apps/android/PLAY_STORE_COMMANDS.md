@@ -43,7 +43,7 @@ bundle exec fastlane android validate_wear_release
 3. Create an annotated `android/v<version>` tag at the exact main-reachable SHA.
 4. Let `.github/workflows/android-release.yml` re-run exact-SHA qualification and upload the phone AAB to Internal Testing.
 5. Verify that workflow's signed AAB, immutable intent, and committed-upload receipt artifacts.
-6. Dispatch `.github/workflows/android-promote-production.yml` from the exact annotated release tag with the exact version name and phone version code. Use its `release_tag` recovery input only from an annotated, main-reachable `android/recovery/*` workflow tag after an infrastructure-only fix; the checked-out product source remains the original release tag.
+6. Dispatch `.github/workflows/android-promote-production.yml` from the exact annotated release tag with the exact version name and phone version code. Use its `release_tag` recovery input only from an annotated, main-reachable `android/recovery/*` workflow tag after an infrastructure-only fix; the checked-out product source remains the original release tag. An Internal-upload recovery also requires the successful exact-SHA Android CI run ID and attempt so the workflow can reverify all retained qualification jobs without rebuilding unchanged test inputs.
 7. Require the workflow to prove `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED` before treating the submission as successful.
 8. Monitor Play review and publish the Android announcement only after Google Play reports the production release as published.
 
