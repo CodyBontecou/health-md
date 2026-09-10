@@ -78,7 +78,7 @@ See `PLAY_STORE_COMMANDS.md` for the checklist and `PLAY_CONSOLE_BROWSER_PROMPT.
 
 ### Workload Identity or service account not authorized
 
-Verify the protected environment's provider/service-account variables, the provider's repository/environment/tag condition, its `roles/iam.workloadIdentityUser` binding, and the service account's app-level Play Console invitation. Do not create or copy a JSON mutation key locally. The uploader reports whether authentication, exact-track preflight, or Play edit creation failed without printing access tokens.
+Verify the protected environment's provider/service-account variables, the provider's repository/environment/tag condition, and its `roles/iam.workloadIdentityUser` binding. In Play Console, verify the service account has app-level permission to view the app, upload bundles, release to testing tracks and production, update the store presence, and submit changes for review. Baseline track-read and empty-edit access does not prove bundle-upload authority. Do not create or copy a JSON mutation key locally. The uploader reports bounded authentication, exact-track, edit-creation, and bundle-upload failures without printing access tokens.
 
 ### Invalid version code
 

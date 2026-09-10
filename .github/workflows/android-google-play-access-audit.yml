@@ -140,7 +140,7 @@ jobs:
           jq -e '.releases | type == "array"' "$work/internal.json" >/dev/null
 
           # Insert one empty edit without retries, then delete it. No bundle, track, listing, commit,
-          # or review endpoint is called. This proves the exact permission that blocked the release.
+          # or review endpoint is called. This proves baseline edit access, not bundle-upload authority.
           set +e
           edit_http=$(curl --fail-with-body --max-time 30 -sS -X POST \
             -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \

@@ -25,7 +25,7 @@ play_http_error() {
   local stage=$1 status=$2 response_file=$3 detail
   detail=$(jq -r '
     if (.error | type) == "object" then
-      [(.error.status // empty), (.error.message // empty)]
+      [(.error.status // empty), (.error.errors[0].reason // empty), (.error.message // empty)]
       | map(select(type == "string" and length > 0)) | join(": ")
     elif (.error | type) == "string" then
       [(.error // empty), (.error_description // empty)]
@@ -139,9 +139,24 @@ if [[ $edit_exit -ne 0 || ! "$edit_http" =~ ^2[0-9][0-9]$ ]]; then
 fi
 edit_id=$(jq -er .id "$work/edit-create.json") || fail 'Play edit response omitted id'
 
-actual=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 300 -sS \
+# Bundle upload is a mutating POST. Send it once, retain the bounded response for diagnostics, and
+# delete the uncommitted edit on every rejection or transport failure instead of blindly retrying.
+set +e
+bundle_http=$(curl --fail-with-body --max-time 300 -sS \
   -X POST "${auth[@]}" -H 'Content-Type: application/octet-stream' --data-binary "@$aab" \
-  "$upload_api/edits/$edit_id/bundles?uploadType=media" | jq -er '.versionCode | tostring')
+  "$upload_api/edits/$edit_id/bundles?uploadType=media" \
+  -o "$work/bundle-upload.json" --write-out '%{http_code}')
+bundle_exit=$?
+set -e
+if [[ $bundle_exit -ne 0 || ! "$bundle_http" =~ ^2[0-9][0-9]$ ]]; then
+  play_http_error 'phone bundle upload' "$bundle_http" "$work/bundle-upload.json"
+  if [[ $bundle_exit -eq 22 ]]; then
+    fail 'Play definitively rejected the phone bundle; the uncommitted edit will be deleted'
+  fi
+  fail 'phone bundle upload response was lost; the uncommitted edit will be deleted before recovery'
+fi
+actual=$(jq -er '.versionCode | tostring' "$work/bundle-upload.json") \
+  || fail 'phone bundle upload response omitted versionCode'
 [[ "$actual" == "$version_code" ]] || fail "$aab uploaded unexpected versionCode $actual"
 
 release_payload=$(play_phone_release_payload "$version_code" "$release_status" "$locale" "$release_notes")

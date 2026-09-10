@@ -81,26 +81,38 @@ printf '%s\n' "$*" >> "$MOCK_CURL_LOG"
 output=''
 write_out=''
 url=''
+method=GET
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -o|--output) output=$2; shift 2 ;;
     -w|--write-out) write_out=$2; shift 2 ;;
+    -X) method=$2; shift 2 ;;
     http://*|https://*) url=$1; shift ;;
     *) shift ;;
   esac
 done
-case "$url" in
-  */tracks/internal/releases) ;;
-  *) echo "unexpected mock Play request: $url" >&2; exit 90 ;;
+respond() {
+  status=$1 body=$2 exit_code=$3
+  if [ -n "$output" ]; then printf '%s' "$body" > "$output"; else printf '%s' "$body"; fi
+  [ -z "$write_out" ] || printf '%s' "$status"
+  exit "$exit_code"
+}
+mode=${MOCK_PLAY_MODE:-deny}
+case "$url:$method:$mode" in
+  */tracks/internal/releases:GET:reconcile)
+    respond 200 '{"releases":[{"activeArtifacts":[{"versionCode":"39"}]}]}' 0 ;;
+  */tracks/internal/releases:GET:bundle-deny)
+    respond 200 '{"releases":[]}' 0 ;;
+  */tracks/internal/releases:GET:deny)
+    respond 403 '{"error":{"code":403,"status":"PERMISSION_DENIED","message":"track read denied"}}' 22 ;;
+  */edits:POST:bundle-deny)
+    respond 200 '{"id":"edit-1"}' 0 ;;
+  */edits/edit-1/bundles?uploadType=media:POST:bundle-deny)
+    respond 403 '{"error":{"code":403,"status":"PERMISSION_DENIED","errors":[{"reason":"forbidden"}],"message":"bundle upload denied"}}' 22 ;;
+  */edits/edit-1:DELETE:bundle-deny)
+    respond 200 '{}' 0 ;;
+  *) echo "unexpected mock Play request: $url ($method, $mode)" >&2; exit 90 ;;
 esac
-if [ "${MOCK_PLAY_MODE:-deny}" = reconcile ]; then
-  printf '%s' '{"releases":[{"activeArtifacts":[{"versionCode":"39"}]}]}' > "$output"
-  [ -z "$write_out" ] || printf '200'
-  exit 0
-fi
-printf '%s' '{"error":{"code":403,"status":"PERMISSION_DENIED","message":"track read denied"}}' > "$output"
-[ -z "$write_out" ] || printf '403'
-exit 22
 SH
 chmod +x "$tmp/bin/curl"
 upload_env=(
@@ -132,6 +144,24 @@ jq -e '.versionCode == 39 and .track == "internal" and .editCommitted == true an
   .reconciledExisting == true and .commitResponseReceived == false' "$tmp/mock-receipt.json" >/dev/null \
   || fail 'uploader did not retain a reconciled Workload Identity receipt'
 [[ $(wc -l < "$tmp/mock-curl.log") -eq 1 ]] || fail 'reconciliation made an unnecessary Play request'
+
+# A definite bundle rejection must expose the bounded stage/reason, issue the upload exactly once,
+# delete its uncommitted edit, and never create a success receipt.
+: > "$tmp/mock-curl.log"
+rm -f "$tmp/mock-receipt.json"
+if env "${upload_env[@]}" MOCK_PLAY_MODE=bundle-deny "$uploader" >"$tmp/mock-bundle-denied.log" 2>&1; then
+  fail 'uploader accepted a rejected phone bundle'
+fi
+grep -q 'phone bundle upload failed (HTTP 403): PERMISSION_DENIED: forbidden: bundle upload denied' \
+  "$tmp/mock-bundle-denied.log" || fail 'uploader omitted bounded bundle-stage diagnostics'
+grep -q 'Play definitively rejected the phone bundle; the uncommitted edit will be deleted' \
+  "$tmp/mock-bundle-denied.log" || fail 'uploader did not classify a definite bundle rejection'
+! grep -q 'do-not-print-this-token' "$tmp/mock-bundle-denied.log" || fail 'bundle diagnostics printed the access token'
+[[ $(grep -c 'bundles?uploadType=media' "$tmp/mock-curl.log") -eq 1 ]] \
+  || fail 'uploader retried a mutating bundle upload'
+grep -Eq -- '-X DELETE .*\/edits/edit-1($| )' "$tmp/mock-curl.log" \
+  || fail 'uploader did not delete the rejected bundle edit'
+[[ ! -e "$tmp/mock-receipt.json" ]] || fail 'uploader retained a success receipt after bundle rejection'
 
 repo=$(cd "$(dirname "$0")/../../.." && pwd)
 release="$repo/.github/workflows/android-release.yml"
@@ -213,6 +243,8 @@ grep -q "refusing to create a Play edit without an exact-track reconciliation re
 grep -q 'play_phone_release_payload' "$uploader" || fail 'uploader bypasses tested payload policy'
 grep -q 'editCommitted:true' "$uploader" || fail 'uploader does not produce a committed-state receipt'
 grep -q 'commit_response_received=true' "$uploader" || fail 'uploader cannot classify response reconciliation'
+grep -q "play_http_error 'phone bundle upload'" "$uploader" \
+  || fail 'uploader does not report bounded bundle-stage failures'
 grep -q 'commit_exit_code -eq 22' "$uploader" || fail 'uploader can relabel a definite HTTP rejection'
 grep -q 'reconciledExisting:true' "$uploader" || fail 'uploader cannot safely recover a completed prior attempt'
 [[ $(grep -c ':commit?changesNotSentForReview=' "$uploader") -eq 1 ]] \
