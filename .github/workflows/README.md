@@ -26,15 +26,25 @@ Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope
 
 After Internal Testing succeeds, dispatch `.github/workflows/android-promote-production.yml` **from the exact annotated release tag** with the semantic version and phone version code. It requires the same tag/main/version bindings, retains a pre-mutation intent, verifies that the exact code is active on `internal` and that production has no newer code, applies the reviewed English listing while promoting that artifact to `production`, and submits the single edit for review. Success requires Google Play to report `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED`. The workflow retains an attempt-qualified production receipt.
 
-Both mutation workflows use the tag-restricted `google-play` environment. It contains:
+Both mutation workflows use the tag-restricted `google-play` environment and exchange GitHub's job-scoped OIDC assertion for a short-lived Google access token. No long-lived Google service-account key is materialized. Configure these protected environment variables:
+
+| Variable | Used for |
+| --- | --- |
+| `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` | Fully qualified Google Workload Identity provider resource |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT` | App-scoped Play publisher service account impersonated by the provider |
+
+The environment contains only the upload-signing secrets needed by the release build:
 
 | Secret | Used for |
 | --- | --- |
-| `PLAY_CONSOLE_KEY_JSON` | App-scoped Google Play upload, listing, track, and review submission |
 | `ANDROID_RELEASE_KEYSTORE_BASE64` | Existing Play upload keystore |
 | `RELEASE_STORE_PASSWORD` | Upload-keystore password |
 | `RELEASE_KEY_ALIAS` | Upload-key alias |
 | `RELEASE_KEY_PASSWORD` | Upload-key password |
+
+The normal execution ref is the exact `android/v<version>` release tag. If an already-created immutable release needs a workflow-infrastructure-only recovery, an administrator may add and retain an annotated, main-reachable `android/recovery/*` tag for the fixed workflow revision and pass the original `release_tag` input. The workflow still checks out, qualifies, builds, and promotes only the original release tag's source. Intent and result receipts bind both the release SHA and recovery workflow SHA. Recovery tags must never contain product or artifact changes.
+
+`.github/workflows/android-google-play-access-audit.yml` is a protected diagnostic for this boundary. It retains intent, verifies an Internal-track read, inserts and immediately deletes one empty Play edit without committing it, and retains a receipt. It has no artifact upload, track/listing update, edit-commit, or review-submission operation.
 
 Campaign-attribution build values remain repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`.
 

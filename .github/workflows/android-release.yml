@@ -43,6 +43,16 @@ jobs:
               echo '::error::release_tag is valid only for manual recovery'; exit 1;
             }
             tag="${{ inputs.release_tag }}"
+            [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == android/recovery/* ]] || {
+              echo '::error::workflow-only recovery must run from an android/recovery/* tag'; exit 1;
+            }
+            git fetch --force --no-tags origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+            [[ "$(git cat-file -t "$GITHUB_REF_NAME")" == tag ]] || {
+              echo '::error::workflow-only recovery ref must be an annotated tag'; exit 1;
+            }
+            [[ "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" == "$GITHUB_SHA" ]] || {
+              echo '::error::workflow-only recovery tag does not peel to the workflow SHA'; exit 1;
+            }
           else
             [[ "${{ github.ref_type }}" == tag ]] || {
               echo '::error::push trigger must be an android/v* tag'; exit 1;
@@ -58,6 +68,9 @@ jobs:
           git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
           git merge-base --is-ancestor "$sha" refs/remotes/origin/main || {
             echo "::error::$tag does not point to a main-reachable commit"; exit 1;
+          }
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main || {
+            echo '::error::workflow revision is not main-reachable'; exit 1;
           }
           {
             echo "tag=$tag"
@@ -80,6 +93,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     environment: google-play
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: apps/android
@@ -90,6 +106,17 @@ jobs:
           ref: ${{ needs.resolve.outputs.release_sha }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Checkout trusted release tooling revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout: |
+            apps/android/scripts/google-play-phone-policy.sh
+            apps/android/scripts/upload-google-play-phone-release.sh
+          sparse-checkout-cone-mode: false
 
       - name: Set up Java
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
@@ -239,18 +266,25 @@ jobs:
           VERSION_CODE: ${{ steps.version.outputs.version_code }}
           RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
           RELEASE_SHA: ${{ needs.resolve.outputs.release_sha }}
+          WORKFLOW_SHA: ${{ github.sha }}
+          WORKFLOW_REF: ${{ github.ref }}
         run: |
           set -euo pipefail
           aab=app/build/outputs/bundle/playRelease/app-play-release.aab
+          upload_tool="$GITHUB_WORKSPACE/.release-tooling/apps/android/scripts/upload-google-play-phone-release.sh"
+          test -f "$upload_tool"
           jq -n --arg repository "$GITHUB_REPOSITORY" \
             --arg workflow '.github/workflows/android-release.yml' \
+            --arg workflowSha "$WORKFLOW_SHA" --arg workflowRef "$WORKFLOW_REF" \
+            --arg uploadToolSha256 "$(sha256sum "$upload_tool" | awk '{print $1}')" \
             --arg tag "$RELEASE_TAG" --arg sha "$RELEASE_SHA" \
             --arg peeled "$(git rev-parse "$RELEASE_TAG^{commit}")" --arg version "$VERSION" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
             --argjson code "$VERSION_CODE" --arg aab "$(sha256sum "$aab" | awk '{print $1}')" \
             --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
-              schemaVersion:1,repository:$repository,workflow:$workflow,runId:$runId,
-              runAttempt:$runAttempt,tag:$tag,headSha:$sha,tagPeeledSha:$peeled,
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              workflowSha:$workflowSha,workflowRef:$workflowRef,uploadToolSha256:$uploadToolSha256,
+              runId:$runId,runAttempt:$runAttempt,tag:$tag,headSha:$sha,tagPeeledSha:$peeled,
               versionName:$version,phoneVersionCode:$code,phoneTrack:"internal",
               releaseStatus:"completed",phoneAabSha256:$aab,wearIncluded:false,
               uploadPrepared:true,preparedAtUtc:$preparedAt
@@ -265,17 +299,15 @@ jobs:
           retention-days: 90
           compression-level: 0
 
-      - name: Configure ephemeral Google Play credential
-        shell: bash
-        env:
-          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
-        run: |
-          set -euo pipefail
-          test -n "${PLAY_CONSOLE_KEY_JSON:-}"
-          play_key="$RUNNER_TEMP/play-console-key.json"
-          printf '%s' "$PLAY_CONSOLE_KEY_JSON" > "$play_key"
-          chmod 600 "$play_key"
-          echo "PLAY_CONSOLE_KEY_PATH=$play_key" >> "$GITHUB_ENV"
+      - name: Authenticate to Google Play with protected Workload Identity
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
 
       - name: Upload phone bundle to Internal Testing
         env:
@@ -284,12 +316,10 @@ jobs:
           PHONE_PLAY_TRACK: internal
           PLAY_RELEASE_STATUS: completed
           PLAY_UPLOAD_RECEIPT_PATH: ${{ runner.temp }}/phone-upload-receipt.json
-        run: ./scripts/upload-google-play-phone-release.sh
-
-      - name: Remove ephemeral credential after phone upload
-        if: ${{ always() }}
-        shell: bash
-        run: rm -f "$RUNNER_TEMP/play-console-key.json"
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          PLAY_RELEASE_ROOT: ${{ github.workspace }}/apps/android
+        run: >-
+          "$GITHUB_WORKSPACE/.release-tooling/apps/android/scripts/upload-google-play-phone-release.sh"
 
       - name: Retain verified phone upload receipt
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -304,7 +334,7 @@ jobs:
         if: ${{ always() }}
         shell: bash
         run: |
-          rm -f local.properties "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/health-md-release.jks"
+          rm -f local.properties "$RUNNER_TEMP/health-md-release.jks"
 
       - name: Release summary
         if: ${{ !cancelled() }}

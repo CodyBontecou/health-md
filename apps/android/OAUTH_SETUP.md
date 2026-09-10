@@ -23,14 +23,15 @@ Do not print token contents while checking cleanup.
 
 ## Supported authentication model
 
-Use protected, least-privilege service accounts:
+The current phone-only release path uses GitHub OIDC with Google Workload Identity Federation in the tag-restricted `google-play` environment. `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` identifies a provider constrained to this repository, the `google-play` environment subject, and Android tags; `GOOGLE_PLAY_SERVICE_ACCOUNT` identifies the app-scoped Play publisher. The workflows request only a short-lived `androidpublisher` access token after retaining pre-mutation intent evidence. No Google private key is downloaded or written.
 
-- `google-play-qa` environment: upload key plus a Play account restricted to `qa` and `wear:internal`.
-- `google-play-production` environment: production-capable account used only after sealed evidence verification and environment approval.
-- `google-play-announce` environment: dedicated app-level read-only account.
-- Optional local readiness inspection: a separate app-level read-only account passed through `PLAY_CONSOLE_KEY_PATH`.
+Keep other duties separated:
 
-Credentials are written only under the protected runner's temporary directory and removed in unconditional cleanup. Signing material is removed before Play credentials are materialized.
+- Future Wear QA/production environments must use independently protected, least-privilege identities when that release path is reactivated.
+- `google-play-announce` uses a dedicated app-level read-only account.
+- Optional local readiness inspection uses a separate app-level read-only account passed through `PLAY_CONSOLE_KEY_PATH`.
+
+Upload-signing material is removed before Play access is requested. Never copy a QA or production mutation key to a developer workstation.
 
 ## Safe local verification
 

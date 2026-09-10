@@ -75,28 +75,48 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])
 
-    def test_production_dispatch_runs_only_from_the_exact_annotated_release_tag(self) -> None:
+    def test_production_dispatch_uses_exact_release_source_or_constrained_recovery_tag(self) -> None:
         workflow = (ROOT / ".github/workflows/android-promote-production.yml").read_text()
         required = (
-            'test "$GITHUB_REF_NAME" = "android/v$VERSION"',
-            'git cat-file -t "$GITHUB_REF_NAME"',
-            'git rev-parse "$GITHUB_REF_NAME^{commit}"',
+            'expected_tag="android/v$VERSION"',
+            'git cat-file -t "$expected_tag"',
+            'git rev-parse "$expected_tag^{commit}"',
             'git merge-base --is-ancestor "$tagged_sha" refs/remotes/origin/main',
+            '[[ "$GITHUB_REF_NAME" == android/recovery/* ]]',
+            'test "$(git rev-parse HEAD)" = "$tagged_sha"',
+            'workflowRecovery:$recovery',
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])
         self.assertNotIn("ops/android-production-", workflow)
 
-    def test_play_credential_is_materialized_only_after_build_and_artifact_retention(self) -> None:
+    def test_play_access_audit_is_tag_bound_and_cannot_commit_or_upload(self) -> None:
+        workflow = (ROOT / ".github/workflows/android-google-play-access-audit.yml").read_text()
+        required = (
+            "environment: google-play",
+            '[[ "$GITHUB_REF_NAME" == android/v* || "$GITHUB_REF_NAME" == android/recovery/* ]]',
+            'git cat-file -t "$tag"',
+            'git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main',
+            "emptyEditInsertDeleteVerified:true",
+            "noPlayEditCommit:true",
+        )
+        self.assertEqual([], [needle for needle in required if needle not in workflow])
+        self.assertNotIn(":commit", workflow)
+        self.assertNotIn("/bundles", workflow)
+        self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
+
+    def test_workload_identity_is_requested_only_after_build_and_artifact_retention(self) -> None:
         workflow = (ROOT / ".github/workflows/android-release.yml").read_text()
-        play = workflow.index("Configure ephemeral Google Play credential")
+        auth = workflow.index("Authenticate to Google Play with protected Workload Identity")
         build = workflow.index("Build signed phone app bundle")
         cleanup = workflow.index("Remove ephemeral signing credentials after inspection")
         retain = workflow.index("Retain signed phone bundle with native debug symbols")
         upload = workflow.index("Upload phone bundle to Internal Testing")
         self.assertLess(build, cleanup)
         self.assertLess(cleanup, retain)
-        self.assertLess(retain, play)
-        self.assertLess(play, upload)
+        self.assertLess(retain, auth)
+        self.assertLess(auth, upload)
+        self.assertIn("id-token: write", workflow)
+        self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
 
     def test_instrumentation_declares_a_ready_software_ime_before_accessibility_tests(self) -> None:
         workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()

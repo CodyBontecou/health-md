@@ -6,13 +6,14 @@ Health.md currently publishes the Android phone app only. The Wear OS companion 
 
 Repository administrators—not local release operators—maintain the `google-play` GitHub environment:
 
-1. Allow deployments only from tags matching `android/v*`.
-2. Store `PLAY_CONSOLE_KEY_JSON` for the Play service account authorized for this app's Internal Testing and production tracks.
+1. Allow deployments from annotated tags matching `android/v*`. A narrowly scoped `android/recovery/*` tag rule may be added only for a retained, main-reachable workflow-infrastructure recovery.
+2. Configure `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` with the fully qualified provider resource and `GOOGLE_PLAY_SERVICE_ACCOUNT` with the app-scoped publisher identity.
 3. Store the existing upload-signing values: `ANDROID_RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`.
-4. Keep the service account app-scoped and grant only the Play permissions required to upload bundles, update the reviewed English listing, manage testing/production releases, and submit changes for review.
-5. Never copy the mutation credential or upload keystore onto a developer workstation.
+4. Configure the Google provider to accept only this GitHub repository, the `google-play` environment subject, and `refs/tags/android/*`; grant its principal only `roles/iam.workloadIdentityUser` on the publisher service account.
+5. Keep the service account app-scoped in Play Console and grant only the permissions required to upload bundles, update the reviewed English listing, manage testing/production releases, and submit changes for review.
+6. Never copy a Play mutation credential or upload keystore onto a developer workstation.
 
-The Android Publisher OAuth scope is broad. App-level Play Console grants, the tag-restricted GitHub environment, exact-source workflow checks, and ephemeral credential cleanup provide the practical boundary.
+The Android Publisher OAuth scope is broad. Short-lived GitHub OIDC exchange, app-level Play Console grants, the tag-restricted GitHub environment, and exact-source workflow checks provide the practical boundary. The canonical workflows do not consume a long-lived Google service-account JSON key.
 
 ## Optional local read-only inspection
 
@@ -46,7 +47,7 @@ The deferred `:wear` module retains its independent 1,000,000+ code range, but i
 - verifies `release-scope.json` declares phone release and deferred Wear scope;
 - materializes signing inputs only under `$RUNNER_TEMP`;
 - builds and inspects only `app-play-release.aab`;
-- retains the signed AAB and a tag/SHA/run-attempt/AAB-digest-bound intent before obtaining Play credentials;
+- retains the signed AAB and a tag/SHA/run-attempt/AAB-digest-bound intent before requesting a short-lived Workload Identity token;
 - uploads the phone AAB and exact release notes to `internal` in one validated Play edit;
 - issues the non-idempotent commit once and reconciles exact track state if the response is lost.
 
@@ -75,9 +76,9 @@ See `PLAY_STORE_COMMANDS.md` for the checklist and `PLAY_CONSOLE_BROWSER_PROMPT.
 
 ## Troubleshooting
 
-### Service account not found
+### Workload Identity or service account not authorized
 
-Verify the protected environment's `PLAY_CONSOLE_KEY_JSON` and app-level Play Console invitation. Do not copy the credential locally.
+Verify the protected environment's provider/service-account variables, the provider's repository/environment/tag condition, its `roles/iam.workloadIdentityUser` binding, and the service account's app-level Play Console invitation. Do not create or copy a JSON mutation key locally. The uploader reports whether authentication, exact-track preflight, or Play edit creation failed without printing access tokens.
 
 ### Invalid version code
 

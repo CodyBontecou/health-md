@@ -4,8 +4,10 @@ set -euo pipefail
 fail() { echo "phone release policy test: $*" >&2; exit 1; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+test_script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=google-play-phone-policy.sh
-source "$(dirname "$0")/google-play-phone-policy.sh"
+source "$test_script_dir/google-play-phone-policy.sh"
+uploader="$test_script_dir/upload-google-play-phone-release.sh"
 
 phone=39
 play_phone_assert_version_code "$phone" || fail 'valid phone versionCode rejected'
@@ -64,10 +66,77 @@ if play_phone_promotion_payload "$tmp/internal.json" wear:production "$phone" "$
   fail 'Wear production destination accepted by phone policy'
 fi
 
+# The uploader must accept a short-lived Workload Identity token and fail closed if it cannot
+# establish exact track state. A failed read must never fall through to edit creation.
+mock_root="$tmp/mock-release"
+mkdir -p "$mock_root/app/build/outputs/bundle/playRelease" \
+  "$mock_root/play-console/listing/en-US/release-notes/en-US" "$tmp/bin"
+printf 'signed-aab-fixture' > "$mock_root/app/build/outputs/bundle/playRelease/app-play-release.aab"
+printf 'Dependable phone release.\n' \
+  > "$mock_root/play-console/listing/en-US/release-notes/en-US/default.txt"
+cat > "$tmp/bin/curl" <<'SH'
+#!/bin/sh
+set -eu
+printf '%s\n' "$*" >> "$MOCK_CURL_LOG"
+output=''
+write_out=''
+url=''
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o|--output) output=$2; shift 2 ;;
+    -w|--write-out) write_out=$2; shift 2 ;;
+    http://*|https://*) url=$1; shift ;;
+    *) shift ;;
+  esac
+done
+case "$url" in
+  */tracks/internal/releases) ;;
+  *) echo "unexpected mock Play request: $url" >&2; exit 90 ;;
+esac
+if [ "${MOCK_PLAY_MODE:-deny}" = reconcile ]; then
+  printf '%s' '{"releases":[{"activeArtifacts":[{"versionCode":"39"}]}]}' > "$output"
+  [ -z "$write_out" ] || printf '200'
+  exit 0
+fi
+printf '%s' '{"error":{"code":403,"status":"PERMISSION_DENIED","message":"track read denied"}}' > "$output"
+[ -z "$write_out" ] || printf '403'
+exit 22
+SH
+chmod +x "$tmp/bin/curl"
+upload_env=(
+  PATH="$tmp/bin:$PATH"
+  PLAY_RELEASE_ROOT="$mock_root"
+  PLAY_PHONE_POLICY_PATH="$test_script_dir/google-play-phone-policy.sh"
+  PLAY_ACCESS_TOKEN=do-not-print-this-token
+  CONFIRM_PLAY_PHONE_UPLOAD=com.healthmd.android:internal:39
+  PHONE_VERSION_CODE=39
+  PHONE_PLAY_TRACK=internal
+  PLAY_RELEASE_STATUS=completed
+  PLAY_UPLOAD_RECEIPT_PATH="$tmp/mock-receipt.json"
+  MOCK_CURL_LOG="$tmp/mock-curl.log"
+)
+if env "${upload_env[@]}" "$uploader" >"$tmp/mock-denied.log" 2>&1; then
+  fail 'uploader accepted an unavailable exact-track preflight'
+fi
+grep -q 'preflight track query failed (HTTP 403): PERMISSION_DENIED: track read denied' "$tmp/mock-denied.log" \
+  || fail 'uploader omitted bounded Play-stage diagnostics'
+grep -q 'refusing to create a Play edit without an exact-track reconciliation result' "$tmp/mock-denied.log" \
+  || fail 'uploader did not fail closed after the track error'
+! grep -q 'do-not-print-this-token' "$tmp/mock-denied.log" || fail 'uploader printed its access token'
+[[ $(wc -l < "$tmp/mock-curl.log") -eq 1 ]] || fail 'uploader made a request after failed preflight'
+! grep -q '/edits' "$tmp/mock-curl.log" || fail 'uploader created an edit after failed preflight'
+
+: > "$tmp/mock-curl.log"
+env "${upload_env[@]}" MOCK_PLAY_MODE=reconcile "$uploader" >"$tmp/mock-reconciled.log" 2>&1
+jq -e '.versionCode == 39 and .track == "internal" and .editCommitted == true and
+  .reconciledExisting == true and .commitResponseReceived == false' "$tmp/mock-receipt.json" >/dev/null \
+  || fail 'uploader did not retain a reconciled Workload Identity receipt'
+[[ $(wc -l < "$tmp/mock-curl.log") -eq 1 ]] || fail 'reconciliation made an unnecessary Play request'
+
 repo=$(cd "$(dirname "$0")/../../.." && pwd)
 release="$repo/.github/workflows/android-release.yml"
 promotion="$repo/.github/workflows/android-promote-production.yml"
-uploader="$(dirname "$0")/upload-google-play-phone-release.sh"
+access_audit="$repo/.github/workflows/android-google-play-access-audit.yml"
 scope="$(dirname "$0")/../release-scope.json"
 manifest="$(dirname "$0")/../app/src/play/AndroidManifest.xml"
 runtime="$(dirname "$0")/../app/src/play/java/com/healthmd/distribution/PlayDistributionRuntime.kt"
@@ -87,6 +156,15 @@ jq -e '
 
 for workflow in "$release" "$promotion"; do
   grep -q 'environment: google-play' "$workflow" || fail "$workflow does not use the protected google-play environment"
+  grep -q 'google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093' "$workflow" \
+    || fail "$workflow does not use the pinned Workload Identity action"
+  grep -q 'GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER' "$workflow" \
+    || fail "$workflow omits the protected Workload Identity provider"
+  grep -q 'GOOGLE_PLAY_SERVICE_ACCOUNT' "$workflow" \
+    || fail "$workflow omits the protected Google Play service account"
+  if grep -q 'PLAY_CONSOLE_KEY_JSON' "$workflow"; then
+    fail "$workflow still materializes a long-lived Google Play key"
+  fi
   grep -q 'release-scope.json' "$workflow" || fail "$workflow does not enforce release-scope.json"
   grep -q 'wear.status == "deferred"' "$workflow" || fail "$workflow does not enforce deferred Wear status"
   if grep -Eq 'wear_version_code|wear:internal|wear:production|:wear:bundleRelease|upload-google-play-paired-release' "$workflow"; then
@@ -103,12 +181,17 @@ grep -q 'test "$(git rev-parse HEAD)" = "$RELEASE_SHA"' "$release" \
 grep -q 'uses: ./.github/workflows/android-ci.yml' "$release" \
   || fail 'release does not requalify the exact source through Android CI'
 grep -q 'Build signed phone app bundle' "$release" || fail 'release does not build the phone bundle'
-grep -q './scripts/upload-google-play-phone-release.sh' "$release" || fail 'release bypasses phone uploader'
+grep -q '.release-tooling/apps/android/scripts/upload-google-play-phone-release.sh' "$release" \
+  || fail 'release bypasses the SHA-bound phone uploader'
+grep -q 'PLAY_RELEASE_ROOT: ${{ github.workspace }}/apps/android' "$release" \
+  || fail 'recovery uploader is not bound to the exact release root'
 grep -q 'wearIncluded:false' "$release" || fail 'release intent does not record phone-only scope'
+grep -q 'workflowSha:$workflowSha' "$release" || fail 'release intent omits workflow-tooling provenance'
+grep -q 'uploadToolSha256:$uploadToolSha256' "$release" || fail 'release intent omits uploader digest'
 grep -q 'healthmd-android-phone-upload-${{ steps.version.outputs.version }}-${{ steps.version.outputs.release_sha }}-attempt-${{ github.run_attempt }}' "$release" \
   || fail 'phone upload intent is not SHA/attempt bound'
 intent_line=$(grep -n 'Retain immutable phone upload intent receipt' "$release" | head -1 | cut -d: -f1)
-credential_line=$(grep -n 'Configure ephemeral Google Play credential' "$release" | head -1 | cut -d: -f1)
+credential_line=$(grep -n 'Authenticate to Google Play with protected Workload Identity' "$release" | head -1 | cut -d: -f1)
 upload_line=$(grep -n 'Upload phone bundle to Internal Testing' "$release" | head -1 | cut -d: -f1)
 [[ "$intent_line" =~ ^[0-9]+$ && "$credential_line" =~ ^[0-9]+$ && "$upload_line" =~ ^[0-9]+$ ]] \
   || fail 'release intent/credential/upload stages are missing'
@@ -120,6 +203,9 @@ if grep -q '/listings/' "$uploader"; then
   fail 'internal uploader must leave listing mutation for the atomic production review edit'
 fi
 grep -q 'CONFIRM_PLAY_PHONE_UPLOAD' "$uploader" || fail 'uploader lacks explicit exact upload confirmation'
+grep -q 'PLAY_ACCESS_TOKEN' "$uploader" || fail 'uploader cannot consume ephemeral Workload Identity access'
+grep -q "refusing to create a Play edit without an exact-track reconciliation result" "$uploader" \
+  || fail 'uploader does not fail closed when exact-track reconciliation is unavailable'
 grep -q 'play_phone_release_payload' "$uploader" || fail 'uploader bypasses tested payload policy'
 grep -q 'editCommitted:true' "$uploader" || fail 'uploader does not produce a committed-state receipt'
 grep -q 'commit_response_received=true' "$uploader" || fail 'uploader cannot classify response reconciliation'
@@ -131,10 +217,14 @@ if grep -Eq -- '--retry [0-9]+.*:commit|:commit.*--retry [0-9]+' "$uploader"; th
   fail 'uploader retries the non-idempotent Play commit'
 fi
 
-grep -q 'test "$GITHUB_REF_NAME" = "android/v$VERSION"' "$promotion" \
+grep -q 'expected_tag="android/v$VERSION"' "$promotion" \
   || fail 'production dispatch is not bound to the exact release tag'
-grep -q 'test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag' "$promotion" \
-  || fail 'production dispatch does not require an annotated tag'
+grep -q 'test "$(git cat-file -t "$expected_tag")" = tag' "$promotion" \
+  || fail 'production dispatch does not require an annotated release tag'
+grep -q '\[\[ "$GITHUB_REF_NAME" == android/recovery/\* \]\]' "$promotion" \
+  || fail 'workflow-only production recovery lacks a constrained tag namespace'
+grep -q 'test "$(git rev-parse HEAD)" = "$tagged_sha"' "$promotion" \
+  || fail 'workflow-only recovery does not check out the exact release source'
 grep -q 'git merge-base --is-ancestor "$tagged_sha" refs/remotes/origin/main' "$promotion" \
   || fail 'production tag is not required to be main-reachable'
 grep -q 'play_phone_promotion_payload' "$promotion" \
@@ -152,6 +242,7 @@ grep -q 'RELEASE_LIFECYCLE_STATE_IN_REVIEW' "$promotion" \
 grep -q 'android-phone-production-${{ inputs.version }}-${{ steps.release.outputs.sha }}-attempt-${{ github.run_attempt }}' "$promotion" \
   || fail 'production receipt is not SHA/attempt bound'
 grep -q 'wearIncluded:false' "$promotion" || fail 'production intent omits phone-only scope'
+grep -q 'workflowRecovery:$recovery' "$promotion" || fail 'production intent omits recovery provenance'
 grep -q 'commit_response_received=true' "$promotion" \
   || fail 'production commit cannot distinguish a received response from reconciliation'
 grep -q 'commit_exit_code -eq 22' "$promotion" \
@@ -161,8 +252,19 @@ grep -q 'commit_exit_code -eq 22' "$promotion" \
 if grep -Eq -- '--retry [0-9]+.*:commit|:commit.*--retry [0-9]+' "$promotion"; then
   fail 'production workflow retries the non-idempotent Play commit'
 fi
+
+grep -q 'environment: google-play' "$access_audit" || fail 'Play access audit is not protected'
+grep -q 'google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093' "$access_audit" \
+  || fail 'Play access audit does not use pinned Workload Identity'
+grep -q 'noPlayEditCommit:true' "$access_audit" || fail 'Play access audit omits its no-commit receipt'
+grep -q 'emptyEditInsertDeleteVerified:true' "$access_audit" \
+  || fail 'Play access audit does not prove bounded empty-edit cleanup'
+if grep -Eq ':commit|/bundles|listings/.+(-X PUT|--request PUT)' "$access_audit"; then
+  fail 'Play access audit can publish application state'
+fi
+
 promotion_intent_line=$(grep -n 'Retain immutable phone promotion intent' "$promotion" | head -1 | cut -d: -f1)
-promotion_credential_line=$(grep -n 'Configure ephemeral Google Play credential' "$promotion" | head -1 | cut -d: -f1)
+promotion_credential_line=$(grep -n 'Authenticate to Google Play with protected Workload Identity' "$promotion" | head -1 | cut -d: -f1)
 promotion_mutation_line=$(grep -n 'Promote exact phone artifact and submit it for review' "$promotion" | head -1 | cut -d: -f1)
 [[ "$promotion_intent_line" =~ ^[0-9]+$ && "$promotion_credential_line" =~ ^[0-9]+$ && "$promotion_mutation_line" =~ ^[0-9]+$ ]] \
   || fail 'production intent/credential/mutation stages are missing'

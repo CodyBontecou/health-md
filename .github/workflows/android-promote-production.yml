@@ -11,6 +11,11 @@ on:
         description: 'Exact phone versionCode to promote from Internal Testing'
         required: true
         type: string
+      release_tag:
+        description: 'Existing immutable release tag; set only when dispatching a workflow-only recovery tag'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -28,13 +33,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: google-play
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: apps/android
     steps:
-      - name: Checkout promotion workflow revision
+      - name: Checkout exact release source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          ref: ${{ inputs.release_tag || github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -44,22 +53,35 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
           VERSION_CODE: ${{ inputs.version_code }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
           test "$GITHUB_REF_TYPE" = tag
-          test "$GITHUB_REF_NAME" = "android/v$VERSION"
-          git fetch --force --no-tags origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
-          test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag
-          tagged_sha="$(git rev-parse "$GITHUB_REF_NAME^{commit}")"
+          expected_tag="android/v$VERSION"
+          [[ -z "$RELEASE_TAG" || "$RELEASE_TAG" == "$expected_tag" ]]
+          git fetch --force --no-tags origin "+refs/tags/${expected_tag}:refs/tags/${expected_tag}"
+          test "$(git cat-file -t "$expected_tag")" = tag
+          tagged_sha="$(git rev-parse "$expected_tag^{commit}")"
           test "$(git rev-parse HEAD)" = "$tagged_sha"
-          test "$GITHUB_SHA" = "$tagged_sha"
           git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
           git merge-base --is-ancestor "$tagged_sha" refs/remotes/origin/main
+          if [[ "$GITHUB_REF_NAME" == "$expected_tag" ]]; then
+            test "$GITHUB_SHA" = "$tagged_sha"
+            recovery=false
+          else
+            test "$RELEASE_TAG" = "$expected_tag"
+            [[ "$GITHUB_REF_NAME" == android/recovery/* ]]
+            git fetch --force --no-tags origin "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+            test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag
+            test "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" = "$GITHUB_SHA"
+            git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+            recovery=true
+          fi
           [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
           [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]]
           (( VERSION_CODE < 1000000 ))
 
-          tagged_gradle="$(git show "$GITHUB_REF_NAME:apps/android/app/build.gradle.kts")"
+          tagged_gradle="$(git show "$expected_tag:apps/android/app/build.gradle.kts")"
           tagged_version="$(printf '%s\n' "$tagged_gradle" | sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' | head -1)"
           tagged_code="$(printf '%s\n' "$tagged_gradle" | sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' | head -1)"
           test "$tagged_version" = "$VERSION"
@@ -73,8 +95,11 @@ jobs:
             .googlePlay.wear.status == "deferred" and .googlePlay.wear.published == false
           ' release-scope.json >/dev/null
           {
-            echo "tag=$GITHUB_REF_NAME"
+            echo "tag=$expected_tag"
             echo "sha=$tagged_sha"
+            echo "workflow_sha=$GITHUB_SHA"
+            echo "workflow_ref=$GITHUB_REF"
+            echo "recovery=$recovery"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create immutable phone promotion intent
@@ -87,11 +112,15 @@ jobs:
           set -euo pipefail
           jq -n --arg repository "$GITHUB_REPOSITORY" \
             --arg workflow '.github/workflows/android-promote-production.yml' \
+            --arg workflowSha "${{ steps.release.outputs.workflow_sha }}" \
+            --arg workflowRef "${{ steps.release.outputs.workflow_ref }}" \
+            --argjson recovery "${{ steps.release.outputs.recovery }}" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
             --arg sha "$RELEASE_SHA" --arg version "$VERSION" --argjson code "$VERSION_CODE" \
             --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
-              schemaVersion:1,repository:$repository,workflow:$workflow,runId:$runId,
-              runAttempt:$runAttempt,releaseSha:$sha,versionName:$version,
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              workflowSha:$workflowSha,workflowRef:$workflowRef,workflowRecovery:$recovery,
+              runId:$runId,runAttempt:$runAttempt,releaseSha:$sha,versionName:$version,
               phoneVersionCode:$code,sourceTrack:"internal",destinationTrack:"production",
               wearIncluded:false,promotionPrepared:true,preparedAtUtc:$preparedAt
             }' > "$RUNNER_TEMP/phone-production-intent.json"
@@ -105,40 +134,15 @@ jobs:
           retention-days: 90
           compression-level: 0
 
-      - name: Configure ephemeral Google Play credential
-        shell: bash
-        env:
-          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
-        run: |
-          set -euo pipefail
-          test -n "${PLAY_CONSOLE_KEY_JSON:-}"
-          play_key="$RUNNER_TEMP/play-console-key.json"
-          printf '%s' "$PLAY_CONSOLE_KEY_JSON" > "$play_key"
-          chmod 600 "$play_key"
-          echo "PLAY_CONSOLE_KEY_PATH=$play_key" >> "$GITHUB_ENV"
-
-      - name: Create Google Play access token
+      - name: Authenticate to Google Play with protected Workload Identity
         id: play-auth
-        shell: bash
-        run: |
-          set -euo pipefail
-          private_key="$RUNNER_TEMP/play-console-private-key.pem"
-          jq -er '.private_key' "$PLAY_CONSOLE_KEY_PATH" > "$private_key"
-          chmod 600 "$private_key"
-          now=$(date +%s)
-          base64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
-          header=$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | base64url)
-          claims=$(jq -nc --arg iss "$(jq -er .client_email "$PLAY_CONSOLE_KEY_PATH")" \
-            --arg aud "$(jq -er .token_uri "$PLAY_CONSOLE_KEY_PATH")" --argjson iat "$now" \
-            '{iss:$iss,scope:"https://www.googleapis.com/auth/androidpublisher",aud:$aud,iat:$iat,exp:($iat+1200)}' | base64url)
-          signature=$(printf '%s' "$header.$claims" | openssl dgst -sha256 -sign "$private_key" | base64url)
-          token=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-            --data-urlencode "assertion=$header.$claims.$signature" \
-            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer' \
-            "$(jq -er .token_uri "$PLAY_CONSOLE_KEY_PATH")" | jq -er .access_token)
-          echo "::add-mask::$token"
-          echo "access_token=$token" >> "$GITHUB_OUTPUT"
-          rm -f "$private_key"
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
 
       - name: Verify Internal Testing source and production precondition
         id: preflight
@@ -322,10 +326,12 @@ jobs:
           echo "::error::Production versionCode $VERSION_CODE was not proven submitted for review"
           exit 1
 
-      - name: Remove ephemeral credential after production verification
+      - name: Confirm ephemeral Workload Identity credentials were not persisted
         if: ${{ always() }}
         shell: bash
-        run: rm -f "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/play-console-private-key.pem"
+        run: |
+          test ! -e "$RUNNER_TEMP/play-console-key.json"
+          test ! -e "$RUNNER_TEMP/play-console-private-key.pem"
 
       - name: Create phone production receipt
         shell: bash
@@ -333,6 +339,9 @@ jobs:
           VERSION: ${{ inputs.version }}
           VERSION_CODE: ${{ inputs.version_code }}
           RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          WORKFLOW_SHA: ${{ steps.release.outputs.workflow_sha }}
+          WORKFLOW_REF: ${{ steps.release.outputs.workflow_ref }}
+          WORKFLOW_RECOVERY: ${{ steps.release.outputs.recovery }}
           EDIT_ID: ${{ steps.promote.outputs.edit_id }}
           COMMIT_RESPONSE: ${{ steps.promote.outputs.commit_response_received }}
           LIFECYCLE: ${{ steps.verify-review.outputs.lifecycle_state }}
@@ -341,12 +350,15 @@ jobs:
           set -euo pipefail
           jq -n --arg repository "$GITHUB_REPOSITORY" \
             --arg workflow '.github/workflows/android-promote-production.yml' \
+            --arg workflowSha "$WORKFLOW_SHA" --arg workflowRef "$WORKFLOW_REF" \
+            --argjson workflowRecovery "$WORKFLOW_RECOVERY" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
             --arg sha "$RELEASE_SHA" --arg version "$VERSION" --argjson code "$VERSION_CODE" \
             --arg edit "$EDIT_ID" --arg response "$COMMIT_RESPONSE" --arg lifecycle "$LIFECYCLE" \
             --arg releaseName "$RELEASE_NAME" --arg completedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
-              schemaVersion:1,repository:$repository,workflow:$workflow,runId:$runId,
-              runAttempt:$runAttempt,releaseSha:$sha,versionName:$version,
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              workflowSha:$workflowSha,workflowRef:$workflowRef,workflowRecovery:$workflowRecovery,
+              runId:$runId,runAttempt:$runAttempt,releaseSha:$sha,versionName:$version,
               phoneVersionCode:$code,sourceTrack:"internal",destinationTrack:"production",
               wearIncluded:false,playEditId:($edit | if length > 0 then . else null end),
               commitResponseReceived:($response == "true"),reviewLifecycle:$lifecycle,
