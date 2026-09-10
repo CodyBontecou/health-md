@@ -47,6 +47,8 @@ jobs:
           done
           workflow_sha=$(git rev-parse "$GITHUB_REF_NAME^{commit}")
           release_sha=$(git rev-parse "$RELEASE_TAG^{commit}")
+          version_code=$(git show "$RELEASE_TAG:apps/android/release-scope.json" \
+            | jq -er '.googlePlay.phone.versionCode | select(type == "number" and . >= 1 and . < 1000000)')
           test "$workflow_sha" = "$GITHUB_SHA"
           git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
           git merge-base --is-ancestor "$workflow_sha" refs/remotes/origin/main
@@ -54,6 +56,7 @@ jobs:
           {
             echo "workflow_sha=$workflow_sha"
             echo "release_sha=$release_sha"
+            echo "version_code=$version_code"
           } >> "$GITHUB_OUTPUT"
 
       - name: Retain immutable access-audit intent
@@ -61,6 +64,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASE_SHA: ${{ steps.identity.outputs.release_sha }}
+          VERSION_CODE: ${{ steps.identity.outputs.version_code }}
           WORKFLOW_SHA: ${{ steps.identity.outputs.workflow_sha }}
         run: |
           set -euo pipefail
@@ -68,12 +72,13 @@ jobs:
             --arg workflow '.github/workflows/android-google-play-access-audit.yml' \
             --arg workflowRef "$GITHUB_REF" --arg workflowSha "$WORKFLOW_SHA" \
             --arg releaseTag "$RELEASE_TAG" --arg releaseSha "$RELEASE_SHA" \
+            --argjson versionCode "$VERSION_CODE" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
             --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
               schemaVersion:1,repository:$repository,workflow:$workflow,
               workflowRef:$workflowRef,workflowSha:$workflowSha,releaseTag:$releaseTag,
-              releaseSha:$releaseSha,runId:$runId,runAttempt:$runAttempt,
-              requestedChecks:["internal-track-read","empty-edit-insert-delete"],
+              releaseSha:$releaseSha,versionCode:$versionCode,runId:$runId,runAttempt:$runAttempt,
+              requestedChecks:["internal-track-state","generated-apks-state","empty-edit-insert-delete"],
               noPlayEditCommit:true,preparedAtUtc:$preparedAt
             }' > "$RUNNER_TEMP/google-play-access-audit-intent.json"
 
@@ -96,12 +101,13 @@ jobs:
           access_token_scopes: https://www.googleapis.com/auth/androidpublisher
           create_credentials_file: false
 
-      - name: Verify app read and empty-edit authority without committing
+      - name: Verify artifact state and empty-edit authority without committing
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
           RELEASE_SHA: ${{ steps.identity.outputs.release_sha }}
+          VERSION_CODE: ${{ steps.identity.outputs.version_code }}
           WORKFLOW_SHA: ${{ steps.identity.outputs.workflow_sha }}
         run: |
           set -euo pipefail
@@ -138,6 +144,39 @@ jobs:
             exit 1
           fi
           jq -e '.releases | type == "array"' "$work/internal.json" >/dev/null
+          if jq -e --argjson code "$VERSION_CODE" '
+            any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
+          ' "$work/internal.json" >/dev/null; then
+            internal_contains_code=true
+          else
+            internal_contains_code=false
+          fi
+
+          # A generated-APK result can distinguish a code consumed by an earlier orphaned bundle
+          # upload from a code active on a track. This endpoint is read-only. Some narrowly scoped
+          # Play grants cannot query it; retain that as an explicit inconclusive result.
+          set +e
+          generated_http=$(curl --fail-with-body --retry 2 --max-time 30 -sS \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "$api/generatedApks/$VERSION_CODE" -o "$work/generated-apks.json" \
+            --write-out '%{http_code}')
+          generated_exit=$?
+          set -e
+          generated_query_authorized=false
+          generated_apks_present=false
+          if [[ $generated_exit -eq 0 && "$generated_http" =~ ^2[0-9][0-9]$ ]]; then
+            jq -e '.generatedApks | type == "array"' "$work/generated-apks.json" >/dev/null
+            generated_query_authorized=true
+            if jq -e '(.generatedApks | length) > 0' "$work/generated-apks.json" >/dev/null; then
+              generated_apks_present=true
+            fi
+          elif [[ "$generated_http" == 404 ]]; then
+            generated_query_authorized=true
+          else
+            detail=$(jq -r '.error.message // "no structured error detail"' \
+              "$work/generated-apks.json" 2>/dev/null | tr '\r\n\t' '   ' | cut -c1-500)
+            echo "::warning::Generated-APK state query was inconclusive (HTTP ${generated_http:-000}): $detail"
+          fi
 
           # Insert one empty edit without retries, then delete it. No bundle, track, listing, commit,
           # or review endpoint is called. This proves baseline edit access, not bundle-upload authority.
@@ -161,12 +200,21 @@ jobs:
             --arg workflow '.github/workflows/android-google-play-access-audit.yml' \
             --arg workflowRef "$GITHUB_REF" --arg workflowSha "$WORKFLOW_SHA" \
             --arg releaseTag "$RELEASE_TAG" --arg releaseSha "$RELEASE_SHA" \
+            --argjson versionCode "$VERSION_CODE" \
+            --argjson internalContainsCode "$internal_contains_code" \
+            --argjson generatedQueryAuthorized "$generated_query_authorized" \
+            --argjson generatedApksPresent "$generated_apks_present" \
+            --argjson generatedHttpStatus "${generated_http:-0}" \
             --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
             --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
               schemaVersion:1,repository:$repository,workflow:$workflow,
               workflowRef:$workflowRef,workflowSha:$workflowSha,releaseTag:$releaseTag,
-              releaseSha:$releaseSha,runId:$runId,runAttempt:$runAttempt,
+              releaseSha:$releaseSha,versionCode:$versionCode,runId:$runId,runAttempt:$runAttempt,
               workloadIdentityAuthenticated:true,internalTrackReadVerified:true,
+              internalTrackContainsVersionCode:$internalContainsCode,
+              generatedApksQueryAuthorized:$generatedQueryAuthorized,
+              generatedApksQueryHttpStatus:$generatedHttpStatus,
+              generatedApksPresent:$generatedApksPresent,
               emptyEditInsertDeleteVerified:true,noPlayEditCommit:true,
               verifiedAtUtc:$verifiedAt
             }' > "$RUNNER_TEMP/google-play-access-audit-receipt.json"

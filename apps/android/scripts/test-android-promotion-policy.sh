@@ -295,6 +295,10 @@ grep -q 'google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093' "$
 grep -q 'noPlayEditCommit:true' "$access_audit" || fail 'Play access audit omits its no-commit receipt'
 grep -q 'emptyEditInsertDeleteVerified:true' "$access_audit" \
   || fail 'Play access audit does not prove bounded empty-edit cleanup'
+grep -q 'internalTrackContainsVersionCode:$internalContainsCode' "$access_audit" \
+  || fail 'Play access audit does not retain exact Internal Testing state'
+grep -q 'generatedApksPresent:$generatedApksPresent' "$access_audit" \
+  || fail 'Play access audit does not distinguish an already-consumed version code'
 if grep -Eq ':commit|/bundles|listings/.+(-X PUT|--request PUT)' "$access_audit"; then
   fail 'Play access audit can publish application state'
 fi
