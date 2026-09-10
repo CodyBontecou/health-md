@@ -594,7 +594,13 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
     }
 
     private fun selectMenuItem(label: String) {
-        val item = compose.onNode(hasText(label) and hasClickAction() and hasAnyAncestor(isPopup()))
+        val itemMatcher = hasText(label) and hasClickAction() and hasAnyAncestor(isPopup())
+        // The popup is a separate native owner and can attach just after the anchor action's
+        // Compose-idle boundary, especially while a numeric IME is finishing its hide request.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodes(itemMatcher).fetchSemanticsNodes(atLeastOneRootRequired = false).size == 1
+        }
+        val item = compose.onNode(itemMatcher)
         item.performScrollTo().assertIsDisplayed()
         assertTextFits(compose.onNode(hasText(label) and hasAnyAncestor(isPopup()), useUnmergedTree = true))
         item.performTouchInput { click() }
