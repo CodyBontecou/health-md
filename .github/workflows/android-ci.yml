@@ -284,18 +284,8 @@ jobs:
             # API 35 headless AVDs can leave that IME suppressed, so make the software-IME
             # contract explicit and prove a default method is ready before instrumentation.
             adb -s emulator-5554 shell settings put secure show_ime_with_hard_keyboard 1
-            default_ime=''
-            for attempt in $(seq 1 30); do
-              default_ime=$(adb -s emulator-5554 shell settings get secure default_input_method | tr -d '\r')
-              if [ -n "$default_ime" ] && [ "$default_ime" != null ]; then
-                break
-              fi
-              sleep 1
-            done
-            test -n "$default_ime"
-            test "$default_ime" != null
             test "$(adb -s emulator-5554 shell settings get secure show_ime_with_hard_keyboard | tr -d '\r')" = 1
-            adb -s emulator-5554 shell ime list -s | tr -d '\r' | grep -Fx "$default_ime"
+            for attempt in $(seq 1 30); do default_ime=$(adb -s emulator-5554 shell settings get secure default_input_method | tr -d '\r'); if [ -n "$default_ime" ] && [ "$default_ime" != null ] && adb -s emulator-5554 shell ime list -s | tr -d '\r' | grep -Fx "$default_ime"; then exit 0; fi; sleep 1; done; exit 1
             cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedFdroidDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
             cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
 
