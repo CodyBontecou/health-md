@@ -39,6 +39,9 @@ const EVENT_NAMES = new Set([
   "pricing_free_export_used",
   "pricing_paywall_shown",
   "pricing_paywall_cta_tapped",
+  "pricing_upgrade_prompt_shown",
+  "pricing_upgrade_prompt_tapped",
+  "pricing_upgrade_prompt_dismissed",
   "pricing_export_blocked_by_quota",
   "pricing_purchase_started",
   "pricing_purchase_finished",
@@ -114,6 +117,8 @@ const PAYWALL_CONTEXTS = new Set([
   "shortcut",
   "mac_target",
   "export_quota",
+  "restore",
+  "upgrade_prompt",
   "restore",
 ]);
 const EXPORT_TARGET_TYPES = new Set(["local_file", "connected_mac", "api_endpoint", "preview_only"]);

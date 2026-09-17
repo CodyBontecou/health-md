@@ -246,6 +246,27 @@ test("dedupes health authorization completion by install and status", async () =
   );
 });
 
+test("accepts upgrade-prompt events with quota-derived milestone", async () => {
+  const events = [
+    "pricing_upgrade_prompt_shown",
+    "pricing_upgrade_prompt_tapped",
+    "pricing_upgrade_prompt_dismissed",
+  ].map((eventName, index) => ({
+    eventId: `00000000-0000-4000-8000-0000000004${String(index + 1).padStart(2, "0")}`,
+    eventName,
+    properties: baseProperties({
+      paywallContext: "upgrade_prompt",
+      freeExportsUsed: 3,
+      freeExportsRemaining: 7,
+    }),
+  }));
+
+  const { response, json } = await postEvents({ installId, events });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(json, { ok: true, accepted: 3 });
+});
+
 test("accepts source paywall context on purchase events", async () => {
   const { db, response, json } = await postEvents({
     installId,
