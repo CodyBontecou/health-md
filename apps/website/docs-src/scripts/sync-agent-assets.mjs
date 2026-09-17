@@ -17,6 +17,7 @@ const SKILL_V5_SHA256 = 'bb96f4f7416a1cf59b1229b9947be1eb407b790cce2cdd806b2bf05
 const SKILL_V6_SHA256 = 'f1f6340ba0dafeee4f3c549b186a78cca1ee6676b4c219d2252bfa2d6a064515';
 
 const SOURCES = {
+  cliIndex: path.join(DOCS_ROOT, 'agent-docs/cli-llms.txt'),
   provenance: path.join(DOCS_ROOT, 'reference-source.json'),
   macTools: path.join(PUBLIC_ROOT, 'agents/mcp/mac-tools-v1.json'),
   portableTools: path.join(REPOSITORY_ROOT, 'apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json'),
@@ -30,6 +31,7 @@ const SOURCES = {
 };
 
 const OUTPUTS = {
+  cliIndex: 'docs/cli/llms.txt',
   provenance: 'reference/source-manifest.json',
   provenanceV1: 'reference/source-manifest-v1.json',
   portableTools: 'agents/mcp/portable-tools-v1.json',
@@ -100,7 +102,8 @@ function parseToolCatalog(buffer, label, expectedCount) {
 }
 
 async function expectedOutputs() {
-  const [provenance, macTools, portableTools, skill, skillV1, skillV2, skillV3, skillV4, skillV5, skillV6] = await Promise.all([
+  const [cliIndex, provenance, macTools, portableTools, skill, skillV1, skillV2, skillV3, skillV4, skillV5, skillV6] = await Promise.all([
+    readRequired(SOURCES.cliIndex, 'CLI agent index'),
     readRequired(SOURCES.provenance, 'reference provenance manifest'),
     readRequired(SOURCES.macTools, 'generated Mac MCP tool catalog'),
     readRequired(SOURCES.portableTools, 'portable MCP tool catalog'),
@@ -180,6 +183,11 @@ async function expectedOutputs() {
     schema: 'healthmd.agent_assets',
     schema_version: 1,
     artifacts: [
+      artifact('/docs/cli/llms.txt', cliIndex, {
+        id: 'cli_docs_index',
+        availability: 'public_preview',
+        index_version: 1,
+      }),
       artifact('/agents/mcp/mac-tools-v1.json', macTools, {
         id: 'mac_mcp_tools',
         availability: 'released',
@@ -210,6 +218,7 @@ async function expectedOutputs() {
   });
 
   return new Map([
+    [OUTPUTS.cliIndex, cliIndex],
     [OUTPUTS.provenance, provenance],
     [OUTPUTS.provenanceV1, provenance],
     [OUTPUTS.portableTools, portableTools],

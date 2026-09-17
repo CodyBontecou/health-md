@@ -63,9 +63,9 @@ async function validateArtifactManifest() {
   }
 }
 
-async function validateLlmsLinks() {
-  const llms = (await read('/llms.txt')).toString('utf8');
-  if (!llms.includes('emerging convention, not a web standard')) {
+async function validateLlmsLinks(relative, { requireConventionNotice = false } = {}) {
+  const llms = (await read(relative)).toString('utf8');
+  if (requireConventionNotice && !llms.includes('emerging convention, not a web standard')) {
     fail('/llms.txt must describe its non-standard discovery role.');
   }
   const links = [...llms.matchAll(/\]\((https:\/\/healthmd\.app\/[^)]+)\)/g)]
@@ -79,7 +79,7 @@ async function validateLlmsLinks() {
       if (await exists(candidate)) return true;
       throw new Error('missing');
     })).catch(() => false)) {
-      fail(`/llms.txt points to a missing local target: ${pathname}`);
+      fail(`${relative} points to a missing local target: ${pathname}`);
     }
   }
   return links.length;
@@ -127,6 +127,7 @@ async function validateDocsAlternatesAndFreshness() {
 }
 
 await validateArtifactManifest();
-const llmsLinks = await validateLlmsLinks();
+const llmsLinks = await validateLlmsLinks('/llms.txt', { requireConventionNotice: true });
+const cliLlmsLinks = await validateLlmsLinks('/docs/cli/llms.txt');
 const docs = await validateDocsAlternatesAndFreshness();
-console.log(`Agent surfaces valid: ${docs.pages} Markdown alternatives, ${docs.dated} dated pages, ${llmsLinks} llms.txt links, and checksummed public artifacts.`);
+console.log(`Agent surfaces valid: ${docs.pages} Markdown alternatives, ${docs.dated} dated pages, ${llmsLinks} root discovery links, ${cliLlmsLinks} CLI discovery links, and checksummed public artifacts.`);

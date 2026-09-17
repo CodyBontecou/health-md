@@ -43,8 +43,24 @@ test('llms.txt is concise discovery metadata with stable authoritative links', a
   assert.match(llms, /\/docs\/reference\/source-manifest\.json/);
   assert.match(llms, /\/agents\/mcp\/mac-tools-v1\.json/);
   assert.match(llms, /\/agents\/skills\/healthmd-cli\/manifest\.json/);
+  assert.match(llms, /\/docs\/cli\/llms\.txt/);
+  assert.match(llms, /\/docs\/cli\/installation\//);
+  assert.match(llms, /\/docs\/cli-reference\//);
   assert.doesNotMatch(llms, /llms-full/i);
   assert.ok(Buffer.byteLength(llms) < 4_000);
+});
+
+test('CLI agent index maps commands and machine-readable contracts directly', async () => {
+  const cliLlms = (await read('docs-src/agent-docs/cli-llms.txt')).toString('utf8');
+  assert.match(cliLlms, /standalone CLI is a public preview/);
+  assert.match(cliLlms, /\/docs\/cli\/installation\/index\.md/);
+  for (const command of ['status', 'export', 'extract', 'query', 'resume', 'cancel', 'direct', 'mcp', 'setup']) {
+    assert.match(cliLlms, new RegExp(`/docs/cli-reference/${command}/index\\.md`));
+  }
+  assert.match(cliLlms, /\/agents\/mcp\/portable-tools-v1\.json/);
+  assert.match(cliLlms, /\/agents\/skills\/healthmd-cli\/manifest\.json/);
+  assert.match(cliLlms, /Report units, coverage, missingness, and limitations/);
+  assert.ok(Buffer.byteLength(cliLlms) < 4_000);
 });
 
 test('repository, CLI, and website docs publish selective agent-skill installation', async () => {
@@ -71,6 +87,8 @@ test('repository, CLI, and website docs publish selective agent-skill installati
 });
 
 test('published agent assets are byte-exact and checksum-backed', async () => {
+  const cliIndexSource = await read('docs-src/agent-docs/cli-llms.txt');
+  assert.deepEqual(await read('docs-src/public/docs/cli/llms.txt'), cliIndexSource);
   const sourceProvenance = await read('docs-src/reference-source.json');
   assert.deepEqual(await read('docs-src/public/reference/source-manifest.json'), sourceProvenance);
   assert.deepEqual(await read('docs-src/public/reference/source-manifest-v1.json'), sourceProvenance);
@@ -117,6 +135,17 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   assert.deepEqual(skillManifest.versions[6], skillManifest.latest);
   assert.equal(skillManifest.install_as, 'healthmd-cli/SKILL.md');
   assert.equal(skillManifest.availability, 'public_preview');
+  const agentManifest = JSON.parse(await read('docs-src/public/agents/manifest.json'));
+  const cliIndexArtifact = agentManifest.artifacts.find(({ id }) => id === 'cli_docs_index');
+  assert.deepEqual(cliIndexArtifact, {
+    id: 'cli_docs_index',
+    availability: 'public_preview',
+    index_version: 1,
+    path: '/docs/cli/llms.txt',
+    media_type: 'text/markdown',
+    bytes: cliIndexSource.length,
+    sha256: sha256(cliIndexSource),
+  });
   const skillText = publishedSkill.toString('utf8');
   assert.match(skillText, /0\.1\.0-alpha\.7.*public preview/s);
   assert.match(skillText, /explicitly unqualified public preview/);

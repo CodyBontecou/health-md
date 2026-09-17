@@ -1,0 +1,42 @@
+# Health.md CLI
+
+> Compact agent index for installing, operating, and integrating the standalone Health.md CLI and portable MCP server.
+
+The standalone CLI is a public preview for macOS, Linux, and Windows. Health data is read on the paired phone and transferred directly to the requesting computer. Health.md does not provide a health-data cloud. Follow the linked Markdown sources for authoritative prose and examples.
+
+## Start here
+
+- [CLI overview](https://healthmd.app/docs/cli/index.md): availability, supported surfaces, and the shortest successful path.
+- [Installation](https://healthmd.app/docs/cli/installation/index.md): Homebrew, signed Mac helpers, release installers, Cargo, upgrades, and verification.
+- [Direct phone CLI](https://healthmd.app/docs/cli-direct/index.md): pairing, Manual IP or Tailscale transport, platform boundaries, and troubleshooting.
+- [Canonical extraction](https://healthmd.app/docs/cli-extract/index.md): selected canonical iPhone data and output guarantees.
+- [Durable jobs](https://healthmd.app/docs/cli-jobs/index.md): status, interruption, resume, cancellation, and partial results.
+
+## Command reference
+
+- [Command index and global options](https://healthmd.app/docs/cli-reference/index.md)
+- [`healthmd status`](https://healthmd.app/docs/cli-reference/status/index.md)
+- [`healthmd export`](https://healthmd.app/docs/cli-reference/export/index.md)
+- [`healthmd extract`](https://healthmd.app/docs/cli-reference/extract/index.md)
+- [`healthmd query`](https://healthmd.app/docs/cli-reference/query/index.md)
+- [`healthmd resume`](https://healthmd.app/docs/cli-reference/resume/index.md)
+- [`healthmd cancel`](https://healthmd.app/docs/cli-reference/cancel/index.md)
+- [`healthmd direct`](https://healthmd.app/docs/cli-reference/direct/index.md)
+- [`healthmd mcp`](https://healthmd.app/docs/cli-reference/mcp/index.md)
+- [`healthmd setup`](https://healthmd.app/docs/cli-reference/setup/index.md)
+- [Generated exit-code contract](https://healthmd.app/docs/reference/generated/cli/exit-codes/index.md)
+
+## Machine-readable resources
+
+- [Portable MCP tool catalog](https://healthmd.app/agents/mcp/portable-tools-v1.json): exact published tool names and JSON Schemas.
+- [CLI skill manifest](https://healthmd.app/agents/skills/healthmd-cli/manifest.json): latest and immutable versioned skill artifacts with checksums.
+- [Agent asset manifest](https://healthmd.app/agents/manifest.json): availability, byte counts, and SHA-256 hashes.
+- [Reference provenance manifest](https://healthmd.app/docs/reference/source-manifest.json): content-addressed source and generation evidence.
+
+## Operating rules
+
+- Treat public-preview boundaries and platform differences as authoritative; do not infer unsupported parity.
+- Use `healthmd status` before a health-data request and preserve returned job UUIDs.
+- Prefer bounded dates and metric scopes. Report units, coverage, missingness, and limitations.
+- Do not diagnose, recommend treatment, or infer causation from exported health data.
+- Do not send health values, requested scope, or results through an unrelated cloud service.

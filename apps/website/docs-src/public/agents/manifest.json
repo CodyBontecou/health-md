@@ -3,6 +3,15 @@
   "schema_version": 1,
   "artifacts": [
     {
+      "id": "cli_docs_index",
+      "availability": "public_preview",
+      "index_version": 1,
+      "path": "/docs/cli/llms.txt",
+      "media_type": "text/markdown",
+      "bytes": 3111,
+      "sha256": "2a30675b8084f1dd4ff33e86e1914ffdc8e83c0c866922ffbe593a5bbc73a9de"
+    },
+    {
       "id": "mac_mcp_tools",
       "availability": "released",
       "catalog_version": 1,

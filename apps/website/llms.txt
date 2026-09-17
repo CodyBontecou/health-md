@@ -10,6 +10,9 @@ This is a curated discovery aid for language-model clients. `llms.txt` is an eme
 - [Configure your agent](https://healthmd.app/docs/configuration/): interface selection and complete host configuration.
 - [MCP server and tools](https://healthmd.app/docs/mcp/): released Mac tools and clearly marked portable preview.
 - [Health.md CLI](https://healthmd.app/docs/cli/): bundled Mac CLI and portable-preview boundaries.
+- [CLI agent index](https://healthmd.app/docs/cli/llms.txt): compact Markdown map of installation, guides, every command, schemas, and operating rules.
+- [Install the Health.md CLI](https://healthmd.app/docs/cli/installation/): Homebrew, signed Mac helpers, release installers, Cargo, upgrades, and verification.
+- [CLI command reference](https://healthmd.app/docs/cli-reference/): commands, global options, date selection, output behavior, and exit status.
 - [Typed query cookbook](https://healthmd.app/docs/agent-queries/): metric, sleep, workout, coverage, comparison, and evidence workflows.
 
 ## Contracts and machine-readable artifacts
