@@ -1,10 +1,19 @@
 export const defaultLocale = 'en';
 
-// Every focused integration guide is authored and translated in all locales. A
-// guide whose translated editions are still pending may temporarily publish a
-// canonical English fallback route instead; fallback pages stay noindex. The
-// list is empty today and is retained for future pending guides.
+// Every focused integration guide is authored and translated in all locales.
+// Exact command references remain canonical English artifacts; their localized
+// fallback routes stay noindex and point to the English canonical URL.
 export const canonicalEnglishDocSlugs = Object.freeze([
+  'docs/cli-reference',
+  'docs/cli-reference/cancel',
+  'docs/cli-reference/direct',
+  'docs/cli-reference/export',
+  'docs/cli-reference/extract',
+  'docs/cli-reference/mcp',
+  'docs/cli-reference/query',
+  'docs/cli-reference/resume',
+  'docs/cli-reference/setup',
+  'docs/cli-reference/status',
 ]);
 
 // Authored user guides are translated. Generated contract/reference pages remain
