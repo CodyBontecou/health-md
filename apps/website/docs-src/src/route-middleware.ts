@@ -36,6 +36,7 @@ export const onRequest = defineRouteMiddleware((context) => {
   cliGroup.collapsed = false;
   route.sidebar = [cliGroup];
   route.siteTitleHref = docsPathForSlug('cli', localeFromPathname(context.url.pathname));
+  route.toc = undefined;
 
   const links = sidebarLinks(route.sidebar);
   const currentIndex = links.findIndex(({ isCurrent }) => isCurrent);

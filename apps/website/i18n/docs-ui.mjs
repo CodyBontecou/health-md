@@ -33,6 +33,7 @@ export const docsSidebar = Object.freeze([
     collapsed: true,
     items: Object.freeze([
       item(text('Overview', 'Resumen', 'Übersicht', 'Vue d’ensemble', 'Visão geral', 'Panoramica', 'Overzicht', '概要', '개요', '概览'), 'cli'),
+      item(text('Installation', 'Instalación', 'Installation', 'Installation', 'Instalação', 'Installazione', 'Installatie', 'インストール', '설치', '安装'), 'cli/installation'),
       item(text('Direct phone CLI · Preview', 'CLI directa para teléfono · Vista previa', 'Direkte Smartphone-CLI · Vorschau', 'CLI directe pour téléphone · Aperçu', 'CLI direta para celular · Prévia', 'CLI diretta per telefono · Anteprima', 'CLI rechtstreeks naar de telefoon · Preview', 'スマートフォン直接接続CLI・プレビュー', '직접 휴대전화 CLI · 미리보기', '手机直连 CLI · 预览'), 'cli-direct'),
       item(text('Canonical extraction', 'Extracción canónica', 'Kanonische Extraktion', 'Extraction canonique', 'Extração canônica', 'Estrazione canonica', 'Canonieke extractie', '正規抽出', '정규 추출', '规范提取'), 'cli-extract'),
       item(text('Durable jobs', 'Tareas persistentes', 'Persistente Aufträge', 'Tâches persistantes', 'Tarefas persistentes', 'Attività persistenti', 'Persistente taken', '永続ジョブ', '영속 작업', '持久作业'), 'cli-jobs'),

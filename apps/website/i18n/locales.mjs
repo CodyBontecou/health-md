@@ -4,6 +4,7 @@ export const defaultLocale = 'en';
 // Exact command references remain canonical English artifacts; their localized
 // fallback routes stay noindex and point to the English canonical URL.
 export const canonicalEnglishDocSlugs = Object.freeze([
+  'docs/cli/installation',
   'docs/cli-reference',
   'docs/cli-reference/cancel',
   'docs/cli-reference/direct',

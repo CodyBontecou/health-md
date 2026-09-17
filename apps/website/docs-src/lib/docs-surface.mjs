@@ -1,7 +1,6 @@
 import { stripLocalePrefix } from '../../i18n/routes.mjs';
 
 const cliGuidePaths = new Set([
-  '/docs/cli/',
   '/docs/cli-direct/',
   '/docs/cli-extract/',
   '/docs/cli-jobs/',
@@ -14,7 +13,9 @@ function pathnameFor(value) {
 
 export function isCliDocsPath(value) {
   const pathname = pathnameFor(value);
-  return cliGuidePaths.has(pathname) || pathname.startsWith('/docs/cli-reference/');
+  return pathname.startsWith('/docs/cli/')
+    || cliGuidePaths.has(pathname)
+    || pathname.startsWith('/docs/cli-reference/');
 }
 
 export function isCliOverviewPath(value) {

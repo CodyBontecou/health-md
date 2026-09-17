@@ -26,6 +26,8 @@ const agentDocsStyles = await readFile(path.join(ROOT, "docs-src/src/styles/agen
 const docsIndex = await readFile(path.join(ROOT, "docs-src/src/content/docs/index.md"), "utf8");
 const configurationGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/configuration.md"), "utf8");
 const iphoneExportGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/iphone-first-export.md"), "utf8");
+const cliInstallation = await readFile(path.join(ROOT, "docs-src/src/content/docs/cli/installation.md"), "utf8");
+const cliReference = await readFile(path.join(ROOT, "docs-src/src/content/docs/cli-reference/index.md"), "utf8");
 const docsHead = await readFile(path.join(ROOT, "docs-src/src/components/Head.astro"), "utf8");
 const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/HeaderLinks.astro"), "utf8");
 const docsSiteTitle = await readFile(path.join(ROOT, "docs-src/src/components/SiteTitle.astro"), "utf8");
@@ -551,17 +553,33 @@ test("docs navigation separates the CLI manual from the product documentation", 
   assert.match(docsSiteTitle, /isCliDocsPath\(Astro\.url\.pathname\) \? 'CLI manual' : 'Docs'/);
   assert.match(docsMiddleware, /route\.sidebar = \[cliGroup\]/);
   assert.match(docsMiddleware, /route\.siteTitleHref = docsPathForSlug\('cli'/);
+  assert.match(docsMiddleware, /route\.toc = undefined/);
   assert.match(docsMiddleware, /cliGroup\.entries = \[overview\]/);
+  assert.match(docsHead, /const isCliManual = isCliDocsPath\(Astro\.url\.pathname\)/);
+  assert.match(docsHead, /--sl-content-width: 68rem/);
+  assert.match(docsHead, /table\.hmd-vertical-table[\s\S]*?table-layout: fixed/);
 });
 
 test("CLI surface routing includes guides, commands, and localized fallback paths", () => {
   assert.equal(isCliOverviewPath('/docs/cli/'), true);
   assert.equal(isCliOverviewPath('/es/docs/cli/'), true);
+  assert.equal(isCliDocsPath('/docs/cli/installation/'), true);
+  assert.equal(isCliDocsPath('/es/docs/cli/installation/'), true);
   assert.equal(isCliDocsPath('/docs/cli-direct/'), true);
   assert.equal(isCliDocsPath('/docs/cli-reference/export/'), true);
   assert.equal(isCliDocsPath('/ja/docs/cli-reference/status/'), true);
   assert.equal(isCliDocsPath('/docs/mcp/'), false);
   assert.equal(isCliDocsPath('/docs/reference/api-and-cli/'), false);
+});
+
+test("CLI manual publishes a first-class installation path", () => {
+  assert.match(docsUi, /text\('Installation', 'Instalación', 'Installation'/);
+  assert.match(cliInstallation, /brew install CodyBontecou\/tap\/healthmd/);
+  assert.match(cliInstallation, /Contents\/Helpers\/healthmd/);
+  assert.match(cliInstallation, /cargo install healthmd-cli --locked/);
+  assert.match(cliInstallation, /healthmd direct pair --transport manual-ip/);
+  assert.match(cliReference, /## Installation/);
+  assert.match(cliReference, /\[Installation\]\(\/docs\/cli\/installation\/\)/);
 });
 
 test("docs overview paints a static strand before deferred WebGL", async () => {

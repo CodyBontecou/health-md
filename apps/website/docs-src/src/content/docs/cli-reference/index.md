@@ -11,6 +11,17 @@ healthmd [GLOBAL OPTIONS] <COMMAND>
 
 `healthmd` requests exports and typed queries from an open, paired iPhone or Android device. Source health reads always occur on the phone.
 
+## Installation
+
+Install the standalone CLI with Homebrew on macOS or Linux:
+
+```bash
+brew install CodyBontecou/tap/healthmd
+healthmd --version
+```
+
+The formula installs both `healthmd` and `healthmd-mcp`. See [Installation](/docs/cli/installation/) for the signed helpers bundled with Health.md for Mac, versioned release installers, Cargo, upgrades, and verification.
+
 ## Commands
 
 | Command | Description |
