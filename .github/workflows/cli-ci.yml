@@ -299,7 +299,7 @@ jobs:
           assert responses[3]["result"]["resources"][0]["uri"] == "ui://healthmd/query-visualization-v1"
           capability_text = responses[4]["result"]["content"][0]["text"]
           capabilities = json.loads(capability_text)
-          assert capabilities["requires_mac_app"] is False
+          assert "requires_mac_app" not in capabilities
           assert capabilities["query_tool_guidance"]["sleep"] == "healthmd_sleep_sessions"
           doctor_result = responses[5]["result"]
           assert isinstance(doctor_result, dict), doctor_result
