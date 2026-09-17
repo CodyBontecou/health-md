@@ -1,14 +1,22 @@
 ---
 import { localeFor } from '../../../i18n/locales.mjs';
-import { localeFromPathname, routePath } from '../../../i18n/routes.mjs';
+import {
+  localeFromPathname,
+  routePath,
+  stripLocalePrefix,
+} from '../../../i18n/routes.mjs';
+import { isCliDocsPath } from '../../lib/docs-surface.mjs';
 
 const localeCode = localeFromPathname(Astro.url.pathname);
 const locale = localeFor(localeCode);
 const docsRoot = routePath('docsHome', localeCode).replace(/\/$/, '');
+const englishPath = stripLocalePrefix(Astro.url.pathname);
+const isCli = isCliDocsPath(Astro.url.pathname);
+const isDataReference = englishPath.startsWith('/docs/reference/');
 ---
 <nav class="healthmd-header-links" aria-label={locale.ui.docsPrimary}>
-  <a href={`${docsRoot}/mcp/`}>MCP</a>
-  <a href={`${docsRoot}/cli/`}>CLI</a>
-  <a href={`${docsRoot}/reference/`}>{locale.ui.docsData}</a>
+  <a href={`${docsRoot}/`} aria-current={!isCli && !isDataReference ? 'page' : undefined}>Docs</a>
+  <a href={`${docsRoot}/cli/`} aria-current={isCli ? 'page' : undefined}>CLI manual</a>
+  <a href={`${docsRoot}/reference/`} aria-current={isDataReference ? 'page' : undefined}>{locale.ui.docsData}</a>
   <a href={routePath('home', localeCode)} class="header-home-link">{locale.ui.docsHome} <span aria-hidden="true">↗</span></a>
 </nav>

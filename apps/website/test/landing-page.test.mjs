@@ -3,6 +3,10 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import {
+  isCliDocsPath,
+  isCliOverviewPath,
+} from "../docs-src/lib/docs-surface.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const index = await readFile(path.join(ROOT, "index.html"), "utf8");
@@ -24,6 +28,8 @@ const configurationGuide = await readFile(path.join(ROOT, "docs-src/src/content/
 const iphoneExportGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/iphone-first-export.md"), "utf8");
 const docsHead = await readFile(path.join(ROOT, "docs-src/src/components/Head.astro"), "utf8");
 const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/HeaderLinks.astro"), "utf8");
+const docsSiteTitle = await readFile(path.join(ROOT, "docs-src/src/components/SiteTitle.astro"), "utf8");
+const docsMiddleware = await readFile(path.join(ROOT, "docs-src/src/route-middleware.ts"), "utf8");
 const docsFooter = await readFile(path.join(ROOT, "docs-src/src/components/Footer.astro"), "utf8");
 const emptyLanguageSelect = await readFile(path.join(ROOT, "docs-src/src/components/EmptyLanguageSelect.astro"), "utf8");
 const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
@@ -520,7 +526,7 @@ test("language selection lives in the landing and documentation footers", () => 
   );
 });
 
-test("docs navigation starts with user goals and labels preview surfaces", () => {
+test("docs navigation separates the CLI manual from the product documentation", () => {
   const getStarted = docsUi.indexOf("text('Get Started'");
   const agents = docsUi.indexOf("text('Use an Agent'");
   const exports = docsUi.indexOf("text('Export & Automate'");
@@ -531,15 +537,31 @@ test("docs navigation starts with user goals and labels preview surfaces", () =>
   assert.match(docsUi, /Direct phone CLI · Preview/);
   assert.ok((docsUi.match(/collapsed: true/g) ?? []).length >= 5);
   assert.match(docsConfig, /sidebar: starlightSidebar\(\)/);
+  assert.match(docsConfig, /SiteTitle: '\.\/src\/components\/SiteTitle\.astro'/);
   assert.match(docsIndex, /Start with Health\.md/);
   assert.match(docsIndex, /Contents\/Helpers\/healthmd" doctor/);
   assert.match(docsIndex, /Ten-minute local agent quickstart/);
   assert.doesNotMatch(docsIndex, /healthmd setup codex/);
   assert.match(configurationGuide, /Available now · signed Mac helper/);
   assert.match(configurationGuide, /Public preview · not yet qualified stable/);
-  assert.match(docsHeader, />MCP<|>MCP<\/a>/);
+  assert.match(docsHeader, />CLI manual<\/a>/);
+  assert.match(docsHeader, /aria-current=\{isCli \? 'page' : undefined\}/);
   assert.match(docsHeader, /const docsRoot = routePath\('docsHome', localeCode\)/);
   assert.match(docsHeader, /href=\{`\$\{docsRoot\}\/reference\/`\}/);
+  assert.match(docsSiteTitle, /isCliDocsPath\(Astro\.url\.pathname\) \? 'CLI manual' : 'Docs'/);
+  assert.match(docsMiddleware, /route\.sidebar = \[cliGroup\]/);
+  assert.match(docsMiddleware, /route\.siteTitleHref = docsPathForSlug\('cli'/);
+  assert.match(docsMiddleware, /cliGroup\.entries = \[overview\]/);
+});
+
+test("CLI surface routing includes guides, commands, and localized fallback paths", () => {
+  assert.equal(isCliOverviewPath('/docs/cli/'), true);
+  assert.equal(isCliOverviewPath('/es/docs/cli/'), true);
+  assert.equal(isCliDocsPath('/docs/cli-direct/'), true);
+  assert.equal(isCliDocsPath('/docs/cli-reference/export/'), true);
+  assert.equal(isCliDocsPath('/ja/docs/cli-reference/status/'), true);
+  assert.equal(isCliDocsPath('/docs/mcp/'), false);
+  assert.equal(isCliDocsPath('/docs/reference/api-and-cli/'), false);
 });
 
 test("docs overview paints a static strand before deferred WebGL", async () => {

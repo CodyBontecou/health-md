@@ -197,7 +197,7 @@ test('docs metadata uses Git dates for HTML and sitemap freshness', async () => 
   assert.match(config, /lastUpdated: true/);
   assert.match(config, /lastmod: lastModified/);
   assert.match(config, /routeMiddleware: '.\/src\/route-middleware\.ts'/);
-  assert.match(middleware, /starlightRoute\.lastUpdated = lastModified/);
+  assert.match(middleware, /route\.lastUpdated = lastModified/);
   assert.match(head, /dateModified/);
   assert.match(head, /entry\.data\.lastUpdated instanceof Date/);
   assert.match(head, /article:modified_time/);

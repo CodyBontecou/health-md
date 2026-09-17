@@ -1,0 +1,11 @@
+---
+import DefaultSiteTitle from '@astrojs/starlight/components/SiteTitle.astro';
+import { isCliDocsPath } from '../../lib/docs-surface.mjs';
+
+const surfaceLabel = isCliDocsPath(Astro.url.pathname) ? 'CLI manual' : 'Docs';
+---
+
+<div class="healthmd-site-title">
+  <DefaultSiteTitle />
+  <span class="healthmd-surface-label">{surfaceLabel}</span>
+</div>
