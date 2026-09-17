@@ -11,7 +11,7 @@ The shared Rust registry contains deterministic contract metadata while HealthKi
 - 230 ordered Apple v8 selections
 - 106 ordered Android selections
 - 102 preserved Android unavailable/stale identities
-- Three independent output profiles. No unified v8 schema
+- Three independent output profiles; no unified v8 schema
 
 | Internal profile | Public profile | Schema | Ordered selections | Output descriptors |
 |---|---|---:|---:|---:|
