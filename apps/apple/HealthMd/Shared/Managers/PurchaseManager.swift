@@ -157,6 +157,10 @@ final class PurchaseManager: ObservableObject {
     /// Number of free export actions before a purchase is required.
     static let freeExportLimit = 10
 
+    /// Free-export counts after which a soft, non-blocking upgrade prompt is
+    /// surfaced ("value moments"). Distinct from the hard quota block.
+    static let upgradePromptMilestones: Set<Int> = [3, 7]
+
     /// Single grandfather cutoff: anyone with `originalPurchaseDate` strictly
     /// before this is granted free access. Covers all earlier cohorts in one
     /// rule — pre-freemium paid users (v1.0–v1.6.x), v1.7.x freemium users,
@@ -208,6 +212,16 @@ final class PurchaseManager: ObservableObject {
     @Published private(set) var isPurchasing: Bool = false
     @Published private(set) var isRestoring: Bool = false
     @Published private(set) var purchaseError: String? = nil
+
+    // MARK: - Soft Value Moments
+
+    /// Non-nil when a milestone free export (3rd or 7th) just completed and a
+    /// soft upgrade prompt should be presented. Observed by the iOS and iPad
+    /// UIs; App Intent / background exports simply leave it set until the
+    /// next foreground visit.
+    @Published private(set) var pendingUpgradePrompt: Int? = nil
+
+    private let upgradePromptShownDefaultsKey = "pricing.upgradePrompt.shown.v1"
 
     // MARK: - Free Export Quota
     //
@@ -1024,6 +1038,7 @@ final class PurchaseManager: ObservableObject {
         )
         objectWillChange.send()
         analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
+        evaluateUpgradePrompt()
     }
 
     /// Records one durable export operation exactly once by job identity.
@@ -1041,6 +1056,38 @@ final class PurchaseManager: ObservableObject {
         )
         objectWillChange.send()
         analytics.trackFreeExportUsed(quotaState: analyticsQuotaState)
+        evaluateUpgradePrompt()
+    }
+
+    /// Marks the milestone prompt as handled and clears the pending state.
+    /// Called when the UI presents the prompt (so it never replays) or when
+    /// the user dismisses it.
+    func consumeUpgradePrompt() {
+        if let milestone = pendingUpgradePrompt {
+            markUpgradePromptShown(milestone)
+        }
+        pendingUpgradePrompt = nil
+    }
+
+    private func evaluateUpgradePrompt() {
+        guard !isUnlocked, pendingUpgradePrompt == nil else { return }
+        let used = TestMode.isUITesting ? TestMode.freeExportsUsed : freeExportsUsed
+        guard Self.upgradePromptMilestones.contains(used), !upgradePromptAlreadyShown(used) else { return }
+        pendingUpgradePrompt = used
+    }
+
+    private func upgradePromptAlreadyShown(_ milestone: Int) -> Bool {
+        if TestMode.isUITesting { return false }
+        var shown = Set(UserDefaults.standard.stringArray(forKey: upgradePromptShownDefaultsKey) ?? [])
+        shown.formUnion(TestMode.suppressedUpgradePromptMilestones)
+        return shown.contains(String(milestone))
+    }
+
+    private func markUpgradePromptShown(_ milestone: Int) {
+        guard !TestMode.isUITesting else { return }
+        var shown = Set(UserDefaults.standard.stringArray(forKey: upgradePromptShownDefaultsKey) ?? [])
+        shown.insert(String(milestone))
+        UserDefaults.standard.set(Array(shown).sorted(), forKey: upgradePromptShownDefaultsKey)
     }
 
     // MARK: - Transaction Listener

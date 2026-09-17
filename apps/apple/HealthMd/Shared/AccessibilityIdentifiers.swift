@@ -119,6 +119,13 @@ enum AccessibilityID {
         static let errorMessage = "paywall.errorMessage"
     }
 
+    // MARK: - Value Moment Prompt
+    enum UpgradePrompt {
+        static let upgrade = "upgradePrompt.upgradeButton"
+        static let notNow = "upgradePrompt.notNowButton"
+        static let title = "upgradePrompt.title"
+    }
+
     // MARK: - Schedule
     enum Schedule {
         static let enableToggle = "schedule.enableToggle"

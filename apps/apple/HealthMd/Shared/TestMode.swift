@@ -55,6 +55,20 @@ enum TestMode {
         Int(env("UITEST_FREE_EXPORTS_USED") ?? "0") ?? 0
     }
 
+    /// Value-moment milestones (3 or 7) that UI tests want suppressed, so an
+    /// unexpected soft prompt cannot obstruct an unrelated flow. Passed as a
+    /// comma-separated list, e.g. `UITEST_SUPPRESSED_UPGRADE_PROMPTS=3,7`.
+    static var suppressedUpgradePromptMilestones: Set<String> {
+        Set((env("UITEST_SUPPRESSED_UPGRADE_PROMPTS") ?? "").split(separator: ",").map(String.init))
+    }
+
+    /// Whether the one-time post-onboarding paywall may appear in a UI-test
+    /// launch. Opt-in so existing journeys stay deterministic; the onboarding
+    /// journey test enables it to verify the offer end to end.
+    static var showsPostOnboardingPaywall: Bool {
+        env("UITEST_SHOW_POST_ONBOARDING_PAYWALL") == "true"
+    }
+
     /// Simulated sync connection state.
     static var syncState: String {
         env("UITEST_SYNC_STATE") ?? "disconnected"
