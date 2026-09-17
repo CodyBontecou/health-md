@@ -32,6 +32,10 @@ struct PaywallView: View {
         if context == .onboarding {
             return "You just previewed your first health export. Your first \(PurchaseManager.freeExportLimit) exports are free — unlock unlimited private exports, including scheduled runs."
         }
+        if context == .upgradePrompt {
+            let remaining = purchaseManager.freeExportsRemaining
+            return "You've used \(PurchaseManager.freeExportLimit - remaining) of your \(PurchaseManager.freeExportLimit) free exports. Unlock once for unlimited private exports, including scheduled runs."
+        }
         return "Your \(PurchaseManager.freeExportLimit) free exports are complete. Unlock unlimited private exports, including scheduled runs."
     }
 
