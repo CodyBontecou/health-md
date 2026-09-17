@@ -174,7 +174,7 @@ jobs:
           state="${RUNNER_TEMP}/healthmd-cli-state"
           result="${RUNNER_TEMP}/healthmd-cli-smoke.json"
           if HEALTHMD_CLI_DATA_DIR="$state" cargo run --quiet -- \
-              --backend direct direct devices >"$result"; then
+              direct devices >"$result"; then
             code=0
           else
             code=$?

@@ -148,7 +148,7 @@ grep -F "identifier \"${healthmd_mcp_identifier}\"" "$work/mcp.requirement" >/de
 # fixed identity proves that the exact deployed service/account was read.
 credential_state="$work/credential-state"
 mkdir -m 700 "$credential_state"
-HEALTHMD_CLI_DATA_DIR="$credential_state" "$upgrade_old" --backend direct direct devices \
+HEALTHMD_CLI_DATA_DIR="$credential_state" "$upgrade_old" direct devices \
   > "$work/previous-devices.json"
 owner_id="$(python3 - "$credential_state/identity.json" <<'PY'
 import json, sys
@@ -176,7 +176,7 @@ security add-generic-password -U \
   -w "$(cat "$work/trust.json")" \
   -T "$upgrade_old" \
   "$keychain" >/dev/null
-HEALTHMD_CLI_DATA_DIR="$credential_state" "$healthmd" --backend direct direct devices \
+HEALTHMD_CLI_DATA_DIR="$credential_state" "$healthmd" direct devices \
   > "$work/upgraded-devices.json"
 python3 - "$work/upgraded-devices.json" <<'PY'
 import json, sys
