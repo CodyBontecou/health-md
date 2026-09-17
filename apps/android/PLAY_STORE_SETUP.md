@@ -36,6 +36,9 @@ products, and update the documented price in
 Pending as of 2026-09-17: raise `health_md_premium_lifetime` from USD 9.99 to
 USD 19.99 to match the iOS change made the same day.
 
+Completed 2026-09-17: `health_md_premium_lifetime` raised from USD 9.99 to
+USD 19.99 in Play Console, matching the iOS individual lifetime price.
+
 Validate it locally with:
 
 ```bash
