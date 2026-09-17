@@ -18,14 +18,12 @@ final class OnboardingJourneyUITests: XCTestCase {
 
         tapButton("Start Setup", in: app)
 
-        // Health, sample export, and Obsidian plugin screens.
-        tapButton("Continue Setup", in: app)
+        // Health access, then sample export (with the folded-in plugin promo).
         tapButton("Continue Setup", in: app)
         tapButton("Continue Setup", in: app)
 
         // Keep folder setup optional and verify the explicit skip path remains usable.
         tapButton("Skip for Now", in: app)
-        tapButton("Try 10 Free Exports", in: app)
         tapButton("Create My First Export", in: app)
 
         let markdownRow = app.descendants(matching: .any)[
@@ -38,6 +36,58 @@ final class OnboardingJourneyUITests: XCTestCase {
         XCTAssertFalse(
             app.staticTexts["Clearer, more reliable exports"].exists,
             "Release notes should not replace the first-export preview after initial onboarding."
+        )
+    }
+
+    func testPostOnboardingPaywallAppearsAfterFirstPreviewCloses() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            showOnboarding: true,
+            useHealthKitExportPreviewFixtures: true,
+            analyticsTransport: "offline",
+            showsPostOnboardingPaywall: true
+        )
+        app.launch()
+
+        tapButton("Start Setup", in: app)
+        tapButton("Continue Setup", in: app)
+        tapButton("Continue Setup", in: app)
+        tapButton("Skip for Now", in: app)
+        tapButton("Create My First Export", in: app)
+
+        let markdownRow = app.descendants(matching: .any)[
+            UITestLaunchHelper.ExportPreview.markdownFileRow
+        ]
+        XCTAssertTrue(markdownRow.waitForExistence(timeout: 15))
+
+        // Closing the first preview is the value moment: the one-time
+        // post-onboarding paywall appears, non-blocking.
+        tapButton("Done", in: app)
+
+        let paywallTitle = app.descendants(matching: .any)[UITestLaunchHelper.Paywall.title]
+        XCTAssertTrue(paywallTitle.waitForExistence(timeout: 8), "Post-onboarding paywall should appear after the first preview closes")
+        let paywallSubtitle = app.descendants(matching: .any)[UITestLaunchHelper.Paywall.subtitle]
+        XCTAssertTrue(
+            paywallSubtitle.waitForExistence(timeout: 5) &&
+                paywallSubtitle.label.contains("You just previewed your first health export"),
+            "The post-onboarding paywall should use onboarding-specific copy"
+        )
+
+        // Dismiss by swiping down — the small dismiss button's identifier is
+        // unreliable through the accessibility container (same approach as
+        // PaywallJourneyUITests.testPaywallDismiss_closesPaywall).
+        let paywallElement = app.otherElements["paywall.view"]
+        if paywallElement.waitForExistence(timeout: 3) {
+            paywallElement.swipeDown()
+        } else {
+            let center = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+            let below = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+            center.press(forDuration: 0.1, thenDragTo: below)
+        }
+
+        XCTAssertFalse(
+            paywallTitle.waitForExistence(timeout: 3),
+            "Dismissing the post-onboarding paywall should return to the export tab"
         )
     }
 
@@ -143,13 +193,13 @@ final class OnboardingJourneyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Skip for Now"].exists)
         tapButton("Skip for Now", in: app)
 
-        tapButton("Continue Setup", in: app)
+        // Sample export (plugin promo folded in) goes straight to folder setup —
+        // the unlock step no longer blocks the funnel.
         tapButton("Continue Setup", in: app)
 
         XCTAssertTrue(app.buttons["Select Export Folder"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Skip for Now"].exists)
         tapButton("Skip for Now", in: app)
-        tapButton("Try 10 Free Exports", in: app)
 
         XCTAssertTrue(app.buttons["Connect"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Choose Folder"].exists)

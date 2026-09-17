@@ -40,6 +40,10 @@ struct ExportTabView: View {
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
     @Binding var presentFirstExportPreview: Bool
+    /// Fired whenever the export-preview sheet closes. ContentView uses this
+    /// to surface the one-time post-onboarding paywall after the first real
+    /// export preview — the value moment — instead of blocking onboarding.
+    var onFirstExportPreviewDismissed: (() -> Void)? = nil
     let canExport: Bool
     let onExportTapped: () -> Void
 
@@ -210,7 +214,7 @@ struct ExportTabView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showPreview) {
+        .sheet(isPresented: $showPreview, onDismiss: { onFirstExportPreviewDismissed?() }) {
             ExportPreviewView(
                 startDate: previewDateRange.startDate,
                 endDate: previewDateRange.endDate,

@@ -29,6 +29,11 @@ struct ContentView: View {
     @State private var showFolderPicker = false
     @State private var showDestinationChangedAlert = false
     @State private var presentFirstExportPreview = false
+    /// One-time post-onboarding paywall: armed when onboarding completes
+    /// (unlocked users skip it), fired when the first export preview closes.
+    @State private var awaitingFirstPreviewCloseAfterOnboarding = false
+    @State private var showPostOnboardingPaywall = false
+    @AppStorage("pricing.paywall.postOnboarding.shown.v1") private var hasSeenPostOnboardingPaywall = false
     @State private var isExporting = false
     @State private var isRequestingHealthAuthorization = false
     @State private var exportProgress: Double = 0.0
@@ -47,6 +52,8 @@ struct ContentView: View {
     @State private var browsedFileURL: URL?
     @State private var showExportFolderBrowser = false
     @State private var showPaywall = false
+    @State private var showUpgradePromptPaywall = false
+    @State private var presentPaywallAfterUpgradePrompt = false
     @State private var showExportProfiles = false
     @State private var showClinicianReport = false
     @State private var showMarketingMetricSelection = false
@@ -105,6 +112,7 @@ struct ContentView: View {
                         selectedTab = .export
                         presentFirstExportPreview = true
                         hasCompletedOnboarding = true
+                        awaitingFirstPreviewCloseAfterOnboarding = shouldOfferPostOnboardingUnlock
                     }
                 }
             )
@@ -152,6 +160,7 @@ struct ContentView: View {
                         exportStatusMessage: $exportStatusMessage,
                         showFolderPicker: $showFolderPicker,
                         presentFirstExportPreview: $presentFirstExportPreview,
+                        onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
                         canExport: canExport,
                         onExportTapped: exportData
                     )
@@ -317,6 +326,52 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: currentPaywallContext)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showPostOnboardingPaywall, onDismiss: {
+            if !TestMode.isUITesting {
+                hasSeenPostOnboardingPaywall = true
+            }
+            PricingAnalyticsClient.shared.trackOnboardingContinueFreeTapped(
+                quotaState: purchaseManager.analyticsQuotaState
+            )
+        }) {
+            PaywallView(context: .onboarding)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { purchaseManager.pendingUpgradePrompt != nil },
+                set: { presented in
+                    if !presented { handleUpgradePromptSwipeDismissIfNeeded() }
+                }
+            ),
+            onDismiss: {
+                if presentPaywallAfterUpgradePrompt {
+                    presentPaywallAfterUpgradePrompt = false
+                    showUpgradePromptPaywall = true
+                }
+            }
+        ) {
+            ExportUpgradePrompt(
+                milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                onUpgrade: {
+                    let quotaState = purchaseManager.analyticsQuotaState
+                    purchaseManager.consumeUpgradePrompt()
+                    PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                    presentPaywallAfterUpgradePrompt = true
+                },
+                onDismiss: {
+                    let quotaState = purchaseManager.analyticsQuotaState
+                    purchaseManager.consumeUpgradePrompt()
+                    PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
+                }
+            )
+        }
+        .sheet(isPresented: $showUpgradePromptPaywall) {
+            PaywallView(context: .upgradePrompt)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -875,6 +930,42 @@ struct ContentView: View {
             quotaState: purchaseManager.analyticsQuotaState
         )
         showPaywall = true
+    }
+
+    /// Post-onboarding unlock offer. Onboarding no longer gates on a paywall
+    /// step; instead, after the user sees their first real export preview, a
+    /// single non-blocking paywall is offered once per install.
+    private var shouldOfferPostOnboardingUnlock: Bool {
+        // UI tests control the offer through the launch environment and need
+        // launch-to-launch determinism, so persisted state is ignored there.
+        if TestMode.isUITesting {
+            return TestMode.showsPostOnboardingPaywall
+        }
+        guard !purchaseManager.isUnlocked,
+              !hasSeenPostOnboardingPaywall else { return false }
+        return true
+    }
+
+    private func handleFirstExportPreviewClosed() {
+        guard awaitingFirstPreviewCloseAfterOnboarding else { return }
+        awaitingFirstPreviewCloseAfterOnboarding = false
+        guard shouldOfferPostOnboardingUnlock else { return }
+        // Presenting a sheet directly inside another sheet's onDismiss can be
+        // dropped by SwiftUI; hop out of the dismissal transaction first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            showPostOnboardingPaywall = true
+        }
+    }
+
+    /// Swipe-to-dismiss on the value-moment prompt bypasses the button
+    /// actions, so the binding's `set(false)` finishes the funnel: consume the
+    /// pending milestone and record a dismissal. Button paths have already
+    /// consumed the milestone by the time this runs, making this a no-op.
+    private func handleUpgradePromptSwipeDismissIfNeeded() {
+        guard purchaseManager.pendingUpgradePrompt != nil else { return }
+        let quotaState = purchaseManager.analyticsQuotaState
+        purchaseManager.consumeUpgradePrompt()
+        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
     }
 
     private func trackSuccessfulExport(

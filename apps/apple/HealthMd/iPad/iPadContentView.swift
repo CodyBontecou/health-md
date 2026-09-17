@@ -33,6 +33,8 @@ struct iPadContentView: View {
     @State private var errorReason: ExportFailureReason?
     @State private var exportTask: Task<Void, Never>?
     @State private var showPaywall = false
+    @State private var showUpgradePromptPaywall = false
+    @State private var presentPaywallAfterUpgradePrompt = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -172,6 +174,40 @@ struct iPadContentView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView(context: .export)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(
+                isPresented: Binding(
+                    get: { purchaseManager.pendingUpgradePrompt != nil },
+                    set: { presented in
+                        if !presented { handleUpgradePromptSwipeDismissIfNeeded() }
+                    }
+                ),
+                onDismiss: {
+                    if presentPaywallAfterUpgradePrompt {
+                        presentPaywallAfterUpgradePrompt = false
+                        showUpgradePromptPaywall = true
+                    }
+                }
+            ) {
+                ExportUpgradePrompt(
+                    milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                    onUpgrade: {
+                        let quotaState = purchaseManager.analyticsQuotaState
+                        purchaseManager.consumeUpgradePrompt()
+                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                        presentPaywallAfterUpgradePrompt = true
+                    },
+                    onDismiss: {
+                        let quotaState = purchaseManager.analyticsQuotaState
+                        purchaseManager.consumeUpgradePrompt()
+                        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
+                    }
+                )
+            }
+            .sheet(isPresented: $showUpgradePromptPaywall) {
+                PaywallView(context: .upgradePrompt)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
@@ -362,6 +398,16 @@ struct iPadContentView: View {
             quotaState: purchaseManager.analyticsQuotaState
         )
         showPaywall = true
+    }
+
+    /// Swipe-to-dismiss on the value-moment prompt bypasses the button
+    /// actions, so the binding's `set(false)` finishes the funnel. Button
+    /// paths have already consumed the milestone by then, making this a no-op.
+    private func handleUpgradePromptSwipeDismissIfNeeded() {
+        guard purchaseManager.pendingUpgradePrompt != nil else { return }
+        let quotaState = purchaseManager.analyticsQuotaState
+        purchaseManager.consumeUpgradePrompt()
+        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
     }
 
     private func trackSuccessfulExport(startDate: Date, endDate: Date) {

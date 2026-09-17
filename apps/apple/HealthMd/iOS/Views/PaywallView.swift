@@ -29,6 +29,9 @@ struct PaywallView: View {
 
     private var subtitleText: String {
         if isManagingPurchase { return currentPlanTitle }
+        if context == .onboarding {
+            return "You just previewed your first health export. Your first \(PurchaseManager.freeExportLimit) exports are free — unlock unlimited private exports, including scheduled runs."
+        }
         return "Your \(PurchaseManager.freeExportLimit) free exports are complete. Unlock unlimited private exports, including scheduled runs."
     }
 
@@ -215,9 +218,9 @@ struct PaywallView: View {
         #if DEBUG
         if MarketingCapture.usesStaticPurchasePrices {
             switch option {
-            case .individual: return "$14.99"
-            case .family: return "$24.99"
-            case .familyUpgrade: return nil
+            case .individual: return "$19.99"
+            case .family: return "$39.99"
+            case .familyUpgrade: return "$20.00"
             }
         }
         #endif
