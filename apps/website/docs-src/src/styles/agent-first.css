@@ -187,6 +187,7 @@ body::before,
 }
 
 .healthmd-header-links a[aria-current='page'] {
+  background: transparent;
   border-bottom: 1px solid #121212;
   color: #121212;
 }
