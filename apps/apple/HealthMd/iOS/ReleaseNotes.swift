@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.2",
+            items: [
+                .list(
+                    title: "A faster start and gentler upgrade reminders",
+                    rows: [
+                        .init(
+                            symbolSystemName: "figure.walk.motion",
+                            title: "Shorter setup",
+                            description: "Onboarding is now five quick steps. The Obsidian plugin intro moved onto the sample-export screen, and importing a shared setup stays available as a quiet link on the first screen."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.text.magnifyingglass",
+                            title: "See your first export, then decide",
+                            description: "Nothing blocks setup anymore. After your first real export preview, a single optional screen explains unlimited exports — dismiss it and keep going with your 10 free exports."
+                        ),
+                        .init(
+                            symbolSystemName: "sparkles",
+                            title: "Gentle progress reminders",
+                            description: "After your 3rd and 7th free exports, a small reminder shows how many remain and how unlimited exports work. Your free count is unchanged."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.4.1",
             items: [
                 .list(

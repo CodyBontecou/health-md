@@ -4,6 +4,15 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.2] - 2026-09-17
+
+### Changed
+- Onboarding is now five steps: the Obsidian plugin promo moved onto the sample-export screen as a link card, the blocking unlock step was removed, and "Use a Shared Setup" became a quiet link on the welcome screen.
+- After the first export preview closes, a single optional paywall screen is offered once per install instead of gatekeeping setup.
+
+### Added
+- Soft upgrade reminders after the 3rd and 7th free exports, with new `pricing_upgrade_prompt_shown/tapped/dismissed` analytics events (quota-derived milestone, no schema change). The free-export limit stays at 10.
+
 ## [3.4.1] - 2026-09-09
 
 ### Added

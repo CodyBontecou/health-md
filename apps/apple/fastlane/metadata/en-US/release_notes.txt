@@ -1,6 +1,5 @@
-Health.md 3.4.1 makes setup sharing, scheduled exports, and accessibility more dependable.
+Health.md 3.4.2 makes getting started faster and upgrade reminders gentler.
 
-• Share My Setup lets you move export profiles between devices in one small file, review changes before applying them, and undo once. Shared files contain no health data or credentials.
-• Scheduled profiles now refresh the full lookback you chose on every run. Optional Today Refresh can update today’s in-progress export every 3, 6, or 12 hours.
-• Export History reports generated files and outcomes more clearly, with retries and informational notes easier to reach.
-• VoiceOver, keyboard focus, touch targets, scrolling, and large-text layouts are improved across onboarding, export setup, metrics, schedules, and connection screens.
+• Onboarding is now five quick steps. The Obsidian plugin intro moved onto the sample-export screen, and importing a shared setup stays available as a quiet link on the first screen.
+• Nothing blocks setup anymore. After your first real export preview, one optional screen explains unlimited exports — dismiss it and keep going with your 10 free exports.
+• After your 3rd and 7th free exports, a small reminder shows how many remain and how unlimited exports work. Your free count is unchanged.
