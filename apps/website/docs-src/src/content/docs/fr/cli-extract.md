@@ -221,10 +221,10 @@ Cette option modifie le comportement d’émission et le code de sortie. Il ne r
 La CLI autonome exécute l’extraction directement sur l’iPhone jumelé. L’utilitaire Swift intégré à Health.md for Mac atteint la même extraction par défaut via le loopback de l’app Mac, ou directement avec son préfixe `--backend direct` :
 
 ```bash
-# Standalone CLI (macOS, Linux, Windows) : direct, sans app Mac
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Utilitaire Mac intégré : contourne l’app Mac
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```

@@ -23,11 +23,11 @@ description: "One-time Full Access purchase, no subscription. Remove the shared 
 <p>Tap <em>Restore Purchase</em> on the paywall. The app queries StoreKit for any prior purchases tied to the signed-in Apple ID. This is the path to use after reinstalling the app or moving to a new device.</p>
 
 ## Refunds &amp; support
-<p>Refunds go through Apple — open a request at <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>. For app-side support, email <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>.</p>
+<p>Refunds go through Apple, open a request at <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>. For app-side support, email <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>.</p>
 
 ## Related
 
 <div class="related">
-  <a href="/docs/onboarding/"><span>Setup</span>Onboarding — where the unlock step appears for the first time.</a>
-  <a href="/docs/export/"><span>Use</span>Export — what unlimited buys you.</a>
+  <a href="/docs/onboarding/"><span>Setup</span>Onboarding, where the unlock step appears for the first time.</a>
+  <a href="/docs/export/"><span>Use</span>Export, what unlimited buys you.</a>
 </div>

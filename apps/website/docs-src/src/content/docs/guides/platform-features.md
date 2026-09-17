@@ -1,11 +1,11 @@
 ---
 title: Feature Overview by Platform
-description: What Health.md does on iPhone, iPad, Mac, Android, Wear OS, and the CLI — shared capabilities and the honest platform differences.
+description: Compare Health.md features on iPhone, iPad, Mac, Android, Wear OS, and the CLI. Review shared features and platform differences.
 ---
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Platform overview</p>
-  <p>What Health.md does on iPhone, iPad, Mac, Android, Wear OS, and the CLI — shared wherever the platforms allow, honest where they differ.</p>
+  <p>What Health.md does on iPhone, iPad, Mac, Android, Wear OS, and the CLI, shared wherever the platforms allow, honest where they differ.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">iPhone & Mac</a>
     <a class="docs-button-secondary" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Android</a>
@@ -14,9 +14,9 @@ description: What Health.md does on iPhone, iPad, Mac, Android, Wear OS, and the
 
 **Wear OS entries are planned capabilities, not features in the current Google Play release.**
 
-Legend: ✓ available · ◐ available with platform differences named in the row · △ planned or in QA · ? availability not claimed · — not available on that platform.
+Legend: ✓ available · ◐ available with platform differences named in the row · △ planned or in QA · ? availability not claimed ·, not available on that platform.
 
-The CLI is not a separate health-data platform column: CLI capabilities appear in the automation rows and retain the semantics of their iPhone or Android source.
+The CLI is not a separate health-data platform column. CLI capabilities appear in the automation rows. They retain the semantics of their iPhone or Android source.
 
 ## Setup and permissions
 
@@ -55,7 +55,7 @@ The CLI is not a separate health-data platform column: CLI capabilities appear i
 | Blood pressure, glucose, oxygen, temperature readings | ✓ | ✓ | ✓ | — |
 | Third-party provider data | ◐ WHOOP section in export (beta) | ◐ | ✓ provider-native raw snapshots | — |
 
-Some data is deliberately **not treated as equivalent** across platforms: heart-rate variability is SDNN on Apple and RMSSD on Android and WHOOP — Health.md keeps them as distinct metrics instead of blending them. Apple Watch wrist temperature and Health Connect skin temperature are also kept separate.
+Some data is deliberately **not treated as equivalent** across platforms. Heart-rate variability is SDNN on Apple and RMSSD on Android and WHOOP. Health.md keeps them as distinct metrics. Apple Watch wrist temperature and Health Connect skin temperature are also separate metrics.
 
 ## Automate and integrate
 

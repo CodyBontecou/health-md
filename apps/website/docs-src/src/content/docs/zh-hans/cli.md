@@ -40,26 +40,26 @@ description: "在 macOS、Linux 或 Windows 上安装独立的 healthmd CLI，�
 直连命令与 iPhone（协议 v1）或 Android（协议 v2）来源配对。规范 `extract` 和所有类型化查询命令都是 iPhone 功能；Android 直连来源返回提供商原生的 Health Connect 原始快照和生成文件。
 
 ```bash
-# 就绪状态与本地信任
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# 平台原生原始导出；省略 --output 可将验证过的 JSON/NDJSON 流式输出到 stdout
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# 通过与 MCP 相同的操作注册表进行类型化查询（iPhone）
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# 限定范围的规范提取（iPhone）
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# 在所有 CLI 操作系统上生产生成文件
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# 持久操作
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

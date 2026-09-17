@@ -221,10 +221,10 @@ healthmd extract --category Sleep --last 30 \
 スタンドアロンCLIは、ペアリング済みiPhoneに対して直接抽出を実行します。Health.md for Mac同梱のSwiftヘルパーは、既定ではMacアプリのループバック経由で、または`--backend direct`プレフィックスで直接、同じ抽出に到達します。
 
 ```bash
-# Standalone CLI（macOS、Linux、Windows）：直接接続、Macアプリ不要
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# 同梱Macヘルパー：Macアプリを経由しない
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```

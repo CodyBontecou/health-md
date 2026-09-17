@@ -1,6 +1,6 @@
 ---
 title: "Shortcuts & App Intents"
-description: "Seven App Intents let you trigger exports, fetch summaries, and toggle the schedule from Siri, the Shortcuts app, Focus filters, automations, and any other AppIntent-aware host."
+description: "Use seven App Intents to start exports, get summaries, and control schedules from Siri, Shortcuts, Focus filters, automations, or another AppIntent host."
 ---
 
 ## Available intents
@@ -8,24 +8,24 @@ description: "Seven App Intents let you trigger exports, fetch summaries, and to
 <div class="option"><strong>Export Yesterday's Health Data</strong><p>Zero-parameter shortcut. The fast path for &quot;just export yesterday's data and shut up about it.&quot; Same engine as the manual export. Optional <em>Profile</em> parameter (see <a href="#profiles">Export profiles</a>).</p></div>
 <div class="option"><strong>Export Health Data for a Date</strong><p>Single <em>Date</em> parameter. Time-of-day is ignored. Useful in calendar-driven automations. Optional <em>Profile</em> parameter.</p></div>
 <div class="option"><strong>Export Health Data for Date Range</strong><p><em>Start Date</em> and <em>End Date</em> parameters, inclusive on both ends. Use for backfills. Optional <em>Profile</em> parameter.</p></div>
-<div class="option"><strong>Export Last N Days of Health Data</strong><p><em>Number of Days</em> parameter (1–366). Ends yesterday. Default 7. Good for &quot;every Sunday, export last 7 days&quot; automations. Optional <em>Profile</em> parameter.</p></div>
-<div class="option"><strong>Get Health Summary for a Date</strong><p>Returns a structured snapshot — steps, active calories, sleep, heart rate — without writing anything to the vault. Use this in Shortcuts to feed values into other apps.</p></div>
+<div class="option"><strong>Export Last N Days of Health Data</strong><p><em>Number of Days</em> parameter, from 1 to 366. Ends yesterday. Default 7. Use it for automations such as &quot;every Sunday, export the last 7 days.&quot; Optional <em>Profile</em> parameter.</p></div>
+<div class="option"><strong>Get Health Summary for a Date</strong><p>Returns a structured snapshot, steps, active calories, sleep, heart rate, without writing anything to the vault. Use this in Shortcuts to feed values into other apps.</p></div>
 <div class="option"><strong>Get Last Export Status</strong><p>Returns the timestamp, success state, day count, and any failure reason from the most recent recorded export. A locked-device request remains pending until retried, so it is not returned as the current status while pending.</p></div>
 <div class="option"><strong>Turn Scheduled Export On or Off</strong><p>Boolean parameter. Use to suspend the schedule (e.g. on vacation Focus) and resume it later.</p></div>
 </div>
 
 <a id="profiles"></a>
 ## Export profiles
-<p>Create and manage saved export profiles in Health.md on iPhone or Android. Apple profile management is currently documented for iPhone only; iPad and macOS management availability is not claimed.</p>
-<p>All four export intents accept an optional <em>Profile</em> parameter. Once profiles exist, leaving it empty uses the active profile; in legacy zero-profile mode, it uses the current in-app export settings. Pass a saved profile name to run that profile's frozen configuration — its metric selection, formats, and destination — regardless of what the app currently shows.</p>
+<p>Create and manage saved export profiles in Health.md on iPhone or Android. Apple profile management is currently documented for iPhone only. IPad and macOS management availability is not claimed.</p>
+<p>All four export intents accept an optional <em>Profile</em> parameter. If profiles exist, an empty parameter uses the active profile. In legacy zero-profile mode, it uses the current in-app export settings. Pass a saved profile name to use its frozen configuration. This includes its metric selection, formats, and destination, regardless of the settings that the app shows.</p>
 <div class="callout">
 <strong>Heads-up for existing zero-parameter shortcuts.</strong>
-<p style="margin-top:6px;">Once you create your first export profile in the app, a shortcut with no <em>Profile</em> set exports using the <em>active</em> profile's saved settings instead of the app's live settings. If you rely on the old behavior, pin the shortcut to a specific profile (or keep zero profiles) to stay explicit. A profile name that no longer exists fails with a clear error instead of exporting the wrong thing.</p>
+<p style="margin-top:6px;">After you create your first export profile, a shortcut with no <em>Profile</em> uses the active profile's saved settings. It does not use the app's live settings. If you rely on the old behavior, pin the shortcut to a specific profile or keep zero profiles. A profile name that no longer exists returns a clear error. It does not export the wrong profile.</p>
 </div>
 
 ## Where to find them
 <p>Open the Shortcuts app on iOS or macOS. Tap the <em>+</em> button to create a new shortcut, search for &quot;Health.md&quot; or any of the intent titles above. They live under the <em>Health</em> category.</p>
-<p>Most intents have <code>openAppWhenRun = false</code>, so they execute headlessly — no app launch, no UI flash. They work from automations, Focus filters, the Hey Siri handoff, and the Action Button.</p>
+<p>Most intents have <code>openAppWhenRun = false</code>, so they execute headlessly, no app launch, no UI flash. They work from automations, Focus filters, the Hey Siri handoff, and the Action Button.</p>
 
 <div class="callout">
 <strong>Running while locked does not unlock HealthKit.</strong>
@@ -58,12 +58,12 @@ description: "Seven App Intents let you trigger exports, fetch summaries, and to
 
 <div class="callout">
 <strong>Authorization required.</strong>
-<p style="margin-top:6px;">Intents inherit your in-app HealthKit permission and vault selection. They will fail with a clear error if the app hasn't been opened-and-set-up at least once on this device.</p>
+<p style="margin-top:6px;">Intents inherit your in-app HealthKit permission and vault selection. They will fail with a clear error if the app has not been opened-and-set-up at least once on this device.</p>
 </div>
 
 ## Related
 
 <div class="related">
-  <a href="/docs/scheduling/"><span>Source</span>Scheduling — the in-app equivalent of the toggle intent.</a>
-  <a href="/docs/export/"><span>Source</span>Export — the in-app equivalent of the date-range intents.</a>
+  <a href="/docs/scheduling/"><span>Source</span>Scheduling, the in-app equivalent of the toggle intent.</a>
+  <a href="/docs/export/"><span>Source</span>Export, the in-app equivalent of the date-range intents.</a>
 </div>

@@ -3,7 +3,7 @@ title: "Export profiles"
 description: "Save export settings and a destination together, then run or schedule that setup from iPhone, Android, Shortcuts, the CLI, Tasker, or adb."
 ---
 
-Export profiles keep a repeatable export setup together. Manage them in Health.md on iPhone or Android. On Apple platforms, the current management workflow is documented and tested on iPhone only; no iPad or Mac management surface is claimed.
+Export profiles keep a repeatable export setup together. Manage them in Health.md on iPhone or Android. On Apple platforms, the current management workflow is documented and tested on iPhone only. No iPad or Mac management surface is claimed.
 
 ## Manage and edit profiles
 
@@ -13,8 +13,8 @@ The Export tab edits the active profile. Activate another profile before changin
 
 Each profile freezes the choices needed to reproduce a run:
 
-- selected metrics, Data Detail, formats, templates, filenames, units, and write behavior;
-- its own folder destination and subfolder, API endpoint, or Connected Mac target where that platform supports it;
+- selected metrics, Data Detail, formats, templates, filenames, units, and write behavior.
+- its own folder destination and subfolder, API endpoint, or Connected Mac target where that platform supports it.
 - daily-note, individual-entry, roll-up, and other output choices supported by that platform.
 
 A schedule is bound separately to the profile's stable identity. Switching the active profile does not retarget that schedule. A profile run uses the saved snapshot instead of borrowing changed settings from another profile.
@@ -31,9 +31,9 @@ A schedule is bound separately to the profile's stable identity. Switching the a
 
 A display name is for people and may change. A profile's stable ID is for rename-safe automation. Copy it from **Settings → Export Profiles → Profile ID**.
 
-- Apple Shortcuts select a profile by display name; an empty profile parameter uses the active profile.
+- Apple Shortcuts select a profile by display name. An empty profile parameter uses the active profile.
 - Android Tasker and adb broadcasts can supply the `PROFILE` extra with a stable ID or name. Prefer the ID for workflows that must survive renames.
-- The direct CLI accepts `--profile PROFILE_ID` for supported generated-file jobs. The profile supplies its frozen output settings; the required `--destination` still selects the existing folder on the computer.
+- The direct CLI accepts `--profile PROFILE_ID` for supported generated-file jobs. The profile supplies its frozen output settings. The required `--destination` still selects the existing folder on the computer.
 
 Review the platform automation guide before enabling an unattended workflow.
 

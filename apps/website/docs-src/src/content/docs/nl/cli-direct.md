@@ -278,7 +278,7 @@ Manual IP blijft versleuteld op een lokaal netwerk of via Tailscale. Tailscale b
 | `direct_export_paused` | Bekijk de taak, open de gekoppelde telefoon opnieuw en hervat de taak. |
 | `direct_cancellation_pending` | Open de gekoppelde telefoon opnieuw en probeer de annulering nogmaals. |
 | `transport_unsupported` | Gebruik Manual IP of Tailscale in de platformonafhankelijke client. |
-| `backend_unsupported` | Gebruik de backend van de Mac-app voor query's, bewijs, doctor, meetwaarden of MCP. |
+| `backend_unsupported` | Alleen het gebundelde Swift-hulpprogramma: gebruik voor query's, bewijs, doctor of meetwaarden de standaard Mac-loopbackmodus. De zelfstandige CLI gebruikt in plaats daarvan `healthmd mcp serve`. |
 | `invalid_direct_raw_response` | Gebruik de uitvoer niet. Bewaar de validatiediagnostiek. |
 | `invalid_direct_file_receipt` | Herstel bestanden niet handmatig. Bekijk en hervat de taak. |
 | `job_expired` | De levensduur van de status van zeven dagen is verstreken. Vraag om bevestiging voordat je nieuw werk start. |

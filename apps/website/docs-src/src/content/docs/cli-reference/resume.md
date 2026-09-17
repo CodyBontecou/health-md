@@ -45,4 +45,4 @@ healthmd resume 11111111-2222-4333-8444-555555555555 \
 
 Resume verifies the saved peer, request fingerprint, date scope, destination identity, manifests, partition chain, and committed frontier. A mismatch fails closed.
 
-Timeout, Ctrl-C, process death, disconnection, and mobile background expiration pause work; they do not cancel the phone-side job. Use [`healthmd cancel`](/docs/cli-reference/cancel/) only when cancellation is intended.
+Timeout, Ctrl-C, process death, disconnection, and mobile background expiration pause work. They do not cancel the phone-side job. Use [`healthmd cancel`](/docs/cli-reference/cancel/) only when cancellation is intended.

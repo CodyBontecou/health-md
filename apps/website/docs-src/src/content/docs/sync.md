@@ -4,7 +4,7 @@ description: "Use the macOS companion as a local destination. Your iPhone captur
 ---
 
 ## What it is
-<p>Mac Sync lets your Mac produce exports without becoming a HealthKit reader. The iPhone remains the source of truth for Apple Health data: it captures the selected daily data and exact settings snapshot, then transfers that job to the Mac. The Mac uses the shared exporters to plan paths, render the requested formats, and write the resulting files into the destination folder you chose.</p>
+<p>Mac Sync lets your Mac produce exports without becoming a HealthKit reader. The iPhone remains the source of truth for Apple Health data. It captures the selected daily data and exact settings snapshot, then transfers that job to the Mac. The Mac plans paths and renders the requested formats. It writes the files to your selected destination folder.</p>
 
 <div class="doc-diagram">
   <div class="flow-steps" aria-label="Mac Sync export flow">
@@ -23,14 +23,14 @@ description: "Use the macOS companion as a local destination. Your iPhone captur
 <li>Return to the iPhone Export tab, choose <em>Connected Mac</em>, configure the export, and tap Export.</li>
 </ol>
 
-## What's transferred
+## Data that transfers
 <ul>
 <li>A versioned export request describing the date range and effective settings</li>
 <li>Progress and capability messages while the iPhone captures HealthKit data</li>
 <li>Bounded, checksum-validated frames carrying captured daily data and the exact settings snapshot for file-writing jobs</li>
 <li>A structured completion, partial, failure, rejection, or unavailable result</li>
 </ul>
-<p>No account or remote health-data cloud is required. Nearby sync uses encrypted Multipeer Connectivity; Manual IP/Tailscale uses paired encrypted Network.framework transport. Both devices must be able to reach each other, and the iPhone remains the HealthKit reader.</p>
+<p>No account or remote health-data cloud is required. Nearby sync uses encrypted Multipeer Connectivity. Manual IP/Tailscale uses paired encrypted Network.framework transport. Both devices must be able to reach each other, and the iPhone remains the HealthKit reader.</p>
 
 ## When to use it
 <div class="options">
@@ -53,8 +53,8 @@ See [Direct iPhone CLI](/docs/cli-direct/) before enabling the separate iPhone s
 ## Related
 
 <div class="related">
-  <a href="/docs/macos/"><span>Desktop</span>macOS App — Export, Schedule, History on the Mac.</a>
-  <a href="/docs/scheduling/"><span>Workflow</span>Scheduling — automate recurring exports.</a>
-  <a href="/docs/cli-direct/"><span>Separate trust</span>Direct iPhone CLI — pair a CLI without routing work through the Mac app.</a>
-  <a href="/docs/reference/connected-mac-iphone-protocol/"><span>Protocol</span>Connected Mac–iPhone Reference — capabilities, requests, bounded transfer, and results.</a>
+  <a href="/docs/macos/"><span>Desktop</span>macOS App, Export, Schedule, History on the Mac.</a>
+  <a href="/docs/scheduling/"><span>Workflow</span>Scheduling, automate recurring exports.</a>
+  <a href="/docs/cli-direct/"><span>Separate trust</span>Direct iPhone CLI, pair a CLI without routing work through the Mac app.</a>
+  <a href="/docs/reference/connected-mac-iphone-protocol/"><span>Protocol</span>Connected Mac–iPhone Reference, capabilities, requests, bounded transfer, and results.</a>
 </div>

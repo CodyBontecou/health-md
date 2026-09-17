@@ -40,26 +40,26 @@ O cliente portátil suporta emparelhamento, status, exportação bruta, destinos
 Os comandos diretos emparelham com fontes de iPhone (protocolo v1) ou de Android (protocolo v2). O `extract` canônico e todos os comandos de consulta tipada são funcionalidades do iPhone; as fontes diretas do Android retornam snapshots brutos Health Connect nativos do provedor e arquivos gerados.
 
 ```bash
-# Prontidão e confiança local
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# Exportação bruta nativa da plataforma; omita --output para transmitir JSON/NDJSON validado ao stdout
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# Consulta tipada pelo mesmo registro de operações do MCP (iPhone)
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# Extração canônica com escopo (iPhone)
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Arquivos gerados em produção em todos os sistemas operacionais da CLI
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# Operações persistentes
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

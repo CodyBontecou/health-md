@@ -221,10 +221,10 @@ Das Flag ändert Ausgabe- und Exit-Verhalten. Es entfernt keine Diagnosen und ma
 Die eigenständige CLI führt die Extraktion direkt gegen das gekoppelte iPhone aus. Der in Health.md für Mac enthaltene Swift-Helfer erreicht dieselbe Extraktion standardmäßig über den Mac-App-Loopback oder mit seinem `--backend direct`-Präfix direkt:
 
 ```bash
-# Standalone CLI (macOS, Linux, Windows): direkt, ohne Mac-App
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Mitgelieferter Mac-Helfer: Mac-App umgehen
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```

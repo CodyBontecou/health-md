@@ -40,26 +40,26 @@ Il client multipiattaforma supporta abbinamento, stato, esportazione raw, destin
 I comandi diretti si abbinano a sorgenti iPhone (protocollo v1) o Android (protocollo v2). L’`extract` canonico e ogni comando di query tipizzata sono funzionalità di iPhone; le sorgenti dirette di Android restituiscono snapshot raw Health Connect nativi del fornitore e file generati.
 
 ```bash
-# Disponibilità e fiducia locale
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# Esportazione raw nativa della piattaforma; ometti --output per trasmettere JSON/NDJSON convalidato su stdout
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# Query tipizzata tramite lo stesso registro di operazioni di MCP (iPhone)
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# Estrazione canonica mirata (iPhone)
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# File generati in produzione su ogni sistema operativo della CLI
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# Operazioni persistenti
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

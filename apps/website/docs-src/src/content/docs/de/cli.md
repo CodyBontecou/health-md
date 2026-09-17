@@ -40,26 +40,26 @@ Der portable Client unterstützt auf allen drei Desktop-Plattformen für iPhone-
 Direkte Befehle koppeln sich mit iPhone-Quellen (Protokoll v1) oder Android-Quellen (Protokoll v2). Das kanonische `extract` und jeder typisierte Abfragebefehl sind iPhone-Funktionen; direkte Android-Quellen geben provider-native Health-Connect-Rohdaten-Snapshots und generierte Dateien zurück.
 
 ```bash
-# Bereitschaft und lokales Vertrauen
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# Plattform-nativer Rohdatenexport; --output weglassen, um validiertes JSON/NDJSON auf stdout zu streamen
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# Typisierte Abfrage über dasselbe Operationregistry wie MCP (iPhone)
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# Kanonische Bereichsextraktion (iPhone)
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Produktions-generierte Dateien unter jedem CLI-Betriebssystem
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# Persistente Vorgänge
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

@@ -40,26 +40,26 @@ macOSまたはLinuxでは、<code>brew install CodyBontecou/tap/healthmd</code>�
 ダイレクトコマンドはiPhone（プロトコルv1）またはAndroid（プロトコルv2）のソースとペアリングします。正規`extract`とすべての型付きクエリコマンドはiPhoneの機能で、Androidのダイレクトソースはプロバイダー固有のHealth Connect生スナップショットと生成ファイルを返します。
 
 ```bash
-# 準備状況とローカルの信頼
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# プラットフォーム固有の生データエクスポート。--outputを省略すると検証済みJSON/NDJSONをstdoutへストリーム
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# MCPと同じ操作レジストリによる型付きクエリ（iPhone）
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# 範囲を指定した正規抽出（iPhone）
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# すべてのCLI OSでの本番生成ファイル
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# 永続操作
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

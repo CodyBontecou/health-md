@@ -3,7 +3,7 @@ title: "healthmd extract"
 description: "Extract selected canonical healthmd.health_data content from a paired iPhone."
 ---
 
-Request a scoped canonical `healthmd.health_data` projection from a paired iPhone. `extract` is source-data access; it is separate from typed sleep, workout, chart, and evidence queries.
+Request a scoped canonical `healthmd.health_data` projection from a paired iPhone. `extract` is source-data access. It is separate from typed sleep, workout, chart, and evidence queries.
 
 ## Synopsis
 

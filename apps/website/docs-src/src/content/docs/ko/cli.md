@@ -40,26 +40,26 @@ macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>�
 직접 명령은 iPhone(프로토콜 v1) 또는 Android(프로토콜 v2) 소스와 페어링합니다. 정규 `extract`와 모든 타입 지정 쿼리 명령은 iPhone 기능이며, Android 직접 소스는 공급자 고유의 Health Connect 원시 스냅샷과 생성 파일을 반환합니다.
 
 ```bash
-# 준비 상태와 로컬 신뢰
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# 플랫폼 고유 원시 내보내기. --output을 생략하면 검증된 JSON/NDJSON을 stdout으로 스트리밍
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# MCP와 동일한 작업 레지스트리를 통한 타입 지정 쿼리(iPhone)
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# 범위 지정 정규 추출(iPhone)
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# 모든 CLI 운영 체제에서 프로덕션 생성 파일
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# 영속 작업
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

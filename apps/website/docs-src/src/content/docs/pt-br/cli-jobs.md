@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 Arquivos gerados diretamente:
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -102,7 +102,7 @@ healthmd resume JOB_UUID --output recovered.json --allow-partial
 No modo direto, selecione o mesmo dispositivo, transporte, porta e iPhone usados pela solicitação original:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```

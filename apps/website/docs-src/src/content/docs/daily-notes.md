@@ -1,10 +1,10 @@
 ---
 title: "Daily Note Injection"
-description: "Merge selected health metrics into the YAML frontmatter (and optionally the body) of your existing daily notes — the ones you write in Obsidian or any other Markdown app."
+description: "Merge selected health metrics into the YAML frontmatter and optional body of your existing daily notes in Obsidian or another Markdown app."
 ---
 
 ## What it does
-<p>If you keep daily notes (e.g. <code>Daily/2026-04-28.md</code>), turn this on and the app will <em>merge</em> your selected metrics into the YAML frontmatter of those notes on every export — without touching the rest of your note content.</p>
+<p>If you keep daily notes, turn on this option. For example, your notes can use <code>Daily/2026-04-28.md</code>. On each export, the app <em>merges</em> selected metrics into the YAML frontmatter. It does not change the rest of the note.</p>
 
 <div class="doc-diagram merge-preview" aria-label="Daily note frontmatter before and after Health.md merge">
 <div class="merge-card">
@@ -41,22 +41,22 @@ Wrote launch notes...</code></pre>
 ## Filename placeholders
 <p>Mix and match:</p>
 <ul>
-<li><code>{date}</code> — full ISO date (<code>2026-04-28</code>)</li>
+<li><code>{date}</code>, full ISO date (<code>2026-04-28</code>)</li>
 <li><code>{year}</code>, <code>{month}</code>, <code>{day}</code></li>
-<li><code>{weekday}</code> — short name (<code>Tue</code>)</li>
-<li><code>{monthName}</code> — long name (<code>April</code>)</li>
-<li><code>{quarter}</code> — Q1 / Q2 / Q3 / Q4</li>
+<li><code>{weekday}</code>, short name (<code>Tue</code>)</li>
+<li><code>{monthName}</code>, long name (<code>April</code>)</li>
+<li><code>{quarter}</code>, Q1 / Q2 / Q3 / Q4</li>
 </ul>
 <p>Example: <code>{year}/{monthName}/{date}-{weekday}</code> → <code>2026/April/2026-04-28-Tue.md</code>. The preview line below the field shows the resolved path live.</p>
 
 ## Options
 <div class="options">
-<div class="option"><strong>Create note if missing</strong><p>If the daily note doesn't exist for a given date, create a fresh one. Leave off if you create your own daily notes via Obsidian Templater or a similar plugin.</p></div>
+<div class="option"><strong>Create note if missing</strong><p>If the daily note does not exist for a given date, create a fresh one. Leave off if you create your own daily notes via Obsidian Templater or a similar plugin.</p></div>
 <div class="option"><strong>Inject metric sections</strong><p>Also write Sleep, Activity, Heart, etc. headings into the note body. App-managed, replaced cleanly on each export. Off by default.</p></div>
 </div>
 
 ## Which metrics get injected
-<p>Whatever you've selected in <em>Health Metrics</em>. There is no separate selector here. Change your metric selection there, and Daily Note Injection follows.</p>
+<p>Daily Note Injection uses your selections in <em>Health Metrics</em>. There is no separate selector. Change the metric selection there to change Daily Note Injection.</p>
 
 ## Frontmatter preview
 <p>The bottom of the Daily Note Injection screen has a live preview of the frontmatter that will be merged. This updates as you change metric selection or the format customization frontmatter fields.</p>
@@ -69,7 +69,7 @@ Wrote launch notes...</code></pre>
 ## Related
 
 <div class="related">
-  <a href="/docs/metrics/"><span>Prereq</span>Health Metrics — pick what gets injected.</a>
-  <a href="/docs/format/"><span>Format</span>Frontmatter Fields editor — rename keys, add custom fields.</a>
-  <a href="/docs/individual-tracking/"><span>Granular</span>Individual Tracking — alternative for per-event tracking.</a>
+  <a href="/docs/metrics/"><span>Prereq</span>Health Metrics, pick what gets injected.</a>
+  <a href="/docs/format/"><span>Format</span>Frontmatter Fields editor, rename keys, add custom fields.</a>
+  <a href="/docs/individual-tracking/"><span>Granular</span>Individual Tracking, alternative for per-event tracking.</a>
 </div>

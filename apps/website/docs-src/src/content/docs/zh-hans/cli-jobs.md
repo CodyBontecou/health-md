@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 直连生成文件：
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -102,7 +102,7 @@ healthmd resume JOB_UUID --output recovered.json --allow-partial
 直连模式必须选择原始请求使用的同一设备、传输方式、端口和 iPhone：
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```

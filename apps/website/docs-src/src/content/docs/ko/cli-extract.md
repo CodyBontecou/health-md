@@ -221,10 +221,10 @@ healthmd extract --category Sleep --last 30 \
 독립 CLI는 페어링된 iPhone에 대해 직접 추출을 실행합니다. Mac용 Health.md에 번들된 Swift 도우미는 기본적으로 Mac 앱 루프백을 통해, 또는 `--backend direct` 접두사로 직접 동일한 추출에 도달합니다.
 
 ```bash
-# Standalone CLI(macOS, Linux, Windows): 직접, Mac 앱 불필요
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# 번들 Mac 도우미: Mac 앱 우회
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```

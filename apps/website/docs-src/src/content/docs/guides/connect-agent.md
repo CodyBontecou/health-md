@@ -8,13 +8,13 @@ description: Connect the released Health.md Mac MCP helper to Codex or Claude, a
 <p>This path uses the signed <code>healthmd-mcp</code> helper bundled with the released Mac app. It does not use the portable CLI preview, Direct CLI Access, a pairing QR code, or port 17647.</p>
 </div>
 
-You will connect a local MCP host, verify readiness without reading health values, explicitly refresh one small scope from iPhone, and query that encrypted Mac context. Allow about ten minutes when both apps are already installed and on the same local network.
+You will connect a local MCP host and verify readiness without reading health values. Then refresh one small iPhone scope and query the encrypted Mac context. Allow about ten minutes when both apps are installed and use the same local network.
 
 ## 1. Install and open Health.md
 
 [Download Health.md from the App Store](https://apps.apple.com/us/app/health-md/id6757763969) on both the Mac and iPhone. Open both apps.
 
-HealthKit stays on iPhone. The Mac app hosts the signed MCP helper and an encrypted, disposable query context; it does not read HealthKit directly.
+HealthKit stays on iPhone. The Mac app hosts the signed MCP helper and an encrypted, disposable query context. It does not read HealthKit directly.
 
 ## 2. Connect iPhone and Mac
 
@@ -23,7 +23,7 @@ HealthKit stays on iPhone. The Mac app hosts the signed MCP helper and an encryp
 3. Keep both devices on the same reachable local network and keep Health.md foreground on iPhone while starting fresh work.
 4. Confirm the Mac app shows the intended iPhone connection. If it does not, reopen both apps and review [Mac Sync readiness](/docs/sync/).
 
-This is the released Mac connection. Do not run `healthmd direct pair`; that command belongs to the separate portable preview.
+This is the released Mac connection. Do not run `healthmd direct pair`. That command belongs to the separate portable preview.
 
 ## 3. Copy the signed helper path
 
@@ -33,7 +33,7 @@ Open **Health.md for Mac → CLI** and copy the displayed MCP helper path. A nor
 /Applications/Health.md.app/Contents/Helpers/healthmd-mcp
 ```
 
-Use the displayed path if the app is installed elsewhere. Configure the helper directly—do not wrap it in a shell or launch it as an interactive command.
+Use the displayed path if the app is installed elsewhere. Configure the helper directly. Do not wrap it in a shell or launch it as an interactive command.
 
 ## 4. Configure Codex or Claude
 
@@ -154,14 +154,14 @@ After refresh completes, call `healthmd_metric_chart` with the same dates, metri
 
 Do not treat tool success as proof of complete health coverage. Check all of the following:
 
-- the refresh reached a terminal successful state for the same exact dates, metrics, sources, and detail level;
-- the response schema and version are recognized;
-- the requested range and timezone match the question;
-- each stated value retains its canonical metric ID and unit;
-- coverage status, days considered, days with values, and every missing interval are reported;
-- `complete_empty`, `partial`, `failed`, `unsupported`, `skipped`, and `cancelled` are not converted to zero;
-- traversal completed, or any remaining cursor or aggregate ceiling is disclosed;
-- evidence/source descriptors and limitations remain attached to the answer;
+- the refresh reached a terminal successful state for the same exact dates, metrics, sources, and detail level.
+- the response schema and version are recognized.
+- the requested range and timezone match the question.
+- each stated value retains its canonical metric ID and unit.
+- coverage status, days considered, days with values, and every missing interval are reported.
+- `complete_empty`, `partial`, `failed`, `unsupported`, `skipped`, and `cancelled` are not converted to zero.
+- traversal completed, or any remaining cursor or aggregate ceiling is disclosed.
+- evidence/source descriptors and limitations remain attached to the answer.
 - factual direction is not turned into diagnosis, treatment advice, causation, or “better/worse” language.
 
 ### Read partial results without discarding useful data
@@ -191,7 +191,7 @@ A typed query can return a valid `healthmd.query_response` while only part of th
 }
 ```
 
-The strings inside `items` and `limitations` above are explanatory abbreviations; use the downloadable generated fixture for exact fields and evidence. Preserve the retained item, failed interval, coverage counts, and limitation together.
+The strings inside `items` and `limitations` above are explanatory abbreviations. Use the downloadable generated fixture for exact fields and evidence. Preserve the retained item, failed interval, coverage counts, and limitation together.
 
 Do not add `status: "partial_success"` to `healthmd.query_response`. That status belongs to higher-level CLI and export envelopes when acquisition, traversal, or file generation is incomplete. A timeout is different again: it is an unknown durable-job outcome that must be inspected by job ID.
 
@@ -205,15 +205,15 @@ A timeout, closed host, or cancelled MCP waiter does not cancel an accepted refr
 2. Call `healthmd_job_status` with that ID.
 3. If the immutable job is resumable, review and approve `healthmd_job_resume` with the same ID and a finite wait timeout.
 4. Start a new refresh only after status proves that no accepted job can still complete.
-5. Use `healthmd_job_cancel` only when you intend to terminate the job; cancellation is terminal only after iPhone acknowledgement.
+5. Use `healthmd_job_cancel` only when you intend to terminate the job. Cancellation is terminal only after iPhone acknowledgement.
 
 Never retry blindly after an unknown outcome. Durable refresh jobs preserve the accepted scope and committed frontier.
 
 ## You are connected
 
-The first read-only workflow is complete when doctor is ready, the explicit refresh is terminal, the bounded query has complete traversal, and you have inspected coverage, evidence, units, and limitations.
+The first read-only workflow is complete when doctor is ready and the explicit refresh is terminal. The bounded query must also have complete traversal. You must inspect coverage, evidence, units, and limitations.
 
-Generated-file exports are a separate approval-gated workflow. The released Mac tool writes into the folder already selected in Health.md for Mac; it does not accept an arbitrary destination argument.
+Generated-file exports are a separate approval-gated workflow. The released Mac tool writes into the folder already selected in Health.md for Mac. It does not accept an arbitrary destination argument.
 
 <div class="related">
   <a href="/docs/mcp/"><span>Tool catalog</span>Review all released Mac tools, exact schemas, MCP Apps, paging, and safety boundaries.</a>

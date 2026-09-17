@@ -10,13 +10,13 @@ description: "Run exports automatically on daily, weekly, or custom calendar cad
 <li>The next scheduled run, if any</li>
 <li>The last run's outcome</li>
 </ul>
-<p>One button — <em>Set Up Schedule</em> (or <em>Manage Schedule</em>) — opens the detail view.</p>
+<p>One button, <em>Set Up Schedule</em> (or <em>Manage Schedule</em>), opens the detail view.</p>
 
 ## Schedule settings
 <div class="options">
 <div class="option"><strong>Enable Scheduled Exports</strong><p>Master toggle at the top. When off, no background runs and no notifications.</p></div>
 <div class="option"><strong>Frequency</strong><p>Daily, Weekly, or Custom. Custom schedules repeat every N days, weeks, or months from a chosen start date. The lookback controls how many completed days each run covers.</p></div>
-<div class="option"><strong>Time</strong><p>Hour and minute. iOS treats this as a hint, not a guarantee — see the limitations callout below.</p></div>
+<div class="option"><strong>Time</strong><p>Hour and minute. iOS treats this as a hint, not a guarantee, see the limitations callout below.</p></div>
 </div>
 
 ## Export history
@@ -34,12 +34,12 @@ description: "Run exports automatically on daily, weekly, or custom calendar cad
 
 <div class="callout">
 <strong>iOS limitations you should know.</strong>
-<p style="margin-top:6px;">HealthKit data isn't readable while the device is locked. Scheduled exports run via <code>BGAppRefreshTask</code>, which iOS opportunistically schedules based on usage patterns — your time setting is a target, not a contract. As a fallback, the app posts a local notification at the scheduled time if the device is locked; tap it to run the export.</p>
+<p style="margin-top:6px;">HealthKit data is not readable while the device is locked. Scheduled exports run via <code>BGAppRefreshTask</code>, which iOS opportunistically schedules based on usage patterns, your time setting is a target, not a contract. As a fallback, the app posts a local notification at the scheduled time if the device is locked. Tap it to run the export.</p>
 </div>
 <ul>
 <li>The scheduled time is approximate. iOS may run the task earlier, later, or skip it if the device is dead/disconnected.</li>
 <li>Scheduled exports work best when your phone is regularly plugged in and unlocked at roughly the same time each day.</li>
-<li>If the export fails because the device was locked, tap the notification — that runs the export with HealthKit access.</li>
+<li>If the export fails because the device was locked, tap the notification, that runs the export with HealthKit access.</li>
 </ul>
 
 ## Programmatic control
@@ -47,8 +47,8 @@ description: "Run exports automatically on daily, weekly, or custom calendar cad
 
 ## Profile schedules and cancellation
 
-- Every profile can keep its own schedule, including a custom cadence; switching the active profile does not retarget another profile's schedule.
-- A collision warning appears when profiles could write the same rendered paths at the same destination. Review it before enabling competing schedules; Health.md does not silently change either profile.
+- Every profile can keep its own schedule, including a custom cadence. Switching the active profile does not retarget another profile's schedule.
+- A collision warning appears when profiles could write the same rendered paths at the same destination. Review it before enabling competing schedules. Health.md does not silently change either profile.
 - Stop or Cancel ends only the current attempt. Completed dates stay completed, unresolved dates remain retryable, and the schedule stays enabled.
 - Each history row remains pinned to the run-time profile and the privacy-safe destination label actually used.
 
@@ -57,8 +57,8 @@ Manage the frozen settings and per-profile destination in [Export profiles](/doc
 ## Related
 
 <div class="related">
-  <a href="/docs/export-profiles/"><span>Multiple workflows</span>Export Profiles — give each saved setup its own destination and cadence.</a>
-  <a href="/docs/export/"><span>Manual</span>Export — for one-off date ranges.</a>
-  <a href="/docs/shortcuts/"><span>Automate</span>Shortcuts — toggle the schedule from automations.</a>
-  <a href="/docs/sync/"><span>Cross-device</span>Mac Sync — schedule on Mac too.</a>
+  <a href="/docs/export-profiles/"><span>Multiple workflows</span>Export Profiles, give each saved setup its own destination and cadence.</a>
+  <a href="/docs/export/"><span>Manual</span>Export, for one-off date ranges.</a>
+  <a href="/docs/shortcuts/"><span>Automate</span>Shortcuts, toggle the schedule from automations.</a>
+  <a href="/docs/sync/"><span>Cross-device</span>Mac Sync, schedule on Mac too.</a>
 </div>

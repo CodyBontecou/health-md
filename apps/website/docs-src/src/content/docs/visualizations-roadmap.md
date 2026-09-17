@@ -3,11 +3,11 @@ title: Visualizations & Roadmap
 description: Current Health.md Obsidian visualization coverage and planned charts organized by exported data type.
 ---
 
-Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases, JSON, and CSV. The visualization roadmap below connects that data surface to the companion Obsidian visualization plugin: what already exists, what the exported data can support next, and which categories need generic schema-aware charting.
+Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases, JSON, and CSV. This roadmap connects the data to the Obsidian visualization plugin. It shows current visualizations, possible additions, and categories that need generic schema-aware charts.
 
 <div class="callout">
 <strong>Data source.</strong>
-<p style="margin-top:6px;">This page is organized from Health.md's export schema and data dictionary: activity, sleep, heart, vitals, body, nutrition, mindfulness, medications, workouts, reproductive health, symptoms, hearing, and lifestyle/environment metrics.</p>
+<p style="margin-top:6px;">This page follows Health.md's export schema and data dictionary. It covers activity, sleep, heart, vitals, body, nutrition, mindfulness, medications, and workouts. It also covers reproductive health, symptoms, hearing, and lifestyle or environment metrics.</p>
 </div>
 
 ## Per-visualization unit overrides
@@ -20,7 +20,7 @@ metric: distance
 units: imperial
 ```
 
-Use `auto` to follow the unit system declared by the export, `metric` to display kilometers, kilograms, meters, and Celsius, or `imperial` to display miles, pounds, feet, and Fahrenheit. The override applies only to that visualization and takes precedence over the global Units setting. It changes display values only; the exported Health.md files remain unchanged. Non-convertible metrics such as steps, BPM, percentages, and calories are not changed.
+Use `auto` to follow the unit system in the export. Use `metric` for kilometers, kilograms, meters, and Celsius. Use `imperial` for miles, pounds, feet, and Fahrenheit. The override applies only to that visualization. It takes precedence over the global Units setting. It changes display values only. The exported Health.md files remain unchanged. Non-convertible metrics such as steps, BPM, percentages, and calories do not change.
 
 ## Current visualization coverage
 
@@ -94,73 +94,73 @@ Each item links to its matching public variation in the [Health.md visualization
 
 ### Summary and overview
 
-- [Intro stats](/visualizations/overview-trends/intro-stats/theme-colors/) — `intro-stats`
-- [Summary card](/visualizations/overview-trends/summary-card/theme-colors/) — `summary-card`
-- [Trend tile](/visualizations/overview-trends/trend-tile/theme-colors/) — `trend-tile`
+- [Intro stats](/visualizations/overview-trends/intro-stats/theme-colors/), `intro-stats`
+- [Summary card](/visualizations/overview-trends/summary-card/theme-colors/), `summary-card`
+- [Trend tile](/visualizations/overview-trends/trend-tile/theme-colors/), `trend-tile`
 
 ### Activity
 
-- [Activity rings](/visualizations/activity-fitness/activity-rings/theme-colors/) — `activity-rings`
-- [Bar chart](/visualizations/activity-fitness/bar-chart/theme-colors/) — `bar-chart`
-- [Activity heatmap](/visualizations/activity-fitness/activity-heatmap/theme-colors/) — `activity-heatmap`
-- [Step spiral](/visualizations/activity-fitness/step-spiral/theme-colors/) — `step-spiral`
-- [Weekday average](/visualizations/activity-fitness/weekday-average/theme-colors/) — `weekday-average`
+- [Activity rings](/visualizations/activity-fitness/activity-rings/theme-colors/), `activity-rings`
+- [Bar chart](/visualizations/activity-fitness/bar-chart/theme-colors/), `bar-chart`
+- [Activity heatmap](/visualizations/activity-fitness/activity-heatmap/theme-colors/), `activity-heatmap`
+- [Step spiral](/visualizations/activity-fitness/step-spiral/theme-colors/), `step-spiral`
+- [Weekday average](/visualizations/activity-fitness/weekday-average/theme-colors/), `weekday-average`
 
 ### Heart
 
-- [Heart terrain](/visualizations/heart-health/heart-terrain/theme-colors/) — `heart-terrain`
-- [Heart range](/visualizations/heart-health/heart-range/theme-colors/) — `heart-range`
-- [HRV trend](/visualizations/heart-health/hrv-trend/theme-colors/) — `hrv-trend`
+- [Heart terrain](/visualizations/heart-health/heart-terrain/theme-colors/), `heart-terrain`
+- [Heart range](/visualizations/heart-health/heart-range/theme-colors/), `heart-range`
+- [HRV trend](/visualizations/heart-health/hrv-trend/theme-colors/), `hrv-trend`
 
 ### Respiratory, oxygen, and vitals
 
-- [Oxygen river](/visualizations/respiratory-oxygen/oxygen-river/theme-colors/) — `oxygen-river`
-- [Oxygen range](/visualizations/respiratory-oxygen/oxygen-range/theme-colors/) — `oxygen-range`
-- [Breathing wave](/visualizations/respiratory-oxygen/breathing-wave/theme-colors/) — `breathing-wave`
-- [Vitals rings](/visualizations/activity-fitness/vitals-rings/theme-colors/) — `vitals-rings`
+- [Oxygen river](/visualizations/respiratory-oxygen/oxygen-river/theme-colors/), `oxygen-river`
+- [Oxygen range](/visualizations/respiratory-oxygen/oxygen-range/theme-colors/), `oxygen-range`
+- [Breathing wave](/visualizations/respiratory-oxygen/breathing-wave/theme-colors/), `breathing-wave`
+- [Vitals rings](/visualizations/activity-fitness/vitals-rings/theme-colors/), `vitals-rings`
 
 ### Sleep
 
-- [Sleep schedule](/visualizations/sleep-analysis/sleep-schedule/theme-colors/) — `sleep-schedule`
-- [Sleep quality bars](/visualizations/sleep-analysis/sleep-quality-bars/theme-colors/) — `sleep-quality-bars`
-- [Sleep architecture](/visualizations/sleep-analysis/sleep-architecture/theme-colors/) — `sleep-architecture`
-- [Sleep polar](/visualizations/sleep-analysis/sleep-polar/theme-colors/) — `sleep-polar`
+- [Sleep schedule](/visualizations/sleep-analysis/sleep-schedule/theme-colors/), `sleep-schedule`
+- [Sleep quality bars](/visualizations/sleep-analysis/sleep-quality-bars/theme-colors/), `sleep-quality-bars`
+- [Sleep architecture](/visualizations/sleep-analysis/sleep-architecture/theme-colors/), `sleep-architecture`
+- [Sleep polar](/visualizations/sleep-analysis/sleep-polar/theme-colors/), `sleep-polar`
 
 ### Mindfulness and mood
 
-- [Mood trend](/visualizations/mindfulness-mood/mood-trend/theme-colors/) — `mood-trend`
-- [Mood calendar heatmap](/visualizations/mindfulness-mood/mood-calendar-heatmap/theme-colors/) — `mood-calendar-heatmap`
-- [Mood × sleep scatterplot](/visualizations/mindfulness-mood/mood-sleep-scatter/theme-colors/) — `mood-sleep-scatter`
-- [Mood day timeline](/visualizations/mindfulness-mood/mood-day-timeline/theme-colors/) — `mood-day-timeline`
-- [Mood by association](/visualizations/mindfulness-mood/mood-association-breakdown/theme-colors/) — `mood-association-breakdown`
-- [Mood label cloud](/visualizations/mindfulness-mood/mood-label-cloud/theme-colors/) — `mood-label-cloud`
-- [Mood volatility](/visualizations/mindfulness-mood/mood-volatility/theme-colors/) — `mood-volatility`
-- [Daily vs momentary mood](/visualizations/mindfulness-mood/mood-kind-split/theme-colors/) — `mood-kind-split`
-- [Circadian mood clock](/visualizations/mindfulness-mood/mood-circadian-clock/theme-colors/) — `mood-circadian-clock`
-- [Recovery + mindset tile](/visualizations/mindfulness-mood/mood-recovery-tile/theme-colors/) — `mood-recovery-tile`
-- [Mood association matrix](/visualizations/mindfulness-mood/mood-association-matrix/theme-colors/) — `mood-association-matrix`
+- [Mood trend](/visualizations/mindfulness-mood/mood-trend/theme-colors/), `mood-trend`
+- [Mood calendar heatmap](/visualizations/mindfulness-mood/mood-calendar-heatmap/theme-colors/), `mood-calendar-heatmap`
+- [Mood × sleep scatterplot](/visualizations/mindfulness-mood/mood-sleep-scatter/theme-colors/), `mood-sleep-scatter`
+- [Mood day timeline](/visualizations/mindfulness-mood/mood-day-timeline/theme-colors/), `mood-day-timeline`
+- [Mood by association](/visualizations/mindfulness-mood/mood-association-breakdown/theme-colors/), `mood-association-breakdown`
+- [Mood label cloud](/visualizations/mindfulness-mood/mood-label-cloud/theme-colors/), `mood-label-cloud`
+- [Mood volatility](/visualizations/mindfulness-mood/mood-volatility/theme-colors/), `mood-volatility`
+- [Daily vs momentary mood](/visualizations/mindfulness-mood/mood-kind-split/theme-colors/), `mood-kind-split`
+- [Circadian mood clock](/visualizations/mindfulness-mood/mood-circadian-clock/theme-colors/), `mood-circadian-clock`
+- [Recovery + mindset tile](/visualizations/mindfulness-mood/mood-recovery-tile/theme-colors/), `mood-recovery-tile`
+- [Mood association matrix](/visualizations/mindfulness-mood/mood-association-matrix/theme-colors/), `mood-association-matrix`
 
 ### Medications
 
-- [Medication overview](/visualizations/medication-adherence/medication-overview/theme-colors/) — `medication-overview`
-- [Medication inventory](/visualizations/medication-adherence/medication-inventory/theme-colors/) — `medication-inventory`
-- [Medication adherence summary](/visualizations/medication-adherence/medication-adherence-summary/theme-colors/) — `medication-adherence-summary`
-- [Medication dose status](/visualizations/medication-adherence/medication-dose-status/theme-colors/) — `medication-dose-status`
-- [Medication adherence trend](/visualizations/medication-adherence/medication-adherence-trend/theme-colors/) — `medication-adherence-trend`
-- [Medication recent dose events](/visualizations/medication-adherence/medication-recent-dose-events/theme-colors/) — `medication-recent-dose-events`
+- [Medication overview](/visualizations/medication-adherence/medication-overview/theme-colors/), `medication-overview`
+- [Medication inventory](/visualizations/medication-adherence/medication-inventory/theme-colors/), `medication-inventory`
+- [Medication adherence summary](/visualizations/medication-adherence/medication-adherence-summary/theme-colors/), `medication-adherence-summary`
+- [Medication dose status](/visualizations/medication-adherence/medication-dose-status/theme-colors/), `medication-dose-status`
+- [Medication adherence trend](/visualizations/medication-adherence/medication-adherence-trend/theme-colors/), `medication-adherence-trend`
+- [Medication recent dose events](/visualizations/medication-adherence/medication-recent-dose-events/theme-colors/), `medication-recent-dose-events`
 
 ### Mobility, gait, and running form
 
-- [Walking symmetry](/visualizations/mobility-gait/walking-symmetry/theme-colors/) — `walking-symmetry`
+- [Walking symmetry](/visualizations/mobility-gait/walking-symmetry/theme-colors/), `walking-symmetry`
 
 ### Workouts
 
-- [Workout log](/visualizations/workout-analytics/workout-log/theme-colors/) — `workout-log`
-- [Workout heart rate](/visualizations/workout-analytics/workout-heart-rate/theme-colors/) — `workout-heart-rate`
-- [Workout zones](/visualizations/workout-analytics/workout-zones/theme-colors/) — `workout-zones`
-- [Workout trends](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
-- [Workout intervals](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
-- [Workout map](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
+- [Workout log](/visualizations/workout-analytics/workout-log/theme-colors/), `workout-log`
+- [Workout heart rate](/visualizations/workout-analytics/workout-heart-rate/theme-colors/), `workout-heart-rate`
+- [Workout zones](/visualizations/workout-analytics/workout-zones/theme-colors/), `workout-zones`
+- [Workout trends](/visualizations/workout-analytics/workout-trends/theme-colors/), `workout-trends`
+- [Workout intervals](/visualizations/workout-analytics/workout-intervals/theme-colors/), `workout-intervals`
+- [Workout map](/visualizations/workout-analytics/workout-map/theme-colors/), `workout-map`
 
 ## Foundation roadmap
 
@@ -175,11 +175,11 @@ The biggest product gap is not one missing chart. It is a generic schema-aware m
 
 ### Planned
 
-- **Generic schema-aware metric accessor** — read `_healthmd_data_dictionary.json` for labels, units, categories, aggregation rules, and aliases.
-- **Generic metric trend** — line/area chart for any numeric exported key.
-- **Generic metric bars** — generalized daily/weekly/monthly bars with goal and threshold lines.
-- **Generic calendar heatmap** — any daily numeric metric as a calendar grid.
-- **Visualization coverage report** — show fields present in a vault vs fields covered by dedicated renderers.
+- **Generic schema-aware metric accessor**, read `_healthmd_data_dictionary.json` for labels, units, categories, aggregation rules, and aliases.
+- **Generic metric trend**, line/area chart for any numeric exported key.
+- **Generic metric bars**, generalized daily/weekly/monthly bars with goal and threshold lines.
+- **Generic calendar heatmap**, any daily numeric metric as a calendar grid.
+- **Visualization coverage report**, show fields present in a vault vs fields covered by dedicated renderers.
 
 ---
 
@@ -187,9 +187,9 @@ The biggest product gap is not one missing chart. It is a generic schema-aware m
 
 ### Built
 
-- [`intro-stats`](/visualizations/overview-trends/intro-stats/theme-colors/) — dataset summary with totals, averages, sleep, and vitals.
-- [`summary-card`](/visualizations/overview-trends/summary-card/theme-colors/) — Apple-style KPI card with sparkline and prior-period comparison.
-- [`trend-tile`](/visualizations/overview-trends/trend-tile/theme-colors/) — trends-card comparison between current and prior windows.
+- [`intro-stats`](/visualizations/overview-trends/intro-stats/theme-colors/), dataset summary with totals, averages, sleep, and vitals.
+- [`summary-card`](/visualizations/overview-trends/summary-card/theme-colors/), Apple-style KPI card with sparkline and prior-period comparison.
+- [`trend-tile`](/visualizations/overview-trends/trend-tile/theme-colors/), trends-card comparison between current and prior windows.
 
 ### Planned
 
@@ -201,7 +201,7 @@ The biggest product gap is not one missing chart. It is a generic schema-aware m
 
 ## Activity
 
-Health.md exports steps, active energy, basal energy, exercise time, stand time, flights climbed, walking/running distance, cycling, swimming, wheelchair activity, downhill snow distance, move time, physical effort, and VO₂ max.
+Health.md exports steps, active energy, basal energy, exercise time, stand time, flights climbed, and walking/running distance. It also exports cycling, swimming, wheelchair activity, downhill snow distance, move time, physical effort, and VO₂ max.
 
 ### Built
 
@@ -321,7 +321,7 @@ Health.md exports weight, height, BMI, body fat percentage, lean body mass, and 
 
 ## Mobility, gait, and running form
 
-Health.md exports walking speed, step length, double support, walking asymmetry, stair ascent/descent speed, six-minute walk, walking steadiness, running speed, running stride length, ground contact time, vertical oscillation, and running power.
+Health.md exports walking speed, step length, double support, walking asymmetry, stair ascent/descent speed, six-minute walk, and walking steadiness. It also exports running speed, running stride length, ground contact time, vertical oscillation, and running power.
 
 ### Built
 
@@ -339,7 +339,7 @@ Health.md exports walking speed, step length, double support, walking asymmetry,
 
 ## Workouts
 
-Health.md exports workout counts, minutes, calories, distance, workout types, heart-rate stats, running/cycling form metrics, power, elevation, laps, splits, route points, heart-rate zones, and workout time-series samples.
+Health.md exports workout counts, minutes, calories, distance, workout types, heart-rate statistics, and running/cycling form metrics. It also exports power, elevation, laps, splits, route points, heart-rate zones, and workout time-series samples.
 
 ### Built
 
@@ -437,7 +437,7 @@ Health.md exports dietary calories, protein, carbohydrates, fat, saturated fat, 
 
 ## Vitamins and minerals
 
-Health.md exports vitamins A, B6, B12, C, D, E, K, thiamin, riboflavin, niacin, folate, biotin, pantothenic acid, calcium, iron, potassium, magnesium, phosphorus, zinc, selenium, copper, manganese, chromium, molybdenum, chloride, and iodine.
+Health.md exports vitamins A, B6, B12, C, D, E, and K. It also exports thiamin, riboflavin, niacin, folate, biotin, and pantothenic acid. Exported minerals include calcium, iron, potassium, magnesium, phosphorus, zinc, selenium, copper, manganese, chromium, molybdenum, chloride, and iodine.
 
 ### Built
 
@@ -491,7 +491,7 @@ Health.md exports menstrual flow, sexual activity, ovulation test result, cervic
 
 ## Symptoms
 
-Health.md exports daily symptom counts for headache, fatigue, nausea, dizziness, mood changes, sleep changes, appetite changes, hot flashes, chills, fever, lower back pain, bloating, constipation, diarrhea, heartburn, coughing, sore throat, runny nose, shortness of breath, chest pain, skipped heartbeat, rapid heartbeat, acne, dry skin, hair loss, memory lapse, night sweats, vomiting, abdominal cramps, breast pain, pelvic pain, body ache, fainting, loss of smell, loss of taste, wheezing, sinus congestion, bladder incontinence, and vaginal dryness.
+Health.md exports daily counts for headache, fatigue, nausea, dizziness, mood changes, sleep changes, appetite changes, hot flashes, chills, and fever. It also exports lower back pain, bloating, constipation, diarrhea, heartburn, coughing, sore throat, runny nose, and shortness of breath. Other counts cover chest pain, skipped heartbeat, rapid heartbeat, acne, dry skin, hair loss, memory lapse, night sweats, and vomiting. They also cover abdominal cramps, breast pain, pelvic pain, body ache, fainting, loss of smell, loss of taste, and wheezing. The remaining counts cover sinus congestion, bladder incontinence, and vaginal dryness.
 
 ### Built
 

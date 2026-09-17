@@ -3,7 +3,7 @@ title: "iPhone onboarding"
 description: "Complete Health.md's seven-step iPhone setup: review a sample export, authorize Apple Health, choose a Files destination, decide whether to unlock, and prepare the first export."
 ---
 
-Onboarding appears the first time you open Health.md on iPhone. It explains the local export model, discloses automatically collected first-party product analytics, and gets the two required connections—Apple Health and a folder you control—ready before the first run. Product analytics never includes health values, metric names, health dates, exported files, paths, peer names, credentials, or user text.
+Onboarding appears the first time you open Health.md on iPhone. It explains the local export model and discloses automatic first-party product analytics. It prepares the two required connections before the first run: Apple Health and a folder that you control. Product analytics never includes health values, metric names, health dates, exported files, paths, peer names, credentials, or user text.
 
 <div class="availability available">
 <strong>Available now · Health.md for iPhone</strong>
@@ -29,13 +29,13 @@ Onboarding appears the first time you open Health.md on iPhone. It explains the 
 
 ## What onboarding does not lock in
 
-Onboarding establishes a safe starting point; it does not permanently fix your export behavior. From the Export and Settings tabs you can later change:
+Onboarding establishes a safe starting point. It does not permanently fix your export behavior. From the Export and Settings tabs you can later change:
 
-- the local folder and export target;
-- date range and lookback;
-- selected metrics and special authorizations;
-- Markdown, CSV, JSON, and Obsidian Bases output;
-- filenames, units, frontmatter, and write behavior;
+- the local folder and export target.
+- date range and lookback.
+- selected metrics and special authorizations.
+- Markdown, CSV, JSON, and Obsidian Bases output.
+- filenames, units, frontmatter, and write behavior.
 - scheduling and Mac connectivity.
 
 ## Run the first export

@@ -21,9 +21,9 @@ Running `healthmd mcp` without a subcommand returns local discovery. It does not
 | `healthmd mcp serve-read-only` | Serve readiness and typed-query tools over stdio; omit pairing and export tools. |
 | `healthmd mcp schema [TOOL]` | Print one tool schema or the complete fixed catalog. |
 
-Default release builds include these local stdio commands. The experimental `serve-http` command is source-build-only; see [Remote MCP architecture](/docs/mcp/#portable-direct-mcp-preview) before enabling it.
+Default release builds include these local stdio commands. The experimental `serve-http` command is source-build-only. See [Remote MCP architecture](/docs/mcp/#portable-direct-mcp-preview) before enabling it.
 
-All subcommands accept the [global options](/docs/cli-reference/#global-options). After a server starts, stdout is reserved for MCP JSON-RPC; `--json` and `--human` do not change the protocol.
+All subcommands accept the [global options](/docs/cli-reference/#global-options). After a server starts, stdout is reserved for MCP JSON-RPC. `--json` and `--human` do not change the protocol.
 
 ## `healthmd mcp serve`
 
@@ -68,7 +68,7 @@ healthmd mcp schema
 
 ## Wake environment
 
-MCP query and job operations use the same 120-second wake window as the shell commands. Set `HEALTHMD_WAKE_TIMEOUT=<SECONDS>` for the server process; use `0` to disable waiting. Set `HEALTHMD_NO_WAKE=1` to disable the best-effort notification nudge.
+MCP query and job operations use the same 120-second wake window as the shell commands. Set `HEALTHMD_WAKE_TIMEOUT=<SECONDS>` for the server process. Use `0` to disable waiting. Set `HEALTHMD_NO_WAKE=1` to disable the best-effort notification nudge.
 
 ## Experimental Streamable HTTP
 

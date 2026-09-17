@@ -3,7 +3,7 @@ title: "API Endpoint"
 description: "Send selected Apple Health JSON directly from iPhone to your own HTTP(S) endpoint."
 ---
 
-<p>API Endpoint is an export target for users who want Health.md data to flow into their own server, webhook, database, dashboard, or automation. The iPhone still reads Apple Health; instead of writing files, it POSTs JSON to the endpoint you configure.</p>
+<p>API Endpoint is an export target for users who want Health.md data to flow into their own server, webhook, database, dashboard, or automation. The iPhone still reads Apple Health. Instead of writing files, it POSTs JSON to the endpoint you configure.</p>
 
 <div class="callout">
 <strong>Privacy reminder.</strong>
@@ -25,7 +25,7 @@ description: "Send selected Apple Health JSON directly from iPhone to your own H
 
 ## Payload shape
 
-<p>Health.md sends one POST per export action. The body is an independently versioned <code>healthmd.api_export</code> envelope containing public schema-v8 <code>healthmd.health_data</code> daily records. API envelope v1 carries the daily records; v2 can additionally carry provider sidecars without changing the daily-record schema.</p>
+<p>Health.md sends one POST per export action. The body is an independently versioned <code>healthmd.api_export</code> envelope containing public schema-v8 <code>healthmd.health_data</code> daily records. API envelope v1 carries the daily records. V2 can additionally carry provider sidecars without changing the daily-record schema.</p>
 
 <div class="options">
 <div class="option"><strong><code>records</code></strong><p>Complete daily schema-v8 objects retained for the requested range, including complete-empty records whose query manifest is evidence.</p></div>
@@ -51,10 +51,10 @@ description: "Send selected Apple Health JSON directly from iPhone to your own H
 
 <ul>
 <li>Test with one day before uploading a long backfill.</li>
-<li>Keep Lossless Health Records enabled when source completeness matters; reduce the date range for dense routes, clinical documents, ECGs, or attachments.</li>
+<li>Keep Lossless Health Records enabled when source completeness matters. Reduce the date range for dense routes, clinical documents, ECGs, or attachments.</li>
 <li>Validate the token server-side before storing any payload.</li>
 <li>Use <code>records[].date</code> as the primary per-day key.</li>
-<li>Return a concise error body; Health.md only displays a short preview.</li>
+<li>Return a concise error body. Health.md only displays a short preview.</li>
 </ul>
 
 ## Troubleshooting
@@ -70,7 +70,7 @@ description: "Send selected Apple Health JSON directly from iPhone to your own H
 ## Related
 
 <div class="related">
-  <a href="/docs/export/"><span>Source</span>Export — choose targets, date ranges, and run manual exports.</a>
-  <a href="/docs/reference/api-and-cli/"><span>Schema</span>API and CLI Reference — exact envelopes, versions, failure behavior, and generated examples.</a>
-  <a href="/docs/format/"><span>Output</span>Format Customization — JSON, CSV, Markdown, units, and fields.</a>
+  <a href="/docs/export/"><span>Source</span>Export, choose targets, date ranges, and run manual exports.</a>
+  <a href="/docs/reference/api-and-cli/"><span>Schema</span>API and CLI Reference, exact envelopes, versions, failure behavior, and generated examples.</a>
+  <a href="/docs/format/"><span>Output</span>Format Customization, JSON, CSV, Markdown, units, and fields.</a>
 </div>

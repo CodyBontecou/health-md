@@ -40,26 +40,26 @@ Le client portable prend en charge le jumelage, l’état, l’export brut, les 
 Les commandes directes se jumellent aux sources iPhone (protocole v1) ou Android (protocole v2). L’`extract` canonique et chaque commande de requête typée sont des fonctionnalités iPhone ; les sources directes Android renvoient des instantanés bruts Health Connect natifs du fournisseur et des fichiers générés.
 
 ```bash
-# État de préparation et confiance locale
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# Export brut natif de la plateforme ; omettre --output pour diffuser le JSON/NDJSON validé sur stdout
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# Requête typée via le même registre d’opérations que MCP (iPhone)
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# Extraction canonique ciblée (iPhone)
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Fichiers générés en production sur tous les systèmes d’exploitation de la CLI
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# Opérations persistantes
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

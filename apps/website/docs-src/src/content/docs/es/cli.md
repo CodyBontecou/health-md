@@ -40,26 +40,26 @@ El cliente portátil admite emparejamiento, estado, exportación sin procesar, d
 Los comandos directos se emparejan con fuentes iPhone (protocolo v1) o Android (protocolo v2). El `extract` canónico y cada comando de consulta tipada son capacidades de iPhone; las fuentes directas de Android devuelven instantáneas sin procesar nativas del proveedor Health Connect y archivos generados.
 
 ```bash
-# Disponibilidad y confianza local
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# Exportación sin procesar nativa de la plataforma; omite --output para transmitir JSON/NDJSON validado a stdout
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# Consulta tipada a través del mismo registro de operaciones que MCP (iPhone)
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# Extracción canónica con alcance (iPhone)
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Archivos generados por producción en todos los sistemas operativos de la CLI
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# Operaciones persistentes
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

@@ -40,26 +40,26 @@ De draagbare client ondersteunt koppeling, status, onbewerkte export, bestemming
 Rechtstreekse opdrachten koppelen met iPhone-bronnen (protocol v1) of Android-bronnen (protocol v2). Canonieke `extract` en elke getypeerde queryopdracht zijn iPhone-mogelijkheden; rechtstreekse Android-bronnen geven providerspecifieke onbewerkte Health Connect-snapshots en gegenereerde bestanden terug.
 
 ```bash
-# Gereedheid en lokaal vertrouwen
+# Readiness and local trust
 healthmd status
 healthmd direct devices
 
-# Platform-eigen onbewerkte export; laat --output weg om gevalideerde JSON/NDJSON naar stdout te streamen
+# Platform-native raw export; omit --output to stream validated JSON/NDJSON to stdout
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 
-# Getypeerde query via hetzelfde bewerkingsregister als MCP (iPhone)
+# Typed query through the same operation registry as MCP (iPhone)
 healthmd query healthmd_sleep_sessions \
   --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
 
-# Canonieke extractie met bereik (iPhone)
+# Scoped canonical extraction (iPhone)
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Productiegegenereerde bestanden op elk CLI-besturingssysteem
+# Production-generated files on every CLI OS
 mkdir -p "$HOME/Documents/HealthVault"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 
-# Persistente bewerkingen
+# Durable operations
 healthmd status --job JOB_UUID
 healthmd resume JOB_UUID --output resumed.json
 healthmd cancel JOB_UUID

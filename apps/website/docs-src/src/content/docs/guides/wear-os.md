@@ -19,6 +19,6 @@ description: The Wear OS companion is deferred and is not included in the curren
 
 ## Target
 
-Wear is targeted for the Android 1.10.0 qualification cycle. It will ship only after exact Play-signed builds pass physical Pixel Watch and Samsung Galaxy Watch checks, battery runs, install/upgrade/reconnect scenarios, screenshot review, and independent release approval.
+Wear is targeted for the Android 1.10.0 qualification cycle. Exact Play-signed builds must first pass physical Pixel Watch and Samsung Galaxy Watch checks. They must also pass battery runs, install, upgrade, reconnect, screenshot review, and independent release approval.
 
 Until then, use the Android phone app for Health Connect exports, schedules, widgets, and Direct CLI pairing.

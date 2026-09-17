@@ -278,7 +278,7 @@ O IP manual permanece criptografado em uma rede local ou no Tailscale. O Tailsca
 | `direct_export_paused` | Inspecione a tarefa, reabra o telefone emparelhado e retome-a. |
 | `direct_cancellation_pending` | Reabra o telefone emparelhado e tente cancelar novamente. |
 | `transport_unsupported` | Use IP manual ou Tailscale no cliente portátil. |
-| `backend_unsupported` | Use o backend do app para Mac para consultas, evidências, diagnóstico, métricas ou MCP. |
+| `backend_unsupported` | Somente o auxiliar Swift incluído: use o modo loopback do Mac padrão dele para consultas, evidências, diagnóstico ou métricas. A CLI autônoma usa `healthmd mcp serve` em vez disso. |
 | `invalid_direct_raw_response` | Não consuma a saída. Preserve os diagnósticos de validação. |
 | `invalid_direct_file_receipt` | Não repare os arquivos manualmente. Inspecione e retome a tarefa. |
 | `job_expired` | O período de sete dias do estado terminou. Confirme antes de iniciar uma nova tarefa. |

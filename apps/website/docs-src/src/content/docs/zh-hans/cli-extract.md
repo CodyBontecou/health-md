@@ -221,10 +221,10 @@ healthmd extract --category Sleep --last 30 \
 独立 CLI 直接对已配对的 iPhone 执行提取。Health.md Mac 版内置的 Swift 辅助程序默认经由 Mac 应用回环完成同一提取，也可通过其 `--backend direct` 前缀直达：
 
 ```bash
-# Standalone CLI（macOS、Linux、Windows）：直连，无需 Mac 应用
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# 内置 Mac 辅助程序：绕过 Mac 应用
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```

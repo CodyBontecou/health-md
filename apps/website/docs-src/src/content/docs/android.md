@@ -1,6 +1,6 @@
 ---
 title: Android App
-description: Set up Health.md for Android, export Health Connect data to Markdown, Obsidian Bases, JSON, and CSV, choose Storage Access Framework folders, schedule exports, and automate with Tasker or adb.
+description: Set up Health.md for Android. Export Health Connect data, select Storage Access Framework folders, schedule exports, and automate with Tasker or adb.
 ---
 
 <div class="docs-hero">
@@ -22,7 +22,7 @@ description: Set up Health.md for Android, export Health Connect data to Markdow
 
 ## What the Android app does
 
-Health.md for Android turns Health Connect into a local-first health journal. Choose the metrics you care about, preview the output, then export clean files to a local folder, Obsidian vault, synced provider folder, or any Android document provider that grants write access.
+Health.md for Android turns Health Connect into a local-first health journal. Choose the metrics that you need and preview the output. Then export files to a local folder, Obsidian vault, synced provider folder, or writable Android document provider.
 
 <div class="options">
   <div class="option"><strong>Health Connect source</strong><p>Reads activity, sleep, heart, vitals, body measurements, nutrition, workouts, and other categories through Android's on-device Health Connect APIs.</p></div>
@@ -104,11 +104,11 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-Automation uses the active profile by default, including its frozen destination, formats, metrics, accounting, and history. A supplied `PROFILE` extra can select a stable profile ID or name; an unknown reference fails closed instead of using current settings. Scheduled runs also stay bound to their profile. See [Export profiles](/docs/export-profiles/).
+Automation uses the active profile by default, including its frozen destination, formats, metrics, accounting, and history. A supplied `PROFILE` extra can select a stable profile ID or name. An unknown reference fails closed instead of using current settings. Scheduled runs also stay bound to their profile. See [Export profiles](/docs/export-profiles/).
 
 ### Background readiness and scheduled cancellation
 
-- Allow background Health Connect reads for unattended exports; otherwise open Health.md to complete the health-data read.
+- Allow background Health Connect reads for unattended exports. Otherwise open Health.md to complete the health-data read.
 - Keep notifications enabled so Android can show active work, foreground-service state, results, and recovery actions.
 - Grant Alarms & reminders only when you want exact-alarm scheduling. Without it, durable WorkManager work remains available but the chosen time is approximate.
 - Cancelling a scheduled run stops only that attempt. Completed dates remain complete, unresolved dates can be retried, and the recurring schedule remains enabled.
@@ -121,11 +121,11 @@ Google Fit is intentionally excluded from the supported-provider surface because
 
 ### Exact local-day steps
 
-Daily step totals use exact zoned-local-day boundaries. Health.md clips and splits overlapping Health Connect intervals at local midnight before aggregating, so travel and daylight-saving changes do not shift steps into the wrong day.
+Daily step totals use exact zoned-local-day boundaries. Before aggregation, Health.md clips and splits overlapping Health Connect intervals at local midnight. Thus, travel and daylight-saving changes do not move steps into the wrong day.
 
 ## Distribution, pricing, and switching
 
-- **Google Play:** 10 free manual export actions, followed by one lifetime purchase through Google Play Billing. There is no subscription. Restore Purchase uses the purchasing Google account. The current release is phone-only; the Wear OS companion is deferred to a later qualification cycle.
+- **Google Play:** 10 free manual export actions, followed by one lifetime purchase through Google Play Billing. There is no subscription. Restore Purchase uses the purchasing Google account. The current release is phone-only. The Wear OS companion is deferred to a later qualification cycle.
 - **F-Droid:** unlimited access is included. There is no free counter, Billing dependency, paywall, purchase, or restore action.
 - **F-Droid scope:** Health Connect only, with no Wear OS integration, direct cloud-provider OAuth, Play review, attribution, or Health.md onboarding telemetry.
 - **Shared outcome:** both channels use the same Health Connect capture, exporters, schemas, automation actions, and direct-device protocol.
@@ -133,7 +133,7 @@ Daily step totals use exact zoned-local-day boundaries. Health.md clips and spli
 
 A channel switch does not migrate purchases, settings, history, credentials, or private transfer state. Exported files remain in the destination you chose.
 
-If Google Play Billing disconnects transiently, the Play build reconnects and refreshes entitlement state automatically. A temporary service loss does not permanently remove Premium; use Restore Purchase only if the account remains unresolved after connectivity returns.
+If Google Play Billing disconnects transiently, the Play build reconnects and refreshes entitlement state automatically. A temporary service loss does not permanently remove Premium. Use Restore Purchase only if the account remains unresolved after connectivity returns.
 
 ## Privacy model
 
@@ -143,7 +143,7 @@ Health.md for Android is local-first:
 - Exports are written directly to folders you choose.
 - Health.md does not run a health-data cloud service.
 - Settings and export history stay on-device.
-- Billing is handled by Google Play in the Play build; F-Droid includes unlimited access without Billing and contains no Health.md telemetry code or telemetry identity/state.
+- Billing is handled by Google Play in the Play build. F-Droid includes unlimited access without Billing and contains no Health.md telemetry code or telemetry identity/state.
 - Provider-backed folders sync according to that provider's own terms.
 
 If you want the strictest local setup, run manual exports to a local device folder and leave scheduled exports and provider-backed sync disabled.

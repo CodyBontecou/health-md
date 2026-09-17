@@ -5,7 +5,7 @@ description: Export immutable, versioned JSON or NDJSON snapshots of Health Conn
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Android · archival-grade export</p>
-  <p>Raw API Snapshot is a separate Health.md for Android export product for migration and archival workflows: one immutable, versioned JSON or NDJSON artifact per selected range, preserving native records.</p>
+  <p>Raw API Snapshot is a separate Health.md for Android export product for migration and archival workflows. It creates one immutable, versioned JSON or NDJSON artifact per selected range. The artifact preserves native records.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
     <a class="docs-button-secondary" href="/docs/android/">Android App Guide</a>
@@ -16,11 +16,11 @@ description: Export immutable, versioned JSON or NDJSON snapshots of Health Conn
 
 Compatibility exports convert Health Connect records into readable daily `HealthData` summaries. A raw snapshot skips that conversion entirely:
 
-- **Health Connect snapshots** preserve every field exposed by the pinned AndroidX API, including native identity and metadata, nanosecond timestamps, nullable source offsets, raw enum values, nested samples, stages, routes, and planned-workout structures.
+- **Health Connect snapshots** preserve every field that the pinned AndroidX API exposes. These fields include native identity, metadata, timestamps, source offsets, enum values, nested samples, stages, routes, and planned-workout structures.
 - **Fitbit, Oura, WHOOP, and Withings snapshots** preserve the exact successful provider response bytes and disclose endpoint pagination and server-side aggregation. Providers that are not supported are reported rather than normalized or silently replaced with Health Connect data.
 - Every artifact ends with a **manifest** containing per-type status, issues, counts, and checksums. Folder exports also receive a `.sha256` sidecar.
 
-A raw snapshot is API-complete for the app's pinned provider API, not a transactional provider-database backup. It cannot recover inaccessible records, original units the API does not expose, deleted records, or fields unknown to the installed SDK.
+A raw snapshot is API-complete for the app's pinned provider API. It is not a transactional provider-database backup. It cannot recover inaccessible or deleted records. It also cannot recover unexposed original units or fields that the installed SDK does not know.
 
 ## Preview before destination
 
@@ -39,13 +39,13 @@ Raw API uploads are deliberately stricter than compatibility API exports:
 
 ## Incremental archives
 
-The separately versioned `healthmd.raw-changes` backend uses Health Connect change tokens and deletion tombstones for future incremental archive workflows, so a full snapshot does not have to be the only archival strategy.
+The separately versioned `healthmd.raw-changes` backend uses Health Connect change tokens and deletion tombstones. This supports future incremental archives as an alternative to full snapshots.
 
 ## Requirements
 
 - Health.md for Android with the Raw API Snapshot product.
 - Health Connect permissions for the selected record types, or a connected Fitbit, Oura, WHOOP, or Withings account for provider snapshots.
-- An HTTPS endpoint if you upload snapshots; local folder export has no transport requirements.
+- An HTTPS endpoint if you upload snapshots. Local folder export has no transport requirements.
 
 ## Where to learn more
 

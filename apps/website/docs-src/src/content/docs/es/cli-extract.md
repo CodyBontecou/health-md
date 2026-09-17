@@ -221,10 +221,10 @@ La bandera cambia el comportamiento de emisión y salida. No elimina diagnóstic
 La CLI independiente ejecuta la extracción directamente contra el iPhone emparejado. El asistente Swift incluido dentro de Health.md para Mac alcanza la misma extracción de forma predeterminada mediante el loopback de la app de Mac, o directamente con su prefijo `--backend direct`:
 
 ```bash
-# Standalone CLI (macOS, Linux, Windows): directo, sin app de Mac
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Asistente de Mac incluido: omite la app de Mac
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```

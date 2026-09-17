@@ -98,7 +98,7 @@ healthmd query --category Activity --last 365 \
   --all-pages --output activity-all-pages.json
 ```
 
-The response keeps the first `healthmd.query_response` under `query`, later versioned responses under `pages`, and a `healthmd.cli_query_receipt` v1 containing page, item, fact, and evidence counts plus terminal traversal status.
+The response keeps the first `healthmd.query_response` under `query` and later versioned responses under `pages`. A `healthmd.cli_query_receipt` v1 contains page, item, fact, and evidence counts. It also contains the terminal traversal status.
 
 Automatic traversal has an aggregate page and byte ceiling. If reached, narrow the date or metric selection or use the [low-level API](/docs/agent-api/) to page manually.
 
@@ -143,20 +143,20 @@ healthmd sleep sessions --all --all-pages
 
 Each session can report:
 
-- stable session identity;
-- owner date and local timezone;
-- exact local and UTC start and end timestamps;
-- overnight or nap classification;
-- selected stage totals;
-- observed and untracked duration;
-- completeness and exclusions;
-- fixed session-relative window;
-- adjacent-day physiology coverage;
+- stable session identity.
+- owner date and local timezone.
+- exact local and UTC start and end timestamps.
+- overnight or nap classification.
+- selected stage totals.
+- observed and untracked duration.
+- completeness and exclusions.
+- fixed session-relative window.
+- adjacent-day physiology coverage.
 - source evidence.
 
 Session acquisition requests lossless canonical sleep-stage intervals and the complete canonical stage metric set. Health.md reads at most one technical adjacent owner day for boundaries, then excludes unrelated dates from the result.
 
-Overlapping stage sources are deduplicated for total asleep duration. Aggregate-only cached context is labeled `aggregated`; it does not claim interval observation coverage. A fixed `first:4h` window never apportions a daily aggregate across four hours.
+Overlapping stage sources are deduplicated for total asleep duration. Aggregate-only cached context is labeled `aggregated`. It does not claim interval observation coverage. A fixed `first:4h` window never apportions a daily aggregate across four hours.
 
 ## Workout and sleep alignment
 
@@ -171,11 +171,11 @@ healthmd training align --last 14 --workout running \
 
 For each selected workout, Health.md finds the nearest eligible preceding and following sleep sessions within 36 hours. It reports:
 
-- stable workout and session IDs;
-- exact timing gaps;
-- requested sleep windows;
-- physiology sample counts;
-- stage and session coverage;
+- stable workout and session IDs.
+- exact timing gaps.
+- requested sleep windows.
+- physiology sample counts.
+- stage and session coverage.
 - evidence and exclusions.
 
 The operation is deterministic temporal alignment. It does not claim that a workout caused a sleep result or that sleep caused workout performance. It reads no more than two technical adjacent owner days and does not return unrelated data.
@@ -190,7 +190,7 @@ healthmd workouts \
   --format table
 ```
 
-Workout listing preserves stable identity, exact timestamps, typed details, evidence, and missingness. Results are ordered by start timestamp and stable workout identity. There is no fixed total workout cap; page controls bound each response.
+Workout listing preserves stable identity, exact timestamps, typed details, evidence, and missingness. Results are ordered by start timestamp and stable workout identity. There is no fixed total workout cap. Page controls bound each response.
 
 ## Coverage
 
@@ -272,13 +272,13 @@ When asking an agent a date-sensitive question, include the intended owner dates
 
 A safe summary should retain:
 
-- metric ID and canonical unit;
-- date range and timezone;
-- fresh, cached, or reuse-covered mode;
-- requested-scope and corpus status;
-- page traversal completion;
-- evidence references or source digest;
-- complete-empty and missing intervals;
+- metric ID and canonical unit.
+- date range and timezone.
+- fresh, cached, or reuse-covered mode.
+- requested-scope and corpus status.
+- page traversal completion.
+- evidence references or source digest.
+- complete-empty and missing intervals.
 - warnings, limitations, and unrelated skips.
 
 Do not average away failed days, treat absence as zero, or describe temporal alignment as a cause.

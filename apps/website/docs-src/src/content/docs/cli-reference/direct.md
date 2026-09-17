@@ -94,4 +94,4 @@ Use reset only when all local trust is unusable or intentionally being removed. 
 
 ## Transport
 
-The portable CLI supports Manual IP over a local network or Tailscale. `--transport nearby` is retained for compatibility but returns `transport_unsupported`; the CLI never silently switches transport.
+The portable CLI supports Manual IP over a local network or Tailscale. `--transport nearby` is retained for compatibility but returns `transport_unsupported`. The CLI never silently switches transport.

@@ -221,10 +221,10 @@ A flag altera a emissão e o comportamento de saída. Ela não remove os diagnó
 A CLI autônoma executa a extração diretamente no iPhone emparelhado. O auxiliar Swift incluído no Health.md para Mac alcança a mesma extração por padrão pelo loopback do app do Mac, ou diretamente com o prefixo `--backend direct` dele:
 
 ```bash
-# CLI autônoma (macOS, Linux, Windows): direta, sem app do Mac
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Auxiliar do Mac incluído: contorna o app do Mac
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
