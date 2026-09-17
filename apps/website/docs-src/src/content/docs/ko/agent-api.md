@@ -28,7 +28,7 @@ API는 포트 `17645`의 루프백에 바인딩됩니다. 검증된 IPv4 또는 
 
 이전 `/v1/agent/profiles` 및 `/v1/agent/activity/query` 라우트는 `410 removed_endpoint`를 반환합니다.
 
-직접 iPhone 백엔드는 이 HTTP 라우트를 호스팅하지 않습니다. 독립 실행형 `healthmd` 명령은 정규 추출 및 내보내기에 이를 사용하고, `healthmd mcp serve`는 iPhone 쿼리 프로토콜 v3를 통해 새 타입 지정 쿼리, 증거, 측정 항목 카탈로그, 준비 상태, 시각화 및 영속 내보내기 도구를 직접 구현합니다. 페어링과 MCP는 동일한 실행 파일 식별 정보를 사용하며, 새로 고침과 암호화된 Mac 컨텍스트는 이 HTTP API에만 해당합니다.
+직접 iPhone 액세스는 이 HTTP 라우트를 호스팅하지 않습니다. 독립 실행형 `healthmd` 명령은 정규 추출 및 내보내기에 이를 사용하고, `healthmd mcp serve`는 iPhone 쿼리 프로토콜 v3를 통해 새 타입 지정 쿼리, 증거, 측정 항목 카탈로그, 준비 상태, 시각화 및 영속 내보내기 도구를 직접 구현합니다. 페어링과 MCP는 동일한 실행 파일 식별 정보를 사용하며, 새로 고침과 암호화된 Mac 컨텍스트는 이 HTTP API에만 해당합니다.
 
 ## CLI 어댑터 우선 사용
 
@@ -292,6 +292,6 @@ curl --fail-with-body --max-time 30 \
   <a href="/ko/docs/agents/"><span>개요</span>로컬 에이전트 및 건강 컨텍스트: 설정, 암호화 저장소, 범위 및 보고 규칙.</a>
   <a href="/ko/docs/agent-queries/"><span>고수준</span>타입 지정 쿼리 활용법: 일반적인 측정 항목, 수면, 운동 및 증거 질문을 위한 검증된 명령.</a>
   <a href="/ko/docs/mcp/"><span>도구</span>로컬 MCP 서버: stdio 구성, 타입 지정 도구, 페이징 및 샌드박스 제한.</a>
-  <a href="/ko/docs/reference/api-and-cli/"><span>참조</span>API 및 CLI 계약: 내보내기, 추출, 쿼리, 직접 백엔드 및 운영 제한.</a>
+  <a href="/ko/docs/reference/api-and-cli/"><span>참조</span>API 및 CLI 계약: 내보내기, 추출, 쿼리, 직접 액세스 및 운영 제한.</a>
   <a href="/ko/docs/reference/evidence-packets/"><span>데이터 계약</span>압축 쿼리 및 증거 패킷: 유형, 커서, 작업 및 결정론적 패킷 ID.</a>
 </div>

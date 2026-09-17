@@ -37,7 +37,7 @@ Het gebruikelijke pad is `/Applications/Health.md.app/Contents/Helpers/healthmd-
 - Installeer de zelfstandige preview op macOS, Linux of Windows; de Mac-app en loopbackservice zijn niet vereist.
 - Koppel eenmaal een iPhone met queryondersteuning en houd Health.md voor elke nieuwe getypeerde aanvraag op de voorgrond. Android ondersteunt geen getypeerde MCP.
 - Gebruik Manual IP of Tailscale en systeemeigen opslag van inloggegevens; Linux vereist een ontgrendelde Secret Service-provider.
-- Configureer het geïnstalleerde compatibiliteitsprogramma of de stdio-server in hetzelfde binaire bestand. Beide gebruiken de gekoppelde directe backend.
+- Configureer het geïnstalleerde compatibiliteitsprogramma of de stdio-server in hetzelfde binaire bestand. Beide gebruiken de gekoppelde rechtstreekse toegang.
 
 ## Codex configureren
 

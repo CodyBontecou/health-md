@@ -20,7 +20,7 @@ O app lançado para Mac inclui dois auxiliares locais assinados: `healthmd-mcp` 
 | Desenvolver com base em envelopes exatos de solicitação e resposta | API de loopback ou contratos públicos | [API de loopback](/pt-br/docs/agent-api/) |
 | Analisar schemas, registros, evidências ou fixtures geradas | Referência versionada | [Contratos de dados](/pt-br/docs/reference/) |
 
-As escolhas de backend e transporte são explícitas; o Health.md não muda silenciosamente do acesso direto ao iPhone para o app para Mac.
+As escolhas de transporte são explícitas; a CLI autônoma nunca muda silenciosamente para o acesso pelo app para Mac.
 
 ## Codex com o app para Mac
 

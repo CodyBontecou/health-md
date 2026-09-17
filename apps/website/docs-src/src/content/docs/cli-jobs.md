@@ -33,16 +33,16 @@ A durable job has a fixed `expires_at` seven days after creation. Progress does 
 
 A job can persist:
 
-- exact dates or resolved all-history identifiers;
-- metric, category, source, and detail scope;
-- backend and paired-device binding;
-- settings policy;
-- raw profile or extraction selection;
-- file destination identity;
-- request fingerprint;
-- session and transfer manifests;
-- partition digest chain;
-- committed partition and byte frontier;
+- exact dates or resolved all-history identifiers.
+- metric, category, source, and detail scope.
+- paired-device binding.
+- settings policy.
+- raw profile or extraction selection.
+- file destination identity.
+- request fingerprint.
+- session and transfer manifests.
+- partition digest chain.
+- committed partition and byte frontier.
 - completion or cancellation acknowledgement.
 
 Resume cannot reinterpret any of these fields.
@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 Direct generated files:
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -99,10 +99,10 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-For direct mode, select the same backend, device, transport, port, and phone used by the original request:
+For direct mode, select the same device, transport, port, and phone used by the original request:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```
@@ -125,7 +125,7 @@ healthmd agent job cancel JOB_UUID
 
 Cancellation has two stages:
 
-1. the CLI records and sends a durable cancellation request;
+1. the CLI records and sends a durable cancellation request.
 2. the phone acknowledges cancellation and makes it terminal.
 
 If the phone is unavailable, the job remains `cancellation_pending`. Reopen the same phone and retry cancel. Do not report a job as cancelled based only on local intent.
@@ -235,7 +235,7 @@ An agent or scheduler should follow this order:
 2. Run `status --job` locally.
 3. Check whether the job is paused, terminal, expired, or awaiting acknowledgement.
 4. Reopen the same phone when fresh work or acknowledgement is needed.
-5. Resume the existing job with the same backend and device.
+5. Resume the existing job with the same device.
 6. Start a new job only after the prior outcome is known or expiration is explicitly accepted.
 
 Retrying a mutation blindly can duplicate source work even when file commits themselves are idempotent.
@@ -245,7 +245,7 @@ Retrying a mutation blindly can duplicate source work even when file commits the
 | Code | Meaning | Safe response |
 |---|---|---|
 | `timed_out` | The command stopped waiting before the job finished | Inspect the returned job and resume it |
-| `job_not_found` | No local durable record exists for that ID | Confirm backend and state directory before starting over |
+| `job_not_found` | No local durable record exists for that ID | Confirm the state directory before starting over |
 | `job_expired` | The fixed seven-day deadline elapsed | Record the gap and create a new request if appropriate |
 | `direct_export_paused` | Direct work needs the paired phone again | Reopen the phone and resume |
 | `direct_cancellation_pending` | Local cancel intent lacks phone acknowledgement | Reopen the phone and retry cancel |
@@ -270,7 +270,7 @@ Progress JSONL can include phase, page count, item count, dates, and safe diagno
 ## Related
 
 <div class="related">
-  <a href="/docs/cli/"><span>Setup</span>Health.md CLI: install, choose a backend, and understand command output.</a>
+  <a href="/docs/cli/"><span>Setup</span>Health.md CLI: install the standalone client and understand command output.</a>
   <a href="/docs/cli-direct/"><span>Direct</span>Direct phone CLI: pairing, foreground rules, explicit destination, and trusted resume.</a>
   <a href="/docs/agent-queries/"><span>Paging</span>Typed query cookbook: fresh and cached modes, page traversal, coverage, and receipts.</a>
   <a href="/docs/reference/generated/cli/exit-codes/"><span>Generated contract</span>CLI exit codes: production-generated status and error behavior.</a>

@@ -35,7 +35,7 @@ Un’attività può conservare:
 
 - le date esatte o gli identificatori risolti per l’intera cronologia;
 - l’ambito di metriche, categorie, sorgenti e livello di dettaglio;
-- il vincolo al backend e al dispositivo abbinato;
+- il vincolo al dispositivo abbinato;
 - i criteri per le impostazioni;
 - il profilo dei dati grezzi o la selezione per l’estrazione;
 - l’identità della destinazione dei file;
@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 File generati in modalità diretta:
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -99,10 +99,10 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-Per la modalità diretta, seleziona gli stessi backend, dispositivo, trasporto, porta e iPhone usati dalla richiesta originale:
+Per la modalità diretta, seleziona lo stesso dispositivo, trasporto, porta e iPhone usati dalla richiesta originale:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```
@@ -235,7 +235,7 @@ Un agente o un sistema di pianificazione deve procedere in quest’ordine:
 2. Eseguire localmente `status --job`.
 3. Verificare se l’attività è sospesa, definitiva, scaduta o in attesa di conferma.
 4. Riaprire lo stesso iPhone quando servono dati aggiornati o una conferma.
-5. Riprendere l’attività esistente con gli stessi backend e dispositivo.
+5. Riprendere l’attività esistente con lo stesso dispositivo.
 6. Avviare una nuova attività soltanto dopo aver accertato l’esito precedente o averne accettato esplicitamente la scadenza.
 
 Ripetere alla cieca un’operazione che modifica lo stato può duplicare il lavoro di origine, anche se il salvataggio dei file è idempotente.
@@ -245,7 +245,7 @@ Ripetere alla cieca un’operazione che modifica lo stato può duplicare il lavo
 | Codice | Significato | Risposta sicura |
 |---|---|---|
 | `timed_out` | Il comando ha smesso di attendere prima del completamento dell’attività | Controlla l’attività restituita e riprendila |
-| `job_not_found` | Non esiste un record persistente locale con quell’ID | Controlla backend e directory dello stato prima di ricominciare |
+| `job_not_found` | Non esiste un record persistente locale con quell’ID | Controlla la directory dello stato prima di ricominciare |
 | `job_expired` | È trascorso il termine fisso di sette giorni | Registra l’interruzione e, se opportuno, crea una nuova richiesta |
 | `direct_export_paused` | L’attività diretta richiede di nuovo l’iPhone abbinato | Riapri l’iPhone e riprendi l’attività |
 | `direct_cancellation_pending` | L’intenzione locale di annullare non è stata confermata dall’iPhone | Riapri l’iPhone e ripeti l’annullamento |
@@ -270,7 +270,7 @@ Il flusso JSONL dell’avanzamento può includere fase, numero di pagine, numero
 ## Argomenti correlati
 
 <div class="related">
-  <a href="/it/docs/cli/"><span>Configurazione</span>CLI di Health.md: installazione, scelta del backend e output dei comandi.</a>
+  <a href="/it/docs/cli/"><span>Configurazione</span>CLI di Health.md: installazione del client autonomo e output dei comandi.</a>
   <a href="/it/docs/cli-direct/"><span>Modalità diretta</span>CLI diretta per iPhone: abbinamento, periodo limitato in background, destinazione esplicita e ripresa attendibile.</a>
   <a href="/it/docs/agent-queries/"><span>Pagine</span>Ricettario delle query tipizzate: modalità aggiornata e cache, pagine, copertura e ricevute.</a>
   <a href="/it/docs/reference/generated/cli/exit-codes/"><span>Contratto generato</span>Codici di uscita della CLI: stati ed errori generati dagli strumenti di produzione.</a>

@@ -37,7 +37,7 @@ Codex / Claude / another local MCP host
 - 在 macOS、Linux 或 Windows 上安装独立预览版；无需 Mac 应用及其环回服务。
 - 与支持查询的 iPhone 配对一次，并在每次新的类型化请求期间保持 Health.md 前台运行。Android 不支持类型化 MCP。
 - 使用 Manual IP 或 Tailscale 连通性以及原生凭据存储；Linux 要求已解锁的 Secret Service 提供方。
-- 配置已安装的兼容启动器或同一二进制文件的 stdio 服务器。两者都使用已配对的直连后端。
+- 配置已安装的兼容启动器或同一二进制文件的 stdio 服务器。两者都使用已配对的直连访问。
 
 ## Codex 设置
 

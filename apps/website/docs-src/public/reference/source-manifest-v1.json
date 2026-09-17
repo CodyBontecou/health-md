@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "cdead2ecf56fa8cc76321fa67fe4f150a69afaff",
+  "docs_reference_git_tree": "969a4445396aeea017f8e296157e3a2aace47245",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "f5b3274835192ad6ccfaf1aba69c4b821b74ff901c8e682001866d48ef55d799",
+    "digest": "211456c9c01628498b203c62e0547a46ff1e235f7d250caf37e408747c6348ae",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -95,8 +95,8 @@
   "files": [
     {
       "path": "api-and-cli.md",
-      "bytes": 28785,
-      "sha256": "ae8a862d5752e572f5ab607638ecda8bb2a8280a6b8d81f0761739fed8131bd3",
+      "bytes": 29010,
+      "sha256": "e70dbc47aa9f0e884d6698e92e1b022c7f95ba1fb5e554c195f3d57cc778cb30",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/api-and-cli/",
@@ -115,8 +115,8 @@
     },
     {
       "path": "connected-mac-iphone-protocol.md",
-      "bytes": 23011,
-      "sha256": "7e6fd1e8e957a7f0b5fc3398f2d9117e753d74651552f0bcae46034c069a3af2",
+      "bytes": 23093,
+      "sha256": "06d903d8fb7378dbd50269ff495678a11e13baa399d663427d071874b29d8b67",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/connected-mac-iphone-protocol/",
@@ -1859,8 +1859,8 @@
     },
     {
       "path": "src/content/docs/reference/api-and-cli.md",
-      "bytes": 29136,
-      "sha256": "f604b5282264b38bb4b62b396f775354bdce532ddcdd758ca5df34e4e3c14991",
+      "bytes": 29361,
+      "sha256": "832b63edba1a1f6df40dc1a9857b0c0e984997b01c38bec9c0de032f75724aa0",
       "classification": "rendered-page",
       "route": "/docs/reference/api-and-cli/"
     },
@@ -1873,8 +1873,8 @@
     },
     {
       "path": "src/content/docs/reference/connected-mac-iphone-protocol.md",
-      "bytes": 23383,
-      "sha256": "8d9f5df347cd3f7c5d590bf60495d20695624001584cc39bc99b438c4b157e1e",
+      "bytes": 23465,
+      "sha256": "d9bc8060aba67a53beb396cfdda05eca03e786855c0d94422a0fc717b4929959",
       "classification": "rendered-page",
       "route": "/docs/reference/connected-mac-iphone-protocol/"
     },

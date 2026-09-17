@@ -21,8 +21,9 @@ healthmd on macOS / Linux / Windows
 open Health.md iOS or Android app -> platform health provider -> private bounded export spool
 ```
 
-Manual IP is portable. Apple's MultipeerConnectivity-based Nearby transport remains available only
-in the legacy Swift client. No command silently falls back to another backend or transport.
+Manual IP is portable. Apple's MultipeerConnectivity-based Nearby transport is available only in the
+Swift helper bundled inside Health.md for Mac and is not part of this CLI. No command silently falls
+back to another transport, and the CLI never connects through the Health.md Mac app.
 
 ### Bounded wake window
 

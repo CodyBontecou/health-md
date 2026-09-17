@@ -3,7 +3,7 @@ title: "Direct phone CLI"
 description: "Pair healthmd with an iPhone or Android phone over Manual IP or Tailscale, then export without running Health.md for Mac."
 ---
 
-The direct backend connects `healthmd` to an open Health.md app on iPhone or Android without routing the command through Health.md for Mac. The phone reads its platform health store — HealthKit on iPhone, Health Connect on Android — stages the result in protected storage, and transfers validated partitions to the CLI.
+The `healthmd` CLI connects directly to an open Health.md app on iPhone or Android. The standalone CLI never requires or routes through Health.md for Mac, and it has no backend selection. The phone reads its platform health store: HealthKit on iPhone or Health Connect on Android. It stages the result in protected storage and transfers validated partitions to the CLI.
 
 ```text
 healthmd on the computer
@@ -19,7 +19,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 
 ## Mobile compatibility for 0.1.0-alpha.6
 
-This standalone compatibility table is the actionable matrix for the explicitly unqualified preview. Basic iPhone and Android connectivity is physically confirmed; no public CLI/mobile pair has completed and retained the full qualification matrix yet.
+This standalone compatibility table is the actionable matrix for the explicitly unqualified preview. Basic iPhone and Android connectivity is physically confirmed. No public CLI/mobile pair has completed and retained the full qualification matrix yet.
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
@@ -30,21 +30,21 @@ This standalone compatibility table is the actionable matrix for the explicitly 
 
 ## What direct mode supports
 
-- shared selector-3 one-time pairing and trusted reconnect with iPhone (application v1) or Android (application v2) sources;
-- local trusted-device inspection and unpairing;
-- live phone readiness;
-- strict raw export — schema-v8 `healthmd.health_data` on iPhone, provider-native Health Connect snapshots on Android;
-- selected canonical extraction (iPhone only);
-- production-generated file export on both phone platforms;
-- durable local job status and resume;
-- explicit cancellation;
+- shared selector-3 one-time pairing and trusted reconnect with iPhone (application v1) or Android (application v2) sources.
+- local trusted-device inspection and unpairing.
+- live phone readiness.
+- strict raw export, schema-v8 `healthmd.health_data` on iPhone, provider-native Health Connect snapshots on Android.
+- selected canonical extraction (iPhone only).
+- production-generated file export on both phone platforms.
+- durable local job status and resume.
+- explicit cancellation.
 - the same-executable `healthmd mcp serve` stdio server with direct typed queries, metric catalog, evidence, MCP Apps UI, and PNG fallback (iPhone only).
 
-The `healthmd` command's direct backend does not emulate the Mac app's encrypted-context HTTP routes, so Mac-oriented `doctor`, query, evidence, and refresh subcommands still return `backend_unsupported` rather than switching backends. Use `healthmd mcp serve` for fresh direct-iPhone typed analysis, or run `healthmd setup codex` to configure and pair Codex automatically. `healthmd mcp schema [TOOL]` prints the exact nested MCP input schema and examples locally; use `healthmd_sleep_sessions` directly for sleep rather than treating canonical `extract` output as the typed query API.
+The bundled Swift helper that ships inside Health.md for Mac also offers a compatible direct mode. Select it with `--backend direct`. The standalone Rust CLI shown on this page is direct-only and accepts no backend flag. Mac-oriented `doctor`, query, evidence, and refresh subcommands belong to that bundled helper. They return `backend_unsupported` in its direct mode. They do not exist in the standalone Rust grammar and never switch to the Mac app. Use `healthmd mcp serve` for fresh direct-iPhone typed analysis. Run `healthmd setup codex` to configure and pair Codex automatically. `healthmd mcp schema [TOOL]` prints the exact nested MCP input schema and local examples. Use `healthmd_sleep_sessions` directly for sleep. Canonical `extract` output is not the typed query API.
 
 ## Requirements
 
-- A direct-capable `healthmd` binary and a matching Health.md build: iPhone (application v1) or Android (application v2). Android pairing requires the portable Rust client; the bundled macOS helper pairs with iPhone only.
+- A direct-capable `healthmd` binary and a matching Health.md build: iPhone (application v1) or Android (application v2). Android pairing requires the portable Rust client. The bundled macOS helper pairs with iPhone only.
 - Health.md open in the foreground on the phone for pairing and new commands.
 - **Settings > Mac Sync > Direct CLI Access** enabled on iPhone, or **Settings → Direct CLI** on Android.
 - Platform health permission (HealthKit or Health Connect), protected data, local network permission, and export quota available.
@@ -71,12 +71,12 @@ Start the listener on the computer:
 healthmd direct pair --transport manual-ip
 ```
 
-The portable Rust client renders one universal iOS/Android QR and writes its shared 20-digit code, candidate computer addresses, listener port, and a six-digit legacy-iOS fallback to stderr. The bundled macOS helper still prints only its legacy six-digit iPhone code. stdout stays reserved for the final JSON result.
+The portable Rust client renders one universal iOS/Android QR. It writes its shared 20-digit code, candidate computer addresses, listener port, and six-digit legacy-iOS fallback to stderr. The bundled macOS helper prints only its legacy six-digit iPhone code. stdout stays reserved for the final JSON result.
 
 On iPhone:
 
 1. Open **Health.md > Sync > CLI > Direct CLI Access**.
-2. Tap **Scan Pairing QR** and scan the universal QR shown by the portable CLI. A valid in-app scan starts pairing immediately; do not open it as a custom URL.
+2. Tap **Scan Pairing QR** and scan the universal QR shown by the portable CLI. A valid in-app scan starts pairing immediately. Do not open it as a custom URL.
 3. If scanning is unavailable, enable **Manual IP** and enter the LAN/Tailscale address, port, and shared 20-digit code. Six-digit entry remains available only for the bundled or another legacy Apple client.
 4. Keep the app open until both sides report success.
 
@@ -87,9 +87,9 @@ Portable pairing codes expire when their bounded listener closes (after two minu
 Android pairing uses the portable Rust client's same universal selector-3 QR and 20-digit (~66-bit) code. Android never downgrades its application protocol to iPhone v1.
 
 1. Open **Health.md > Settings → Direct CLI** on the Android phone.
-2. Tap **Scan pairing QR**; a valid in-app scan starts pairing immediately.
+2. Tap **Scan pairing QR**. A valid in-app scan starts pairing immediately.
 3. If camera access or hardware is unavailable, enter the same LAN/Tailscale address, port, and 20-digit code manually.
-4. Keep the app open; Android runs a visible, user-started data-sync foreground service for an active direct session. Both Play and F-Droid builds use CameraX and ZXing Core rather than a Google-only scanner service.
+4. Keep the app open. Android runs a visible, user-started data-sync foreground service for an active direct session. Both Play and F-Droid builds use CameraX and ZXing Core rather than a Google-only scanner service.
 
 After the one-time code is consumed, reconnect trust is Keystore-backed.
 
@@ -97,7 +97,7 @@ Use a different port when needed:
 
 ```bash
 healthmd --port 18000 direct pair --transport manual-ip
-healthmd --backend direct --port 18000 status
+healthmd --port 18000 status
 ```
 
 Keep using the same explicit port for later status, export, resume, and cancel commands.
@@ -121,12 +121,12 @@ healthmd direct devices
 healthmd direct unpair DEVICE_UUID
 ```
 
-These commands read or modify local trust and do not contact the phone. On iPhone, use **Forget Paired CLI** to remove the other side; on Android, remove the pairing from **Settings → Direct CLI**.
+These commands read or modify local trust and do not contact the phone. On iPhone, use **Forget Paired CLI** to remove the other side. On Android, remove the pairing from **Settings → Direct CLI**.
 
 When more than one phone is trusted, select the intended installation explicitly:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID status
+healthmd --device DEVICE_UUID status
 ```
 
 Use `healthmd direct reset-trust --confirm` only when local trust is corrupt or belongs to a replaced installation. It removes all local direct pairings. Forget those pairings on the phone before starting over.
@@ -134,15 +134,13 @@ Use `healthmd direct reset-trust --confirm` only when local trust is corrupt or 
 ## Check live readiness
 
 ```bash
-healthmd --backend direct --transport manual-ip status
+healthmd --transport manual-ip status
 ```
 
-A direct status response reports connection and safety state without health values. The portable client reports the source under `source` with a `platform` of `ios` or `android`; the bundled helper exposes the `iphone` fields below. Check these fields before starting work (iPhone source shown):
+A direct status response reports connection and safety state without health values. The portable client reports the source under `source` with a `platform` of `ios` or `android`. iPhone sources repeat the same data under `iphone`. Check these fields before starting work (iPhone source shown):
 
 | Field | Ready state |
 |---|---|
-| `backend` | `direct` |
-| `mac_app` | `bypassed` |
 | `direct_cli.paired` | `true` |
 | `iphone.connected` | `true` |
 | `iphone.app_active` | `true` for new work |
@@ -150,7 +148,7 @@ A direct status response reports connection and safety state without health valu
 | `iphone.can_trigger_raw_exports` | `true` for raw and extract |
 | `iphone.can_trigger_exports` | `true` for generated files |
 
-The direct status destination remains unselected. File mode uses only the explicit `--destination` supplied to the command.
+Direct status reports no selected destination. File mode uses only the explicit `--destination` supplied to the command.
 
 An Android source reports `platform: "android"` with `app_active`, `protected_data_available`, `export_in_progress`, and its available raw products instead of the iPhone trigger flags.
 
@@ -159,11 +157,11 @@ An Android source reports `platform: "android"` with `app_active`, `protected_da
 Choose one range selector:
 
 ```bash
-healthmd --backend direct export --yesterday --raw --output yesterday.json
-healthmd --backend direct export --last 7 --raw --output week.json
-healthmd --backend direct export \
+healthmd export --yesterday --raw --output yesterday.json
+healthmd export --last 7 --raw --output week.json
+healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd --backend direct export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --output complete-health-corpus.json
 ```
 
 Omit `--output` to stream validated JSON to stdout. An output file is safer for sensitive or large responses.
@@ -174,14 +172,14 @@ A complete-empty day is successful. Missing, partial, failed, cancelled, unsuppo
 
 ## Provider-native raw export (Android)
 
-The portable Rust client is direct by default, so Android raw commands omit the `--backend` flag:
+The portable Rust client has no backend flag, so Android raw commands use the same grammar:
 
 ```bash
 healthmd export --last 7 --raw --provider health_connect \
   --raw-format ndjson --output health-connect.ndjson
 ```
 
-`--provider` names one explicit provider and defaults to `health_connect`. `--raw-format` defaults to NDJSON, the recommended shape for large snapshots; in-memory JSON validation is capped at 64 MiB. Metric selection supports `--metric` and `--all-metrics`, but not canonical or generated-file selectors — those remain iPhone capabilities.
+`--provider` names one explicit provider and defaults to `health_connect`. `--raw-format` defaults to NDJSON, the recommended shape for large snapshots. In-memory JSON validation is capped at 64 MiB. Metric selection supports `--metric` and `--all-metrics`, but not canonical or generated-file selectors, those remain iPhone capabilities.
 
 Android raw snapshots keep their Health Connect provider-native contract. They are never converted into HealthKit-shaped `healthmd.health_data` days, and related-but-different statistics keep their own identities.
 
@@ -190,10 +188,10 @@ Android raw snapshots keep their Health Connect provider-native contract. They a
 Direct extraction uses the same durable raw transport but returns selected source-shaped data instead of the transport wrapper. It is an iPhone capability:
 
 ```bash
-healthmd --backend direct extract \
+healthmd extract \
   --category Sleep --last 7 --output sleep.json
 
-healthmd --backend direct extract \
+healthmd extract \
   --metric workouts --last 14 --object records \
   --detail lossless --output workout-records.json
 ```
@@ -207,26 +205,26 @@ Direct file mode asks the phone to run Health.md's production exporters, then tr
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday \
+healthmd export --yesterday \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --last 7 \
+healthmd export --last 7 \
   --category Sleep --detail summary \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday --use-iphone-settings \
+healthmd export --yesterday --use-iphone-settings \
   --destination "$HOME/Documents/HealthVault"
 ```
 
-The destination must already exist, be absolute, and not resolve through a symlink. Direct mode never guesses or uses a Mac app bookmark. `--output` is for raw or extraction output; `--destination` is for generated files.
+The destination must already exist, be absolute, and not resolve through a symlink. Direct mode never guesses or uses a Mac app bookmark. `--output` is for raw or extraction output. `--destination` is for generated files.
 
 By default, a request keeps saved formats, Health subfolder, filenames, templates, write mode, Daily Note Injection, and Daily Notes Only. It suppresses roll-ups and summary-only mode for that job. Repeatable `--metric` or `--category` options plus `--detail` replace only the job's metric and detail scope. `--use-iphone-settings` mirrors all saved settings and cannot combine with selectors.
 
 The iPhone can stage JSON, CSV, Markdown, ZIP, data dictionaries, roll-ups, individual records, daily notes, and provider sidecars. The CLI validates each relative path, byte count, digest, file manifest, destination identity, and request fingerprint before committing. It rejects traversal, symlink ancestors, root mutation, path collisions, and digest changes. Overwrite is atomic. Append and Markdown merge use persisted plans so a replay does not duplicate content.
 
-Generated-file destinations for both iPhone protocol v1 and Android protocol v2 work on every CLI operating system — macOS, Linux, and Windows. Android caps each generated job at 4,096 files.
+Generated-file destinations support iPhone protocol v1 and Android protocol v2. They work on macOS, Linux, and Windows. Android limits each generated job to 4,096 files.
 
-Android protocol v2 file jobs take their output settings from the device's saved export selections or from `--profile PROFILE_ID`; CLI metric, category, and detail selectors are rejected for Android file jobs. On either phone platform, `--profile` resolves frozen output settings while the required `--destination` remains the explicit computer folder. For stable IDs and fail-closed profile behavior, see [Export profiles](/docs/export-profiles/).
+Android protocol v2 file jobs use the device's saved export selections or `--profile PROFILE_ID`. Android file jobs reject CLI metric, category, and detail selectors. On either phone platform, `--profile` resolves frozen output settings. The required `--destination` remains the explicit computer folder. For stable IDs and fail-closed profile behavior, see [Export profiles](/docs/export-profiles/).
 
 ## Foreground and background behavior
 
@@ -234,10 +232,10 @@ Pairing and new work require the phone app in the foreground. Direct CLI Access 
 
 For query, export, extract, resume, and cancel, the portable CLI keeps an unavailable request open
 for a bounded 120-second wake window. Unlock and open Health.md before it expires and the same
-request continues without a re-run. Use `--wake-timeout SECONDS` per command (`0` disables); MCP
+request continues without a re-run. Use `--wake-timeout SECONDS` per command (`0` disables). MCP
 uses `HEALTHMD_WAKE_TIMEOUT` and emits health-free progress when the caller supplied a progress
 token. Published alpha.6 binaries are wait-only. In subsequent official builds, an enrolled iPhone
-also receives one best-effort APNs notification through Health.md's notification-only wake service;
+also receives one best-effort APNs notification through Health.md's notification-only wake service.
 Android and unenrolled iPhones remain wait-only. The notification can restore user presence but
 never authorizes a HealthKit read or sends health scope through the Worker.
 
@@ -245,18 +243,18 @@ On iPhone, if an export is already connected when the app moves to the backgroun
 
 On Android, an active direct session runs a visible, user-started data-sync foreground service. Keep the app in the foreground for pairing and new work.
 
-On iPhone, a global activity banner during direct work includes capture and transfer phase, completed days, byte progress, and paused or completed status without displaying health values.
+On iPhone, a global activity banner shows the capture and transfer phase, completed days, byte progress, and job status. It does not display health values.
 
-While the phone app remains foreground, a trusted direct session may reconnect automatically after a transient disconnect, retrying with backoff delays capped at a short maximum. The host wake window waits for that reconnect but does not launch a suspended app, bypass unlock, or promise background access.
+While the phone app remains foreground, a trusted direct session can reconnect automatically after a transient disconnect. It retries with short, capped backoff delays. The host wake window waits for that reconnect. It does not launch a suspended app, bypass unlock, or promise background access.
 
 ## Durable resume and cancel
 
 Direct jobs expire seven days after creation. Timeout, Ctrl-C, process death, disconnect, and background expiration do not cancel them.
 
 ```bash
-healthmd --backend direct status --job JOB_UUID
-healthmd --backend direct resume JOB_UUID --timeout 300 --output recovered.json
-healthmd --backend direct cancel JOB_UUID
+healthmd status --job JOB_UUID
+healthmd resume JOB_UUID --timeout 300 --output recovered.json
+healthmd cancel JOB_UUID
 ```
 
 Resume keeps the original dates, settings, destination, request fingerprint, device, and partition frontier. You cannot point a file job at a different destination during resume.
@@ -266,12 +264,12 @@ Cancel records a durable request, but cancellation becomes terminal only after t
 ## Security model
 
 - Current portable onboarding uses ephemeral key agreement and selector-3 transcript proofs bound to one shared high-entropy 20-digit (~66-bit) iOS/Android code. Legacy Apple selector 1 and Android selector 2 remain byte-compatible.
-- QR handoffs are accepted only by explicit in-app scanners for canonical private-LAN/Tailscale addresses; external custom-URL opens cannot authorize pairing.
+- QR handoffs are accepted only by explicit in-app scanners for canonical private-LAN/Tailscale addresses. External custom-URL opens cannot authorize pairing.
 - Reconnect proves a random stored secret and both installation identities.
 - Each connection derives fresh keys and nonces.
 - Messages and binary frames use ChaCha20-Poly1305 with monotonic sequence checks.
 - Partitions use SHA-256 manifests and a chained digest frontier.
-- iPhone trust is stored in Keychain; Android reconnect trust is Keystore-backed.
+- iPhone trust is stored in Keychain. Android reconnect trust is Keystore-backed.
 - Portable trust uses Keychain, Secret Service, or Windows Credential Manager and never falls back to plaintext.
 - Spools and journals use private application storage and exclude backups where the platform supports it.
 
@@ -288,7 +286,7 @@ Manual IP remains encrypted on a local network or Tailscale. Tailscale protects 
 | `direct_export_paused` | Inspect the job, reopen the paired phone, and resume it. |
 | `direct_cancellation_pending` | Reopen the paired phone and retry cancel. |
 | `transport_unsupported` | Use Manual IP or Tailscale in the portable client. |
-| `backend_unsupported` | Use the Mac app backend for query, evidence, doctor, metrics, or MCP. |
+| `backend_unsupported` | Bundled Swift helper only: use its default Mac loopback mode for query, evidence, doctor, or metrics. The standalone CLI uses `healthmd mcp serve` instead. |
 | `invalid_direct_raw_response` | Do not consume the output. Keep validation diagnostics. |
 | `invalid_direct_file_receipt` | Do not repair files manually. Inspect and resume the job. |
 | `job_expired` | The seven-day state lifetime ended. Confirm before starting new work. |
@@ -296,7 +294,7 @@ Manual IP remains encrypted on a local network or Tailscale. Tailscale protects 
 ## Related
 
 <div class="related">
-  <a href="/docs/cli/"><span>Overview</span>Health.md CLI: install the bundled helpers and choose the right backend.</a>
+  <a href="/docs/cli/"><span>Overview</span>Health.md CLI: install the standalone client and review the command map.</a>
   <a href="/docs/android/"><span>Android</span>Health.md for Android: Health Connect sources, folder destinations, and on-device automation.</a>
   <a href="/docs/cli-extract/"><span>Data</span>Canonical extraction: select and emit source-shaped Health.md data (iPhone).</a>
   <a href="/docs/cli-jobs/"><span>Reliability</span>Durable jobs and automation: resume, cancel, partial results, and scripting.</a>

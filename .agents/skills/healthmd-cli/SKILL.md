@@ -15,7 +15,7 @@ foreground Health.md mobile app → HealthKit or Health Connect
   → bounded typed results, canonical data, or generated files
 ```
 
-The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.7 binaries send one best-effort APNs notification when the selected iPhone has enrolled wake material; alpha.6 binaries were wait-only. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. Direct is the portable default. Do not add `--backend mac-app` or `--transport nearby`.
+The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.7 binaries send one best-effort APNs notification when the selected iPhone has enrolled wake material; alpha.6 binaries were wait-only. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. The CLI is direct-only and has no backend option; it never requires or contacts the Health.md Mac app. Do not add `--transport nearby`.
 
 ## Authorization and privacy first
 
@@ -152,7 +152,7 @@ durable-job cancellation.
 NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 ```
 
-Require the selected phone to be authenticated, active enough for new work, and ready for the requested operation. Respect `active_job_id` and all protected-data, permission, and capability fields. `backend: direct` and `mac_app: bypassed` confirm the standalone path. Direct generated-file mode always uses the explicit `--destination`; it never uses a Mac bookmark.
+Require the selected phone to be authenticated, active enough for new work, and ready for the requested operation. Respect `active_job_id` and all protected-data, permission, and capability fields. Status contains no backend or Mac fields; the standalone path is the only path. Direct generated-file mode always uses the explicit `--destination`; it never uses a Mac bookmark.
 
 ## Query typed health data
 
@@ -264,7 +264,7 @@ When values were requested, also preserve canonical units/statistics, owner date
 2. `healthmd status --job JOB_UUID` — durable state after any started operation.
 3. `healthmd status` or `healthmd_doctor` — live readiness.
 4. Verify the selected phone, foreground state, Direct CLI Access, address/port, local-network permission, native credential storage, and LAN/Tailscale reachability.
-5. Resume the same job when appropriate; never switch peer, transport, port, or backend silently.
+5. Resume the same job when appropriate; never switch peer, transport, or port silently.
 
 Common actions:
 
@@ -282,4 +282,4 @@ Common actions:
 | `invalid_direct_file_receipt` | Do not append or merge manually; inspect and resume if allowed. |
 | `partial_canonical_extraction` | Review diagnostics; accept partial data only with explicit approval. |
 | `transport_unsupported` | Use Manual IP over LAN/Tailscale, not Nearby. |
-| `not_implemented` with `mac-app` | Remove the backend option; direct is default. |
+| `unknown_argument` after passing `--backend` | Remove it; the CLI is direct-only and has no backend option. |

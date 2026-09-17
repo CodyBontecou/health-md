@@ -25,7 +25,7 @@ These query contracts are independent from daily exports: `healthmd.health_data`
 
 1. **Mac app routes:** with Health.md for Mac open, `POST /v1/agent/query` and `POST /v1/agent/evidence` on the loopback listener (`127.0.0.1`/`::1`, port 17645). Loopback is the complete authorization boundary — see [Agent-local API](./agent-local-api.md).
 2. **MCP tools:** through the bundled `healthmd-mcp` helper (or portable `healthmd mcp serve`), call `healthmd_query`, `healthmd_evidence_packet`, or `healthmd_training_evidence` — see [Local MCP server](./local-mcp.md).
-3. **Portable CLI/MCP:** `healthmd mcp serve` on macOS, Linux, or Windows runs fresh typed queries directly against a paired, foreground iPhone over direct query protocol v3 — see [Direct iPhone CLI backend](./cli-direct-iphone.md).
+3. **Portable CLI/MCP:** `healthmd mcp serve` on macOS, Linux, or Windows runs fresh typed queries directly against a paired, foreground iPhone over direct query protocol v3 — see [Direct iPhone CLI access](./cli-direct-iphone.md).
 
 There is no in-app iPhone screen for queries; the iPhone's role is serving the typed protocol while Direct CLI Access is enabled.
 
@@ -94,7 +94,7 @@ A bounded response page carries typed items plus the context that makes them tru
 | `single_item_exceeds_page_bytes` limitation | One indivisible item exceeds `max_bytes` | Raise `max_bytes` (up to the public v1 maximum) and re-request that page |
 | `invalidCursor` / `cursorDoesNotMatchQuery` / `staleCursor` | Tampered cursor, different request, or a committed store mutation | Re-issue the query from the first page |
 | `traversal_complete: false` in an MCP wrapper | Automatic cursor traversal hit its bounded ceiling | Continue from `receipt.next_cursor` manually or narrow the scope |
-| `backend_unsupported` from the bundled Swift helper | Mac-context query/evidence subcommands were run with `--backend direct` | Use the default `mac-app` backend, or use portable `healthmd mcp serve` for direct queries |
+| `backend_unsupported` from the bundled Swift helper | Mac-context query/evidence subcommands were run with `--backend direct` | Use the helper's default Mac loopback mode, or use portable `healthmd mcp serve` for direct queries |
 | `query_scope_too_large` (direct protocol v3) | One foreground request exceeds the 366,000-day / 64 MiB compact-context guard | Partition dates or metrics across separate requests |
 | `query_unavailable` (retryable) | The iPhone could not complete the direct query | Keep Health.md foregrounded with protected data available and retry |
 

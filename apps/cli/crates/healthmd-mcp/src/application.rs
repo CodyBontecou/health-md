@@ -630,7 +630,6 @@ fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity
         "surface_profile": application.profile().wire_name(),
         "source_kind": backend.source_kind,
         "transport": backend.transport,
-        "requires_mac_app": false,
         "iphone_must_be_foreground": backend.requires_foreground_source,
         "requires_foreground_source": backend.requires_foreground_source,
         "supports_queries": backend.supports_queries,

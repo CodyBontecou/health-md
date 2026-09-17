@@ -42,7 +42,6 @@ Global options work before or after a subcommand.
 
 | Option | Description | Default |
 |---|---|---|
-| `--backend <direct\|mac-app>` | Select the execution backend. `direct` is the portable implementation; `mac-app` is reserved and currently unsupported. | `direct` |
 | `--transport <manual-ip\|nearby>` | Select the direct transport. Use `manual-ip` for LAN or Tailscale. The portable CLI does not support Nearby. | `manual-ip` |
 | `--device <UUID>` | Select a trusted phone. Required when more than one phone is paired. | Automatically selected when unambiguous. |
 | `--port <PORT>` | Use the TCP port saved in the phone's Direct CLI settings. | `17647` |

@@ -3,7 +3,7 @@ title: "직접 휴대전화 CLI"
 description: "수동 IP 또는 Tailscale을 통해 healthmd를 iPhone 또는 Android 휴대전화와 페어링한 뒤 Mac용 Health.md를 실행하지 않고 내보냅니다."
 ---
 
-직접 백엔드는 명령을 Mac용 Health.md를 통해 라우팅하지 않고 `healthmd`를 iPhone 또는 Android에서 열린 Health.md 앱에 연결합니다. 휴대전화는 플랫폼 건강 저장소 — iPhone에서는 HealthKit, Android에서는 Health Connect — 를 읽고 보호된 저장소에 결과를 준비한 뒤 검증된 파티션을 CLI로 전송합니다.
+`healthmd` CLI는 iPhone 또는 Android에서 열린 Health.md 앱에 직접 연결됩니다. 독립 CLI는 Mac용 Health.md를 전혀 필요로 하지 않고, 이를 거치지 않으며, 백엔드 선택도 존재하지 않습니다. 휴대전화는 플랫폼 건강 저장소 — iPhone에서는 HealthKit, Android에서는 Health Connect — 를 읽고 보호된 저장소에 결과를 준비한 뒤 검증된 파티션을 CLI로 전송합니다.
 
 ```text
 healthmd on the computer
@@ -40,7 +40,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 - 명시적 취소
 - 직접 타입 지정 쿼리, 측정 항목 카탈로그, 증거, MCP Apps UI 및 PNG 대체 출력을 갖춘 동일 실행 파일의 `healthmd mcp serve` stdio 서버(iPhone 전용)
 
-`healthmd` 명령의 직접 백엔드는 Mac 앱의 암호화 컨텍스트 HTTP 라우트를 에뮬레이션하지 않습니다. 따라서 Mac 지향 `doctor`, 쿼리, 증거 및 새로 고침 하위 명령은 백엔드를 전환하지 않고 계속 `backend_unsupported`를 반환합니다. 새로운 직접 iPhone 타입 지정 분석에는 `healthmd mcp serve`를 사용하거나 `healthmd setup codex`를 실행하여 Codex를 자동 구성하고 페어링하세요. `healthmd mcp schema [TOOL]`은 정확한 중첩 MCP 입력 스키마와 예제를 로컬에 출력합니다. 수면에는 `healthmd_sleep_sessions`를 직접 사용하고, 정규 `extract` 출력을 타입 지정 쿼리 API로 취급하지 마세요.
+Mac용 Health.md에 번들된 Swift 도우미도 `--backend direct`로 선택하는 호환 직접 모드를 제공합니다. 이 페이지에 나오는 독립 Rust CLI는 직접 전용이며 백엔드 플래그를 받지 않습니다. Mac 지향 `doctor`, 쿼리, 증거, 새로 고침 하위 명령은 해당 번들 도우미에 속하고 그 직접 모드에서는 `backend_unsupported`를 반환합니다. 독립 Rust 문법에는 존재하지 않으며 Mac 앱으로 전환되지 않습니다. 새로운 직접 iPhone 타입 지정 분석에는 `healthmd mcp serve`를 사용하거나 `healthmd setup codex`를 실행하여 Codex를 자동 구성하고 페어링하세요. `healthmd mcp schema [TOOL]`은 정확한 중첩 MCP 입력 스키마와 예제를 로컬에 출력합니다. 수면에는 `healthmd_sleep_sessions`를 직접 사용하고, 정규 `extract` 출력을 타입 지정 쿼리 API로 취급하지 마세요.
 
 ## 요구 사항
 
@@ -93,7 +93,7 @@ iPhone에서 다음을 수행합니다.
 
 ```bash
 healthmd --port 18000 direct pair --transport manual-ip
-healthmd --backend direct --port 18000 status
+healthmd --port 18000 status
 ```
 
 이후 상태, 내보내기, 재개 및 취소 명령에서도 동일한 명시적 포트를 계속 사용하세요.
@@ -122,7 +122,7 @@ healthmd direct unpair DEVICE_UUID
 둘 이상의 휴대전화가 신뢰된 경우 원하는 설치를 명시적으로 선택하세요.
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID status
+healthmd --device DEVICE_UUID status
 ```
 
 로컬 신뢰가 손상되었거나 교체된 설치에 속할 때만 `healthmd direct reset-trust --confirm`을 사용하세요. 모든 로컬 직접 페어링을 제거합니다. 다시 시작하기 전에 휴대전화에서도 해당 페어링을 지우세요.
@@ -130,15 +130,13 @@ healthmd --backend direct --device DEVICE_UUID status
 ## 실시간 준비 상태 확인
 
 ```bash
-healthmd --backend direct --transport manual-ip status
+healthmd --transport manual-ip status
 ```
 
-직접 상태 응답은 건강 값 없이 연결 및 안전 상태를 보고합니다. 이식 가능한 클라이언트는 소스를 `source` 아래에 보고하며 `platform`은 `ios` 또는 `android`입니다. 번들 도우미는 아래의 `iphone` 필드를 노출합니다. 작업 시작 전 다음 필드를 확인하세요(iPhone 소스 표시).
+직접 상태 응답은 건강 값 없이 연결 및 안전 상태를 보고합니다. 이식 가능한 클라이언트는 소스를 `source` 아래에 보고하며 `platform`은 `ios` 또는 `android`입니다. iPhone 소스는 동일한 데이터를 `iphone` 아래에도 보고합니다. 작업 시작 전 다음 필드를 확인하세요(iPhone 소스 표시).
 
 | 필드 | 준비 상태 |
 |---|---|
-| `backend` | `direct` |
-| `mac_app` | `bypassed` |
 | `direct_cli.paired` | `true` |
 | `iphone.connected` | `true` |
 | `iphone.app_active` | 새 작업의 경우 `true` |
@@ -146,7 +144,7 @@ healthmd --backend direct --transport manual-ip status
 | `iphone.can_trigger_raw_exports` | 원시 및 추출의 경우 `true` |
 | `iphone.can_trigger_exports` | 생성 파일의 경우 `true` |
 
-직접 상태의 대상은 선택되지 않은 상태로 유지됩니다. 파일 모드는 명령에 지정한 명시적 `--destination`만 사용합니다.
+직접 상태는 선택된 대상을 보고하지 않습니다. 파일 모드는 명령에 지정한 명시적 `--destination`만 사용합니다.
 
 Android 소스는 iPhone 트리거 플래그 대신 `platform: "android"`와 함께 `app_active`, `protected_data_available`, `export_in_progress` 및 사용 가능한 원시 제품을 보고합니다.
 
@@ -155,11 +153,11 @@ Android 소스는 iPhone 트리거 플래그 대신 `platform: "android"`와 함
 범위 선택자 하나를 선택하세요.
 
 ```bash
-healthmd --backend direct export --yesterday --raw --output yesterday.json
-healthmd --backend direct export --last 7 --raw --output week.json
-healthmd --backend direct export \
+healthmd export --yesterday --raw --output yesterday.json
+healthmd export --last 7 --raw --output week.json
+healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd --backend direct export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --output complete-health-corpus.json
 ```
 
 검증된 JSON을 stdout으로 스트리밍하려면 `--output`을 생략하세요. 민감하거나 큰 응답에는 출력 파일이 더 안전합니다.
@@ -170,7 +168,7 @@ complete-empty 날짜는 성공입니다. 요청한 데이터가 누락, 부분,
 
 ## 제공자 고유 원시 내보내기(Android)
 
-이식 가능한 Rust 클라이언트는 기본적으로 직접 모드이므로 Android 원시 명령은 `--backend` 플래그를 생략합니다.
+이식 가능한 Rust 클라이언트에는 백엔드 플래그가 없으므로 Android 원시 명령도 동일한 문법을 사용합니다.
 
 ```bash
 healthmd export --last 7 --raw --provider health_connect \
@@ -186,10 +184,10 @@ Android 원시 스냅샷은 Health Connect 제공자 고유 계약을 유지합�
 직접 추출은 동일한 영속 원시 전송을 사용하지만 전송 래퍼 대신 선택된 소스 형태 데이터를 반환합니다. 이 기능은 iPhone 전용입니다.
 
 ```bash
-healthmd --backend direct extract \
+healthmd extract \
   --category Sleep --last 7 --output sleep.json
 
-healthmd --backend direct extract \
+healthmd extract \
   --metric workouts --last 14 --object records \
   --detail lossless --output workout-records.json
 ```
@@ -205,14 +203,14 @@ healthmd --backend direct extract \
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday \
+healthmd export --yesterday \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --last 7 \
+healthmd export --last 7 \
   --category Sleep --detail summary \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday --use-iphone-settings \
+healthmd export --yesterday --use-iphone-settings \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -246,9 +244,9 @@ iPhone에서는 직접 작업 중 전역 활동 배너가 캡처 및 전송 단�
 직접 작업은 생성 7일 후 만료됩니다. 제한 시간, Ctrl-C, 프로세스 종료, 연결 해제 및 백그라운드 시간 만료로 취소되지 않습니다.
 
 ```bash
-healthmd --backend direct status --job JOB_UUID
-healthmd --backend direct resume JOB_UUID --timeout 300 --output recovered.json
-healthmd --backend direct cancel JOB_UUID
+healthmd status --job JOB_UUID
+healthmd resume JOB_UUID --timeout 300 --output recovered.json
+healthmd cancel JOB_UUID
 ```
 
 재개는 원래 날짜, 설정, 대상, 요청 지문, 기기 및 파티션 경계를 유지합니다. 재개 중 파일 작업을 다른 대상으로 지정할 수 없습니다.
@@ -280,7 +278,7 @@ healthmd --backend direct cancel JOB_UUID
 | `direct_export_paused` | 작업을 확인하고 페어링된 휴대전화를 다시 연 뒤 재개하세요. |
 | `direct_cancellation_pending` | 페어링된 휴대전화를 다시 열고 취소를 재시도하세요. |
 | `transport_unsupported` | 이식 가능한 클라이언트에서는 수동 IP 또는 Tailscale을 사용하세요. |
-| `backend_unsupported` | 쿼리, 증거, doctor, 측정 항목 또는 MCP에는 Mac 앱 백엔드를 사용하세요. |
+| `backend_unsupported` | 번들 Swift 도우미 전용: 쿼리, 증거, doctor, 측정 항목에는 기본 Mac 루프백 모드를 사용하세요. 독립 CLI는 대신 `healthmd mcp serve`를 사용합니다. |
 | `invalid_direct_raw_response` | 출력을 사용하지 마세요. 검증 진단을 보존하세요. |
 | `invalid_direct_file_receipt` | 파일을 수동으로 복구하지 마세요. 작업을 확인하고 재개하세요. |
 | `job_expired` | 7일 상태 수명이 끝났습니다. 새 작업을 시작하기 전에 확인하세요. |
@@ -288,7 +286,7 @@ healthmd --backend direct cancel JOB_UUID
 ## 관련 문서
 
 <div class="related">
-  <a href="/ko/docs/cli/"><span>개요</span>Health.md CLI: 번들 도우미를 설치하고 올바른 백엔드를 선택합니다.</a>
+  <a href="/ko/docs/cli/"><span>개요</span>Health.md CLI: 독립 클라이언트를 설치하고 명령 목록을 확인합니다.</a>
   <a href="/ko/docs/android/"><span>Android</span>Android용 Health.md: Health Connect 소스, 폴더 대상 및 기기 내 자동화.</a>
   <a href="/ko/docs/cli-extract/"><span>데이터</span>정규 추출: 소스 형태의 Health.md 데이터를 선택하고 출력합니다(iPhone).</a>
   <a href="/ko/docs/cli-jobs/"><span>안정성</span>영속 작업 및 자동화: 재개, 취소, 부분 결과 및 스크립팅.</a>

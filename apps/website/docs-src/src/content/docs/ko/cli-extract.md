@@ -5,7 +5,7 @@ description: "healthmd extract를 사용하여 선택한 Apple Health 측정 항
 
 `healthmd extract`는 스크립트와 에이전트를 위한 소스 데이터 명령입니다. iPhone에 선택한 측정 항목과 세부 정보만 가져오도록 요청하고, 영속 전송을 검증하며, 전송 엔벨로프를 제거한 뒤 정규 `healthmd.health_data` v8 문서 또는 명확히 표시된 프로젝션을 출력합니다.
 
-정규 추출은 Mac 앱 백엔드와 iOS v1 다이렉트 프로토콜을 기반으로 하는 iPhone 기능입니다. Android 다이렉트 소스는 대신 공급자 고유의 Health Connect 스냅샷을 [raw 내보내기](/ko/docs/cli-direct/)로 반환합니다.
+정규 추출은 iOS v1 다이렉트 프로토콜을 기반으로 하는 iPhone 기능입니다. Android 다이렉트 소스는 대신 공급자 고유의 Health Connect 스냅샷을 [raw 내보내기](/ko/docs/cli-direct/)로 반환합니다.
 
 원본 Health.md 데이터가 필요하면 추출을 사용하세요. 세션, 비교, 운동 시점 정렬, 데이터 범위 또는 증거 패킷이 필요하면 [타입 지정 쿼리](/ko/docs/agent-queries/)를 사용하세요.
 
@@ -216,20 +216,20 @@ healthmd extract --category Sleep --last 30 \
 
 이 플래그는 출력 및 종료 동작을 변경합니다. 진단을 제거하거나 부분 데이터를 완전한 데이터로 바꾸지 않습니다.
 
-## Mac 앱 및 직접 백엔드
+## 독립 CLI와 번들 Mac 도우미
 
-명령은 두 백엔드 모두에서 작동합니다.
+독립 CLI는 페어링된 iPhone에 대해 직접 추출을 실행합니다. Mac용 Health.md에 번들된 Swift 도우미는 기본적으로 Mac 앱 루프백을 통해, 또는 `--backend direct` 접두사로 직접 동일한 추출에 도달합니다.
 
 ```bash
-# Bundled helper default: Mac app loopback and connected iPhone
+# Standalone CLI(macOS, Linux, Windows): 직접, Mac 앱 불필요
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Direct-capable helper: bypass the Mac app
+# 번들 Mac 도우미: Mac 앱 우회
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-두 경로 모두 동일한 공개 일별 스키마와 엄격한 검증을 사용합니다. 전송, 페어링, 저장소 및 작업 레코드는 다릅니다. 두 경로 모두 iPhone 소스를 필요로 하며, Android 다이렉트 백엔드는 정규 추출을 구현하지 않습니다.
+두 경로 모두 동일한 공개 일별 스키마와 엄격한 검증을 사용합니다. 전송, 페어링, 저장소 및 작업 레코드는 다릅니다. 두 경로 모두 iPhone 소스를 필요로 하며, Android 다이렉트 소스는 정규 추출을 구현하지 않습니다.
 
 ## 긴 기록
 
@@ -255,7 +255,7 @@ iPhone은 선택한 레코드 중 가장 이른 날짜를 확인하고, 그 날�
 ## 관련 문서
 
 <div class="related">
-  <a href="/ko/docs/cli/"><span>CLI</span>Health.md CLI: 설정, 백엔드 선택, 명령 목록 및 출력 규칙.</a>
+  <a href="/ko/docs/cli/"><span>CLI</span>Health.md CLI: 독립 클라이언트를 설치하고 명령 목록을 확인합니다.</a>
   <a href="/ko/docs/agent-queries/"><span>파생 보기</span>타입 지정 쿼리 활용법: 측정 항목 계열, 수면, 훈련, 운동, 비교 및 증거.</a>
   <a href="/ko/docs/reference/daily-records/"><span>스키마</span>일별 레코드: 완전한 스키마 v8 일별 문서 계약.</a>
   <a href="/ko/docs/reference/canonical-healthkit-records/"><span>소스 아카이브</span>정규 Apple Health 레코드: 식별, 출처, 관계 및 페이로드.</a>

@@ -35,7 +35,7 @@ healthmd agent job resume JOB_UUID --timeout 300
 
 - 정확한 날짜 또는 확인된 전체 기록 식별자
 - 측정 항목, 카테고리, 소스 및 세부 정보 범위
-- 백엔드 및 페어링된 기기 연결
+- 페어링된 기기 연결
 - 설정 정책
 - 원시 프로필 또는 추출 선택
 - 파일 대상 식별 정보
@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 직접 생성 파일:
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -99,10 +99,10 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-직접 모드에서는 원래 요청에 사용한 것과 동일한 백엔드, 기기, 전송, 포트 및 iPhone을 선택하세요.
+직접 모드에서는 원래 요청에 사용한 것과 동일한 기기, 전송, 포트 및 iPhone을 선택하세요.
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```
@@ -235,7 +235,7 @@ fi
 2. 로컬에서 `status --job`을 실행합니다.
 3. 작업이 일시 중지, 최종 상태, 만료 또는 확인 대기 중인지 확인합니다.
 4. 새 작업 또는 확인이 필요하면 동일한 iPhone을 다시 엽니다.
-5. 동일한 백엔드와 기기로 기존 작업을 재개합니다.
+5. 동일한 기기로 기존 작업을 재개합니다.
 6. 이전 결과가 확인되었거나 만료를 명시적으로 수락한 뒤에만 새 작업을 시작합니다.
 
 파일 커밋 자체가 멱등적이어도 변경 작업을 무작정 재시도하면 소스 작업이 중복될 수 있습니다.
@@ -245,7 +245,7 @@ fi
 | 코드 | 의미 | 안전한 대응 |
 |---|---|---|
 | `timed_out` | 작업 완료 전에 명령의 대기가 중지됨 | 반환된 작업을 확인하고 재개 |
-| `job_not_found` | 해당 ID의 로컬 영속 레코드가 없음 | 새로 시작하기 전에 백엔드와 상태 디렉터리 확인 |
+| `job_not_found` | 해당 ID의 로컬 영속 레코드가 없음 | 새로 시작하기 전에 상태 디렉터리 확인 |
 | `job_expired` | 고정된 7일 기한이 지남 | 간격을 기록하고 적절하면 새 요청 생성 |
 | `direct_export_paused` | 직접 작업에 페어링된 iPhone이 다시 필요함 | iPhone을 다시 열고 재개 |
 | `direct_cancellation_pending` | 로컬 취소 의도에 iPhone 확인이 없음 | iPhone을 다시 열고 취소 재시도 |
@@ -270,7 +270,7 @@ healthmd query --category Sleep --last 30 \
 ## 관련 문서
 
 <div class="related">
-  <a href="/ko/docs/cli/"><span>설정</span>Health.md CLI: 설치, 백엔드 선택 및 명령 출력 이해.</a>
+  <a href="/ko/docs/cli/"><span>설정</span>Health.md CLI: 독립 클라이언트를 설치하고 명령 출력을 이해합니다.</a>
   <a href="/ko/docs/cli-direct/"><span>직접</span>직접 iPhone CLI: 페어링, 제한된 백그라운드 시간, 명시적 대상 및 신뢰할 수 있는 재개.</a>
   <a href="/ko/docs/agent-queries/"><span>페이징</span>타입 지정 쿼리 활용법: 새 데이터 및 캐시 모드, 페이지 순회, 데이터 범위 및 수신 확인.</a>
   <a href="/ko/docs/reference/generated/cli/exit-codes/"><span>생성된 계약</span>CLI 종료 코드: 프로덕션에서 생성된 상태 및 오류 동작.</a>

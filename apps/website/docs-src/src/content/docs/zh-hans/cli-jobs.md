@@ -35,7 +35,7 @@ healthmd agent job resume JOB_UUID --timeout 300
 
 - 精确日期或解析后的全部历史标识符；
 - 指标、类别、来源和详细程度范围；
-- 后端和已配对设备绑定；
+- 已配对设备绑定；
 - 设置策略；
 - 原始配置或提取选择；
 - 文件目标位置身份；
@@ -99,7 +99,7 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-直连模式必须选择原始请求使用的同一后端、设备、传输方式、端口和 iPhone：
+直连模式必须选择原始请求使用的同一设备、传输方式、端口和 iPhone：
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID \
@@ -235,7 +235,7 @@ fi
 2. 在本地运行 `status --job`。
 3. 检查作业是已暂停、已终止、已过期，还是正在等待确认。
 4. 需要获取新数据或确认时，重新打开同一台 iPhone。
-5. 使用相同的后端和设备恢复现有作业。
+5. 使用相同的设备恢复现有作业。
 6. 只有在已明确知道先前结果，或明确接受先前作业过期后，才启动新作业。
 
 即使文件提交本身具备幂等性，盲目重试会产生副作用的操作仍可能重复来源端工作。
@@ -245,7 +245,7 @@ fi
 | 代码 | 含义 | 安全处理方式 |
 |---|---|---|
 | `timed_out` | 作业完成前，命令已停止等待 | 检查返回的作业并恢复 |
-| `job_not_found` | 该 ID 没有对应的本地持久记录 | 重新开始前确认后端和状态目录 |
+| `job_not_found` | 该 ID 没有对应的本地持久记录 | 重新开始前确认状态目录 |
 | `job_expired` | 固定的七天期限已过 | 记录缺口，并在适当时创建新请求 |
 | `direct_export_paused` | 直连作业需要已配对的 iPhone 重新连接 | 重新打开 iPhone 并恢复 |
 | `direct_cancellation_pending` | 本地取消意图尚未得到 iPhone 确认 | 重新打开 iPhone 并再次执行取消 |
@@ -270,7 +270,7 @@ healthmd query --category Sleep --last 30 \
 ## 相关内容
 
 <div class="related">
-  <a href="/zh-hans/docs/cli/"><span>设置</span>Health.md CLI：安装、选择后端并理解命令输出。</a>
+  <a href="/zh-hans/docs/cli/"><span>设置</span>Health.md CLI：安装独立客户端并理解命令输出。</a>
   <a href="/zh-hans/docs/cli-direct/"><span>直连</span>iPhone 直连 CLI：配对、有限后台时间、明确目标位置和可信恢复。</a>
   <a href="/zh-hans/docs/agent-queries/"><span>分页</span>类型化查询手册：全新与缓存模式、分页遍历、覆盖范围和回执。</a>
   <a href="/zh-hans/docs/reference/generated/cli/exit-codes/"><span>生成契约</span>CLI 退出代码：由生产实现生成的状态和错误行为。</a>

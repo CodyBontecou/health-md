@@ -3,7 +3,7 @@ title: "手机直连 CLI"
 description: "通过手动 IP 或 Tailscale 将 healthmd 与 iPhone 或 Android 手机配对，无需运行 Health.md Mac 版即可导出。"
 ---
 
-直连后端会将 `healthmd` 连接到 iPhone 或 Android 上已打开的 Health.md 应用，命令无需经过 Health.md Mac 版。手机会读取自身平台的健康数据存储——iPhone 上是 HealthKit，Android 上是 Health Connect——将结果暂存到受保护的存储空间，再把经过验证的分区传输给 CLI。
+`healthmd` CLI 直接连接到 iPhone 或 Android 上已打开的 Health.md 应用。独立 CLI 完全不需要 Health.md Mac 版，不会经由它，也不存在后端选择。手机会读取自身平台的健康数据存储——iPhone 上是 HealthKit，Android 上是 Health Connect——将结果暂存到受保护的存储空间，再把经过验证的分区传输给 CLI。
 
 ```text
 healthmd on the computer
@@ -40,7 +40,7 @@ Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounde
 - 明确取消作业；
 - 与 CLI 共用可执行文件的 `healthmd mcp serve` stdio 服务器，提供直连类型化查询、指标目录、证据、MCP Apps UI 和 PNG 后备图表（仅限 iPhone）。
 
-`healthmd` 命令的直连后端不会模拟 Mac 应用的加密上下文 HTTP 路由。因此，面向 Mac 的 `doctor`、查询、证据和刷新子命令仍会返回 `backend_unsupported`，不会自行切换后端。需要对 iPhone 中的全新数据进行类型化分析时，请使用 `healthmd mcp serve`；也可以运行 `healthmd setup codex`，自动配置 Codex 并完成配对。`healthmd mcp schema [TOOL]` 会在本地输出准确的嵌套 MCP 输入架构和示例。睡眠问题应直接使用 `healthmd_sleep_sessions`，不要把规范 `extract` 输出当作类型化查询 API。
+Health.md Mac 版内置的 Swift 辅助程序也提供可用 `--backend direct` 选择的兼容直连模式；本页介绍的独立 Rust CLI 仅为直连，不接受任何后端标志。面向 Mac 的 `doctor`、查询、证据和刷新子命令属于该内置辅助程序，在其直连模式下返回 `backend_unsupported`；它们不存在于独立 Rust 语法中，也绝不会切换到 Mac 应用。需要对 iPhone 中的全新数据进行类型化分析时，请使用 `healthmd mcp serve`；也可以运行 `healthmd setup codex`，自动配置 Codex 并完成配对。`healthmd mcp schema [TOOL]` 会在本地输出准确的嵌套 MCP 输入架构和示例。睡眠问题应直接使用 `healthmd_sleep_sessions`，不要把规范 `extract` 输出当作类型化查询 API。
 
 ## 要求
 
@@ -93,7 +93,7 @@ healthmd direct pair --transport manual-ip
 
 ```bash
 healthmd --port 18000 direct pair --transport manual-ip
-healthmd --backend direct --port 18000 status
+healthmd --port 18000 status
 ```
 
 后续执行状态、导出、恢复和取消命令时，请继续明确使用同一端口。
@@ -122,7 +122,7 @@ healthmd direct unpair DEVICE_UUID
 如果信任了多台手机，请明确选择目标安装：
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID status
+healthmd --device DEVICE_UUID status
 ```
 
 仅当本地信任已损坏或属于被替换的安装时，才使用 `healthmd direct reset-trust --confirm`。该命令会删除所有本地直连配对。重新配对前，也请在手机上忘记这些配对。
@@ -130,15 +130,13 @@ healthmd --backend direct --device DEVICE_UUID status
 ## 检查实时就绪状态
 
 ```bash
-healthmd --backend direct --transport manual-ip status
+healthmd --transport manual-ip status
 ```
 
-直连状态响应只报告连接和安全状态，不包含健康数值。可移植客户端会在 `source` 下报告数据来源，其 `platform` 为 `ios` 或 `android`；内置辅助程序则提供下方的 `iphone` 字段。开始作业前，请检查以下字段（以 iPhone 来源为例）：
+直连状态响应只报告连接和安全状态，不包含健康数值。可移植客户端会在 `source` 下报告数据来源，其 `platform` 为 `ios` 或 `android`；iPhone 来源还会在 `iphone` 下报告相同数据。开始作业前，请检查以下字段（以 iPhone 来源为例）：
 
 | 字段 | 就绪值 |
 |---|---|
-| `backend` | `direct` |
-| `mac_app` | `bypassed` |
 | `direct_cli.paired` | `true` |
 | `iphone.connected` | `true` |
 | `iphone.app_active` | 启动新作业时为 `true` |
@@ -146,7 +144,7 @@ healthmd --backend direct --transport manual-ip status
 | `iphone.can_trigger_raw_exports` | 原始导出和提取可用时为 `true` |
 | `iphone.can_trigger_exports` | 生成文件可用时为 `true` |
 
-直连状态中的目标位置始终保持未选择。文件模式只使用命令明确提供的 `--destination`。
+直连状态不会报告任何已选择的目标位置。文件模式只使用命令明确提供的 `--destination`。
 
 Android 来源会报告 `platform: "android"`，并提供 `app_active`、`protected_data_available`、`export_in_progress` 及其可用的原始产品，以替代上述 iPhone 触发标志。
 
@@ -155,11 +153,11 @@ Android 来源会报告 `platform: "android"`，并提供 `app_active`、`protec
 请选择一种日期范围选择器：
 
 ```bash
-healthmd --backend direct export --yesterday --raw --output yesterday.json
-healthmd --backend direct export --last 7 --raw --output week.json
-healthmd --backend direct export \
+healthmd export --yesterday --raw --output yesterday.json
+healthmd export --last 7 --raw --output week.json
+healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd --backend direct export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --output complete-health-corpus.json
 ```
 
 省略 `--output` 时，经过验证的 JSON 会流式写入 stdout。对于敏感或大型响应，写入输出文件更安全。
@@ -170,7 +168,7 @@ iPhone 严格原始导出返回 `healthmd.raw_result` v1，其中包含普通 sc
 
 ## 提供方原生原始导出（Android）
 
-可移植 Rust 客户端默认即使用直连模式，因此 Android 原始导出命令可以省略 `--backend` 标志：
+可移植 Rust 客户端没有后端标志，因此 Android 原始导出命令使用相同语法：
 
 ```bash
 healthmd export --last 7 --raw --provider health_connect \
@@ -186,10 +184,10 @@ Android 原始快照保持其 Health Connect 提供方原生契约，绝不会�
 直连提取使用相同的持久原始传输，但返回所选的来源结构数据，而不是传输封装。这是 iPhone 专属功能：
 
 ```bash
-healthmd --backend direct extract \
+healthmd extract \
   --category Sleep --last 7 --output sleep.json
 
-healthmd --backend direct extract \
+healthmd extract \
   --metric workouts --last 14 --object records \
   --detail lossless --output workout-records.json
 ```
@@ -205,14 +203,14 @@ healthmd --backend direct extract \
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday \
+healthmd export --yesterday \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --last 7 \
+healthmd export --last 7 \
   --category Sleep --detail summary \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday --use-iphone-settings \
+healthmd export --yesterday --use-iphone-settings \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -246,9 +244,9 @@ Android 协议 v2 的文件作业从设备上已保存的选择或 `--profile PR
 直连作业会在创建七天后到期。超时、Ctrl-C、进程终止、断开连接和后台时间耗尽都不会取消作业。
 
 ```bash
-healthmd --backend direct status --job JOB_UUID
-healthmd --backend direct resume JOB_UUID --timeout 300 --output recovered.json
-healthmd --backend direct cancel JOB_UUID
+healthmd status --job JOB_UUID
+healthmd resume JOB_UUID --timeout 300 --output recovered.json
+healthmd cancel JOB_UUID
 ```
 
 恢复作业会保留原始日期、设置、目标位置、请求指纹、设备和分区提交边界。恢复文件作业时，不能改用其他目标位置。
@@ -280,7 +278,7 @@ healthmd --backend direct cancel JOB_UUID
 | `direct_export_paused` | 检查作业，重新打开已配对的手机，再恢复作业。 |
 | `direct_cancellation_pending` | 重新打开已配对的手机，再次执行取消。 |
 | `transport_unsupported` | 在可移植客户端中使用手动 IP 或 Tailscale。 |
-| `backend_unsupported` | 查询、证据、doctor、指标或 MCP 请使用 Mac 应用后端。 |
+| `backend_unsupported` | 仅限内置 Swift 辅助程序：查询、证据、doctor、指标请使用其默认 Mac 回环模式。独立 CLI 改用 `healthmd mcp serve`。 |
 | `invalid_direct_raw_response` | 不要使用输出，并保留验证诊断信息。 |
 | `invalid_direct_file_receipt` | 不要手动修复文件。请检查并恢复作业。 |
 | `job_expired` | 七天的状态有效期已结束。开始新作业前先确认。 |
@@ -288,7 +286,7 @@ healthmd --backend direct cancel JOB_UUID
 ## 相关内容
 
 <div class="related">
-  <a href="/zh-hans/docs/cli/"><span>概览</span>Health.md CLI：安装内置辅助程序并选择正确的后端。</a>
+  <a href="/zh-hans/docs/cli/"><span>概览</span>Health.md CLI：安装独立客户端并查看命令索引。</a>
   <a href="/zh-hans/docs/android/"><span>Android</span>Health.md Android 版：Health Connect 来源、文件夹目标位置和设备端自动化。</a>
   <a href="/zh-hans/docs/cli-extract/"><span>数据</span>规范提取：选择并输出与来源结构一致的 Health.md 数据（iPhone）。</a>
   <a href="/zh-hans/docs/cli-jobs/"><span>可靠性</span>持久作业与自动化：恢复、取消、部分结果和脚本。</a>

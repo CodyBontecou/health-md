@@ -35,7 +35,7 @@ Uma tarefa pode persistir:
 
 - datas exatas ou identificadores resolvidos de todo o histórico;
 - escopo de métrica, categoria, fonte e detalhes;
-- vinculação ao backend e ao dispositivo emparelhado;
+- vinculação ao dispositivo emparelhado;
 - política de configurações;
 - perfil raw ou seleção de extração;
 - identidade do destino do arquivo;
@@ -99,7 +99,7 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-No modo direto, selecione o mesmo backend, dispositivo, transporte, porta e iPhone usados pela solicitação original:
+No modo direto, selecione o mesmo dispositivo, transporte, porta e iPhone usados pela solicitação original:
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID \
@@ -235,7 +235,7 @@ Um agente ou agendador deve seguir esta ordem:
 2. Execute `status --job` localmente.
 3. Verifique se a tarefa está pausada, terminal, expirada ou aguardando confirmação.
 4. Reabra o mesmo iPhone quando for necessário realizar trabalho recente ou obter confirmação.
-5. Retome a tarefa existente com o mesmo backend e dispositivo.
+5. Retome a tarefa existente com o mesmo dispositivo.
 6. Inicie uma nova tarefa somente depois que o resultado anterior for conhecido ou que a expiração seja explicitamente aceita.
 
 Repetir uma mutação às cegas pode duplicar o trabalho na fonte, mesmo quando as confirmações de arquivos são idempotentes.
@@ -245,7 +245,7 @@ Repetir uma mutação às cegas pode duplicar o trabalho na fonte, mesmo quando 
 | Código | Significado | Resposta segura |
 |---|---|---|
 | `timed_out` | O comando deixou de aguardar antes da conclusão da tarefa | Verifique a tarefa retornada e retome-a |
-| `job_not_found` | Não existe registro persistente local para esse ID | Confirme o backend e o diretório de estado antes de recomeçar |
+| `job_not_found` | Não existe registro persistente local para esse ID | Confirme o diretório de estado antes de recomeçar |
 | `job_expired` | O prazo fixo de sete dias expirou | Registre a lacuna e crie uma nova solicitação, se apropriado |
 | `direct_export_paused` | O trabalho direto precisa novamente do iPhone emparelhado | Reabra o iPhone e retome |
 | `direct_cancellation_pending` | A intenção local de cancelamento não tem confirmação do iPhone | Reabra o iPhone e tente cancelar novamente |
@@ -270,7 +270,7 @@ O JSONL de progresso pode incluir fase, contagem de páginas, contagem de itens,
 ## Relacionado
 
 <div class="related">
-  <a href="/pt-br/docs/cli/"><span>Configuração</span>CLI do Health.md: instale, escolha um backend e entenda a saída dos comandos.</a>
+  <a href="/pt-br/docs/cli/"><span>Configuração</span>CLI do Health.md: instale o cliente autônomo e entenda a saída dos comandos.</a>
   <a href="/pt-br/docs/cli-direct/"><span>Direto</span>CLI direta para iPhone: emparelhamento, tempo finito em segundo plano, destino explícito e retomada confiável.</a>
   <a href="/pt-br/docs/agent-queries/"><span>Paginação</span>Receitas de consultas tipadas: modos recente e em cache, navegação pelas páginas, cobertura e recibos.</a>
   <a href="/pt-br/docs/reference/generated/cli/exit-codes/"><span>Contrato gerado</span>Códigos de saída da CLI: comportamento de status e erros gerado em produção.</a>

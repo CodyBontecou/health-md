@@ -35,7 +35,7 @@ Una tarea puede conservar:
 
 - fechas exactas o identificadores resueltos de todo el historial;
 - alcance de métricas, categorías, fuentes y detalle;
-- enlace de backend y dispositivo emparejado;
+- enlace de dispositivo emparejado;
 - política de configuración;
 - selección del perfil de datos sin procesar o de la extracción;
 - identidad del destino del archivo;
@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 Archivos generados directamente:
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -99,10 +99,10 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-Para el modo directo, seleccione el mismo backend, dispositivo, transporte, puerto y iPhone utilizados en la solicitud original:
+Para el modo directo, seleccione el mismo dispositivo, transporte, puerto y iPhone utilizados en la solicitud original:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```
@@ -235,7 +235,7 @@ Un agente o planificador debe seguir este orden:
 2. Ejecuta `status --job` localmente.
 3. Comprueba si la tarea está en pausa, en estado terminal, caducada o a la espera de confirmación.
 4. Vuelve a abrir el mismo iPhone cuando se necesiten datos recientes o una confirmación.
-5. Reanuda la tarea existente con el mismo backend y dispositivo.
+5. Reanuda la tarea existente con el mismo dispositivo.
 6. Inicia una tarea nueva solo después de conocer el resultado anterior o aceptar explícitamente su caducidad.
 
 Reintentar una mutación a ciegas puede duplicar la tarea de origen incluso cuando las confirmaciones de archivos son idempotentes.
@@ -245,7 +245,7 @@ Reintentar una mutación a ciegas puede duplicar la tarea de origen incluso cuan
 | Código | Significado | Respuesta segura |
 |---|---|---|
 | `timed_out` | El comando dejó de esperar antes de que finalizara la tarea | Inspeccionar la tarea devuelta y reanudarla |
-| `job_not_found` | No existe ningún registro persistente local para ese ID | Confirma el backend y el directorio de estado antes de empezar de nuevo |
+| `job_not_found` | No existe ningún registro persistente local para ese ID | Confirma el directorio de estado antes de empezar de nuevo |
 | `job_expired` | Venció el plazo fijado de siete días | Registre la brecha y cree una nueva solicitud si corresponde |
 | `direct_export_paused` | La tarea directa vuelve a necesitar el iPhone emparejado | Vuelve a abrir el iPhone y reanúdala |
 | `direct_cancellation_pending` | La intención de cancelación local carece de reconocimiento del iPhone | Vuelve a abrir el iPhone e intenta cancelar de nuevo |
@@ -270,7 +270,7 @@ El progreso en JSONL puede incluir fases, recuento de páginas, recuento de elem
 ## Relacionado
 
 <div class="related">
-<a href="/es/docs/cli/"><span>Configuración</span>Health.md CLI: instale, elija un backend y comprenda la salida del comando.</a>
+<a href="/es/docs/cli/"><span>Configuración</span>Health.md CLI: instale el cliente independiente y comprenda la salida del comando.</a>
 <a href="/es/docs/cli-direct/"><span>Directo</span> CLI directa de iPhone: emparejamiento, tiempo de fondo finito, destino explícito y reanudación fiable.</a>
 <a href="/es/docs/agent-queries/"><span>Paginación</span>Libro de recetas de consultas tipadas: modos de datos recientes y en caché, recorrido de páginas, cobertura y recibos.</a>
 <a href="/es/docs/reference/generated/cli/exit-codes/"><span>Contrato generado</span>CLI códigos de salida: estado generado en producción y comportamiento de error.</a>

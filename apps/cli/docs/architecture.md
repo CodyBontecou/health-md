@@ -11,12 +11,11 @@ applicable shared fixtures before advertising a protocol version.
 
 | Capability | macOS | Linux | Windows |
 |---|---:|---:|---:|
-| Manual IP / Tailscale direct backend | Yes | Yes | Yes |
+| Manual IP / Tailscale direct connection | Yes | Yes | Yes |
 | iOS pair, status, raw, extract, resume, cancel | Yes | Yes | Yes |
 | Android pair, status, raw, generated files, resume, cancel | Yes | Yes | Yes |
 | iOS generated-file destination commits (protocol v1) | Yes | Yes | Yes |
 | Nearby (MultipeerConnectivity) | Swift legacy only | No | No |
-| Mac-app loopback backend | Reserved, not implemented | No | No |
 | Direct HealthKit/Health Connect reads | No | No | No |
 
 A mobile device running Health.md is always required to acquire source health data. Local and
@@ -137,7 +136,6 @@ credentials or network work; malformed and operational failures remain nonzero.
 `healthmd query <operation> --arguments <JSON>` and MCP use identical registry normalization
 and canonical query execution, while query discovery embeds that shared registry's schema and
 examples; adapter envelopes alone differ.
-The direct backend is the portable default.
 Pairing and local stdio MCP run through one installed `healthmd` executable (`healthmd mcp serve`) so
 Keychain/Secret Service/Credential Manager trust has one executable owner. `healthmd setup codex`
 performs bounded, lock-protected, atomic Codex configuration and pairing; `healthmd-mcp` is only a
@@ -145,9 +143,9 @@ compatibility launcher. It execs the sibling `healthmd` on Unix; on Windows it s
 supervises its own same-file helper against the same fixed Credential Manager service/account.
 The opt-in `streamable-http` command selects the read-only direct profile; adding
 `oauth-resource-server` accepts OAuth only as a complete single-owner configuration. Neither feature
-adds a health-data store, and each query still requires the paired foreground iPhone. A future
-optional Mac-app adapter may use the existing loopback HTTP API on macOS; it must remain explicit and
-may not become a fallback. This crate does not contain direct wire or local
+adds a health-data store, and each query still requires the paired foreground iPhone. The CLI has no
+Mac-app mode: the loopback HTTP API belongs to the separately bundled Swift helper inside Health.md
+for Mac and is not a backend of this executable. This crate does not contain direct wire or local
 filesystem-security policy.
 
 ## Compatibility policy

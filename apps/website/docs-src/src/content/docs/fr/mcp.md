@@ -37,7 +37,7 @@ Le chemin normal de l’utilitaire est `/Applications/Health.md.app/Contents/Hel
 - Installez l’aperçu autonome sur macOS, Linux ou Windows ; l’app Mac et son service en boucle locale ne sont pas requis.
 - Associez une fois un iPhone compatible avec les requêtes et gardez Health.md au premier plan pour chaque nouvelle demande typée. Android ne prend pas en charge le MCP typé.
 - Utilisez Manual IP ou Tailscale et le stockage natif des identifiants ; Linux exige un fournisseur Secret Service déverrouillé.
-- Configurez le lanceur de compatibilité installé ou le serveur stdio du même binaire. Tous deux utilisent le backend direct associé.
+- Configurez le lanceur de compatibilité installé ou le serveur stdio du même binaire. Tous deux utilisent l’accès direct jumelé.
 
 ## Configuration Codex
 

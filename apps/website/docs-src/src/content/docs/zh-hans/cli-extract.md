@@ -5,7 +5,7 @@ description: "使用 healthmd extract 获取所选 Apple Health 指标，并输�
 
 `healthmd extract` 是供脚本和智能体使用的来源数据命令。它会要求 iPhone 只获取所选指标和详细程度，验证持久传输，移除传输封装，再输出规范 `healthmd.health_data` v8 文档或明确标记的投影。
 
-规范提取是一项 iPhone 功能，由 Mac 应用后端和 iOS v1 直连协议提供支持。Android 直连来源则改为通过[原始导出](/zh-hans/docs/cli-direct/)返回提供商原生的 Health Connect 快照。
+规范提取是一项 iPhone 功能，由 iOS v1 直连协议提供支持。Android 直连来源则改为通过[原始导出](/zh-hans/docs/cli-direct/)返回提供商原生的 Health Connect 快照。
 
 需要 Health.md 原始数据时，请使用提取。需要睡眠时段、比较、锻炼对齐、覆盖范围或证据包时，请使用[类型化查询](/zh-hans/docs/agent-queries/)。
 
@@ -216,20 +216,20 @@ healthmd extract --category Sleep --last 30 \
 
 该标志只改变输出和退出行为，不会删除诊断信息，也不会把部分数据变成完整数据。
 
-## Mac 应用与直连后端
+## 独立 CLI 与内置 Mac 辅助程序
 
-该命令可通过任一后端运行：
+独立 CLI 直接对已配对的 iPhone 执行提取。Health.md Mac 版内置的 Swift 辅助程序默认经由 Mac 应用回环完成同一提取，也可通过其 `--backend direct` 前缀直达：
 
 ```bash
-# Bundled helper default: Mac app loopback and connected iPhone
+# Standalone CLI（macOS、Linux、Windows）：直连，无需 Mac 应用
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Direct-capable helper: bypass the Mac app
+# 内置 Mac 辅助程序：绕过 Mac 应用
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-两条路径都使用同一公开每日架构和严格验证。传输、配对、存储和作业记录则有所不同。两条路径都需要 iPhone 来源；Android 直连后端不实现规范提取。
+两条路径都使用同一公开每日架构和严格验证。传输、配对、存储和作业记录则有所不同。两条路径都需要 iPhone 来源；Android 直连来源不实现规范提取。
 
 ## 大量历史数据
 
@@ -255,7 +255,7 @@ iPhone 会确定所选记录中最早可用的一条，固定从该日起到今�
 ## 相关内容
 
 <div class="related">
-  <a href="/zh-hans/docs/cli/"><span>CLI</span>Health.md CLI：设置、后端选择、命令索引和输出规则。</a>
+  <a href="/zh-hans/docs/cli/"><span>CLI</span>Health.md CLI：安装独立客户端并查看命令索引。</a>
   <a href="/zh-hans/docs/agent-queries/"><span>派生视图</span>类型化查询手册：指标序列、睡眠、训练、锻炼、比较和证据。</a>
   <a href="/zh-hans/docs/reference/daily-records/"><span>架构</span>每日记录：完整的 schema-v8 每日文档契约。</a>
   <a href="/zh-hans/docs/reference/canonical-healthkit-records/"><span>来源归档</span>规范 Apple Health 记录：身份、溯源信息、关系和载荷。</a>

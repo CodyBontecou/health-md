@@ -37,7 +37,7 @@ O caminho normal do auxiliar é `/Applications/Health.md.app/Contents/Helpers/he
 - Instale a prévia independente no macOS, Linux ou Windows; o app para Mac e seu serviço de loopback não são necessários.
 - Emparelhe uma vez um iPhone com consultas e mantenha o Health.md em primeiro plano para cada nova solicitação tipada. O Android não oferece MCP tipado.
 - Use Manual IP ou Tailscale e o armazenamento nativo de credenciais; no Linux, é preciso um provedor Secret Service desbloqueado.
-- Configure o iniciador de compatibilidade instalado ou o servidor stdio no mesmo binário. Ambos usam o backend direto emparelhado.
+- Configure o iniciador de compatibilidade instalado ou o servidor stdio no mesmo binário. Ambos usam o acesso direto emparelhado.
 
 ## Configuração do Codex
 

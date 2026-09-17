@@ -3,7 +3,7 @@ title: "CLI directa de teléfono"
 description: "Empareja healthmd con un iPhone o un teléfono Android mediante Manual IP o Tailscale y exporta sin ejecutar Health.md para Mac."
 ---
 
-El backend directo conecta `healthmd` a una aplicación Health.md abierta en iPhone o Android sin enrutar el comando a través de Health.md para Mac. El teléfono lee su almacén de salud de la plataforma — HealthKit en iPhone, Health Connect en Android —, prepara el resultado en un almacenamiento protegido y transfiere particiones validadas a la CLI.
+La CLI `healthmd` se conecta directamente a una aplicación Health.md abierta en iPhone o Android. La CLI independiente nunca requiere ni enruta a través de Health.md para Mac y no tiene selección de backend. El teléfono lee su almacén de salud de la plataforma — HealthKit en iPhone, Health Connect en Android —, prepara el resultado en un almacenamiento protegido y transfiere particiones validadas a la CLI.
 
 ```text
 healthmd on the computer
@@ -40,7 +40,7 @@ Esta tabla independiente es la matriz aplicable para la vista previa explícitam
 - cancelación explícita;
 - el mismo servidor stdio `healthmd mcp serve` ejecutable con consultas tipadas directas, catálogo de métricas, evidencia, interfaz de usuario de aplicaciones MCP y respaldo PNG (solo iPhone).
 
-El backend directo del comando `healthmd` no emula las rutas HTTP de contexto cifrado de la aplicación Mac, por lo que los subcomandos `doctor`, de consulta, evidencia y actualización orientados a Mac aún devuelven `backend_unsupported` en lugar de cambiar de backend. Usa `healthmd mcp serve` para análisis tipados directos y recientes del iPhone, o ejecuta `healthmd setup codex` para configurar y emparejar Codex automáticamente. `healthmd mcp schema [TOOL]` imprime localmente el esquema de entrada MCP anidado exacto y ejemplos; usa `healthmd_sleep_sessions` directamente para el sueño en lugar de tratar la salida canónica de `extract` como la API de consulta tipada.
+El asistente Swift incluido dentro de Health.md para Mac también ofrece un modo directo compatible, seleccionado con `--backend direct`; la CLI independiente de Rust mostrada en esta página es solo directa y no acepta ningún indicador de backend. Los subcomandos `doctor`, de consulta, evidencia y actualización orientados a Mac pertenecen a ese asistente incluido y devuelven `backend_unsupported` en su modo directo; no existen en la gramática Rust independiente y nunca cambian a la aplicación Mac. Usa `healthmd mcp serve` para análisis tipados directos y recientes del iPhone, o ejecuta `healthmd setup codex` para configurar y emparejar Codex automáticamente. `healthmd mcp schema [TOOL]` imprime localmente el esquema de entrada MCP anidado exacto y ejemplos; usa `healthmd_sleep_sessions` directamente para el sueño en lugar de tratar la salida canónica de `extract` como la API de consulta tipada.
 
 ## Requisitos
 
@@ -93,7 +93,7 @@ Usa un puerto diferente cuando sea necesario:
 
 ```bash
 healthmd --port 18000 direct pair --transport manual-ip
-healthmd --backend direct --port 18000 status
+healthmd --port 18000 status
 ```
 
 Sigue usando el mismo puerto explícito para los comandos posteriores de estado, exportación, reanudación y cancelación.
@@ -122,7 +122,7 @@ Estos comandos leen o modifican la confianza local y no contactan al teléfono. 
 Cuando se confíe en más de un teléfono, selecciona explícitamente la instalación deseada:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID status
+healthmd --device DEVICE_UUID status
 ```
 
 Usa `healthmd direct reset-trust --confirm` solo cuando la confianza local esté dañada o pertenezca a una instalación reemplazada. Elimina todos los emparejamientos directos locales. Olvida esos emparejamientos en el teléfono antes de empezar de nuevo.
@@ -130,15 +130,13 @@ Usa `healthmd direct reset-trust --confirm` solo cuando la confianza local esté
 ## Comprobar la disponibilidad en directo
 
 ```bash
-healthmd --backend direct --transport manual-ip status
+healthmd --transport manual-ip status
 ```
 
-Una respuesta de estado directa informa del estado de conexión y de seguridad sin valores de salud. El cliente portátil informa la fuente bajo `source` con una `platform` de `ios` o `android`; el asistente incluido expone los campos `iphone` siguientes. Comprueba estos campos antes de comenzar a trabajar (se muestra la fuente iPhone):
+Una respuesta de estado directa informa del estado de conexión y de seguridad sin valores de salud. El cliente portátil informa la fuente bajo `source` con una `platform` de `ios` o `android`; además los mismos datos bajo `iphone` para fuentes iPhone. Comprueba estos campos antes de comenzar a trabajar (se muestra la fuente iPhone):
 
 | Campo | Estado listo |
 |---|---|
-| `backend` | `direct` |
-| `mac_app` | `bypassed` |
 | `direct_cli.paired` | `true` |
 | `iphone.connected` | `true` |
 | `iphone.app_active` | `true` para tareas nuevas |
@@ -146,7 +144,7 @@ Una respuesta de estado directa informa del estado de conexión y de seguridad s
 | `iphone.can_trigger_raw_exports` | `true` para exportaciones sin procesar y extracciones |
 | `iphone.can_trigger_exports` | `true` para archivos generados |
 
-El destino del estado directo permanece sin seleccionar. El modo de archivo usa solo el `--destination` explícito proporcionado al comando.
+El estado directo no informa ningún destino seleccionado. El modo de archivo usa solo el `--destination` explícito proporcionado al comando.
 
 Una fuente Android informa `platform: "android"` con `app_active`, `protected_data_available`, `export_in_progress` y sus productos sin procesar disponibles, en lugar de los indicadores de activación del iPhone.
 
@@ -155,11 +153,11 @@ Una fuente Android informa `platform: "android"` con `app_active`, `protected_da
 Elige un selector de intervalo:
 
 ```bash
-healthmd --backend direct export --yesterday --raw --output yesterday.json
-healthmd --backend direct export --last 7 --raw --output week.json
-healthmd --backend direct export \
+healthmd export --yesterday --raw --output yesterday.json
+healthmd export --last 7 --raw --output week.json
+healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd --backend direct export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --output complete-health-corpus.json
 ```
 
 Omite `--output` para transmitir JSON validado a la salida estándar. Un archivo de salida es más seguro para respuestas confidenciales o grandes.
@@ -170,7 +168,7 @@ Un día completamente vacío es un éxito. Los datos solicitados faltantes, parc
 
 ## Exportación sin procesar nativa del proveedor (Android)
 
-El cliente Rust portátil es directo de forma predeterminada, por lo que los comandos sin procesar de Android omiten la opción `--backend`:
+El cliente Rust portátil no tiene indicador de backend, por lo que los comandos sin procesar de Android usan la misma gramática:
 
 ```bash
 healthmd export --last 7 --raw --provider health_connect \
@@ -186,10 +184,10 @@ Las instantáneas sin procesar de Android conservan su contrato nativo del prove
 La extracción directa usa el mismo transporte persistente de datos sin procesar, pero devuelve datos seleccionados en forma de fuente en lugar del contenedor de transporte. Es una capacidad de iPhone:
 
 ```bash
-healthmd --backend direct extract \
+healthmd extract \
   --category Sleep --last 7 --output sleep.json
 
-healthmd --backend direct extract \
+healthmd extract \
   --metric workouts --last 14 --object records \
   --detail lossless --output workout-records.json
 ```
@@ -205,14 +203,14 @@ El modo de archivo directo solicita al teléfono que ejecute los exportadores de
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday \
+healthmd export --yesterday \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --last 7 \
+healthmd export --last 7 \
   --category Sleep --detail summary \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday --use-iphone-settings \
+healthmd export --yesterday --use-iphone-settings \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -246,9 +244,9 @@ La ventana de espera limitada de 120 segundos mantiene abierta la misma solicitu
 Las tareas directas caducan siete días después de su creación. El tiempo de espera, Ctrl-C, la muerte del proceso, la desconexión y el vencimiento en segundo plano no las cancelan.
 
 ```bash
-healthmd --backend direct status --job JOB_UUID
-healthmd --backend direct resume JOB_UUID --timeout 300 --output recovered.json
-healthmd --backend direct cancel JOB_UUID
+healthmd status --job JOB_UUID
+healthmd resume JOB_UUID --timeout 300 --output recovered.json
+healthmd cancel JOB_UUID
 ```
 
 La reanudación mantiene las fechas originales, la configuración, el destino, la huella digital de la solicitud, el dispositivo y la frontera de la partición. No se puede dirigir una tarea de archivos a un destino diferente durante la reanudación.
@@ -280,7 +278,7 @@ Manual IP permanece cifrado en una red local o Tailscale. Tailscale también pro
 | `direct_export_paused` | Inspecciona la tarea, vuelve a abrir el teléfono emparejado y reanúdala. |
 | `direct_cancellation_pending` | Vuelve a abrir el teléfono emparejado e intenta cancelar de nuevo. |
 | `transport_unsupported` | Usa Manual IP o Tailscale en el cliente portátil. |
-| `backend_unsupported` | Usa el backend de la aplicación para Mac para consultas, evidencia, diagnóstico, métricas o MCP. |
+| `backend_unsupported` | Solo el asistente Swift incluido: usa su modo loopback de Mac predeterminado para consultas, evidencia, diagnóstico o métricas. La CLI independiente usa `healthmd mcp serve` en su lugar. |
 | `invalid_direct_raw_response` | No uses la salida. Conserva los diagnósticos de validación. |
 | `invalid_direct_file_receipt` | No repares archivos manualmente. Inspecciona y reanuda la tarea. |
 | `job_expired` | El período de conservación del estado, de siete días, ha terminado. Confírmalo antes de iniciar una tarea nueva. |
@@ -288,7 +286,7 @@ Manual IP permanece cifrado en una red local o Tailscale. Tailscale también pro
 ## Relacionado
 
 <div class="related">
-<a href="/es/docs/cli/"><span>Resumen</span>Health.md CLI: instala los asistentes incluidos y elige el backend correcto.</a>
+<a href="/es/docs/cli/"><span>Resumen</span>Health.md CLI: instala el cliente independiente y revisa el mapa de comandos.</a>
 <a href="/es/docs/android/"><span>Android</span>Health.md para Android: fuentes de Health Connect, destinos de carpeta y automatización en el dispositivo.</a>
 <a href="/es/docs/cli-extract/"><span>Datos</span>Extracción canónica: selecciona y emite datos Health.md en forma de fuente (iPhone).</a>
 <a href="/es/docs/cli-jobs/"><span>Fiabilidad</span>Tareas persistentes y automatización: reanudación, cancelación, resultados parciales y scripting.</a>

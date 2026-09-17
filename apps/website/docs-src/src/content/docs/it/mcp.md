@@ -37,7 +37,7 @@ Il percorso abituale dell'helper è `/Applications/Health.md.app/Contents/Helper
 - Installa l’anteprima autonoma su macOS, Linux o Windows; l’app per Mac e il relativo servizio di loopback non sono necessari.
 - Abbina una volta un iPhone con query e mantieni Health.md in primo piano per ogni nuova richiesta tipizzata. Android non supporta MCP tipizzato.
 - Usa Manual IP o Tailscale e l’archivio credenziali nativo; Linux richiede un provider Secret Service sbloccato.
-- Configura il launcher di compatibilità installato o il server stdio nello stesso binario. Entrambi usano il backend diretto abbinato.
+- Configura il launcher di compatibilità installato o il server stdio nello stesso binario. Entrambi usano l’accesso diretto abbinato.
 
 ## Configurazione di Codex
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Disconnect the CLI from the Health.md Mac app: remove the reserved `--backend` option entirely.
+  Direct mobile access is the only execution path, so no backend selection exists. `--backend` now
+  fails as an unknown argument with the structured parser error.
+- Remove the vestigial `backend` field from `healthmd.cli_guidance/1`, `healthmd.cli_error/1`,
+  `healthmd.direct_devices`, durable job payloads, and file receipts; remove `mac_app` and the
+  always-empty Mac `destination` object from `healthmd status`; remove `requires_mac_app` from the
+  MCP capabilities object. The Mac app's loopback API belongs to the Swift helper bundled inside
+  Health.md for Mac, not to this CLI.
+
 ## 0.1.0-alpha.7
 
 - Compile the RFC-0005 P2 wake client into every macOS, Linux, and Windows CLI build, use the

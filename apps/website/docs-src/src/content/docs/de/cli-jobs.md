@@ -35,7 +35,7 @@ Ein Auftrag kann Folgendes speichern:
 
 - exakte Datumswerte oder aufgelöste Kennungen für den gesamten Verlauf;
 - Umfang von Metriken, Kategorien, Quellen und Details;
-- Bindung an Backend und gekoppeltes Gerät;
+- Bindung an das gekoppelte Gerät;
 - Einstellungsrichtlinie;
 - Rohdatenprofil oder Extraktionsauswahl;
 - Identität des Dateiziels;
@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 Direkt generierte Dateien:
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -99,10 +99,10 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-Wählen Sie im Direktmodus dasselbe Backend, Gerät, denselben Übertragungsweg, Port und dasselbe iPhone wie bei der ursprünglichen Anfrage:
+Wählen Sie im Direktmodus dasselbe Gerät, denselben Übertragungsweg, Port und dasselbe iPhone wie bei der ursprünglichen Anfrage:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```
@@ -235,7 +235,7 @@ Ein Agent oder Scheduler sollte diese Reihenfolge einhalten:
 2. Lokal `status --job` ausführen.
 3. Prüfen, ob der Auftrag pausiert, endgültig, abgelaufen oder noch nicht bestätigt ist.
 4. Dasselbe iPhone erneut öffnen, wenn neue Arbeit oder eine Bestätigung nötig ist.
-5. Den bestehenden Auftrag mit demselben Backend und Gerät fortsetzen.
+5. Den bestehenden Auftrag mit demselben Gerät fortsetzen.
 6. Einen neuen Auftrag erst starten, wenn das vorherige Ergebnis bekannt ist oder der Ablauf ausdrücklich akzeptiert wurde.
 
 Das blinde Wiederholen einer Änderung kann Quellarbeit duplizieren, selbst wenn Datei-Commits idempotent sind.
@@ -245,7 +245,7 @@ Das blinde Wiederholen einer Änderung kann Quellarbeit duplizieren, selbst wenn
 | Code | Bedeutung | Sichere Reaktion |
 |---|---|---|
 | `timed_out` | Der Befehl wartete nicht bis zum Auftragsende | Zurückgegebenen Auftrag prüfen und fortsetzen |
-| `job_not_found` | Für diese ID ist kein lokaler Datensatz eines persistenten Auftrags vorhanden | Backend und Statusverzeichnis prüfen, bevor Sie neu beginnen |
+| `job_not_found` | Für diese ID ist kein lokaler Datensatz eines persistenten Auftrags vorhanden | Statusverzeichnis prüfen, bevor Sie neu beginnen |
 | `job_expired` | Die feste Frist von sieben Tagen ist abgelaufen | Lücke dokumentieren und gegebenenfalls neue Anfrage erstellen |
 | `direct_export_paused` | Direkter Vorgang benötigt das gekoppelte iPhone erneut | iPhone öffnen und fortsetzen |
 | `direct_cancellation_pending` | Lokale Abbruchabsicht wurde vom iPhone noch nicht bestätigt | iPhone öffnen und Abbruch wiederholen |
@@ -270,7 +270,7 @@ Fortschritts-JSONL kann Phase, Seitenzahl, Elementzahl, Datumswerte und Diagnose
 ## Verwandte Themen
 
 <div class="related">
-  <a href="/de/docs/cli/"><span>Einrichtung</span>Health.md CLI: installieren, Backend auswählen und Befehlsausgabe verstehen.</a>
+  <a href="/de/docs/cli/"><span>Einrichtung</span>Health.md CLI: die eigenständige CLI installieren und die Befehlsausgabe verstehen.</a>
   <a href="/de/docs/cli-direct/"><span>Direkt</span>Direkte iPhone-CLI: begrenzte Hintergrundzeit, ausdrückliches Ziel und vertrauenswürdige Fortsetzung.</a>
   <a href="/de/docs/agent-queries/"><span>Paginierung</span>Typisierte Abfragen: neue und zwischengespeicherte Modi, Paginierung, Abdeckung und Belege.</a>
   <a href="/de/docs/reference/generated/cli/exit-codes/"><span>Generierter Vertrag</span>CLI-Exit-Codes: aus dem Produktcode erzeugtes Status- und Fehlerverhalten.</a>

@@ -35,7 +35,7 @@ Een taak kan het volgende bewaren:
 
 - exacte datums of opgeloste ID's voor de volledige geschiedenis;
 - het bereik van meetwaarden, categorieën, bronnen en details;
-- binding aan de backend en het gekoppelde apparaat;
+- binding aan het gekoppelde apparaat;
 - instellingenbeleid;
 - het profiel voor onbewerkte gegevens of de extractieselectie;
 - de identiteit van de bestandsbestemming;
@@ -99,7 +99,7 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-Selecteer voor de rechtstreekse modus dezelfde backend, hetzelfde apparaat, transport, dezelfde poort en iPhone als bij het oorspronkelijke verzoek:
+Selecteer voor de rechtstreekse modus hetzelfde apparaat, transport, dezelfde poort en iPhone als bij het oorspronkelijke verzoek:
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID \
@@ -235,7 +235,7 @@ Een agent of planner hoort deze volgorde te volgen:
 2. Voer lokaal `status --job` uit.
 3. Controleer of de taak is gepauzeerd, definitief, verlopen of op bevestiging wacht.
 4. Open dezelfde iPhone opnieuw als nieuw werk of een bevestiging nodig is.
-5. Hervat de bestaande taak met dezelfde backend en hetzelfde apparaat.
+5. Hervat de bestaande taak met hetzelfde apparaat.
 6. Start pas een nieuwe taak als de eerdere uitkomst bekend is of het verlopen ervan expliciet is aanvaard.
 
 Een muterende bewerking blind opnieuw proberen kan bronwerk dupliceren, ook als het vastleggen van bestanden zelf idempotent is.
@@ -245,7 +245,7 @@ Een muterende bewerking blind opnieuw proberen kan bronwerk dupliceren, ook als 
 | Code | Betekenis | Veilige reactie |
 |---|---|---|
 | `timed_out` | De opdracht stopte met wachten voordat de taak was voltooid | Bekijk de teruggegeven taak en hervat deze |
-| `job_not_found` | Er bestaat geen lokaal persistent record voor die ID | Controleer de backend en statusmap voordat je opnieuw begint |
+| `job_not_found` | Er bestaat geen lokaal persistent record voor die ID | Controleer de statusmap voordat je opnieuw begint |
 | `job_expired` | De vaste termijn van zeven dagen is verstreken | Leg het hiaat vast en maak zo nodig een nieuw verzoek |
 | `direct_export_paused` | Voor rechtstreeks werk is de gekoppelde iPhone opnieuw nodig | Open de iPhone opnieuw en hervat de taak |
 | `direct_cancellation_pending` | De lokale annuleringsintentie is niet door de iPhone bevestigd | Open de iPhone opnieuw en probeer de annulering nogmaals |
@@ -270,7 +270,7 @@ JSONL-voortgang kan de fase, het aantal pagina's en items, datums en veilige dia
 ## Gerelateerde documentatie
 
 <div class="related">
-  <a href="/nl/docs/cli/"><span>Configuratie</span>Health.md-CLI: installeren, een backend kiezen en de opdrachtuitvoer begrijpen.</a>
+  <a href="/nl/docs/cli/"><span>Configuratie</span>Health.md-CLI: installeer de zelfstandige client en begrijp de opdrachtuitvoer.</a>
   <a href="/nl/docs/cli-direct/"><span>Rechtstreeks</span>CLI rechtstreeks naar de iPhone: koppeling, beperkte achtergrondtijd, expliciete bestemming en vertrouwd hervatten.</a>
   <a href="/nl/docs/agent-queries/"><span>Paginering</span>Recepten voor getypeerde queries: nieuwe en gecachte modi, paginadoorloop, dekking en ontvangstbewijzen.</a>
   <a href="/nl/docs/reference/generated/cli/exit-codes/"><span>Gegenereerd contract</span>CLI-afsluitcodes: vanuit productie gegenereerd status- en foutgedrag.</a>

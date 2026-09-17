@@ -5,7 +5,7 @@ description: "healthmd extractを使い、選択したApple Health指標を取�
 
 `healthmd extract`は、スクリプトやエージェントがソースデータを取得するためのコマンドです。選択した指標と詳細レベルだけを取得するようiPhoneへ要求し、永続転送を検証して、転送エンベロープを取り除きます。その後、正規の`healthmd.health_data` v8ドキュメント、またはプロジェクションであることが明示された結果を出力します。
 
-正規抽出は、MacアプリのバックエンドとiOS v1ダイレクトプロトコルを基盤とするiPhoneの機能です。Androidのダイレクトソースは、代わりにプロバイダー固有のHealth Connectスナップショットを[rawエクスポート](/ja/docs/cli-direct/)で返します。
+正規抽出は、iOS v1ダイレクトプロトコルを基盤とするiPhoneの機能です。Androidのダイレクトソースは、代わりにプロバイダー固有のHealth Connectスナップショットを[rawエクスポート](/ja/docs/cli-direct/)で返します。
 
 元のHealth.mdデータが必要な場合は抽出を使用します。セッション、比較、ワークアウトとの対応付け、カバレッジ、エビデンスパケットが必要な場合は、[型付きクエリ](/ja/docs/agent-queries/)を使用してください。
 
@@ -216,20 +216,20 @@ healthmd extract --category Sleep --last 30 \
 
 このフラグは、出力と終了動作を変更します。診断を削除したり、部分的なデータを完全なデータへ変えたりするものではありません。
 
-## Macアプリと直接接続のバックエンド
+## スタンドアロンCLIと同梱Macヘルパー
 
-このコマンドは、どちらのバックエンドでも動作します。
+スタンドアロンCLIは、ペアリング済みiPhoneに対して直接抽出を実行します。Health.md for Mac同梱のSwiftヘルパーは、既定ではMacアプリのループバック経由で、または`--backend direct`プレフィックスで直接、同じ抽出に到達します。
 
 ```bash
-# Bundled helper default: Mac app loopback and connected iPhone
+# Standalone CLI（macOS、Linux、Windows）：直接接続、Macアプリ不要
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Direct-capable helper: bypass the Mac app
+# 同梱Macヘルパー：Macアプリを経由しない
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-どちらの経路も、同じ公開日次スキーマと厳密な検証を使用します。転送、ペアリング、ストレージ、ジョブレコードは異なります。どちらの経路もiPhoneソースを必要とします。Androidのダイレクトバックエンドは正規抽出を実装していません。
+どちらの経路も、同じ公開日次スキーマと厳密な検証を使用します。転送、ペアリング、ストレージ、ジョブレコードは異なります。どちらの経路もiPhoneソースを必要とします。Androidのダイレクトソースは正規抽出を実装していません。
 
 ## 大規模な履歴
 
@@ -255,7 +255,7 @@ iPhoneは、選択したレコードのうち最も古い利用可能な日付�
 ## 関連項目
 
 <div class="related">
-  <a href="/ja/docs/cli/"><span>CLI</span>Health.md CLI：設定、バックエンドの選択、コマンド一覧、出力規則。</a>
+  <a href="/ja/docs/cli/"><span>CLI</span>Health.md CLI：スタンドアロンクライアントをインストールし、コマンド一覧を確認します。</a>
   <a href="/ja/docs/agent-queries/"><span>派生ビュー</span>型付きクエリの実例：指標時系列、睡眠、トレーニング、ワークアウト、比較、エビデンス。</a>
   <a href="/ja/docs/reference/daily-records/"><span>スキーマ</span>日次レコード：完全なschema-v8日次ドキュメントのコントラクト。</a>
   <a href="/ja/docs/reference/canonical-healthkit-records/"><span>ソースアーカイブ</span>正規Apple Healthレコード：ID、出所、関係、ペイロード。</a>

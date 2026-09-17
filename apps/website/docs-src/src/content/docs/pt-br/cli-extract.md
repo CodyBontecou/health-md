@@ -5,7 +5,7 @@ description: "Use healthmd extract para obter métricas selecionadas do Apple He
 
 `healthmd extract` é o comando de dados de origem para scripts e agentes. Ele solicita ao iPhone que obtenha apenas as métricas e o nível de detalhe selecionados, valida a transferência persistente, remove o envelope de transporte e emite documentos canônicos `healthmd.health_data` v8 ou projeções claramente identificadas.
 
-A extração canônica é uma funcionalidade do iPhone, apoiada pelo backend do app do Mac e pelo protocolo direto v1 do iOS. As fontes diretas do Android retornam, em vez disso, snapshots Health Connect nativos do provedor por meio da [exportação bruta](/pt-br/docs/cli-direct/).
+A extração canônica é uma funcionalidade do iPhone, apoiada pelo protocolo direto v1 do iOS. As fontes diretas do Android retornam, em vez disso, snapshots Health Connect nativos do provedor por meio da [exportação bruta](/pt-br/docs/cli-direct/).
 
 Use a extração quando precisar dos dados originais do Health.md. Use [consultas tipadas](/pt-br/docs/agent-queries/) quando precisar de sessões, comparações, alinhamento de treinos, cobertura ou pacotes de evidências.
 
@@ -216,20 +216,20 @@ healthmd extract --category Sleep --last 30 \
 
 A flag altera a emissão e o comportamento de saída. Ela não remove os diagnósticos nem transforma dados parciais em dados completos.
 
-## App para Mac e backends diretos
+## CLI autônoma e auxiliar do Mac incluído
 
-O comando funciona por qualquer um dos backends:
+A CLI autônoma executa a extração diretamente no iPhone emparelhado. O auxiliar Swift incluído no Health.md para Mac alcança a mesma extração por padrão pelo loopback do app do Mac, ou diretamente com o prefixo `--backend direct` dele:
 
 ```bash
-# Bundled helper default: Mac app loopback and connected iPhone
+# CLI autônoma (macOS, Linux, Windows): direta, sem app do Mac
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Direct-capable helper: bypass the Mac app
+# Auxiliar do Mac incluído: contorna o app do Mac
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-Os dois caminhos usam o mesmo schema diário público e uma validação rigorosa. O transporte, o emparelhamento, o armazenamento e os registros de tarefas são diferentes. Os dois caminhos exigem uma fonte de iPhone; o backend direto do Android não implementa a extração canônica.
+Os dois caminhos usam o mesmo schema diário público e uma validação rigorosa. O transporte, o emparelhamento, o armazenamento e os registros de tarefas são diferentes. Os dois caminhos exigem uma fonte de iPhone; as fontes diretas do Android não implementam a extração canônica.
 
 ## Históricos extensos
 
@@ -255,7 +255,7 @@ Use JSONL ou uma seleção mais restrita quando o corpus for grande. O espaço d
 ## Relacionados
 
 <div class="related">
-  <a href="/pt-br/docs/cli/"><span>CLI</span>CLI do Health.md: configuração, seleção de backend, mapa de comandos e regras de saída.</a>
+  <a href="/pt-br/docs/cli/"><span>CLI</span>CLI do Health.md: instale o cliente autônomo e revise o mapa de comandos.</a>
   <a href="/pt-br/docs/agent-queries/"><span>Visualizações derivadas</span>Guia de consultas tipadas: séries de métricas, sono, treinos, alinhamento, comparações e evidências.</a>
   <a href="/pt-br/docs/reference/daily-records/"><span>Schema</span>Registros diários: o contrato completo do documento diário do schema v8.</a>
   <a href="/pt-br/docs/reference/canonical-healthkit-records/"><span>Arquivo de origem</span>Registros canônicos do Apple Health: identidade, procedência, relações e conteúdos.</a>

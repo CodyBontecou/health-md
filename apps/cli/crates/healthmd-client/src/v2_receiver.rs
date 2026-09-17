@@ -780,7 +780,6 @@ impl V2ArtifactReceiver {
         let payload = json!({
             "schema": "healthmd.android_direct_file_receipt",
             "schema_version": 1,
-            "backend": "direct",
             "platform": "android",
             "job_id": journal.request.job_id,
             "status": "success",

@@ -20,7 +20,7 @@ De uitgebrachte Mac-app bevat twee ondertekende lokale hulpprogramma's: `healthm
 | Ontwikkel met exacte API-enveloppen voor verzoeken en antwoorden | Loopback-API of openbare contracten | [Loopback-API](/nl/docs/agent-api/) |
 | Verwerk schema's, records, bewijs of gegenereerde fixtures | Referentie met versiebeheer | [Datacontracten](/nl/docs/reference/) |
 
-Je kiest de backend en het transport expliciet. Health.md schakelt niet ongemerkt van rechtstreekse iPhone-toegang over op de Mac-app.
+Je kiest het transport expliciet. De zelfstandige CLI schakelt nooit ongemerkt over op toegang via de Mac-app.
 
 ## Codex met de Mac-app
 

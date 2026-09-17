@@ -28,7 +28,7 @@ De API bindt op poort `17645` aan loopback. Alleen gevalideerde IPv4- en IPv6-lo
 
 De voormalige routes `/v1/agent/profiles` en `/v1/agent/activity/query` geven `410 removed_endpoint` terug.
 
-De backend voor rechtstreekse iPhone-toegang host deze HTTP-routes niet. De zelfstandige opdracht `healthmd` gebruikt deze backend voor canonieke extractie en exports. `healthmd mcp serve` implementeert via iPhone-queryprotocol v3 rechtstreeks tools voor nieuwe getypeerde queries, bewijs, de meetwaardecatalogus, gereedheid, visualisaties en persistente exports. Koppeling en MCP gebruiken dezelfde identiteit van het uitvoerbare bestand. Verversing en de versleutelde Mac-context zijn specifiek voor deze HTTP-API.
+Rechtstreekse iPhone-toegang host deze HTTP-routes niet. De zelfstandige opdracht `healthmd` gebruikt deze toegang voor canonieke extractie en exports. `healthmd mcp serve` implementeert via iPhone-queryprotocol v3 rechtstreeks tools voor nieuwe getypeerde queries, bewijs, de meetwaardecatalogus, gereedheid, visualisaties en persistente exports. Koppeling en MCP gebruiken dezelfde identiteit van het uitvoerbare bestand. Verversing en de versleutelde Mac-context zijn specifiek voor deze HTTP-API.
 
 ## Gebruik bij voorkeur de CLI-adapter
 

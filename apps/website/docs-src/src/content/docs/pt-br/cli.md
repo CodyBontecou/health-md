@@ -1,41 +1,100 @@
 ---
 title: "CLI do Health.md"
-description: "Escolha o app para Mac ou o backend direto para telefone, emparelhe o healthmd com um iPhone ou um dispositivo Android, verifique a prontidão, exporte arquivos, extraia dados canônicos do Apple Health, execute consultas tipadas e automatize tarefas persistentes."
+description: "Instale a CLI healthmd autônoma no macOS, Linux ou Windows, emparelhe-a diretamente com um iPhone ou um dispositivo Android, verifique a prontidão, exporte dados, execute consultas e gerencie tarefas persistentes. Nenhum app para Mac é necessário."
 ---
 
-O comando `healthmd` tem dois modos de operação. Use o backend do app para Mac quando quiser consultas locais criptografadas, ferramentas MCP ou a pasta de destino já selecionada no Health.md para Mac. Use o backend direto para telefone quando quiser dados brutos ou arquivos gerados sem executar o app para Mac. O modo direto emparelha com um app Health.md aberto no iPhone (protocolo v1) ou no Android (protocolo v2).
+A CLI `healthmd` autônoma funciona no macOS, Linux e Windows e emparelha diretamente com um app Health.md aberto no iPhone (protocolo v1) ou no Android (protocolo v2). Ela nunca exige o app Health.md para Mac, não tem seleção de backend e nunca lê o Apple Health ou o Health Connect a partir do computador.
 
 <div class="callout">
 <strong>Os dados de saúde permanecem no seu telefone.</strong>
-<p style="margin-top:6px;">Nenhum dos backends da CLI lê o Apple Health ou o Health Connect pelo computador. Um app Health.md atualizado e aberto no iPhone ou no Android realiza cada nova leitura de saúde da plataforma. A CLI recebe resultados ou arquivos validados.</p>
+<p style="margin-top:6px;">A CLI nunca lê o Apple Health ou o Health Connect a partir do computador. Um app Health.md aberto e atual no iPhone ou no Android executa cada nova leitura de saúde da plataforma. A CLI recebe resultados ou arquivos validados.</p>
 </div>
 
-## Escolha um backend
+## Instalar a CLI autônoma
 
-| Recurso | Backend do app para Mac | Backend direto para telefone |
-|---|---|---|
-| Padrão no auxiliar integrado para Mac | Sim | Não, selecione com `--backend direct` |
-| Dispositivos de origem | iPhone | iPhone (protocolo v1) ou Android (protocolo v2) |
-| Requer que o Health.md para Mac esteja aberto | Sim | Não |
-| Requer que o app Health.md do telefone esteja aberto para novos dados | Sim | Sim |
-| Destino dos arquivos | Pasta selecionada no app para Mac | Caminho absoluto existente em `--destination` |
-| Exportação bruta estrita | Sim | Sim; snapshots nativos do Health Connect no Android |
-| `healthmd extract` canônico | Sim | Somente iPhone |
-| Contexto criptografado, consultas tipadas e evidências | Sim | Somente iPhone, cliente portátil |
-| `healthmd-mcp` | Sim | Sim, iniciador de compatibilidade portátil instalado |
-| IP manual ou Tailscale | Sincronização com o Mac ou modo direto explícito | Sim |
-| Transporte direto por proximidade | Somente no auxiliar Swift integrado | Não está disponível no cliente Rust portátil |
+<div class="availability preview">
+<strong>Pré-visualização pública · ainda sem versão estável qualificada</strong>
+<p>A CLI Rust multiplataforma está empacotada publicamente, mas sua matriz móvel exata ainda aguarda a qualificação física de lançamento.</p>
+</div>
 
-As escolhas de backend e transporte nunca recorrem silenciosamente a uma alternativa. Um comando direto não pode mudar para o app para Mac para atender a uma consulta, e uma conexão Nearby com falha não pode mudar para IP manual.
+No macOS ou Linux, instale a pré-visualização com <code>brew install CodyBontecou/tap/healthmd</code>. Use a build móvel exata indicada pelas evidências de lançamento; a publicação do pacote não prova compatibilidade móvel.
 
-## Instale os auxiliares integrados para Mac
+A CLI Rust autônoma funciona no macOS, Linux e Windows, usa conexões diretas Manual IP ou Tailscale e não precisa do app para Mac. Ela emparelha com fontes de iPhone pelo protocolo v1 e com fontes de Android pelo protocolo v2, com verificações automatizadas de compatibilidade Swift↔Rust e Kotlin↔Rust. A compatibilidade de protocolos está implementada; a QA de lançamento em dispositivos físicos precisa terminar antes da primeira versão estável qualificada. Arquivos com soma de verificação, um instalador PowerShell e `cargo install healthmd-cli --locked` acompanham cada lançamento.
+
+O cliente portátil suporta emparelhamento, status, exportação bruta, destinos de arquivos gerados, retomada e cancelamento nas três plataformas de desktop para iPhone e Android. A extração canônica e as consultas MCP tipadas são funcionalidades do iPhone. Os snapshots brutos do Android mantêm seu contrato Health Connect nativo do provedor em vez de conversão em dados no formato HealthKit. As consultas tipadas do Android não estão implementadas. Na exportação de arquivos gerados, o telefone trata o destino como um rótulo opaco; a CLI receptora o valida e o vincula de forma durável ao sistema de arquivos do host. O protocolo Android v2 confirma destinos de arquivos em todos os sistemas operacionais da CLI e limita cada tarefa gerada a 4.096 arquivos.
+
+## Mapa de comandos
+
+| Comando | Finalidade |
+|---|---|
+| `healthmd status` | Inspecionar prontidão em tempo real ou uma tarefa persistente local |
+| `healthmd export` | Gravar arquivos gerados ou retornar JSON bruto estrito |
+| `healthmd extract` | Adquirir objetos canônicos `healthmd.health_data` selecionados (iPhone) |
+| `healthmd query` | Executar operações fixas de consulta tipada (iPhone) |
+| `healthmd resume` | Retomar uma tarefa de exportação persistente imutável |
+| `healthmd cancel` | Solicitar cancelamento explícito |
+| `healthmd direct ...` | Emparelhar, listar e remover confiança direta do telefone |
+| `healthmd mcp ...` | Servir ou inspecionar a superfície fixa de ferramentas MCP |
+| `healthmd setup codex` | Configurar o Codex e emparelhar um iPhone em um único fluxo |
+
+Os comandos diretos emparelham com fontes de iPhone (protocolo v1) ou de Android (protocolo v2). O `extract` canônico e todos os comandos de consulta tipada são funcionalidades do iPhone; as fontes diretas do Android retornam snapshots brutos Health Connect nativos do provedor e arquivos gerados.
+
+```bash
+# Prontidão e confiança local
+healthmd status
+healthmd direct devices
+
+# Exportação bruta nativa da plataforma; omita --output para transmitir JSON/NDJSON validado ao stdout
+healthmd export --yesterday --raw --output yesterday.json
+healthmd export --last 7 --raw --output week.json
+
+# Consulta tipada pelo mesmo registro de operações do MCP (iPhone)
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+
+# Extração canônica com escopo (iPhone)
+healthmd extract --category Sleep --last 7 --output sleep.json
+
+# Arquivos gerados em produção em todos os sistemas operacionais da CLI
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
+
+# Operações persistentes
+healthmd status --job JOB_UUID
+healthmd resume JOB_UUID --output resumed.json
+healthmd cancel JOB_UUID
+```
+
+### Exportação portátil de arquivos baseada em perfil
+
+A CLI direta autônoma pode resolver um perfil salvo em qualquer uma das plataformas de telefone suportadas pelo seu ID estável. O perfil fornece suas configurações de saída congeladas; o destino no computador permanece explícito:
+
+```bash
+mkdir -p "$HOME/Documents/HealthVault"
+healthmd export --last 7 \
+  --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+`--profile PROFILE_ID` não pode ser combinado com `--use-device-settings` nem com seletores de métrica/categoria, e um ID desconhecido falha de forma segura em vez de usar configurações atuais. Copie o ID em **Ajustes → Perfis de exportação → ID do perfil** no iPhone ou no Android. Consulte [Perfis de exportação](/pt-br/docs/export-profiles/) para automação e comportamento do destino.
+
+O cliente direto portátil pode invocar qualquer operação tipada de iPhone suportada sem envelope MCP:
+
+```bash
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
+
+## Auxiliar do Mac incluído
+
+O Health.md para Mac inclui seus próprios auxiliares Swift assinados `healthmd` e `healthmd-mcp` dentro do app. Esse auxiliar é um recurso do app para Mac, não um backend da CLI autônoma: por padrão ele conversa com o servidor loopback do app para Mac em execução para consultas locais criptografadas, ferramentas MCP e a pasta de destino já selecionada no Health.md para Mac; ele também oferece um modo direto de iPhone compatível, selecionado com `--backend direct`. Os dois clientes nunca trocam de modo silenciosamente.
 
 <div class="availability available">
 <strong>Disponível agora · Health.md para Mac</strong>
-<p>Os auxiliares assinados Swift para CLI e MCP estão incluídos no app lançado para Mac.</p>
+<p>Os auxiliares Swift assinados de CLI e MCP acompanham o app para Mac publicado.</p>
 </div>
 
-O Health.md para Mac inclui os auxiliares assinados `healthmd` e `healthmd-mcp`. Abra o app para Mac e selecione **CLI** para ver os caminhos da cópia instalada, os comandos de configuração, os prompts para agentes e o instalador opcional de skill para agentes.
+Abra o app para Mac e selecione **CLI** para ver os caminhos da sua cópia instalada, comandos de configuração, prompts de agentes e o instalador opcional de habilidades de agente.
 
 Os caminhos normais do pacote do app são:
 
@@ -44,7 +103,7 @@ Os caminhos normais do pacote do app são:
 /Applications/Health.md.app/Contents/Helpers/healthmd-mcp
 ```
 
-Use aliases durante uma sessão do shell:
+Use aliases para uma sessão de shell:
 
 ```bash
 alias healthmd="/Applications/Health.md.app/Contents/Helpers/healthmd"
@@ -59,63 +118,48 @@ ln -sf "/Applications/Health.md.app/Contents/Helpers/healthmd" ~/.local/bin/heal
 ln -sf "/Applications/Health.md.app/Contents/Helpers/healthmd-mcp" ~/.local/bin/healthmd-mcp
 ```
 
-Adicione `~/.local/bin` ao `PATH` se o shell ainda não o incluir:
+Adicione `~/.local/bin` ao `PATH` se o seu shell ainda não o incluir:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Verifique a CLI sem iniciar o loop stdio do MCP:
+Verifique o auxiliar sem iniciar o loop stdio do MCP:
 
 ```bash
 healthmd --help
 healthmd doctor
 ```
 
-`healthmd doctor` retorna um JSON `healthmd.cli_doctor` com a prontidão do Mac, do contexto criptografado e do iPhone. Ele não exibe valores de saúde.
+`healthmd doctor` retorna JSON `healthmd.cli_doctor` com a prontidão do Mac, do contexto criptografado e do iPhone. Ele não imprime valores de saúde.
 
-## Status da CLI portátil
+### Comandos do auxiliar incluído
 
-<div class="availability preview">
-<strong>Prévia pública · ainda não é uma versão estável qualificada</strong>
-<p>A CLI Rust multiplataforma está empacotada publicamente, mas sua matriz móvel exata ainda aguarda a qualificação física de lançamento.</p>
-</div>
+| Comando | Finalidade |
+|---|---|
+| `healthmd export --iphone ...` | Gravar arquivos gerados ou retornar JSON bruto estrito pelo app para Mac |
+| `healthmd status` | Inspecionar prontidão de Mac/iPhone ou uma tarefa persistente |
+| `healthmd doctor` | Explicar a prontidão do Mac, do contexto criptografado e do iPhone |
+| `healthmd metrics list` | Retornar o catálogo canônico de métricas consultáveis |
+| `healthmd query` | Adquirir e consultar métricas tipadas selecionadas |
+| `healthmd sleep sessions` | Retornar sessões de sono de primeira classe e janelas fixas |
+| `healthmd training align` | Alinhar treinos com o sono anterior e seguinte |
+| `healthmd workouts` | Listar treinos tipados com evidências |
+| `healthmd coverage` | Inspecionar cobertura de datas e métricas ou dados ausentes |
+| `healthmd compare` | Comparar períodos exatos com agregação escolhida pelo chamador |
+| `healthmd evidence training` | Construir um pacote de evidências de treino factual |
+| `healthmd resume` / `healthmd cancel` | Gerenciar tarefas persistentes |
+| `healthmd agent ...` | Chamar a API loopback de baixo nível de consultas e tarefas |
+| `healthmd --backend direct ...` | O modo direto de iPhone compatível do auxiliar |
 
-A CLI Rust independente está disponível como prévia pública explicitamente não qualificada. Ela é executada no macOS, Linux e Windows, usa por padrão conexões diretas por IP manual ou Tailscale e não precisa do app para Mac. Ela emparelha com fontes iPhone por meio do protocolo v1 e com fontes Android por meio do protocolo v2, com gates automatizados de compatibilidade Swift↔Rust e Kotlin↔Rust. A compatibilidade de protocolo está implementada, mas a validação em dispositivos físicos precisa ser concluída antes da primeira versão estável qualificada.
+No modo direto do auxiliar, os subcomandos de consulta, evidência, doctor, métricas e atualização de contexto do Mac retornam `backend_unsupported` em vez de trocar para o app para Mac.
 
-No macOS ou Linux, instale a prévia com <code>brew install CodyBontecou/tap/healthmd</code>. Use a compilação móvel exata indicada pela evidência da versão; a publicação do pacote não comprova compatibilidade móvel.
+### Primeiro fluxo de trabalho com o app para Mac
 
-O cliente portátil permite emparelhamento, status, exportação bruta, destinos de arquivos gerados, retomada e cancelamento nas três plataformas de desktop, tanto para fontes iPhone quanto para Android. A extração canônica e as consultas MCP tipadas são recursos do iPhone; os snapshots brutos do Android mantêm seu contrato nativo do provedor Health Connect em vez de serem convertidos em dados no formato do HealthKit, e as consultas tipadas para Android não estão implementadas. Na exportação de arquivos gerados, o telefone trata o destino como um rótulo de destino opaco, enquanto a CLI receptora o valida e associa de forma persistente ao sistema de arquivos do host. O protocolo v2 do Android confirma destinos de arquivos em todos os sistemas operacionais da CLI e limita cada tarefa gerada a 4.096 arquivos.
-
-## Mapa de comandos
-
-| Comando | Finalidade | Backend |
-|---|---|---|
-| `healthmd status` | Verificar a prontidão em tempo real ou uma tarefa persistente local | Ambos |
-| `healthmd doctor` | Explicar a prontidão do Mac, do contexto criptografado e do iPhone | App para Mac |
-| `healthmd metrics list` | Retornar o catálogo canônico de métricas consultáveis | App para Mac |
-| `healthmd extract` | Adquirir objetos canônicos selecionados de `healthmd.health_data` | Ambos, fonte iPhone |
-| `healthmd query` | Adquirir e consultar métricas tipadas selecionadas | App para Mac; iPhone direto com TOOL e argumentos |
-| `healthmd sleep sessions` | Retornar sessões de sono de primeira classe e janelas fixas | App para Mac |
-| `healthmd training align` | Alinhar treinos ao sono anterior e posterior | App para Mac |
-| `healthmd workouts` | Listar treinos tipados com evidências | App para Mac |
-| `healthmd coverage` | Verificar a cobertura ou ausência de dados por data e métrica | App para Mac |
-| `healthmd compare` | Comparar períodos exatos com a agregação escolhida pelo chamador | App para Mac |
-| `healthmd evidence training` | Criar um pacote factual de evidências de treino | App para Mac |
-| `healthmd export` | Gravar arquivos gerados ou retornar JSON bruto estrito | Ambos |
-| `healthmd resume` | Retomar uma tarefa de exportação persistente e imutável | Ambos |
-| `healthmd cancel` | Solicitar cancelamento explícito | Ambos |
-| `healthmd agent ...` | Chamar a API de loopback de baixo nível para consultas e tarefas | App para Mac |
-| `healthmd direct ...` | Emparelhar, listar e remover relações de confiança diretas com o telefone | Direto |
-
-Os comandos direct emparelham com fontes iPhone (protocolo v1) ou Android (protocolo v2). O `extract` canônico e todos os comandos de consulta tipada são recursos do iPhone; o backend direto do Android retorna snapshots brutos nativos do provedor Health Connect e arquivos gerados.
-
-## Primeiro fluxo de trabalho com o app para Mac
-
-1. Abra o Health.md no Mac e selecione uma pasta de destino se pretende gravar arquivos.
+1. Abra o Health.md no Mac e selecione uma pasta de destino se você planeja gravar arquivos.
 2. Abra o Health.md no iPhone emparelhado e aguarde a conectividade com o Mac.
 3. Verifique a prontidão.
-4. Execute um comando pequeno antes de solicitar um histórico extenso.
+4. Execute um comando pequeno antes de solicitar um histórico grande.
 
 ```bash
 healthmd doctor
@@ -124,9 +168,9 @@ healthmd extract --category Sleep --yesterday --output sleep.json
 healthmd query --metric sleep_total --yesterday
 ```
 
-As novas consultas adquirem apenas as métricas, fontes, datas e o nível de detalhe resumido ou sem perdas fornecidos. Elas não alteram as configurações de exportação salvas no iPhone.
+As consultas novas adquirem apenas as métricas, fontes, datas e detalhes de resumo ou sem perdas fornecidos. Elas não alteram as configurações de exportação salvas do iPhone.
 
-## Exportações de arquivos e dados brutos
+### Exportações de arquivos e brutas do auxiliar incluído
 
 ```bash
 # Use the Mac app's selected destination
@@ -146,77 +190,58 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 healthmd export --iphone --yesterday --use-iphone-settings
 ```
 
-No momento, não há limite de dias corridos. `--all` solicita ao iPhone que encontre o registro mais antigo disponível da fonte selecionada, fixe o intervalo resolvido e o processe em partições limitadas. O armazenamento disponível e um único dia excepcionalmente denso continuam sendo limites práticos.
+Não há limite atual de dias de calendário. `--all` pede ao iPhone que descubra o registro selecionado disponível mais antigo, fixe o intervalo resolvido e o processe em partições limitadas. O armazenamento disponível e um dia incomumente denso permanecem limites práticos.
 
-`--raw` solicita temporariamente registros de origem canônicos e sem perdas sem alterar a preferência do iPhone. Ele não grava arquivos gerados nem inclui sidecars de provedores conectados.
-
-### Exportação portátil de arquivos baseada em perfil
-
-A CLI direta independente pode resolver um perfil salvo pelo ID estável nas duas plataformas de telefone compatíveis. O perfil fornece as configurações de saída congeladas; o destino no computador continua explícito:
-
-```bash
-mkdir -p "$HOME/Documents/HealthVault"
-healthmd export --last 7 \
-  --profile 11111111-2222-4333-8444-555555555555 \
-  --destination "$HOME/Documents/HealthVault"
-```
-
-`--profile PROFILE_ID` não pode ser combinado com `--use-device-settings` nem com seletores de métrica/categoria. Um ID desconhecido falha de forma segura em vez de usar as configurações ativas. Copie o ID em **Ajustes → Perfis de exportação → ID do perfil** no iPhone ou Android. Consulte [Perfis de exportação](/pt-br/docs/export-profiles/) para automação e comportamento do destino.
-
-O cliente direto portátil pode chamar qualquer operação tipada compatível do iPhone sem um envelope MCP:
-
-```bash
-healthmd query healthmd_sleep_sessions \
-  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
-```
+`--raw` solicita temporariamente registros canônicos sem perdas sem alterar a preferência do iPhone. Ele não grava arquivos gerados nem inclui sidecars de provedores conectados.
 
 ## Extração canônica ou consulta derivada?
 
-Use `extract` quando precisar de dados com a estrutura da fonte:
+Use `extract` quando precisar de dados na forma da origem:
 
 ```bash
 healthmd extract --metric workouts --last 14 \
   --object records --detail lossless --output workout-records.json
 ```
 
-Use um comando de consulta quando precisar de uma visualização tipada e vinculada a evidências:
+Use um comando de consulta quando precisar de uma visão tipada vinculada a evidências. A CLI autônoma expõe operações tipadas fixas; o auxiliar do Mac incluído também oferece os comandos de alto nível abaixo:
 
 ```bash
-healthmd sleep sessions --last-nights 14 --window first:4h
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"exact","range":{"start_date":"2026-07-22","end_date":"2026-07-28"}},"all_pages":true}'
 healthmd compare --metric steps:sum \
   --first-from 2026-07-01 --first-to 2026-07-07 \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v8 é o contrato público da fonte Apple. Os schemas de consulta, evidência, tarefa e recibo descrevem o transporte ou as visualizações derivadas. Eles não substituem o schema da fonte. A extração canônica é um recurso do iPhone; as fontes diretas do Android expõem snapshots brutos nativos do provedor Health Connect por meio da exportação bruta.
+`healthmd.health_data` v8 é o contrato público de origem da Apple. Os schemas de consulta, evidência, tarefa e recibo descrevem visões de transporte ou derivadas. Eles não substituem o schema de origem. A extração canônica é uma funcionalidade do iPhone; as fontes diretas do Android expõem snapshots Health Connect nativos do provedor por meio da exportação bruta.
 
 ## Comportamento legível por máquina
 
-Por padrão, os comandos usam JSON versionado no stdout ou no caminho explícito de `--output`. A extração canônica pode optar por JSONL, e consultas de alto nível podem optar por uma tabela deliberadamente com perdas. O progresso sem dados de saúde pode usar stderr. `--help` é texto simples. Falhas de argumentos antes do início de um comando são exibidas como texto simples no stderr com código de saída 2.
+Os comandos usam JSON versionado no stdout ou no caminho `--output` explícito por padrão. A extração canônica pode emitir JSONL e as consultas de alto nível podem optar por uma tabela deliberadamente com perdas. O progresso sem valores de saúde pode usar o stderr. `--help` é texto simples. Falhas de argumentos antes do início de um comando são texto simples no stderr com código de saída 2.
 
-Uma saída bem-sucedida do processo não basta para comprovar que os dados de saúde estão completos. Verifique:
+Uma saída de processo bem-sucedida não é suficiente para provar dados de saúde completos. Verifique:
 
 - o status externo;
 - o status do escopo solicitado;
 - os resultados por dia e por consulta;
 - os intervalos ausentes;
 - `next_cursor` ou o recibo de percurso;
-- o schema e a versão da fonte;
-- as limitações e os avisos.
+- o schema e a versão da origem;
+- limitações e avisos.
 
-Um resultado completo e vazio significa que o Health.md representou o escopo solicitado e não encontrou observações. Não é o mesmo que zero, ausente, com falha, ignorado ou sem suporte.
+Um resultado completamente vazio significa que o Health.md representou o escopo solicitado e não encontrou observações. Não é o mesmo que zero, ausente, falho, ignorado ou não suportado.
 
 ## Automação segura
 
-Use o timeout de processo do host de automação e mantenha o stdin fechado para comandos que não devem solicitar interação. Em sistemas com GNU `timeout`:
+Use o tempo limite de processo do seu host de automação e mantenha o stdin fechado para comandos que não devem solicitar entrada. Em sistemas com `timeout` do GNU:
 
 ```bash
-NO_COLOR=1 TERM=dumb timeout 30 healthmd doctor </dev/null
+NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 NO_COLOR=1 TERM=dumb timeout 300 \
   healthmd extract --category Sleep --last 7 --output sleep.json </dev/null
 ```
 
-Timeout, Ctrl-C, encerramento do processo, perda de rede e esgotamento do tempo de execução em segundo plano do iOS não cancelam uma tarefa persistente. Verifique o ID da tarefa e retome-a em vez de iniciar uma duplicata.
+Tempo limite, Ctrl-C, término do processo, perda de rede e tempo de plano de fundo do iOS esgotado não cancelam uma tarefa persistente. Inspecione o ID da tarefa e retome-a em vez de iniciar uma duplicata.
 
 ```bash
 healthmd status --job JOB_UUID
@@ -228,17 +253,17 @@ Somente uma confirmação do iPhone torna o cancelamento definitivo.
 
 ## Regras de privacidade
 
-A saída bruta e sem perdas pode conter timestamps exatos, rotas, registros clínicos, medicamentos, registros de humor, valores de ECG, proveniência e anexos. Prefira um arquivo de saída à saída no terminal. Não cole os payloads em relatórios de problemas, transcrições de agentes, logs de CI ou rastreamentos do shell.
+A saída bruta e sem perdas pode conter carimbos de data/hora exatos, rotas, registros clínicos, medicamentos, entradas de humor, valores de ECG, proveniência e anexos. Prefira um arquivo de saída à saída no terminal. Não cole payloads em relatórios de problemas, transcrições de agentes, logs de CI nem rastreamentos de shell.
 
-A API local de consultas não tem token bearer, cadastro, perfil de acesso nem banco de dados de concessões. A acessibilidade pelo loopback é todo o seu limite de acesso. Qualquer processo local pode usá-la enquanto o app para Mac estiver aberto, portanto nunca use proxy nem exponha a porta `17645` a outra máquina.
+A API de consulta local do auxiliar do Mac incluído não tem token de portador, registro, perfil de acesso nem banco de dados de concessões. A acessibilidade do loopback é sua fronteira de acesso completa. Qualquer processo local pode usá-la enquanto o app para Mac está aberto; nunca faça proxy nem exponha a porta `17645` a outra máquina.
 
 ## Próximos guias
 
 <div class="related">
-  <a href="/pt-br/docs/cli-direct/"><span>Sem o app para Mac</span>CLI direta para telefone: emparelhe com iPhone ou Android, revise transportes, exportações brutas e de arquivos, comportamento em segundo plano e suporte a plataformas.</a>
-  <a href="/pt-br/docs/cli-extract/"><span>Dados de origem</span>Extração canônica: selecione métricas, objetos, nível de detalhe, JSON Pointers, JSONL e recibos.</a>
-  <a href="/pt-br/docs/cli-jobs/"><span>Automação</span>Tarefas persistentes: timeouts, retomada, cancelamento, resultados parciais e scripts seguros.</a>
+  <a href="/pt-br/docs/cli-direct/"><span>Sem app para Mac</span>CLI direta por telefone: emparelhe com iPhone ou Android, revise transportes, exportações brutas e de arquivos, comportamento em segundo plano e suporte de plataformas.</a>
+  <a href="/pt-br/docs/cli-extract/"><span>Dados de origem</span>Extração canônica: selecione métricas, objetos, detalhes, ponteiros JSON, JSONL e recibos.</a>
+  <a href="/pt-br/docs/cli-jobs/"><span>Automação</span>Tarefas persistentes: tempos limite, retomada, cancelamento, resultados parciais e scripts seguros.</a>
   <a href="/pt-br/docs/agents/"><span>Agentes</span>Fluxos de agentes locais: contexto criptografado, escopo direto, comandos tipados e evidências.</a>
-  <a href="/pt-br/docs/mcp/"><span>MCP</span>Configure o auxiliar stdio em sandbox e analise os limites de suas ferramentas.</a>
-  <a href="/pt-br/docs/reference/api-and-cli/"><span>Contrato</span>Referência da API e da CLI: rotas, schemas, respostas e fixtures geradas exatas.</a>
+  <a href="/pt-br/docs/mcp/"><span>MCP</span>Configure o auxiliar stdio isolado e revise a fronteira de ferramentas dele.</a>
+  <a href="/pt-br/docs/reference/api-and-cli/"><span>Contrato</span>Referência de API e CLI: rotas exatas, schemas, respostas e fixtures gerados.</a>
 </div>
