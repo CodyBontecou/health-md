@@ -36,6 +36,7 @@ Codex / Claude / another local MCP host
 
 - macOS, Linux 또는 Windows에 독립 실행형 미리보기를 설치합니다. Mac 앱과 루프백 서비스는 필요하지 않습니다.
 - 쿼리 지원 iPhone과 한 번 페어링하고 새 타입 지정 요청마다 Health.md를 포그라운드에 유지합니다. Android 타입 지정 MCP는 지원되지 않습니다.
+- MCP 페어링 도구는 iPhone만 등록합니다. Android는 MCP 시작 전에 CLI에서 명시적으로 페어링합니다.
 - Manual IP 또는 Tailscale 연결과 운영체제 자격 증명 저장소를 사용합니다. Linux에는 잠금 해제된 Secret Service 제공자가 필요합니다.
 - 설치된 호환성 실행기 또는 동일 바이너리 stdio 서버를 구성합니다. 둘 다 페어링된 직접 백엔드를 사용합니다.
 
@@ -148,6 +149,12 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 | `healthmd_export_job_status` | 내보내기 진행 상황 및 대상 수신 확인 검토 |
 | `healthmd_export_job_resume` | 정확하고 변경 불가능한 영속 내보내기 작업 재개 |
 | `healthmd_export_job_cancel` | 내보내기 작업 명시적 취소 |
+### 전체 원시 코퍼스 액세스 · 휴대용 로컬 MCP 전용
+
+| 도구 | 목적 |
+|---|---|
+| `healthmd_export_raw` | 명시적 승인 후 iPhone 또는 Android에서 내구성 있는 원시 코퍼스 내보내기 시작 |
+| `healthmd_raw_artifact_read` | 검증되고 작업에 바인딩된 아티팩트를 제한된 청크로 읽기 |
 
 내보내기, 재개 및 취소 도구는 잠재적으로 파괴적인 쓰기로 표시되며 현재 Claude 호스트에서 명시적 상호 작용이 필요합니다. 구성된 내보내기 모드가 생성 파일을 업데이트하거나 덮어쓸 수 있기 때문입니다. 위 Codex 구성은 추가 보호 수단으로 해당 도구에서 확인을 요청합니다.
 

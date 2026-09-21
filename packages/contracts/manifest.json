@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "80af13d2ee97d5f8af372c7a068979f22e9e64d14760886df249787e526825a4",
+      "sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -190,6 +190,33 @@
           ]
         }
       ]
+    },
+    {
+      "id": "healthmd.health_corpus",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Cross-platform scope, completeness, durable-job, and bounded local-MCP contract for every public, supported, user-authorized health record while preserving native Apple and Android semantics.",
+      "specification": "packages/contracts/health-corpus/v1/contract.md",
+      "authorities": [
+        "packages/contracts/health-corpus/v1/contract.md",
+        "apps/apple/docs/features/export-schema.md",
+        "apps/android/docs/export-contract/raw-snapshot-v1.md"
+      ],
+      "implementations": [
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-cli/src/main.rs",
+        "apps/cli/crates/healthmd-cli/src/mcp/direct_backend.rs",
+        "apps/cli/crates/healthmd-client/src/direct.rs",
+        "apps/apple/HealthMd/iOS/IPhoneDirectExportCoordinator.swift",
+        "apps/android/app/src/main/java/com/healthmd/direct/DirectCliCoordinator.kt"
+      ],
+      "consumers": [
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+        ".agents/skills/healthmd-cli/SKILL.md"
+      ],
+      "fixtures": []
     },
     {
       "id": "healthmd.semantic_input",

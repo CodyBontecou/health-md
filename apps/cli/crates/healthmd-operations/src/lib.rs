@@ -16,8 +16,10 @@ pub use limits::OperationLimits;
 pub use model::SurfaceProfile;
 pub use normalize::{
     DateOptions, ExtractSelection, GeneratedFileExportInput, GeneratedFileExportInvocation,
-    OperationInputError, SelectionDetail, SelectionOptions, canonical_destination,
-    canonical_object_path, generated_file_export_from_value, validate_canonical_pointer,
+    OperationInputError, RawArtifactReadInput, RawCorpusExportInput, RawCorpusFormat,
+    SelectionDetail, SelectionOptions, canonical_destination, canonical_object_path,
+    generated_file_export_from_value, raw_artifact_read_from_value, raw_corpus_export_from_value,
+    validate_canonical_pointer,
 };
 pub use receipt::{
     OperationOutcome, OperationReceipt, backend_error_value, cancellation_value,

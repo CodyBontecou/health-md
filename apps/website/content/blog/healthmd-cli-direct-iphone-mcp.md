@@ -50,7 +50,7 @@ For Codex, one command pairs your iPhone if needed and writes the MCP configurat
 - *"Show sleep sessions around my running workouts."*
 - *"Which days are missing sleep data?"*
 
-The local MCP server exposes 19 fixed tools: metric catalog, typed queries, charts, sleep sessions, workouts, period comparison, coverage, evidence packets, and durable exports. Every query runs against the paired, foreground iPhone. Export, resume, and cancel tools require explicit approval. A read-only 13-tool profile exists for hosts that should have no export authority at all.
+The local MCP server exposes 21 fixed tools: metric catalog, typed queries, charts, sleep sessions, workouts, period comparison, coverage, evidence packets, durable generated-file exports, full public/authorized raw-corpus export, and bounded job-artifact reads. Typed queries run against the paired, foreground iPhone; raw-corpus jobs also support Android. Export start, resume, and cancel tools require explicit approval. A read-only 13-tool profile exists for hosts that should have no export or raw-artifact authority at all.
 
 ## What stays private
 

@@ -130,16 +130,16 @@
 | Feature | Products | Description | Evidence | Docs |
 |---|---|---|---|---|
 | `healthmd status` / `direct devices` / `unpair` / `reset-trust` | CLI | Readiness, device inventory, trust management | `healthmd-cli/src/main.rs` | ✅ README + skill |
-| `healthmd export` (raw / files / Android) | CLI | Raw JSON/NDJSON, production-generated files (iOS v1 / Android v2), provider + format flags, `--allow-partial` | main.rs, `healthmd-client` | ✅ |
+| `healthmd export` (raw / files / Android) | CLI | Raw JSON/NDJSON, explicit `--full-corpus` public/authorized scope, production-generated files (iOS v1 / Android v2), provider + format flags, `--allow-partial` | main.rs, `healthmd-client` | ✅ |
 | `healthmd extract` | CLI | Scoped canonical extraction projection (iOS v1) incl. JSONL | main.rs | ✅ website `cli-extract.md` |
 | `healthmd query <op>` | CLI | Typed operations through the same registry/evaluator as MCP (iOS query v3) | main.rs, `healthmd-operations` | ✅ |
 | `healthmd resume` / `cancel` | CLI | Durable job resume/cancel (7-day jobs) | main.rs, `job.rs`/`v2_job.rs` | ✅ website `cli-jobs.md` |
 | `healthmd direct pair` | CLI | iOS 6-digit / Android 20-digit pairing; QR code; LAN + Tailscale addresses | `pairing.rs` | ✅ |
 | `healthmd setup codex` | CLI | Guided Codex MCP host config + pairing | `onboarding.rs` | ✅ skill |
-| `healthmd mcp serve` / `serve-read-only` | CLI, macOS | Full 19-tool local MCP; 13-tool read-only profile, stdio | `healthmd-mcp`, `mcp-tools-v1.json` | ✅ `local-mcp.md`, `remote-mcp.md`; website `mcp.md` |
+| `healthmd mcp serve` / `serve-read-only` | CLI, macOS | Full 21-tool local MCP with durable full-corpus jobs and bounded artifact reads; 13-tool read-only profile, stdio | `healthmd-mcp`, `mcp-tools-v1.json` | ✅ README, `remote-mcp.md`; website `mcp.md` |
 | `healthmd mcp serve-http` | CLI | Loopback Streamable HTTP with Host/Origin allowlists + optional OAuth resource server (JWT/JWKS) | `transport/streamable_http.rs`, `auth/jwt.rs` | ✅ `remote-mcp.md` |
 | `healthmd mcp schema` | CLI | Offline fixed tool JSON-Schema catalog | main.rs | ✅ |
-| MCP tool catalog (19 tools) | CLI, macOS | status/doctor/capabilities/metrics; metric_chart (PNG/HTML), sleep_sessions, training_alignment, workouts, coverage, compare_periods, training_evidence; query, evidence_packet; pairing_start/status; export_files + job status/resume/cancel | `healthmd-operations/src/registry.rs`, assets | ✅ reference/generated/automation |
+| MCP tool catalog (21 tools) | CLI, macOS | status/doctor/capabilities/metrics; metric_chart (PNG/HTML), sleep_sessions, training_alignment, workouts, coverage, compare_periods, training_evidence; query, evidence_packet; pairing_start/status; export_files; export_raw + bounded job-bound artifact read; shared job status/resume/cancel | `healthmd-operations/src/registry.rs`, assets | ✅ reference/generated/automation |
 | Evidence packets / query manifests | macOS, CLI, iOS | `healthmd.evidence_packet` v1, `healthmd.query_request/response/error` v1 paged typed queries | `Shared/Query/*`, `docs/reference/evidence-packets.md` | ✅ `apps/apple/docs/features/evidence-packets.md` (indexed in `apps/apple/docs/features/index.md` Automation rows) |
 | Encrypted query-context store | macOS | AES-256-GCM per-day encrypted local context, Keychain device key | `EncryptedHealthContextStore.swift` | ✅ `encrypted-query-context-store.md` (indexed) |
 | Bounded encrypted query executor | macOS | Bounded-memory paged execution over encrypted context | `EncryptedHealthContextQueryExecutor.swift` | ✅ `bounded-encrypted-query-executor.md` (indexed) |

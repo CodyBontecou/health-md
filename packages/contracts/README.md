@@ -13,6 +13,7 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json`](../healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json) | Rust-owned ordered metric/profile inventory pinned by `manifest.json` |
 | [`validate.py`](validate.py) | Standard-library validation for inventories, hashes, mirrors, metric/profile cross-links, and wire-vector invariants |
 | [`direct-protocol`](direct-protocol) | Normative direct-device protocol specifications and canonical interoperability vectors |
+| [`health-corpus/v1`](health-corpus/v1/contract.md) | Shared all-public-authorized scope, truthful completeness semantics, durable CLI jobs, and bounded local-MCP artifact access over native Apple and Android raw contracts |
 | [`semantic-input/v1`](semantic-input/v1/contract.md) | Internal post-capture semantic envelope, strict schemas, and synthetic cross-language differential corpus |
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |

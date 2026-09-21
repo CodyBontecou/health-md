@@ -19,7 +19,8 @@ applicable shared fixtures before advertising a protocol version.
 | Direct HealthKit/Health Connect reads | No | No | No |
 
 A mobile device running Health.md is always required to acquire source health data. Local and
-feature-enabled Streamable HTTP MCP queries contact a foreground iPhone; Health.md does not retain a
+feature-enabled Streamable HTTP typed MCP queries contact a foreground iPhone; complete local MCP can
+also run durable provider-native raw jobs against iPhone or Android. Health.md does not retain a
 remote query corpus. Windows accepts existing local drive-root and UNC destinations, but rejects
 verbatim/device namespaces, traversal,
 reserved aliases, alternate data streams, symlinks, junctions, reparse points, and root replacement.
@@ -46,15 +47,21 @@ operation registry, typed normalization, canonical receipts, validation, and bou
 `healthmd query` command calls the same registry and query service directly, without an MCP envelope.
 
 `healthmd mcp serve` preserves newline-delimited stdio and the direct Manual IP/Tailscale backend. It
-exposes 19 fixed tools plus negotiated self-contained analysis and local-only pairing UI resources;
+exposes 21 fixed tools plus negotiated self-contained analysis and local-only pairing UI resources;
 it has no Mac-app, localhost, shell, SQL, arbitrary URL, or arbitrary file-read authority. Two
 local-only tools start a bounded background iPhone pairing listener, return its short-lived QR as MCP
 `image/png`, request an inline pairing card on MCP Apps hosts, and poll a health-free session receipt.
 The QR bearer secret is omitted from text/structured results, and the pairing tools and resource
-require local stdio identity. Pairing start is first-device onboarding only: existing
-mobile trust or an explicit server device pin fails closed instead of creating ambiguous routing.
-Query tools require a foreground query-capable iPhone and
-v3. Before query/export/resume/cancel dispatch, one shared `healthmd-client` wake window keeps the
+require local stdio identity. Pairing start is first-device iPhone onboarding only: Android pairing
+remains an explicit shell workflow, and existing mobile trust or an explicit server device pin fails
+closed instead of creating ambiguous routing. Query tools require a foreground query-capable iPhone
+and v3. The local `healthmd_export_raw` operation instead selects iOS v1 or Android v2 from paired
+trust, starts an immutable durable `all_public_authorized` job, and keeps its validated artifact in
+the private job spool. `healthmd_raw_artifact_read` accepts only an exact completed job UUID and a
+bounded offset/length, revalidates stored size and SHA-256, and returns at most 64 KiB as base64; it
+cannot read an arbitrary path. Existing Apple and Android raw envelopes remain the completeness
+manifests and preserve native capture/authorization/unsupported/partial/read-error evidence.
+Before query/export/resume/cancel dispatch, one shared `healthmd-client` wake window keeps the
 listener bound for up to 120 seconds and retries authenticated readiness with 250 ms to 2 s
 backoff. MCP cancellation drops this local wait immediately without creating phone-side job
 cancellation, and stdio emits health-free `notifications/progress` when the caller supplied a
@@ -65,19 +72,21 @@ test-environment override and `HEALTHMD_NO_WAKE=1` disables the nudge. Failure a
 P1. Android FCM remains P3 and Android therefore stays wait-only. The experimental feature-gated
 Streamable HTTP relay additionally bounds each request at 300 seconds — a pre-existing transport
 limit that the wake window does not extend — so keep `HEALTHMD_WAKE_TIMEOUT` low or disable it
-behind that relay. Generated-file export, resume,
-and cancellation remain durable protocol-v1 operations and require host approval. Unix `healthmd-mcp` uses `exec(2)` to become the sibling `healthmd`.
+behind that relay. Generated-file and full-corpus raw export start/resume/cancel operations remain durable and require
+host approval. Unix `healthmd-mcp` uses `exec(2)` to become the sibling `healthmd`.
 Windows has no `exec(2)`, so `healthmd-mcp.exe` serves in-process and supervises its own same-file
 helper against the same fixed Credential Manager service/account.
 
 `healthmd mcp serve-read-only` is a second default-build stdio entry for local least-privilege
 hosts. It uses a distinct `local_read_only` application profile and a caller identity carrying only
-`healthmd:read`. Catalog filtering and call authorization independently exclude both pairing tools
-and all four export-job tools, including status; the pairing UI resource and local destination
-authority are also absent. Pairing happens separately with `healthmd direct pair`. This entry starts
+`healthmd:read`. Catalog filtering and call authorization independently exclude both pairing tools,
+the full-corpus start/read tools, the generated-file start tool, and the three shared job
+status/resume/cancel tools; the pairing UI resource, job artifact authority, and local destination
+authority are also absent. Pairing
+happens separately with `healthmd direct pair`. This entry starts
 no MCP HTTP listener and introduces no cloud, OAuth, tunnel, or iPhone protocol dependency.
 
-The default CLI feature set contains local stdio/direct iPhone transport plus the bounded P2 wake
+The default CLI feature set contains local stdio/direct mobile transport plus the bounded P2 wake
 HTTPS client; it does not contain an MCP HTTP listener or a health-data cloud path. The experimental
 `streamable-http` and `oauth-resource-server` Cargo features add a read-only HTTP envelope but are
 absent from release binaries. Feature-enabled `healthmd mcp serve-http` uses the same direct backend

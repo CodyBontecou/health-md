@@ -36,6 +36,7 @@ O caminho normal do auxiliar é `/Applications/Health.md.app/Contents/Helpers/he
 
 - Instale a prévia independente no macOS, Linux ou Windows; o app para Mac e seu serviço de loopback não são necessários.
 - Emparelhe uma vez um iPhone com consultas e mantenha o Health.md em primeiro plano para cada nova solicitação tipada. O Android não oferece MCP tipado.
+- As ferramentas de emparelhamento MCP integram apenas o iPhone. Emparelhe o Android explicitamente pela CLI antes de iniciar o MCP.
 - Use Manual IP ou Tailscale e o armazenamento nativo de credenciais; no Linux, é preciso um provedor Secret Service desbloqueado.
 - Configure o iniciador de compatibilidade instalado ou o servidor stdio no mesmo binário. Ambos usam o acesso direto emparelhado.
 
@@ -148,6 +149,12 @@ O servidor integrado para Mac disponibiliza 21 ferramentas fixas: 13 de prontid�
 | `healthmd_export_job_status` | Inspecionar o progresso da exportação e o recibo do destino |
 | `healthmd_export_job_resume` | Retomar exatamente a tarefa persistente e imutável de exportação |
 | `healthmd_export_job_cancel` | Cancelar explicitamente a tarefa de exportação |
+### Acesso ao corpus bruto completo · somente MCP local portátil
+
+| Ferramenta | Finalidade |
+|---|---|
+| `healthmd_export_raw` | Após aprovação explícita, iniciar uma exportação durável do corpus bruto no iPhone ou Android |
+| `healthmd_raw_artifact_read` | Ler um trecho limitado do artefato validado e vinculado à tarefa |
 
 As ferramentas de exportação, retomada e cancelamento são marcadas como gravações potencialmente destrutivas e exigem interação explícita nos hosts Claude atuais, pois os modos de exportação configurados podem atualizar ou sobrescrever arquivos gerados. A configuração do Codex acima solicita aprovação para essas ferramentas como proteção adicional.
 

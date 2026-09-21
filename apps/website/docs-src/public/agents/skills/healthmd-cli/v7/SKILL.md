@@ -1,6 +1,6 @@
 ---
 name: healthmd-cli
-description: Safely install and use the Health.md CLI and MCP server to query user-authorized health data, chart typed metrics, inspect sleep and workouts, export scoped Apple Health or Health Connect data, and recover durable jobs on macOS, Linux, or Windows. Use for consumer workflows, not Health.md development.
+description: Safely install and use the Health.md CLI and MCP server to query user-authorized health data, chart typed metrics, inspect sleep and workouts, export scoped or complete public/authorized Apple Health or Health Connect data, and recover durable jobs on macOS, Linux, or Windows. Use for consumer workflows, not Health.md development.
 compatibility: Requires matching `healthmd` and `healthmd-mcp` binaries plus an explicitly compatible Health.md mobile build. Direct typed queries and canonical extraction currently require iPhone; Android supports provider-native raw and generated-file exports. Live work requires Direct CLI Access and the selected phone to be available.
 ---
 
@@ -162,7 +162,7 @@ Typed queries currently require a compatible foreground iPhone. For least privil
 healthmd mcp serve-read-only
 ```
 
-This local stdio profile exposes only readiness, catalog, and typed-query tools. Use full `healthmd mcp serve` only when the user also approves in-host pairing or generated-file job authority. For Codex, `healthmd setup codex` configures the full local profile and can open pairing; review that broader authority with the user first.
+This local stdio profile exposes only readiness, catalog, and typed-query tools. Use full `healthmd mcp serve` only when the user also approves in-host pairing, generated-file jobs, or full-corpus raw jobs and bounded artifact reads. For Codex, `healthmd setup codex` configures the full local profile and can open iPhone pairing; review that broader authority with the user first. Android pairing remains an explicit `healthmd direct pair` workflow.
 
 Query workflow:
 
@@ -195,6 +195,19 @@ Dates are illustrative; resolve the user's actual request. `healthmd extract` is
 ## Export or extract only approved scope
 
 Choose exactly one date range: `--yesterday`, `--last N`, `--from/--to`, or `--all`. Prefer an approved protected absolute output path so health data does not enter stdout, transcripts, or a repository. In the examples, first set `PRIVATE_HEALTH_DIR` to an existing private absolute directory selected by the user; never guess or create that location silently.
+
+### Complete public, authorized corpus
+
+Use this only after the user explicitly approves the broad scope and a protected output path:
+
+```bash
+healthmd export --all --raw --full-corpus \
+  --output "$PRIVATE_HEALTH_DIR/complete-health-corpus.json"
+```
+
+`--full-corpus` requests every public record type supported by the selected mobile source and authorized by the user. It cannot read private Apple/Google databases. Preserve the native raw envelope and its capture/authorization/unsupported/skipped/partial/read-error evidence; do not claim that inaccessible or unsupported data was exported. On Android, add `--provider health_connect` or the exact discovered provider and choose JSON/NDJSON as needed. Readable exercise routes are included in this explicit scope; interactive platform consent may still make a route unavailable.
+
+The complete local MCP profile exposes the same scope through `healthmd_export_raw`. It leaves the validated artifact in a private durable job spool. Inspect status with the shared export-job tools and read it only through `healthmd_raw_artifact_read`, one base64 chunk of at most 64 KiB at a time. Never ask MCP for the entire corpus in one model response. These tools are absent from read-only and remote profiles.
 
 ### iPhone strict raw and canonical extraction
 

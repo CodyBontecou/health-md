@@ -157,7 +157,7 @@ healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 ```
 
 省略 `--output` 时，经过验证的 JSON 会流式写入 stdout。对于敏感或大型响应，写入输出文件更安全。
@@ -171,7 +171,7 @@ iPhone 严格原始导出返回 `healthmd.raw_result` v1，其中包含普通 sc
 可移植 Rust 客户端没有后端标志，因此 Android 原始导出命令使用相同语法：
 
 ```bash
-healthmd export --last 7 --raw --provider health_connect \
+healthmd export --all --raw --full-corpus --provider health_connect \
   --raw-format ndjson --output health-connect.ndjson
 ```
 

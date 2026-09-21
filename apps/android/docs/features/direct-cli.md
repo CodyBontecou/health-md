@@ -42,8 +42,12 @@ The QR scanner is implemented with CameraX and ZXing Core in both Play and F-Dro
 
 ```bash
 healthmd export --raw --yesterday --provider health_connect --raw-format ndjson
+healthmd export --all --raw --full-corpus --provider health_connect --raw-format ndjson \
+  --output "$HOME/Documents/HealthVault/health-connect.ndjson"
 healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 ```
+
+`--full-corpus` maps to `all_authorized_supported_data` and includes exercise routes when they are readable; per-session consent can still report a route unavailable. It means all public record types supported by the provider integration and authorized by the user, never a private Health Connect/provider database. The provider-native snapshot manifest and issue inventory preserve authorization, unsupported, skipped, partial, and read-error evidence. Complete local `healthmd mcp serve` can start the same approval-gated job and read only bounded, base64 chunks from its exact validated job artifact; read-only and remote MCP profiles cannot access it.
 
 A visible data-sync notification ("Waiting for Health.md CLI" → transfer progress) runs during the session. If the CLI closes a connection without a terminal outcome — including the wake window's readiness probe, which rebinds its listener for the real request — the session automatically reconnects with 250 ms to 2 s backoff and keeps waiting; it finishes only after a completed export, an explicit disconnect, or repeated unreachable CLI attempts.
 

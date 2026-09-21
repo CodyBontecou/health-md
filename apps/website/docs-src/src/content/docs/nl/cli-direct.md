@@ -24,7 +24,7 @@ Deze zelfstandige tabel is de toepasbare matrix voor de uitdrukkelijk ongekwalif
 | Mobiele bron | Protocol | Exacte tag-SHA-tegenhanger / ongekwalificeerde ondergrens | Platformonafhankelijke Rust-bewerkingen | Openbare status |
 |---|---|---|---|---|
 | iPhone met export | huidige selector 3 (oude 1) / applicatie v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, onbewerkt, extractie, bestanden, hervatten, annuleren | Connectiviteit bevestigd; volledige kwalificatie in afwachting |
-| iPhone met queries | huidige selector 3 (oude 1) / applicatie v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus lokale MCP/query met 19 tools | Connectiviteit bevestigd; volledige kwalificatie in afwachting |
+| iPhone met queries | huidige selector 3 (oude 1) / applicatie v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus lokale MCP/query met 21 tools | Connectiviteit bevestigd; volledige kwalificatie in afwachting |
 | Android | huidige selector 3 (oude 2) / applicatie v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, systeemeigen onbewerkt, bestanden, hervatten, annuleren | Connectiviteit bevestigd; volledige kwalificatie in afwachting |
 | Getypeerde Android-MCP-query | Niet beschikbaar | Niet geïmplementeerd | Querytools vereisen iPhone v3 | Niet ondersteund |
 
@@ -157,7 +157,7 @@ healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 ```
 
 Laat `--output` weg om gevalideerde JSON naar stdout te streamen. Een uitvoerbestand is veiliger voor gevoelige of omvangrijke antwoorden.
@@ -171,7 +171,7 @@ Een volledig lege dag geldt als geslaagd. Ontbrekende, gedeeltelijke, mislukte, 
 De platformonafhankelijke Rust-client heeft geen backendvlag, dus onbewerkte Android-opdrachten gebruiken dezelfde grammatica:
 
 ```bash
-healthmd export --last 7 --raw --provider health_connect \
+healthmd export --all --raw --full-corpus --provider health_connect \
   --raw-format ndjson --output health-connect.ndjson
 ```
 

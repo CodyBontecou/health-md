@@ -215,6 +215,29 @@ pub trait HealthDataBackend: Send + Sync {
         ))
     }
 
+    async fn start_raw_export(
+        &self,
+        _context: &CallContext,
+        _job_id: Uuid,
+        _arguments: &Value,
+    ) -> Result<Value, BackendError> {
+        Err(BackendError::new(
+            "healthmd_export_unsupported",
+            "This Health.md data source does not support local raw exports.",
+        ))
+    }
+
+    async fn read_raw_artifact(
+        &self,
+        _context: &CallContext,
+        _arguments: &Value,
+    ) -> Result<Value, BackendError> {
+        Err(BackendError::new(
+            "healthmd_export_unsupported",
+            "This Health.md data source does not support bounded raw-artifact reads.",
+        ))
+    }
+
     async fn export_status(
         &self,
         _context: &CallContext,

@@ -157,7 +157,7 @@ healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 ```
 
 Lassen Sie `--output` weg, um validiertes JSON auf stdout zu streamen. Eine Ausgabedatei ist bei vertraulichen oder großen Antworten sicherer.
@@ -171,7 +171,7 @@ Ein vollständig leerer Tag ist erfolgreich. Fehlende, partielle, fehlgeschlagen
 Der portable Rust-Client hat kein Backend-Flag, daher verwenden Android-Rohdatenbefehle dieselbe Grammatik:
 
 ```bash
-healthmd export --last 7 --raw --provider health_connect \
+healthmd export --all --raw --full-corpus --provider health_connect \
   --raw-format ndjson --output health-connect.ndjson
 ```
 

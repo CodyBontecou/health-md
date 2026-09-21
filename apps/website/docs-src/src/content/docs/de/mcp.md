@@ -36,6 +36,7 @@ Der übliche Helferpfad ist `/Applications/Health.md.app/Contents/Helpers/health
 
 - Installiere die eigenständige Vorschau unter macOS, Linux oder Windows; Mac-App und Loopback-Dienst sind nicht erforderlich.
 - Kopple einmal ein abfragefähiges iPhone und lasse Health.md für jede neue typisierte Anfrage im Vordergrund. Typisiertes MCP wird unter Android nicht unterstützt.
+- Die MCP-Kopplungswerkzeuge unterstützen nur iPhone. Kopple Android vor dem MCP-Start ausdrücklich über die CLI.
 - Nutze Manual IP oder Tailscale und den nativen Anmeldedatenspeicher; Linux erfordert einen entsperrten Secret-Service-Anbieter.
 - Konfiguriere den installierten Kompatibilitätsstarter oder den gleichen stdio-Server. Beide verwenden die gekoppelte Direktverbindung.
 
@@ -148,6 +149,12 @@ Der mitgelieferte Mac-Server stellt 21 feste Tools bereit: 13 für Bereitschaft 
 | `healthmd_export_job_status` | Überprüfen Sie den Exportfortschritt und den Zielbeleg |
 | `healthmd_export_job_resume` | Setzen Sie den exakt festgelegten unveränderlichen persistenten Exportauftrag fort |
 | `healthmd_export_job_cancel` | Den Exportauftrag explizit abbrechen |
+### Vollständiger Rohdatenzugriff · nur portables lokales MCP
+
+| Tool | Zweck |
+|---|---|
+| `healthmd_export_raw` | Nach ausdrücklicher Freigabe einen dauerhaften Rohdaten-Gesamtexport auf iPhone oder Android starten |
+| `healthmd_raw_artifact_read` | Einen begrenzten Block des validierten, auftragsgebundenen Artefakts lesen |
 
 Die Tools zum Exportieren, Fortsetzen und Abbrechen werden als potenziell destruktive Schreibvorgänge markiert und erfordern eine explizite Interaktion auf aktuellen Claude-Hosts, da konfigurierte Exportmodi generierte Dateien aktualisieren oder überschreiben können. Die obige Codex-Konfiguration weist als zusätzlichen Schutz auf diese Tools hin.
 

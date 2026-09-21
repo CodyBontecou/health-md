@@ -36,6 +36,7 @@ Il percorso abituale dell'helper è `/Applications/Health.md.app/Contents/Helper
 
 - Installa l’anteprima autonoma su macOS, Linux o Windows; l’app per Mac e il relativo servizio di loopback non sono necessari.
 - Abbina una volta un iPhone con query e mantieni Health.md in primo piano per ogni nuova richiesta tipizzata. Android non supporta MCP tipizzato.
+- Gli strumenti di abbinamento MCP configurano solo iPhone. Abbina Android esplicitamente dalla CLI prima di avviare MCP.
 - Usa Manual IP o Tailscale e l’archivio credenziali nativo; Linux richiede un provider Secret Service sbloccato.
 - Configura il launcher di compatibilità installato o il server stdio nello stesso binario. Entrambi usano l’accesso diretto abbinato.
 
@@ -148,6 +149,12 @@ Il server incluso per Mac espone 21 strumenti fissi: 13 per verifica e query, qu
 | `healthmd_export_job_status` | Esamina l'avanzamento dell'esportazione e la ricevuta della destinazione |
 | `healthmd_export_job_resume` | Riprende esattamente l'attività persistente e immutabile di esportazione |
 | `healthmd_export_job_cancel` | Annulla esplicitamente l'attività di esportazione |
+### Accesso al corpus grezzo completo · solo MCP locale portatile
+
+| Strumento | Scopo |
+|---|---|
+| `healthmd_export_raw` | Dopo l’approvazione esplicita, avvia un’esportazione durevole del corpus grezzo su iPhone o Android |
+| `healthmd_raw_artifact_read` | Legge un blocco limitato dell’artefatto convalidato e vincolato al job |
 
 Gli strumenti di esportazione, ripresa e annullamento sono contrassegnati come scritture potenzialmente distruttive e richiedono un'interazione esplicita negli host Claude attuali, perché le modalità di esportazione configurate possono aggiornare o sovrascrivere i file generati. La configurazione di Codex riportata sopra richiede una conferma per questi strumenti come ulteriore misura di sicurezza.
 

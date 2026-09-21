@@ -37,7 +37,7 @@ The portable client supports pairing, status, raw export, generated-file destina
 | `healthmd mcp ...` | Serve or inspect the fixed MCP tool surface |
 | `healthmd setup codex` | Configure Codex and pair an iPhone in one flow |
 
-Direct commands pair with iPhone (protocol v1) or Android (protocol v2) sources. Canonical `extract` and every typed query command are iPhone capabilities. Android direct sources return provider-native Health Connect raw snapshots and generated files.
+Direct commands pair with iPhone (protocol v1) or Android (protocol v2) sources. Canonical `extract` and every typed query command are iPhone capabilities. Android direct sources return provider-native Health Connect raw snapshots and generated files. The full-corpus option is an explicit raw-only scope: it requests every public record type that the selected source supports and the user authorized. It cannot read a private Apple/Google database, and native completeness/authorization/read-error evidence is preserved rather than claiming inaccessible data was exported.
 
 ```bash
 # Readiness and local trust

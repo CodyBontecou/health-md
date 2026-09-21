@@ -157,7 +157,7 @@ healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 ```
 
 Omita `--output` para transmitir o JSON validado por stdout. Um arquivo de saída é mais seguro para respostas confidenciais ou grandes.
@@ -171,7 +171,7 @@ Um dia completo sem dados é considerado bem-sucedido. Dados solicitados ausente
 O cliente Rust portátil não tem sinalizador de backend, então os comandos brutos do Android usam a mesma gramática:
 
 ```bash
-healthmd export --last 7 --raw --provider health_connect \
+healthmd export --all --raw --full-corpus --provider health_connect \
   --raw-format ndjson --output health-connect.ndjson
 ```
 

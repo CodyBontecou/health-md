@@ -117,7 +117,7 @@ async function expectedOutputs() {
   ]);
 
   const macToolNames = parseToolCatalog(macTools, 'Mac MCP tool catalog', 21);
-  const portableToolNames = parseToolCatalog(portableTools, 'portable MCP tool catalog', 19);
+  const portableToolNames = parseToolCatalog(portableTools, 'portable MCP tool catalog', 21);
   if (sha256(skillV1) !== SKILL_V1_SHA256) {
     throw new Error('Published Health.md CLI skill v1 was modified; versioned assets are immutable.');
   }

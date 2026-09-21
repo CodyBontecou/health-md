@@ -36,6 +36,7 @@ La ruta habitual del asistente es `/Applications/Health.md.app/Contents/Helpers/
 
 - Instala la vista previa independiente en macOS, Linux o Windows; no requiere la aplicación para Mac ni su servicio de loopback.
 - Empareja una vez un iPhone con consultas y mantén Health.md en primer plano para cada petición tipada nueva. Android no admite MCP tipado.
+- Las herramientas de emparejamiento MCP solo incorporan iPhone. Empareja Android explícitamente desde la CLI antes de iniciar MCP.
 - Usa Manual IP o Tailscale y el almacén nativo de credenciales; Linux requiere un proveedor Secret Service desbloqueado.
 - Configura el iniciador de compatibilidad instalado o el servidor stdio del mismo binario. Ambos usan el backend directo emparejado.
 
@@ -148,6 +149,12 @@ El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y co
 | `healthmd_export_job_status` | Inspeccionar el progreso de la exportación y el recibo de destino |
 | `healthmd_export_job_resume` | Reanudar la tarea de exportación exacta, inmutable y persistente |
 | `healthmd_export_job_cancel` | Cancelar explícitamente la tarea de exportación |
+### Acceso al corpus bruto completo · solo MCP local portátil
+
+| Herramienta | Propósito |
+|---|---|
+| `healthmd_export_raw` | Tras aprobación explícita, iniciar una exportación duradera del corpus bruto en iPhone o Android |
+| `healthmd_raw_artifact_read` | Leer un fragmento limitado del artefacto validado y vinculado a la tarea |
 
 Las herramientas de exportación, reanudación y cancelación están marcadas como escrituras potencialmente destructivas y requieren interacción explícita en los hosts Claude actuales, porque los modos de exportación configurados pueden actualizar o sobrescribir los archivos generados. La configuración del Codex anterior solicita esas herramientas como protección adicional.
 

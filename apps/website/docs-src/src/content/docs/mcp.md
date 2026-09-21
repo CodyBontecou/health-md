@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Preview · portable direct MCP</strong>
-<p>The separate 19-tool <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is publicly packaged as an explicitly unqualified preview. Its cloud-free <code>serve-read-only</code> entry exposes only the 13 readiness/query tools after local pairing. Install on macOS or Linux with <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>The separate 21-tool <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is publicly packaged as an explicitly unqualified preview. Its cloud-free <code>serve-read-only</code> entry exposes only the 13 readiness/query tools after local pairing. Install on macOS or Linux with <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Bundled Mac requirements
@@ -35,7 +35,8 @@ The normal helper path is `/Applications/Health.md.app/Contents/Helpers/healthmd
 ## Portable direct requirements
 
 - Install the standalone preview on macOS, Linux, or Windows. The Mac app and its loopback service are not required.
-- Pair once with a query-capable iPhone and keep Health.md foreground for each new typed request. Android typed MCP is not supported.
+- Pair once and keep Health.md foreground for each new request. Typed tools require a query-capable iPhone; durable full-corpus raw jobs support a paired iPhone or Android source. Android typed MCP is not supported.
+- Portable MCP pairing tools onboard iPhone only. Pair Android explicitly with the healthmd direct pair command before starting MCP.
 - Use Manual IP or Tailscale reachability and native credential storage. Linux requires an unlocked Secret Service provider.
 - Configure the installed compatibility launcher or the same-binary stdio server. Both use the paired direct connection.
 
@@ -115,7 +116,7 @@ If the host does not support MCP Apps, the tools still work. `healthmd_metric_ch
 
 ## Available tools
 
-The bundled Mac server exposes 21 fixed tools. It has 13 readiness/query tools, four generated-file job tools, and four encrypted-context refresh job tools. The portable preview has 19 tools. It keeps the 13 readiness/query tools and four export tools. It replaces Mac refresh jobs with two direct-pairing tools. It runs typed queries directly on the foreground iPhone.
+The bundled Mac server exposes 21 fixed tools. It has 13 readiness/query tools, four generated-file job tools, and four encrypted-context refresh job tools. The portable preview also has 21 tools. It keeps the 13 readiness/query tools and four shared generated/export-job tools, replaces Mac refresh jobs with two direct-pairing tools, and adds full-corpus raw export plus bounded job-artifact reads. It runs typed queries directly on the foreground iPhone; raw corpus jobs use iPhone or Android.
 
 ### Readiness and discovery
 
@@ -149,7 +150,16 @@ The bundled Mac server exposes 21 fixed tools. It has 13 readiness/query tools, 
 | `healthmd_export_job_resume` | Resume the exact immutable durable export job |
 | `healthmd_export_job_cancel` | Explicitly cancel the export job |
 
-The export, resume, and cancel tools are marked as potentially destructive writes. Current Claude hosts require explicit interaction for these tools. Configured export modes can update or overwrite generated files. The Codex configuration above prompts for these tools as an additional safeguard.
+### Full-corpus raw access · portable local MCP only
+
+| Tool | Purpose |
+|---|---|
+| `healthmd_export_raw` | After explicit approval, start a durable all-public-authorized raw job against the paired iPhone or Android source |
+| `healthmd_raw_artifact_read` | Read at most 64 KiB from that validated private artifact by exact completed job ID and offset, encoded as base64 |
+
+The raw scope means every public record type supported by the selected source and authorized by the user—not a private Apple/Google database. Apple and Android keep native record semantics and completeness, authorization, unsupported, skipped, partial, and read-error evidence. The artifact remains in the CLI's private seven-day job spool; the tool cannot read arbitrary paths. Use the shared export status/resume/cancel tools for its durable lifecycle. Full raw tools are absent from local read-only and every HTTP/OAuth profile.
+
+The generated-file export, raw-export start, resume, and cancel tools are marked as potentially destructive writes. Current Claude hosts require explicit interaction for these tools. Configured file export modes can update or overwrite generated files. The Codex configuration above prompts for these tools as an additional safeguard.
 
 ### Encrypted-context acquisition jobs · bundled Mac only
 

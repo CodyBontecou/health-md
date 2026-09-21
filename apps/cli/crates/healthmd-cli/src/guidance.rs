@@ -135,6 +135,7 @@ pub(super) fn export(missing_dates: bool, missing_mode: bool) -> Value {
                 "options": [
                     "--output <FILE>",
                     "--allow-partial",
+                    "--full-corpus (all public, supported, user-authorized record types)",
                     "--provider <PROVIDER_ID> (Android)",
                     "--raw-format <json|ndjson> (Android)",
                     "--metric <METRIC_ID> (Android)",
@@ -157,8 +158,8 @@ pub(super) fn export(missing_dates: bool, missing_mode: bool) -> Value {
                 "argv_template": ["healthmd", "export", "--last", "7", "--raw", "--output", "week.json"]
             },
             {
-                "description": "Stream all validated raw data to stdout",
-                "argv_template": ["healthmd", "export", "--all", "--raw"]
+                "description": "Stream the complete supported public and authorized corpus to stdout",
+                "argv_template": ["healthmd", "export", "--all", "--raw", "--full-corpus"]
             }
         ],
         "next_actions": [

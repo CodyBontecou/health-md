@@ -24,7 +24,7 @@ This standalone compatibility table is the actionable matrix for the explicitly 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
 | Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
-| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Connectivity confirmed; full qualification pending |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 21-tool local MCP/query and full-corpus jobs | Connectivity confirmed; full qualification pending |
 | Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
@@ -161,12 +161,12 @@ healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 ```
 
 Omit `--output` to stream validated JSON to stdout. An output file is safer for sensitive or large responses.
 
-iPhone strict raw returns `healthmd.raw_result` v1 containing ordinary schema-v8 `healthmd.health_data` days and their canonical source archives. It temporarily requests lossless detail without changing saved iPhone settings. The CLI validates the exact dates, profile, schema, archive, manifests, digest chain, final body digest, and completion state before exposing the result.
+iPhone strict raw returns `healthmd.raw_result` v1 containing ordinary schema-v8 `healthmd.health_data` days and their canonical source archives. The --full-corpus option explicitly selects every public HealthKit type supported by Health.md and authorized by the user, independently of saved/default metric selections, with lossless detail. It cannot read a private HealthKit database. The CLI validates the exact dates, profile, schema, archive, manifests, digest chain, final body digest, and completion state before exposing the result.
 
 A complete-empty day is successful. Missing, partial, failed, cancelled, unsupported, or skipped requested data produces `partial_success` and a nonzero exit unless `--allow-partial` is explicit.
 
@@ -175,13 +175,13 @@ A complete-empty day is successful. Missing, partial, failed, cancelled, unsuppo
 The portable Rust client has no backend flag, so Android raw commands use the same grammar:
 
 ```bash
-healthmd export --last 7 --raw --provider health_connect \
+healthmd export --all --raw --full-corpus --provider health_connect \
   --raw-format ndjson --output health-connect.ndjson
 ```
 
 `--provider` names one explicit provider and defaults to `health_connect`. `--raw-format` defaults to NDJSON, the recommended shape for large snapshots. In-memory JSON validation is capped at 64 MiB. Metric selection supports `--metric` and `--all-metrics`, but not canonical or generated-file selectors, those remain iPhone capabilities.
 
-Android raw snapshots keep their Health Connect provider-native contract. They are never converted into HealthKit-shaped `healthmd.health_data` days, and related-but-different statistics keep their own identities.
+Android raw snapshots keep their Health Connect provider-native contract. With full-corpus mode, the provider scope is all authorized supported data and readable exercise routes are included; route consent or provider restrictions can still report them unavailable. They are never converted into HealthKit-shaped `healthmd.health_data` days, and related-but-different statistics keep their own identities. The snapshot manifest and issue inventory preserve authorization, unsupported, skipped, partial, and read-error evidence rather than treating omission as success.
 
 ## Canonical extraction
 

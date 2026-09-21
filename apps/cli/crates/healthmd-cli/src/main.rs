@@ -32,7 +32,10 @@ use healthmd_operations::{
 };
 use healthmd_protocol::{
     encoding::SwiftUuid,
-    models::{DateSelection, ExportRequest, ProfileReference, ResponseMode, SettingsPolicy},
+    models::{
+        CanonicalSelection, DateSelection, DetailLevel, ExportRequest, ProfileReference,
+        ResponseMode, SettingsPolicy,
+    },
     v2,
     wire::RawProfile,
 };
@@ -235,7 +238,7 @@ struct StatusArgs {
 #[derive(Debug, Args)]
 #[command(
     long_about = "Export either a validated platform-native raw artifact or production-generated Health.md files. Every execution requires exactly one date selection. Raw mode requires --raw; generated-file mode requires an existing absolute --destination directory. Running `healthmd export` with an incomplete request returns local guidance and never contacts a device.",
-    after_help = "MODES:\n  Raw artifact:\n    healthmd export --last 7 --raw --output week.json\n    Omit --output to stream validated JSON/NDJSON to stdout.\n\n  Generated files:\n    healthmd export --yesterday --destination <EXISTING_ABSOLUTE_DIRECTORY>\n    The mobile app's production exporters create files; the host validates and binds\n    the destination before transfer.\n\nDATE SELECTION (choose exactly one):\n  --yesterday | --last DAYS | --from YYYY-MM-DD --to YYYY-MM-DD | --all\n\nDISCOVERY:\n  Run `healthmd export` without a complete mode/date selection to receive structured\n  requirements, platform constraints, and argv examples without contacting a device."
+    after_help = "MODES:\n  Raw artifact:\n    healthmd export --last 7 --raw --output week.json\n    healthmd export --all --raw --full-corpus --output corpus.json\n    Omit --output to stream validated JSON/NDJSON to stdout. --full-corpus requests\n    every public type supported by the source and authorized by the user; it cannot read\n    a platform-private database.\n\n  Generated files:\n    healthmd export --yesterday --destination <EXISTING_ABSOLUTE_DIRECTORY>\n    The mobile app's production exporters create files; the host validates and binds\n    the destination before transfer.\n\nDATE SELECTION (choose exactly one):\n  --yesterday | --last DAYS | --from YYYY-MM-DD --to YYYY-MM-DD | --all\n\nDISCOVERY:\n  Run `healthmd export` without a complete mode/date selection to receive structured\n  requirements, platform constraints, and argv examples without contacting a device."
 )]
 struct ExportArgs {
     #[command(flatten)]
@@ -244,6 +247,12 @@ struct ExportArgs {
     /// Return the source platform's native validated raw artifact instead of generated files.
     #[arg(long)]
     raw: bool,
+
+    /// Capture every public record type supported by the selected source and authorized by the
+    /// user. This is lossless Apple Health JSON on iOS and all-authorized provider-native data on
+    /// Android; it never means access to a platform-private database.
+    #[arg(long, requires = "raw")]
+    full_corpus: bool,
 
     /// Atomic output path for raw JSON/NDJSON. Omit to stream the validated artifact to stdout.
     #[arg(long)]
@@ -1380,6 +1389,7 @@ async fn direct_export(
         return Err(usage_error("--destination cannot be used with --raw"));
     }
     if options.use_device_settings
+        || options.profile_id.is_some()
         || options.selection.all_metrics
         || !options.selection.metrics.is_empty()
         || !options.selection.categories.is_empty()
@@ -1388,9 +1398,25 @@ async fn direct_export(
         || !options.selection.sources.is_empty()
     {
         return Err(usage_error(
-            "strict iOS --raw export cannot be combined with selectors or --use-device-settings",
+            "iOS --raw cannot combine with saved settings, profiles, or selectors; use --full-corpus for the complete supported public metric scope",
         ));
     }
+    let (raw_profile, canonical_selection) = if options.full_corpus {
+        (
+            RawProfile::HealthDataProjection,
+            Some(CanonicalSelection {
+                metric_ids: Vec::new(),
+                categories: Vec::new(),
+                source_ids: vec!["apple_health".to_owned()],
+                object_paths: vec!["/healthkit_record_archive".to_owned()],
+                field_pointers: Vec::new(),
+                all_metrics: true,
+                detail_level: DetailLevel::Lossless,
+            }),
+        )
+    } else {
+        (RawProfile::CanonicalSourceRecordsV1, None)
+    };
     let request = ExportRequest {
         protocol_version: 1,
         job_id: SwiftUuid(Uuid::new_v4()),
@@ -1399,8 +1425,8 @@ async fn direct_export(
         settings_policy: SettingsPolicy::RequestedDatesOnly,
         profile_reference: None,
         response_mode: ResponseMode::RawJson,
-        raw_profile: Some(RawProfile::CanonicalSourceRecordsV1),
-        canonical_selection: None,
+        raw_profile: Some(raw_profile),
+        canonical_selection,
         destination: None,
     };
     let client = DirectClient::open().map_err(client_error)?;
@@ -1436,6 +1462,7 @@ async fn direct_android_export(
             return Err(usage_error("--destination cannot be used with --raw"));
         }
         if options.use_device_settings
+            || options.profile_id.is_some()
             || !options.selection.categories.is_empty()
             || !options.selection.objects.is_empty()
             || !options.selection.fields.is_empty()
@@ -1448,6 +1475,13 @@ async fn direct_android_export(
         if options.selection.all_metrics && !options.selection.metrics.is_empty() {
             return Err(usage_error(
                 "--all-metrics cannot be combined with --metric",
+            ));
+        }
+        if options.full_corpus
+            && (options.selection.all_metrics || !options.selection.metrics.is_empty())
+        {
+            return Err(usage_error(
+                "--full-corpus already selects every supported authorized record type; remove --metric/--all-metrics",
             ));
         }
         let provider = options.provider.trim().to_lowercase();
@@ -1479,7 +1513,7 @@ async fn direct_android_export(
                     RawArtifactFormat::Ndjson => v2::RawSnapshotFormat::Ndjson,
                 },
                 scope,
-                include_exercise_routes: false,
+                include_exercise_routes: options.full_corpus,
             },
             destination: None,
         };
@@ -2573,6 +2607,27 @@ mod tests {
         assert!(help.contains("healthmd query healthmd_sleep_sessions"));
         assert!(help.contains("healthmd mcp schema"));
         assert!(help.contains("is not the sleep-session query API"));
+    }
+
+    #[test]
+    fn full_corpus_requires_raw_and_parses_as_an_explicit_scope() {
+        assert!(Cli::try_parse_from(["healthmd", "export", "--all", "--full-corpus"]).is_err());
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "export",
+            "--all",
+            "--raw",
+            "--full-corpus",
+            "--raw-format",
+            "ndjson",
+        ])
+        .unwrap();
+        let Command::Export(options) = parsed.command else {
+            panic!("expected export command");
+        };
+        assert!(options.raw);
+        assert!(options.full_corpus);
+        assert!(options.dates.all);
     }
 
     #[test]

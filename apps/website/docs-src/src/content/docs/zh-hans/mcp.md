@@ -36,6 +36,7 @@ Codex / Claude / another local MCP host
 
 - 在 macOS、Linux 或 Windows 上安装独立预览版；无需 Mac 应用及其环回服务。
 - 与支持查询的 iPhone 配对一次，并在每次新的类型化请求期间保持 Health.md 前台运行。Android 不支持类型化 MCP。
+- MCP 配对工具仅用于 iPhone。启动 MCP 前，请通过 CLI 明确配对 Android。
 - 使用 Manual IP 或 Tailscale 连通性以及原生凭据存储；Linux 要求已解锁的 Secret Service 提供方。
 - 配置已安装的兼容启动器或同一二进制文件的 stdio 服务器。两者都使用已配对的直连访问。
 
@@ -148,6 +149,12 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 | `healthmd_export_job_status` | 检查导出进度和目标位置回执 |
 | `healthmd_export_job_resume` | 恢复完全相同且不可变的持久导出作业 |
 | `healthmd_export_job_cancel` | 明确取消导出作业 |
+### 完整原始语料访问 · 仅限便携式本地 MCP
+
+| 工具 | 用途 |
+|---|---|
+| `healthmd_export_raw` | 经明确批准后，在 iPhone 或 Android 上启动持久的原始语料导出 |
+| `healthmd_raw_artifact_read` | 以受限分块读取已验证且绑定到作业的工件 |
 
 导出、恢复和取消工具被标记为可能产生破坏性影响的写入。当前 Claude 主机要求用户明确交互，因为所配置的导出模式可能更新或覆盖生成文件。上方 Codex 配置也会对这些工具发出批准提示，作为额外保护。
 

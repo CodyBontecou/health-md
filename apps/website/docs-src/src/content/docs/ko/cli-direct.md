@@ -157,7 +157,7 @@ healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export \
   --from 2026-07-01 --to 2026-07-07 --raw --output range.json
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 ```
 
 검증된 JSON을 stdout으로 스트리밍하려면 `--output`을 생략하세요. 민감하거나 큰 응답에는 출력 파일이 더 안전합니다.
@@ -171,7 +171,7 @@ complete-empty 날짜는 성공입니다. 요청한 데이터가 누락, 부분,
 이식 가능한 Rust 클라이언트에는 백엔드 플래그가 없으므로 Android 원시 명령도 동일한 문법을 사용합니다.
 
 ```bash
-healthmd export --last 7 --raw --provider health_connect \
+healthmd export --all --raw --full-corpus --provider health_connect \
   --raw-format ndjson --output health-connect.ndjson
 ```
 

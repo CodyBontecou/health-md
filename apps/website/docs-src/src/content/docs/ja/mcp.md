@@ -36,6 +36,7 @@ Codex / Claude / another local MCP host
 
 - macOS、Linux、Windowsにスタンドアロンプレビューをインストールします。Macアプリとループバックサービスは不要です。
 - クエリ対応iPhoneと一度ペアリングし、新しい型付きリクエストごとにHealth.mdを前面に保ちます。Androidの型付きMCPには対応していません。
+- MCPのペアリングツールはiPhone専用です。AndroidはMCPを開始する前にCLIで明示的にペアリングします。
 - Manual IPまたはTailscaleによる到達性とOSの認証情報ストレージを使います。Linuxではロック解除済みSecret Serviceプロバイダが必要です。
 - インストール済み互換ランチャーまたは同じバイナリのstdioサーバーを設定します。どちらもペアリング済み直接接続バックエンドを使います。
 
@@ -148,6 +149,12 @@ Health.mdは、安定版`io.modelcontextprotocol/ui`ネゴシエーションを`
 | `healthmd_export_job_status` | エクスポートの進捗と保存先レシートを確認 |
 | `healthmd_export_job_resume` | 変更不能な永続エクスポートジョブをそのまま再開 |
 | `healthmd_export_job_cancel` | エクスポートジョブを明示的にキャンセル |
+### 完全な生コーパスへのアクセス · ポータブルローカルMCPのみ
+
+| ツール | 目的 |
+|---|---|
+| `healthmd_export_raw` | 明示的な承認後、iPhone または Android で永続的な生コーパスエクスポートを開始 |
+| `healthmd_raw_artifact_read` | 検証済みでジョブに結び付いたアーティファクトを制限付きチャンクで読み取る |
 
 エクスポート、再開、キャンセルのツールには、破壊的な書き込みの可能性があることを示すマークが付きます。設定されたエクスポートモードによって生成ファイルが更新または上書きされる場合があるため、現在のClaudeホストでは明示的な操作が必要です。上記のCodex設定では、追加の安全策として、これらのツールを使うときに確認を求めます。
 

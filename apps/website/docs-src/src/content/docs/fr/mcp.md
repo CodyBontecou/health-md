@@ -36,6 +36,7 @@ Le chemin normal de l’utilitaire est `/Applications/Health.md.app/Contents/Hel
 
 - Installez l’aperçu autonome sur macOS, Linux ou Windows ; l’app Mac et son service en boucle locale ne sont pas requis.
 - Associez une fois un iPhone compatible avec les requêtes et gardez Health.md au premier plan pour chaque nouvelle demande typée. Android ne prend pas en charge le MCP typé.
+- Les outils de jumelage MCP intègrent uniquement l’iPhone. Jumelez Android explicitement depuis la CLI avant de démarrer MCP.
 - Utilisez Manual IP ou Tailscale et le stockage natif des identifiants ; Linux exige un fournisseur Secret Service déverrouillé.
 - Configurez le lanceur de compatibilité installé ou le serveur stdio du même binaire. Tous deux utilisent l’accès direct jumelé.
 
@@ -148,6 +149,12 @@ Le serveur Mac intégré expose 21 outils fixes : 13 outils de préparation et d
 | `healthmd_export_job_status` | Inspecter la progression d’export et le reçu de destination |
 | `healthmd_export_job_resume` | Reprendre exactement la tâche persistante d’export, sans en modifier les paramètres |
 | `healthmd_export_job_cancel` | Annuler explicitement la tâche d’export |
+### Accès au corpus brut complet · MCP local portable uniquement
+
+| Outil | Objectif |
+|---|---|
+| `healthmd_export_raw` | Après approbation explicite, démarrer un export durable du corpus brut sur iPhone ou Android |
+| `healthmd_raw_artifact_read` | Lire un fragment limité de l’artefact validé et lié à la tâche |
 
 Les outils d’export, de reprise et d’annulation sont signalés comme des écritures potentiellement destructrices et exigent une interaction explicite sur les hôtes Claude actuels, car les modes d’export configurés peuvent mettre à jour ou écraser des fichiers générés. La configuration Codex ci-dessus demande une confirmation pour ces outils comme protection supplémentaire.
 

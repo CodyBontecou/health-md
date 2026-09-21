@@ -8,4 +8,6 @@ adapters. It does not parse shell arguments, implement JSON-RPC, open sockets, a
 or read HealthKit.
 
 The CLI and MCP adapters must translate into these operations rather than implementing parallel
-business behavior.
+business behavior. This includes the local-only `all_public_authorized` raw-export request and
+bounded, job-bound artifact reads; platform adapters preserve Apple and Android native raw contracts
+instead of inventing cross-platform equivalence.

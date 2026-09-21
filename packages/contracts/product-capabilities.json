@@ -678,6 +678,28 @@
       ]
     },
     {
+      "id": "direct.full_public_authorized_corpus",
+      "name": "Direct full public and authorized health corpus",
+      "classification": "shared",
+      "summary": "Capture every public record type supported by the selected mobile integration and authorized by the user as a durable platform-native CLI or local-MCP raw artifact, with truthful completeness evidence and bounded job-bound MCP reads.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/health-corpus/v1/contract.md",
+        "apps/cli/README.md",
+        "apps/apple/docs/features/cli-direct-iphone.md",
+        "apps/android/docs/features/direct-cli.md",
+        "apps/android/docs/export-contract/raw-snapshot-v1.md"
+      ]
+    },
+    {
       "id": "direct.cli_agent_wake",
       "name": "Direct CLI agent wake window",
       "classification": "shared",

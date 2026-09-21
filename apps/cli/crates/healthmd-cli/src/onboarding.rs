@@ -231,6 +231,7 @@ fn update_locked_config(
     let tools = ensure_table(healthmd, "tools")?;
     for tool in [
         "healthmd_export_files",
+        "healthmd_export_raw",
         "healthmd_export_job_resume",
         "healthmd_export_job_cancel",
     ] {

@@ -79,7 +79,7 @@ in-memory JSON validation is capped at 64 MiB.
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
 | Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
-| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Connectivity confirmed; full qualification pending |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 21-tool local MCP/query and full-corpus jobs | Connectivity confirmed; full qualification pending |
 | Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
@@ -301,10 +301,10 @@ healthmd direct devices
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export --from 2026-07-01 --to 2026-07-07 --raw
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 
-# Android raw options
-healthmd export --last 7 --raw --provider health_connect --raw-format ndjson \
+# Android full corpus in provider-native form (routes are included when authorized/readable)
+healthmd export --all --raw --full-corpus --provider health_connect --raw-format ndjson \
   --output health-connect.ndjson
 
 # Typed query through the same operation registry and evaluator as MCP (iOS query v3)
@@ -352,7 +352,10 @@ privacy rules, and the recommended agent loop. Raw and extraction output is eith
 JSON/JSONL or atomically committed to the explicit `--output` path. JSONL file output writes its
 health-free receipt beside it as `OUTPUT.receipt.json`. JSONL conversion bounds each daily item to
 64 MiB; use JSON for an unusually dense day. A validated partial result exits nonzero unless
-`--allow-partial` is set.
+`--allow-partial` is set. `--full-corpus` means all public record types that the selected source
+supports and the user authorized—not a private Apple/Google database. Existing raw envelopes retain
+their per-type capture, authorization, unsupported, skipped, partial, and read-error evidence so an
+empty or inaccessible type is never silently reported as exported.
 
 ## Durability and security
 
@@ -380,8 +383,10 @@ validation, canonical receipts, and bounded traversal. `healthmd query` calls it
 writes the packaged MCP catalog from the shared registry and CI rejects stale output.
 
 The default `healthmd` build includes only the local stdio MCP transport. It communicates directly
-with the foreground Health.md iPhone app over the paired, authenticated, encrypted channel on port
-`17647`; the Health.md Mac app, an OAuth service, and a health-data cloud are not required.
+with the foreground Health.md app on a paired iPhone or Android device over the authenticated,
+encrypted channel on port `17647`; the Health.md Mac app, an OAuth service, and a health-data cloud
+are not required. Typed query tools remain iPhone-only, while full-corpus raw jobs work with either
+mobile protocol.
 Release archives intentionally use this local-first default feature set. Pairing and MCP deliberately run through the same installed,
 signed executable identity so native credentials never require a second application's Keychain ACL.
 
@@ -402,10 +407,14 @@ cancel tools for approval. `healthmd-mcp` remains an installed compatibility lau
 replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
 and supervises its own same-file helper against the same fixed Credential Manager service/account.
 
-The complete local server exposes 19 fixed operations for pairing, readiness, bounded typed
-queries, charts, sleep, workouts, comparisons, coverage, evidence, and durable generated-file
-exports. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated
-exports require an explicit existing destination.
+The complete local server exposes 21 fixed operations for pairing, readiness, bounded typed
+queries, charts, sleep, workouts, comparisons, coverage, evidence, durable generated-file exports,
+and durable full-corpus raw exports. `healthmd_export_raw` requests every public type supported by
+the selected mobile source and authorized by the user. The artifact remains in the private durable
+job spool; `healthmd_raw_artifact_read` can read only an exact job artifact in base64 chunks of at
+most 64 KiB. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated
+exports require an explicit existing destination, and raw export start/resume/cancel calls require
+explicit host approval.
 
 For a least-privilege local host that should never receive pairing or filesystem-export authority,
 pair outside MCP and use the separate read-only stdio entry:
@@ -416,8 +425,8 @@ healthmd mcp serve-read-only
 ```
 
 `serve-read-only` is part of the default local-first build. It exposes exactly the 13 readiness,
-discovery, and typed-query tools; all six pairing/export-job tools are absent and guessed calls are
-rejected. It starts no MCP HTTP listener, requires no OAuth or tunnel, and uses no Health.md or
+discovery, and typed-query tools; all eight local pairing/export tools are absent and guessed calls
+are rejected. It starts no MCP HTTP listener, requires no OAuth or tunnel, and uses no Health.md or
 third-party cloud service. The iPhone must already be paired and remain foreground for each query.
 
 A complete local desktop MCP client can onboard without opening a separate terminal. Call
