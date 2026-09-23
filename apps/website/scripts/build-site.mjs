@@ -11,7 +11,7 @@ import { localizeSitemapFile } from './build-localized-sitemap.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(ROOT, 'dist');
 const DOCS_OUTPUT = path.join(ROOT, 'docs-src', 'dist');
-const STATIC_DIRECTORIES = ['assets', 'visualizations'];
+const STATIC_DIRECTORIES = ['assets', 'visualizations', 'about'];
 const STATIC_FILES = [
   'favicon.ico',
   'llms.txt',

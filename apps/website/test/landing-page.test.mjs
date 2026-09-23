@@ -69,6 +69,7 @@ test("landing closes with a localized download decision and compact footer", () 
   assert.match(downloadSection, /Switching channels requires uninstalling the app and does not migrate local app state\./);
 
   assert.match(footer, /<nav class="footer-links" aria-label="Footer navigation">/);
+  assert.match(footer, /href="about\/">About<\/a>/);
   assert.match(footer, /href="docs\/">Docs<\/a>/);
   assert.match(footer, /href="privacy-policy\.html">Privacy<\/a>/);
   assert.match(footer, /href="terms-of-service\.html">Terms<\/a>/);

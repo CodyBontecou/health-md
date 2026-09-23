@@ -28,6 +28,7 @@ This is a curated discovery aid for language-model clients. `llms.txt` is an eme
 
 ## Trust, privacy, and source
 
+- [About Health.md and key facts](https://healthmd.app/about/): product scope, differentiators, audience, founder, operating model, pricing, alternatives, and crawlable company facts.
 - [Local-agent architecture and reporting rules](https://healthmd.app/docs/agents/)
 - [Privacy policy](https://healthmd.app/privacy-policy.html)
 - [Source repository](https://github.com/CodyBontecou/health-md)
