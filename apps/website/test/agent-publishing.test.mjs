@@ -160,9 +160,9 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   const macTools = JSON.parse(await read('docs-src/public/agents/mcp/mac-tools-v1.json'));
   const portableTools = JSON.parse(portableSource);
   assert.equal(macTools.length, 21);
-  assert.equal(portableTools.length, 19);
+  assert.equal(portableTools.length, 21);
   assert.equal(new Set(macTools.map(({ name }) => name)).size, 21);
-  assert.equal(new Set(portableTools.map(({ name }) => name)).size, 19);
+  assert.equal(new Set(portableTools.map(({ name }) => name)).size, 21);
 });
 
 test('CLI launch post uses runnable preview commands and honest privacy boundaries', async () => {
@@ -170,14 +170,15 @@ test('CLI launch post uses runnable preview commands and honest privacy boundari
     readFile(path.join(ROOT, 'content/blog/healthmd-cli-direct-iphone-mcp.md')),
     readFile(path.join(REPOSITORY_ROOT, 'apps/cli/README.md')),
   ]).then((buffers) => buffers.map((buffer) => buffer.toString('utf8')));
-  assert.match(post, /0\.1\.0-alpha\.3/);
+  assert.match(post, /0\.1\.0-alpha\.7/);
+  assert.match(post, /portable preview exposes 19 tools/i);
+  assert.match(post, /development source[^.]*total of 21/i);
   assert.match(post, /brew install CodyBontecou\/tap\/healthmd/);
   assert.match(post, /healthmd status --job JOB_UUID/);
   assert.match(post, /healthmd resume JOB_UUID/);
   assert.doesNotMatch(post, /healthmd setup claude/);
-  assert.doesNotMatch(post, /never a dump of everything/);
-  assert.match(post, /complete-corpus operation you explicitly request/);
-  assert.match(post, /No Health\.md cloud/);
+  assert.match(post, /full-corpus raw-artifact tools/);
+  assert.match(post, /no Health\.md health-data cloud/i);
   assert.match(cliReadme, /0\.1\.0-alpha\.7` is a public, explicitly unqualified preview/);
   assert.match(cliReadme, /workflow published a checksummed, explicitly unqualified preview/);
   assert.match(cliReadme, /every macOS, Linux, and Windows CLI build/);

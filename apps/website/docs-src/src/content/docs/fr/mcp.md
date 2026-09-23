@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Aperçu · MCP direct portable</strong>
-<p>La topologie distincte à 19 outils <code>healthmd mcp serve</code> pour macOS, Linux et Windows est distribuée publiquement comme aperçu explicitement non qualifié. Son entrée sans cloud <code>serve-read-only</code> expose uniquement les 13 outils de préparation/requête après jumelage local. Installez sous macOS ou Linux avec <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>La topologie distincte <code>healthmd mcp serve</code> pour macOS, Linux et Windows est publiée comme aperçu non qualifié à 19 outils sous <code>0.1.0-alpha.7</code>. Son entrée sans cloud <code>serve-read-only</code> expose uniquement les 13 outils de préparation/requête après jumelage local. Installez sous macOS ou Linux avec <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Conditions pour la version Mac intégrée
@@ -116,7 +116,7 @@ Si l’hôte ne prend pas en charge MCP Apps, les outils fonctionnent quand mêm
 
 ## Outils disponibles
 
-Le serveur Mac intégré expose 21 outils fixes : 13 outils de préparation et de requête, quatre outils de tâche de fichiers générés et quatre outils de tâche d’actualisation du contexte chiffré. L’aperçu portable à 19 outils conserve les 13 outils de préparation/requête et les quatre outils d’export, remplace les tâches d’actualisation Mac par deux outils de jumelage direct et exécute les requêtes typées directement sur l’iPhone au premier plan.
+Le serveur Mac intégré expose 21 outils fixes : 13 de préparation/requête, quatre de fichiers générés et quatre d’actualisation du contexte chiffré. L’aperçu portable publié `0.1.0-alpha.7` possède 19 outils. Le code de développement actuel en possède 21 après l’ajout du corpus complet et de la lecture bornée d’artefact ; n’attendez pas ces deux outils avant une version ultérieure.
 
 ### Préparation et découverte
 

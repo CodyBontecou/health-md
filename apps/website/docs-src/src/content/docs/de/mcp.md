@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Vorschau · portables direktes MCP</strong>
-<p>Die separate Topologie mit 19 Tools über <code>healthmd mcp serve</code> für macOS, Linux und Windows ist als ausdrücklich unqualifizierte Vorschau öffentlich paketiert. Der cloudfreie Einstiegspunkt <code>serve-read-only</code> stellt nach der lokalen Kopplung nur die 13 Bereitschafts- und Abfragetools bereit. Installieren Sie unter macOS oder Linux mit <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>Die separate Topologie <code>healthmd mcp serve</code> für macOS, Linux und Windows ist als unqualifizierte Vorschau mit 19 Tools unter <code>0.1.0-alpha.7</code> veröffentlicht. Der cloudfreie Einstiegspunkt <code>serve-read-only</code> stellt nach der lokalen Kopplung nur die 13 Bereitschafts- und Abfragetools bereit. Installieren Sie unter macOS oder Linux mit <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Voraussetzungen für den mitgelieferten Mac
@@ -116,7 +116,7 @@ Wenn der Host MCP Apps nicht unterstützt, funktionieren die Tools trotzdem. `he
 
 ## Verfügbare Tools
 
-Der mitgelieferte Mac-Server stellt 21 feste Tools bereit: 13 für Bereitschaft und Abfragen, vier für Aufträge mit generierten Dateien und vier für Aktualisierungsaufträge des verschlüsselten Kontexts. Die portable Vorschau mit 19 Tools behält die 13 Bereitschafts-/Abfragetools und vier Exporttools bei, ersetzt Mac-Aktualisierungsaufträge durch zwei Tools zur direkten Kopplung und führt typisierte Abfragen direkt auf dem im Vordergrund geöffneten iPhone aus.
+Der mitgelieferte Mac-Server stellt 21 feste Tools bereit: 13 für Bereitschaft und Abfragen, vier für generierte Dateien und vier für Aktualisierungen des verschlüsselten Kontexts. Die veröffentlichte portable Vorschau `0.1.0-alpha.7` hat 19 Tools. Der aktuelle Entwicklungsstand hat durch vollständigen Corpus-Export und begrenztes Artefaktlesen 21; diese zwei Tools gelten erst mit einer späteren Veröffentlichung.
 
 ### Bereitschaft und Entdeckung
 

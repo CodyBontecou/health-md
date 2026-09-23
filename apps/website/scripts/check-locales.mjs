@@ -44,17 +44,24 @@ const discoveredGuideSlugs = englishGuideFilenames.map((filename) => (
   `docs/guides/${path.basename(filename, '.md')}`
 )).sort();
 assert.deepEqual(
-  authoredDocSlugs.filter((slug) => !slug.startsWith('docs/guides/')).sort(),
+  [
+    ...authoredDocSlugs.filter((slug) => !slug.startsWith('docs/guides/')),
+    ...canonicalEnglishDocSlugs.filter((slug) => discoveredAuthoredDocSlugs.includes(slug)),
+  ].sort(),
   discoveredAuthoredDocSlugs,
-  'authoredDocSlugs must cover every authored top-level documentation file',
+  'Every English top-level documentation file must be declared authored or canonical-English fallback',
 );
 assert.deepEqual(
   [...authoredGuideSlugs, ...canonicalEnglishGuideSlugs].sort(),
   discoveredGuideSlugs,
   'Every English guide must be declared either authored or canonical-English fallback',
 );
+const localizedAuthoredDocFilenames = authoredDocSlugs
+  .filter((slug) => !slug.startsWith('docs/guides/'))
+  .map((slug) => (slug === 'docs' ? 'index.md' : `${slug.replace(/^docs\//, '')}.md`))
+  .sort();
 const authoredGuideFiles = authoredGuideSlugs.map((slug) => `${slug.replace(/^docs\//, '')}.md`).sort();
-const authoredDocFiles = [...authoredDocFilenames, ...authoredGuideFiles].sort();
+const authoredDocFiles = [...localizedAuthoredDocFilenames, ...authoredGuideFiles].sort();
 const authoredDocSlugSet = new Set(authoredDocSlugs);
 const authoredSidebarSlugs = docsSidebar
   .flatMap(({ items }) => items)
@@ -420,7 +427,7 @@ for (const locale of localeConfigs.filter(({ code }) => code !== defaultLocale))
   const localizedEntries = await fs.readdir(path.join(DOCS_SOURCE_ROOT, locale.path), { withFileTypes: true });
   assert.deepEqual(
     localizedEntries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map(({ name }) => name).sort(),
-    authoredDocFilenames,
+    localizedAuthoredDocFilenames,
     `${locale.code} must translate exactly the authored top-level guide set`,
   );
   assert.deepEqual(

@@ -1,9 +1,11 @@
 export const defaultLocale = 'en';
 
-// Every focused integration guide is authored and translated in all locales.
-// Exact command references remain canonical English artifacts; their localized
-// fallback routes stay noindex and point to the English canonical URL.
+// Focused integration guides are authored and translated in all locales.
+// Exact command references and the fast-changing release-status ledger remain
+// canonical English artifacts; localized fallback routes stay noindex and point
+// to the English canonical URL.
 export const canonicalEnglishDocSlugs = Object.freeze([
+  'docs/release-status',
   'docs/cli/installation',
   'docs/cli-reference',
   'docs/cli-reference/cancel',
@@ -30,12 +32,14 @@ export const authoredDocSlugs = Object.freeze([
   'docs/cli-direct',
   'docs/cli-extract',
   'docs/cli-jobs',
+  'docs/clinician-report',
   'docs/configuration',
   'docs/daily-notes',
   'docs/export',
   'docs/export-profiles',
   'docs/folder-vault',
   'docs/format',
+  'docs/full-corpus-export',
   'docs/guides/connect-agent',
   'docs/guides/platform-features',
   'docs/guides/raw-snapshots',
@@ -48,9 +52,12 @@ export const authoredDocSlugs = Object.freeze([
   'docs/onboarding',
   'docs/paywall',
   'docs/scheduling',
+  'docs/share-my-setup',
   'docs/shared-metric-registry',
   'docs/shortcuts',
+  'docs/sleep-date-attribution',
   'docs/sync',
+  'docs/troubleshooting',
   'docs/visualizations-roadmap',
 ]);
 

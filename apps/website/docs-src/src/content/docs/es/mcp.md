@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Vista previa · MCP directo y portátil</strong>
-<p>La topología independiente <code>healthmd mcp serve</code> de 19 herramientas para macOS, Linux y Windows está empaquetada públicamente como vista previa explícitamente no cualificada. Su entrada <code>serve-read-only</code> sin nube expone solo las 13 herramientas de disponibilidad y consulta después del emparejamiento local. Instala en macOS o Linux con <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>La topología independiente <code>healthmd mcp serve</code> para macOS, Linux y Windows se publica como la vista previa no cualificada de 19 herramientas <code>0.1.0-alpha.7</code>. Su entrada <code>serve-read-only</code> sin nube expone solo las 13 herramientas de disponibilidad y consulta después del emparejamiento local. Instala en macOS o Linux con <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Requisitos de la versión incluida para Mac
@@ -116,7 +116,7 @@ Si el host no admite aplicaciones MCP, las herramientas aún funcionan. `healthm
 
 ## Herramientas disponibles
 
-El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y consulta, cuatro de tareas de archivos generados y cuatro de tareas de actualización del contexto cifrado. La vista previa portátil de 19 herramientas conserva las 13 herramientas de disponibilidad y consulta y las cuatro de exportación, sustituye las tareas de actualización de Mac por dos herramientas de emparejamiento directo y ejecuta las consultas tipadas directamente en el iPhone en primer plano.
+El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y consulta, cuatro de tareas de archivos generados y cuatro de actualización del contexto cifrado. La vista previa portátil publicada `0.1.0-alpha.7` tiene 19 herramientas. El código de desarrollo actual tiene 21 al añadir la exportación de corpus completo y la lectura acotada de artefactos; no presupongas esas dos herramientas hasta una versión posterior.
 
 ### Disponibilidad y descubrimiento
 

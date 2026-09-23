@@ -1,33 +1,29 @@
 ---
-title: "잠금 해제 및 결제 화면"
-description: "구독 없이 Full Access를 한 번만 구매하면 공유되는 10회 내보내기 한도를 없애고 Mac 대상 워크플로와 단축어를 이용할 수 있습니다."
+title: "잠금 해제 및 구매 화면"
+description: "10개의 무료 작업, 닫을 수 있는 알림, Lifetime 구매, StoreKit 복원을 설명합니다."
 ---
 
-## 가격
-<ul>
-<li>Full Access는 App Store 구매 시트에 표시되는 StoreKit 일회성 구매 상품입니다.</li>
-<li>구독 및 반복 결제가 없습니다.</li>
-<li>구매 전에 Apple이 현재 현지 가격을 표시합니다.</li>
-<li>서버 측 계정이 없습니다. 잠금 해제는 Apple ID의 StoreKit 거래에 연결됩니다.</li>
-<li>잠금 해제 전에는 수동 및 예약 내보내기가 동일한 10회 작업 한도를 공유합니다.</li>
-</ul>
+Health.md는 Full Access가 필요하기 전에 완료된 내보내기 작업 10개를 제공합니다. 하나의 작업이 여러 날짜와 형식을 써도 한 번입니다. 수동, 예약, 단축어, 직접 내보내기는 해당되는 경우 같은 카운터를 사용합니다.
 
-## Full Access로 잠금 해제되는 기능
-<ul>
-<li>공유 무료 한도 이후에도 수동 및 예약 내보내기 작업을 무제한으로 실행할 수 있습니다.</li>
-<li>Mac 대상 워크플로.</li>
-<li>단축어 Intent.</li>
-</ul>
+## 제안이 표시되는 시점
 
-## 이전 구매 복원
-<p>결제 화면에서 <em>구매 복원</em>을 탭하세요. 앱이 로그인된 Apple ID에 연결된 이전 구매 내역을 StoreKit에서 조회합니다. 앱을 다시 설치했거나 새 기기로 옮겼다면 이 기능을 사용하세요.</p>
+- 온보딩에는 구매 화면 단계가 없습니다.
+- 첫 실제 미리보기를 닫은 뒤 한 번만 닫을 수 있는 제안이 나타날 수 있습니다.
+- 무료 내보내기 3회와 7회 뒤에 알림이 표시될 수 있습니다.
+- 10회 사용 후 다음 해당 내보내기가 차단됩니다.
 
-## 환불 및 지원
-<p>환불은 Apple을 통해 처리됩니다. <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>에서 요청을 제출하세요. 앱 관련 지원은 <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>로 이메일을 보내 주세요.</p>
+앞선 제안을 닫아도 사용 횟수는 줄지 않습니다.
 
-## 관련 문서
+## Lifetime 옵션
 
-<div class="related">
-  <a href="/ko/docs/onboarding/"><span>설정</span>온보딩 — 잠금 해제 단계가 처음 표시되는 위치입니다.</a>
-  <a href="/ko/docs/export/"><span>사용</span>내보내기 — 잠금 해제 후 무제한 내보내기를 이용하는 방법입니다.</a>
-</div>
+StoreKit 2의 일회성 구매이며 정기 구독이 아닙니다. **Individual Lifetime**, **Family Lifetime**, 자격이 있는 소유자의 가족 업그레이드가 있습니다. Apple 구매 시트의 현지 가격이 기준입니다. Family Lifetime은 Apple 구입 항목 공유 조건을 따릅니다.
+
+**구매 복원**은 Apple ID 거래를 새로 고칩니다. 가족의 경우 Apple ID, 구입 항목 공유, 구매 내역에서 Health.md가 숨겨져 있지 않은지 확인합니다.
+
+| 문제 | 조치 |
+|---|---|
+| 가격 없음 | 네트워크/App Store를 확인하고 다시 엽니다. |
+| 10회 전 표시 | 닫을 수 있는 알림이며 최종 차단이 아닙니다. |
+| 일정 중지 | 구매 또는 복원 후 정상 복구를 사용합니다. |
+
+<div class="related"><a href="/ko/docs/onboarding/"><span>시작</span>5단계 설정.</a><a href="/ko/docs/scheduling/"><span>자동화</span>공유 한도.</a></div>

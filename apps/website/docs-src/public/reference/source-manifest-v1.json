@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "2fc48912e6a3cd0d360bad5d9b0e63e60b516679",
+  "docs_reference_git_tree": "fc3ee0be84fdcd6c30eb948250ba42af6a884ff6",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "1665f426f78c73a4644ff8f9457628225eb9dd1bae193cc9dae649f40220db31",
+    "digest": "05b235e4fe63edf420824b302020f156f97e8ef2631215be0a0022c3d3510f16",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -1156,7 +1156,7 @@
     {
       "path": "integration-recipes.md",
       "bytes": 10476,
-      "sha256": "2aaaa36e11cf7361dcbadd2799e9ad0cdb0a740d9d96ce226963a6a6eaf8be77",
+      "sha256": "1d34cd7b105f01e527c499e9dd4a1c49b047aa949a2bb4badf79837cc44172b7",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/integration-recipes/",
@@ -2063,7 +2063,7 @@
     {
       "path": "src/content/docs/reference/integration-recipes.md",
       "bytes": 10696,
-      "sha256": "e63b21d83f4aa7d90ddb40fa489d72f0f845108ca35a86fb8190994017dcb9fd",
+      "sha256": "0f93807604df4e985c5525e6b9df1dab38f9e3870640931889e90740e91df845",
       "classification": "rendered-page",
       "route": "/docs/reference/integration-recipes/"
     },

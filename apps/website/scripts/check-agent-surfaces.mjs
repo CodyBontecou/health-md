@@ -58,7 +58,7 @@ async function validateArtifactManifest() {
 
   const macTools = JSON.parse((await read('/agents/mcp/mac-tools-v1.json')).toString('utf8'));
   const portableTools = JSON.parse((await read('/agents/mcp/portable-tools-v1.json')).toString('utf8'));
-  if (macTools.length !== 21 || portableTools.length !== 19) {
+  if (macTools.length !== 21 || portableTools.length !== 21) {
     fail('Published MCP tool catalog count mismatch.');
   }
 }

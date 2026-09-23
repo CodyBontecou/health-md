@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Anteprima · MCP diretto multipiattaforma</strong>
-<p>La topologia separata con 19 strumenti <code>healthmd mcp serve</code> per macOS, Linux e Windows è distribuita pubblicamente come anteprima esplicitamente non qualificata. Il comando senza cloud <code>serve-read-only</code> espone soltanto i 13 strumenti di verifica e query dopo l'abbinamento locale. Installa su macOS o Linux con <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>La topologia separata <code>healthmd mcp serve</code> per macOS, Linux e Windows è pubblicata come anteprima non qualificata con 19 strumenti <code>0.1.0-alpha.7</code>. Il comando senza cloud <code>serve-read-only</code> espone soltanto i 13 strumenti di verifica e query dopo l'abbinamento locale. Installa su macOS o Linux con <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Requisiti della versione integrata per Mac
@@ -116,7 +116,7 @@ Gli strumenti funzionano anche se l'host non supporta MCP Apps. `healthmd_metric
 
 ## Strumenti disponibili
 
-Il server incluso per Mac espone 21 strumenti fissi: 13 per verifica e query, quattro per le attività dei file generati e quattro per le attività di aggiornamento del contesto crittografato. L'anteprima multipiattaforma con 19 strumenti mantiene i 13 strumenti di verifica/query e i quattro di esportazione, sostituisce le attività di aggiornamento Mac con due strumenti di abbinamento diretto ed esegue le query tipizzate direttamente sull'iPhone in primo piano.
+Il server incluso per Mac espone 21 strumenti fissi: 13 per verifica/query, quattro per file generati e quattro per l’aggiornamento del contesto crittografato. L’anteprima portatile pubblicata `0.1.0-alpha.7` ha 19 strumenti. Il codice di sviluppo attuale ne ha 21 dopo corpus completo e lettura limitata degli artefatti; non presupporre questi due strumenti prima di una versione successiva.
 
 ### Verifica e rilevamento
 

@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>预览版 · 可移植直连 MCP</strong>
-<p>面向 macOS、Linux 和 Windows 的独立 19 工具 <code>healthmd mcp serve</code> 拓扑已作为明确未经资格验证的公开预览版打包。其不使用云服务的 <code>serve-read-only</code> 入口在本地配对后只提供 13 个就绪状态和查询工具。在 macOS 或 Linux 上使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装。</p>
+<p>面向 macOS、Linux 和 Windows 的独立 <code>healthmd mcp serve</code> 拓扑已作为 19 工具的未验证预览版 <code>0.1.0-alpha.7</code> 发布。其不使用云服务的 <code>serve-read-only</code> 入口在本地配对后只提供 13 个就绪状态和查询工具。在 macOS 或 Linux 上使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装。</p>
 </div>
 
 ## 内置 Mac 版要求
@@ -116,7 +116,7 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 
 ## 可用工具
 
-内置 Mac 服务器提供 21 个固定工具：13 个就绪状态/查询工具、四个生成文件作业工具和四个加密上下文更新作业工具。包含 19 个工具的可移植预览版保留 13 个就绪状态/查询工具和四个导出工具，用两个直连配对工具替换 Mac 更新作业，并直接在前台 iPhone 上运行类型化查询。
+内置 Mac 服务器提供 21 个固定工具：13 个就绪状态/查询工具、四个生成文件工具和四个加密上下文更新工具。已发布的可移植预览版 `0.1.0-alpha.7` 有 19 个工具。当前开发源码加入完整数据集与受限构件读取后有 21 个；后续版本发布前请勿假定存在这两个工具。
 
 ### 就绪状态与发现
 
