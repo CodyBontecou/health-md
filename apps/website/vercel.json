@@ -76,7 +76,8 @@
     { "source": "/docs/data-reference/", "destination": "/docs/reference/", "permanent": true },
     { "source": "/blog", "destination": "/blog/", "permanent": true },
     { "source": "/visualizations", "destination": "/visualizations/", "permanent": true },
-    { "source": "/mcp", "destination": "/health-data-for-ai/", "permanent": true }
+    { "source": "/mcp", "destination": "/health-data-for-ai/", "permanent": true },
+    { "source": "/mcp/", "destination": "/health-data-for-ai/", "permanent": true }
   ],
   "headers": [
     {
