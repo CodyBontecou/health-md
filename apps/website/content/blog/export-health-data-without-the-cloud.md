@@ -5,7 +5,7 @@ lead: "Local export is a checklist, not a vibe: where the read happens, where th
 date: "2026-09-26T12:00:00.000Z"
 updated: "2026-09-26T12:00:00.000Z"
 category: "Workflow guide"
-draft: true
+draft: false
 tags:
   - healthmd
   - apple-health

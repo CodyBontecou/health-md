@@ -5,7 +5,7 @@ lead: "The CSV export is the bridge: one file per day, ready for Sheets."
 date: "2026-09-26T12:00:00.000Z"
 updated: "2026-09-26T12:00:00.000Z"
 category: "Workflow guide"
-draft: true
+draft: false
 tags:
   - healthmd
   - apple-health
@@ -40,7 +40,7 @@ A pivot table is the fastest way to see patterns. Here is weekly step volume:
 3. Add `Value` under Values and set it to summarize by AVERAGE.
 4. Add a filter on `Metric` and keep only your step metric.
 
-You now have one row per week with your average daily steps. If you prefer to build the week labels by hand instead, `=TEXT(A2,"YYYY-WW")` turns a date into a week label you can pivot on.
+You now have one row per week with your average daily steps. If you prefer to build the week labels by hand instead, `=YEAR(A2)&"-W"&WEEKNUM(A2,2)` turns a date into a `2026-W39`-style label you can pivot on (the `2` starts weeks on Monday).
 
 For a trend line, filter the `Metric` column to a sleep metric, copy the `Date` and `Value` columns into a small table, select both columns, and go to Insert > Chart. In the chart editor, pick a line chart — you get a night-by-night view of your own data in about a minute.
 
@@ -48,7 +48,7 @@ For a trend line, filter the `Metric` column to a sleep metric, copy the `Date` 
 
 - A month of history is roughly thirty files. Import each into its own tab (File > Import, then "Insert new sheet(s)"), or concatenate the files locally before importing.
 - Keep the raw import tab untouched. Do your analysis on pivot tables or copies that reference it — if an import goes sideways, you re-import instead of re-exporting.
-- A few rows omit the timestamp column; those are compatibility summary rows. Timestamped sample rows always include all six fields. If a row looks sparse, that is why, not a broken export.
+- A few rows omit the timestamp column; those are summary rows. Timestamped sample rows always include all six fields. If a row looks sparse, that is why, not a broken export.
 
 ## Troubleshooting notes
 
