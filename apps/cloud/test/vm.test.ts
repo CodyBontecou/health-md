@@ -41,7 +41,7 @@ afterEach(() => {
 
 async function proxiedRequest(port: number, path: string, method = "GET", body?: unknown,
   cookie?: string, origin = `http://preview.tailnet.test:18788`, intent = true,
-  host = "preview.tailnet.test:18788") {
+  host = "preview.tailnet.test:18788", authorization?: string) {
   const payload = body === undefined ? undefined : JSON.stringify(body);
   return new Promise<{ status: number; headers: Record<string, string | string[] | undefined>; body: string }>(
     (done, fail) => {
@@ -53,6 +53,7 @@ async function proxiedRequest(port: number, path: string, method = "GET", body?:
         ...(payload === undefined ? {} : { "Content-Type": "application/json" }),
         ...(method === "GET" ? {} : { Origin: origin, ...(intent ? { "X-HealthMd-Intent": "dashboard" } : {}) }),
         ...(cookie ? { Cookie: cookie } : {}),
+        ...(authorization ? { Authorization: authorization } : {}),
       } }, (response) => {
         const chunks: Uint8Array[] = [];
         response.on("data", (chunk: Uint8Array) => chunks.push(chunk));
@@ -210,6 +211,62 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     } finally { await service.close(); db.close(); }
   }, 30_000);
 
+  it("isolates public write-only ingestion from the private writer and account APIs", async () => {
+    const { env, db, directory } = createTestEnv("personal-mvp");
+    const { env: apiEnv, db: apiDb } = createVmEnvironment({
+      dataDirectory: directory, sourceDirectory,
+      publicOrigin: "https://api.example.test", identityKey: env.IDENTITY_KEY_B64,
+      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON, currentKeyId: "v1",
+      passwordPepper: env.PASSWORD_PEPPER_B64 ?? "", personalMvp: true,
+      revisionRetention: "unlimited",
+    });
+    await createSingleUserAccount(env, "pilot", email, fakePassword);
+    const writer = await startVmServer(env, 0);
+    const api = await startVmServer(apiEnv, 0, "ingest");
+    const request = (path: string, method = "GET", body?: unknown, cookie?: string,
+      token?: string, host = "api.example.test") =>
+      proxiedRequest(api.port, path, method, body, cookie, "https://api.example.test", false,
+        host, token ? `Bearer ${token}` : undefined);
+    try {
+      const login = await proxiedRequest(writer.port, "/api/auth/password-login", "POST",
+        { username: "pilot", password: fakePassword });
+      expect(login.status).toBe(200);
+      const cookie = (login.headers["set-cookie"] as string[] | undefined)?.[0]?.split(";")[0];
+      expect(cookie).toBeDefined();
+      const create = await proxiedRequest(writer.port, "/api/ingest-tokens", "POST",
+        { name: "Synthetic phone" }, cookie);
+      expect(create.status).toBe(201);
+      const token = JSON.parse(create.body).token as string;
+      const id = (db.connection.prepare("SELECT id FROM users").get() as { id: string }).id;
+      const readToken = createReadToken(db.connection, id, "Synthetic read-only client").token;
+      const fixture = JSON.parse(readFileSync(resolve(sourceDirectory,
+        "../apple/docs/reference/generated/automation/api-export-v1.json"), "utf8"));
+      expect((await request("/health")).status).toBe(200);
+      expect((await request("/api/runtime")).status).toBe(404);
+      expect((await request("/login")).status).toBe(404);
+      expect((await request("/dashboard")).status).toBe(404);
+      expect((await request("/api/account", "GET", undefined, cookie, token)).status).toBe(404);
+      expect((await request("/api/exports", "GET", undefined, cookie, token)).status).toBe(404);
+      expect((await request("/api/ingest-tokens", "POST", {}, cookie, token)).status).toBe(404);
+      expect((await request("/api/auth/password-login", "POST", {}, cookie)).status).toBe(404);
+      expect((await request("/mcp", "POST", {}, undefined, token)).status).toBe(404);
+      expect((await request("/api/v1/exports", "GET", undefined, undefined, token)).status).toBe(404);
+      expect((await request("/api/v1/exports", "POST", fixture, undefined, token,
+        "wrong.example.test")).status).toBe(421);
+      expect((await request("/api/v1/exports", "POST", fixture, cookie)).status).toBe(401);
+      expect((await request("/api/v1/exports", "POST", fixture, undefined, readToken)).status).toBe(401);
+      const accepted = await request("/api/v1/exports", "POST", fixture, cookie, token);
+      expect(accepted.status).toBe(201);
+      expect(accepted.headers["cache-control"]).toBe("no-store");
+      expect(accepted.headers["set-cookie"]).toBeUndefined();
+      const duplicate = await request("/api/v1/exports", "POST", fixture, undefined, token);
+      expect(duplicate.status).toBe(200);
+      expect(JSON.parse(duplicate.body)).toMatchObject({ accepted: true, duplicate: true });
+      expect(db.connection.prepare("SELECT COUNT(*) AS n FROM exports").get()).toMatchObject({ n: 1 });
+      expect((await proxiedRequest(writer.port, "/api/exports", "GET", undefined, cookie)).status).toBe(200);
+    } finally { await api.close(); await writer.close(); apiDb.close(); db.close(); }
+  }, 30_000);
+
   it("exposes only account routes and issues/revokes full-export credentials after reauthentication", async () => {
     const { env, db, directory } = createTestEnv("personal-mvp");
     const { env: accountEnv, db: accountDb } = createVmEnvironment({
@@ -226,7 +283,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     db.connection.prepare(`INSERT INTO users (id, email_lookup, email_ciphertext, email_iv, status, created_at)
       VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`).run(otherId, randomUUID(), new Date().toISOString());
     const other = createReadToken(db.connection, otherId, "Other agent");
-    const account = await startVmServer(accountEnv, 0, true);
+    const account = await startVmServer(accountEnv, 0, "account");
     const req = (path: string, method = "GET", body?: unknown, cookie?: string,
       origin = "https://account.example.test", intent = true) =>
       proxiedRequest(account.port, path, method, body, cookie, origin, intent, "account.example.test");
@@ -239,6 +296,10 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect((await req("/api/agent-tokens", "POST", {})).status).toBe(401);
       expect(JSON.parse((await req("/api/runtime")).body)).toMatchObject({
         unbackedPersonalMvp: true, exportEndpoint: `${fakeOrigin}/api/v1/exports`,
+      });
+      accountEnv.EXPORT_ENDPOINT_ORIGIN = "https://api.example.test";
+      expect(JSON.parse((await req("/api/runtime")).body)).toMatchObject({
+        exportEndpoint: "https://api.example.test/api/v1/exports",
       });
       const login = await req("/api/auth/password-login", "POST",
         { username: "pilot", password: fakePassword });

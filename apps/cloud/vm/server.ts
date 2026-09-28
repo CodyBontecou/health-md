@@ -13,7 +13,9 @@ function safeError(response: ServerResponse, status: number): void {
   response.end('{"error":"unavailable"}');
 }
 
-function trustedProxyRequest(request: IncomingMessage, env: Env, accountOnly = false): Request | null {
+export type VmServerMode = "writer" | "account" | "ingest";
+
+function trustedProxyRequest(request: IncomingMessage, env: Env, mode: VmServerMode): Request | null {
   const remote = request.socket.remoteAddress;
   if (remote !== "127.0.0.1" && remote !== "::ffff:127.0.0.1") return null;
   const expected = new URL(env.PUBLIC_ORIGIN);
@@ -37,7 +39,7 @@ function trustedProxyRequest(request: IncomingMessage, env: Env, accountOnly = f
   // Tailscale Serve rewrites the browser Origin from HTTPS to its local HTTP
   // upstream. Only restore the expected Origin when the request carries the
   // dashboard's non-simple CSRF header; never rewrite an arbitrary origin.
-  if (!accountOnly && headers.get("Origin") === `http://${expected.host}` &&
+  if (mode === "writer" && headers.get("Origin") === `http://${expected.host}` &&
       headers.get("X-HealthMd-Intent") === "dashboard") headers.set("Origin", env.PUBLIC_ORIGIN);
   const method = request.method ?? "GET";
   const body = method === "GET" || method === "HEAD" ? undefined : Readable.toWeb(request);
@@ -102,16 +104,26 @@ function accountRoute(method: string, path: string): boolean {
     /^\/api\/agent-tokens\/[a-f0-9-]{36}$/u.test(path));
 }
 
+// Public ingestion is an exact positive route, never a proxy to the writer's
+// session, export-download, token-administration or MCP surfaces.
+function ingestRoute(method: string, path: string): boolean {
+  return (method === "POST" && path === "/api/v1/exports") ||
+    (method === "GET" && path === "/health");
+}
+
 async function respond(request: IncomingMessage, response: ServerResponse, env: Env,
-  gate: VmGate, accountOnly: boolean): Promise<void> {
+  gate: VmGate, mode: VmServerMode): Promise<void> {
   let releaseIngest: (() => void) | null = null;
   try {
-    const webRequest = trustedProxyRequest(request, env, accountOnly);
+    const webRequest = trustedProxyRequest(request, env, mode);
     if (!webRequest) { safeError(response, 421); return; }
-    if (accountOnly && !accountRoute(webRequest.method, new URL(webRequest.url).pathname)) {
+    const path = new URL(webRequest.url).pathname;
+    if ((mode === "account" && !accountRoute(webRequest.method, path)) ||
+        (mode === "ingest" && !ingestRoute(webRequest.method, path))) {
       safeError(response, 404); return;
     }
-    if (webRequest.method === "POST" && new URL(webRequest.url).pathname === "/api/v1/exports") {
+    if (mode === "ingest") webRequest.headers.delete("Cookie");
+    if (webRequest.method === "POST" && path === "/api/v1/exports") {
       releaseIngest = await gate.reserveUpload(response);
       if (!releaseIngest) {
         if (!response.destroyed) safeError(response, 503);
@@ -120,7 +132,9 @@ async function respond(request: IncomingMessage, response: ServerResponse, env: 
     }
     const result = await worker.fetch(webRequest, env);
     const headers: Record<string, string> = {};
-    result.headers.forEach((value, key) => { headers[key] = value; });
+    result.headers.forEach((value, key) => {
+      if (mode !== "ingest" || key !== "set-cookie") headers[key] = value;
+    });
     response.writeHead(result.status, headers);
     if (!result.body) { response.end(); return; }
     await new Promise<void>((done, fail) => {
@@ -139,7 +153,7 @@ async function respond(request: IncomingMessage, response: ServerResponse, env: 
   }
 }
 
-export async function startVmServer(env: Env, port: number, accountOnly = false): Promise<{
+export async function startVmServer(env: Env, port: number, mode: VmServerMode = "writer"): Promise<{
   close: () => Promise<void>;
   runMaintenance: (job: () => Promise<void>) => Promise<boolean>;
   port: number;
@@ -147,7 +161,7 @@ export async function startVmServer(env: Env, port: number, accountOnly = false)
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Invalid VM port");
   const gate = new VmGate();
   const server = createServer({ maxHeaderSize: 16 * 1024 },
-    (req, res) => { void respond(req, res, env, gate, accountOnly); });
+    (req, res) => { void respond(req, res, env, gate, mode); });
   server.headersTimeout = 15_000;
   server.requestTimeout = 120_000;
   server.keepAliveTimeout = 5_000;

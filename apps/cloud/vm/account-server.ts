@@ -19,7 +19,9 @@ export async function runVmAccountServer(): Promise<void> {
       process.env.ACCOUNT_LOOPBACK_PORT !== "18791") throw new Error("Account configuration is incomplete");
   const writer = new URL(writerOrigin);
   if (origin !== "https://account.healthmd.app" || writer.protocol !== "https:" ||
-      !writer.hostname.endsWith(".ts.net") || writer.port !== "18788") {
+      !writer.hostname.endsWith(".ts.net") || writer.port !== "18788" ||
+      (process.env.API_PUBLIC_ORIGIN !== undefined &&
+        process.env.API_PUBLIC_ORIGIN !== "https://api.healthmd.app")) {
     throw new Error("Account or writer origin is not isolated");
   }
   const source = assertPrivateDirectory(resolve(sourceDirectory));
@@ -31,8 +33,10 @@ export async function runVmAccountServer(): Promise<void> {
     passwordPepper: process.env.PASSWORD_PEPPER_B64,
     revisionRetention: "unlimited", personalMvp: true,
   });
-  env.EXPORT_ENDPOINT_ORIGIN = writerOrigin;
-  await startVmServer(env, 18791, true);
+  // Keep the old tailnet target until the independent public ingestion Tunnel
+  // has passed end-to-end negative and authorized synthetic upload checks.
+  env.EXPORT_ENDPOINT_ORIGIN = process.env.API_PUBLIC_ORIGIN ?? writerOrigin;
+  await startVmServer(env, 18791, "account");
   // No maintenance or writer actions here. The private writer owns reconciliation
   // and deletion cleanup; both processes use SQLite's existing WAL discipline.
 }

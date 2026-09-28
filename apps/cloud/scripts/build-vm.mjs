@@ -3,6 +3,7 @@ import { build } from "esbuild";
 for (const [entry, name] of [
   ["vm/server.ts", "server"],
   ["vm/account-server.ts", "account-server"],
+  ["vm/ingest-server.ts", "ingest-server"],
   ["vm/bootstrap-cli.ts", "bootstrap"],
   ["vm/bootstrap-generated.ts", "bootstrap-generated"],
   ["mcp/server.ts", "mcp-server"],

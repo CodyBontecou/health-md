@@ -1,5 +1,5 @@
 [Unit]
-Description=Health.md owner-only account dashboard (separate public HTTPS ingress)
+Description=Health.md write-only public ingest listener (isolated from account/MCP)
 After=network-online.target healthmd-cloud-personal-mvp.service
 BindsTo=healthmd-cloud-personal-mvp.service
 
@@ -11,12 +11,10 @@ WorkingDirectory=/var/lib/healthmd-cloud-mvp/source
 EnvironmentFile=/etc/healthmd-cloud-mvp/secrets.env
 # Set this to the actual dedicated healthmd-cloud-read numeric GID at install time.
 Environment=HEALTHMD_VM_READER_GID=REPLACE_WITH_READER_GID
-Environment=HEALTHMD_ACCOUNT_START=1
-Environment=ACCOUNT_PUBLIC_ORIGIN=https://account.healthmd.app
-Environment=ACCOUNT_LOOPBACK_PORT=18791
-# Set only after the dedicated api.healthmd.app Tunnel has passed public upload/denial checks:
-# Environment=API_PUBLIC_ORIGIN=https://api.healthmd.app
-ExecStart=/opt/healthmd-cloud-mvp/bin/node /var/lib/healthmd-cloud-mvp/source/account-server.mjs
+Environment=HEALTHMD_INGEST_START=1
+Environment=API_PUBLIC_ORIGIN=https://api.healthmd.app
+Environment=API_LOOPBACK_PORT=18793
+ExecStart=/opt/healthmd-cloud-mvp/bin/node /var/lib/healthmd-cloud-mvp/source/ingest-server.mjs
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=yes
@@ -25,7 +23,7 @@ ProtectHome=yes
 PrivateTmp=yes
 ReadWritePaths=/var/lib/healthmd-cloud-mvp/data
 ReadOnlyPaths=/var/lib/healthmd-cloud-mvp/source
-InaccessiblePaths=/etc/healthmd-cloud-mcp /etc/healthmd-cloud-mcp-tunnel
+InaccessiblePaths=/etc/healthmd-cloud-mcp /etc/healthmd-cloud-mcp-tunnel /etc/healthmd-cloud-account-tunnel
 LimitNOFILE=4096
 
 [Install]

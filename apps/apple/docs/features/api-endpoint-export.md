@@ -23,6 +23,8 @@ Data Detail defaults to Summary for new installs; historical combined choices mi
 
 Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `Basic ` are sent as entered.
 
+For the **single-owner, unbacked Health.md Cloud pilot** only, the optional destination is `https://api.healthmd.app/api/v1/exports` with a separate write-only `hmd_ing_…` token from the owner's account dashboard. This is a public HTTPS upload route, not the dashboard (`account.healthmd.app`), the read-only MCP (`mcp.healthmd.app`), or the earlier tailnet-only `:18788` address (which remains available for saved destinations). It accepts compatibility JSON v1/v2 and retains accepted revisions without an off-host backup; the VM or encryption key could be lost permanently. The app does not default or silently migrate existing API targets to this pilot. Enter the endpoint only when the public ingest service is confirmed live, and never put the token in the URL.
+
 ## Payload shape (abridged)
 
 Complete v1 and provider-sidecar v2 envelopes are under [`docs/reference/generated/automation/`](../reference/generated/automation/).
@@ -135,4 +137,4 @@ If a single-day payload is larger than your endpoint accepts, reducing the selec
 - `APIEndpointExportRunner` tracks partial failures and splits normalized dates into sequential batches bounded by `defaultMaxBatchDaySpan` (7 days) and `defaultMaxBatchPayloadBytes` (8 MiB). It stops on the first failed batch and preserves exact completed dates from earlier batches.
 - `APIExportClient` wraps public v8 daily JSON, stores the optional token in Keychain-backed settings, and uploads the exact prepared body that the runner measured. The immutable destination is snapshotted once per action.
 - `JSONExporter` and `HealthKitRecordArchiveSerializer` own the daily/archive contracts.
-- API output is direct iPhone → configured endpoint; Health.md does not proxy it through its servers.
+- API output is direct iPhone → configured endpoint; when the user explicitly chooses Health.md Cloud, that endpoint is the retained-export receiver rather than a transparent intermediary for another destination.
