@@ -1,6 +1,6 @@
 # Health.md
 
-Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, notification-only wake service, practice boundary, website, and an opt-in cloud export receiver prototype with a synthetic, upload-disabled tailnet preview and a separate unbacked single-user VM pilot accepting owner-authorized exports. No general-purpose cloud launch is approved.
+Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, notification-only wake service, practice boundary, website, and an opt-in cloud export receiver prototype with a synthetic, upload-disabled tailnet preview and a separate unbacked single-user VM pilot accepting owner-authorized exports through private tailnet or dedicated public write-only HTTPS ingress. No general-purpose cloud launch is approved.
 
 ## Agent skills
 
@@ -30,7 +30,7 @@ A skill supplies agent instructions; it does not install the `healthmd` binaries
 | [`apps/cli`](apps/cli) | Portable `healthmd` CLI | Cargo / Rust |
 | [`apps/practice`](apps/practice) | Isolated synthetic clinician portal and future clinical boundary | Node.js / Cloudflare Workers |
 | [`apps/wake`](apps/wake) | Notification-only Direct CLI wake doorbell | TypeScript / Cloudflare Workers |
-| [`apps/cloud`](apps/cloud) | Opt-in receiver/dashboard: synthetic preview plus unbacked, owner-operated VM pilot and a separately authenticated read-only MCP endpoint | TypeScript / Cloudflare Workers, D1, R2 |
+| [`apps/cloud`](apps/cloud) | Opt-in receiver/dashboard: synthetic preview, unbacked owner-operated VM pilot with separate public write-only API/account ingress, and an independently authenticated read-only MCP endpoint | TypeScript / Cloudflare Workers, D1, R2 |
 | [`apps/website`](apps/website) | Product website and documentation | Node.js / Astro |
 | [`packages/contracts`](packages/contracts) | Cross-platform schemas and compatibility fixtures | Language-neutral |
 | [`packages/healthmd-core-rust`](packages/healthmd-core-rust) | Shared export core, UniFFI binding tooling, and direct protocol | Cargo / Rust |
