@@ -14,7 +14,7 @@
     <p class="eyebrow">Private export storage</p>
     <h1>Your exports</h1>
     <p id="account" aria-live="polite">Loading account…</p>
-    <p class="note">Your phone sends only the data you choose to this destination. Cloud MCP connectors and third-party access are not enabled.</p>
+    <p class="note">Your phone sends only data you select. Agent credentials are separate from phone upload tokens and can disclose retained exports to a third-party provider you choose.</p>
     <p id="synthetic-warning" class="token-panel" hidden><strong>Synthetic preview only.</strong> Export uploads and token creation are disabled. Do not enter this URL in a real device or send personal health data.</p>
     <p id="unbacked-warning" class="token-panel" hidden><strong>Unbacked personal trial.</strong> Exports are retained without a time limit, but the current storage quota applies. There is no off-host backup: VM, disk or key loss may permanently destroy everything. Do not mistake this for a production cloud service.</p>
     <p id="message" role="status" aria-live="polite"></p>
@@ -39,21 +39,46 @@
       <ul id="token-list"></ul>
     </section>
 
+    <section id="agents-section" aria-labelledby="agents-title" hidden>
+      <h2 id="agents-title">Agent access</h2>
+      <p>Connect a compatible agent to <code>https://mcp.healthmd.app/mcp</code> with its own Bearer credential. Each new credential can read <strong>every retained export JSON field</strong>, including historical revisions, free text, embedded source archives and binary data. It cannot access data your device never uploaded. The agent provider may retain or use returned data under its own policies.</p>
+      <p class="note">Existing aggregate-only credentials remain restricted; this form does not upgrade them. A credential can be revoked immediately. It expires automatically and cannot upload or delete exports.</p>
+      <form id="create-agent-form">
+        <label for="agent-name">Agent or provider name</label>
+        <input id="agent-name" required maxlength="80" autocomplete="off" placeholder="My approved agent">
+        <label for="agent-days">Expiry in days (1–90)</label>
+        <input id="agent-days" type="number" required min="1" max="90" value="30">
+        <label for="agent-password">Confirm your account password</label>
+        <input id="agent-password" type="password" autocomplete="current-password" required minlength="16">
+        <label><input id="agent-consent" type="checkbox" required> I authorize this named agent to read all my retained Health.md export data and have reviewed how its provider handles health data.</label>
+        <button type="submit">Create full-export agent credential</button>
+      </form>
+      <div id="new-agent-panel" class="token-panel" hidden>
+        <label for="new-agent-token">New agent credential · copy once into the agent's secure vault, not a chat or URL</label>
+        <input id="new-agent-token" readonly autocomplete="off">
+        <button type="button" id="hide-agent-token" class="subtle">Hide credential</button>
+      </div>
+      <h3>Agent credentials</h3>
+      <ul id="agent-list"></ul>
+    </section>
+
     <section aria-labelledby="storage-title">
       <h2 id="storage-title">Stored exports</h2>
       <p id="storage">Loading…</p>
       <p class="note">Repeated dates replace the current daily pointer; earlier accepted envelopes remain stored. Downloaded files are the original API envelopes, not normalized reports. Downloads contain sensitive health data.</p>
       <ul id="export-list"></ul>
+      <button type="button" id="more-exports" class="subtle" hidden>Load more exports</button>
     </section>
 
     <section aria-labelledby="days-title">
       <h2 id="days-title">Current daily snapshots</h2>
       <ul id="day-list"></ul>
+      <button type="button" id="more-days" class="subtle" hidden>Load more days</button>
     </section>
 
     <section id="deletion-section" aria-labelledby="deletion-title" hidden>
       <h2 id="deletion-title">Delete this account</h2>
-      <p>Deleting your account disables sign-in and uploads immediately. Stored exports are then erased by the background deletion job. Independent encrypted backups follow their documented expiry schedule.</p>
+      <p>Deleting your account disables sign-in and uploads immediately. Stored exports are then erased by the background deletion job. This unbacked pilot has no off-host backup or recovery.</p>
       <form id="delete-account-form">
         <label for="delete-password">Enter your password again</label>
         <input id="delete-password" type="password" autocomplete="current-password" required minlength="16">

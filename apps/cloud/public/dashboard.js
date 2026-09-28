@@ -52,12 +52,34 @@ async function showTokens() {
   }
 }
 
-async function showExports() {
-  const { exports, days, storage } = await api("/api/exports");
-  $("storage").textContent = `${storage.count} envelopes · ${(storage.bytes / 1048576).toFixed(2)} MiB stored (first 50 shown)`;
-  const list = $("export-list");
+async function showAgents() {
+  const { tokens } = await api("/api/agent-tokens");
+  const list = $("agent-list");
   list.replaceChildren();
-  if (!exports.length) addTextRow(list, "No exports yet", "Send a single day from your phone to begin");
+  if (!tokens.length) addTextRow(list, "No agent credentials", "Create one only for a provider you trust");
+  for (const item of tokens) {
+    const state = item.revokedAt ? "Revoked" : new Date(item.expiresAt) <= new Date() ? "Expired" : "Active";
+    const detail = `${item.scope === "full_export" ? "All retained exports" : "Daily aggregates only"} · ${state} · expires ${new Date(item.expiresAt).toLocaleDateString()} · •••• ${item.lastFour}`;
+    let button = null;
+    if (!item.revokedAt) {
+      button = document.createElement("button");
+      button.className = "subtle";
+      button.textContent = "Revoke";
+      button.addEventListener("click", async () => {
+        if (!confirm(`Revoke ${item.label}? The agent will lose access immediately.`)) return;
+        try {
+          await api(`/api/agent-tokens/${item.id}`, "DELETE");
+          status("Agent credential revoked.");
+          await showAgents();
+        } catch (error) { status(error.message); }
+      });
+    }
+    addTextRow(list, item.label, detail, button);
+  }
+}
+
+function appendExports(exports) {
+  const list = $("export-list");
   for (const item of exports) {
     const link = document.createElement("a");
     link.href = `/api/exports/${item.id}/download`;
@@ -65,12 +87,26 @@ async function showExports() {
     addTextRow(list, `${item.dateStart} – ${item.dateEnd}`,
       `${item.recordCount} days · ${item.source} · ${new Date(item.receivedAt).toLocaleString()}`, link);
   }
-  const dayList = $("day-list");
-  dayList.replaceChildren();
-  if (!days.length) addTextRow(dayList, "No daily snapshots", "Send an export to begin");
-  for (const day of days) {
-    addTextRow(dayList, day.date, `v${day.schemaVersion} · ${day.captureStatus || "status not reported"}`);
-  }
+}
+
+function appendDays(days) {
+  for (const day of days) addTextRow($("day-list"), day.date,
+    `v${day.schemaVersion} · ${day.captureStatus || "status not reported"}`);
+}
+
+async function showExports() {
+  const { exports, days, storage, nextExportOffset, nextDayOffset } = await api("/api/exports");
+  $("storage").textContent = `${storage.count} envelopes · ${(storage.bytes / 1048576).toFixed(2)} MiB stored`;
+  $("export-list").replaceChildren();
+  $("day-list").replaceChildren();
+  if (!exports.length) addTextRow($("export-list"), "No exports yet", "Send a single day from your phone to begin");
+  if (!days.length) addTextRow($("day-list"), "No daily snapshots", "Send an export to begin");
+  appendExports(exports);
+  appendDays(days);
+  $("more-exports").dataset.offset = nextExportOffset ?? "";
+  $("more-exports").hidden = nextExportOffset === null;
+  $("more-days").dataset.offset = nextDayOffset ?? "";
+  $("more-days").hidden = nextDayOffset === null;
 }
 
 async function initLogin() {
@@ -119,7 +155,6 @@ async function initLogin() {
 }
 
 async function initDashboard() {
-  $("endpoint").value = `${location.origin}/api/v1/exports`;
   $("logout").addEventListener("click", async () => {
     try {
       await api("/api/auth/logout", "POST");
@@ -141,6 +176,49 @@ async function initDashboard() {
     $("new-token").value = "";
     $("new-token-panel").hidden = true;
   });
+  $("create-agent-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    $("new-agent-token").value = "";
+    $("new-agent-panel").hidden = true;
+    try {
+      const result = await api("/api/agent-tokens", "POST", {
+        label: $("agent-name").value, days: Number($("agent-days").value),
+        password: $("agent-password").value, scope: "full_export",
+        consent: $("agent-consent").checked,
+      });
+      $("new-agent-token").value = result.token;
+      $("new-agent-panel").hidden = false;
+      $("agent-name").value = "";
+      $("agent-consent").checked = false;
+      status("Copy this credential into the agent's secure vault now. It cannot be shown again.");
+      await showAgents();
+    } catch (error) { status(error.message); }
+    finally { $("agent-password").value = ""; }
+  });
+  $("hide-agent-token").addEventListener("click", () => {
+    $("new-agent-token").value = "";
+    $("new-agent-panel").hidden = true;
+  });
+  $("more-exports").addEventListener("click", async () => {
+    const offset = $("more-exports").dataset.offset;
+    if (!offset) return;
+    try {
+      const page = await api(`/api/exports/page/${offset}`);
+      appendExports(page.exports);
+      $("more-exports").dataset.offset = page.nextOffset ?? "";
+      $("more-exports").hidden = page.nextOffset === null;
+    } catch (error) { status(error.message); }
+  });
+  $("more-days").addEventListener("click", async () => {
+    const offset = $("more-days").dataset.offset;
+    if (!offset) return;
+    try {
+      const page = await api(`/api/days/page/${offset}`);
+      appendDays(page.days);
+      $("more-days").dataset.offset = page.nextOffset ?? "";
+      $("more-days").hidden = page.nextOffset === null;
+    } catch (error) { status(error.message); }
+  });
   $("delete-account-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -153,6 +231,9 @@ async function initDashboard() {
       $("deletion-section").hidden = true;
       $("export-list").replaceChildren();
       $("day-list").replaceChildren();
+      $("agent-list").replaceChildren();
+      $("new-agent-token").value = "";
+      $("new-agent-panel").hidden = true;
       status(`Account disabled. Deletion job ${result.deletionId} is pending; contact the operator to confirm completion.`);
     } catch (error) { $("delete-password").value = ""; status(error.message); }
   });
@@ -160,11 +241,13 @@ async function initDashboard() {
     const runtime = await api("/api/runtime");
     $("synthetic-warning").hidden = !runtime.syntheticPreviewOnly;
     $("unbacked-warning").hidden = !runtime.unbackedPersonalMvp;
+    $("agents-section").hidden = !runtime.unbackedPersonalMvp;
+    $("endpoint").value = runtime.exportEndpoint;
     $("connect-section").hidden = runtime.syntheticPreviewOnly;
     $("deletion-section").hidden = runtime.syntheticPreviewOnly || runtime.authMode !== "password";
     const account = await api("/api/account");
     $("account").textContent = `Signed in as ${account.email}`;
-    await Promise.all([showTokens(), showExports()]);
+    await Promise.all([showTokens(), showExports(), ...(runtime.unbackedPersonalMvp ? [showAgents()] : [])]);
   } catch (error) {
     if (error.message === "Sign in to continue.") location.replace("/login");
     else status(error.message);

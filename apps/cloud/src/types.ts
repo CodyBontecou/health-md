@@ -4,6 +4,7 @@ export interface Env {
   ASSETS: Fetcher;
   ENVIRONMENT: "development" | "production";
   PUBLIC_ORIGIN: string;
+  EXPORT_ENDPOINT_ORIGIN?: string;
   AUTH_SIGNUP_MODE: "closed" | "invite" | "open";
   AUTH_MODE?: "email_link" | "password";
   AUTH_EMAIL_FROM: string;

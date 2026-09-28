@@ -39,7 +39,8 @@ describe("Worker deployment and request policy", () => {
     expect(token.status).toBe(403);
     const runtime = await worker.fetch(new Request("http://localhost:8787/api/runtime"), preview);
     expect(runtime.status).toBe(200);
-    expect(await runtime.json()).toEqual({ syntheticPreviewOnly: true, unbackedPersonalMvp: false, authMode: "email_link" });
+    expect(await runtime.json()).toEqual({ syntheticPreviewOnly: true, unbackedPersonalMvp: false,
+      authMode: "email_link", exportEndpoint: "http://localhost:8787/api/v1/exports" });
   });
 
   it("accepts only the expected HTTPS tailnet proxy headers for a synthetic preview", async () => {

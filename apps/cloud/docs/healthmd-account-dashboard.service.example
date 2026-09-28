@@ -1,0 +1,30 @@
+[Unit]
+Description=Health.md owner-only account dashboard (separate public HTTPS ingress)
+After=network-online.target healthmd-cloud-personal-mvp.service
+Requires=healthmd-cloud-personal-mvp.service
+
+[Service]
+Type=simple
+User=healthmd-cloud
+Group=healthmd-cloud
+WorkingDirectory=/var/lib/healthmd-cloud-mvp/source
+EnvironmentFile=/etc/healthmd-cloud-mvp/secrets.env
+# Set this to the actual dedicated healthmd-cloud-read numeric GID at install time.
+Environment=HEALTHMD_VM_READER_GID=REPLACE_WITH_READER_GID
+Environment=HEALTHMD_ACCOUNT_START=1
+Environment=ACCOUNT_PUBLIC_ORIGIN=https://account.healthmd.app
+Environment=ACCOUNT_LOOPBACK_PORT=18791
+ExecStart=/opt/healthmd-cloud-mvp/bin/node /var/lib/healthmd-cloud-mvp/source/account-server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/healthmd-cloud-mvp/data
+ReadOnlyPaths=/var/lib/healthmd-cloud-mvp/source
+InaccessiblePaths=/etc/healthmd-cloud-mcp /etc/healthmd-cloud-mcp-tunnel
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

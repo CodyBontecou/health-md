@@ -2,7 +2,8 @@ import {
   accountSummary, consumeMagicLink, createIngestToken, getSession, listIngestTokens,
   logout, requestMagicLink, requireSession, revokeIngestToken,
 } from "./auth";
-import { downloadExport, ingest, listExports } from "./exports";
+import { downloadExport, ingest, listDayPage, listExportPage, listExports } from "./exports";
+import { createAgentToken, listAgentTokens, revokeAgentToken } from "./agent-tokens";
 import { passwordLogin } from "./password";
 import { processAccountDeletions, purgeArchivedRevisions, requestAccountDeletion } from "./lifecycle";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
@@ -69,7 +70,8 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (method === "GET" && path === "/api/runtime") {
     return json({ syntheticPreviewOnly: env.SYNTHETIC_PREVIEW_ONLY === "1",
       unbackedPersonalMvp: env.VM_PERSONAL_MVP_NO_BACKUP_ACK === "I_ACCEPT_PERMANENT_DATA_LOSS",
-      authMode: env.AUTH_MODE ?? "email_link" });
+      authMode: env.AUTH_MODE ?? "email_link",
+      exportEndpoint: `${env.EXPORT_ENDPOINT_ORIGIN ?? env.PUBLIC_ORIGIN}/api/v1/exports` });
   }
   if (method === "GET" && path === "/") return redirect("/dashboard");
   if (method === "GET" && (path === "/login.html" || path === "/dashboard.html")) {
@@ -122,8 +124,26 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (method === "DELETE" && revoke?.[1]) {
     return revokeIngestToken(request, env, (await requireSession(request, env)).id, revoke[1]);
   }
+  if (method === "GET" && path === "/api/agent-tokens") {
+    return listAgentTokens(env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/agent-tokens") {
+    return createAgentToken(request, env, (await requireSession(request, env)).id);
+  }
+  const agentRevoke = /^\/api\/agent-tokens\/([a-f0-9-]{36})$/u.exec(path);
+  if (method === "DELETE" && agentRevoke?.[1]) {
+    return revokeAgentToken(request, env, (await requireSession(request, env)).id, agentRevoke[1]);
+  }
   if (method === "GET" && path === "/api/exports") {
     return listExports(env, (await requireSession(request, env)).id);
+  }
+  const exportPage = /^\/api\/exports\/page\/([0-9]{1,7})$/u.exec(path);
+  if (method === "GET" && exportPage?.[1]) {
+    return listExportPage(env, (await requireSession(request, env)).id, Number(exportPage[1]));
+  }
+  const dayPage = /^\/api\/days\/page\/([0-9]{1,7})$/u.exec(path);
+  if (method === "GET" && dayPage?.[1]) {
+    return listDayPage(env, (await requireSession(request, env)).id, Number(dayPage[1]));
   }
   const exportDownload = /^\/api\/exports\/([a-f0-9-]{36})\/download$/u.exec(path);
   if (method === "GET" && exportDownload?.[1]) {

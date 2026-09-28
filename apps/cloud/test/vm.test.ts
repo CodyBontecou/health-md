@@ -7,6 +7,7 @@ import { request as httpRequest } from "node:http";
 import { createVmEnvironment } from "../vm/runtime";
 import { createSingleUserAccount } from "../vm/bootstrap";
 import { startVmServer } from "../vm/server";
+import { authenticateReadToken, createReadToken } from "../mcp/auth";
 import { processAccountDeletions, purgeArchivedRevisions } from "../src/lifecycle";
 import type { Env } from "../src/types";
 import worker from "../src/index";
@@ -38,14 +39,15 @@ afterEach(() => {
 });
 
 async function proxiedRequest(port: number, path: string, method = "GET", body?: unknown,
-  cookie?: string, origin = `http://preview.tailnet.test:18788`, intent = true) {
+  cookie?: string, origin = `http://preview.tailnet.test:18788`, intent = true,
+  host = "preview.tailnet.test:18788") {
   const payload = body === undefined ? undefined : JSON.stringify(body);
   return new Promise<{ status: number; headers: Record<string, string | string[] | undefined>; body: string }>(
     (done, fail) => {
       const request = httpRequest({ host: "127.0.0.1", port, path, method, headers: {
-        Host: "preview.tailnet.test:18788",
+        Host: host,
         "X-Forwarded-Proto": "https",
-        "X-Forwarded-Host": "preview.tailnet.test:18788",
+        "X-Forwarded-Host": host,
         "X-Forwarded-For": "100.64.0.23",
         ...(payload === undefined ? {} : { "Content-Type": "application/json" }),
         ...(method === "GET" ? {} : { Origin: origin, ...(intent ? { "X-HealthMd-Intent": "dashboard" } : {}) }),
@@ -205,5 +207,74 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       });
       expect(statSync(join(directory, "objects", latest.object_key), { throwIfNoEntry: false })).toBeUndefined();
     } finally { await service.close(); db.close(); }
+  }, 30_000);
+
+  it("exposes only account routes and issues/revokes full-export credentials after reauthentication", async () => {
+    const { env, db, directory } = createTestEnv("personal-mvp");
+    const { env: accountEnv, db: accountDb } = createVmEnvironment({
+      dataDirectory: directory, sourceDirectory,
+      publicOrigin: "https://account.example.test", identityKey: env.IDENTITY_KEY_B64,
+      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON, currentKeyId: "v1",
+      passwordPepper: env.PASSWORD_PEPPER_B64 ?? "", personalMvp: true,
+      revisionRetention: "unlimited",
+    });
+    accountEnv.EXPORT_ENDPOINT_ORIGIN = fakeOrigin;
+    await createSingleUserAccount(env, "pilot", email, fakePassword);
+    const user = db.connection.prepare("SELECT id FROM users").get() as { id: string };
+    const otherId = randomUUID();
+    db.connection.prepare(`INSERT INTO users (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`).run(otherId, randomUUID(), new Date().toISOString());
+    const other = createReadToken(db.connection, otherId, "Other agent");
+    const account = await startVmServer(accountEnv, 0, true);
+    const req = (path: string, method = "GET", body?: unknown, cookie?: string,
+      origin = "https://account.example.test", intent = true) =>
+      proxiedRequest(account.port, path, method, body, cookie, origin, intent, "account.example.test");
+    try {
+      expect((await req("/api/v1/exports", "POST", {})).status).toBe(404);
+      expect((await req("/api/auth/request-link", "POST", {})).status).toBe(404);
+      expect((await req("/dashboard")).status).toBe(303);
+      expect((await req("/api/agent-tokens")).status).toBe(401);
+      expect((await req("/api/exports/page/0")).status).toBe(401);
+      expect((await req("/api/agent-tokens", "POST", {})).status).toBe(401);
+      expect(JSON.parse((await req("/api/runtime")).body)).toMatchObject({
+        unbackedPersonalMvp: true, exportEndpoint: `${fakeOrigin}/api/v1/exports`,
+      });
+      const login = await req("/api/auth/password-login", "POST",
+        { username: "pilot", password: fakePassword });
+      expect(login.status).toBe(200);
+      const cookie = (login.headers["set-cookie"] as string[] | undefined)?.[0]?.split(";")[0];
+      expect(cookie).toBeDefined();
+      expect(JSON.parse((await req("/api/exports/page/0", "GET", undefined, cookie)).body))
+        .toMatchObject({ exports: [], nextOffset: null });
+      expect(JSON.parse((await req("/api/days/page/0", "GET", undefined, cookie)).body))
+        .toMatchObject({ days: [], nextOffset: null });
+      expect((await req("/api/exports/page/1000001", "GET", undefined, cookie)).status).toBe(400);
+      expect((await req("/api/agent-tokens", "POST", {}, cookie,
+        "https://other.example.test")).status).toBe(403);
+      const input = { label: "Synthetic model", days: 30, password: fakePassword,
+        consent: true, scope: "full_export" };
+      expect((await req("/api/agent-tokens", "POST", { ...input, consent: false }, cookie)).status).toBe(400);
+      expect((await req("/api/agent-tokens", "POST", { ...input, password: "wrong" }, cookie)).status).toBe(401);
+      const created = await req("/api/agent-tokens", "POST", input, cookie);
+      expect(created.status).toBe(201);
+      expect(created.headers["cache-control"]).toBe("no-store");
+      const issued = JSON.parse(created.body) as { id: string; token: string; scope: string };
+      expect(issued.token).toMatch(/^hmd_read_[A-Za-z0-9_-]{43}$/u);
+      expect(issued.scope).toBe("full_export");
+      expect(authenticateReadToken(db.connection, `Bearer ${issued.token}`)).toMatchObject({
+        userId: user.id, tokenId: issued.id, scope: "full_export",
+      });
+      expect(JSON.stringify(db.connection.prepare("SELECT * FROM mcp_read_tokens").all()))
+        .not.toContain(issued.token);
+      const inventory = await req("/api/agent-tokens", "GET", undefined, cookie);
+      expect(inventory.body).not.toContain(issued.token);
+      expect(JSON.parse(inventory.body).tokens).toHaveLength(1);
+      expect((await req(`/api/agent-tokens/${other.id}`, "DELETE", undefined, cookie)).status).toBe(404);
+      expect(authenticateReadToken(db.connection, `Bearer ${other.token}`)).toMatchObject({ userId: otherId });
+      expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
+      expect(authenticateReadToken(db.connection, `Bearer ${issued.token}`)).toBeNull();
+      expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(404);
+      expect((await req("/api/v1/exports", "POST", {}, cookie)).status).toBe(404);
+    } finally { await account.close(); accountDb.close(); db.close(); }
   }, 30_000);
 });

@@ -145,7 +145,41 @@ export async function listExports(env: Env, userId: string): Promise<Response> {
       "SELECT COUNT(*) AS count, COALESCE(SUM(byte_count), 0) AS bytes FROM exports WHERE user_id = ?",
     ).bind(userId).first<{ count: number; bytes: number }>(),
   ]);
-  return json({ exports: exports.results, days: days.results, storage: storage ?? { count: 0, bytes: 0 } });
+  return json({ exports: exports.results, days: days.results, storage: storage ?? { count: 0, bytes: 0 },
+    nextExportOffset: exports.results.length === 50 ? 50 : null,
+    nextDayOffset: days.results.length === 50 ? 50 : null });
+}
+
+// Bounded owner-only navigation of retained metadata. The inventory is not a
+// snapshot across concurrent uploads/deletions; the MCP cursor handles agent
+// discovery separately. No raw health readings appear in these responses.
+export async function listExportPage(env: Env, userId: string, offset: number): Promise<Response> {
+  if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000) {
+    throw new HttpError(400, "invalid_page", "Invalid export page.");
+  }
+  const result = await env.DB.prepare(
+    `SELECT id, byte_count AS byteCount, envelope_schema_version AS envelopeSchemaVersion,
+            daily_record_schema_version AS dailyRecordSchemaVersion, source,
+            exported_at AS exportedAt, received_at AS receivedAt, date_start AS dateStart,
+            date_end AS dateEnd, record_count AS recordCount, failure_count AS failureCount,
+            external_record_count AS externalRecordCount
+     FROM exports WHERE user_id = ? ORDER BY received_at DESC, id DESC LIMIT 51 OFFSET ?`,
+  ).bind(userId, offset).all();
+  return json({ exports: result.results.slice(0, 50),
+    nextOffset: result.results.length > 50 ? offset + 50 : null });
+}
+
+export async function listDayPage(env: Env, userId: string, offset: number): Promise<Response> {
+  if (!Number.isInteger(offset) || offset < 0 || offset > 1_000_000) {
+    throw new HttpError(400, "invalid_page", "Invalid day page.");
+  }
+  const result = await env.DB.prepare(
+    `SELECT owner_date AS date, schema_version AS schemaVersion, capture_status AS captureStatus,
+            exported_at AS exportedAt, received_at AS receivedAt
+     FROM daily_records WHERE user_id = ? ORDER BY owner_date DESC LIMIT 51 OFFSET ?`,
+  ).bind(userId, offset).all();
+  return json({ days: result.results.slice(0, 50),
+    nextOffset: result.results.length > 50 ? offset + 50 : null });
 }
 
 export async function downloadExport(env: Env, userId: string, exportId: string): Promise<Response> {

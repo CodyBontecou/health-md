@@ -13,7 +13,7 @@ function safeError(response: ServerResponse, status: number): void {
   response.end('{"error":"unavailable"}');
 }
 
-function trustedProxyRequest(request: IncomingMessage, env: Env): Request | null {
+function trustedProxyRequest(request: IncomingMessage, env: Env, accountOnly = false): Request | null {
   const remote = request.socket.remoteAddress;
   if (remote !== "127.0.0.1" && remote !== "::ffff:127.0.0.1") return null;
   const expected = new URL(env.PUBLIC_ORIGIN);
@@ -37,7 +37,7 @@ function trustedProxyRequest(request: IncomingMessage, env: Env): Request | null
   // Tailscale Serve rewrites the browser Origin from HTTPS to its local HTTP
   // upstream. Only restore the expected Origin when the request carries the
   // dashboard's non-simple CSRF header; never rewrite an arbitrary origin.
-  if (headers.get("Origin") === `http://${expected.host}` &&
+  if (!accountOnly && headers.get("Origin") === `http://${expected.host}` &&
       headers.get("X-HealthMd-Intent") === "dashboard") headers.set("Origin", env.PUBLIC_ORIGIN);
   const method = request.method ?? "GET";
   const body = method === "GET" || method === "HEAD" ? undefined : Readable.toWeb(request);
@@ -85,12 +85,32 @@ class VmGate {
   }
 }
 
+// A dedicated public account listener has an exact, positive route/method list.
+// It cannot reach ingestion, magic-link signup, scheduled maintenance or MCP.
+function accountRoute(method: string, path: string): boolean {
+  if (method === "GET") return new Set([
+    "/health", "/login", "/dashboard", "/dashboard.js", "/style.css",
+    "/api/runtime", "/api/account", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
+  ]).has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||
+    /^\/api\/(?:exports|days)\/page\/[0-9]{1,7}$/u.test(path);
+  if (method === "POST") return new Set([
+    "/api/auth/password-login", "/api/auth/logout", "/api/ingest-tokens", "/api/agent-tokens",
+    "/api/account/delete",
+  ]).has(path);
+  return method === "DELETE" && (
+    /^\/api\/ingest-tokens\/[a-f0-9-]{36}$/u.test(path) ||
+    /^\/api\/agent-tokens\/[a-f0-9-]{36}$/u.test(path));
+}
+
 async function respond(request: IncomingMessage, response: ServerResponse, env: Env,
-  gate: VmGate): Promise<void> {
+  gate: VmGate, accountOnly: boolean): Promise<void> {
   let releaseIngest: (() => void) | null = null;
   try {
-    const webRequest = trustedProxyRequest(request, env);
+    const webRequest = trustedProxyRequest(request, env, accountOnly);
     if (!webRequest) { safeError(response, 421); return; }
+    if (accountOnly && !accountRoute(webRequest.method, new URL(webRequest.url).pathname)) {
+      safeError(response, 404); return;
+    }
     if (webRequest.method === "POST" && new URL(webRequest.url).pathname === "/api/v1/exports") {
       releaseIngest = await gate.reserveUpload(response);
       if (!releaseIngest) {
@@ -119,7 +139,7 @@ async function respond(request: IncomingMessage, response: ServerResponse, env: 
   }
 }
 
-export async function startVmServer(env: Env, port: number): Promise<{
+export async function startVmServer(env: Env, port: number, accountOnly = false): Promise<{
   close: () => Promise<void>;
   runMaintenance: (job: () => Promise<void>) => Promise<boolean>;
   port: number;
@@ -127,7 +147,7 @@ export async function startVmServer(env: Env, port: number): Promise<{
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("Invalid VM port");
   const gate = new VmGate();
   const server = createServer({ maxHeaderSize: 16 * 1024 },
-    (req, res) => { void respond(req, res, env, gate); });
+    (req, res) => { void respond(req, res, env, gate, accountOnly); });
   server.headersTimeout = 15_000;
   server.requestTimeout = 120_000;
   server.keepAliveTimeout = 5_000;
