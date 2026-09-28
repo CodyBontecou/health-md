@@ -62,6 +62,59 @@
       ]
     },
     {
+      "id": "cloud.opt-in-export-receiver",
+      "name": "Opt-in cloud API Endpoint receiver",
+      "classification": "planned",
+      "summary": "Use a private account-bound API Endpoint receiver retaining platform-native compatibility envelopes without changing daily schemas. A one-user, unbacked, tailnet-only VM pilot accepts real iPhone exports; no general production cloud or third-party export credential exists.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "After ADR-0007 production security, privacy, deletion, and operational gates, qualify the existing iOS API Endpoint target against the approved HTTPS cloud receiver on a physical iPhone."
+        },
+        "android": {
+          "state": "planned",
+          "target": "After ADR-0007 production gates, qualify the existing Android Compatibility Export API Endpoint target against the same approved HTTPS receiver on a physical Android device; Raw API Snapshot is a separate unsupported contract."
+        }
+      },
+      "evidence": [
+        "apps/cloud/README.md",
+        "docs/architecture/adr-0007-healthmd-cloud.md",
+        "apps/apple/docs/features/api-endpoint-export.md",
+        "apps/android/docs/api-endpoint-export.md"
+      ]
+    },
+    {
+      "id": "cloud.read-only-mcp",
+      "name": "Scoped read-only retained-export MCP",
+      "classification": "planned",
+      "summary": "The unbacked VM pilot's public, separately authenticated read-only MCP serves bounded Apple-v8 daily aggregates. An explicitly scoped full-export token can additionally navigate all retained Apple/Android API Endpoint compatibility envelope bytes, including provider sidecars and historical revisions, without inventing cross-platform metric mappings. Distinct Muse aggregate-only and full-export credentials were issued with explicit owner consent; actual Muse vault capture and broader platform-client qualification remain planned.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Qualify the new independently consented full-export scope on the deployed VM against real iPhone v8 envelopes without disclosing health values in tests/logs; retain the prior aggregate-only credential boundary, then validate a real hosted client."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Test complete retained Android v4/v5 compatibility envelope navigation against real Android API Endpoint exports without relabeling fields as Apple metrics; review registry equivalence separately before enabling any Android typed aggregate projection. Raw API Snapshot NDJSON requires a distinct ingestion decision."
+        }
+      },
+      "evidence": [
+        "apps/cloud/docs/remote-read-only-mcp.md",
+        "apps/cloud/docs/mcp-full-export-tools.md",
+        "apps/cloud/test/mcp-reader.test.ts",
+        "apps/cloud/test/mcp-http.test.ts",
+        "docs/architecture/adr-0007-healthmd-cloud.md"
+      ]
+    },
+    {
       "id": "export.range-summary",
       "name": "Requested-range summary",
       "classification": "planned",

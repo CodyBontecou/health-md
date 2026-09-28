@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Sign in · Health.md Cloud</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/dashboard.js" defer></script>
+</head>
+<body data-page="login">
+  <main class="narrow">
+    <p class="eyebrow">Health.md Cloud · private preview</p>
+    <h1>Sign in</h1>
+    <p id="login-description">Sign in to access your private export dashboard.</p>
+    <p id="unbacked-warning" class="token-panel" hidden><strong>Unbacked personal trial.</strong> This VM has no off-host backup. Disk, VM or encryption-key loss may permanently destroy all exports. This is not a production cloud service.</p>
+    <form id="login-form" hidden>
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" required maxlength="254">
+      <button type="submit">Send sign-in link</button>
+    </form>
+    <form id="password-form" hidden>
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required maxlength="64">
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required minlength="16">
+      <button type="submit">Sign in</button>
+    </form>
+    <p id="message" role="status" aria-live="polite"></p>
+    <p class="note">Access is invitation-only. No health data is sent until you explicitly configure an approved API Endpoint in the mobile app.</p>
+  </main>
+</body>
+</html>

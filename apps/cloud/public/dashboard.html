@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Exports · Health.md Cloud</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/dashboard.js" defer></script>
+</head>
+<body data-page="dashboard">
+  <header class="bar"><strong>Health.md Cloud</strong><button id="logout" class="subtle">Sign out</button></header>
+  <main>
+    <p class="eyebrow">Private export storage</p>
+    <h1>Your exports</h1>
+    <p id="account" aria-live="polite">Loading account…</p>
+    <p class="note">Your phone sends only the data you choose to this destination. Cloud MCP connectors and third-party access are not enabled.</p>
+    <p id="synthetic-warning" class="token-panel" hidden><strong>Synthetic preview only.</strong> Export uploads and token creation are disabled. Do not enter this URL in a real device or send personal health data.</p>
+    <p id="unbacked-warning" class="token-panel" hidden><strong>Unbacked personal trial.</strong> Exports are retained without a time limit, but the current storage quota applies. There is no off-host backup: VM, disk or key loss may permanently destroy everything. Do not mistake this for a production cloud service.</p>
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <section id="connect-section" aria-labelledby="connect-title" hidden>
+      <h2 id="connect-title">Connect your iPhone</h2>
+      <p>In Health.md, choose <strong>Export → API Endpoint</strong>. Use this URL and a write-only bearer token from below. Start with a single Summary day.</p>
+      <label for="endpoint">API Endpoint URL</label>
+      <input id="endpoint" readonly>
+      <p class="note">Copy the token immediately. It cannot read your exports and is shown only once. The app saves it in Keychain. Never put it in the URL.</p>
+      <form id="create-token-form">
+        <label for="token-name">Token name (for example, My iPhone)</label>
+        <input id="token-name" required maxlength="80" autocomplete="off">
+        <button type="submit">Create export token</button>
+      </form>
+      <div id="new-token-panel" class="token-panel" hidden>
+        <label for="new-token">New write-only token · copy now</label>
+        <input id="new-token" readonly autocomplete="off">
+        <button type="button" id="hide-token" class="subtle">Hide token</button>
+      </div>
+      <h3>Export tokens</h3>
+      <ul id="token-list"></ul>
+    </section>
+
+    <section aria-labelledby="storage-title">
+      <h2 id="storage-title">Stored exports</h2>
+      <p id="storage">Loading…</p>
+      <p class="note">Repeated dates replace the current daily pointer; earlier accepted envelopes remain stored. Downloaded files are the original API envelopes, not normalized reports. Downloads contain sensitive health data.</p>
+      <ul id="export-list"></ul>
+    </section>
+
+    <section aria-labelledby="days-title">
+      <h2 id="days-title">Current daily snapshots</h2>
+      <ul id="day-list"></ul>
+    </section>
+
+    <section id="deletion-section" aria-labelledby="deletion-title" hidden>
+      <h2 id="deletion-title">Delete this account</h2>
+      <p>Deleting your account disables sign-in and uploads immediately. Stored exports are then erased by the background deletion job. Independent encrypted backups follow their documented expiry schedule.</p>
+      <form id="delete-account-form">
+        <label for="delete-password">Enter your password again</label>
+        <input id="delete-password" type="password" autocomplete="current-password" required minlength="16">
+        <label for="delete-confirmation">Type DELETE to confirm</label>
+        <input id="delete-confirmation" required autocomplete="off" pattern="DELETE">
+        <button type="submit">Request permanent deletion</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

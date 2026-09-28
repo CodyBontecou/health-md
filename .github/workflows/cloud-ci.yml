@@ -1,0 +1,50 @@
+name: Cloud CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/cloud/**'
+      - 'docs/architecture/adr-0007-healthmd-cloud.md'
+      - 'packages/contracts/product-capabilities.json'
+      - 'packages/contracts/manifest.json'
+      - '.github/workflows/cloud-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Cloud CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/cloud
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/cloud/package-lock.json
+      - name: Install locked cloud dependencies
+        run: npm ci
+      - name: Typecheck and unit tests (synthetic only)
+        run: npm run check
+      - name: Verify platform capability inventory
+        run: python3 ../../packages/contracts/validate.py --product-parity-only
+      - name: Exercise isolated local D1/R2 authentication and ingestion
+        run: npm run test:smoke
+      - name: Build VM-native adapter without publishing
+        run: npm run build:vm
+      - name: Build Worker without publishing
+        run: npm exec -- wrangler deploy --dry-run --outdir "$RUNNER_TEMP/healthmd-cloud-dry-run"
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate

@@ -5,11 +5,11 @@ CORE_RUST_DIR := packages/healthmd-core-rust
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 
 .PHONY: test test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
-        test-apple test-android test-cli test-practice test-wake test-website apple-ios apple-macos cli-build \
+        test-apple test-android test-cli test-practice test-wake test-cloud test-website apple-ios apple-macos cli-build \
         android-build android-play-debug android-fdroid-debug android-fdroid-release \
-        practice-build website-build
+        practice-build cloud-build website-build
 
-test: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website
+test: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-cloud test-website
 
 test-contracts:
 	python3 packages/contracts/validate.py
@@ -56,6 +56,9 @@ test-practice:
 test-wake:
 	cd apps/wake && npm test && npm run check
 
+test-cloud:
+	cd apps/cloud && npm run check && npm run test:smoke
+
 test-website:
 	cd apps/website && npm test
 
@@ -82,6 +85,9 @@ android-fdroid-release:
 
 practice-build:
 	cd apps/practice && npm run build
+
+cloud-build:
+	cd apps/cloud && npm run dry-run
 
 website-build:
 	cd apps/website && npm run build

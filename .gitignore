@@ -38,6 +38,9 @@ marketing/
 # Local configuration and secrets
 .env
 .env*.local
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
 local.properties
 *.jks
 *.keystore
