@@ -1,7 +1,7 @@
 [Unit]
 Description=Health.md owner-only account dashboard (separate public HTTPS ingress)
 After=network-online.target healthmd-cloud-personal-mvp.service
-Requires=healthmd-cloud-personal-mvp.service
+BindsTo=healthmd-cloud-personal-mvp.service
 
 [Service]
 Type=simple

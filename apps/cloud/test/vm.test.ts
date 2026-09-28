@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, statSync, unlinkSync } from "node:fs
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { request as httpRequest } from "node:http";
+import { DatabaseSync } from "node:sqlite";
 import { createVmEnvironment } from "../vm/runtime";
 import { createSingleUserAccount } from "../vm/bootstrap";
 import { startVmServer } from "../vm/server";
@@ -261,18 +262,22 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       const issued = JSON.parse(created.body) as { id: string; token: string; scope: string };
       expect(issued.token).toMatch(/^hmd_read_[A-Za-z0-9_-]{43}$/u);
       expect(issued.scope).toBe("full_export");
-      expect(authenticateReadToken(db.connection, `Bearer ${issued.token}`)).toMatchObject({
-        userId: user.id, tokenId: issued.id, scope: "full_export",
-      });
-      expect(JSON.stringify(db.connection.prepare("SELECT * FROM mcp_read_tokens").all()))
-        .not.toContain(issued.token);
-      const inventory = await req("/api/agent-tokens", "GET", undefined, cookie);
-      expect(inventory.body).not.toContain(issued.token);
-      expect(JSON.parse(inventory.body).tokens).toHaveLength(1);
-      expect((await req(`/api/agent-tokens/${other.id}`, "DELETE", undefined, cookie)).status).toBe(404);
-      expect(authenticateReadToken(db.connection, `Bearer ${other.token}`)).toMatchObject({ userId: otherId });
-      expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
-      expect(authenticateReadToken(db.connection, `Bearer ${issued.token}`)).toBeNull();
+      const readOnly = new DatabaseSync(join(directory, "cloud.sqlite"), { readOnly: true });
+      readOnly.exec("PRAGMA query_only = ON");
+      try {
+        expect(authenticateReadToken(readOnly, `Bearer ${issued.token}`)).toMatchObject({
+          userId: user.id, tokenId: issued.id, scope: "full_export",
+        });
+        expect(JSON.stringify(db.connection.prepare("SELECT * FROM mcp_read_tokens").all()))
+          .not.toContain(issued.token);
+        const inventory = await req("/api/agent-tokens", "GET", undefined, cookie);
+        expect(inventory.body).not.toContain(issued.token);
+        expect(JSON.parse(inventory.body).tokens).toHaveLength(1);
+        expect((await req(`/api/agent-tokens/${other.id}`, "DELETE", undefined, cookie)).status).toBe(404);
+        expect(authenticateReadToken(readOnly, `Bearer ${other.token}`)).toMatchObject({ userId: otherId });
+        expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
+        expect(authenticateReadToken(readOnly, `Bearer ${issued.token}`)).toBeNull();
+      } finally { readOnly.close(); }
       expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(404);
       expect((await req("/api/v1/exports", "POST", {}, cookie)).status).toBe(404);
     } finally { await account.close(); accountDb.close(); db.close(); }
