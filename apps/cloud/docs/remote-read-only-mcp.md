@@ -2,7 +2,7 @@
 
 **Live endpoint:** `https://mcp.healthmd.app/mcp` (Streamable HTTP, `POST` only). This is an explicitly **unbacked, single-user, disposable** pilot, not a durable or independently audited health-data service. The owner accepts permanent loss of this VM's exports and keys. The endpoint is publicly reachable and a separate **aggregate-only Muse credential** was issued after the owner's explicit consent to Muse's default Meta data handling. A new, separately issued `full_export` Muse credential now exists after broader explicit owner consent; whether Muse completed its custom-connector capture is not yet verified. No Grokbot credential exists. Existing aggregate tokens must never silently gain full-export scope.
 
-The existing iPhone export writer stays on the **tailnet-only** `:18788` service, the synthetic upload-disabled preview stays on `:18787`, and the unrelated tailnet `:443` service and `healthmd.app` website remain unchanged. The MCP reader is not a route on the writer or dashboard.
+The original iPhone export writer stays on the **tailnet-only** `:18788` service, the synthetic upload-disabled preview stays on `:18787`, and the unrelated tailnet `:443` service remains unchanged. A new, separately tunneled **write-only** compatibility-export ingress lives at `https://api.healthmd.app/api/v1/exports` and shares the owner's encrypted writer store; it exposes no MCP, dashboard, account or download route. The MCP reader remains a different credential and process, never a route on either writer or dashboard. The static website does not proxy health data.
 
 ## Process and authority boundary
 

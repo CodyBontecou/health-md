@@ -65,7 +65,7 @@
       "id": "cloud.opt-in-export-receiver",
       "name": "Opt-in cloud API Endpoint receiver",
       "classification": "planned",
-      "summary": "Use a private account-bound API Endpoint receiver retaining platform-native compatibility envelopes without changing daily schemas. A one-user, unbacked, tailnet-only VM pilot accepts real iPhone exports; no general production cloud or third-party export credential exists.",
+      "summary": "An unbacked single-owner VM pilot retains API Endpoint compatibility envelopes without changing daily schemas. A dedicated public, token-authenticated write-only HTTPS receiver at api.healthmd.app shares the existing encrypted store while the original tailnet-only iPhone writer remains available. Android Raw API Snapshot NDJSON is not ingested; no general production cloud or third-party export credential exists.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4"
@@ -82,6 +82,7 @@
       },
       "evidence": [
         "apps/cloud/README.md",
+        "apps/cloud/docs/public-write-only-ingest.md",
         "docs/architecture/adr-0007-healthmd-cloud.md",
         "apps/apple/docs/features/api-endpoint-export.md",
         "apps/android/docs/api-endpoint-export.md"

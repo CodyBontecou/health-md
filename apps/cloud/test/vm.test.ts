@@ -41,7 +41,8 @@ afterEach(() => {
 
 async function proxiedRequest(port: number, path: string, method = "GET", body?: unknown,
   cookie?: string, origin = `http://preview.tailnet.test:18788`, intent = true,
-  host = "preview.tailnet.test:18788", authorization?: string) {
+  host = "preview.tailnet.test:18788", authorization?: string,
+  contentType = "application/json") {
   const payload = body === undefined ? undefined : JSON.stringify(body);
   return new Promise<{ status: number; headers: Record<string, string | string[] | undefined>; body: string }>(
     (done, fail) => {
@@ -50,7 +51,7 @@ async function proxiedRequest(port: number, path: string, method = "GET", body?:
         "X-Forwarded-Proto": "https",
         "X-Forwarded-Host": host,
         "X-Forwarded-For": "100.64.0.23",
-        ...(payload === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(payload === undefined ? {} : { "Content-Type": contentType }),
         ...(method === "GET" ? {} : { Origin: origin, ...(intent ? { "X-HealthMd-Intent": "dashboard" } : {}) }),
         ...(cookie ? { Cookie: cookie } : {}),
         ...(authorization ? { Authorization: authorization } : {}),
@@ -224,9 +225,9 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const writer = await startVmServer(env, 0);
     const api = await startVmServer(apiEnv, 0, "ingest");
     const request = (path: string, method = "GET", body?: unknown, cookie?: string,
-      token?: string, host = "api.example.test") =>
+      token?: string, host = "api.example.test", contentType = "application/json") =>
       proxiedRequest(api.port, path, method, body, cookie, "https://api.example.test", false,
-        host, token ? `Bearer ${token}` : undefined);
+        host, token ? `Bearer ${token}` : undefined, contentType);
     try {
       const login = await proxiedRequest(writer.port, "/api/auth/password-login", "POST",
         { username: "pilot", password: fakePassword });
@@ -255,6 +256,8 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
         "wrong.example.test")).status).toBe(421);
       expect((await request("/api/v1/exports", "POST", fixture, cookie)).status).toBe(401);
       expect((await request("/api/v1/exports", "POST", fixture, undefined, readToken)).status).toBe(401);
+      expect((await request("/api/v1/exports", "POST", fixture, undefined, token,
+        "api.example.test", "application/x-ndjson")).status).toBe(415);
       const accepted = await request("/api/v1/exports", "POST", fixture, cookie, token);
       expect(accepted.status).toBe(201);
       expect(accepted.headers["cache-control"]).toBe("no-store");
