@@ -335,6 +335,9 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect((await request("/api/account", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/exports", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/dashboard/trends", "GET", undefined, cookie, token)).status).toBe(404);
+      expect((await request("/api/explore/chart", "POST", {}, cookie, token)).status).toBe(404);
+      expect((await request("/api/explore/exports", "POST", {}, cookie, token)).status).toBe(404);
+      expect((await request("/api/explore/node", "POST", {}, cookie, token)).status).toBe(404);
       expect((await request("/api/ingest-tokens", "POST", {}, cookie, token)).status).toBe(404);
       expect((await request("/api/auth/password-login", "POST", {}, cookie)).status).toBe(404);
       expect((await request("/mcp", "POST", {}, undefined, token)).status).toBe(404);

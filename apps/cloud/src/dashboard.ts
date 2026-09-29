@@ -1,15 +1,24 @@
 import { decryptExport, parseExportKeyring, sha256Hex } from "./crypto";
-import { HttpError, json } from "./http";
+import { HttpError, json, readJson, assertSameOrigin } from "./http";
 import type { Env } from "./types";
 import registry from "../../../packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json" with { type: "json" };
 
-// Internal, owner-session-only view: three verified Apple-v8 daily summary
-// projections. Do not map Android v4 or provider statistics onto these IDs.
+// These are the eleven reviewed Apple-v8 daily-summary bindings used by the
+// separate MCP reader. Android and provider-native statistics are NOT aliases.
 const projections = [
   { id: "steps", section: "activity", field: "steps", key: "steps", divisor: 1 },
-  { id: "sleep_total", section: "sleep", field: "totalDuration", key: "sleep_total_hours", divisor: 3600 },
+  { id: "active_energy", section: "activity", field: "activeCalories", key: "active_calories", divisor: 1 },
+  { id: "heart_rate_avg", section: "heart", field: "averageHeartRate", key: "average_heart_rate", divisor: 1 },
+  { id: "heart_rate_min", section: "heart", field: "heartRateMin", key: "heart_rate_min", divisor: 1 },
+  { id: "heart_rate_max", section: "heart", field: "heartRateMax", key: "heart_rate_max", divisor: 1 },
   { id: "resting_heart_rate", section: "heart", field: "restingHeartRate", key: "resting_heart_rate", divisor: 1 },
+  { id: "hrv", section: "heart", field: "hrv", key: "hrv_ms", divisor: 1 },
+  { id: "sleep_total", section: "sleep", field: "totalDuration", key: "sleep_total_hours", divisor: 3600 },
+  { id: "sleep_deep", section: "sleep", field: "deepSleep", key: "sleep_deep_hours", divisor: 3600 },
+  { id: "sleep_rem", section: "sleep", field: "remSleep", key: "sleep_rem_hours", divisor: 3600 },
+  { id: "weight", section: "body", field: "weight", key: "weight_kg", divisor: 1 },
 ] as const;
+type MetricId = (typeof projections)[number]["id"];
 const catalog = projections.map((projection) => {
   const metric = registry.metrics.find((item) => item.semantic_id === projection.id);
   const output = metric?.apple?.outputs?.[0];
@@ -24,36 +33,41 @@ const MAX_OBJECT_BYTES = 25 * 1024 * 1024 + 256;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const OBJECT_KEY = /^v1\/[a-f0-9-]{36}$/u;
 const EXPORT_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u;
-
-type Values = Record<(typeof projections)[number]["id"], number | null>;
-type DayStatus = "not_uploaded" | "available" | "unsupported_profile" | "read_limit";
-interface Row {
-  date: string; recordIndex: number; source: string; dailyVersion: number;
-  exportId: string; objectKey: string; keyId: string; digest: string;
-  byteCount: number; envelopeVersion: number; recordCount: number;
+export interface EnvelopeRow {
+  source: string; dailyVersion: number; exportId: string; objectKey: string;
+  keyId: string; digest: string; byteCount: number; envelopeVersion: number; recordCount: number;
 }
-function object(value: unknown): Record<string, unknown> | null {
+interface DayRow extends EnvelopeRow { date: string; recordIndex: number }
+type Profile = "all" | "apple_v8" | "android_compat";
+type DayStatus = "not_uploaded" | "available" | "unsupported_profile" | "filtered_profile" | "read_limit";
+
+export function object(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
-function emptyValues(): Values { return { steps: null, sleep_total: null, resting_heart_rate: null }; }
-function project(record: Record<string, unknown>): Values {
-  const values = emptyValues();
+export function validDate(input: unknown): input is string {
+  if (typeof input !== "string" || !DATE.test(input)) return false;
+  const parsed = new Date(`${input}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === input;
+}
+function project(record: Record<string, unknown>, metrics: readonly MetricId[]): Record<string, number | null> {
+  const values: Record<string, number | null> = Object.fromEntries(metrics.map((id) => [id, null]));
   const units = object(record.units);
   const timezone = object(record.time_context)?.calendar_timezone;
-  // Refuse to present a daily value whose owner-day context or unit is not
-  // proven. Zero remains a genuine measured zero; absence remains null.
   if (typeof timezone !== "string" || !/^[A-Za-z0-9_+\/-]{1,64}$/u.test(timezone)) return values;
-  for (const [index, metric] of projections.entries()) {
-    const raw = object(record[metric.section])?.[metric.field];
-    if (typeof raw === "number" && Number.isFinite(raw) && units?.[metric.key] === catalog[index]!.unit) {
-      values[metric.id] = raw / metric.divisor;
+  for (const id of metrics) {
+    const binding = projections.find((item) => item.id === id)!;
+    const unit = catalog.find((item) => item.id === id)!.unit;
+    const raw = object(record[binding.section])?.[binding.field];
+    if (typeof raw === "number" && Number.isFinite(raw) && units?.[binding.key] === unit) {
+      values[id] = raw / binding.divisor;
     }
   }
   return values;
 }
 
-// A bad/missing encrypted object is an error, never an invented empty day.
-async function readEnvelope(row: Row, env: Env, userId: string): Promise<Record<string, unknown>> {
+// Shared by the owner-only chart and JSON navigator. The original download
+// remains the only byte-exact representation (including unsafe JSON integers).
+export async function readVerifiedEnvelope(row: EnvelopeRow, env: Env, userId: string): Promise<Record<string, unknown>> {
   if (!EXPORT_ID.test(row.exportId) || !OBJECT_KEY.test(row.objectKey) ||
       !Number.isSafeInteger(row.byteCount) || row.byteCount < 1 || row.byteCount > 25 * 1024 * 1024) {
     throw new HttpError(503, "unavailable_data", "A retained export is unavailable.");
@@ -77,17 +91,9 @@ async function readEnvelope(row: Row, env: Env, userId: string): Promise<Record<
   } catch { throw new HttpError(503, "unavailable_data", "A retained export is unavailable."); }
 }
 
-export async function dashboardTrends(env: Env, userId: string): Promise<Response> {
-  const last = await env.DB.prepare(
-    "SELECT MAX(owner_date) AS date FROM daily_records WHERE user_id = ?",
-  ).bind(userId).first<{ date: string | null }>();
-  const end = last?.date ?? null;
-  if (!end) return json({ version: 1, window: { start: null, end: null }, metrics: catalog, days: [] });
-  if (!DATE.test(end) || !Number.isFinite(Date.parse(`${end}T00:00:00Z`))) {
-    throw new HttpError(503, "unavailable_data", "Current daily dates are unavailable.");
-  }
-  const endTime = Date.parse(`${end}T00:00:00Z`);
-  const start = new Date(endTime - 29 * DAY).toISOString().slice(0, 10);
+async function chartDays(env: Env, userId: string, start: string, end: string,
+  metrics: readonly MetricId[], profile: Profile, includePointers: boolean) {
+  const dayCount = Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY) + 1;
   const { results } = await env.DB.prepare(`
     SELECT d.owner_date AS date, d.record_index AS recordIndex,
       e.source AS source, e.daily_record_schema_version AS dailyVersion,
@@ -96,18 +102,26 @@ export async function dashboardTrends(env: Env, userId: string): Promise<Respons
       e.envelope_schema_version AS envelopeVersion, e.record_count AS recordCount
     FROM daily_records d JOIN exports e ON e.id = d.export_id AND e.user_id = d.user_id
     WHERE d.user_id = ? AND d.owner_date BETWEEN ? AND ?
-    ORDER BY d.owner_date ASC LIMIT 30
-  `).bind(userId, start, end).all<Row>();
+    ORDER BY d.owner_date ASC LIMIT 31
+  `).bind(userId, start, end).all<DayRow>();
   const byDate = new Map(results.map((row) => [row.date, row]));
   const cache = new Map<string, Record<string, unknown>>();
   let bytes = 0;
-  const days: Array<{ date: string; status: DayStatus; values: Values }> = [];
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(endTime - (29 - i) * DAY).toISOString().slice(0, 10);
+  const days: Array<{ date: string; status: DayStatus; values: Record<string, number | null>;
+    source?: string; dailyVersion?: number; exportId?: string; recordIndex?: number }> = [];
+  for (let i = 0; i < dayCount; i++) {
+    const date = new Date(Date.parse(`${start}T00:00:00Z`) + i * DAY).toISOString().slice(0, 10);
     const row = byDate.get(date);
-    if (!row) { days.push({ date, status: "not_uploaded", values: emptyValues() }); continue; }
+    const values = Object.fromEntries(metrics.map((id) => [id, null])) as Record<string, number | null>;
+    if (!row) { days.push({ date, status: "not_uploaded", values }); continue; }
+    const evidence = includePointers ? { source: row.source, dailyVersion: row.dailyVersion,
+      exportId: row.exportId, recordIndex: row.recordIndex } : {};
+    if ((profile === "apple_v8" && (row.source !== "ios" || row.dailyVersion !== 8)) ||
+        (profile === "android_compat" && row.source !== "android")) {
+      days.push({ date, status: "filtered_profile", values, ...evidence }); continue;
+    }
     if (row.source !== "ios" || row.dailyVersion !== 8) {
-      days.push({ date, status: "unsupported_profile", values: emptyValues() }); continue;
+      days.push({ date, status: "unsupported_profile", values, ...evidence }); continue;
     }
     if (!Number.isSafeInteger(row.recordIndex) || row.recordIndex < 0 || row.recordIndex >= row.recordCount) {
       throw new HttpError(503, "unavailable_data", "A retained daily record is unavailable.");
@@ -116,9 +130,9 @@ export async function dashboardTrends(env: Env, userId: string): Promise<Respons
     if (!envelope) {
       if (!Number.isSafeInteger(row.byteCount) || row.byteCount < 1 ||
           bytes + row.byteCount > MAX_DECRYPTED_BYTES) {
-        days.push({ date, status: "read_limit", values: emptyValues() }); continue;
+        days.push({ date, status: "read_limit", values, ...evidence }); continue;
       }
-      envelope = await readEnvelope(row, env, userId);
+      envelope = await readVerifiedEnvelope(row, env, userId);
       bytes += row.byteCount;
       cache.set(row.exportId, envelope);
     }
@@ -126,7 +140,43 @@ export async function dashboardTrends(env: Env, userId: string): Promise<Respons
     if (record?.schema !== "healthmd.health_data" || record.schema_version !== 8 || record.date !== date) {
       throw new HttpError(503, "unavailable_data", "A retained daily record is unavailable.");
     }
-    days.push({ date, status: "available", values: project(record) });
+    days.push({ date, status: "available", values: project(record, metrics), ...evidence });
   }
-  return json({ version: 1, window: { start, end }, metrics: catalog, days });
+  return days;
+}
+
+export async function dashboardTrends(env: Env, userId: string): Promise<Response> {
+  const last = await env.DB.prepare(
+    "SELECT MAX(owner_date) AS date FROM daily_records WHERE user_id = ?",
+  ).bind(userId).first<{ date: string | null }>();
+  const end = last?.date ?? null;
+  const metrics: MetricId[] = ["steps", "sleep_total", "resting_heart_rate"];
+  const selected = catalog.filter((item) => metrics.some((id) => id === item.id));
+  if (!end) return json({ version: 1, window: { start: null, end: null }, metrics: selected, days: [] });
+  if (!validDate(end)) throw new HttpError(503, "unavailable_data", "Current daily dates are unavailable.");
+  const start = new Date(Date.parse(`${end}T00:00:00Z`) - 29 * DAY).toISOString().slice(0, 10);
+  return json({ version: 1, window: { start, end }, metrics: selected,
+    days: await chartDays(env, userId, start, end, metrics, "all", false) });
+}
+
+export async function exploreChart(request: Request, env: Env, userId: string): Promise<Response> {
+  assertSameOrigin(request, env);
+  const body = await readJson<{ start?: unknown; end?: unknown; metrics?: unknown; profile?: unknown }>(request);
+  if (!validDate(body?.start) || !validDate(body?.end)) {
+    throw new HttpError(400, "invalid_date", "Use valid dates in YYYY-MM-DD format.");
+  }
+  const count = Math.round((Date.parse(`${body.end}T00:00:00Z`) - Date.parse(`${body.start}T00:00:00Z`)) / DAY) + 1;
+  if (count < 1 || count > 31) throw new HttpError(400, "invalid_range", "Choose 1–31 calendar days.");
+  if (!Array.isArray(body.metrics) || body.metrics.length < 1 || body.metrics.length > projections.length ||
+      new Set(body.metrics).size !== body.metrics.length ||
+      !body.metrics.every((id: unknown) => projections.some((binding) => binding.id === id))) {
+    throw new HttpError(400, "invalid_metrics", "Choose distinct, reviewed Apple daily metrics.");
+  }
+  if (body.profile !== "all" && body.profile !== "apple_v8" && body.profile !== "android_compat") {
+    throw new HttpError(400, "invalid_profile", "Choose a supported source/schema filter.");
+  }
+  const metrics = body.metrics as MetricId[];
+  return json({ version: 1, window: { start: body.start, end: body.end },
+    catalog, metrics: metrics.map((id) => catalog.find((item) => item.id === id)), profile: body.profile,
+    days: await chartDays(env, userId, body.start, body.end, metrics, body.profile as Profile, true) });
 }

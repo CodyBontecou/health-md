@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="color-scheme" content="light dark">
+  <title>Explore · Health.md Cloud</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/explore.js" defer></script>
+</head>
+<body data-page="explore">
+  <header class="bar"><a class="brand" href="/dashboard"><span class="brand-mark" aria-hidden="true">✳</span> health.md <span class="brand-divider"></span><span class="brand-suffix">cloud</span></a><div class="bar-actions"><span class="pilot-label">Private pilot</span><a class="subtle-link" href="/dashboard">Overview</a></div></header>
+  <main class="dashboard-main" id="explore">
+    <nav class="section-nav" aria-label="Explorer sections"><a href="/dashboard">Overview</a><a href="#explore" aria-current="page">Explore</a><a href="#library-title">Export library</a><a href="#inspector-title">Original fields</a></nav>
+    <div class="hero-head"><div><p class="eyebrow">Overview · Filter · Details on demand</p><h1>Explore your data<span class="title-period">.</span></h1><p class="hero-copy">Choose the evidence, comparison and display. Only what your devices uploaded appears here; nothing queries a live phone.</p></div><span class="section-tag">Your account only</span></div>
+    <p id="explore-message" role="status" aria-live="polite"></p>
+    <section aria-labelledby="controls-title" class="explore-controls">
+      <div class="section-heading"><div><p class="eyebrow">01 · Compose a view</p><h2 id="controls-title">Choose what to compare</h2></div></div>
+      <form id="chart-form">
+        <fieldset class="metric-fieldset"><legend>Daily metric summaries · choose any available metrics</legend><div id="metric-options" class="metric-options"></div></fieldset>
+        <div class="control-grid">
+          <div><label for="chart-start">From (calendar day)</label><input id="chart-start" type="date" required></div><div><label for="chart-end">Through (calendar day)</label><input id="chart-end" type="date" required></div>
+          <div><label for="chart-profile">Source / schema</label><select id="chart-profile"><option value="all">All current daily snapshots</option><option value="apple_v8">Apple v8 only</option><option value="android_compat">Android compatibility · no Apple metric mapping</option></select></div>
+          <div><label for="chart-type">Display</label><select id="chart-type"><option value="line">Line · gaps disconnected</option><option value="bars">Bars · observed days only</option></select></div>
+          <div><label for="chart-axis">Y-axis</label><select id="chart-axis"><option value="data">Data range · labeled</option><option value="zero">Start at zero · labeled</option></select></div>
+        </div>
+        <label class="checkbox-row"><input id="compare-enabled" type="checkbox">Compare with another date range</label>
+        <div id="compare-controls" class="control-grid" hidden><div><label for="compare-start">Compare from</label><input id="compare-start" type="date"></div><div><label for="compare-end">Compare through</label><input id="compare-end" type="date"></div></div>
+        <p class="note">At most 31 calendar days per period. Comparisons align by day number, never by fabricated timestamps; each value keeps its original owner date. Units and provenance are never merged between platforms.</p>
+        <button type="submit">Update view</button>
+      </form>
+    </section>
+    <section aria-labelledby="visuals-title" class="trends-section"><div class="section-heading"><div><p class="eyebrow">02 · Read the evidence</p><h2 id="visuals-title">Small multiples</h2><p class="note">Every metric has its own labeled scale. If comparison is on, both periods for that metric share the same scale. Blank dates are not zero.</p></div></div><p id="chart-summary" class="window-label" aria-live="polite">Choose a view to begin.</p><div id="explore-charts" class="explore-charts"></div></section>
+    <section aria-labelledby="library-title"><div class="section-heading"><div><p class="eyebrow">03 · Trace the source</p><h2 id="library-title">Export library</h2><p class="note">Filter by evidence actually present in the API envelope: source, daily schema and overlapping declared date range. A named app export profile or Summary versus Detailed setting is <strong>not carried</strong> by these uploads. “Current” means at least one day still points to the envelope; “all” includes older revisions and provider-only sidecars.</p></div></div>
+      <form id="library-form" class="control-grid"><div><label for="library-source">Source</label><select id="library-source"><option value="all">Apple & Android</option><option value="ios">Apple</option><option value="android">Android</option></select></div><div><label for="library-version">Daily schema</label><select id="library-version"><option value="all">All versions</option><option value="8">v8</option><option value="7">v7</option><option value="6">v6</option><option value="5">v5</option><option value="4">v4</option></select></div><div><label for="library-scope">Revisions</label><select id="library-scope"><option value="all">All retained</option><option value="current">Still referenced by a current day</option></select></div><div><label for="library-start">Overlaps from</label><input id="library-start" type="date"></div><div><label for="library-end">Overlaps through</label><input id="library-end" type="date"></div><div class="filter-action"><button type="submit">Filter exports</button></div></form>
+      <p id="library-status" class="note" role="status"></p><ul id="library-list" class="record-list"></ul><button id="library-more" type="button" class="subtle" hidden>Load more retained exports</button>
+    </section>
+    <section aria-labelledby="inspector-title" id="inspector-section"><div class="section-heading"><div><p class="eyebrow">04 · Details on demand</p><h2 id="inspector-title">Original fields</h2><p class="note">Select a day or retained envelope above to navigate its original JSON, including optional provider sidecars, archives and sensitive free text. Pages show 20 children. Long strings are previews; download the envelope for exact bytes or unsafe integers.</p></div></div>
+      <p id="inspector-meta" class="note">Nothing selected. This view does not prefetch original fields.</p>
+      <div class="inspector-actions"><button id="inspector-root" class="subtle" type="button" hidden>Envelope root</button><button id="inspector-up" class="subtle" type="button" hidden>Up one level</button><a id="inspector-download" hidden>Download exact JSON</a></div>
+      <p id="inspector-path" class="pointer-path" aria-live="polite"></p><div id="inspector-value" class="inspector-value"></div><ul id="inspector-children" class="record-list"></ul><div class="inspector-actions"><button id="inspector-previous" type="button" class="subtle" hidden>Previous 20 fields</button><button id="inspector-more" type="button" class="subtle" hidden>Next 20 fields</button></div>
+    </section>
+    <footer>Only retained exports · No third-party scripts or analytics · Single-owner unbacked pilot</footer>
+  </main>
+</body>
+</html>

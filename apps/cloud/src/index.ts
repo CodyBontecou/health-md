@@ -3,14 +3,15 @@ import {
   logout, requestMagicLink, requireSession, revokeIngestToken,
 } from "./auth";
 import { downloadExport, ingest, listDayPage, listExportPage, listExports } from "./exports";
-import { dashboardTrends } from "./dashboard";
+import { dashboardTrends, exploreChart } from "./dashboard";
+import { exploreExports, exploreNode } from "./explore";
 import { createAgentToken, listAgentTokens, revokeAgentToken } from "./agent-tokens";
 import { passwordLogin } from "./password";
 import { processAccountDeletions, purgeArchivedRevisions, requestAccountDeletion } from "./lifecycle";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
 import type { Env } from "./types";
 
-const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/style.css"]);
+const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js", "/style.css"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 function validateConfiguration(env: Env): void {
@@ -79,7 +80,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     return redirect(path.slice(0, -5), 307);
   }
   if (method === "GET" && STATIC_PATHS.has(path)) {
-    if (path === "/dashboard" && !await getSession(request, env)) {
+    if ((path === "/dashboard" || path === "/explore") && !await getSession(request, env)) {
       return redirect("/login");
     }
     const asset = await env.ASSETS.fetch(request);
@@ -140,6 +141,15 @@ async function route(request: Request, env: Env): Promise<Response> {
   }
   if (method === "GET" && path === "/api/dashboard/trends") {
     return dashboardTrends(env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/explore/chart") {
+    return exploreChart(request, env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/explore/exports") {
+    return exploreExports(request, env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/explore/node") {
+    return exploreNode(request, env, (await requireSession(request, env)).id);
   }
   const exportPage = /^\/api\/exports\/page\/([0-9]{1,7})$/u.exec(path);
   if (method === "GET" && exportPage?.[1]) {

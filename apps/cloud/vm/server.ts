@@ -91,14 +91,14 @@ class VmGate {
 // It cannot reach ingestion, magic-link signup, scheduled maintenance or MCP.
 function accountRoute(method: string, path: string): boolean {
   if (method === "GET") return new Set([
-    "/health", "/login", "/dashboard", "/dashboard.js", "/style.css",
+    "/health", "/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js", "/style.css",
     "/api/runtime", "/api/account", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
     "/api/dashboard/trends",
   ]).has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||
     /^\/api\/(?:exports|days)\/page\/[0-9]{1,7}$/u.test(path);
   if (method === "POST") return new Set([
     "/api/auth/password-login", "/api/auth/logout", "/api/ingest-tokens", "/api/agent-tokens",
-    "/api/account/delete",
+    "/api/account/delete", "/api/explore/chart", "/api/explore/exports", "/api/explore/node",
   ]).has(path);
   return method === "DELETE" && (
     /^\/api\/ingest-tokens\/[a-f0-9-]{36}$/u.test(path) ||
