@@ -223,7 +223,8 @@ async function openNode(exportId, pointer, offset = 0) {
       $("inspector-value").textContent = `${result.type} · ${result.totalChildren} child(ren) · page of 20`;
       for (const item of result.items) {
         const li = element("li");
-        const description = item.preview !== undefined ? String(item.preview) : item.value !== undefined ? String(item.value) :
+        const description = item.preview !== undefined ? String(item.preview) : item.value !== undefined ?
+          `${String(item.value)}${item.approximate ? " (decimal may be rounded)" : ""}` :
           item.exactValueUnavailable ? "Exact unsafe integer: download original" : item.type === "null" ? "null" :
             `${item.type} · ${item.length ?? 0} child(ren)`;
         li.append(element("span", `${item.key} · ${item.type} · ${description}`, "inspector-entry"));
@@ -240,7 +241,7 @@ async function openNode(exportId, pointer, offset = 0) {
       $("inspector-value").textContent = result.exactValueUnavailable ?
         "Unsafe integer: download the original JSON for exact digits." :
         result.preview !== undefined ? `${result.preview}${result.truncated ? " (preview only)" : ""}` :
-          result.type === "null" ? "null" : String(result.value);
+          result.type === "null" ? "null" : `${String(result.value)}${result.approximate ? " (decimal may be rounded; download original for exact digits)" : ""}`;
     }
     note("");
   } catch (error) { $("inspector-meta").textContent = "Field unavailable. You can still download the original export if it exists."; note(error.message); }
@@ -279,13 +280,11 @@ async function init() {
   });
   try {
     await api("/api/account"); // A session is required before loading any data.
-    const overview = await api("/api/dashboard/trends");
-    const end = overview.window.end || new Date().toISOString().slice(0, 10);
+    const [inventory, catalog] = await Promise.all([api("/api/exports"), api("/api/explore/catalog")]);
+    const end = inventory.days?.[0]?.date || new Date().toISOString().slice(0, 10);
     $("chart-end").value = end;
     $("chart-start").value = shiftDay(end, -29);
-    const catalog = await api("/api/explore/chart", { start: $("chart-start").value, end,
-      metrics: ["steps"], profile: "all" });
-    for (const metric of catalog.catalog) {
+    for (const metric of catalog.metrics) {
       const label = element("label", undefined, "metric-choice");
       const input = element("input"); input.type = "checkbox"; input.value = metric.id;
       input.checked = ["steps", "sleep_total", "resting_heart_rate"].includes(metric.id);

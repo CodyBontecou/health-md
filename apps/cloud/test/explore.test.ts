@@ -60,6 +60,7 @@ it("keeps exploration session-only, bounded, source-aware and able to navigate o
     metrics: ["steps", "sleep_total", "hrv", "weight"], profile: "all" };
   try {
     expect((await proxy(service.port, "/explore")).status).toBe(303);
+    expect((await proxy(service.port, "/api/explore/catalog")).status).toBe(401);
     expect((await post("/api/explore/chart", chart)).status).toBe(401);
     expect((await post("/api/explore/exports", filters, undefined, origin)).status).toBe(401);
     expect((await post("/api/explore/node", { exportId: randomUUID(), pointer: "", offset: 0 })).status).toBe(401);
@@ -68,6 +69,7 @@ it("keeps exploration session-only, bounded, source-aware and able to navigate o
     expect(login.status).toBe(200);
     expect(cookie).toBeDefined();
     expect((await proxy(service.port, "/explore", cookie)).status).toBe(200);
+    expect(JSON.parse((await proxy(service.port, "/api/explore/catalog", cookie)).body).metrics).toHaveLength(11);
     expect((await post("/api/explore/chart", chart, cookie, "https://other.example.test")).status).toBe(403);
     const token = await post("/api/ingest-tokens", { name: "Synthetic phone" }, cookie);
     const bearer = JSON.parse(token.body).token as string;
@@ -86,6 +88,7 @@ it("keeps exploration session-only, bounded, source-aware and able to navigate o
     summary["sensitive/x~y"] = "<img src=x onerror=alert(1)>";
     summary.long_text = "A".repeat(900);
     summary.large_integer = 18446744073709551615;
+    summary.sample_decimal = 0.125;
     const fixture = { schema: "healthmd.api_export", schema_version: 2,
       daily_record_schema: "healthmd.health_data", daily_record_schema_version: 8,
       external_record_schema: "healthmd.external_provider_daily", external_record_schema_version: 1,
@@ -150,6 +153,8 @@ it("keeps exploration session-only, bounded, source-aware and able to navigate o
     expect(JSON.parse((await post("/api/explore/node", { exportId,
       pointer: "/records/0/large_integer", offset: 0 }, cookie)).body)
       .exactValueUnavailable).toBe(true);
+    expect(JSON.parse((await post("/api/explore/node", { exportId,
+      pointer: "/records/0/sample_decimal", offset: 0 }, cookie)).body).approximate).toBe(true);
     expect(JSON.parse((await post("/api/explore/node", { exportId,
       pointer: "/records/0/healthkit_record_archive/records", offset: 20 }, cookie)).body).items).toHaveLength(5);
     expect((await post("/api/explore/node", { exportId, pointer: "/records/-1", offset: 0 }, cookie)).status).toBe(404);

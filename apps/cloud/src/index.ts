@@ -3,7 +3,7 @@ import {
   logout, requestMagicLink, requireSession, revokeIngestToken,
 } from "./auth";
 import { downloadExport, ingest, listDayPage, listExportPage, listExports } from "./exports";
-import { dashboardTrends, exploreChart } from "./dashboard";
+import { dashboardTrends, exploreCatalog, exploreChart } from "./dashboard";
 import { exploreExports, exploreNode } from "./explore";
 import { createAgentToken, listAgentTokens, revokeAgentToken } from "./agent-tokens";
 import { passwordLogin } from "./password";
@@ -141,6 +141,10 @@ async function route(request: Request, env: Env): Promise<Response> {
   }
   if (method === "GET" && path === "/api/dashboard/trends") {
     return dashboardTrends(env, (await requireSession(request, env)).id);
+  }
+  if (method === "GET" && path === "/api/explore/catalog") {
+    await requireSession(request, env);
+    return exploreCatalog();
   }
   if (method === "POST" && path === "/api/explore/chart") {
     return exploreChart(request, env, (await requireSession(request, env)).id);

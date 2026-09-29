@@ -145,6 +145,11 @@ async function chartDays(env: Env, userId: string, start: string, end: string,
   return days;
 }
 
+export function exploreCatalog(): Response {
+  return json({ version: 1, metrics: catalog, profileNote:
+    "Reviewed Apple v8 daily summaries only. Android and provider values remain available in original retained JSON." });
+}
+
 export async function dashboardTrends(env: Env, userId: string): Promise<Response> {
   const last = await env.DB.prepare(
     "SELECT MAX(owner_date) AS date FROM daily_records WHERE user_id = ?",

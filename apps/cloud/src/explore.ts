@@ -89,6 +89,9 @@ function preview(value: unknown): Record<string, unknown> {
   if (type === "number" && Number.isInteger(value) && !Number.isSafeInteger(value)) {
     return { type, exactValueUnavailable: true, note: "Download original JSON for the exact integer." };
   }
+  if (type === "number" && !Number.isInteger(value)) {
+    return { type, value, approximate: true, note: "Download original JSON for exact decimal digits." };
+  }
   if (type === "null" || type === "boolean" || type === "number") return { type, value };
   return { type, length: Array.isArray(value) ? value.length : Object.keys(value as object).length };
 }
