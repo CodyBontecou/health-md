@@ -93,6 +93,7 @@ function accountRoute(method: string, path: string): boolean {
   if (method === "GET") return new Set([
     "/health", "/login", "/dashboard", "/dashboard.js", "/style.css",
     "/api/runtime", "/api/account", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
+    "/api/dashboard/trends",
   ]).has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||
     /^\/api\/(?:exports|days)\/page\/[0-9]{1,7}$/u.test(path);
   if (method === "POST") return new Set([

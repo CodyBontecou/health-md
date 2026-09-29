@@ -142,10 +142,12 @@ export async function listExports(env: Env, userId: string): Promise<Response> {
        FROM daily_records WHERE user_id = ? ORDER BY owner_date DESC LIMIT 50`,
     ).bind(userId).all(),
     env.DB.prepare(
-      "SELECT COUNT(*) AS count, COALESCE(SUM(byte_count), 0) AS bytes FROM exports WHERE user_id = ?",
-    ).bind(userId).first<{ count: number; bytes: number }>(),
+      `SELECT COUNT(*) AS count, COALESCE(SUM(byte_count), 0) AS bytes,
+        (SELECT COUNT(*) FROM daily_records WHERE user_id = ?) AS dayCount
+       FROM exports WHERE user_id = ?`,
+    ).bind(userId, userId).first<{ count: number; bytes: number; dayCount: number }>(),
   ]);
-  return json({ exports: exports.results, days: days.results, storage: storage ?? { count: 0, bytes: 0 },
+  return json({ exports: exports.results, days: days.results, storage: storage ?? { count: 0, bytes: 0, dayCount: 0 },
     nextExportOffset: exports.results.length === 50 ? 50 : null,
     nextDayOffset: days.results.length === 50 ? 50 : null });
 }

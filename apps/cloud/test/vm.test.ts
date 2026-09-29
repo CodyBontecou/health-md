@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, statSync, unlinkSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { request as httpRequest } from "node:http";
@@ -212,6 +212,92 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     } finally { await service.close(); db.close(); }
   }, 30_000);
 
+  it("charts only current, bounded Apple-v8 daily summaries for an owner session", async () => {
+    const { env, db, directory } = createTestEnv("personal-mvp");
+    const { env: accountEnv, db: accountDb } = createVmEnvironment({
+      dataDirectory: directory, sourceDirectory, publicOrigin: "https://account.example.test",
+      identityKey: env.IDENTITY_KEY_B64, exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON,
+      currentKeyId: "v1", passwordPepper: env.PASSWORD_PEPPER_B64 ?? "",
+      personalMvp: true, revisionRetention: "unlimited",
+    });
+    await createSingleUserAccount(env, "pilot", email, fakePassword);
+    const account = await startVmServer(accountEnv, 0, "account");
+    const req = (path: string, cookie?: string, bearer?: string) => proxiedRequest(account.port,
+      path, "GET", undefined, cookie, "https://account.example.test", true,
+      "account.example.test", bearer);
+    try {
+      expect((await req("/api/dashboard/trends")).status).toBe(401);
+      const login = await proxiedRequest(account.port, "/api/auth/password-login", "POST",
+        { username: "pilot", password: fakePassword }, undefined, "https://account.example.test",
+        true, "account.example.test");
+      const cookie = (login.headers["set-cookie"] as string[] | undefined)?.[0]?.split(";")[0];
+      expect(cookie).toBeDefined();
+      const token = await proxiedRequest(account.port, "/api/ingest-tokens", "POST",
+        { name: "Synthetic phone" }, cookie, "https://account.example.test", true, "account.example.test");
+      const bearer = JSON.parse(token.body).token as string;
+      expect((await req("/api/dashboard/trends", undefined, `Bearer ${bearer}`)).status).toBe(401);
+      const blank = await req("/api/dashboard/trends", cookie);
+      expect(blank.status).toBe(200);
+      expect(blank.headers["cache-control"]).toBe("no-store");
+      expect(JSON.parse(blank.body)).toMatchObject({ window: { start: null, end: null }, days: [] });
+      const fixture = JSON.parse(readFileSync(resolve(sourceDirectory,
+        "../apple/docs/reference/generated/automation/api-export-v1.json"), "utf8"));
+      const summary = JSON.parse(readFileSync(resolve(sourceDirectory,
+        "../apple/docs/reference/generated/core/summary-day.json"), "utf8"));
+      summary.date = fixture.records[0].date;
+      fixture.records = [summary];
+      const upload = await worker.fetch(new Request(`${fakeOrigin}/api/v1/exports`, {
+        method: "POST", headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+        body: JSON.stringify(fixture),
+      }), env);
+      expect(upload.status).toBe(201);
+      const body = JSON.parse((await req("/api/dashboard/trends", cookie)).body);
+      expect(JSON.parse((await req("/api/exports", cookie)).body).storage)
+        .toMatchObject({ count: 1, dayCount: 1 });
+      expect(body.version).toBe(1);
+      expect(body.days).toHaveLength(30);
+      expect(body.window.end).toBe(summary.date);
+      expect(body.metrics).toEqual(expect.arrayContaining([
+        { id: "steps", label: "Steps", unit: "steps" },
+        { id: "sleep_total", label: "Total Sleep", unit: "hours" },
+      ]));
+      expect(body.days.at(-1)).toMatchObject({ date: summary.date, status: "available",
+        values: { steps: summary.activity.steps, sleep_total: 7.75 } });
+      expect(body.days[0]).toMatchObject({ status: "not_uploaded",
+        values: { steps: null, sleep_total: null, resting_heart_rate: null } });
+      expect(body).not.toHaveProperty("healthkit_record_archive");
+      expect(body.days.at(-1).values).not.toHaveProperty("providers");
+      const replacement = { ...fixture, exported_at: "2026-03-20T12:00:00Z",
+        records: [{ ...summary, activity: { ...summary.activity, steps: 0 } }] };
+      expect((await worker.fetch(new Request(`${fakeOrigin}/api/v1/exports`, {
+        method: "POST", headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+        body: JSON.stringify(replacement),
+      }), env)).status).toBe(201);
+      const updated = JSON.parse((await req("/api/dashboard/trends", cookie)).body);
+      expect(updated.days.at(-1).values.steps).toBe(0);
+      const current = db.connection.prepare(`SELECT e.object_key AS objectKey FROM daily_records d
+        JOIN exports e ON e.id = d.export_id WHERE d.owner_date = ?`).get(summary.date) as { objectKey: string };
+      const storedPath = join(directory, "objects", current.objectKey);
+      const original = readFileSync(storedPath);
+      const tampered = Buffer.from(original);
+      tampered[tampered.length - 1] ^= 1;
+      writeFileSync(storedPath, tampered);
+      expect((await req("/api/dashboard/trends", cookie)).status).toBe(503);
+      writeFileSync(storedPath, original);
+      const unsupported = { ...fixture, source: "android", daily_record_schema_version: 4,
+        exported_at: "2026-03-21T12:00:00Z",
+        records: [{ schema: "healthmd.health_data", schema_version: 4, date: summary.date }] };
+      expect((await worker.fetch(new Request(`${fakeOrigin}/api/v1/exports`, {
+        method: "POST", headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+        body: JSON.stringify(unsupported),
+      }), env)).status).toBe(201);
+      expect(JSON.parse((await req("/api/dashboard/trends", cookie)).body).days.at(-1))
+        .toMatchObject({ status: "unsupported_profile", values: { steps: null, sleep_total: null } });
+      expect((await req("/api/dashboard/trends?date=2026-03-15", cookie)).status).toBe(400);
+      expect((await req("/api/dashboard/trends", cookie, "Bearer invalid")).status).toBe(200);
+    } finally { await account.close(); accountDb.close(); db.close(); }
+  }, 30_000);
+
   it("isolates public write-only ingestion from the private writer and account APIs", async () => {
     const { env, db, directory } = createTestEnv("personal-mvp");
     const { env: apiEnv, db: apiDb } = createVmEnvironment({
@@ -248,6 +334,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect((await request("/dashboard")).status).toBe(404);
       expect((await request("/api/account", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/exports", "GET", undefined, cookie, token)).status).toBe(404);
+      expect((await request("/api/dashboard/trends", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/ingest-tokens", "POST", {}, cookie, token)).status).toBe(404);
       expect((await request("/api/auth/password-login", "POST", {}, cookie)).status).toBe(404);
       expect((await request("/mcp", "POST", {}, undefined, token)).status).toBe(404);
@@ -296,6 +383,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect((await req("/dashboard")).status).toBe(303);
       expect((await req("/api/agent-tokens")).status).toBe(401);
       expect((await req("/api/exports/page/0")).status).toBe(401);
+      expect((await req("/api/dashboard/trends")).status).toBe(401);
       expect((await req("/api/agent-tokens", "POST", {})).status).toBe(401);
       expect(JSON.parse((await req("/api/runtime")).body)).toMatchObject({
         unbackedPersonalMvp: true, exportEndpoint: `${fakeOrigin}/api/v1/exports`,
@@ -313,6 +401,10 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
         .toMatchObject({ exports: [], nextOffset: null });
       expect(JSON.parse((await req("/api/days/page/0", "GET", undefined, cookie)).body))
         .toMatchObject({ days: [], nextOffset: null });
+      expect(JSON.parse((await req("/api/dashboard/trends", "GET", undefined, cookie)).body))
+        .toMatchObject({ version: 1, window: { start: null, end: null }, days: [] });
+      expect((await req("/api/dashboard/trends", "GET", undefined, undefined,
+        "https://account.example.test", true)).status).toBe(401);
       expect((await req("/api/exports/page/1000001", "GET", undefined, cookie)).status).toBe(400);
       expect((await req("/api/agent-tokens", "POST", {}, cookie,
         "https://other.example.test")).status).toBe(403);

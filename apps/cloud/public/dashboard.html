@@ -4,89 +4,93 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Exports · Health.md Cloud</title>
+  <meta name="color-scheme" content="light dark">
+  <title>Overview · Health.md Cloud</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/dashboard.js" defer></script>
 </head>
 <body data-page="dashboard">
-  <header class="bar"><strong>Health.md Cloud</strong><button id="logout" class="subtle">Sign out</button></header>
-  <main>
-    <p class="eyebrow">Private export storage</p>
-    <h1>Your exports</h1>
-    <p id="account" aria-live="polite">Loading account…</p>
-    <p class="note">Your phone sends only data you select. Agent credentials are separate from phone upload tokens and can disclose retained exports to a third-party provider you choose.</p>
+  <header class="bar">
+    <a class="brand" href="#overview" aria-label="Health.md Cloud overview"><span class="brand-mark" aria-hidden="true">✳</span> health.md <span class="brand-divider"></span><span class="brand-suffix">cloud</span></a>
+    <div class="bar-actions"><span class="pilot-label">Private pilot</span><button id="logout" class="subtle">Sign out</button></div>
+  </header>
+  <main id="overview" class="dashboard-main">
+    <nav class="section-nav" aria-label="Dashboard sections">
+      <a href="#overview" aria-current="page">Overview</a><a href="#trends-title">Trends</a><a href="#storage-title">Exports</a><a href="#connect-title">Connections</a><a href="#deletion-title">Account</a>
+    </nav>
+    <div class="hero-head">
+      <div><p class="eyebrow">Your private space <span class="eyebrow-dot" aria-hidden="true"></span> Uploaded evidence only</p>
+        <h1>Your health, in view<span class="title-period">.</span></h1>
+        <p class="hero-copy">A clearer look at the days you chose to export. Nothing here connects to a live device.</p></div>
+      <div class="hero-status"><span class="status-dot" aria-hidden="true"></span><span id="account" aria-live="polite">Loading account…</span></div>
+    </div>
     <p id="synthetic-warning" class="token-panel" hidden><strong>Synthetic preview only.</strong> Export uploads and token creation are disabled. Do not enter this URL in a real device or send personal health data.</p>
     <p id="unbacked-warning" class="token-panel" hidden><strong>Unbacked personal trial.</strong> Exports are retained without a time limit, but the current storage quota applies. There is no off-host backup: VM, disk or key loss may permanently destroy everything. Do not mistake this for a production cloud service.</p>
     <p id="message" role="status" aria-live="polite"></p>
 
-    <section id="connect-section" aria-labelledby="connect-title" hidden>
-      <h2 id="connect-title">Connect your iPhone</h2>
-      <p>In Health.md, choose <strong>Export → API Endpoint</strong>. Use this URL and a write-only bearer token from below. Start with a single Summary day.</p>
-      <label for="endpoint">API Endpoint URL</label>
-      <input id="endpoint" readonly>
-      <p class="note">Copy the token immediately. It cannot read your exports and is shown only once. The app saves it in Keychain. Never put it in the URL.</p>
-      <form id="create-token-form">
-        <label for="token-name">Token name (for example, My iPhone)</label>
-        <input id="token-name" required maxlength="80" autocomplete="off">
-        <button type="submit">Create export token</button>
-      </form>
-      <div id="new-token-panel" class="token-panel" hidden>
-        <label for="new-token">New write-only token · copy now</label>
-        <input id="new-token" readonly autocomplete="off">
-        <button type="button" id="hide-token" class="subtle">Hide token</button>
-      </div>
-      <h3>Export tokens</h3>
-      <ul id="token-list"></ul>
+    <div class="overview-grid" aria-label="Retained export overview">
+      <article class="stat-card"><span class="stat-label">Current daily snapshots</span><strong id="stat-days" class="stat-value">—</strong><span class="stat-foot">Across all retained dates</span></article>
+      <article class="stat-card"><span class="stat-label">Latest exported day</span><strong id="stat-latest" class="stat-value stat-date">—</strong><span class="stat-foot">Based on the last uploaded date, not today</span></article>
+      <article class="stat-card"><span class="stat-label">Stored export revisions</span><strong id="stat-exports" class="stat-value">—</strong><span id="stat-bytes" class="stat-foot">Loading storage…</span></article>
+    </div>
+
+    <section class="trends-section" aria-labelledby="trends-title">
+      <div class="section-heading"><div><p class="eyebrow">The details</p><h2 id="trends-title">Daily trends</h2><p class="note">Verified Apple v8 daily summaries in the 30 calendar days ending on your latest retained day. Gaps are not zero. Android and other profiles are not mapped to Apple metrics.</p></div><span class="section-tag">Retained exports</span></div>
+      <p id="trends-window" class="window-label" aria-live="polite">Loading daily summaries…</p>
+      <div id="trend-cards" class="chart-grid"></div>
+      <p id="trends-note" class="note">Summary values are not a clinical interpretation or a real-time device reading. Archive and provider data are not used in these charts.</p>
     </section>
 
-    <section id="agents-section" aria-labelledby="agents-title" hidden>
-      <h2 id="agents-title">Agent access</h2>
-      <p>Connect a compatible agent to <code>https://mcp.healthmd.app/mcp</code> with its own Bearer credential. Each new credential can read <strong>every retained export JSON field</strong>, including historical revisions, free text, embedded source archives and binary data. It cannot access data your device never uploaded. The agent provider may retain or use returned data under its own policies.</p>
-      <p class="note">Existing aggregate-only credentials remain restricted; this form does not upgrade them. A credential can be revoked immediately. It expires automatically and cannot upload or delete exports.</p>
-      <form id="create-agent-form">
-        <label for="agent-name">Agent or provider name</label>
-        <input id="agent-name" required maxlength="80" autocomplete="off" placeholder="My approved agent">
-        <label for="agent-days">Expiry in days (1–90)</label>
-        <input id="agent-days" type="number" required min="1" max="90" value="30">
-        <label for="agent-password">Confirm your account password</label>
-        <input id="agent-password" type="password" autocomplete="current-password" required minlength="16">
-        <label><input id="agent-consent" type="checkbox" required> I authorize this named agent to read all my retained Health.md export data and have reviewed how its provider handles health data.</label>
-        <button type="submit">Create full-export agent credential</button>
-      </form>
-      <div id="new-agent-panel" class="token-panel" hidden>
-        <label for="new-agent-token">New agent credential · copy once into the agent's secure vault, not a chat or URL</label>
-        <input id="new-agent-token" readonly autocomplete="off">
-        <button type="button" id="hide-agent-token" class="subtle">Hide credential</button>
-      </div>
-      <h3>Agent credentials</h3>
-      <ul id="agent-list"></ul>
-    </section>
+    <div class="section-heading collection-heading"><div><p class="eyebrow">Your archive</p><h2>Retained exports</h2></div></div>
+    <div class="collection-grid">
+      <section id="storage-section" aria-labelledby="storage-title">
+        <h3 id="storage-title">Export history</h3>
+        <p id="storage" class="note">Loading…</p>
+        <p class="note">Repeated dates replace the current daily pointer; earlier accepted envelopes remain stored. Downloads are original, sensitive JSON—not normalized reports.</p>
+        <ul id="export-list" class="record-list"></ul>
+        <button type="button" id="more-exports" class="subtle" hidden>Load more exports</button>
+      </section>
+      <section aria-labelledby="days-title">
+        <h3 id="days-title">Current daily snapshots</h3>
+        <p class="note">Only days your device uploaded are listed. Capture status describes the optional raw archive, not whether all summaries were available.</p>
+        <ul id="day-list" class="record-list"></ul>
+        <button type="button" id="more-days" class="subtle" hidden>Load more days</button>
+      </section>
+    </div>
 
-    <section aria-labelledby="storage-title">
-      <h2 id="storage-title">Stored exports</h2>
-      <p id="storage">Loading…</p>
-      <p class="note">Repeated dates replace the current daily pointer; earlier accepted envelopes remain stored. Downloaded files are the original API envelopes, not normalized reports. Downloads contain sensitive health data.</p>
-      <ul id="export-list"></ul>
-      <button type="button" id="more-exports" class="subtle" hidden>Load more exports</button>
-    </section>
+    <div class="section-heading collection-heading"><div><p class="eyebrow">Your connections</p><h2 id="connect-title">Connect on your terms</h2></div></div>
+    <div class="collection-grid">
+      <section id="connect-section" aria-labelledby="phone-title" hidden>
+        <h3 id="phone-title">Phone uploads <span class="section-tag">Write only</span></h3>
+        <p>In Health.md, choose <strong>Export → API Endpoint</strong>. Use this URL and a separate write-only token. Start with one Summary day.</p>
+        <label for="endpoint">API Endpoint URL</label><input id="endpoint" readonly>
+        <p class="note">Copy the token immediately. It cannot read your exports and is shown only once. The app saves it in Keychain. Never put it in the URL.</p>
+        <form id="create-token-form"><label for="token-name">Token name (for example, My iPhone)</label><input id="token-name" required maxlength="80" autocomplete="off"><button type="submit">Create export token</button></form>
+        <div id="new-token-panel" class="token-panel" hidden><label for="new-token">New write-only token · copy now</label><input id="new-token" readonly autocomplete="off"><button type="button" id="hide-token" class="subtle">Hide token</button></div>
+        <h4>Export tokens</h4><ul id="token-list" class="record-list"></ul>
+      </section>
+      <section id="agents-section" aria-labelledby="agents-title" hidden>
+        <h3 id="agents-title">Agent access <span class="section-tag">Read only</span></h3>
+        <p>Connect a compatible agent to <code>https://mcp.healthmd.app/mcp</code> with its own Bearer credential. Each new credential can read <strong>every retained export JSON field</strong>, including historical revisions, free text, embedded source archives and binary data. It cannot access data your device never uploaded. The agent provider may retain or use returned data under its own policies.</p>
+        <p class="note">Existing aggregate-only credentials stay restricted. Revoke a credential at any time; it cannot upload or delete exports.</p>
+        <form id="create-agent-form">
+          <label for="agent-name">Agent or provider name</label><input id="agent-name" required maxlength="80" autocomplete="off" placeholder="My approved agent">
+          <label for="agent-days">Expiry in days (1–90)</label><input id="agent-days" type="number" required min="1" max="90" value="30">
+          <label for="agent-password">Confirm your account password</label><input id="agent-password" type="password" autocomplete="current-password" required minlength="16">
+          <label><input id="agent-consent" type="checkbox" required> I authorize this named agent to read all my retained Health.md export data and have reviewed how its provider handles health data.</label>
+          <button type="submit">Create full-export agent credential</button>
+        </form>
+        <div id="new-agent-panel" class="token-panel" hidden><label for="new-agent-token">New agent credential · copy once into the agent's secure vault, not a chat or URL</label><input id="new-agent-token" readonly autocomplete="off"><button type="button" id="hide-agent-token" class="subtle">Hide credential</button></div>
+        <h4>Agent credentials</h4><ul id="agent-list" class="record-list"></ul>
+      </section>
+    </div>
 
-    <section aria-labelledby="days-title">
-      <h2 id="days-title">Current daily snapshots</h2>
-      <ul id="day-list"></ul>
-      <button type="button" id="more-days" class="subtle" hidden>Load more days</button>
-    </section>
-
-    <section id="deletion-section" aria-labelledby="deletion-title" hidden>
-      <h2 id="deletion-title">Delete this account</h2>
+    <section id="deletion-section" class="danger-section" aria-labelledby="deletion-title" hidden>
+      <h3 id="deletion-title">Delete this account</h3>
       <p>Deleting your account disables sign-in and uploads immediately. Stored exports are then erased by the background deletion job. This unbacked pilot has no off-host backup or recovery.</p>
-      <form id="delete-account-form">
-        <label for="delete-password">Enter your password again</label>
-        <input id="delete-password" type="password" autocomplete="current-password" required minlength="16">
-        <label for="delete-confirmation">Type DELETE to confirm</label>
-        <input id="delete-confirmation" required autocomplete="off" pattern="DELETE">
-        <button type="submit">Request permanent deletion</button>
-      </form>
+      <form id="delete-account-form"><label for="delete-password">Enter your password again</label><input id="delete-password" type="password" autocomplete="current-password" required minlength="16"><label for="delete-confirmation">Type DELETE to confirm</label><input id="delete-confirmation" required autocomplete="off" pattern="DELETE"><button type="submit" class="danger-button">Request permanent deletion</button></form>
     </section>
+    <footer>Health.md Cloud · Your data, your choice · Single-owner unbacked pilot</footer>
   </main>
 </body>
 </html>

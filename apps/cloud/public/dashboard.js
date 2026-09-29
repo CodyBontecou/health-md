@@ -78,6 +78,131 @@ async function showAgents() {
   }
 }
 
+// Charts intentionally use no remote dependency or external asset: the
+// browser receives only bounded, owner-session daily summary projections.
+const SVG_NS = "http://www.w3.org/2000/svg";
+const formatDay = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,
+  { month: "short", day: "numeric", timeZone: "UTC" });
+const formatted = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(value);
+const dayLabel = (day, id, unit) => {
+  if (day.status === "not_uploaded") return "Not uploaded";
+  if (day.status === "unsupported_profile") return "No reviewed Apple mapping";
+  if (day.status === "read_limit") return "Outside bounded read";
+  const value = day.values[id];
+  return typeof value === "number" && Number.isFinite(value) ? `${formatted(value)} ${unit}` : "Value unavailable";
+};
+function svgElement(tag, attributes) {
+  const element = document.createElementNS(SVG_NS, tag);
+  for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, String(value));
+  return element;
+}
+function renderTrend(metric, days) {
+  const card = document.createElement("article");
+  card.className = "chart-card";
+  const heading = document.createElement("header");
+  const name = document.createElement("span");
+  name.className = "chart-name";
+  name.textContent = metric.label;
+  const unit = document.createElement("span");
+  unit.className = "chart-unit";
+  unit.textContent = metric.unit;
+  heading.append(name, unit);
+  const observations = days.map((day, index) => ({ index, day, value: day.values[metric.id] }))
+    .filter(({ day, value }) => day.status === "available" && typeof value === "number" && Number.isFinite(value));
+  const latest = observations.at(-1);
+  const value = document.createElement("p");
+  value.className = "chart-value";
+  value.textContent = latest ? formatted(latest.value) : "—";
+  const subtitle = document.createElement("p");
+  subtitle.className = "chart-subtitle";
+  subtitle.textContent = latest ? `Latest retained value · ${formatDay(latest.day.date)}` : "No value in this retained window";
+  const plot = document.createElement("div");
+  plot.className = "chart-plot";
+  const chart = svgElement("svg", { viewBox: "0 0 300 112", preserveAspectRatio: "none",
+    role: "img", "aria-label": `${metric.label}: ${observations.length} observed of ${days.length} calendar days. Missing days are not connected.` });
+  chart.append(svgElement("line", { x1: 0, y1: 105, x2: 300, y2: 105, class: "chart-base" }));
+  if (observations.length) {
+    const numbers = observations.map((item) => item.value);
+    const min = Math.min(...numbers);
+    const max = Math.max(...numbers);
+    const span = Math.max(1, max - min);
+    let segment = [];
+    const drawSegment = () => {
+      if (segment.length > 1) chart.append(svgElement("path", { d: segment.join(" "), class: "chart-line" }));
+      segment = [];
+    };
+    for (let index = 0; index < days.length; index++) {
+      const day = days[index];
+      const reading = day.status === "available" ? day.values[metric.id] : null;
+      if (typeof reading !== "number" || !Number.isFinite(reading)) { drawSegment(); continue; }
+      const x = 8 + index * (284 / Math.max(1, days.length - 1));
+      const y = 94 - ((reading - min) / span) * 72;
+      segment.push(`${segment.length ? "L" : "M"}${x.toFixed(2)} ${y.toFixed(2)}`);
+      if (index === latest?.index || observations.length === 1) {
+        chart.append(svgElement("circle", { cx: x.toFixed(2), cy: y.toFixed(2), r: 3.5, class: "chart-point" }));
+      }
+    }
+    drawSegment();
+  }
+  plot.append(chart);
+  const axis = document.createElement("div");
+  axis.className = "chart-axis";
+  for (const date of [days[0].date, days.at(-1).date]) {
+    const label = document.createElement("span");
+    label.textContent = formatDay(date);
+    axis.append(label);
+  }
+  const coverage = document.createElement("div");
+  coverage.className = "chart-coverage";
+  coverage.textContent = `${observations.length} of ${days.length} calendar days have this value`;
+  const details = document.createElement("details");
+  details.className = "chart-table";
+  const summary = document.createElement("summary");
+  summary.textContent = "View daily values & gaps";
+  const table = document.createElement("table");
+  const caption = document.createElement("caption");
+  caption.textContent = `${metric.label} from retained daily exports`;
+  const head = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  for (const text of ["Date", "Value or reason"]) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = text;
+    headerRow.append(cell);
+  }
+  head.append(headerRow);
+  const body = document.createElement("tbody");
+  for (const day of days) {
+    const row = document.createElement("tr");
+    for (const text of [day.date, dayLabel(day, metric.id, metric.unit)]) {
+      const cell = document.createElement("td");
+      cell.textContent = text;
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  table.append(caption, head, body);
+  details.append(summary, table);
+  card.append(heading, value, subtitle, plot, axis, coverage, details);
+  return card;
+}
+async function showTrends() {
+  const result = await api("/api/dashboard/trends");
+  const cards = $("trend-cards");
+  cards.replaceChildren();
+  if (!result.window.end) {
+    $("trends-window").textContent = "No retained daily exports yet";
+    $("trends-note").textContent = "Export a Summary day to see trends. No sample or device data is filled in for you.";
+    return;
+  }
+  $("trends-window").textContent = `${result.window.start} – ${result.window.end} · Last 30 calendar days ending with your latest retained snapshot`;
+  $("stat-latest").textContent = formatDay(result.window.end);
+  for (const metric of result.metrics) cards.append(renderTrend(metric, result.days));
+  const excluded = result.days.filter((day) => day.status === "unsupported_profile").length;
+  const limited = result.days.filter((day) => day.status === "read_limit").length;
+  $("trends-note").textContent = `Summary values are not a clinical interpretation or a real-time device reading. Archive and provider data are not charted.${excluded ? ` ${excluded} day(s) use a profile without a reviewed Apple mapping.` : ""}${limited ? ` ${limited} day(s) exceeded this view's bounded read budget.` : ""}`;
+}
+
 function appendExports(exports) {
   const list = $("export-list");
   for (const item of exports) {
@@ -97,6 +222,9 @@ function appendDays(days) {
 async function showExports() {
   const { exports, days, storage, nextExportOffset, nextDayOffset } = await api("/api/exports");
   $("storage").textContent = `${storage.count} envelopes · ${(storage.bytes / 1048576).toFixed(2)} MiB stored`;
+  $("stat-days").textContent = new Intl.NumberFormat().format(storage.dayCount);
+  $("stat-exports").textContent = new Intl.NumberFormat().format(storage.count);
+  $("stat-bytes").textContent = `${(storage.bytes / 1048576).toFixed(2)} MiB on this unbacked VM`;
   $("export-list").replaceChildren();
   $("day-list").replaceChildren();
   if (!exports.length) addTextRow($("export-list"), "No exports yet", "Send a single day from your phone to begin");
@@ -232,6 +360,10 @@ async function initDashboard() {
       $("export-list").replaceChildren();
       $("day-list").replaceChildren();
       $("agent-list").replaceChildren();
+      $("trend-cards").replaceChildren();
+      $("stat-days").textContent = "—";
+      $("stat-exports").textContent = "—";
+      $("stat-latest").textContent = "—";
       $("new-agent-token").value = "";
       $("new-agent-panel").hidden = true;
       status(`Account disabled. Deletion job ${result.deletionId} is pending; contact the operator to confirm completion.`);
@@ -247,7 +379,10 @@ async function initDashboard() {
     $("deletion-section").hidden = runtime.syntheticPreviewOnly || runtime.authMode !== "password";
     const account = await api("/api/account");
     $("account").textContent = `Signed in as ${account.email}`;
-    await Promise.all([showTokens(), showExports(), ...(runtime.unbackedPersonalMvp ? [showAgents()] : [])]);
+    await Promise.all([showTokens(), showExports(), showTrends().catch(() => {
+      $("trends-window").textContent = "Daily summaries could not be loaded. Other dashboard functions are still available.";
+      $("trend-cards").replaceChildren();
+    }), ...(runtime.unbackedPersonalMvp ? [showAgents()] : [])]);
   } catch (error) {
     if (error.message === "Sign in to continue.") location.replace("/login");
     else status(error.message);
