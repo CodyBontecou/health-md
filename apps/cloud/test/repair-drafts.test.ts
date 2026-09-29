@@ -45,7 +45,11 @@ it("previews without inventing readings, encrypts owner-only drafts, and never e
     expect((await req("/api/repair/drafts", "GET")).status).toBe(401);
     expect((await req("/api/repair/preview", "POST", undefined, scope)).status).toBe(401);
     expect((await req("/repair", "GET")).status).toBe(303);
+    expect((await req("/repair-panel", "GET")).status).toBe(303);
     expect((await req("/repair", "GET", cookie)).status).toBe(200);
+    const panel = await req("/repair-panel", "GET", cookie);
+    expect(panel.status).toBe(200);
+    expect(await panel.text()).toContain("id=\"repair-form\"");
     expect((await req("/api/repair/preview", "POST", cookie, scope, "https://other.example.test")).status).toBe(403);
     expect((await req("/api/repair/drafts", "POST", cookie, scope, "https://other.example.test")).status).toBe(403);
     for (const bad of [
@@ -160,7 +164,9 @@ it("previews without inventing readings, encrypts owner-only drafts, and never e
       }).catch(fail);
     });
     expect(await hit(account.port, "/api/repair/drafts", "GET")).toBe(401);
+    expect(await hit(account.port, "/repair-panel", "GET")).toBe(303);
     expect(await hit(ingest.port, "/api/repair/drafts", "GET")).toBe(404);
+    expect(await hit(ingest.port, "/repair-panel", "GET")).toBe(404);
     expect(await hit(ingest.port, "/repair", "GET")).toBe(404);
   } finally { await account.close(); await ingest.close(); db.close(); }
 }, 30_000);

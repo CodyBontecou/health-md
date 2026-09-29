@@ -92,7 +92,7 @@ class VmGate {
 function accountRoute(method: string, path: string): boolean {
   if (method === "GET") return new Set([
     "/health", "/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
-    "/repair", "/repair.js", "/style.css", "/api/repair/drafts",
+    "/repair", "/repair.js", "/repair-panel", "/style.css", "/api/repair/drafts",
     "/api/runtime", "/api/account", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
     "/api/dashboard/trends", "/api/explore/catalog",
   ]).has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||

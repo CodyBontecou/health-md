@@ -137,9 +137,11 @@ export async function listExports(env: Env, userId: string): Promise<Response> {
        FROM exports WHERE user_id = ? ORDER BY received_at DESC, id DESC LIMIT 50`,
     ).bind(userId).all(),
     env.DB.prepare(
-      `SELECT owner_date AS date, schema_version AS schemaVersion, capture_status AS captureStatus,
-              exported_at AS exportedAt, received_at AS receivedAt
-       FROM daily_records WHERE user_id = ? ORDER BY owner_date DESC LIMIT 50`,
+      `SELECT d.owner_date AS date, d.schema_version AS schemaVersion,
+              d.capture_status AS captureStatus, d.exported_at AS exportedAt,
+              d.received_at AS receivedAt, e.source AS source
+       FROM daily_records d JOIN exports e ON e.id = d.export_id AND e.user_id = d.user_id
+       WHERE d.user_id = ? ORDER BY d.owner_date DESC LIMIT 50`,
     ).bind(userId).all(),
     env.DB.prepare(
       `SELECT COUNT(*) AS count, COALESCE(SUM(byte_count), 0) AS bytes,
@@ -176,9 +178,11 @@ export async function listDayPage(env: Env, userId: string, offset: number): Pro
     throw new HttpError(400, "invalid_page", "Invalid day page.");
   }
   const result = await env.DB.prepare(
-    `SELECT owner_date AS date, schema_version AS schemaVersion, capture_status AS captureStatus,
-            exported_at AS exportedAt, received_at AS receivedAt
-     FROM daily_records WHERE user_id = ? ORDER BY owner_date DESC LIMIT 51 OFFSET ?`,
+    `SELECT d.owner_date AS date, d.schema_version AS schemaVersion,
+            d.capture_status AS captureStatus, d.exported_at AS exportedAt,
+            d.received_at AS receivedAt, e.source AS source
+     FROM daily_records d JOIN exports e ON e.id = d.export_id AND e.user_id = d.user_id
+     WHERE d.user_id = ? ORDER BY d.owner_date DESC LIMIT 51 OFFSET ?`,
   ).bind(userId, offset).all();
   return json({ days: result.results.slice(0, 50),
     nextOffset: result.results.length > 50 ? offset + 50 : null });

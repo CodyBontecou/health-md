@@ -14,7 +14,7 @@ import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSec
 import type { Env } from "./types";
 
 const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
-  "/repair", "/repair.js", "/style.css"]);
+  "/repair", "/repair.js", "/repair-panel", "/style.css"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 function validateConfiguration(env: Env): void {
@@ -83,7 +83,8 @@ async function route(request: Request, env: Env): Promise<Response> {
     return redirect(path.slice(0, -5), 307);
   }
   if (method === "GET" && STATIC_PATHS.has(path)) {
-    if ((path === "/dashboard" || path === "/explore" || path === "/repair") && !await getSession(request, env)) {
+    if ((path === "/dashboard" || path === "/explore" || path === "/repair" || path === "/repair-panel") &&
+        !await getSession(request, env)) {
       return redirect("/login");
     }
     const asset = await env.ASSETS.fetch(request);

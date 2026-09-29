@@ -13,6 +13,7 @@ const ASSETS = new Map([
   ["/explore.js", ["explore.js", "text/javascript; charset=utf-8"]],
   ["/repair", ["repair.html", "text/html; charset=utf-8"]],
   ["/repair.js", ["repair.js", "text/javascript; charset=utf-8"]],
+  ["/repair-panel", ["repair-panel.html", "text/html; charset=utf-8"]],
   ["/style.css", ["style.css", "text/css; charset=utf-8"]],
 ]);
 

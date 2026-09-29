@@ -8,6 +8,7 @@
   <title>Overview · Health.md Cloud</title>
   <link rel="stylesheet" href="/style.css">
   <script src="/dashboard.js" defer></script>
+  <script src="/repair.js" defer></script>
 </head>
 <body data-page="dashboard">
   <header class="bar">
@@ -16,7 +17,7 @@
   </header>
   <main id="overview" class="dashboard-main">
     <nav class="section-nav" aria-label="Dashboard sections">
-      <a href="#overview" aria-current="page">Overview</a><a href="/explore">Explore data</a><a href="/repair">Plan missing exports</a><a href="#trends-title">Trends</a><a href="#storage-title">Exports</a><a href="#connect-title">Connections</a><a href="#deletion-title">Account</a>
+      <a href="#overview" aria-current="page">Overview</a><a href="/explore">Explore data</a><a href="#repair-planner">Plan missing exports</a><a href="#trends-title">Trends</a><a href="#storage-title">Exports</a><a href="#connect-title">Connections</a><a href="#deletion-title">Account</a>
     </nav>
     <div class="hero-head">
       <div><p class="eyebrow">Your private space <span class="eyebrow-dot" aria-hidden="true"></span> Uploaded evidence only</p>
@@ -39,8 +40,10 @@
       <p id="trends-window" class="window-label" aria-live="polite">Loading daily summaries…</p>
       <div id="trend-cards" class="chart-grid"></div>
       <p id="trends-note" class="note">Summary values are not a clinical interpretation or a real-time device reading. Archive and provider data are not used in these charts.</p>
-      <a class="subtle-link" href="/explore">Choose metrics, compare periods & explore original fields →</a>
+      <div class="inspector-actions"><a class="subtle-link" href="/explore">Choose metrics, compare periods & explore original fields →</a><a class="subtle-link" href="#repair-planner">Plan missing days →</a></div>
     </section>
+
+    <div id="repair-mount" class="repair-mount"><p class="note">Loading private planner…</p></div>
 
     <div class="section-heading collection-heading"><div><p class="eyebrow">Your archive</p><h2>Retained exports</h2></div></div>
     <div class="collection-grid">
@@ -54,6 +57,7 @@
       <section aria-labelledby="days-title">
         <h3 id="days-title">Current daily snapshots</h3>
         <p class="note">Only days your device uploaded are listed. Capture status describes the optional raw archive, not whether all summaries were available.</p>
+        <button type="button" id="plan-unlisted-day" class="subtle">Plan an unlisted day</button>
         <ul id="day-list" class="record-list"></ul>
         <button type="button" id="more-days" class="subtle" hidden>Load more days</button>
       </section>

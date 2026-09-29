@@ -1,11 +1,16 @@
+(() => {
 "use strict";
-// Session-only planner. No request scope or health dates in URLs, browser
-// storage, link targets or logs. This page cannot launch a mobile export.
+// Shared session-only planner for overview, explorer and standalone view. No
+// request scope or health dates in URLs, browser storage, link targets or logs.
+// This page cannot launch a mobile export.
 const $ = (id) => document.getElementById(id);
 const dayMs = 86400000;
 const dates = new Set();
 let previewed = null;
-const message = (text) => { $("repair-message").textContent = text; };
+let ready = false;
+let disabled = false;
+let pendingSelection = null;
+const message = (text) => { if ($("repair-message")) $("repair-message").textContent = text; };
 const element = (name, text) => { const node = document.createElement(name); node.textContent = text; return node; };
 async function api(path, body, method) {
   const response = await fetch(path, { method: method || (body === undefined ? "GET" : "POST"),
@@ -86,6 +91,7 @@ function renderPreview(result) {
 async function loadDrafts() {
   try {
     const { requests } = await api("/api/repair/drafts");
+    if (disabled) return;
     const list = $("repair-drafts"); list.replaceChildren();
     if (!requests.length) { list.append(element("li", "No active drafts.")); return; }
     for (const draft of requests) {
@@ -97,12 +103,22 @@ async function loadDrafts() {
         catch (error) { message(error.message); }
       }); row.append(remove); list.append(row);
     }
-  } catch (error) { message(error.message); }
+  } catch (error) { if (!disabled) message(error.message); }
 }
 async function init() {
   try {
     await api("/api/account");
+    if (disabled) return;
+    const panel = await fetch("/repair-panel", { credentials: "same-origin", cache: "no-store" });
+    if (disabled) return;
+    if (!panel.ok) throw new Error("Planner unavailable. Please try again.");
+    const fragment = new DOMParser().parseFromString(await panel.text(), "text/html")
+      .getElementById("repair-planner");
+    if (disabled) return;
+    if (!fragment) throw new Error("Planner unavailable. Please try again.");
+    $("repair-mount").replaceChildren(document.importNode(fragment, true));
     const { metrics } = await api("/api/explore/catalog");
+    if (disabled) return;
     for (const metric of metrics) {
       const label = element("label", ""); label.className = "metric-choice";
       const input = element("input", ""); input.type = "checkbox"; input.value = metric.id;
@@ -132,6 +148,7 @@ async function init() {
     });
     $("repair-form").addEventListener("submit", async (event) => {
       event.preventDefault(); try { const chosen = spec(); const result = await api("/api/repair/preview", chosen);
+        if (disabled) return;
         // Do not enable save for a response to an earlier, changed selection.
         if (JSON.stringify(chosen) !== JSON.stringify(spec())) return;
         previewed = chosen; renderPreview(result); $("repair-save").disabled = false; message("");
@@ -140,16 +157,75 @@ async function init() {
     $("repair-save").addEventListener("click", async () => {
       try { if (!previewed || JSON.stringify(previewed) !== JSON.stringify(spec())) throw new Error("Review the current scope first.");
         const result = await api("/api/repair/drafts", previewed);
+        if (disabled) return;
         $("repair-save").disabled = true; previewed = null;
         await loadDrafts(); message(`Private draft saved until ${new Date(result.expiresAt).toLocaleString()}. No export or link was started.`);
       } catch (error) { message(error.message); }
     });
-    syncSource(); await loadDrafts();
-  } catch (error) { if (error.message === "Sign in to continue.") location.replace("/login"); else message(error.message); }
+    syncSource(); ready = true;
+    if (pendingSelection) { applySelection(pendingSelection); pendingSelection = null; }
+    await loadDrafts();
+  } catch (error) {
+    if (disabled) return;
+    if (error.message === "Sign in to continue.") location.replace("/login");
+    else if ($("repair-message")) message(error.message);
+    else $("repair-mount").textContent = "Planner temporarily unavailable. Other dashboard functions still work.";
+  }
 }
-if (document.body.dataset.page === "repair") {
-  window.addEventListener("pagehide", () => { dates.clear(); previewed = null;
-    $("repair-results").replaceChildren(); $("repair-drafts").replaceChildren(); });
+function applySelection(selection) {
+  if (!ready) { pendingSelection = selection; return; }
+  const source = selection?.source;
+  const metricId = selection?.metricId;
+  const chosen = selection?.date ? [selection.date] : selection?.dates || [];
+  if (source && source !== "ios" && source !== "android") return;
+  if (!Array.isArray(chosen) || chosen.length > 31 || chosen.some((date) => {
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return true;
+    const stamp = Date.parse(`${date}T00:00:00Z`);
+    return !Number.isFinite(stamp) || new Date(stamp).toISOString().slice(0, 10) !== date ||
+      date > new Date(Date.now() + dayMs).toISOString().slice(0, 10);
+  })) return;
+  if (metricId && (source !== "ios" || ![...$("repair-metrics").querySelectorAll("input")]
+    .some((input) => input.value === metricId))) return;
+  const sourceChanged = Boolean(source && source !== $("repair-source").value);
+  const clearedPrevious = sourceChanged && dates.size > 0;
+  const proposed = new Set(sourceChanged ? [] : dates);
+  for (const date of chosen) proposed.add(date);
+  if (proposed.size > 31) {
+    message("Maximum 31 selected days. Remove some before adding another range."); return;
+  }
+  if (sourceChanged) {
+    for (const input of $("repair-metrics").querySelectorAll("input")) input.checked = false;
+    $("repair-source").value = source;
+    $("repair-scope").value = source === "android" ? "entire_days" : "metric_ids";
+  }
+  if (metricId) {
+    $("repair-scope").value = "metric_ids";
+    [...$("repair-metrics").querySelectorAll("input")]
+      .find((input) => input.value === metricId).checked = true;
+  } else if (selection?.entireDay) $("repair-scope").value = "entire_days";
+  dates.clear(); for (const date of proposed) dates.add(date);
+  if (chosen.length === 1) $("repair-one").value = chosen[0];
+  syncSource(); renderDates();
+  $("repair-planner").scrollIntoView({ behavior: "smooth", block: "start" });
+  $(chosen.length ? "repair-preview" : "repair-one").focus({ preventScroll: true });
+  message(chosen.length ? `${chosen.length} day(s) added to this private plan.${clearedPrevious ? " Previous source selections were cleared." : ""} Review coverage before saving.` :
+    "Choose a date to plan an export. This cannot contact your phone yet.");
+}
+if ($("repair-mount")) {
+  document.addEventListener("healthmd:repair-select", (event) => applySelection(event.detail));
+  document.addEventListener("healthmd:repair-clear", () => {
+    dates.clear(); previewed = null; pendingSelection = null; ready = false; disabled = true;
+  });
+  document.addEventListener("click", (event) => {
+    if (event.target instanceof Element && event.target.closest('a[href="#repair-planner"]') && !ready) {
+      event.preventDefault(); applySelection({ focus: "date" });
+    }
+  });
+  window.addEventListener("pagehide", () => {
+    dates.clear(); previewed = null; pendingSelection = null; ready = false;
+    $("repair-mount").replaceChildren();
+  });
   window.addEventListener("pageshow", (event) => { if (event.persisted) location.reload(); });
   void init();
 }
+})();

@@ -252,8 +252,8 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       }), env);
       expect(upload.status).toBe(201);
       const body = JSON.parse((await req("/api/dashboard/trends", cookie)).body);
-      expect(JSON.parse((await req("/api/exports", cookie)).body).storage)
-        .toMatchObject({ count: 1, dayCount: 1 });
+      expect(JSON.parse((await req("/api/exports", cookie)).body))
+        .toMatchObject({ storage: { count: 1, dayCount: 1 }, days: [{ date: summary.date, source: "ios" }] });
       expect(body.version).toBe(1);
       expect(body.days).toHaveLength(30);
       expect(body.window.end).toBe(summary.date);
@@ -293,6 +293,8 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       }), env)).status).toBe(201);
       expect(JSON.parse((await req("/api/dashboard/trends", cookie)).body).days.at(-1))
         .toMatchObject({ status: "unsupported_profile", values: { steps: null, sleep_total: null } });
+      expect(JSON.parse((await req("/api/exports", cookie)).body).days)
+        .toMatchObject([{ date: summary.date, source: "android" }]);
       expect((await req("/api/dashboard/trends?date=2026-03-15", cookie)).status).toBe(400);
       expect((await req("/api/dashboard/trends", cookie, "Bearer invalid")).status).toBe(200);
     } finally { await account.close(); accountDb.close(); db.close(); }

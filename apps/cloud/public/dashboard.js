@@ -1,6 +1,8 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const status = (text) => { $("message").textContent = text; };
+const planFromRow = (selection) => document.dispatchEvent(
+  new CustomEvent("healthmd:repair-select", { detail: selection }));
 
 async function api(path, method = "GET", body) {
   const response = await fetch(path, {
@@ -164,7 +166,7 @@ function renderTrend(metric, days) {
   caption.textContent = `${metric.label} from retained daily exports`;
   const head = document.createElement("thead");
   const headerRow = document.createElement("tr");
-  for (const text of ["Date", "Value or reason"]) {
+  for (const text of ["Date", "Value or reason", "Plan this day"]) {
     const cell = document.createElement("th");
     cell.scope = "col";
     cell.textContent = text;
@@ -179,6 +181,17 @@ function renderTrend(metric, days) {
       cell.textContent = text;
       row.append(cell);
     }
+    const action = document.createElement("td");
+    if (day.status === "not_uploaded" || day.status === "available") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "subtle";
+      button.textContent = "Add to plan";
+      button.setAttribute("aria-label", `Plan ${metric.label} for ${day.date}`);
+      button.addEventListener("click", () => planFromRow({ date: day.date, source: "ios", metricId: metric.id }));
+      action.append(button);
+    }
+    row.append(action);
     body.append(row);
   }
   table.append(caption, head, body);
@@ -215,8 +228,16 @@ function appendExports(exports) {
 }
 
 function appendDays(days) {
-  for (const day of days) addTextRow($("day-list"), day.date,
-    `v${day.schemaVersion} · ${day.captureStatus || "status not reported"}`);
+  for (const day of days) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "subtle";
+    action.textContent = "Plan entire day";
+    action.setAttribute("aria-label", `Plan entire ${day.source === "ios" ? "Apple" : "Android"} day ${day.date}`);
+    action.addEventListener("click", () => planFromRow({ date: day.date, source: day.source, entireDay: true }));
+    addTextRow($("day-list"), day.date,
+      `${day.source === "ios" ? "Apple" : "Android"} v${day.schemaVersion} · ${day.captureStatus || "status not reported"}`, action);
+  }
 }
 
 async function showExports() {
@@ -283,6 +304,7 @@ async function initLogin() {
 }
 
 async function initDashboard() {
+  $("plan-unlisted-day").addEventListener("click", () => planFromRow({ focus: "date" }));
   $("logout").addEventListener("click", async () => {
     try {
       await api("/api/auth/logout", "POST");
@@ -366,6 +388,8 @@ async function initDashboard() {
       $("stat-latest").textContent = "—";
       $("new-agent-token").value = "";
       $("new-agent-panel").hidden = true;
+      document.dispatchEvent(new Event("healthmd:repair-clear"));
+      $("repair-mount").replaceChildren();
       status(`Account disabled. Deletion job ${result.deletionId} is pending; contact the operator to confirm completion.`);
     } catch (error) { $("delete-password").value = ""; status(error.message); }
   });

@@ -10,6 +10,8 @@ const shortDate = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString(und
 const display = (value) => new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
 const shiftDay = (date, delta) => new Date(Date.parse(`${date}T00:00:00Z`) + delta * dayMs).toISOString().slice(0, 10);
 const note = (text) => { $("explore-message").textContent = text; };
+const planFromRow = (selection) => document.dispatchEvent(
+  new CustomEvent("healthmd:repair-select", { detail: selection }));
 let chartSequence = 0;
 let librarySequence = 0;
 let selectedExport = null;
@@ -104,7 +106,7 @@ function chartCard(metric, first, second, chartType, axisMode) {
   table.append(element("caption", `${metric.label} · source dates (not upload timestamps)`));
   const thead = element("thead");
   const heading = element("tr");
-  for (const text of ["Day", "Selected period", ...(second ? ["Comparison"] : []), "Source"]) {
+  for (const text of ["Day", "Selected period", ...(second ? ["Comparison"] : []), "Evidence & plan"]) {
     const th = element("th", text); th.scope = "col"; heading.append(th);
   }
   thead.append(heading); table.append(thead);
@@ -125,6 +127,17 @@ function chartCard(metric, first, second, chartType, axisMode) {
         Number.isSafeInteger(second.days[index].recordIndex)) {
       source.append(inspectButton(second.days[index].exportId,
         `/records/${second.days[index].recordIndex}`, `Inspect ${second.days[index].date}`));
+    }
+    for (const period of periods) {
+      const selected = period.days[index];
+      if (period.profile === "android_compat" || !selected ||
+          (selected.status !== "available" && selected.status !== "not_uploaded")) continue;
+      const button = element("button", `Plan ${selected.date}`, "subtle");
+      button.type = "button";
+      button.setAttribute("aria-label", `Plan ${metric.label} for ${selected.date}`);
+      button.addEventListener("click", () => planFromRow({ date: selected.date,
+        source: "ios", metricId: metric.id }));
+      source.append(button);
     }
     row.append(source); tbody.append(row);
   }
@@ -191,6 +204,19 @@ async function showLibrary(offset = 0) {
         const download = element("a", "Download JSON");
         download.href = `/api/exports/${item.id}/download`;
         actions.append(download);
+      }
+      const first = Date.parse(`${item.dateStart}T00:00:00Z`);
+      const last = Date.parse(`${item.dateEnd}T00:00:00Z`);
+      const rangeDays = (last - first) / dayMs + 1;
+      if ((item.source === "ios" || item.source === "android") &&
+          Number.isInteger(rangeDays) && rangeDays >= 1 && rangeDays <= 31) {
+        const button = element("button", "Plan declared range", "subtle");
+        button.type = "button";
+        button.setAttribute("aria-label", `Plan ${item.source === "ios" ? "Apple" : "Android"} days ${item.dateStart} through ${item.dateEnd}`);
+        button.addEventListener("click", () => planFromRow({ dates: Array.from({ length: rangeDays },
+          (_, i) => new Date(first + i * dayMs).toISOString().slice(0, 10)),
+          source: item.source, entireDay: true }));
+        actions.append(button);
       }
       row.append(description, actions); list.append(row);
     }
