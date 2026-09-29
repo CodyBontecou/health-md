@@ -49,7 +49,7 @@ export function validDate(input: unknown): input is string {
   const parsed = new Date(`${input}T00:00:00Z`);
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === input;
 }
-function project(record: Record<string, unknown>, metrics: readonly MetricId[]): Record<string, number | null> {
+export function project(record: Record<string, unknown>, metrics: readonly MetricId[]): Record<string, number | null> {
   const values: Record<string, number | null> = Object.fromEntries(metrics.map((id) => [id, null]));
   const units = object(record.units);
   const timezone = object(record.time_context)?.calendar_timezone;

@@ -7,11 +7,14 @@ import { dashboardTrends, exploreCatalog, exploreChart } from "./dashboard";
 import { exploreExports, exploreNode } from "./explore";
 import { createAgentToken, listAgentTokens, revokeAgentToken } from "./agent-tokens";
 import { passwordLogin } from "./password";
+import { cancelRepairDraft, createRepairDraft, listRepairDrafts, previewRepairRequest,
+  purgeExpiredRepairDrafts } from "./repair-drafts";
 import { processAccountDeletions, purgeArchivedRevisions, requestAccountDeletion } from "./lifecycle";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
 import type { Env } from "./types";
 
-const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js", "/style.css"]);
+const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
+  "/repair", "/repair.js", "/style.css"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 function validateConfiguration(env: Env): void {
@@ -80,7 +83,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     return redirect(path.slice(0, -5), 307);
   }
   if (method === "GET" && STATIC_PATHS.has(path)) {
-    if ((path === "/dashboard" || path === "/explore") && !await getSession(request, env)) {
+    if ((path === "/dashboard" || path === "/explore" || path === "/repair") && !await getSession(request, env)) {
       return redirect("/login");
     }
     const asset = await env.ASSETS.fetch(request);
@@ -142,6 +145,19 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (method === "GET" && path === "/api/dashboard/trends") {
     return dashboardTrends(env, (await requireSession(request, env)).id);
   }
+  if (method === "GET" && path === "/api/repair/drafts") {
+    return listRepairDrafts(env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/repair/preview") {
+    return previewRepairRequest(request, env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/repair/drafts") {
+    return createRepairDraft(request, env, (await requireSession(request, env)).id);
+  }
+  const cancelDraft = /^\/api\/repair\/drafts\/([a-f0-9-]{36})$/u.exec(path);
+  if (method === "DELETE" && cancelDraft?.[1]) {
+    return cancelRepairDraft(request, env, (await requireSession(request, env)).id, cancelDraft[1]);
+  }
   if (method === "GET" && path === "/api/explore/catalog") {
     await requireSession(request, env);
     return exploreCatalog();
@@ -194,5 +210,6 @@ export default {
       env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now),
       env.DB.prepare("DELETE FROM auth_rate_limits WHERE expires_at < ?").bind(now),
     ]);
+    await purgeExpiredRepairDrafts(env);
   },
 };

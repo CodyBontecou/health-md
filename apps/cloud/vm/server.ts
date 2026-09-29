@@ -91,7 +91,8 @@ class VmGate {
 // It cannot reach ingestion, magic-link signup, scheduled maintenance or MCP.
 function accountRoute(method: string, path: string): boolean {
   if (method === "GET") return new Set([
-    "/health", "/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js", "/style.css",
+    "/health", "/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
+    "/repair", "/repair.js", "/style.css", "/api/repair/drafts",
     "/api/runtime", "/api/account", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
     "/api/dashboard/trends", "/api/explore/catalog",
   ]).has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||
@@ -99,8 +100,10 @@ function accountRoute(method: string, path: string): boolean {
   if (method === "POST") return new Set([
     "/api/auth/password-login", "/api/auth/logout", "/api/ingest-tokens", "/api/agent-tokens",
     "/api/account/delete", "/api/explore/chart", "/api/explore/exports", "/api/explore/node",
+    "/api/repair/preview", "/api/repair/drafts",
   ]).has(path);
   return method === "DELETE" && (
+    /^\/api\/repair\/drafts\/[a-f0-9-]{36}$/u.test(path) ||
     /^\/api\/ingest-tokens\/[a-f0-9-]{36}$/u.test(path) ||
     /^\/api\/agent-tokens\/[a-f0-9-]{36}$/u.test(path));
 }
