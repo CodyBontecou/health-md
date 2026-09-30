@@ -15,6 +15,7 @@ const production = {
 const development = {
   ENVIRONMENT: "development",
   PUBLIC_ORIGIN: "http://localhost:8787",
+  AUTH_SIGNUP_MODE: "closed",
 } as Env;
 
 describe("Worker deployment and request policy", () => {
