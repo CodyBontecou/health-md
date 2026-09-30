@@ -341,24 +341,57 @@ export async function createIngestToken(request: Request, env: Env, userId: stri
   if (name.length < 1 || name.length > 80 || /[\x00-\x1f\x7f]/u.test(name)) {
     throw new HttpError(400, "invalid_name", "Choose a name of 1–80 characters.");
   }
-  const count = await env.DB.prepare(
-    "SELECT COUNT(*) AS count FROM ingest_tokens WHERE user_id = ? AND revoked_at IS NULL",
-  ).bind(userId).first<{ count: number }>();
-  if ((count?.count ?? 0) >= 10) {
-    throw new HttpError(409, "token_limit", "Revoke an export token before creating another.");
-  }
   const id = crypto.randomUUID();
   const token = `hmd_ing_${randomToken()}`;
+  const tokenHash = await sha256Hex(token);
   const now = new Date().toISOString();
-  await env.DB.batch([
-    env.DB.prepare(
-      `INSERT INTO ingest_tokens (id, user_id, name, token_hash, last_four, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ).bind(id, userId, name, await sha256Hex(token), token.slice(-4), now),
-    env.DB.prepare(
-      "INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at) VALUES (?, ?, ?, ?, ?)",
-    ).bind(crypto.randomUUID(), userId, "ingest_token.created", id, now),
-  ]);
+  let batchCompleted = false;
+  let batchFailure: unknown;
+  try {
+    await env.DB.batch([
+      // The cap check belongs in the serialized write transaction. A separate
+      // count read would let concurrent account requests exceed the limit.
+      env.DB.prepare(
+        `INSERT INTO ingest_tokens (id, user_id, name, token_hash, last_four, created_at)
+         SELECT ?, ?, ?, ?, ?, ? WHERE
+           EXISTS (SELECT 1 FROM users WHERE id = ? AND status = 'active') AND
+           (SELECT COUNT(*) FROM ingest_tokens WHERE user_id = ? AND revoked_at IS NULL) < 10`,
+      ).bind(id, userId, name, tokenHash, token.slice(-4), now, userId, userId),
+      env.DB.prepare(
+        `INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+         SELECT ?, ?, 'ingest_token.created', ?, ? FROM ingest_tokens
+         WHERE id = ? AND user_id = ? AND token_hash = ?`,
+      ).bind(crypto.randomUUID(), userId, id, now, id, userId, tokenHash),
+    ]);
+    batchCompleted = true;
+  } catch (error) {
+    // The D1 response can be lost after commit. Verify the exact durable token
+    // and audit postcondition before deciding whether the one-time secret is safe to return.
+    batchFailure = error;
+  }
+  let committed: { valid: number } | null;
+  try {
+    committed = await env.DB.prepare(`SELECT 1 AS valid FROM ingest_tokens t
+      JOIN audit_events a ON a.user_id = t.user_id AND a.target_id = t.id
+        AND a.event_type = 'ingest_token.created'
+      WHERE t.id = ? AND t.user_id = ? AND t.token_hash = ? AND t.revoked_at IS NULL`)
+      .bind(id, userId, tokenHash).first<{ valid: number }>();
+  } catch {
+    throw new HttpError(503, "token_verification_pending",
+      "Export token creation verification is temporarily unavailable. Review account tokens before retrying.");
+  }
+  if (committed?.valid !== 1) {
+    const state = await env.DB.prepare(`SELECT
+      EXISTS (SELECT 1 FROM users WHERE id = ? AND status = 'active') AS active,
+      (SELECT COUNT(*) FROM ingest_tokens WHERE user_id = ? AND revoked_at IS NULL) AS count`)
+      .bind(userId, userId).first<{ active: number; count: number }>();
+    if (!state?.active) throw new HttpError(401, "unauthorized", "Sign in to continue.");
+    if (state.count >= 10) {
+      throw new HttpError(409, "token_limit", "Revoke an export token before creating another.");
+    }
+    if (!batchCompleted) throw batchFailure;
+    throw new HttpError(503, "token_creation_failed", "Export token creation is temporarily unavailable.");
+  }
   return json({ id, token, name, message: "Copy this write-only token now. It will not be shown again." }, { status: 201 });
 }
 
