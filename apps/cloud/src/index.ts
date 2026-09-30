@@ -59,7 +59,7 @@ export function validateConfiguration(env: Env): void {
     const personalMvp = env.VM_PERSONAL_MVP_NO_BACKUP_ACK === "I_ACCEPT_PERMANENT_DATA_LOSS";
     const splitNonIdentity = profile === "ingest" || profile === "maintenance";
     const invalidProductionIdentity = splitNonIdentity ?
-      (env.AUTH_SIGNUP_MODE !== "closed" || env.AUTH_MODE === "password" || !!env.PASSWORD_PEPPER_B64) :
+      (env.AUTH_SIGNUP_MODE !== "closed" || env.AUTH_MODE !== undefined || !!env.PASSWORD_PEPPER_B64) :
       profile === "account" ?
         (env.AUTH_MODE === "password" || !!env.PASSWORD_PEPPER_B64 || !env.RESEND_API_KEY ||
           !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")) :
@@ -84,7 +84,13 @@ export function validateConfiguration(env: Env): void {
       (env.HEALTH_FREE_METRICS_REQUIRED !== "1" || !env.METRICS);
     const invalidBindings = profile !== "combined" && (!env.DB || !env.EXPORTS ||
       (profile === "account" && (!env.ASSETS || !env.LIFECYCLE_QUEUE)) ||
-      (profile === "maintenance" && !env.LIFECYCLE_QUEUE));
+      (profile === "ingest" && (!!env.ASSETS || !!env.LIFECYCLE_QUEUE)) ||
+      (profile === "maintenance" && (!env.LIFECYCLE_QUEUE || !!env.ASSETS)));
+    const invalidExcessSecrets = splitNonIdentity && (!!env.IDENTITY_KEY_B64 || !!env.RESEND_API_KEY ||
+      !!env.AUTH_EMAIL_FROM || !!env.AUTH_INVITE_EMAILS ||
+      (profile === "maintenance" && !!env.EXPORT_ENCRYPTION_KEYS_JSON));
+    const invalidRepairFlags = profile !== "combined" &&
+      (!!env.CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED || !!env.CLOUD_REPAIR_DISPATCH_ENABLED);
     const invalidDeploymentRevision = profile !== "combined" &&
       !/^[a-f0-9]{40}$/u.test(env.DEPLOYMENT_REVISION ?? "");
     let invalidExportEndpoint = false;
@@ -161,7 +167,8 @@ export function validateConfiguration(env: Env): void {
           invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation) :
           (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
             invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation || invalidBindings ||
-            invalidMetrics || invalidRuntimeLimits || invalidDeletionTtl || invalidAbuseLimits ||
+            invalidExcessSecrets || invalidRepairFlags || invalidMetrics || invalidRuntimeLimits ||
+            invalidDeletionTtl || invalidAbuseLimits ||
             invalidDeploymentRevision || invalidExportEndpoint)) ||
         env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
       throw new Error("Production or personal-MVP configuration is incomplete");

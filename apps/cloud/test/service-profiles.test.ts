@@ -161,6 +161,21 @@ describe("split production Worker profiles", () => {
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noAssets)).status)
       .toBe(500);
 
+    const excessIngestAssets = profile("ingest", "https://api.healthmd.app");
+    excessIngestAssets.ASSETS = { fetch: async () => new Response() } as unknown as Fetcher;
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
+      excessIngestAssets)).status).toBe(500);
+
+    const excessIngestQueue = profile("ingest", "https://api.healthmd.app");
+    excessIngestQueue.LIFECYCLE_QUEUE = { send: async () => undefined } as unknown as Queue<LifecycleMessage>;
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
+      excessIngestQueue)).status).toBe(500);
+
+    const excessIngestIdentity = profile("ingest", "https://api.healthmd.app");
+    excessIngestIdentity.IDENTITY_KEY_B64 = Buffer.alloc(32, 5).toString("base64");
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
+      excessIngestIdentity)).status).toBe(500);
+
     const noLifecycleQueue = profile("account", "https://account.healthmd.app");
     noLifecycleQueue.LIFECYCLE_QUEUE = undefined;
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
@@ -185,6 +200,23 @@ describe("split production Worker profiles", () => {
     noMaintenanceQueue.LIFECYCLE_QUEUE = undefined;
     await expect(maintenanceWorker.scheduled({} as ScheduledEvent, noMaintenanceQueue))
       .rejects.toThrow("configuration is incomplete");
+
+    const excessMaintenanceAssets = profile("maintenance", "https://maintenance.healthmd.app");
+    excessMaintenanceAssets.ASSETS = { fetch: async () => new Response() } as unknown as Fetcher;
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, excessMaintenanceAssets))
+      .rejects.toThrow("configuration is incomplete");
+
+    const excessMaintenanceLegacyKey = profile("maintenance", "https://maintenance.healthmd.app");
+    excessMaintenanceLegacyKey.EXPORT_ENCRYPTION_KEYS_JSON = JSON.stringify({
+      v1: Buffer.alloc(32, 6).toString("base64"),
+    });
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, excessMaintenanceLegacyKey))
+      .rejects.toThrow("configuration is incomplete");
+
+    const unapprovedRepair = profile("account", "https://account.healthmd.app");
+    unapprovedRepair.CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED = "1";
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      unapprovedRepair)).status).toBe(500);
 
     const emptyBatch = { messages: [] } as unknown as MessageBatch<LifecycleMessage>;
     await expect(maintenanceWorker.queue(emptyBatch,
