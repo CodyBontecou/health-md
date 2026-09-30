@@ -1,4 +1,4 @@
-import { decryptExport, sha256Hex } from "./crypto";
+import { decryptExport, encryptedExportByteCount, sha256Hex } from "./crypto";
 import { resolveExportKey } from "./account-export-keys";
 import { HttpError, json, readJson, assertSameOrigin } from "./http";
 import type { Env } from "./types";
@@ -30,7 +30,6 @@ const catalog = projections.map((projection) => {
 });
 const DAY = 86_400_000;
 const MAX_DECRYPTED_BYTES = 48 * 1024 * 1024;
-const MAX_OBJECT_BYTES = 25 * 1024 * 1024 + 256;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const OBJECT_KEY = /^v1\/[a-f0-9-]{36}$/u;
 const EXPORT_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u;
@@ -74,11 +73,10 @@ export async function readVerifiedEnvelope(row: EnvelopeRow, env: Env, userId: s
     throw new HttpError(503, "unavailable_data", "A retained export is unavailable.");
   }
   const objectData = await env.EXPORTS.get(row.objectKey);
-  if (!objectData) throw new HttpError(503, "unavailable_data", "A retained export is unavailable.");
-  const encrypted = new Uint8Array(await objectData.arrayBuffer());
-  if (encrypted.byteLength > MAX_OBJECT_BYTES) {
+  if (!objectData || objectData.size !== encryptedExportByteCount(row.byteCount)) {
     throw new HttpError(503, "unavailable_data", "A retained export is unavailable.");
   }
+  const encrypted = new Uint8Array(await objectData.arrayBuffer());
   try {
     const key = await resolveExportKey(env, userId, row.keyId);
     const plaintext = await decryptExport(encrypted, key, userId, row.exportId);

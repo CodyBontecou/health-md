@@ -143,11 +143,17 @@ it("stores and reads new exports with an account key while preserving exact byte
       const value = Reflect.get(target, property);
       return typeof value === "function" ? value.bind(target) : value;
     } }) as R2Bucket;
-    const oversized = await worker.fetch(new Request(`${origin}/api/exports/${receipt.id}/download`, {
+    const oversizedDashboard = await worker.fetch(new Request(`${origin}/api/dashboard/trends`, {
       headers: { Cookie: cookie },
     }), env);
-    expect(oversized.status).toBe(503);
-    expect(await oversized.json()).toMatchObject({ error: "unavailable_data" });
+    expect(oversizedDashboard.status).toBe(503);
+    expect(await oversizedDashboard.json()).toMatchObject({ error: "unavailable_data" });
+    expect(materialized).toBe(false);
+    const oversizedDownload = await worker.fetch(new Request(`${origin}/api/exports/${receipt.id}/download`, {
+      headers: { Cookie: cookie },
+    }), env);
+    expect(oversizedDownload.status).toBe(503);
+    expect(await oversizedDownload.json()).toMatchObject({ error: "unavailable_data" });
     expect(materialized).toBe(false);
   } finally { db.close(); }
 });
