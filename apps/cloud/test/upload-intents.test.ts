@@ -72,6 +72,47 @@ it("bounds active uploads per account without imposing a process-global account 
   } finally { db.close(); }
 });
 
+it("accepts a successful D1 insert even when adapter change metadata is zero", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property !== "prepare") {
+        const value = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      }
+      return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("INSERT INTO upload_intents")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty !== "run") {
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              }
+              return async () => {
+                const result = await boundStatement.run();
+                return { ...result, meta: { ...result.meta, changes: 0 } };
+              };
+            } });
+          };
+        } });
+      };
+    } }) as D1Database;
+    const intent = await reserveUploadIntent(env, principal, "a".repeat(64), null, 100);
+    expect(intent.userId).toBe(principal.userId);
+    expect(db.connection.prepare("SELECT state FROM upload_intents WHERE id = ?").get(intent.id))
+      .toMatchObject({ state: "reserved" });
+  } finally { db.close(); }
+});
+
 it("reserves quota atomically before writing an object", async () => {
   const { env, db } = setup();
   try {

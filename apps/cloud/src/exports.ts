@@ -180,8 +180,15 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
   ];
   try {
     // D1 batch is transactional; a failed metadata commit does not acknowledge the payload.
-    const results = await env.DB.batch(statements);
-    if (results[0]?.meta.changes !== 1 || results.at(-1)?.meta.changes !== 1) {
+    await env.DB.batch(statements);
+    // D1 change counts are not portable when the batch also fires storage
+    // ledger triggers. Verify the durable postcondition instead: both the
+    // authenticated export insert and reservation commit must exist.
+    const committed = await env.DB.prepare(`SELECT 1 AS valid FROM exports e
+      JOIN upload_intents i ON i.export_id = e.id AND i.user_id = e.user_id
+      WHERE e.id = ? AND e.user_id = ? AND i.id = ? AND i.state = 'committed'`)
+      .bind(intent.exportId, principal.userId, intent.id).first<{ valid: number }>();
+    if (committed?.valid !== 1) {
       throw new HttpError(401, "unauthorized", "Export token is no longer active.");
     }
   } catch (error) {

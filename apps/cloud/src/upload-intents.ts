@@ -123,7 +123,11 @@ export async function reserveUploadIntent(
     expiresAt: new Date(Date.parse(createdAt) + INTENT_LEASE_MS).toISOString(),
   };
   try {
-    const result = await env.DB.prepare(
+    // A plain INSERT either succeeds or throws (including trigger RAISE/unique
+    // failures). D1's `meta.changes` is not portable across local/remote
+    // adapters when triggers also update the storage ledger, so it must not be
+    // used to decide whether this reservation exists.
+    await env.DB.prepare(
       `INSERT INTO upload_intents
        (id, user_id, token_id, export_id, object_key, plaintext_sha256, scope_digest,
         byte_count, state, created_at, updated_at, expires_at)
@@ -131,9 +135,6 @@ export async function reserveUploadIntent(
     ).bind(intent.id, intent.userId, intent.tokenId, intent.exportId, intent.objectKey,
       intent.digest, intent.scopeDigest, intent.byteCount, intent.createdAt, intent.createdAt,
       intent.expiresAt).run();
-    if ((result.meta.changes ?? 0) !== 1) {
-      return await classifyReservationFailure(env, principal, digest, scopeDigest, byteCount, createdAt);
-    }
   } catch {
     return await classifyReservationFailure(env, principal, digest, scopeDigest, byteCount, createdAt);
   }

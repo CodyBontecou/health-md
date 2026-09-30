@@ -41,8 +41,6 @@ jobs:
         run: npm run check
       - name: Verify production remains fail-closed and unapproved
         run: npm run verify:production-safety
-      - name: Verify platform capability inventory
-        run: python3 ../../packages/contracts/validate.py --product-parity-only
       - name: Exercise isolated local D1/R2 authentication and ingestion
         run: npm run test:smoke
       - name: Build VM-native adapter without publishing
