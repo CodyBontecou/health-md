@@ -67,6 +67,9 @@ function validateConfiguration(env: Env): void {
     }
     const invalidMetrics = profile !== "combined" &&
       (env.HEALTH_FREE_METRICS_REQUIRED !== "1" || !env.METRICS);
+    const invalidBindings = profile !== "combined" && (!env.DB || !env.EXPORTS ||
+      (profile === "account" && (!env.ASSETS || !env.LIFECYCLE_QUEUE)) ||
+      (profile === "maintenance" && !env.LIFECYCLE_QUEUE));
     const invalidDeploymentRevision = profile !== "combined" &&
       !/^[a-f0-9]{40}$/u.test(env.DEPLOYMENT_REVISION ?? "");
     let invalidDeletionTtl = false;
@@ -103,8 +106,8 @@ function validateConfiguration(env: Env): void {
           env.REVISION_RETENTION_DAYS !== "unlimited" || !env.PASSWORD_PEPPER_B64 ||
           invalidIdentityKey || invalidLegacyKeys) :
           (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
-            invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidMetrics ||
-            invalidDeletionTtl || invalidAbuseLimits || invalidDeploymentRevision)) ||
+            invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidBindings ||
+            invalidMetrics || invalidDeletionTtl || invalidAbuseLimits || invalidDeploymentRevision)) ||
         env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
       throw new Error("Production or personal-MVP configuration is incomplete");
     }

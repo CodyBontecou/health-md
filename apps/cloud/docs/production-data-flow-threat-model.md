@@ -83,7 +83,7 @@ Cloudflare terminates TLS before application encryption and hosts compute/storag
 | Deletion skips ciphertext or loses status authority | ciphertext-first bounded deletion, retries, scheduled fallback, client-known pre-mutation status receipt, atomic disablement/job transaction and deletion-row postcondition read that survives concurrent completion | R2/D1 outage can delay completion; disclose and monitor SLA |
 | Portability exfiltration | owner session, no-store, five-object pages, per-object digest/key check, no staged plaintext | compromised browser/session can read by design; reauthentication decision before GA |
 | Sensitive observability/support | fixed low-cardinality metrics only; no app error logging; no routine content tooling | provider edge logs and emergency break-glass design need approval |
-| Supply-chain/deployment compromise | lockfile, CI type/test/audit/dry-run, separate profiles, placeholders/fail-closed marker | provenance/signing/deployment identity policy and external assessment pending |
+| Supply-chain/deployment compromise | lockfile, CI type/test/audit/dry-run, separate profiles, placeholders/fail-closed marker, service-specific runtime binding-presence checks | provenance/signing/deployment identity policy and external assessment pending |
 | Region/residency mismatch | no claim in source | D1/R2/Queue/Workers/AE/email placement and contracts must be verified before user promise |
 | Backup restores deleted/other-tenant data | proposed separate recovery and deletion expiry | no production backup/restore implementation or drill yet |
 | Insider misuse | least-privilege profiles; no content support UI; health-free metrics | named access approvers, audit, two-person key operations and break-glass policy pending |

@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 import accountWorker from "../src/account-worker";
 import ingestWorker from "../src/ingest-worker";
 import maintenanceWorker from "../src/maintenance-worker";
-import type { Env } from "../src/types";
+import type { Env, LifecycleMessage } from "../src/types";
 
 function profile(kind: "ingest" | "account" | "maintenance", origin: string): Env {
   return {
+    DB: {} as D1Database,
+    EXPORTS: {} as R2Bucket,
+    ASSETS: kind === "account" ? { fetch: async () => new Response(null, { status: 404 }) } as unknown as Fetcher : undefined,
+    LIFECYCLE_QUEUE: kind === "ingest" ? undefined : {
+      send: async () => undefined,
+    } as unknown as Queue<LifecycleMessage>,
     ENVIRONMENT: "production",
     SERVICE_PROFILE: kind,
     DEPLOYMENT_REVISION: "a".repeat(40),
@@ -118,6 +124,30 @@ describe("split production Worker profiles", () => {
     noAbuseBudget.INGEST_ACCOUNT_HOURLY_LIMIT = undefined;
     expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noAbuseBudget)).status)
       .toBe(500);
+
+    const noDatabase = profile("ingest", "https://api.healthmd.app");
+    delete (noDatabase as Partial<Env>).DB;
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noDatabase)).status).toBe(500);
+
+    const noBucket = profile("account", "https://account.healthmd.app");
+    delete (noBucket as Partial<Env>).EXPORTS;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noBucket)).status)
+      .toBe(500);
+
+    const noAssets = profile("account", "https://account.healthmd.app");
+    delete (noAssets as Partial<Env>).ASSETS;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noAssets)).status)
+      .toBe(500);
+
+    const noLifecycleQueue = profile("account", "https://account.healthmd.app");
+    noLifecycleQueue.LIFECYCLE_QUEUE = undefined;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      noLifecycleQueue)).status).toBe(500);
+
+    const noMaintenanceQueue = profile("maintenance", "https://maintenance.healthmd.app");
+    noMaintenanceQueue.LIFECYCLE_QUEUE = undefined;
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, noMaintenanceQueue))
+      .rejects.toThrow("configuration is incomplete");
 
     const placeholderRevision = profile("account", "https://account.healthmd.app");
     placeholderRevision.DEPLOYMENT_REVISION = "REPLACE_WITH_FULL_GIT_COMMIT_SHA";

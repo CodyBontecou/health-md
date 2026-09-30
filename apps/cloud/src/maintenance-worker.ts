@@ -25,7 +25,7 @@ export default {
     }
   },
   async queue(batch: MessageBatch<LifecycleMessage>, env: Env): Promise<void> {
-    if (env.SERVICE_PROFILE !== "maintenance" || !env.LIFECYCLE_QUEUE) {
+    if (env.SERVICE_PROFILE !== "maintenance" || !env.DB || !env.EXPORTS || !env.LIFECYCLE_QUEUE) {
       throw new Error("Maintenance queue profile is misconfigured");
     }
     const started = Date.now();

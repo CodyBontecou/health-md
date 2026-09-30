@@ -7,6 +7,10 @@ const wrapping = Buffer.alloc(32, 9).toString("base64");
 
 function env(profile: "ingest" | "account", points: unknown[]): Env {
   return {
+    DB: {} as D1Database,
+    EXPORTS: {} as R2Bucket,
+    ASSETS: profile === "account" ? { fetch: async () => new Response(null, { status: 404 }) } as unknown as Fetcher : undefined,
+    LIFECYCLE_QUEUE: profile === "account" ? { send: async () => undefined } as unknown as Queue : undefined,
     ENVIRONMENT: "production",
     SERVICE_PROFILE: profile,
     DEPLOYMENT_REVISION: "b".repeat(40),
