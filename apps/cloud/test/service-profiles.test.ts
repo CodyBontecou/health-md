@@ -39,6 +39,7 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
     EMAIL_SEND_HOURLY_LIMIT: kind === "account" ? "100" : undefined,
     INGEST_TOKEN_HOURLY_LIMIT: kind === "ingest" ? "120" : undefined,
     INGEST_ACCOUNT_HOURLY_LIMIT: kind === "ingest" ? "240" : undefined,
+    REVISION_RETENTION_DAYS: kind === "maintenance" ? "30" : undefined,
     DELETION_STATUS_TTL_DAYS: kind === "ingest" ? undefined : "30",
   } as Env;
 }
@@ -163,6 +164,26 @@ describe("split production Worker profiles", () => {
     const noMaintenanceQueue = profile("maintenance", "https://maintenance.healthmd.app");
     noMaintenanceQueue.LIFECYCLE_QUEUE = undefined;
     await expect(maintenanceWorker.scheduled({} as ScheduledEvent, noMaintenanceQueue))
+      .rejects.toThrow("configuration is incomplete");
+
+    const noPayloadLimit = profile("ingest", "https://api.healthmd.app");
+    delete (noPayloadLimit as Partial<Env>).MAX_EXPORT_BYTES;
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noPayloadLimit)).status)
+      .toBe(500);
+
+    const invalidSessionTtl = profile("account", "https://account.healthmd.app");
+    invalidSessionTtl.SESSION_TTL_DAYS = "31";
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      invalidSessionTtl)).status).toBe(500);
+
+    const noMagicLinkTtl = profile("account", "https://account.healthmd.app");
+    delete (noMagicLinkTtl as Partial<Env>).MAGIC_LINK_TTL_MINUTES;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      noMagicLinkTtl)).status).toBe(500);
+
+    const unlimitedProductionRevisions = profile("maintenance", "https://maintenance.healthmd.app");
+    unlimitedProductionRevisions.REVISION_RETENTION_DAYS = "unlimited";
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, unlimitedProductionRevisions))
       .rejects.toThrow("configuration is incomplete");
 
     const placeholderRevision = profile("account", "https://account.healthmd.app");

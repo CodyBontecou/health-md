@@ -83,6 +83,23 @@ function validateConfiguration(env: Env): void {
         }
       } catch { invalidExportEndpoint = true; }
     }
+    let invalidRuntimeLimits = false;
+    try {
+      if (profile === "ingest" || profile === "account") {
+        parsePositiveInteger(env.MAX_EXPORT_BYTES, "MAX_EXPORT_BYTES", 1024, 25 * 1024 * 1024);
+      }
+      if (profile === "account") {
+        parsePositiveInteger(env.SESSION_TTL_DAYS, "SESSION_TTL_DAYS", 1, 30);
+        parsePositiveInteger(env.MAGIC_LINK_TTL_MINUTES, "MAGIC_LINK_TTL_MINUTES", 5, 30);
+      }
+      if (profile === "maintenance") {
+        if (!env.REVISION_RETENTION_DAYS || env.REVISION_RETENTION_DAYS === "unlimited") {
+          invalidRuntimeLimits = true;
+        } else {
+          parsePositiveInteger(env.REVISION_RETENTION_DAYS, "REVISION_RETENTION_DAYS", 1, 3650);
+        }
+      }
+    } catch { invalidRuntimeLimits = true; }
     let invalidDeletionTtl = false;
     if (profile === "account" || profile === "maintenance") {
       try {
@@ -118,8 +135,8 @@ function validateConfiguration(env: Env): void {
           invalidIdentityKey || invalidLegacyKeys) :
           (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
             invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidBindings ||
-            invalidMetrics || invalidDeletionTtl || invalidAbuseLimits || invalidDeploymentRevision ||
-            invalidExportEndpoint)) ||
+            invalidMetrics || invalidRuntimeLimits || invalidDeletionTtl || invalidAbuseLimits ||
+            invalidDeploymentRevision || invalidExportEndpoint)) ||
         env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
       throw new Error("Production or personal-MVP configuration is incomplete");
     }
