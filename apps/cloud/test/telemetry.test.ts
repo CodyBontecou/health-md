@@ -15,6 +15,7 @@ function env(profile: "ingest" | "account", points: unknown[]): Env {
     SERVICE_PROFILE: profile,
     DEPLOYMENT_REVISION: "b".repeat(40),
     PUBLIC_ORIGIN: profile === "ingest" ? "https://api.healthmd.app" : "https://account.healthmd.app",
+    EXPORT_ENDPOINT_ORIGIN: profile === "account" ? "https://api.healthmd.app" : undefined,
     AUTH_SIGNUP_MODE: "closed",
     AUTH_EMAIL_FROM: profile === "account" ? "Health.md Cloud <cloud@healthmd.app>" : "",
     RESEND_API_KEY: profile === "account" ? "synthetic-provider-secret" : "",

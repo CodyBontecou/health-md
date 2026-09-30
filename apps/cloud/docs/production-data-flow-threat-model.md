@@ -69,7 +69,7 @@ Cloudflare terminates TLS before application encryption and hosts compute/storag
 | Account enumeration | generic link request response; keyed email/IP buckets; race-safe first-account creation and durable-link postcondition reconciliation; closed/invite signup | email provider bounce/suppression side channels and edge abuse review |
 | Cross-tenant object/reference access | every SQL/object key starts from authenticated `user_id`; random IDs; cross-account tests; account-bound AEAD | exhaustive route matrix and independent assessment |
 | CSRF/cross-origin mutation | SameSite=Strict, exact Origin checks, no wildcard CORS; bearer ingest is not browser session | browser compatibility and proxy-header review |
-| Token confusion | distinct prefixes/tables/authenticators; split route allowlists; ingest strips cookies; account denies ingest/MCP | repeat negative matrix on every route change |
+| Token confusion | distinct prefixes/tables/authenticators; split route allowlists; ingest strips cookies; account denies ingest/MCP; account runtime metadata requires a distinct credential-free bare HTTPS ingest origin | repeat negative matrix on every route or hostname change |
 | Quota/concurrency race | D1 trigger reservation, <=2 active intents/account, committed/reserved ledger, exact digest uniqueness | 2x concurrent D1 benchmark; provider contention/availability |
 | Disconnect/crash slot leak | stream pipeline on VM; durable leases/reservation reconciliation in Worker design | dependency-failure and isolate-termination drills |
 | Duplicate/stale snapshot | account digest idempotency; normalized newest `exported_at` pointer; revisions retained | mobile operation IDs are still needed for deliberate Cloud destination |

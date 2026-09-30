@@ -16,6 +16,7 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
     SERVICE_PROFILE: kind,
     DEPLOYMENT_REVISION: "a".repeat(40),
     PUBLIC_ORIGIN: origin,
+    EXPORT_ENDPOINT_ORIGIN: kind === "account" ? "https://api.healthmd.app" : undefined,
     AUTH_SIGNUP_MODE: "closed",
     AUTH_EMAIL_FROM: kind === "account" ? "Health.md Cloud <cloud@healthmd.app>" : "",
     RESEND_API_KEY: kind === "account" ? "synthetic-provider-secret" : "",
@@ -143,6 +144,21 @@ describe("split production Worker profiles", () => {
     noLifecycleQueue.LIFECYCLE_QUEUE = undefined;
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
       noLifecycleQueue)).status).toBe(500);
+
+    const noExportEndpoint = profile("account", "https://account.healthmd.app");
+    noExportEndpoint.EXPORT_ENDPOINT_ORIGIN = undefined;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      noExportEndpoint)).status).toBe(500);
+
+    const malformedExportEndpoint = profile("account", "https://account.healthmd.app");
+    malformedExportEndpoint.EXPORT_ENDPOINT_ORIGIN = "https://token@example.invalid/upload";
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      malformedExportEndpoint)).status).toBe(500);
+
+    const sameExportEndpoint = profile("account", "https://account.healthmd.app");
+    sameExportEndpoint.EXPORT_ENDPOINT_ORIGIN = sameExportEndpoint.PUBLIC_ORIGIN;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      sameExportEndpoint)).status).toBe(500);
 
     const noMaintenanceQueue = profile("maintenance", "https://maintenance.healthmd.app");
     noMaintenanceQueue.LIFECYCLE_QUEUE = undefined;

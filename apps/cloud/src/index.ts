@@ -72,6 +72,17 @@ function validateConfiguration(env: Env): void {
       (profile === "maintenance" && !env.LIFECYCLE_QUEUE));
     const invalidDeploymentRevision = profile !== "combined" &&
       !/^[a-f0-9]{40}$/u.test(env.DEPLOYMENT_REVISION ?? "");
+    let invalidExportEndpoint = false;
+    if (profile === "account") {
+      try {
+        if (!env.EXPORT_ENDPOINT_ORIGIN) invalidExportEndpoint = true;
+        else {
+          const exportOrigin = new URL(env.EXPORT_ENDPOINT_ORIGIN);
+          invalidExportEndpoint = exportOrigin.protocol !== "https:" || exportOrigin.origin !== env.EXPORT_ENDPOINT_ORIGIN ||
+            exportOrigin.origin === origin.origin;
+        }
+      } catch { invalidExportEndpoint = true; }
+    }
     let invalidDeletionTtl = false;
     if (profile === "account" || profile === "maintenance") {
       try {
@@ -107,7 +118,8 @@ function validateConfiguration(env: Env): void {
           invalidIdentityKey || invalidLegacyKeys) :
           (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
             invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidBindings ||
-            invalidMetrics || invalidDeletionTtl || invalidAbuseLimits || invalidDeploymentRevision)) ||
+            invalidMetrics || invalidDeletionTtl || invalidAbuseLimits || invalidDeploymentRevision ||
+            invalidExportEndpoint)) ||
         env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
       throw new Error("Production or personal-MVP configuration is incomplete");
     }
