@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import worker from "../src/index";
 import { currentExportKey, resolveExportKey, rewrapAccountExportKeys } from "../src/account-export-keys";
 import { issueSession } from "../src/auth";
+import { encryptedExportByteCount } from "../src/crypto";
 import { createVmEnvironment } from "../vm/runtime";
 import { createSingleUserAccount } from "../vm/bootstrap";
 
@@ -120,6 +121,34 @@ it("stores and reads new exports with an account key while preserving exact byte
     expect((await worker.fetch(new Request(`${origin}/api/dashboard/trends`, {
       headers: { Cookie: cookie },
     }), env)).status).toBe(200);
+
+    const stored = db.connection.prepare(`SELECT object_key AS objectKey, byte_count AS byteCount
+      FROM exports WHERE id = ?`).get(receipt.id) as { objectKey: string; byteCount: number };
+    const bucket = env.EXPORTS;
+    let materialized = false;
+    env.EXPORTS = new Proxy(bucket, { get(target, property) {
+      if (property === "get") return async (key: string) => {
+        const object = await target.get(key);
+        if (!object || key !== stored.objectKey) return object;
+        return new Proxy(object, { get(body, bodyProperty) {
+          if (bodyProperty === "size") return encryptedExportByteCount(stored.byteCount) + 1;
+          if (bodyProperty === "arrayBuffer") return async () => {
+            materialized = true;
+            throw new Error("Oversized ciphertext must not be materialized");
+          };
+          const value = Reflect.get(body, bodyProperty);
+          return typeof value === "function" ? value.bind(body) : value;
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    const oversized = await worker.fetch(new Request(`${origin}/api/exports/${receipt.id}/download`, {
+      headers: { Cookie: cookie },
+    }), env);
+    expect(oversized.status).toBe(503);
+    expect(await oversized.json()).toMatchObject({ error: "unavailable_data" });
+    expect(materialized).toBe(false);
   } finally { db.close(); }
 });
 

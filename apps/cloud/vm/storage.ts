@@ -180,14 +180,14 @@ export class VmObjectStore {
     }
   }
 
-  async get(key: string): Promise<{ arrayBuffer: () => Promise<ArrayBuffer> } | null> {
+  async get(key: string): Promise<{ size: number; arrayBuffer: () => Promise<ArrayBuffer> } | null> {
     let bytes: Uint8Array;
     try { bytes = await readFile(this.path(key)); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;
     }
-    return { arrayBuffer: async () => Uint8Array.from(bytes).buffer };
+    return { size: bytes.byteLength, arrayBuffer: async () => Uint8Array.from(bytes).buffer };
   }
 
   async delete(key: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { resolveExportKey } from "./account-export-keys";
-import { decryptExport, sha256Hex } from "./crypto";
+import { decryptExport, encryptedExportByteCount, sha256Hex } from "./crypto";
 import { HttpError, parsePositiveInteger } from "./http";
 import type { Env } from "./types";
 
@@ -114,7 +114,7 @@ export async function downloadAccountExportPage(
         for (let index = 0; index < rows.length; index += 1) {
           const row = rows[index]!;
           const object = await env.EXPORTS.get(row.objectKey);
-          if (!object || object.size > maxBytes + 1024) {
+          if (!object || object.size !== encryptedExportByteCount(row.byteCount)) {
             throw new Error("A retained export object is unavailable");
           }
           const key = await resolveExportKey(env, userId, row.keyId);

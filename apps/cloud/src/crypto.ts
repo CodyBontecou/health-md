@@ -3,6 +3,15 @@ const textDecoder = new TextDecoder();
 const EXPORT_MAGIC = textEncoder.encode("HMDC1");
 const EXPORT_SALT_BYTES = 16;
 const AES_GCM_IV_BYTES = 12;
+const AES_GCM_TAG_BYTES = 16;
+
+export function encryptedExportByteCount(plaintextByteCount: number): number {
+  if (!Number.isSafeInteger(plaintextByteCount) || plaintextByteCount < 0) {
+    throw new Error("Export plaintext byte count is invalid");
+  }
+  return plaintextByteCount + EXPORT_MAGIC.byteLength + EXPORT_SALT_BYTES + AES_GCM_IV_BYTES +
+    AES_GCM_TAG_BYTES;
+}
 
 function toBuffer(bytes: Uint8Array): ArrayBuffer {
   return Uint8Array.from(bytes).buffer;
@@ -200,7 +209,7 @@ export async function encryptExport(
       toBuffer(plaintext),
     ),
   );
-  const result = new Uint8Array(EXPORT_MAGIC.length + salt.length + iv.length + ciphertext.length);
+  const result = new Uint8Array(encryptedExportByteCount(plaintext.byteLength));
   result.set(EXPORT_MAGIC, 0);
   result.set(salt, EXPORT_MAGIC.length);
   result.set(iv, EXPORT_MAGIC.length + salt.length);
@@ -214,7 +223,7 @@ export async function decryptExport(
   userId: string,
   exportId: string,
 ): Promise<Uint8Array> {
-  const minimumLength = EXPORT_MAGIC.length + EXPORT_SALT_BYTES + AES_GCM_IV_BYTES + 16;
+  const minimumLength = encryptedExportByteCount(0);
   if (encrypted.byteLength < minimumLength) throw new Error("Encrypted export is truncated");
   for (let index = 0; index < EXPORT_MAGIC.length; index += 1) {
     if (encrypted[index] !== EXPORT_MAGIC[index]) throw new Error("Encrypted export has an unknown format");

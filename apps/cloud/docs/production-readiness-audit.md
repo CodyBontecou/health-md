@@ -40,7 +40,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Long-term identity/recovery | ADR recommends passkeys + recovery codes; invite beta discloses no support override | **not implemented/approved for open signup** |
 | Sessions/tokens/revocation | account lifecycle and two-account isolation tests | source verified |
 | Deletion Queue/status/SLA | lifecycle Queue source, migration 0012, client-known hashed receipt, ambiguous-commit/concurrent-completion and retry tests | source verified; Queue/DLQ/backup-expiry/SLA deployment absent |
-| Account data export | five-envelope verified TAR pages and cross-account tests | source verified; production streaming qualification absent |
+| Account data export | five-envelope verified TAR pages, exact pre-materialization ciphertext-size bounds and cross-account tests | source verified; production streaming qualification absent |
 | Cross-tenant route matrix | `production-authorization-matrix.md` mapping current routes to tests; 2-account lifecycle/export/repair/MCP evidence | source verified; independent deployed-revision assessment absent |
 | Per-account DEKs | migration 0011, account key resolver, legacy compatibility/tamper/isolation tests | source verified; approved production key provider absent |
 | KEK rotation | migration 0013, bounded conditional rewrap, rotation runbook/tests | source verified; provider key custody/restore drill absent |

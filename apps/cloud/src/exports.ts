@@ -1,5 +1,5 @@
 import { audit, limitIngest, requireIngestToken } from "./auth";
-import { decryptExport, encryptExport, sha256Hex } from "./crypto";
+import { decryptExport, encryptedExportByteCount, encryptExport, sha256Hex } from "./crypto";
 import { currentExportKey, resolveExportKey } from "./account-export-keys";
 import { EnvelopeValidationError, parseAndValidateEnvelope } from "./envelope";
 import { assertJsonContentType, HttpError, json, parsePositiveInteger, readBoundedBody } from "./http";
@@ -301,8 +301,16 @@ export async function downloadExport(env: Env, userId: string, exportId: string)
   ).bind(exportId, userId).first<Pick<ExportRow,
     "id" | "objectKey" | "encryptionKeyId" | "plaintextSha256" | "byteCount">>();
   if (!row) throw new HttpError(404, "not_found", "Export not found.");
+  const maxBytes = parsePositiveInteger(env.MAX_EXPORT_BYTES, "MAX_EXPORT_BYTES", 1024, 100 * 1024 * 1024);
+  if (!Number.isSafeInteger(row.byteCount) || row.byteCount < 1 || row.byteCount > maxBytes) {
+    throw new HttpError(503, "unavailable_data", "The retained export is unavailable.");
+  }
   const object = await env.EXPORTS.get(row.objectKey);
-  if (!object) throw new Error("Encrypted export object is unavailable");
+  // Check the exact AEAD container size before materializing an R2 body. This
+  // keeps a corrupt or substituted object from bypassing the plaintext cap.
+  if (!object || object.size !== encryptedExportByteCount(row.byteCount)) {
+    throw new HttpError(503, "unavailable_data", "The retained export is unavailable.");
+  }
   const key = await resolveExportKey(env, userId, row.encryptionKeyId);
   const plaintext = await decryptExport(new Uint8Array(await object.arrayBuffer()), key, userId, row.id);
   if (plaintext.byteLength !== row.byteCount || await sha256Hex(plaintext) !== row.plaintextSha256) {
