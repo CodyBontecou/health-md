@@ -404,11 +404,41 @@ export async function revokeIngestToken(
   assertSameOrigin(request, env);
   if (!/^[a-f0-9-]{36}$/u.test(tokenId)) throw new HttpError(404, "not_found", "Token not found.");
   const now = new Date().toISOString();
-  const result = await env.DB.prepare(
-    "UPDATE ingest_tokens SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
-  ).bind(now, tokenId, userId).run();
-  if ((result.meta.changes ?? 0) === 0) throw new HttpError(404, "not_found", "Token not found.");
-  await audit(env, userId, "ingest_token.revoked", tokenId);
+  let batchCompleted = false;
+  let batchFailure: unknown;
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE ingest_tokens SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
+      ).bind(now, tokenId, userId),
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'ingest_token.revoked', ?, ? FROM ingest_tokens
+        WHERE id = ? AND user_id = ? AND revoked_at = ?`)
+        .bind(crypto.randomUUID(), userId, tokenId, now, tokenId, userId, now),
+    ]);
+    batchCompleted = true;
+  } catch (error) {
+    batchFailure = error;
+  }
+  let committed: { valid: number } | null;
+  try {
+    committed = await env.DB.prepare(`SELECT 1 AS valid FROM ingest_tokens t
+      JOIN audit_events a ON a.user_id = t.user_id AND a.target_id = t.id
+        AND a.event_type = 'ingest_token.revoked' AND a.occurred_at = t.revoked_at
+      WHERE t.id = ? AND t.user_id = ? AND t.revoked_at = ?`)
+      .bind(tokenId, userId, now).first<{ valid: number }>();
+  } catch {
+    throw new HttpError(503, "revocation_verification_pending",
+      "Export token revocation verification is temporarily unavailable. Review account tokens before retrying.");
+  }
+  if (committed?.valid !== 1) {
+    const token = await env.DB.prepare(
+      "SELECT revoked_at AS revokedAt FROM ingest_tokens WHERE id = ? AND user_id = ?",
+    ).bind(tokenId, userId).first<{ revokedAt: string | null }>();
+    if (!token || token.revokedAt) throw new HttpError(404, "not_found", "Token not found.");
+    if (!batchCompleted) throw batchFailure;
+    throw new HttpError(503, "revocation_failed", "Export token revocation is temporarily unavailable.");
+  }
   return json({ revoked: true });
 }
 

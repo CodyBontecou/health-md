@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createIngestToken } from "../src/auth";
+import { createIngestToken, revokeIngestToken } from "../src/auth";
 import { sha256Hex } from "../src/crypto";
 import { errorResponse } from "../src/http";
 import { createVmEnvironment } from "../vm/runtime";
@@ -99,5 +99,25 @@ it("returns the exact one-time token after a lost committed batch response", asy
     expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
       WHERE user_id = ? AND target_id = ? AND event_type = 'ingest_token.created'`)
       .get(userId, body.id)).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("confirms revocation and its audit event after a lost batch response", async () => {
+  const { env, db, userId } = setup();
+  try {
+    const created = await createIngestToken(request(1), env, userId);
+    const issued = await created.json() as { id: string };
+    env.DB = loseFirstBatchResponse(env.DB);
+    const response = await revokeIngestToken(new Request(`${origin}/api/ingest-tokens/${issued.id}`, {
+      method: "DELETE", headers: { Origin: origin },
+    }), env, userId, issued.id);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ revoked: true });
+    expect(db.connection.prepare(
+      "SELECT revoked_at AS revokedAt FROM ingest_tokens WHERE id = ? AND user_id = ?",
+    ).get(issued.id, userId)).toMatchObject({ revokedAt: expect.any(String) });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE user_id = ? AND target_id = ? AND event_type = 'ingest_token.revoked'`)
+      .get(userId, issued.id)).toMatchObject({ n: 1 });
   } finally { db.close(); }
 });
