@@ -38,7 +38,11 @@ These are qualification targets, not public promises. Replace them with approved
 
 Load tests must use synthetic envelopes and include worst-case valid 25 MiB requests. If the Worker cannot safely validate and application-encrypt that size within measured memory and CPU limits, either implement a versioned chunked encrypted-storage format or lower the advertised limit with explicit mobile/product documentation. Do not silently accept and truncate large days.
 
+**Source milestone:** `npm run qualify:staging-load` implements the fail-closed synthetic procedure in `production-load-qualification.md`: it refuses known live/non-staging hosts, binds to the exact deployed revision, requires owner-only tokens from enough attested distinct disposable accounts to preserve per-account budgets, exercises 500 concurrent, 50/second for ten minutes and ten concurrent exact-25-MiB uploads, and emits only fixed aggregate evidence. It has not been run against provider infrastructure; a harness pass cannot replace provider metrics, cost review or owner sign-off.
+
 ## Target production topology
+
+**Source milestone:** positive-route entrypoints `src/ingest-worker.ts` and `src/account-worker.ts`, scheduled-only `src/maintenance-worker.ts`, separate placeholder Wrangler profiles, CI dry-runs, and route-boundary tests are implemented. Placeholder IDs keep every profile non-deployable; no production resources, secrets, routes, or approval marker have been provisioned.
 
 Use new, production-only resources and credentials:
 
@@ -62,17 +66,20 @@ Use new, production-only resources and credentials:
    - Use forward-only migrations; never reuse the VM SQLite file or preview D1 state.
 
 4. **Private encrypted object storage**
+   - **Source milestone:** migrations `0011_account_export_keys.sql`/`0013_account_key_rewrap.sql` and the account-key resolver create one random DEK per account, wrap it with versioned AES-256-GCM KEKs, bind wrapping to account/key IDs, use it for new exports, preserve legacy reads, and fail closed on tampering. Maintenance conditionally rewraps at most 25 DEKs per invocation under the reviewed procedure in `account-key-rotation-runbook.md`; this does not replace the separate design required for compromised-DEK/object rotation. Split production profiles require per-account mode, while the VM stays legacy by default. No production KEK or migration is deployed.
    - Use a new private R2 bucket with public access disabled.
    - Add a versioned ciphertext format and key ID to every object.
    - Use per-account data-encryption keys wrapped by a managed production key-encryption key. Do not use one JSON root-key list as the long-term key-management system for all users.
    - Keep historical key versions until every referenced object is re-encrypted or verifiably deleted.
 
 5. **Maintenance and lifecycle Worker**
+   - **Source milestone:** migration `0014_maintenance_cursors.sql` and `object-reconciliation.ts` persist only an opaque provider cursor, scan at most 25 exact `v1/<uuid>` objects per invocation, preserve every export/upload-intent reference, delete only unreferenced ciphertext, and refuse cursor advancement on list/delete/unexpected-key failure. It runs only in the split maintenance profile; the VM keeps its existing local reconciliation. No production bucket was scanned.
    - Use Queues or another durable job mechanism for deletion, expired-session cleanup, revision retention, orphan reconciliation, and key rotation.
    - Do not rely on one daily cron processing only a few global rows.
    - Make every job idempotent, bounded, retryable, and observable without logging health data.
 
 6. **Observability boundary**
+   - **Source milestone:** split Workers emit only fixed profile/route/status/outcome/latency/size buckets to isolated Analytics Engine bindings; production validation requires each binding, provider failures cannot affect requests, and regression tests reject identifiers, credentials, URLs and request data. Provisional SLOs, alerts, staging qualification and incident handling are defined in `production-observability-and-slo.md`. No dataset or alert is deployed.
    - Emit aggregate request counts, status classes, latency/size buckets, queue depth, storage totals, deletion age, and reconciliation failures.
    - Never log bodies, health dates, metric values, emails, authorization headers, cookies, object keys, account IDs, export IDs, or stable pseudonyms.
    - Use random operational correlation IDs that are not persisted with account data.
@@ -80,6 +87,8 @@ Use new, production-only resources and credentials:
 The production path should use Cloudflare's Worker route directly rather than the current VM Tunnel. The existing VM services remain separate during rollout.
 
 ## Ingest concurrency and consistency design
+
+**Source milestone:** migration `0010_multi_user_ingest.sql`, `src/upload-intents.ts`, and the ingest integration implement the account reservation ledger, two-active-upload limit, committed/reserved byte triggers, bounded exact-retry wait, and expired-intent reconciliation. Synthetic VM and local-D1 migration tests cover this source state. It has not been applied to the live pilot or any production resource.
 
 Do not replace the four-slot VM gate with a larger process-global number. The production Worker should horizontally serve different accounts and enforce fairness with durable account-scoped state.
 
@@ -116,6 +125,8 @@ Do not discover or implement an unreviewed shard migration during a live inciden
 
 ## Identity and account lifecycle
 
+**Source milestone:** account-owned session inventory/revocation, a bounded reviewed security-activity history with no target IDs, fresh-email-session deletion step-up, immediate account disablement, optional lifecycle Queue dispatch/consumption, bounded ciphertext-first erasure, scheduled recovery fallback, opaque post-session deletion-status receipts, bounded account-data portability archives, and explicit email-provider/token/account hourly budgets are implemented with synthetic tests. Split profiles fail closed without abuse-budget configuration; exhausted eligible-email budget keeps the generic anti-enumeration response and emits only a fixed health-free event. Portability TAR pages stream no more than five owner-scoped, hash-verified exact envelopes plus a manifest and never stage plaintext in R2. Receipt tokens are stored only as hashes, expire after a bounded period, never enter URLs/storage, reveal only pending/completed, and cannot block deletion retries. `production-authorization-matrix.md` maps every current authority-bearing surface to positive and cross-tenant source evidence, including two-account session/token/deletion survival. The in-account activity history is not an out-of-band security notification. Public signup, passkeys/recovery codes, an approved notification/email provider and policy, Queue resources, deployed-revision assessment, and production deployment remain blocked.
+
 The VM password implementation explicitly remains single-user. For production:
 
 1. Start with invitation-only email-link accounts on the Worker profile.
@@ -129,6 +140,8 @@ The VM password implementation explicitly remains single-user. For production:
 Open signup must remain fail-closed in configuration until identity, abuse, privacy, recovery, deletion, and operational gates pass.
 
 ## Retention, recovery, and key management
+
+**Source milestone:** `test/restore-drill.test.ts` exercises a closed, encrypted, isolated synthetic snapshot/restore with migration/integrity checks, exact-byte recovery, tenant denial, and wrong-key failure. `production-recovery-runbook.md` defines the provider-backed staging drill and accurate activation/deletion/key evidence. This local drill is explicitly not D1/R2/PITR, RPO/RTO, escrow, region, or production restore proof; all remain launch blockers.
 
 The disposable pilot's no-backup decision does not carry into a general product.
 
@@ -184,6 +197,8 @@ A later production MCP release requires OAuth 2.1 authorization code with PKCE o
 
 ### Phase 0 — product and architecture approval
 
+**Draft milestone:** proposed `docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md` and `apps/cloud/docs/production-data-flow-threat-model.md` now define the target, provisional defaults, trust/data flows, threat-control-residual ledger, subprocessor decisions, cost formulas, owner matrix, and hard blockers. Every owner remains unassigned and every external/provider decision remains blocked; the drafts are not approval. `production-readiness-audit.md` maps every end-to-end criterion to evidence/gaps, while `npm run verify:production-safety` makes CI assert that the checked-in profiles remain closed, placeholder-bound and unapproved—not ready.
+
 Artifacts:
 
 - new production ADR superseding only the general-production portion of ADR-0007;
@@ -193,6 +208,8 @@ Artifacts:
 Exit gate: named owners approve the target and the live pilot is explicitly excluded from production resources.
 
 ### Phase 1 — isolated production foundation
+
+**Source milestone:** every split profile carries an intentionally invalid provenance placeholder; production runtime requires an exact lowercase 40-character Git commit SHA and `/health` publishes only the short revision. Controlled deployment must inject it consistently and rollback checks must confirm the served revision. No deployment workflow or production revision exists.
 
 - Provision separate development, staging, and production Worker/D1/R2/Queue/KMS resources through reviewable infrastructure as code.
 - Add the upload-intent/quota ledger and crash reconciliation.

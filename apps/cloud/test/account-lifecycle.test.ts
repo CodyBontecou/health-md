@@ -1,0 +1,257 @@
+import { afterEach, expect, it } from "vitest";
+import { randomBytes, randomUUID } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import worker from "../src/index";
+import { issueSession } from "../src/auth";
+import { processAccountDeletionById, purgeExpiredDeletionReceipts } from "../src/lifecycle";
+import maintenanceWorker from "../src/maintenance-worker";
+import { createVmEnvironment } from "../vm/runtime";
+import { createSingleUserAccount } from "../vm/bootstrap";
+import type { Env, LifecycleMessage } from "../src/types";
+
+const roots: string[] = [];
+const sourceDirectory = resolve(import.meta.dirname, "..");
+const origin = "https://account.example.test";
+
+function secret(): string { return Buffer.from(randomBytes(32)).toString("base64"); }
+
+async function setup() {
+  const directory = mkdtempSync(join(tmpdir(), "healthmd-account-lifecycle-"));
+  roots.push(directory);
+  const created = createVmEnvironment({
+    dataDirectory: directory,
+    sourceDirectory,
+    publicOrigin: origin,
+    identityKey: secret(),
+    exportKeys: JSON.stringify({ v1: secret() }),
+    currentKeyId: "v1",
+    passwordPepper: secret(),
+    revisionRetention: 30,
+    approved: true,
+  });
+  created.env.AUTH_MODE = "email_link";
+  created.env.AUTH_SIGNUP_MODE = "invite";
+  created.env.AUTH_EMAIL_FROM = "Health.md Cloud <cloud@healthmd.app>";
+  created.env.RESEND_API_KEY = "synthetic-provider-secret";
+  await createSingleUserAccount(created.env, "synthetic-owner", "owner@example.test",
+    "synthetic-password-not-for-production");
+  const user = created.db.connection.prepare("SELECT id FROM users").get() as { id: string };
+  return { ...created, userId: user.id };
+}
+
+async function session(env: Env, userId: string): Promise<string> {
+  const response = await issueSession(env, userId);
+  const cookie = response.headers.get("set-cookie")?.split(";", 1)[0];
+  if (!cookie) throw new Error("Synthetic session cookie was not issued");
+  return cookie;
+}
+
+async function request(env: Env, path: string, method = "GET", body?: unknown, cookie?: string): Promise<Response> {
+  return worker.fetch(new Request(`${origin}${path}`, {
+    method,
+    headers: {
+      ...(body === undefined ? {} : { "Content-Type": "application/json", Origin: origin }),
+      ...(method === "GET" ? {} : { Origin: origin }),
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  }), env);
+}
+
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+it("uses a fresh email-link session as deletion step-up and durably queues erasure", async () => {
+  const { env, db, userId } = await setup();
+  const queued: LifecycleMessage[] = [];
+  env.LIFECYCLE_QUEUE = { send: async (message: LifecycleMessage) => { queued.push(message); } } as
+    unknown as Queue<LifecycleMessage>;
+  try {
+    const cookie = await session(env, userId);
+    const token = await request(env, "/api/ingest-tokens", "POST", { name: "Synthetic phone" }, cookie);
+    const bearer = (await token.json() as { token: string }).token;
+    const fixture = readFileSync(resolve(sourceDirectory,
+      "../apple/docs/reference/generated/automation/api-export-v1.json"), "utf8");
+    const upload = await worker.fetch(new Request(`${origin}/api/v1/exports`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+      body: fixture,
+    }), env);
+    expect(upload.status).toBe(201);
+
+    const deletion = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    expect(deletion.status).toBe(202);
+    const receipt = await deletion.json() as {
+      deletionId: string; statusToken: string; statusExpiresAt: string
+    };
+    expect(receipt.statusToken).toMatch(/^hmd_del_[A-Za-z0-9_-]{40,60}$/u);
+    expect(Date.parse(receipt.statusExpiresAt)).toBeGreaterThan(Date.now());
+    expect(queued).toEqual([{ version: 1, type: "account.delete", deletionId: receipt.deletionId }]);
+    const pending = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${receipt.statusToken}` },
+    }), env);
+    expect(await pending.json()).toMatchObject({ status: "pending", completedAt: null });
+    expect((await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer hmd_del_${"A".repeat(43)}` },
+    }), env)).status).toBe(401);
+    expect(db.connection.prepare("SELECT status_token_hash AS hash FROM account_deletions WHERE id = ?")
+      .get(receipt.deletionId)).not.toMatchObject({ hash: receipt.statusToken });
+    expect((await request(env, "/api/account", "GET", undefined, cookie)).status).toBe(401);
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "disabled" });
+
+    let acknowledged = false;
+    let retried = false;
+    env.SERVICE_PROFILE = "maintenance";
+    await maintenanceWorker.queue({ messages: [{ body: queued[0],
+      ack: () => { acknowledged = true; }, retry: () => { retried = true; } }] } as
+      unknown as MessageBatch<LifecycleMessage>, env);
+    expect({ acknowledged, retried }).toEqual({ acknowledged: true, retried: false });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM exports").get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(receipt.deletionId)).toMatchObject({ completed_at: expect.any(String) });
+    env.SERVICE_PROFILE = undefined;
+    const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${receipt.statusToken}` },
+    }), env);
+    expect(await completed.json()).toMatchObject({ status: "completed", completedAt: expect.any(String) });
+    db.connection.prepare("UPDATE account_deletions SET status_expires_at = '2020-01-01T00:00:00.000Z'").run();
+    await purgeExpiredDeletionReceipts(env);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("expires a status credential without discarding an unfinished deletion job", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const deletion = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    const receipt = await deletion.json() as { deletionId: string; statusToken: string };
+    db.connection.prepare("UPDATE account_deletions SET status_expires_at = '2020-01-01T00:00:00.000Z'")
+      .run();
+    await purgeExpiredDeletionReceipts(env);
+    expect(db.connection.prepare(`SELECT completed_at, status_token_hash AS statusTokenHash
+      FROM account_deletions WHERE id = ?`).get(receipt.deletionId))
+      .toMatchObject({ completed_at: null, statusTokenHash: null });
+    expect((await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${receipt.statusToken}` },
+    }), env)).status).toBe(401);
+  } finally { db.close(); }
+});
+
+it("requires reauthentication when an email-link session is older than fifteen minutes", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    db.connection.prepare("UPDATE sessions SET created_at = '2020-01-01T00:00:00.000Z'").run();
+    const response = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: "reauthentication_required" });
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "active" });
+  } finally { db.close(); }
+});
+
+it("keeps session, token administration, and deletion isolated between active accounts", async () => {
+  const { env, db, userId: firstUser } = await setup();
+  try {
+    const secondUser = randomUUID();
+    db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`).run(secondUser, randomUUID(), new Date().toISOString());
+    const firstCookie = await session(env, firstUser);
+    const secondCookie = await session(env, secondUser);
+    const created = await request(env, "/api/ingest-tokens", "POST", { name: "Second phone" }, secondCookie);
+    const secondToken = await created.json() as { id: string };
+    const secondSessions = await request(env, "/api/sessions", "GET", undefined, secondCookie);
+    const secondSession = (await secondSessions.json() as { sessions: Array<{ id: string }> }).sessions[0]!;
+
+    expect((await request(env, `/api/ingest-tokens/${secondToken.id}`, "DELETE", undefined, firstCookie)).status)
+      .toBe(404);
+    expect((await request(env, `/api/sessions/${secondSession.id}`, "DELETE", undefined, firstCookie)).status)
+      .toBe(404);
+    expect(await (await request(env, "/api/ingest-tokens", "GET", undefined, firstCookie)).json())
+      .toMatchObject({ tokens: [] });
+    expect(await (await request(env, "/api/sessions/revoke-others", "POST", {}, firstCookie)).json())
+      .toMatchObject({ revoked: 0 });
+    expect((await request(env, "/api/sessions", "GET", undefined, secondCookie)).status).toBe(200);
+    const hiddenTarget = randomUUID();
+    db.connection.prepare(`INSERT INTO audit_events
+      (id, user_id, event_type, target_id, occurred_at) VALUES (?, ?, 'internal.unreviewed', ?, ?)`)
+      .run(randomUUID(), secondUser, hiddenTarget, new Date().toISOString());
+    const firstActivity = await (await request(env, "/api/security-events", "GET", undefined,
+      firstCookie)).json() as { events: Array<{ type: string }> };
+    const secondActivityResponse = await request(env, "/api/security-events", "GET", undefined,
+      secondCookie);
+    const secondActivityText = await secondActivityResponse.text();
+    const secondActivity = JSON.parse(secondActivityText) as { events: Array<{ type: string }> };
+    expect(firstActivity.events.some((event) => event.type === "ingest_token.created")).toBe(false);
+    expect(secondActivity.events.map((event) => event.type)).toEqual(expect.arrayContaining([
+      "session.created", "ingest_token.created",
+    ]));
+    expect(secondActivity.events.some((event) => event.type === "internal.unreviewed")).toBe(false);
+    expect(secondActivityText).not.toContain(secondToken.id);
+    expect(secondActivityText).not.toContain(hiddenTarget);
+
+    const deletion = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, firstCookie);
+    const receipt = await deletion.json() as { deletionId: string };
+    expect(await processAccountDeletionById(env, receipt.deletionId)).toBe(true);
+    expect((await request(env, "/api/sessions", "GET", undefined, secondCookie)).status).toBe(200);
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(secondUser))
+      .toMatchObject({ status: "active" });
+    expect(db.connection.prepare("SELECT revoked_at FROM ingest_tokens WHERE id = ?")
+      .get(secondToken.id)).toMatchObject({ revoked_at: null });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?")
+      .get(secondUser)).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("bounds reviewed security activity and never returns target identifiers", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const ownerCookie = await session(env, userId);
+    const targets: string[] = [];
+    for (let index = 0; index < 60; index += 1) {
+      const target = randomUUID(); targets.push(target);
+      db.connection.prepare(`INSERT INTO audit_events
+        (id, user_id, event_type, target_id, occurred_at)
+        VALUES (?, ?, 'ingest_token.revoked', ?, ?)`)
+        .run(randomUUID(), userId, target, new Date(Date.now() + index).toISOString());
+    }
+    const response = await request(env, "/api/security-events", "GET", undefined, ownerCookie);
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    const events = (JSON.parse(text) as { events: Array<{ type: string; occurredAt: string }> }).events;
+    expect(events).toHaveLength(50);
+    expect(events.every((event) => event.type === "ingest_token.revoked")).toBe(true);
+    expect(targets.some((target) => text.includes(target))).toBe(false);
+  } finally { db.close(); }
+});
+
+it("lists and revokes only account-owned browser sessions", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const first = await session(env, userId);
+    const second = await session(env, userId);
+    const inventory = await request(env, "/api/sessions", "GET", undefined, first);
+    const sessions = (await inventory.json() as { sessions: Array<{ id: string; current: boolean }> }).sessions;
+    expect(sessions).toHaveLength(2);
+    const other = sessions.find((entry) => !entry.current);
+    expect(other).toBeDefined();
+    expect((await request(env, `/api/sessions/${other?.id}`, "DELETE", undefined, first)).status).toBe(200);
+    expect((await request(env, "/api/account", "GET", undefined, second)).status).toBe(401);
+
+    const third = await session(env, userId);
+    const revoked = await request(env, "/api/sessions/revoke-others", "POST", {}, first);
+    expect(await revoked.json()).toMatchObject({ revoked: 1 });
+    expect((await request(env, "/api/account", "GET", undefined, third)).status).toBe(401);
+    const current = sessions.find((entry) => entry.current);
+    const self = await request(env, `/api/sessions/${current?.id}`, "DELETE", undefined, first);
+    expect(self.status).toBe(200);
+    expect(self.headers.get("set-cookie")).toContain("Max-Age=0");
+  } finally { db.close(); }
+});

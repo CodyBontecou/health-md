@@ -80,6 +80,57 @@ async function showAgents() {
   }
 }
 
+async function showSessions() {
+  const { sessions } = await api("/api/sessions");
+  const list = $("session-list");
+  list.replaceChildren();
+  for (const item of sessions) {
+    const button = document.createElement("button");
+    button.className = "subtle";
+    button.textContent = item.current ? "Sign out here" : "Revoke";
+    button.addEventListener("click", async () => {
+      try {
+        await api(`/api/sessions/${item.id}`, "DELETE");
+        if (item.current) { location.replace("/login"); return; }
+        status("Browser session revoked.");
+        await showSessions();
+      } catch (error) { status(error.message); }
+    });
+    addTextRow(list, item.current ? "This browser" : "Other browser",
+      `created ${new Date(item.createdAt).toLocaleString()} · expires ${new Date(item.expiresAt).toLocaleString()}`,
+      button);
+  }
+}
+
+const securityEventLabels = Object.freeze({
+  "password_login.succeeded": "Password sign-in",
+  "session.created": "Browser session created",
+  "session.revoked": "Browser session revoked",
+  "session.others_revoked": "Other browser sessions revoked",
+  "ingest_token.created": "Phone upload token created",
+  "ingest_token.revoked": "Phone upload token revoked",
+  "agent_token.created": "Agent credential created",
+  "agent_token.revoked": "Agent credential revoked",
+  "export.downloaded": "Original export downloaded",
+  "repair_device.approved": "Repair device approved",
+  "repair_device.revoked": "Repair device revoked",
+  "repair_dispatch.queued": "Repair review queued",
+  "repair_dispatch.cancelled": "Repair review cancelled",
+  "repair_dispatch.claimed": "Repair review claimed",
+  "repair_dispatch.declined": "Repair review declined",
+});
+
+async function showSecurityActivity() {
+  const { events } = await api("/api/security-events");
+  const list = $("security-activity-list");
+  list.replaceChildren();
+  if (!events.length) addTextRow(list, "No recent security activity", "New events will appear here");
+  for (const event of events) {
+    addTextRow(list, securityEventLabels[event.type] || "Security activity",
+      new Date(event.occurredAt).toLocaleString());
+  }
+}
+
 // Charts intentionally use no remote dependency or external asset: the
 // browser receives only bounded, owner-session daily summary projections.
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -261,6 +312,10 @@ async function showExports() {
   $("stat-days").textContent = new Intl.NumberFormat().format(storage.dayCount);
   $("stat-exports").textContent = new Intl.NumberFormat().format(storage.count);
   $("stat-bytes").textContent = `${(storage.bytes / 1048576).toFixed(2)} MiB on this unbacked VM`;
+  const accountExportPages = Math.max(1, Math.ceil(storage.count / 5));
+  $("account-export-page").max = String(accountExportPages);
+  $("account-export-pages").textContent = `(1–${accountExportPages})`;
+  $("account-export-panel").hidden = false;
   $("export-list").replaceChildren();
   $("day-list").replaceChildren();
   if (!exports.length) addTextRow($("export-list"), "No exports yet", "Send a single day from your phone to begin");
@@ -384,6 +439,18 @@ async function initDashboard() {
       $("more-days").hidden = page.nextOffset === null;
     } catch (error) { status(error.message); }
   });
+  $("account-export-page").addEventListener("input", () => {
+    const page = Math.min(Number($("account-export-page").max),
+      Math.max(1, Number.parseInt($("account-export-page").value, 10) || 1));
+    $("download-account-export").href = `/api/account/export/page/${page}`;
+  });
+  $("revoke-other-sessions").addEventListener("click", async () => {
+    try {
+      const result = await api("/api/sessions/revoke-others", "POST", {});
+      status(`${result.revoked} other browser session(s) signed out.`);
+      await showSessions();
+    } catch (error) { status(error.message); }
+  });
   $("delete-account-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -396,6 +463,8 @@ async function initDashboard() {
       $("deletion-section").hidden = true;
       $("export-list").replaceChildren();
       $("day-list").replaceChildren();
+      $("security-activity-list").replaceChildren();
+      $("account-export-panel").hidden = true;
       $("agent-list").replaceChildren();
       $("trend-cards").replaceChildren();
       $("stat-days").textContent = "—";
@@ -405,7 +474,9 @@ async function initDashboard() {
       $("new-agent-panel").hidden = true;
       document.dispatchEvent(new Event("healthmd:repair-clear"));
       $("repair-mount").replaceChildren();
-      status(`Account disabled. Deletion job ${result.deletionId} is pending; contact the operator to confirm completion.`);
+      $("deletion-status-token").value = result.statusToken;
+      $("deletion-receipt-section").hidden = false;
+      status("Account disabled. Durable deletion is pending. Save the one-time status receipt below before leaving this page.");
     } catch (error) { $("delete-password").value = ""; status(error.message); }
   });
   try {
@@ -415,10 +486,16 @@ async function initDashboard() {
     $("agents-section").hidden = !runtime.unbackedPersonalMvp;
     $("endpoint").value = runtime.exportEndpoint;
     $("connect-section").hidden = runtime.syntheticPreviewOnly;
-    $("deletion-section").hidden = runtime.syntheticPreviewOnly || runtime.authMode !== "password";
+    $("deletion-section").hidden = runtime.syntheticPreviewOnly;
+    const passwordDeletion = runtime.authMode === "password";
+    $("delete-password-field").hidden = !passwordDeletion;
+    $("delete-password").required = passwordDeletion;
+    if (!passwordDeletion) {
+      $("deletion-copy").textContent = "Deleting your account disables sign-in, uploads, and read credentials immediately. For protection, follow a fresh email sign-in link within 15 minutes before confirming. Stored exports are then erased by a durable background deletion job.";
+    }
     const account = await api("/api/account");
     $("account").textContent = `Signed in as ${account.email}`;
-    await Promise.all([showTokens(), showExports(), showTrends().catch(() => {
+    await Promise.all([showTokens(), showSessions(), showSecurityActivity(), showExports(), showTrends().catch(() => {
       $("trends-window").textContent = "Daily summaries could not be loaded. Other dashboard functions are still available.";
       $("trend-cards").replaceChildren();
     }), ...(runtime.unbackedPersonalMvp ? [showAgents()] : [])]);

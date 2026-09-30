@@ -38,7 +38,10 @@ export function redirect(location: string, status = 303): Response {
 
 export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
-    return json({ error: error.code, message: error.message }, { status: error.status });
+    return json({ error: error.code, message: error.message }, {
+      status: error.status,
+      ...([429, 503].includes(error.status) ? { headers: { "Retry-After": "2" } } : {}),
+    });
   }
   return json({ error: "internal_error", message: "The request could not be completed." }, { status: 500 });
 }

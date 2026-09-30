@@ -195,7 +195,12 @@ export class VmObjectStore {
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
-    const dir = await open(join(this.root, "v1"), "r");
+    let dir;
+    try { dir = await open(join(this.root, "v1"), "r"); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
     try { await dir.sync(); } finally { await dir.close(); }
   }
 
@@ -207,7 +212,9 @@ export class VmObjectStore {
     await mkdir(directory, { recursive: true, mode: vmReaderGroupId() === null ? 0o700 : 0o750 });
     this.assertSafeDirectory(this.root);
     this.assertSafeDirectory(directory);
-    const rows = await db.prepare("SELECT object_key AS objectKey FROM exports").all<{ objectKey: string }>();
+    const rows = await db.prepare(`SELECT object_key AS objectKey FROM exports
+      UNION SELECT object_key AS objectKey FROM upload_intents
+      WHERE state IN ('reserved', 'object_written')`).all<{ objectKey: string }>();
     const expected = new Set(rows.results.map(({ objectKey }) => {
       this.path(objectKey);
       return objectKey.slice(3);

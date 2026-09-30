@@ -7,12 +7,12 @@ import { VmDatabase } from "../vm/storage";
 
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
-for (const priorCount of [7, 8]) it(`applies forward-only repair migrations from v${priorCount} to v9`, () => {
+for (const priorCount of [7, 8, 9, 10, 11, 12, 13]) it(`applies forward-only migrations from v${priorCount} to v14`, () => {
   const root = mkdtempSync(join(tmpdir(), "healthmd-repair-migrate-")); dirs.push(root);
   const prior = join(root, "prior"); const data = join(root, "data");
   mkdirSync(prior, { mode: 0o700 }); mkdirSync(data, { mode: 0o700 });
   const current = resolve(import.meta.dirname, "../migrations");
-  for (const name of readdirSync(current).filter((file) => /^000[1-8]_.+\.sql$/u.test(file) &&
+  for (const name of readdirSync(current).filter((file) => /^[0-9]{4}_.+\.sql$/u.test(file) &&
     Number(file.slice(0, 4)) <= priorCount)) {
     copyFileSync(join(current, name), join(prior, name));
   }
@@ -27,13 +27,24 @@ for (const priorCount of [7, 8]) it(`applies forward-only repair migrations from
     } finally { before.close(); }
     const after = new VmDatabase(data, current);
     try {
-      expect((after.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get() as { n: number }).n).toBe(9);
+      expect((after.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get() as { n: number }).n).toBe(14);
       expect((after.connection.prepare("SELECT id FROM users WHERE id = ?").get(id) as { id: string }).id).toBe(id);
       expect((after.connection.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check)
         .toBe("ok");
       expect(after.connection.prepare("SELECT COUNT(*) AS n FROM repair_drafts").get()).toMatchObject({ n: 0 });
       expect(after.connection.prepare("SELECT COUNT(*) AS n FROM repair_devices").get()).toMatchObject({ n: 0 });
       expect(after.connection.prepare("SELECT COUNT(*) AS n FROM supplemental_exports").get()).toMatchObject({ n: 0 });
+      expect(after.connection.prepare(
+        "SELECT committed_bytes, reserved_bytes, quota_bytes FROM account_storage WHERE user_id = ?",
+      ).get(id)).toMatchObject({ committed_bytes: 0, reserved_bytes: 0, quota_bytes: 1_073_741_824 });
+      expect(after.connection.prepare("SELECT COUNT(*) AS n FROM upload_intents").get()).toMatchObject({ n: 0 });
+      expect(after.connection.prepare("SELECT COUNT(*) AS n FROM account_export_keys").get()).toMatchObject({ n: 0 });
+      expect(after.connection.prepare(`SELECT COUNT(*) AS n FROM pragma_table_info('account_deletions')
+        WHERE name IN ('status_token_hash', 'status_expires_at')`).get()).toMatchObject({ n: 2 });
+      expect(after.connection.prepare(`SELECT COUNT(*) AS n FROM pragma_table_info('account_export_keys')
+        WHERE name = 'rewrapped_at'`).get()).toMatchObject({ n: 1 });
+      expect(after.connection.prepare("SELECT COUNT(*) AS n FROM maintenance_cursors").get())
+        .toMatchObject({ n: 0 });
     } finally { after.close(); }
   } finally { process.umask(originalUmask); }
 });

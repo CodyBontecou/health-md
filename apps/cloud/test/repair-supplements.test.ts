@@ -248,19 +248,15 @@ it("enforces retained-byte quota at transactional commit across simultaneous dif
       VALUES (?, ?, ?, 'v1', ?, ?, 1, 8, 'ios', ?, ?, ?, ?, 0, 1, 0)`)
       .run(fakeId, userId, `v1/${randomUUID()}`, Buffer.from(randomBytes(32)).toString("hex"), baseBytes,
         "2026-04-03T12:00:00.000Z", "2026-04-03T12:00:00.000Z", date, date);
-    // Synchronize both writers after their pre-write usage check, before
-    // either can commit. No actual 1 GiB object is ever created.
+    // Durable reservation rejects the over-quota writer before it creates an
+    // encrypted object. No actual 1 GiB object is ever created.
     const originalStore = env.EXPORTS;
     const originalPut = originalStore.put.bind(originalStore);
-    let started = 0;
-    let release!: () => void;
-    const bothStarted = new Promise<void>((done) => { release = done; });
+    let puts = 0;
     env.EXPORTS = new Proxy(originalStore, { get(target, property) {
       if (property === "put") return async (...args: Parameters<typeof originalPut>) => {
-        const result = await originalPut(...args); started += 1;
-        if (started === 2) release();
-        await bothStarted;
-        return result;
+        puts += 1;
+        return originalPut(...args);
       };
       const value = Reflect.get(target, property);
       return typeof value === "function" ? value.bind(target) : value;
@@ -269,6 +265,7 @@ it("enforces retained-byte quota at transactional commit across simultaneous dif
       supplement(test, bearer, firstPayload), supplement(test, bearer, secondPayload),
     ]);
     expect([first.status, second.status].sort()).toEqual([201, 413]);
+    expect(puts).toBe(1);
     expect((db.connection.prepare("SELECT COALESCE(SUM(byte_count), 0) AS bytes FROM exports")
       .get() as { bytes: number }).bytes).toBeLessThanOrEqual(1_073_741_824);
     db.connection.prepare("DELETE FROM exports WHERE id = ?").run(fakeId);

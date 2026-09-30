@@ -1,5 +1,6 @@
 import { decryptIdentity, encryptIdentity, keyedLookup, randomToken, sha256Hex } from "./crypto";
 import { assertSameOrigin, HttpError, json, parsePositiveInteger, readJson } from "./http";
+import { recordAccountSecurityMetric } from "./telemetry";
 import type { Env, IngestPrincipal, SessionUser, UserRow } from "./types";
 
 const EMAIL_PATTERN = /^[^\s@]{1,64}@[^\s@]{1,190}$/u;
@@ -42,7 +43,8 @@ export async function getSession(request: Request, env: Env): Promise<SessionUse
   if (!token) return null;
   const tokenHash = await sha256Hex(token);
   const session = await env.DB.prepare(
-    `SELECT u.id, u.email_ciphertext AS emailCiphertext, u.email_iv AS emailIv
+    `SELECT u.id, u.email_ciphertext AS emailCiphertext, u.email_iv AS emailIv,
+            s.id AS sessionId, s.created_at AS sessionCreatedAt
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > ? AND u.status = 'active'`,
   ).bind(tokenHash, new Date().toISOString()).first<SessionUser>();
@@ -127,9 +129,16 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
   if (!allowedByRate || !allowedByEmailRate) return generic();
 
   let user = await env.DB.prepare(
-    "SELECT * FROM users WHERE email_lookup = ? AND status = 'active'",
+    "SELECT * FROM users WHERE email_lookup = ?",
   ).bind(emailLookup).first<UserRow>();
+  if (user && user.status !== "active") return generic();
   if (!user && !signupAllowed(email, env)) return generic();
+  const sendBudget = env.EMAIL_SEND_HOURLY_LIMIT ?
+    parsePositiveInteger(env.EMAIL_SEND_HOURLY_LIMIT, "EMAIL_SEND_HOURLY_LIMIT", 1, 100_000) : 100;
+  if (!await rateLimit(env, "auth-send:global", sendBudget)) {
+    recordAccountSecurityMetric(env, "email_budget_exhausted");
+    return generic();
+  }
   let newUser: UserRow | null = null;
   if (!user) {
     const id = crypto.randomUUID();
@@ -229,6 +238,44 @@ export async function logout(request: Request, env: Env, user: SessionUser): Pro
   });
 }
 
+export async function listSessions(env: Env, user: SessionUser): Promise<Response> {
+  const sessions = await env.DB.prepare(
+    `SELECT id, created_at AS createdAt, last_seen_at AS lastSeenAt, expires_at AS expiresAt
+     FROM sessions WHERE user_id = ? AND expires_at > ? ORDER BY created_at DESC LIMIT 20`,
+  ).bind(user.id, new Date().toISOString()).all<{
+    id: string; createdAt: string; lastSeenAt: string; expiresAt: string;
+  }>();
+  return json({ sessions: sessions.results.map((session) => ({
+    ...session, current: session.id === user.sessionId,
+  })) });
+}
+
+export async function revokeSession(
+  request: Request,
+  env: Env,
+  user: SessionUser,
+  sessionId: string,
+): Promise<Response> {
+  assertSameOrigin(request, env);
+  if (!/^[a-f0-9-]{36}$/u.test(sessionId)) throw new HttpError(404, "not_found", "Session not found.");
+  const result = await env.DB.prepare("DELETE FROM sessions WHERE id = ? AND user_id = ?")
+    .bind(sessionId, user.id).run();
+  if ((result.meta.changes ?? 0) !== 1) throw new HttpError(404, "not_found", "Session not found.");
+  await audit(env, user.id, "session.revoked", sessionId);
+  const current = sessionId === user.sessionId;
+  return json({ revoked: true, current }, current ? {
+    headers: { "Set-Cookie": clearSessionCookie(env.ENVIRONMENT === "production") },
+  } : {});
+}
+
+export async function revokeOtherSessions(request: Request, env: Env, user: SessionUser): Promise<Response> {
+  assertSameOrigin(request, env);
+  const result = await env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?")
+    .bind(user.id, user.sessionId).run();
+  await audit(env, user.id, "session.others_revoked", user.sessionId);
+  return json({ revoked: result.meta.changes ?? 0 });
+}
+
 export async function accountSummary(env: Env, user: SessionUser): Promise<Response> {
   const email = await decryptIdentity(user.emailCiphertext, user.emailIv, env.IDENTITY_KEY_B64, user.id);
   return json({ email });
@@ -238,6 +285,22 @@ export async function audit(env: Env, userId: string, type: string, targetId: st
   await env.DB.prepare(
     "INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at) VALUES (?, ?, ?, ?, ?)",
   ).bind(crypto.randomUUID(), userId, type, targetId, new Date().toISOString()).run();
+}
+
+export async function listSecurityActivity(env: Env, userId: string): Promise<Response> {
+  // This explicit allowlist is the public security-history vocabulary. Target
+  // IDs remain server-side because they are unnecessary correlation metadata.
+  const rows = await env.DB.prepare(`SELECT event_type AS type, occurred_at AS occurredAt
+    FROM audit_events WHERE user_id = ? AND event_type IN (
+      'password_login.succeeded', 'session.created', 'session.revoked', 'session.others_revoked',
+      'ingest_token.created', 'ingest_token.revoked', 'agent_token.created', 'agent_token.revoked',
+      'export.downloaded', 'repair_device.approved', 'repair_device.revoked',
+      'repair_dispatch.queued', 'repair_dispatch.cancelled', 'repair_dispatch.claimed',
+      'repair_dispatch.declined'
+    ) ORDER BY occurred_at DESC, id DESC LIMIT 50`).bind(userId).all<{
+      type: string; occurredAt: string;
+    }>();
+  return json({ events: rows.results });
 }
 
 export async function listIngestTokens(env: Env, userId: string): Promise<Response> {
@@ -294,7 +357,13 @@ export async function revokeIngestToken(
   return json({ revoked: true });
 }
 
-export async function limitIngest(env: Env, tokenId: string): Promise<void> {
-  const allowed = await rateLimit(env, `ingest:${tokenId}`, 120);
-  if (!allowed) throw new HttpError(429, "rate_limited", "Export request limit exceeded. Retry later.");
+export async function limitIngest(env: Env, tokenId: string, userId: string): Promise<void> {
+  const tokenLimit = env.INGEST_TOKEN_HOURLY_LIMIT ?
+    parsePositiveInteger(env.INGEST_TOKEN_HOURLY_LIMIT, "INGEST_TOKEN_HOURLY_LIMIT", 1, 100_000) : 120;
+  const accountLimit = env.INGEST_ACCOUNT_HOURLY_LIMIT ?
+    parsePositiveInteger(env.INGEST_ACCOUNT_HOURLY_LIMIT, "INGEST_ACCOUNT_HOURLY_LIMIT", 1, 100_000) : 240;
+  if (!await rateLimit(env, `ingest:${tokenId}`, tokenLimit) ||
+      !await rateLimit(env, `ingest-account:${userId}`, accountLimit)) {
+    throw new HttpError(429, "rate_limited", "Export request limit exceeded. Retry later.");
+  }
 }

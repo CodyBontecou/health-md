@@ -1,0 +1,57 @@
+name = "healthmd-cloud-account"
+main = "src/account-worker.ts"
+compatibility_date = "2026-08-01"
+workers_dev = false
+preview_urls = false
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+# Source-only production profile. Use the same isolated production metadata
+# and encrypted-object resources as ingest, but a separate deployment identity.
+[[d1_databases]]
+binding = "DB"
+database_name = "healthmd-cloud-production-placeholder"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "EXPORTS"
+bucket_name = "healthmd-cloud-production-placeholder-not-for-deployment"
+
+[[queues.producers]]
+binding = "LIFECYCLE_QUEUE"
+queue = "healthmd-cloud-lifecycle-placeholder-not-for-deployment"
+
+[[analytics_engine_datasets]]
+binding = "METRICS"
+dataset = "healthmd_cloud_account_metrics_placeholder"
+
+[vars]
+ENVIRONMENT = "production"
+SERVICE_PROFILE = "account"
+DEPLOYMENT_REVISION = "REPLACE_WITH_FULL_GIT_COMMIT_SHA"
+PUBLIC_ORIGIN = "https://account.healthmd.app"
+EXPORT_ENDPOINT_ORIGIN = "https://api.healthmd.app"
+AUTH_SIGNUP_MODE = "closed"
+AUTH_EMAIL_FROM = "Health.md Cloud <cloud@healthmd.app>"
+CURRENT_EXPORT_KEY_ID = "v1"
+ACCOUNT_KEY_MODE = "per_account"
+CURRENT_ACCOUNT_WRAPPING_KEY_ID = "kek-v1"
+HEALTH_FREE_METRICS_REQUIRED = "1"
+MAX_EXPORT_BYTES = "26214400"
+SESSION_TTL_DAYS = "30"
+MAGIC_LINK_TTL_MINUTES = "15"
+EMAIL_SEND_HOURLY_LIMIT = "100"
+DELETION_STATUS_TTL_DAYS = "30"
+
+# Required secrets:
+#   IDENTITY_KEY_B64
+#   EXPORT_ENCRYPTION_KEYS_JSON (legacy-read compatibility during migration)
+#   ACCOUNT_KEY_WRAPPING_KEYS_JSON (for example {"kek-v1":"<32-byte-base64>"})
+#   RESEND_API_KEY
+#   CLOUD_RUNTIME_APPROVED=healthmd-cloud-v1-reviewed
+# Optional while signup remains invite-only:
+#   AUTH_INVITE_EMAILS

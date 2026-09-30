@@ -125,6 +125,43 @@ export function parseExportKeyring(value: string): ReadonlyMap<string, string> {
   return keyring;
 }
 
+function accountKeyAad(accountId: string, keyId: string, wrappingKeyId: string): Uint8Array {
+  return textEncoder.encode(`healthmd.cloud.account-export-key.v1\0${accountId}\0${keyId}\0${wrappingKeyId}`);
+}
+
+export async function wrapAccountExportKey(
+  dataKeyBase64: string,
+  wrappingKeyBase64: string,
+  accountId: string,
+  keyId: string,
+  wrappingKeyId: string,
+): Promise<{ wrappedKey: string; iv: string }> {
+  const dataKey = decodeBase64(dataKeyBase64);
+  if (dataKey.byteLength !== 32) throw new Error("Account export key must contain exactly 32 bytes");
+  const key = await importAesKey(wrappingKeyBase64);
+  const iv = crypto.getRandomValues(new Uint8Array(AES_GCM_IV_BYTES));
+  const wrapped = await crypto.subtle.encrypt({ name: "AES-GCM", iv: toBuffer(iv),
+    additionalData: toBuffer(accountKeyAad(accountId, keyId, wrappingKeyId)) }, key, toBuffer(dataKey));
+  return { wrappedKey: encodeBase64(new Uint8Array(wrapped)), iv: encodeBase64(iv) };
+}
+
+export async function unwrapAccountExportKey(
+  wrappedKeyBase64: string,
+  ivBase64: string,
+  wrappingKeyBase64: string,
+  accountId: string,
+  keyId: string,
+  wrappingKeyId: string,
+): Promise<string> {
+  const key = await importAesKey(wrappingKeyBase64);
+  const plaintext = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM",
+    iv: toBuffer(decodeBase64(ivBase64)),
+    additionalData: toBuffer(accountKeyAad(accountId, keyId, wrappingKeyId)) }, key,
+  toBuffer(decodeBase64(wrappedKeyBase64))));
+  if (plaintext.byteLength !== 32) throw new Error("Wrapped account export key has an invalid length");
+  return encodeBase64(plaintext);
+}
+
 async function deriveExportKey(rootKeyBase64: string, salt: Uint8Array): Promise<CryptoKey> {
   const rootBytes = decodeBase64(rootKeyBase64);
   if (rootBytes.byteLength !== 32) throw new Error("Export encryption keys must contain exactly 32 bytes");

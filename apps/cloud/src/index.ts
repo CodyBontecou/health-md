@@ -1,8 +1,10 @@
 import {
-  accountSummary, consumeMagicLink, createIngestToken, getSession, listIngestTokens,
-  logout, requestMagicLink, requireSession, revokeIngestToken,
+  accountSummary, consumeMagicLink, createIngestToken, getSession, listIngestTokens, listSecurityActivity,
+  listSessions, logout, requestMagicLink, requireSession, revokeIngestToken, revokeOtherSessions, revokeSession,
 } from "./auth";
 import { downloadExport, ingest, listDayPage, listExportPage, listExports } from "./exports";
+import { downloadAccountExportPage } from "./account-export";
+import { rewrapAccountExportKeys } from "./account-export-keys";
 import { dashboardTrends, exploreCatalog, exploreChart } from "./dashboard";
 import { exploreExports, exploreNode } from "./explore";
 import { createAgentToken, listAgentTokens, revokeAgentToken } from "./agent-tokens";
@@ -14,12 +16,16 @@ import { approveRepairDevice, listRepairDevices, purgeExpiredRepairDevices,
 import { readSupplementEvidence } from "./repair-supplements";
 import { cancelRepairDispatch, claimRepairDispatch, declineRepairDispatch,
   listRepairDispatches, queueRepairDispatch, resumeRepairDispatch } from "./repair-dispatch";
-import { processAccountDeletions, purgeArchivedRevisions, requestAccountDeletion } from "./lifecycle";
+import { getAccountDeletionStatus, processAccountDeletions, purgeArchivedRevisions,
+  purgeExpiredDeletionReceipts, requestAccountDeletion } from "./lifecycle";
+import { reconcileUploadIntents } from "./upload-intents";
+import { reconcileOrphanExportObjects } from "./object-reconciliation";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
+import { parseExportKeyring } from "./crypto";
 import type { Env } from "./types";
 
 const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
-  "/repair", "/repair.js", "/repair-panel", "/style.css"]);
+  "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js", "/style.css"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
 function validateConfiguration(env: Env): void {
@@ -28,6 +34,10 @@ function validateConfiguration(env: Env): void {
   }
   if (env.AUTH_MODE && env.AUTH_MODE !== "email_link" && env.AUTH_MODE !== "password") {
     throw new Error("Invalid authentication mode");
+  }
+  const profile = env.SERVICE_PROFILE ?? "combined";
+  if (!["combined", "ingest", "account", "maintenance"].includes(profile)) {
+    throw new Error("Invalid service profile");
   }
   const origin = new URL(env.PUBLIC_ORIGIN);
   if (env.ENVIRONMENT === "production" && origin.protocol !== "https:") {
@@ -38,13 +48,50 @@ function validateConfiguration(env: Env): void {
   }
   if (env.ENVIRONMENT === "production") {
     const personalMvp = env.VM_PERSONAL_MVP_NO_BACKUP_ACK === "I_ACCEPT_PERMANENT_DATA_LOSS";
+    const splitNonIdentity = profile === "ingest" || profile === "maintenance";
+    const invalidProductionIdentity = splitNonIdentity ?
+      (env.AUTH_SIGNUP_MODE !== "closed" || env.AUTH_MODE === "password" || !!env.PASSWORD_PEPPER_B64) :
+      (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
+        (!env.RESEND_API_KEY || env.AUTH_EMAIL_FROM.includes("example")));
+    const invalidMetrics = profile !== "combined" &&
+      (env.HEALTH_FREE_METRICS_REQUIRED !== "1" || !env.METRICS);
+    const invalidDeploymentRevision = profile !== "combined" &&
+      !/^[a-f0-9]{40}$/u.test(env.DEPLOYMENT_REVISION ?? "");
+    let invalidDeletionTtl = false;
+    if (profile === "account" || profile === "maintenance") {
+      try {
+        if (!env.DELETION_STATUS_TTL_DAYS) invalidDeletionTtl = true;
+        else parsePositiveInteger(env.DELETION_STATUS_TTL_DAYS, "DELETION_STATUS_TTL_DAYS", 1, 90);
+      } catch { invalidDeletionTtl = true; }
+    }
+    let invalidAbuseLimits = false;
+    try {
+      if (profile === "ingest") {
+        if (!env.INGEST_TOKEN_HOURLY_LIMIT || !env.INGEST_ACCOUNT_HOURLY_LIMIT) invalidAbuseLimits = true;
+        else {
+          parsePositiveInteger(env.INGEST_TOKEN_HOURLY_LIMIT, "INGEST_TOKEN_HOURLY_LIMIT", 1, 100_000);
+          parsePositiveInteger(env.INGEST_ACCOUNT_HOURLY_LIMIT, "INGEST_ACCOUNT_HOURLY_LIMIT", 1, 100_000);
+        }
+      } else if (profile === "account") {
+        if (!env.EMAIL_SEND_HOURLY_LIMIT) invalidAbuseLimits = true;
+        else parsePositiveInteger(env.EMAIL_SEND_HOURLY_LIMIT, "EMAIL_SEND_HOURLY_LIMIT", 1, 100_000);
+      }
+    } catch { invalidAbuseLimits = true; }
+    let invalidAccountKeys = false;
+    if (profile === "ingest" || profile === "account" || profile === "maintenance") {
+      try {
+        const keys = parseExportKeyring(env.ACCOUNT_KEY_WRAPPING_KEYS_JSON ?? "");
+        invalidAccountKeys = env.ACCOUNT_KEY_MODE !== "per_account" ||
+          !env.CURRENT_ACCOUNT_WRAPPING_KEY_ID || !keys.has(env.CURRENT_ACCOUNT_WRAPPING_KEY_ID);
+      } catch { invalidAccountKeys = true; }
+    }
     if (env.SYNTHETIC_PREVIEW_ONLY || env.DEV_SHOW_MAGIC_LINK || env.AUTH_SIGNUP_MODE === "open" ||
-        (personalMvp ? (env.CLOUD_RUNTIME_APPROVED !== undefined || env.AUTH_MODE !== "password" ||
-          env.AUTH_SIGNUP_MODE !== "closed" || env.REVISION_RETENTION_DAYS !== "unlimited" ||
-          !env.PASSWORD_PEPPER_B64) :
-          (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" ||
-            (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
-              (!env.RESEND_API_KEY || env.AUTH_EMAIL_FROM.includes("example"))))) ||
+        (personalMvp ? (profile !== "combined" || env.CLOUD_RUNTIME_APPROVED !== undefined ||
+          env.AUTH_MODE !== "password" || env.AUTH_SIGNUP_MODE !== "closed" ||
+          env.REVISION_RETENTION_DAYS !== "unlimited" || !env.PASSWORD_PEPPER_B64) :
+          (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
+            invalidAccountKeys || invalidMetrics || invalidDeletionTtl || invalidAbuseLimits ||
+            invalidDeploymentRevision)) ||
         env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
       throw new Error("Production or personal-MVP configuration is incomplete");
     }
@@ -75,7 +122,8 @@ async function route(request: Request, env: Env): Promise<Response> {
   const path = url.pathname;
   const method = request.method;
   if (method === "GET" && path === "/health") {
-    return json({ status: "ok" });
+    return json({ status: "ok", ...(env.DEPLOYMENT_REVISION ?
+      { revision: env.DEPLOYMENT_REVISION.slice(0, 12) } : {}) });
   }
   if (method === "GET" && path === "/api/runtime") {
     return json({ syntheticPreviewOnly: env.SYNTHETIC_PREVIEW_ONLY === "1",
@@ -84,7 +132,8 @@ async function route(request: Request, env: Env): Promise<Response> {
       exportEndpoint: `${env.EXPORT_ENDPOINT_ORIGIN ?? env.PUBLIC_ORIGIN}/api/v1/exports` });
   }
   if (method === "GET" && path === "/") return redirect("/dashboard");
-  if (method === "GET" && (path === "/login.html" || path === "/dashboard.html")) {
+  if (method === "GET" && (path === "/login.html" || path === "/dashboard.html" ||
+      path === "/deletion-status.html")) {
     return redirect(path.slice(0, -5), 307);
   }
   if (method === "GET" && STATIC_PATHS.has(path)) {
@@ -117,7 +166,23 @@ async function route(request: Request, env: Env): Promise<Response> {
     return accountSummary(env, await requireSession(request, env));
   }
   if (method === "POST" && path === "/api/account/delete") {
-    return requestAccountDeletion(request, env, (await requireSession(request, env)).id);
+    return requestAccountDeletion(request, env, await requireSession(request, env));
+  }
+  if (method === "GET" && path === "/api/account/deletion-status") {
+    return getAccountDeletionStatus(request, env);
+  }
+  if (method === "GET" && path === "/api/sessions") {
+    return listSessions(env, await requireSession(request, env));
+  }
+  if (method === "GET" && path === "/api/security-events") {
+    return listSecurityActivity(env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/sessions/revoke-others") {
+    return revokeOtherSessions(request, env, await requireSession(request, env));
+  }
+  const sessionRevoke = /^\/api\/sessions\/([a-f0-9-]{36})$/u.exec(path);
+  if (method === "DELETE" && sessionRevoke?.[1]) {
+    return revokeSession(request, env, await requireSession(request, env), sessionRevoke[1]);
   }
   if (method === "POST" && path === "/api/auth/logout") {
     return logout(request, env, await requireSession(request, env));
@@ -226,6 +291,11 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (method === "GET" && exportDownload?.[1]) {
     return downloadExport(env, (await requireSession(request, env)).id, exportDownload[1]);
   }
+  const accountExportPage = /^\/api\/account\/export\/page\/([0-9]{1,8})$/u.exec(path);
+  if (method === "GET" && accountExportPage?.[1]) {
+    return downloadAccountExportPage(env, (await requireSession(request, env)).id,
+      Number(accountExportPage[1]));
+  }
   throw new HttpError(404, "not_found", "Endpoint not found.");
 }
 
@@ -255,5 +325,9 @@ export default {
     ]);
     await purgeExpiredRepairDrafts(env);
     await purgeExpiredRepairDevices(env);
+    await purgeExpiredDeletionReceipts(env);
+    await reconcileUploadIntents(env);
+    if (env.SERVICE_PROFILE === "maintenance") await reconcileOrphanExportObjects(env);
+    if (env.ACCOUNT_KEY_MODE === "per_account") await rewrapAccountExportKeys(env);
   },
 };

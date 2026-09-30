@@ -1,0 +1,40 @@
+# Production authorization and tenant-isolation matrix
+
+Status: source-test evidence, not an independent assessment or production approval. Update this matrix whenever `src/index.ts` or a split-profile allowlist adds or changes a route.
+
+| Surface | Required authority and tenant key | Positive/negative evidence | Residual gate |
+|---|---|---|---|
+| `POST /api/auth/request-link` | eligible invite + exact Origin; no tenant response disclosure | `abuse-limits.test.ts`, `worker.test.ts` | provider/edge abuse and email side-channel review |
+| `POST /api/auth/consume-link` | unexpired single-use hashed link bound to active user | `worker.test.ts`, auth atomic `UPDATE … RETURNING` | production email and identity review |
+| account/session/logout | active session joins `sessions.user_id` to active `users.id` | `account-lifecycle.test.ts` covers inventory, self/other-session revocation, revoke-others, two-account denial and survival | passkey/recovery decision before open signup |
+| security activity history | active session; query uses only session-derived `user_id`, returns at most 50 reviewed types/timestamps and omits target IDs | `account-lifecycle.test.ts` covers two-account isolation, allowlist filtering, target redaction and bound; `service-profiles.test.ts` denies ingest listener | out-of-band security notifications still require approved provider/product policy |
+| ingest-token administration | active account session; every list/update uses `user_id` | `account-lifecycle.test.ts` two-account token invisibility/revocation denial; `service-profiles.test.ts` boundary denial | edge abuse controls |
+| `POST /api/v1/exports` | active `hmd_ing_` hash joined to active owner; no cookie authority | `upload-intents.test.ts`, `vm.test.ts`, `service-profiles.test.ts`, `abuse-limits.test.ts`; cookie/read-token/account-host confusion denied | 2x provider load/fault gate and mobile physical test |
+| export/day inventory and pages | session-derived `user_id`, no caller-supplied account | `explore.test.ts`, `account-export.test.ts`, `restore-drill.test.ts` | independent query review |
+| exact export download | session owner + `exports.user_id`; account-bound AEAD/hash | `restore-drill.test.ts` cross-account 404; `account-export-keys.test.ts` key isolation/tamper | independent assessment and browser reauth decision |
+| account portability TAR | session-derived owner; owner SQL/key resolution only | `account-export.test.ts` second account receives empty archive, exact/hash/corruption checks | production memory/stream qualification |
+| dashboard trends | session-derived owner and owner-bound current pointers | `vm.test.ts`, `explore.test.ts` | independent query review |
+| Explorer catalog/chart/export/node | session owner; owner-bound export resolution | `explore.test.ts` cross-account node 404 and route/proxy checks | original fields remain sensitive by design |
+| repair drafts | session owner; `repair_drafts.user_id` on list/delete | `repair-drafts.test.ts` cross-account empty/404 and origin denial | feature remains non-launchable |
+| repair device enrollment/approval | session owner for inventory/approval; separate device token for claim/status | `repair-devices.test.ts`, `repair-dispatch.test.ts` foreign-owner/device and token-confusion denials | disabled in live services; native handoff not approved |
+| repair dispatch/cancel | session owner + owner draft/device joins | `repair-dispatch.test.ts` cross-account 404, duplicate/state/route isolation | upload/receipt handoff remains unimplemented |
+| repair supplement evidence | session owner; primary/supplement rows both keyed by owner | `repair-supplements.test.ts` second-account null/empty and split-listener denial | internal supplement ingest remains unexposed |
+| agent token administration | disposable password pilot only; session owner + `mcp_read_tokens.user_id` | `vm.test.ts` foreign-token revoke 404, password/consent/origin checks | production MCP deferred; route returns unavailable outside pilot |
+| MCP reads | independent `hmd_read_` scope, active owner, read-only process/store | `mcp-http.test.ts`, `mcp-reader.test.ts`, `vm-permissions.test.ts` cross-user/current/scope/revocation checks | pilot consent does not transfer to production |
+| account deletion | fresh owner session/password; durable job carries disabled owner ID only | `account-lifecycle.test.ts` immediate disablement, two-account deletion survival, Queue/retry/status tests | provider Queue/DLQ and backup-expiry drill |
+| deletion status | high-entropy hashed receipt; no account/session authority | `account-lifecycle.test.ts` wrong/expired receipt denial and pending→complete | approved receipt retention/copy |
+| maintenance scheduled/Queue | runtime binding/event only; no public HTTP | `service-profiles.test.ts`, `account-lifecycle.test.ts`, `telemetry.test.ts` | deployment-identity/provider review |
+| split Worker route boundaries | exact method/path allowlists; ingest strips cookies/Set-Cookie | `service-profiles.test.ts`, repair split-listener tests, VM listener tests | edge route/DNS review |
+| telemetry | binding only; fixed non-tenant buckets | `telemetry.test.ts`, `abuse-limits.test.ts` prohibited-value checks | provider logging configuration review |
+
+## Invariants
+
+- Caller-supplied IDs are locators only; authorization always includes the authenticated owner ID.
+- A missing/foreign resource returns the same not-found response and never confirms another tenant.
+- Write-only, session, deletion, repair-device and MCP credentials are not interchangeable.
+- Disabling/deleting one account cannot revoke, list, mutate, decrypt or erase another account's state.
+- Maintenance and metrics never become public data APIs.
+
+## Completion boundary
+
+This matrix closes known source-test gaps for current routes. It does not prove Cloudflare bindings, edge rules, deployment identities, provider logs, mobile credential storage, runtime fault behavior, or undiscovered implementation flaws. Production still requires a route-by-route independent assessment against the deployed revision and fresh resources.
