@@ -66,7 +66,7 @@ Cloudflare terminates TLS before application encryption and hosts compute/storag
 | Threat | Existing/source control | Required qualification or residual risk |
 |---|---|---|
 | Credential theft/replay | hashed tokens/sessions; Secure strict cookie; write/read authority separation; revocation; bounded expiry | passkeys/recovery decision before open signup; email account compromise remains beta risk |
-| Account enumeration | generic link request response; keyed email/IP buckets; closed/invite signup | email provider bounce/suppression side channels and edge abuse review |
+| Account enumeration | generic link request response; keyed email/IP buckets; race-safe first-account creation and durable-link postcondition reconciliation; closed/invite signup | email provider bounce/suppression side channels and edge abuse review |
 | Cross-tenant object/reference access | every SQL/object key starts from authenticated `user_id`; random IDs; cross-account tests; account-bound AEAD | exhaustive route matrix and independent assessment |
 | CSRF/cross-origin mutation | SameSite=Strict, exact Origin checks, no wildcard CORS; bearer ingest is not browser session | browser compatibility and proxy-header review |
 | Token confusion | distinct prefixes/tables/authenticators; split route allowlists; ingest strips cookies; account denies ingest/MCP | repeat negative matrix on every route change |

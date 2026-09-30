@@ -36,7 +36,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Durable reservation/quota/idempotency | migration 0010, `upload-intents.ts`, trigger/concurrency/reconciliation tests, lost-batch-response and post-commit-read outage tests | source verified; D1 2x benchmark/provider fault drill absent |
 | Disconnect/crash handling | upload-intent tests plus deployed VM disconnect probe | VM verified; provider isolate/dependency drills absent |
 | R2 orphan reconciliation | migration 0014, bounded persisted cursor, exact-key/reference checks, provider-failure tests | source verified; no production bucket scan/alert evidence |
-| Account identity/invites | email-link auth, generic responses, IP/identity/provider budgets | source verified; provider/edge review absent |
+| Account identity/invites | email-link auth, generic responses, IP/identity/provider budgets, concurrent first-signup and ambiguous-commit reconciliation tests | source verified; provider/edge review absent |
 | Long-term identity/recovery | ADR recommends passkeys + recovery codes; invite beta discloses no support override | **not implemented/approved for open signup** |
 | Sessions/tokens/revocation | account lifecycle and two-account isolation tests | source verified |
 | Deletion Queue/status/SLA | lifecycle Queue source, migration 0012, client-known hashed receipt, ambiguous-commit/concurrent-completion and retry tests | source verified; Queue/DLQ/backup-expiry/SLA deployment absent |
@@ -75,7 +75,7 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 
 ## Verification commands and coverage
 
-- `npm run check`: on the audited head, 29 files and 110 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
+- `npm run check`: on the audited head, 29 files and 113 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
 - `npm run test:smoke`: passes in an isolated worktree against local Wrangler D1/R2 with synthetic Apple v1/v2 and Android v4 envelopes, replacement ordering, encrypted roundtrip, tenant denial and revocation. The repository worktree's pre-existing owner-only `.dev.vars` is not overwritten or read by the harness.
 - `npm run dry-run:profiles`: all three profiles bundle and list only their intended bindings. It proves buildability, not resource correctness or deployment isolation.
 - `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.

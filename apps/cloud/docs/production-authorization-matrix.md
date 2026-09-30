@@ -4,7 +4,7 @@ Status: source-test evidence, not an independent assessment or production approv
 
 | Surface | Required authority and tenant key | Positive/negative evidence | Residual gate |
 |---|---|---|---|
-| `POST /api/auth/request-link` | eligible invite + exact Origin; no tenant response disclosure | `abuse-limits.test.ts`, `worker.test.ts` | provider/edge abuse and email side-channel review |
+| `POST /api/auth/request-link` | eligible invite + exact Origin; no tenant response disclosure | `abuse-limits.test.ts` concurrent first-account and lost-batch-response reconciliation plus budget checks; `worker.test.ts` | provider/edge abuse and email side-channel review |
 | `POST /api/auth/consume-link` | unexpired single-use hashed link bound to active user | `worker.test.ts`, auth atomic `UPDATE … RETURNING` | production email and identity review |
 | account/session/logout | active session joins `sessions.user_id` to active `users.id` | `account-lifecycle.test.ts` covers inventory, self/other-session revocation, revoke-others, two-account denial and survival | passkey/recovery decision before open signup |
 | security activity history | active session; query uses only session-derived `user_id`, returns at most 50 reviewed types/timestamps and omits target IDs | `account-lifecycle.test.ts` covers two-account isolation, allowlist filtering, target redaction and bound; `service-profiles.test.ts` denies ingest listener | out-of-band security notifications still require approved provider/product policy |

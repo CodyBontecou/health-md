@@ -74,6 +74,154 @@ it("enforces an eligible-email provider send budget without changing the generic
   } finally { db.close(); }
 });
 
+it("creates usable links for deterministic concurrent first-account requests", async () => {
+  const { env, db } = setup();
+  try {
+    env.ENVIRONMENT = "development";
+    env.AUTH_MODE = "email_link";
+    env.AUTH_SIGNUP_MODE = "invite";
+    env.AUTH_INVITE_EMAILS = "concurrent@example.test";
+    env.DEV_SHOW_MAGIC_LINK = "1";
+    const original = env.DB;
+    let initialReads = 0;
+    let releaseReads: (() => void) | undefined;
+    const bothRead = new Promise<void>((resolve) => { releaseReads = resolve; });
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("SELECT * FROM users WHERE email_lookup")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty !== "first") {
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              }
+              return async () => {
+                const result = await boundStatement.first();
+                initialReads += 1;
+                if (initialReads === 2) releaseReads?.();
+                await bothRead;
+                return result;
+              };
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    const ask = () => worker.fetch(new Request(`${origin}/api/auth/request-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": "192.0.2.20" },
+      body: JSON.stringify({ email: "concurrent@example.test" }),
+    }), env);
+    const responses = await Promise.all([ask(), ask()]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const links = await Promise.all(responses.map(async (response) =>
+      (await response.json() as { devLink: string }).devLink));
+    expect(links.every((link) => link.startsWith(`${origin}/login#token=hmd_login_`))).toBe(true);
+    expect(new Set(links).size).toBe(2);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM magic_links").get()).toMatchObject({ n: 2 });
+    env.DB = original;
+    for (const link of links) {
+      const token = new URL(link).hash.slice("#token=".length);
+      const consumed = await worker.fetch(new Request(`${origin}/api/auth/consume-link`, {
+        method: "POST", headers: { Origin: origin, "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      }), env);
+      expect(consumed.status).toBe(200);
+    }
+  } finally { db.close(); }
+});
+
+it("sends a durably committed magic link after its D1 batch response is lost", async () => {
+  const { env, db } = setup();
+  try {
+    env.ENVIRONMENT = "development";
+    env.AUTH_MODE = "email_link";
+    env.AUTH_SIGNUP_MODE = "invite";
+    env.AUTH_INVITE_EMAILS = "ambiguous@example.test";
+    env.DEV_SHOW_MAGIC_LINK = "1";
+    const original = env.DB;
+    let responseLost = false;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        const result = await target.batch(statements);
+        if (!responseLost) {
+          responseLost = true;
+          throw new Error("synthetic lost magic-link batch response");
+        }
+        return result;
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    const response = await worker.fetch(new Request(`${origin}/api/auth/request-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": "192.0.2.21" },
+      body: JSON.stringify({ email: "ambiguous@example.test" }),
+    }), env);
+    expect(responseLost).toBe(true);
+    expect(response.status).toBe(200);
+    const link = (await response.json() as { devLink: string }).devLink;
+    expect(link).toContain("#token=hmd_login_");
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM magic_links").get()).toMatchObject({ n: 1 });
+    env.DB = original;
+    const token = new URL(link).hash.slice("#token=".length);
+    const consumed = await worker.fetch(new Request(`${origin}/api/auth/consume-link`, {
+      method: "POST", headers: { Origin: origin, "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }), env);
+    expect(consumed.status).toBe(200);
+  } finally { db.close(); }
+});
+
+it("keeps magic-link persistence failures generic and health-data-free", async () => {
+  const { env, db } = setup();
+  try {
+    env.ENVIRONMENT = "development";
+    env.AUTH_MODE = "email_link";
+    env.AUTH_SIGNUP_MODE = "invite";
+    env.AUTH_INVITE_EMAILS = "failure@example.test";
+    env.DEV_SHOW_MAGIC_LINK = "1";
+    const points: unknown[] = [];
+    env.METRICS = { writeDataPoint: (point: unknown) => { points.push(point); } } as AnalyticsEngineDataset;
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async () => {
+        throw new Error("synthetic D1 write outage before commit");
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    const response = await worker.fetch(new Request(`${origin}/api/auth/request-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": "192.0.2.22" },
+      body: JSON.stringify({ email: "failure@example.test" }),
+    }), env);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      message: "If this address is eligible, a sign-in link is on its way.",
+    });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM magic_links").get()).toMatchObject({ n: 0 });
+    expect(points).toEqual([{
+      indexes: ["account"],
+      blobs: ["magic_link_persistence_failed", "blocked", "not_applicable", "not_applicable"],
+      doubles: [1],
+    }]);
+    expect(JSON.stringify(points)).not.toContain("failure@example.test");
+  } finally { db.close(); }
+});
+
 it("enforces token and account ingest budgets before payload processing", async () => {
   const { env, db } = setup();
   try {

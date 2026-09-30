@@ -159,20 +159,42 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
   const ttlMinutes = parsePositiveInteger(env.MAGIC_LINK_TTL_MINUTES, "MAGIC_LINK_TTL_MINUTES", 5, 30);
   const now = new Date().toISOString();
   const expires = new Date(Date.now() + ttlMinutes * 60000).toISOString();
-  if (newUser) {
-    await env.DB.batch([
-      env.DB.prepare(
-        `INSERT INTO users (id, email_lookup, email_ciphertext, email_iv, status, created_at)
-         VALUES (?, ?, ?, ?, 'active', ?)`,
-      ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now),
-      env.DB.prepare(
-        `INSERT INTO magic_links (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
-      ).bind(linkId, user.id, tokenHash, expires, now),
-    ]);
-  } else {
-    await env.DB.prepare(
-      `INSERT INTO magic_links (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
-    ).bind(linkId, user.id, tokenHash, expires, now).run();
+  const createLink = env.DB.prepare(
+    `INSERT INTO magic_links (id, user_id, token_hash, expires_at, created_at)
+     SELECT ?, id, ?, ?, ? FROM users WHERE email_lookup = ? AND status = 'active'`,
+  ).bind(linkId, tokenHash, expires, now, emailLookup);
+  try {
+    if (newUser) {
+      // Concurrent first requests may both observe no account. D1 serializes
+      // these transactions: one user wins, the other deliberately reuses it.
+      await env.DB.batch([
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO users
+           (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+           VALUES (?, ?, ?, ?, 'active', ?)`,
+        ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now),
+        createLink,
+      ]);
+    } else {
+      await createLink.run();
+    }
+  } catch {
+    // A D1 response can be lost after commit. Reconcile below before deciding
+    // whether the one-time link is safe to send or reveal in local development.
+  }
+  let durableLink: { valid: number } | null;
+  try {
+    durableLink = await env.DB.prepare(`SELECT 1 AS valid FROM magic_links m
+      JOIN users u ON u.id = m.user_id
+      WHERE m.id = ? AND m.token_hash = ? AND u.email_lookup = ? AND u.status = 'active'`)
+      .bind(linkId, tokenHash, emailLookup).first<{ valid: number }>();
+  } catch {
+    recordAccountSecurityMetric(env, "magic_link_persistence_failed");
+    return generic();
+  }
+  if (durableLink?.valid !== 1) {
+    recordAccountSecurityMetric(env, "magic_link_persistence_failed");
+    return generic();
   }
   let sent = false;
   try {

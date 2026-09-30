@@ -9,7 +9,7 @@ Each Worker writes an optional Analytics Engine data point with exactly:
 | Field | Allowed values |
 |---|---|
 | `index1` | `ingest`, `account`, or `maintenance` |
-| `blob1` | fixed route class or maintenance event |
+| `blob1` | fixed route class, reviewed account-security event, or maintenance event |
 | `blob2` | HTTP status class (`2xx`–`5xx`) or maintenance outcome (`ok`, `retry`, `failed`) |
 | `blob3` | fixed latency bucket: `<50 ms`, `50–249 ms`, `250–999 ms`, `1–4 s`, `5–14 s`, or `>=15 s` |
 | `blob4` | fixed ingest `Content-Length` bucket, `unknown`, or `not_applicable` |
@@ -30,6 +30,7 @@ These targets are provisional until the product and operations owners approve th
 | Ingest admission pressure | <1% 429 responses outside an announced load test | page at >=5% for 5 min; ticket at >=1% for 30 min |
 | Ingest latency | >=95% below 5 s and >=99% below 15 s, evaluated from buckets | page when `gte_15s` >=1% for 10 min with >=20 successes |
 | Eligible-email send budget | no exhaustion outside a declared abuse/load exercise | ticket on any `email_budget_exhausted`; page if repeated in three 5-min windows |
+| Magic-link persistence | no failed durable-link postcondition | page on any `magic_link_persistence_failed`; investigate D1 without inspecting identities |
 | Lifecycle queue | no `failed`; retry returns to zero within 15 min | page on any `failed` or retries in three consecutive 5-min windows |
 | Scheduled maintenance | one `ok` each scheduled interval | page after two missed/failed intervals |
 
@@ -42,7 +43,7 @@ Build aggregate panels grouped only by `index1`, `blob1`, `blob2`, `blob3`, `blo
 1. request count and status class by profile/route class;
 2. ingest latency and coarse size buckets;
 3. ingest 429 and 5xx ratios;
-4. account API 5xx ratio and fixed email-budget exhaustion events;
+4. account API 5xx ratio and fixed email-budget/persistence events;
 5. maintenance outcomes;
 6. provider-native D1 latency/error, R2 error, Queue backlog/DLQ and Worker CPU/subrequest limits, with no request dimensions.
 
