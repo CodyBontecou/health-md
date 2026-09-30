@@ -61,7 +61,7 @@ End-to-end completion means all of the following, not merely source implementati
 
 ## Audited source artifact surface
 
-Fresh audit snapshot on 2026-09-30: draft PR #163, head `02cee6f4472441003428994ab07c247e022ee098`, is mergeable with a clean merge state and 63 changed files. Cloud CI run `36779778124` and every currently triggered repository check passed; there are no reviews or assigned reviewers. The PR remains draft. The changed files map to deliverables as follows:
+Fresh audit snapshot on 2026-09-30: draft PR #163 implementation commit `02cee6f4472441003428994ab07c247e022ee098` was mergeable with a clean merge state and 63 changed files. Cloud CI run `36779778124` and every repository check triggered for that implementation passed; there were no reviews or assigned reviewers. The PR remains draft, and subsequent changes to this paragraph are audit-record updates only. The changed files map to deliverables as follows:
 
 - Trust-boundary/deployment: `.github/workflows/cloud-ci.yml`; `wrangler.{ingest,account,maintenance}.toml`; `src/{ingest-worker,account-worker,maintenance-worker,telemetry,http,index,types}.ts`; `package.json`.
 - Ingest/storage/crypto/lifecycle: migrations `0010`–`0014`; `src/{upload-intents,exports,account-export-keys,account-export,crypto,lifecycle,object-reconciliation,auth,dashboard}.ts`.
