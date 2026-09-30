@@ -122,6 +122,26 @@ describe("split production Worker profiles", () => {
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
       missingCurrentLegacyKey)).status).toBe(500);
 
+    const reusedIdentityKey = profile("account", "https://account.healthmd.app");
+    reusedIdentityKey.EXPORT_ENCRYPTION_KEYS_JSON = JSON.stringify({ v1: reusedIdentityKey.IDENTITY_KEY_B64 });
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      reusedIdentityKey)).status).toBe(500);
+
+    const reusedWrappingKey = profile("ingest", "https://api.healthmd.app");
+    reusedWrappingKey.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({
+      "kek-v1": Buffer.alloc(32, 6).toString("base64"),
+    });
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
+      reusedWrappingKey)).status).toBe(500);
+
+    const duplicateHistoricalKek = profile("maintenance", "https://maintenance.healthmd.app");
+    duplicateHistoricalKek.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({
+      "kek-v1": Buffer.alloc(32, 7).toString("base64"),
+      historical: Buffer.alloc(32, 7).toString("base64"),
+    });
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, duplicateHistoricalKek))
+      .rejects.toThrow("configuration is incomplete");
+
     const noAbuseBudget = profile("ingest", "https://api.healthmd.app");
     noAbuseBudget.INGEST_ACCOUNT_HOURLY_LIMIT = undefined;
     expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noAbuseBudget)).status)

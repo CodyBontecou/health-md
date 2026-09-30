@@ -28,6 +28,12 @@ const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore
   "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js", "/style.css"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
+function normalizedKeyMaterial(encoded: string): string {
+  const bytes = decodeBase64(encoded);
+  if (bytes.byteLength !== 32) throw new Error("Key material must contain exactly 32 bytes");
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export function validateConfiguration(env: Env): void {
   if (env.ENVIRONMENT !== "development" && env.ENVIRONMENT !== "production") {
     throw new Error("Invalid deployment environment");
@@ -60,15 +66,18 @@ export function validateConfiguration(env: Env): void {
         (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
           (!env.RESEND_API_KEY || !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")));
     let invalidIdentityKey = false;
+    let identityKeyMaterial: string | null = null;
     if (profile === "account" || profile === "combined") {
-      try { invalidIdentityKey = decodeBase64(env.IDENTITY_KEY_B64 ?? "").byteLength !== 32; }
+      try { identityKeyMaterial = normalizedKeyMaterial(env.IDENTITY_KEY_B64 ?? ""); }
       catch { invalidIdentityKey = true; }
     }
     let invalidLegacyKeys = false;
+    let legacyKeyMaterials: string[] = [];
     if (profile === "ingest" || profile === "account" || profile === "combined") {
       try {
-        invalidLegacyKeys = !parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")
-          .has(env.CURRENT_EXPORT_KEY_ID);
+        const keyring = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "");
+        invalidLegacyKeys = !keyring.has(env.CURRENT_EXPORT_KEY_ID);
+        legacyKeyMaterials = [...keyring.values()].map(normalizedKeyMaterial);
       } catch { invalidLegacyKeys = true; }
     }
     const invalidMetrics = profile !== "combined" &&
@@ -127,20 +136,31 @@ export function validateConfiguration(env: Env): void {
       }
     } catch { invalidAbuseLimits = true; }
     let invalidAccountKeys = false;
+    let accountKeyMaterials: string[] = [];
     if (profile === "ingest" || profile === "account" || profile === "maintenance") {
       try {
         const keys = parseExportKeyring(env.ACCOUNT_KEY_WRAPPING_KEYS_JSON ?? "");
         invalidAccountKeys = env.ACCOUNT_KEY_MODE !== "per_account" ||
           !env.CURRENT_ACCOUNT_WRAPPING_KEY_ID || !keys.has(env.CURRENT_ACCOUNT_WRAPPING_KEY_ID);
+        accountKeyMaterials = [...keys.values()].map(normalizedKeyMaterial);
       } catch { invalidAccountKeys = true; }
+    }
+    const configuredKeyMaterials = [...legacyKeyMaterials, ...accountKeyMaterials,
+      ...(identityKeyMaterial ? [identityKeyMaterial] : [])];
+    let invalidKeySeparation = new Set(configuredKeyMaterials).size !== configuredKeyMaterials.length;
+    if (profile === "combined" && env.AUTH_MODE === "password") {
+      try {
+        const pepper = normalizedKeyMaterial(env.PASSWORD_PEPPER_B64 ?? "");
+        invalidKeySeparation ||= configuredKeyMaterials.includes(pepper);
+      } catch { invalidKeySeparation = true; }
     }
     if (env.SYNTHETIC_PREVIEW_ONLY || env.DEV_SHOW_MAGIC_LINK || env.AUTH_SIGNUP_MODE === "open" ||
         (personalMvp ? (profile !== "combined" || env.CLOUD_RUNTIME_APPROVED !== undefined ||
           env.AUTH_MODE !== "password" || env.AUTH_SIGNUP_MODE !== "closed" ||
           env.REVISION_RETENTION_DAYS !== "unlimited" || !env.PASSWORD_PEPPER_B64 ||
-          invalidIdentityKey || invalidLegacyKeys) :
+          invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation) :
           (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
-            invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidBindings ||
+            invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation || invalidBindings ||
             invalidMetrics || invalidRuntimeLimits || invalidDeletionTtl || invalidAbuseLimits ||
             invalidDeploymentRevision || invalidExportEndpoint)) ||
         env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
