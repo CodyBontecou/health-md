@@ -117,6 +117,8 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
 
     let acknowledged = false;
     let retried = false;
+    // Exercise the Queue adapter locally; production-profile validation is covered separately.
+    env.ENVIRONMENT = "development";
     env.SERVICE_PROFILE = "maintenance";
     await maintenanceWorker.queue({ messages: [{ body: queued[0],
       ack: () => { acknowledged = true; }, retry: () => { retried = true; } }] } as

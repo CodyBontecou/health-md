@@ -1,4 +1,4 @@
-import core from "./index";
+import core, { validateConfiguration } from "./index";
 import { errorResponse, json, withSecurityHeaders } from "./http";
 import { processAccountDeletionById } from "./lifecycle";
 import { recordHttpMetric, recordMaintenanceMetric } from "./telemetry";
@@ -25,9 +25,9 @@ export default {
     }
   },
   async queue(batch: MessageBatch<LifecycleMessage>, env: Env): Promise<void> {
-    if (env.SERVICE_PROFILE !== "maintenance" || !env.DB || !env.EXPORTS || !env.LIFECYCLE_QUEUE) {
-      throw new Error("Maintenance queue profile is misconfigured");
-    }
+    validateConfiguration(env);
+    const lifecycleQueue = env.LIFECYCLE_QUEUE;
+    if (!lifecycleQueue) throw new Error("Maintenance queue profile is misconfigured");
     const started = Date.now();
     let retried = false;
     for (const message of batch.messages) {
@@ -39,7 +39,7 @@ export default {
       }
       try {
         const completed = await processAccountDeletionById(env, body.deletionId);
-        if (!completed) await env.LIFECYCLE_QUEUE.send(body, { delaySeconds: 1 });
+        if (!completed) await lifecycleQueue.send(body, { delaySeconds: 1 });
         message.ack();
       } catch {
         retried = true;

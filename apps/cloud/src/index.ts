@@ -28,7 +28,7 @@ const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore
   "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js", "/style.css"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
-function validateConfiguration(env: Env): void {
+export function validateConfiguration(env: Env): void {
   if (env.ENVIRONMENT !== "development" && env.ENVIRONMENT !== "production") {
     throw new Error("Invalid deployment environment");
   }

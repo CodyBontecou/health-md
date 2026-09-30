@@ -166,6 +166,14 @@ describe("split production Worker profiles", () => {
     await expect(maintenanceWorker.scheduled({} as ScheduledEvent, noMaintenanceQueue))
       .rejects.toThrow("configuration is incomplete");
 
+    const emptyBatch = { messages: [] } as unknown as MessageBatch<LifecycleMessage>;
+    await expect(maintenanceWorker.queue(emptyBatch,
+      profile("maintenance", "https://maintenance.healthmd.app"))).resolves.toBeUndefined();
+    const unapprovedQueue = profile("maintenance", "https://maintenance.healthmd.app");
+    unapprovedQueue.CLOUD_RUNTIME_APPROVED = undefined;
+    await expect(maintenanceWorker.queue(emptyBatch, unapprovedQueue))
+      .rejects.toThrow("configuration is incomplete");
+
     const noPayloadLimit = profile("ingest", "https://api.healthmd.app");
     delete (noPayloadLimit as Partial<Env>).MAX_EXPORT_BYTES;
     expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noPayloadLimit)).status)
