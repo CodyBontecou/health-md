@@ -85,7 +85,9 @@ export async function requestAccountDeletion(request: Request, env: Env, user: S
     try { await env.LIFECYCLE_QUEUE?.send(message); }
     catch { /* The durable D1 job remains available to scheduled maintenance. */ }
   }
-  return json({ deletionId: id, status: committed.completedAt ? "completed" : "pending",
+  // The internal job ID stays in D1/Queue; the opaque receipt is the complete
+  // user-facing authority and correlation mechanism.
+  return json({ status: committed.completedAt ? "completed" : "pending",
     statusToken, statusExpiresAt }, { status: 202 });
 }
 
