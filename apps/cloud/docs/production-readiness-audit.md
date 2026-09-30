@@ -32,6 +32,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Owner/RACI matrix | ADR-0008 has five roles | **all five unassigned** |
 | Fresh isolated infrastructure/IaC | split Wrangler profiles with deliberate placeholder D1/R2/Queue/AE bindings and invalid deployment-revision placeholders | source shape exists; **no resources/identities/domains provisioned** |
 | Deployment provenance/rollback identity | split runtime requires full 40-character commit SHA; `/health` exposes short revision; tests reject placeholder | source verified; no controlled production workflow/deployment exists |
+| Required runtime key material | account/combined validate exact identity-key length; ingest/account/combined validate the legacy keyring/current key; split profiles validate current account KEK before `/health` | source fail-closed tests pass; no approved production secret store or injected keys exist |
 | Trust-boundary route split | `ingest-worker.ts`, `account-worker.ts`, `maintenance-worker.ts`; `service-profiles.test.ts`; three dry-runs | source verified; deployed production edge absent |
 | Durable reservation/quota/idempotency | migration 0010, `upload-intents.ts`, trigger/concurrency/reconciliation tests, lost-batch-response and post-commit-read outage tests | source verified; D1 2x benchmark/provider fault drill absent |
 | Disconnect/crash handling | upload-intent tests plus deployed VM disconnect probe | VM verified; provider isolate/dependency drills absent |

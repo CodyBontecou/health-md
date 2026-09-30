@@ -21,7 +21,7 @@ import { getAccountDeletionStatus, processAccountDeletions, purgeArchivedRevisio
 import { reconcileUploadIntents } from "./upload-intents";
 import { reconcileOrphanExportObjects } from "./object-reconciliation";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
-import { parseExportKeyring } from "./crypto";
+import { decodeBase64, parseExportKeyring } from "./crypto";
 import type { Env } from "./types";
 
 const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
@@ -52,7 +52,19 @@ function validateConfiguration(env: Env): void {
     const invalidProductionIdentity = splitNonIdentity ?
       (env.AUTH_SIGNUP_MODE !== "closed" || env.AUTH_MODE === "password" || !!env.PASSWORD_PEPPER_B64) :
       (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
-        (!env.RESEND_API_KEY || env.AUTH_EMAIL_FROM.includes("example")));
+        (!env.RESEND_API_KEY || !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")));
+    let invalidIdentityKey = false;
+    if (profile === "account" || profile === "combined") {
+      try { invalidIdentityKey = decodeBase64(env.IDENTITY_KEY_B64 ?? "").byteLength !== 32; }
+      catch { invalidIdentityKey = true; }
+    }
+    let invalidLegacyKeys = false;
+    if (profile === "ingest" || profile === "account" || profile === "combined") {
+      try {
+        invalidLegacyKeys = !parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")
+          .has(env.CURRENT_EXPORT_KEY_ID);
+      } catch { invalidLegacyKeys = true; }
+    }
     const invalidMetrics = profile !== "combined" &&
       (env.HEALTH_FREE_METRICS_REQUIRED !== "1" || !env.METRICS);
     const invalidDeploymentRevision = profile !== "combined" &&
@@ -88,10 +100,11 @@ function validateConfiguration(env: Env): void {
     if (env.SYNTHETIC_PREVIEW_ONLY || env.DEV_SHOW_MAGIC_LINK || env.AUTH_SIGNUP_MODE === "open" ||
         (personalMvp ? (profile !== "combined" || env.CLOUD_RUNTIME_APPROVED !== undefined ||
           env.AUTH_MODE !== "password" || env.AUTH_SIGNUP_MODE !== "closed" ||
-          env.REVISION_RETENTION_DAYS !== "unlimited" || !env.PASSWORD_PEPPER_B64) :
+          env.REVISION_RETENTION_DAYS !== "unlimited" || !env.PASSWORD_PEPPER_B64 ||
+          invalidIdentityKey || invalidLegacyKeys) :
           (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
-            invalidAccountKeys || invalidMetrics || invalidDeletionTtl || invalidAbuseLimits ||
-            invalidDeploymentRevision)) ||
+            invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidMetrics ||
+            invalidDeletionTtl || invalidAbuseLimits || invalidDeploymentRevision)) ||
         env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
       throw new Error("Production or personal-MVP configuration is incomplete");
     }

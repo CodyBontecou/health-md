@@ -13,6 +13,10 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
     AUTH_SIGNUP_MODE: "closed",
     AUTH_EMAIL_FROM: kind === "account" ? "Health.md Cloud <cloud@healthmd.app>" : "",
     RESEND_API_KEY: kind === "account" ? "synthetic-provider-secret" : "",
+    IDENTITY_KEY_B64: kind === "account" ? Buffer.alloc(32, 5).toString("base64") : undefined,
+    EXPORT_ENCRYPTION_KEYS_JSON: kind === "maintenance" ? undefined : JSON.stringify({
+      v1: Buffer.alloc(32, 6).toString("base64"),
+    }),
     CURRENT_EXPORT_KEY_ID: "v1",
     ACCOUNT_KEY_MODE: "per_account",
     CURRENT_ACCOUNT_WRAPPING_KEY_ID: "kek-v1",
@@ -89,6 +93,27 @@ describe("split production Worker profiles", () => {
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noWrappingKey)).status)
       .toBe(500);
 
+    const noIdentityKey = profile("account", "https://account.healthmd.app");
+    delete (noIdentityKey as Partial<Env>).IDENTITY_KEY_B64;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noIdentityKey)).status)
+      .toBe(500);
+
+    const malformedIdentityKey = profile("account", "https://account.healthmd.app");
+    malformedIdentityKey.IDENTITY_KEY_B64 = Buffer.alloc(31).toString("base64");
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      malformedIdentityKey)).status).toBe(500);
+
+    const noLegacyKeys = profile("ingest", "https://api.healthmd.app");
+    delete (noLegacyKeys as Partial<Env>).EXPORT_ENCRYPTION_KEYS_JSON;
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noLegacyKeys)).status).toBe(500);
+
+    const missingCurrentLegacyKey = profile("account", "https://account.healthmd.app");
+    missingCurrentLegacyKey.EXPORT_ENCRYPTION_KEYS_JSON = JSON.stringify({
+      historical: Buffer.alloc(32, 6).toString("base64"),
+    });
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      missingCurrentLegacyKey)).status).toBe(500);
+
     const noAbuseBudget = profile("ingest", "https://api.healthmd.app");
     noAbuseBudget.INGEST_ACCOUNT_HOURLY_LIMIT = undefined;
     expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noAbuseBudget)).status)
@@ -109,5 +134,10 @@ describe("split production Worker profiles", () => {
     const account = profile("account", "https://account.healthmd.app");
     account.RESEND_API_KEY = "";
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), account)).status).toBe(500);
+
+    const noSender = profile("account", "https://account.healthmd.app");
+    noSender.AUTH_EMAIL_FROM = "";
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noSender)).status)
+      .toBe(500);
   });
 });
