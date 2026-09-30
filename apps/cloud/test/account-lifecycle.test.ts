@@ -101,7 +101,7 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
     const pending = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer ${receipt.statusToken}` },
     }), env);
-    expect(await pending.json()).toMatchObject({ status: "pending", completedAt: null });
+    expect(await pending.json()).toEqual({ status: "pending" });
     expect((await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer hmd_del_${"A".repeat(43)}` },
     }), env)).status).toBe(401);
@@ -126,7 +126,7 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
     const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer ${receipt.statusToken}` },
     }), env);
-    expect(await completed.json()).toMatchObject({ status: "completed", completedAt: expect.any(String) });
+    expect(await completed.json()).toEqual({ status: "completed" });
     db.connection.prepare("UPDATE account_deletions SET status_expires_at = '2020-01-01T00:00:00.000Z'").run();
     await purgeExpiredDeletionReceipts(env);
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get()).toMatchObject({ n: 0 });
@@ -190,13 +190,13 @@ it("keeps a client-known receipt when a deletion commit response and verificatio
     const pending = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer ${statusToken}` },
     }), env);
-    expect(await pending.json()).toMatchObject({ status: "pending" });
+    expect(await pending.json()).toEqual({ status: "pending" });
     const deletion = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
     expect(await processAccountDeletionById(env, deletion.id)).toBe(true);
     const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer ${statusToken}` },
     }), env);
-    expect(await completed.json()).toMatchObject({ status: "completed" });
+    expect(await completed.json()).toEqual({ status: "completed" });
   } finally { db.close(); }
 });
 
@@ -256,7 +256,7 @@ it("preserves the receipt when maintenance completes before commit read-back", a
     const statusResponse = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer ${statusToken}` },
     }), env);
-    expect(await statusResponse.json()).toMatchObject({ status: "completed" });
+    expect(await statusResponse.json()).toEqual({ status: "completed" });
   } finally { db.close(); }
 });
 

@@ -5,7 +5,7 @@ import type { Env, LifecycleMessage, SessionUser } from "./types";
 
 interface ExportObjectRow { id: string; objectKey: string }
 interface DeletionRow { id: string; userId: string }
-interface DeletionStatusRow { requestedAt: string; completedAt: string | null; expiresAt: string }
+interface DeletionStatusRow { completedAt: string | null }
 
 const EMAIL_DELETION_REAUTH_MS = 15 * 60_000;
 const DELETION_STATUS_TOKEN = /^hmd_del_[A-Za-z0-9_-]{43}$/u;
@@ -96,18 +96,15 @@ export async function getAccountDeletionStatus(request: Request, env: Env): Prom
     throw new HttpError(401, "invalid_deletion_receipt", "Deletion status receipt is invalid or expired.");
   }
   const row = await env.DB.prepare(
-    `SELECT requested_at AS requestedAt, completed_at AS completedAt, status_expires_at AS expiresAt
-     FROM account_deletions WHERE status_token_hash = ? AND status_expires_at > ? LIMIT 1`,
+    `SELECT completed_at AS completedAt FROM account_deletions
+     WHERE status_token_hash = ? AND status_expires_at > ? LIMIT 1`,
   ).bind(await sha256Hex(match[1]), new Date().toISOString()).first<DeletionStatusRow>();
   if (!row) {
     throw new HttpError(401, "invalid_deletion_receipt", "Deletion status receipt is invalid or expired.");
   }
-  return json({
-    status: row.completedAt ? "completed" : "pending",
-    requestedAt: row.requestedAt,
-    completedAt: row.completedAt,
-    statusExpiresAt: row.expiresAt,
-  });
+  // This endpoint has no account session by design. The opaque receipt grants
+  // only the minimum pending/completed signal, never account or timing metadata.
+  return json({ status: row.completedAt ? "completed" : "pending" });
 }
 
 // Safe to repeat after a crash: the user remains disabled, object deletion is
