@@ -35,6 +35,9 @@ export function validateConfiguration(env: Env): void {
   if (env.AUTH_MODE && env.AUTH_MODE !== "email_link" && env.AUTH_MODE !== "password") {
     throw new Error("Invalid authentication mode");
   }
+  if (!(["closed", "invite", "open"] as string[]).includes(env.AUTH_SIGNUP_MODE)) {
+    throw new Error("Invalid signup mode");
+  }
   const profile = env.SERVICE_PROFILE ?? "combined";
   if (!["combined", "ingest", "account", "maintenance"].includes(profile)) {
     throw new Error("Invalid service profile");
@@ -51,8 +54,11 @@ export function validateConfiguration(env: Env): void {
     const splitNonIdentity = profile === "ingest" || profile === "maintenance";
     const invalidProductionIdentity = splitNonIdentity ?
       (env.AUTH_SIGNUP_MODE !== "closed" || env.AUTH_MODE === "password" || !!env.PASSWORD_PEPPER_B64) :
-      (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
-        (!env.RESEND_API_KEY || !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")));
+      profile === "account" ?
+        (env.AUTH_MODE === "password" || !!env.PASSWORD_PEPPER_B64 || !env.RESEND_API_KEY ||
+          !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")) :
+        (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
+          (!env.RESEND_API_KEY || !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")));
     let invalidIdentityKey = false;
     if (profile === "account" || profile === "combined") {
       try { invalidIdentityKey = decodeBase64(env.IDENTITY_KEY_B64 ?? "").byteLength !== 32; }

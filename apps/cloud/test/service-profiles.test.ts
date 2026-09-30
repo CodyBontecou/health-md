@@ -198,6 +198,11 @@ describe("split production Worker profiles", () => {
     placeholderRevision.DEPLOYMENT_REVISION = "REPLACE_WITH_FULL_GIT_COMMIT_SHA";
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
       placeholderRevision)).status).toBe(500);
+
+    const invalidSignupMode = profile("account", "https://account.healthmd.app");
+    invalidSignupMode.AUTH_SIGNUP_MODE = "invalid" as Env["AUTH_SIGNUP_MODE"];
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      invalidSignupMode)).status).toBe(500);
   });
 
   it("does not require account email credentials in non-identity profiles", async () => {
@@ -214,5 +219,16 @@ describe("split production Worker profiles", () => {
     noSender.AUTH_EMAIL_FROM = "";
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noSender)).status)
       .toBe(500);
+
+    const passwordAccount = profile("account", "https://account.healthmd.app");
+    passwordAccount.AUTH_MODE = "password";
+    passwordAccount.PASSWORD_PEPPER_B64 = Buffer.alloc(32, 9).toString("base64");
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      passwordAccount)).status).toBe(500);
+
+    const unusedPasswordPepper = profile("account", "https://account.healthmd.app");
+    unusedPasswordPepper.PASSWORD_PEPPER_B64 = Buffer.alloc(32, 9).toString("base64");
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      unusedPasswordPepper)).status).toBe(500);
   });
 });

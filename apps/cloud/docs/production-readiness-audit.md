@@ -39,7 +39,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Durable reservation/quota/idempotency | migration 0010, `upload-intents.ts`, trigger/concurrency/reconciliation tests, lost-batch-response and post-commit-read outage tests | source verified; D1 2x benchmark/provider fault drill absent |
 | Disconnect/crash handling | upload-intent tests plus deployed VM disconnect probe | VM verified; provider isolate/dependency drills absent |
 | R2 orphan reconciliation | migration 0014, bounded persisted cursor, exact-key/reference checks, provider-failure tests | source verified; no production bucket scan/alert evidence |
-| Account identity/invites | email-link auth, generic responses, IP/identity/provider budgets, concurrent first-signup and ambiguous-commit reconciliation tests | source verified; provider/edge review absent |
+| Account identity/invites | split account profile requires email-link auth and rejects password/pepper, invalid signup modes and open signup; generic responses, IP/identity/provider budgets, concurrent first-signup and ambiguous-commit reconciliation tests | source verified; provider/edge/recovery review absent |
 | Long-term identity/recovery | ADR recommends passkeys + recovery codes; invite beta discloses no support override | **not implemented/approved for open signup** |
 | Sessions/tokens/revocation | account lifecycle and two-account isolation tests | source verified |
 | Deletion Queue/status/SLA | lifecycle Queue source, migration 0012, client-known hashed receipt, ambiguous-commit/concurrent-completion and retry tests | source verified; Queue/DLQ/backup-expiry/SLA deployment absent |
