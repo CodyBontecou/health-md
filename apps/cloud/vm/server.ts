@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { isIP } from "node:net";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { resolve } from "node:path";
 import worker from "../src/index";
 import type { Env } from "../src/types";
@@ -141,13 +142,7 @@ async function respond(request: IncomingMessage, response: ServerResponse, env: 
     });
     response.writeHead(result.status, headers);
     if (!result.body) { response.end(); return; }
-    await new Promise<void>((done, fail) => {
-      const output = Readable.fromWeb(result.body as never);
-      output.on("error", fail);
-      response.on("error", fail);
-      response.on("finish", done);
-      output.pipe(response);
-    });
+    await pipeline(Readable.fromWeb(result.body as never), response);
   } catch {
     // Never log request data, credentials, response bodies or exception text.
     if (!response.headersSent) safeError(response, 500);

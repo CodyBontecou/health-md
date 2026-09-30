@@ -4,6 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync 
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { request as httpRequest } from "node:http";
+import { connect } from "node:net";
 import { DatabaseSync } from "node:sqlite";
 import { createVmEnvironment } from "../vm/runtime";
 import { createSingleUserAccount } from "../vm/bootstrap";
@@ -66,6 +67,31 @@ async function proxiedRequest(port: number, path: string, method = "GET", body?:
       request.end();
     },
   );
+}
+
+async function abortProxiedUpload(port: number, token: string): Promise<void> {
+  await new Promise<void>((done, fail) => {
+    const socket = connect(port, "127.0.0.1");
+    socket.once("error", fail);
+    socket.once("connect", () => {
+      socket.write([
+        "POST /api/v1/exports HTTP/1.1",
+        "Host: api.example.test",
+        "X-Forwarded-Proto: https",
+        "X-Forwarded-Host: api.example.test",
+        "X-Forwarded-For: 100.64.0.23",
+        `Authorization: Bearer ${token}`,
+        "Content-Type: application/json",
+        "Content-Length: 1048576",
+        "Connection: close",
+        "",
+        "{\"partial\":",
+      ].join("\r\n"), (error) => {
+        if (error) { fail(error); return; }
+        setTimeout(() => { socket.destroy(); done(); }, 50);
+      });
+    });
+  });
 }
 
 describe("isolated VM-native single-user backend (synthetic fixtures only)", () => {
@@ -330,6 +356,9 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       const readToken = createReadToken(db.connection, id, "Synthetic read-only client").token;
       const fixture = JSON.parse(readFileSync(resolve(sourceDirectory,
         "../apple/docs/reference/generated/automation/api-export-v1.json"), "utf8"));
+      await Promise.all(Array.from({ length: 4 }, () => abortProxiedUpload(api.port, token)));
+      await new Promise((done) => setTimeout(done, 100));
+      expect((await request("/api/v1/exports", "POST", fixture, cookie)).status).toBe(401);
       expect((await request("/health")).status).toBe(200);
       expect((await request("/api/runtime")).status).toBe(404);
       expect((await request("/login")).status).toBe(404);
