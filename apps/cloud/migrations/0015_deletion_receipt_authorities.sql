@@ -17,3 +17,9 @@ INSERT INTO account_deletion_receipts (deletion_id, status_token_hash, status_ex
 SELECT id, status_token_hash, status_expires_at
 FROM account_deletions
 WHERE status_token_hash IS NOT NULL AND status_expires_at IS NOT NULL;
+
+-- The child row is now the only status authority. Do not retain duplicate
+-- hashes in the legacy columns after a successful transactional backfill.
+UPDATE account_deletions
+SET status_token_hash = NULL, status_expires_at = NULL
+WHERE status_token_hash IS NOT NULL OR status_expires_at IS NOT NULL;

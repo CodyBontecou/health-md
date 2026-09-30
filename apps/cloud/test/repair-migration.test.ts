@@ -54,6 +54,11 @@ for (const priorCount of [7, 8, 9, 10, 11, 12, 13, 14]) it(`applies forward-only
         .toMatchObject({ n: 0 });
       expect(after.connection.prepare("SELECT COUNT(*) AS n FROM account_deletion_receipts").get())
         .toMatchObject({ n: priorCount >= 12 ? 1 : 0 });
+      if (priorCount >= 12) {
+        expect(after.connection.prepare(`SELECT status_token_hash AS statusTokenHash,
+          status_expires_at AS statusExpiresAt FROM account_deletions WHERE id = ?`).get(deletionId))
+          .toMatchObject({ statusTokenHash: null, statusExpiresAt: null });
+      }
     } finally { after.close(); }
   } finally { process.umask(originalUmask); }
 });
