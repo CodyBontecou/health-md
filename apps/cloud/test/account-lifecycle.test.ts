@@ -4,8 +4,9 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
-import { issueSession } from "../src/auth";
-import { processAccountDeletionById, purgeExpiredDeletionReceipts } from "../src/lifecycle";
+import { getSession, issueSession } from "../src/auth";
+import { processAccountDeletionById, purgeExpiredDeletionReceipts,
+  requestAccountDeletion } from "../src/lifecycle";
 import maintenanceWorker from "../src/maintenance-worker";
 import { createVmEnvironment } from "../vm/runtime";
 import { createSingleUserAccount } from "../vm/bootstrap";
@@ -109,8 +110,9 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
     expect((await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer hmd_del_${"A".repeat(43)}` },
     }), env)).status).toBe(401);
-    expect(db.connection.prepare("SELECT status_token_hash AS hash FROM account_deletions WHERE id = ?")
-      .get(deletionId)).not.toMatchObject({ hash: receipt.statusToken });
+    expect(db.connection.prepare(
+      "SELECT status_token_hash AS hash FROM account_deletion_receipts WHERE deletion_id = ?",
+    ).get(deletionId)).not.toMatchObject({ hash: receipt.statusToken });
     expect((await request(env, "/api/account", "GET", undefined, cookie)).status).toBe(401);
     expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
       .toMatchObject({ status: "disabled" });
@@ -133,9 +135,52 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
       headers: { Authorization: `Bearer ${receipt.statusToken}` },
     }), env);
     expect(await completed.json()).toEqual({ status: "completed" });
-    db.connection.prepare("UPDATE account_deletions SET status_expires_at = '2020-01-01T00:00:00.000Z'").run();
+    db.connection.prepare(
+      "UPDATE account_deletion_receipts SET status_expires_at = '2020-01-01T00:00:00.000Z'",
+    ).run();
     await purgeExpiredDeletionReceipts(env);
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("binds concurrent client-known receipts to one deletion job", async () => {
+  const { env, db, userId } = await setup();
+  const queued: LifecycleMessage[] = [];
+  env.LIFECYCLE_QUEUE = { send: async (message: LifecycleMessage) => { queued.push(message); } } as
+    unknown as Queue<LifecycleMessage>;
+  try {
+    const cookie = await session(env, userId);
+    const user = await getSession(new Request(`${origin}/api/account`, { headers: { Cookie: cookie } }), env);
+    if (!user) throw new Error("Synthetic session was not created");
+    const statusTokens = [deletionStatusToken(), deletionStatusToken()];
+    const deletionRequest = (statusToken: string) => new Request(`${origin}/api/account/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin },
+      body: JSON.stringify(deletionInput({ statusToken })),
+    });
+    const responses = await Promise.all(statusTokens.map((statusToken) =>
+      requestAccountDeletion(deletionRequest(statusToken), env, user)));
+    for (let index = 0; index < responses.length; index += 1) {
+      expect(responses[index]!.status).toBe(202);
+      expect(await responses[index]!.json()).toEqual({ status: "pending",
+        statusToken: statusTokens[index], statusExpiresAt: expect.any(String) });
+    }
+    const exactRetry = await requestAccountDeletion(deletionRequest(statusTokens[0]!), env, user);
+    expect(await exactRetry.json()).toEqual({ status: "pending", statusToken: statusTokens[0],
+      statusExpiresAt: expect.any(String) });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletion_receipts").get())
+      .toMatchObject({ n: 2 });
+    expect(new Set(queued.map((message) => message.deletionId)).size).toBe(1);
+    const job = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    expect(await processAccountDeletionById(env, job.id)).toBe(true);
+    for (const statusToken of statusTokens) {
+      const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+        headers: { Authorization: `Bearer ${statusToken}` },
+      }), env);
+      expect(await completed.json()).toEqual({ status: "completed" });
+    }
   } finally { db.close(); }
 });
 
@@ -159,7 +204,7 @@ it("keeps a client-known receipt when a deletion commit response and verificatio
       if (property === "prepare") return (query: string) => {
         const statement = target.prepare(query);
         if (verificationUnavailable ||
-            !query.includes("SELECT 1 AS valid, completed_at AS completedAt")) {
+            !query.includes("SELECT d.id, d.completed_at AS completedAt")) {
           return statement;
         }
         return new Proxy(statement, { get(prepared, statementProperty) {
@@ -220,7 +265,7 @@ it("preserves the receipt when maintenance completes before commit read-back", a
       if (property === "prepare") return (query: string) => {
         const statement = target.prepare(query);
         if (completedBeforeRead ||
-            !query.includes("SELECT 1 AS valid, completed_at AS completedAt")) return statement;
+            !query.includes("SELECT d.id, d.completed_at AS completedAt")) return statement;
         return new Proxy(statement, { get(prepared, statementProperty) {
           if (statementProperty !== "bind") {
             const value = Reflect.get(prepared, statementProperty);
@@ -235,11 +280,13 @@ it("preserves the receipt when maintenance completes before commit read-back", a
               }
               return async () => {
                 completedBeforeRead = true;
+                const job = await target.prepare("SELECT id FROM account_deletions WHERE user_id = ?")
+                  .bind(userId).first<{ id: string }>();
                 await target.batch([
                   target.prepare("DELETE FROM users WHERE id = ? AND status = 'disabled'").bind(userId),
                   target.prepare(`UPDATE account_deletions SET completed_at = ?
                     WHERE id = ? AND completed_at IS NULL`)
-                    .bind(new Date().toISOString(), values[0]),
+                    .bind(new Date().toISOString(), job?.id),
                 ]);
                 return bound.first();
               };
@@ -274,12 +321,15 @@ it("expires a status credential without discarding an unfinished deletion job", 
     const deletion = await request(env, "/api/account/delete", "POST", deletionInput(), cookie);
     const receipt = await deletion.json() as { statusToken: string };
     const deletionRow = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
-    db.connection.prepare("UPDATE account_deletions SET status_expires_at = '2020-01-01T00:00:00.000Z'")
-      .run();
+    db.connection.prepare(
+      "UPDATE account_deletion_receipts SET status_expires_at = '2020-01-01T00:00:00.000Z'",
+    ).run();
     await purgeExpiredDeletionReceipts(env);
-    expect(db.connection.prepare(`SELECT completed_at, status_token_hash AS statusTokenHash
-      FROM account_deletions WHERE id = ?`).get(deletionRow.id))
-      .toMatchObject({ completed_at: null, statusTokenHash: null });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(deletionRow.id)).toMatchObject({ completed_at: null });
+    expect(db.connection.prepare(
+      "SELECT COUNT(*) AS n FROM account_deletion_receipts WHERE deletion_id = ?",
+    ).get(deletionRow.id)).toMatchObject({ n: 0 });
     expect((await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
       headers: { Authorization: `Bearer ${receipt.statusToken}` },
     }), env)).status).toBe(401);

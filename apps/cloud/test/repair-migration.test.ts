@@ -7,7 +7,7 @@ import { VmDatabase } from "../vm/storage";
 
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
-for (const priorCount of [7, 8, 9, 10, 11, 12, 13]) it(`applies forward-only migrations from v${priorCount} to v14`, () => {
+for (const priorCount of [7, 8, 9, 10, 11, 12, 13, 14]) it(`applies forward-only migrations from v${priorCount} to v15`, () => {
   const root = mkdtempSync(join(tmpdir(), "healthmd-repair-migrate-")); dirs.push(root);
   const prior = join(root, "prior"); const data = join(root, "data");
   mkdirSync(prior, { mode: 0o700 }); mkdirSync(data, { mode: 0o700 });
@@ -17,17 +17,24 @@ for (const priorCount of [7, 8, 9, 10, 11, 12, 13]) it(`applies forward-only mig
     copyFileSync(join(current, name), join(prior, name));
   }
   const id = randomUUID();
+  const deletionId = randomUUID();
   const originalUmask = process.umask(0o077);
   try {
     const before = new VmDatabase(data, prior);
     try {
       before.connection.prepare(`INSERT INTO users (id, email_lookup, email_ciphertext, email_iv, created_at)
         VALUES (?, 'synthetic', 'synthetic', 'synthetic', ?)`).run(id, new Date().toISOString());
+      if (priorCount >= 12) {
+        before.connection.prepare(`INSERT INTO account_deletions
+          (id, user_id, requested_at, status_token_hash, status_expires_at)
+          VALUES (?, ?, ?, ?, '2030-01-01T00:00:00.000Z')`)
+          .run(deletionId, id, new Date().toISOString(), "a".repeat(64));
+      }
       expect((before.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get() as { n: number }).n).toBe(priorCount);
     } finally { before.close(); }
     const after = new VmDatabase(data, current);
     try {
-      expect((after.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get() as { n: number }).n).toBe(14);
+      expect((after.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get() as { n: number }).n).toBe(15);
       expect((after.connection.prepare("SELECT id FROM users WHERE id = ?").get(id) as { id: string }).id).toBe(id);
       expect((after.connection.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check)
         .toBe("ok");
@@ -45,6 +52,8 @@ for (const priorCount of [7, 8, 9, 10, 11, 12, 13]) it(`applies forward-only mig
         WHERE name = 'rewrapped_at'`).get()).toMatchObject({ n: 1 });
       expect(after.connection.prepare("SELECT COUNT(*) AS n FROM maintenance_cursors").get())
         .toMatchObject({ n: 0 });
+      expect(after.connection.prepare("SELECT COUNT(*) AS n FROM account_deletion_receipts").get())
+        .toMatchObject({ n: priorCount >= 12 ? 1 : 0 });
     } finally { after.close(); }
   } finally { process.umask(originalUmask); }
 });
