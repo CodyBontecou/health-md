@@ -60,12 +60,16 @@ export async function requestAccountDeletion(request: Request, env: Env, user: S
   } catch (error) {
     batchFailure = error;
   }
-  let committed: { valid: number } | null;
+  let committed: { valid: number; completedAt: string | null } | null;
   try {
-    committed = await env.DB.prepare(`SELECT 1 AS valid FROM account_deletions d
-      JOIN users u ON u.id = d.user_id
-      WHERE d.id = ? AND d.user_id = ? AND d.status_token_hash = ? AND u.status = 'disabled'`)
-      .bind(id, user.id, statusTokenHash).first<{ valid: number }>();
+    // The deletion row and account disablement are one D1 transaction. The
+    // user row can legitimately disappear if scheduled maintenance completes
+    // between that commit and this read, so it must not be part of the durable
+    // receipt postcondition.
+    committed = await env.DB.prepare(`SELECT 1 AS valid, completed_at AS completedAt
+      FROM account_deletions
+      WHERE id = ? AND user_id = ? AND status_token_hash = ?`)
+      .bind(id, user.id, statusTokenHash).first<{ valid: number; completedAt: string | null }>();
   } catch {
     // The caller already owns the receipt and can safely poll it. Do not try to
     // undo an account disablement whose commit outcome cannot be read.
@@ -76,10 +80,13 @@ export async function requestAccountDeletion(request: Request, env: Env, user: S
     if (!batchCompleted) throw batchFailure;
     throw new HttpError(409, "account_inactive", "Account is not active.");
   }
-  const message: LifecycleMessage = { version: 1, type: "account.delete", deletionId: id };
-  try { await env.LIFECYCLE_QUEUE?.send(message); }
-  catch { /* The durable D1 job remains available to scheduled maintenance. */ }
-  return json({ deletionId: id, status: "pending", statusToken, statusExpiresAt }, { status: 202 });
+  if (!committed.completedAt) {
+    const message: LifecycleMessage = { version: 1, type: "account.delete", deletionId: id };
+    try { await env.LIFECYCLE_QUEUE?.send(message); }
+    catch { /* The durable D1 job remains available to scheduled maintenance. */ }
+  }
+  return json({ deletionId: id, status: committed.completedAt ? "completed" : "pending",
+    statusToken, statusExpiresAt }, { status: 202 });
 }
 
 export async function getAccountDeletionStatus(request: Request, env: Env): Promise<Response> {

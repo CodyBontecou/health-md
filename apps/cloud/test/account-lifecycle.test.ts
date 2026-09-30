@@ -152,7 +152,8 @@ it("keeps a client-known receipt when a deletion commit response and verificatio
       };
       if (property === "prepare") return (query: string) => {
         const statement = target.prepare(query);
-        if (verificationUnavailable || !query.includes("SELECT 1 AS valid FROM account_deletions")) {
+        if (verificationUnavailable ||
+            !query.includes("SELECT 1 AS valid, completed_at AS completedAt")) {
           return statement;
         }
         return new Proxy(statement, { get(prepared, statementProperty) {
@@ -196,6 +197,66 @@ it("keeps a client-known receipt when a deletion commit response and verificatio
       headers: { Authorization: `Bearer ${statusToken}` },
     }), env);
     expect(await completed.json()).toMatchObject({ status: "completed" });
+  } finally { db.close(); }
+});
+
+it("preserves the receipt when maintenance completes before commit read-back", async () => {
+  const { env, db, userId } = await setup();
+  const queued: LifecycleMessage[] = [];
+  env.LIFECYCLE_QUEUE = { send: async (message: LifecycleMessage) => { queued.push(message); } } as
+    unknown as Queue<LifecycleMessage>;
+  try {
+    const cookie = await session(env, userId);
+    const statusToken = deletionStatusToken();
+    const original = env.DB;
+    let completedBeforeRead = false;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (completedBeforeRead ||
+            !query.includes("SELECT 1 AS valid, completed_at AS completedAt")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty !== "first") {
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              }
+              return async () => {
+                completedBeforeRead = true;
+                await target.batch([
+                  target.prepare("DELETE FROM users WHERE id = ? AND status = 'disabled'").bind(userId),
+                  target.prepare(`UPDATE account_deletions SET completed_at = ?
+                    WHERE id = ? AND completed_at IS NULL`)
+                    .bind(new Date().toISOString(), values[0]),
+                ]);
+                return bound.first();
+              };
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+
+    const response = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken }), cookie);
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ status: "completed", statusToken });
+    expect(completedBeforeRead).toBe(true);
+    expect(queued).toEqual([]);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 0 });
+    env.DB = original;
+    const statusResponse = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${statusToken}` },
+    }), env);
+    expect(await statusResponse.json()).toMatchObject({ status: "completed" });
   } finally { db.close(); }
 });
 
