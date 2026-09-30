@@ -35,8 +35,35 @@ for (const [file, profile, entry] of profiles) {
   requireText(text, "00000000-0000-0000-0000-000000000000", file);
   requireText(text, "placeholder", file);
   requireText(text, "HEALTH_FREE_METRICS_REQUIRED = \"1\"", file);
+  requireText(text, 'ACCOUNT_KEY_MODE = "per_account"', file);
+  requireText(text, 'CURRENT_ACCOUNT_WRAPPING_KEY_ID = "kek-v1"', file);
   forbid(text, /^routes?\s*=/mu, file);
-  forbid(text, /^(?:IDENTITY_KEY_B64|EXPORT_ENCRYPTION_KEYS_JSON|ACCOUNT_KEY_WRAPPING_KEYS_JSON|RESEND_API_KEY|CLOUD_RUNTIME_APPROVED)\s*=/mu, file);
+  forbid(text, /^(?:IDENTITY_KEY_B64|EXPORT_ENCRYPTION_KEYS_JSON|ACCOUNT_KEY_WRAPPING_KEYS_JSON|RESEND_API_KEY|PASSWORD_PEPPER_B64|AUTH_INVITE_EMAILS|CLOUD_RUNTIME_APPROVED|CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED|CLOUD_REPAIR_DISPATCH_ENABLED)\s*=/mu, file);
+  if (profile === "ingest") {
+    requireText(text, 'INGEST_TOKEN_HOURLY_LIMIT = "120"', file);
+    requireText(text, 'INGEST_ACCOUNT_HOURLY_LIMIT = "240"', file);
+    forbid(text, /^\[assets\]$/mu, file);
+    forbid(text, /^\[\[queues\./mu, file);
+    forbid(text, /^binding\s*=\s*"LIFECYCLE_QUEUE"$/mu, file);
+  } else if (profile === "account") {
+    requireText(text, "[assets]", file);
+    requireText(text, 'binding = "ASSETS"', file);
+    requireText(text, "[[queues.producers]]", file);
+    requireText(text, 'binding = "LIFECYCLE_QUEUE"', file);
+    requireText(text, 'EXPORT_ENDPOINT_ORIGIN = "https://api.healthmd.app"', file);
+    requireText(text, 'EMAIL_SEND_HOURLY_LIMIT = "100"', file);
+    requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
+    forbid(text, /^\[\[queues\.consumers\]\]$/mu, file);
+  } else {
+    requireText(text, "[triggers]", file);
+    requireText(text, 'crons = ["*/5 * * * *"]', file);
+    requireText(text, "[[queues.producers]]", file);
+    requireText(text, "[[queues.consumers]]", file);
+    requireText(text, 'dead_letter_queue = "healthmd-cloud-lifecycle-dead-letter-placeholder-not-for-deployment"', file);
+    requireText(text, 'REVISION_RETENTION_DAYS = "30"', file);
+    requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
+    forbid(text, /^\[assets\]$/mu, file);
+  }
 }
 const combined = read("wrangler.toml");
 requireText(combined, "00000000-0000-0000-0000-000000000000", "wrangler.toml");

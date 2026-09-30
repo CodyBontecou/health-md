@@ -60,7 +60,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Twice-beta/twice-GA load and cost gates | fail-closed `qualify:staging-load` harness/runbook covers revision-bound 500-concurrent, 50/s × 10-minute and exact-25-MiB probes with health-free aggregates | **provider run, native metrics and accepted cost model absent** |
 | Controlled cohorts | sequence documented | **not started/authorized** |
 | Cutover/rollback | plan and recovery runbook | documented, not exercised against production |
-| Signup closed | all split configs `closed`; runtime approval marker secret absent; placeholder bindings; CI safety verifier | satisfied fail-closed state |
+| Signup and deployment closed | all split configs `closed`, route-free, placeholder-bound and secret-free; the CI safety verifier enforces profile-specific assets/Queue/schedule/origin/budget/retention boundaries and forbids checked-in approval, identity, key, invite, password and repair-flag secrets | satisfied fail-closed state; this is not launch approval |
 
 ## Audited source artifact surface
 
