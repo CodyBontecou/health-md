@@ -178,24 +178,45 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
       spec ? "supplement.accepted" : "export.accepted", intent.exportId, receivedAt, intent.exportId),
     commitUploadIntentStatement(env, intent, receivedAt),
   ];
+  let batchCompleted = false;
+  let batchFailure: unknown;
   try {
-    // D1 batch is transactional; a failed metadata commit does not acknowledge the payload.
+    // D1 batch is transactional, but a transport failure can make its commit
+    // outcome ambiguous to this isolate.
     await env.DB.batch(statements);
+    batchCompleted = true;
+  } catch (error) {
+    batchFailure = error;
+  }
+  let committed: { valid: number } | null;
+  try {
     // D1 change counts are not portable when the batch also fires storage
-    // ledger triggers. Verify the durable postcondition instead: both the
-    // authenticated export insert and reservation commit must exist.
-    const committed = await env.DB.prepare(`SELECT 1 AS valid FROM exports e
+    // ledger triggers. Reconcile the durable postcondition even when the batch
+    // response was lost before deciding that the staged ciphertext is safe to
+    // remove.
+    committed = await env.DB.prepare(`SELECT 1 AS valid FROM exports e
       JOIN upload_intents i ON i.export_id = e.id AND i.user_id = e.user_id
       WHERE e.id = ? AND e.user_id = ? AND i.id = ? AND i.state = 'committed'`)
       .bind(intent.exportId, principal.userId, intent.id).first<{ valid: number }>();
-    if (committed?.valid !== 1) {
-      throw new HttpError(401, "unauthorized", "Export token is no longer active.");
+  } catch {
+    // Never call abandonUploadIntent after an uncertain commit: it deletes the
+    // object before checking intent state. A retry can recover the durable
+    // receipt, while scheduled reconciliation handles a truly abandoned write.
+    throw new HttpError(503, "commit_verification_pending",
+      "Export commit verification is temporarily unavailable. Retry the same export shortly.");
+  }
+  if (committed?.valid !== 1) {
+    let concurrentDuplicate: Response | null;
+    try {
+      concurrentDuplicate = await duplicateReceipt();
+    } catch {
+      throw new HttpError(503, "commit_verification_pending",
+        "Export commit verification is temporarily unavailable. Retry the same export shortly.");
     }
-  } catch (error) {
     try { await abandonUploadIntent(env, intent); } catch { /* Durable reconciliation retries cleanup. */ }
-    const concurrentDuplicate = await duplicateReceipt();
     if (concurrentDuplicate) return concurrentDuplicate;
-    throw error;
+    if (!batchCompleted) throw batchFailure;
+    throw new HttpError(401, "unauthorized", "Export token is no longer active.");
   }
   return json({ accepted: true, duplicate: false, id: intent.exportId, records: info.recordCount,
     ...(spec ? { mode: "supplemental", failureCount: info.failureCount } : {}) }, { status: 201 });

@@ -88,7 +88,7 @@ The production path should use Cloudflare's Worker route directly rather than th
 
 ## Ingest concurrency and consistency design
 
-**Source milestone:** migration `0010_multi_user_ingest.sql`, `src/upload-intents.ts`, and the ingest integration implement the account reservation ledger, two-active-upload limit, committed/reserved byte triggers, bounded exact-retry wait, and expired-intent reconciliation. Synthetic VM and local-D1 migration tests cover this source state. It has not been applied to the live pilot or any production resource.
+**Source milestone:** migration `0010_multi_user_ingest.sql`, `src/upload-intents.ts`, and the ingest integration implement the account reservation ledger, two-active-upload limit, committed/reserved byte triggers, bounded exact-retry wait, ambiguous D1 commit-response reconciliation, and expired-intent reconciliation. A lost batch response is accepted only after the export+committed-intent postcondition is read back; an unavailable post-commit read returns retryable backpressure without deleting possibly committed ciphertext. Synthetic VM and local-D1 migration tests cover this source state. It has not been applied to the live pilot or any production resource.
 
 Do not replace the four-slot VM gate with a larger process-global number. The production Worker should horizontally serve different accounts and enforce fairness with durable account-scoped state.
 
