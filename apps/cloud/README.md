@@ -98,7 +98,7 @@ Do **not** follow this until proposed ADR-0008, `docs/production-data-flow-threa
 | --- | --- | --- |
 | `POST /api/auth/request-link`, `POST /api/auth/consume-link` | Invite + single-use link | Worker-preview browser sign-in; no account enumeration responses |
 | `POST /api/auth/password-login` | VM single-user password profile only | Rate-limited browser sign-in; no HTTP registration or recovery |
-| `POST /api/account/delete` | VM password reauthentication or a production email-link session created within 15 minutes | Disable the account immediately, return one opaque status receipt, and durably queue bounded encrypted-object/account erasure |
+| `POST /api/account/delete` | VM password reauthentication or a production email-link session created within 15 minutes; client-generated high-entropy `statusToken` | Disable the account immediately, hash the already-known opaque receipt, reconcile ambiguous commit outcomes, and durably queue bounded encrypted-object/account erasure |
 | `GET /api/account/deletion-status` | `Authorization: Bearer hmd_del_…` deletion receipt | Report only pending/completed after sessions are revoked; no token in URLs or browser storage |
 | `GET /api/account/export/page/:page` | HttpOnly browser session | Stream a bounded TAR page with a manifest and up to five exact, integrity-verified retained envelopes; no plaintext archive is staged |
 | `GET /api/sessions`, `DELETE /api/sessions/:id`, `POST /api/sessions/revoke-others` | HttpOnly browser session + same-origin mutation | Inventory and revoke account-owned browser sessions |

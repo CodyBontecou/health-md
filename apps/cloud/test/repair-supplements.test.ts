@@ -332,7 +332,8 @@ it("rolls back failed commits, protects supplements from revision cleanup and er
       .run(exportId);
     expect(await purgeArchivedRevisions(env, 30)).toBe(0);
     expect(statSync(payload).isFile()).toBe(true);
-    const deletion = await request("/api/account/delete", "POST", { password, confirmation: "DELETE" }, cookie);
+    const deletion = await request("/api/account/delete", "POST", { password, confirmation: "DELETE",
+      statusToken: `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}` }, cookie);
     expect(deletion.status).toBe(202);
     await processAccountDeletions(env);
     await processAccountDeletions(env);

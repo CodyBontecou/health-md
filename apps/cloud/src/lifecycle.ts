@@ -1,4 +1,4 @@
-import { randomToken, sha256Hex } from "./crypto";
+import { sha256Hex } from "./crypto";
 import { assertSameOrigin, HttpError, json, parsePositiveInteger, readJson } from "./http";
 import { verifyAccountPassword } from "./password";
 import type { Env, LifecycleMessage, SessionUser } from "./types";
@@ -8,6 +8,7 @@ interface DeletionRow { id: string; userId: string }
 interface DeletionStatusRow { requestedAt: string; completedAt: string | null; expiresAt: string }
 
 const EMAIL_DELETION_REAUTH_MS = 15 * 60_000;
+const DELETION_STATUS_TOKEN = /^hmd_del_[A-Za-z0-9_-]{43}$/u;
 
 function deletionStatusTtlDays(env: Env): number {
   return env.DELETION_STATUS_TTL_DAYS ?
@@ -19,9 +20,17 @@ export async function requestAccountDeletion(request: Request, env: Env, user: S
   if (env.SYNTHETIC_PREVIEW_ONLY) {
     throw new HttpError(403, "deletion_unavailable", "Account deletion is unavailable in this profile.");
   }
-  const input = await readJson<{ password?: unknown; confirmation?: unknown }>(request);
+  const input = await readJson<{
+    password?: unknown; confirmation?: unknown; statusToken?: unknown;
+  }>(request);
   if (input.confirmation !== "DELETE") {
     throw new HttpError(401, "invalid_credentials", "Recent sign-in and confirmation are required.");
+  }
+  // The browser generates this high-entropy bearer before submitting the
+  // destructive request. If the response is lost after D1 commits, the user
+  // still has the only credential needed to observe completion.
+  if (typeof input.statusToken !== "string" || !DELETION_STATUS_TOKEN.test(input.statusToken)) {
+    throw new HttpError(400, "invalid_deletion_receipt", "A valid deletion status receipt is required.");
   }
   if (env.AUTH_MODE === "password") {
     if (!await verifyAccountPassword(env, user.id, input.password)) {
@@ -34,16 +43,39 @@ export async function requestAccountDeletion(request: Request, env: Env, user: S
     }
   }
   const id = crypto.randomUUID();
-  const statusToken = `hmd_del_${randomToken()}`;
+  const statusToken = input.statusToken;
+  const statusTokenHash = await sha256Hex(statusToken);
   const now = new Date().toISOString();
   const statusExpiresAt = new Date(Date.now() + deletionStatusTtlDays(env) * 86400000).toISOString();
-  const results = await env.DB.batch([
-    env.DB.prepare("UPDATE users SET status = 'disabled' WHERE id = ? AND status = 'active'").bind(user.id),
-    env.DB.prepare(`INSERT INTO account_deletions
-      (id, user_id, requested_at, status_token_hash, status_expires_at) VALUES (?, ?, ?, ?, ?)`)
-      .bind(id, user.id, now, await sha256Hex(statusToken), statusExpiresAt),
-  ]);
-  if (results[0]?.meta.changes !== 1) throw new HttpError(409, "account_inactive", "Account is not active.");
+  let batchCompleted = false;
+  let batchFailure: unknown;
+  try {
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET status = 'disabled' WHERE id = ? AND status = 'active'").bind(user.id),
+      env.DB.prepare(`INSERT INTO account_deletions
+        (id, user_id, requested_at, status_token_hash, status_expires_at) VALUES (?, ?, ?, ?, ?)`)
+        .bind(id, user.id, now, statusTokenHash, statusExpiresAt),
+    ]);
+    batchCompleted = true;
+  } catch (error) {
+    batchFailure = error;
+  }
+  let committed: { valid: number } | null;
+  try {
+    committed = await env.DB.prepare(`SELECT 1 AS valid FROM account_deletions d
+      JOIN users u ON u.id = d.user_id
+      WHERE d.id = ? AND d.user_id = ? AND d.status_token_hash = ? AND u.status = 'disabled'`)
+      .bind(id, user.id, statusTokenHash).first<{ valid: number }>();
+  } catch {
+    // The caller already owns the receipt and can safely poll it. Do not try to
+    // undo an account disablement whose commit outcome cannot be read.
+    throw new HttpError(503, "deletion_verification_pending",
+      "Account deletion verification is temporarily unavailable. Check the status receipt shortly.");
+  }
+  if (committed?.valid !== 1) {
+    if (!batchCompleted) throw batchFailure;
+    throw new HttpError(409, "account_inactive", "Account is not active.");
+  }
   const message: LifecycleMessage = { version: 1, type: "account.delete", deletionId: id };
   try { await env.LIFECYCLE_QUEUE?.send(message); }
   catch { /* The durable D1 job remains available to scheduled maintenance. */ }

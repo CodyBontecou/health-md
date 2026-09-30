@@ -222,7 +222,8 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect(statSync(join(directory, "objects", saved.object_key), { throwIfNoEntry: false })).toBeUndefined();
       expect(statSync(join(directory, "objects", latest.object_key)).isFile()).toBe(true);
       const deletion = await proxiedRequest(service.port, "/api/account/delete", "POST",
-        { password: fakePassword, confirmation: "DELETE" }, cookie);
+        { password: fakePassword, confirmation: "DELETE",
+          statusToken: `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}` }, cookie);
       expect(deletion.status).toBe(202);
       const unauthorizedAfterDeletion = await proxiedRequest(service.port, "/api/account", "GET",
         undefined, cookie);

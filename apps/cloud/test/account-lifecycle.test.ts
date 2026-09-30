@@ -16,6 +16,12 @@ const sourceDirectory = resolve(import.meta.dirname, "..");
 const origin = "https://account.example.test";
 
 function secret(): string { return Buffer.from(randomBytes(32)).toString("base64"); }
+function deletionStatusToken(): string {
+  return `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}`;
+}
+function deletionInput(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return { confirmation: "DELETE", statusToken: deletionStatusToken(), ...extra };
+}
 
 async function setup() {
   const directory = mkdtempSync(join(tmpdir(), "healthmd-account-lifecycle-"));
@@ -82,12 +88,14 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
     }), env);
     expect(upload.status).toBe(201);
 
-    const deletion = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    const requestedStatusToken = deletionStatusToken();
+    const deletion = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken: requestedStatusToken }), cookie);
     expect(deletion.status).toBe(202);
     const receipt = await deletion.json() as {
       deletionId: string; statusToken: string; statusExpiresAt: string
     };
-    expect(receipt.statusToken).toMatch(/^hmd_del_[A-Za-z0-9_-]{40,60}$/u);
+    expect(receipt.statusToken).toBe(requestedStatusToken);
     expect(Date.parse(receipt.statusExpiresAt)).toBeGreaterThan(Date.now());
     expect(queued).toEqual([{ version: 1, type: "account.delete", deletionId: receipt.deletionId }]);
     const pending = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
@@ -125,11 +133,77 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
   } finally { db.close(); }
 });
 
+it("keeps a client-known receipt when a deletion commit response and verification are unavailable", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const statusToken = deletionStatusToken();
+    const original = env.DB;
+    let batchResponseLost = false;
+    let verificationUnavailable = false;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        const result = await target.batch(statements);
+        if (!batchResponseLost) {
+          batchResponseLost = true;
+          throw new Error("synthetic lost D1 deletion response");
+        }
+        return result;
+      };
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (verificationUnavailable || !query.includes("SELECT 1 AS valid FROM account_deletions")) {
+          return statement;
+        }
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty !== "first") {
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              }
+              return async () => {
+                verificationUnavailable = true;
+                throw new Error("synthetic D1 deletion verification outage");
+              };
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+
+    const response = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken }), cookie);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "deletion_verification_pending" });
+    env.DB = original;
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "disabled" });
+    const pending = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${statusToken}` },
+    }), env);
+    expect(await pending.json()).toMatchObject({ status: "pending" });
+    const deletion = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    expect(await processAccountDeletionById(env, deletion.id)).toBe(true);
+    const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${statusToken}` },
+    }), env);
+    expect(await completed.json()).toMatchObject({ status: "completed" });
+  } finally { db.close(); }
+});
+
 it("expires a status credential without discarding an unfinished deletion job", async () => {
   const { env, db, userId } = await setup();
   try {
     const cookie = await session(env, userId);
-    const deletion = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    const deletion = await request(env, "/api/account/delete", "POST", deletionInput(), cookie);
     const receipt = await deletion.json() as { deletionId: string; statusToken: string };
     db.connection.prepare("UPDATE account_deletions SET status_expires_at = '2020-01-01T00:00:00.000Z'")
       .run();
@@ -143,12 +217,29 @@ it("expires a status credential without discarding an unfinished deletion job", 
   } finally { db.close(); }
 });
 
+it("requires a client-known high-entropy status receipt before deletion", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const missing = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toMatchObject({ error: "invalid_deletion_receipt" });
+    const malformed = await request(env, "/api/account/delete", "POST",
+      { confirmation: "DELETE", statusToken: `hmd_del_${"a".repeat(42)}` }, cookie);
+    expect(malformed.status).toBe(400);
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "active" });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
 it("requires reauthentication when an email-link session is older than fifteen minutes", async () => {
   const { env, db, userId } = await setup();
   try {
     const cookie = await session(env, userId);
     db.connection.prepare("UPDATE sessions SET created_at = '2020-01-01T00:00:00.000Z'").run();
-    const response = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    const response = await request(env, "/api/account/delete", "POST", deletionInput(), cookie);
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({ error: "reauthentication_required" });
     expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
@@ -197,7 +288,7 @@ it("keeps session, token administration, and deletion isolated between active ac
     expect(secondActivityText).not.toContain(secondToken.id);
     expect(secondActivityText).not.toContain(hiddenTarget);
 
-    const deletion = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, firstCookie);
+    const deletion = await request(env, "/api/account/delete", "POST", deletionInput(), firstCookie);
     const receipt = await deletion.json() as { deletionId: string };
     expect(await processAccountDeletionById(env, receipt.deletionId)).toBe(true);
     expect((await request(env, "/api/sessions", "GET", undefined, secondCookie)).status).toBe(200);

@@ -16,8 +16,40 @@ async function api(path, method = "GET", body) {
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.message || "Request failed. Please retry.");
+  if (!response.ok) {
+    const error = new Error(result.message || "Request failed. Please retry.");
+    error.httpStatus = response.status;
+    throw error;
+  }
   return result;
+}
+
+function newDeletionStatusToken() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `hmd_del_${btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "")}`;
+}
+
+function showDeletionPending(statusToken, message) {
+  $("connect-section").hidden = true;
+  $("deletion-section").hidden = true;
+  $("export-list").replaceChildren();
+  $("day-list").replaceChildren();
+  $("security-activity-list").replaceChildren();
+  $("account-export-panel").hidden = true;
+  $("agent-list").replaceChildren();
+  $("trend-cards").replaceChildren();
+  $("stat-days").textContent = "—";
+  $("stat-exports").textContent = "—";
+  $("stat-latest").textContent = "—";
+  $("new-agent-token").value = "";
+  $("new-agent-panel").hidden = true;
+  document.dispatchEvent(new Event("healthmd:repair-clear"));
+  $("repair-mount").replaceChildren();
+  $("deletion-status-token").value = statusToken;
+  $("deletion-receipt-section").hidden = false;
+  status(message);
 }
 
 function addTextRow(list, label, details, action) {
@@ -453,31 +485,25 @@ async function initDashboard() {
   });
   $("delete-account-form").addEventListener("submit", async (event) => {
     event.preventDefault();
+    const statusToken = newDeletionStatusToken();
     try {
-      const result = await api("/api/account/delete", "POST", {
+      await api("/api/account/delete", "POST", {
         password: $("delete-password").value,
         confirmation: $("delete-confirmation").value,
+        statusToken,
       });
       $("delete-password").value = "";
-      $("connect-section").hidden = true;
-      $("deletion-section").hidden = true;
-      $("export-list").replaceChildren();
-      $("day-list").replaceChildren();
-      $("security-activity-list").replaceChildren();
-      $("account-export-panel").hidden = true;
-      $("agent-list").replaceChildren();
-      $("trend-cards").replaceChildren();
-      $("stat-days").textContent = "—";
-      $("stat-exports").textContent = "—";
-      $("stat-latest").textContent = "—";
-      $("new-agent-token").value = "";
-      $("new-agent-panel").hidden = true;
-      document.dispatchEvent(new Event("healthmd:repair-clear"));
-      $("repair-mount").replaceChildren();
-      $("deletion-status-token").value = result.statusToken;
-      $("deletion-receipt-section").hidden = false;
-      status("Account disabled. Durable deletion is pending. Save the one-time status receipt below before leaving this page.");
-    } catch (error) { $("delete-password").value = ""; status(error.message); }
+      showDeletionPending(statusToken,
+        "Account disabled. Durable deletion is pending. Save the one-time status receipt below before leaving this page.");
+    } catch (error) {
+      $("delete-password").value = "";
+      if (!Number.isInteger(error.httpStatus) || error.httpStatus >= 500) {
+        showDeletionPending(statusToken,
+          "The deletion request outcome is temporarily uncertain. Save this one-time receipt and check its status shortly.");
+      } else {
+        status(error.message);
+      }
+    }
   });
   try {
     const runtime = await api("/api/runtime");
