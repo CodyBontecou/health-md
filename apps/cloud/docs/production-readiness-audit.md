@@ -59,14 +59,30 @@ End-to-end completion means all of the following, not merely source implementati
 | Cutover/rollback | plan and recovery runbook | documented, not exercised against production |
 | Signup closed | all split configs `closed`; runtime approval marker secret absent; placeholder bindings; CI safety verifier | satisfied fail-closed state |
 
+## Audited source artifact surface
+
+Fresh audit snapshot on 2026-09-30: draft PR #163, head `02cee6f4472441003428994ab07c247e022ee098`, is mergeable with a clean merge state and 63 changed files. Cloud CI run `36779778124` and every currently triggered repository check passed; there are no reviews or assigned reviewers. The PR remains draft. The changed files map to deliverables as follows:
+
+- Trust-boundary/deployment: `.github/workflows/cloud-ci.yml`; `wrangler.{ingest,account,maintenance}.toml`; `src/{ingest-worker,account-worker,maintenance-worker,telemetry,http,index,types}.ts`; `package.json`.
+- Ingest/storage/crypto/lifecycle: migrations `0010`–`0014`; `src/{upload-intents,exports,account-export-keys,account-export,crypto,lifecycle,object-reconciliation,auth,dashboard}.ts`.
+- Account UI: `public/{dashboard.html,dashboard.js,deletion-status.html,deletion-status.js}` and `docs/public-account-dashboard.md`.
+- VM compatibility and disconnect safety: `vm/{server,storage}.ts`, `test/vm.test.ts`, and ADR-0007 clarification. The deployed disconnect hotfix remains the separately scoped commit `4f748cc5338a7dc3b122a3d2503b91c9b55d3370`.
+- Qualification/gates: `scripts/{qualify-staging-load,staging-load-lib,verify-production-safety}.mjs`, `scripts/staging-load-lib.d.mts`, and the Cloud workflow.
+- Focused evidence: `test/{abuse-limits,account-export-keys,account-export,account-lifecycle,crypto,ingest-commit-ambiguity,object-reconciliation,repair-migration,repair-supplements,restore-drill,service-profiles,staging-load,telemetry,upload-intents,vm}.test.ts`.
+- Governance/runbooks: `README.md`; the nine files under `docs/` named in this audit; and proposed ADR-0008.
+
+No listed test substitutes for the unresolved deployed/provider/mobile/legal gates in the table above.
+
 ## Verification commands and coverage
 
-- `npm run check`: TypeScript Worker/VM checks and all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
-- `npm run dry-run:profiles`: bundles all three profiles and lists bindings. It proves buildability, not resource correctness or deployment isolation.
-- `npm run test:restore-drill`: local encrypted snapshot invariants only, explicitly not provider recovery proof.
-- `npm audit --audit-level=moderate`: dependency advisory check only, not an application/infrastructure security assessment.
-- `git diff --check`: whitespace validity only.
-- `npm run verify:production-safety`: asserts production is still closed, placeholder-bound and unapproved. A passing result means **blocked safely**, not ready.
+- `npm run check`: on the audited head, 29 files and 109 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
+- `npm run test:smoke`: passes in an isolated worktree against local Wrangler D1/R2 with synthetic Apple v1/v2 and Android v4 envelopes, replacement ordering, encrypted roundtrip, tenant denial and revocation. The repository worktree's pre-existing owner-only `.dev.vars` is not overwritten or read by the harness.
+- `npm run dry-run:profiles`: all three profiles bundle and list only their intended bindings. It proves buildability, not resource correctness or deployment isolation.
+- `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.
+- `npm audit --audit-level=moderate`: zero known vulnerabilities at audit time; this is a dependency advisory check, not an application/infrastructure security assessment.
+- `git diff --check`: passes; this proves whitespace validity only.
+- `npm run verify:production-safety`: passes with 13 unchecked gates, five unassigned owners and migrations `0001`–`0014`; it asserts production is still closed, placeholder-bound and unapproved. A passing result means **blocked safely**, not ready.
+- Live boundary recheck: API/account health return 200, anonymous ingest and MCP return 401, account-host ingest returns 404, the ten actual writer/account/ingest/MCP proxy and Tunnel units are active, and `systemctl --failed` reports none after clearing a stale transient login helper. These checks prove current pilot availability only.
 
 ## Current blockers and next required inputs
 
