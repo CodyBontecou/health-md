@@ -215,14 +215,43 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
 
 export async function issueSession(env: Env, userId: string): Promise<Response> {
   const sessionToken = `hmd_ses_${randomToken()}`;
+  const sessionHash = await sha256Hex(sessionToken);
+  const sessionId = crypto.randomUUID();
+  const auditId = crypto.randomUUID();
   const ttlDays = parsePositiveInteger(env.SESSION_TTL_DAYS, "SESSION_TTL_DAYS", 1, 30);
   const now = new Date().toISOString();
   const expires = new Date(Date.now() + ttlDays * 86400000).toISOString();
-  await env.DB.prepare(
-    `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at, last_seen_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).bind(crypto.randomUUID(), userId, await sha256Hex(sessionToken), expires, now, now).run();
-  await audit(env, userId, "session.created", null);
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at, last_seen_at)
+         SELECT ?, id, ?, ?, ?, ? FROM users WHERE id = ? AND status = 'active'`,
+      ).bind(sessionId, sessionHash, expires, now, now, userId),
+      env.DB.prepare(
+        `INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+         SELECT ?, user_id, 'session.created', NULL, ? FROM sessions
+         WHERE id = ? AND user_id = ? AND token_hash = ? AND expires_at = ?`,
+      ).bind(auditId, now, sessionId, userId, sessionHash, expires),
+    ]);
+  } catch {
+    // A D1 response can be lost after the atomic batch commits. The cookie is
+    // returned only after the exact session and its reviewed audit record are readable.
+  }
+  let durable: { valid: number } | null;
+  try {
+    durable = await env.DB.prepare(`SELECT 1 AS valid FROM sessions s
+      JOIN audit_events a ON a.id = ? AND a.user_id = s.user_id
+        AND a.event_type = 'session.created' AND a.target_id IS NULL
+      JOIN users u ON u.id = s.user_id AND u.status = 'active'
+      WHERE s.id = ? AND s.user_id = ? AND s.token_hash = ? AND s.expires_at = ?`)
+      .bind(auditId, sessionId, userId, sessionHash, expires).first<{ valid: number }>();
+  } catch {
+    throw new HttpError(503, "session_verification_pending",
+      "Session creation could not yet be verified. Sign in again and try again.");
+  }
+  if (durable?.valid !== 1) {
+    throw new HttpError(503, "session_creation_failed", "Session creation failed. Please try again.");
+  }
   return json({ signedIn: true }, {
     headers: { "Set-Cookie": sessionCookie(sessionToken, ttlDays, env.ENVIRONMENT === "production") },
   });

@@ -1,10 +1,10 @@
 import { afterEach, expect, it } from "vitest";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
-import { limitIngest } from "../src/auth";
+import { issueSession, limitIngest } from "../src/auth";
 import { createVmEnvironment } from "../vm/runtime";
 
 const roots: string[] = [];
@@ -181,6 +181,84 @@ it("sends a durably committed magic link after its D1 batch response is lost", a
       body: JSON.stringify({ token }),
     }), env);
     expect(consumed.status).toBe(200);
+  } finally { db.close(); }
+});
+
+it("returns a committed session after its atomic D1 batch response is lost", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = randomUUID();
+    db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, 'synthetic-session', 'synthetic', 'synthetic', 'active', ?)`)
+      .run(userId, new Date().toISOString());
+    const original = env.DB;
+    let responseLost = false;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        const result = await target.batch(statements);
+        responseLost = true;
+        throw new Error("synthetic lost session batch response");
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    const response = await issueSession(env, userId);
+    expect(responseLost).toBe(true);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Set-Cookie")).toMatch(/^__Host-healthmd_cloud_session=hmd_ses_/u);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?")
+      .get(userId)).toMatchObject({ n: 1 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE user_id = ? AND event_type = 'session.created'`).get(userId)).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("withholds an ambiguously committed session when its durable state is unreadable", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = randomUUID();
+    db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, 'synthetic-unreadable-session', 'synthetic', 'synthetic', 'active', ?)`)
+      .run(userId, new Date().toISOString());
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        await target.batch(statements);
+        throw new Error("synthetic lost session batch response");
+      };
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("SELECT 1 AS valid FROM sessions s")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => {
+                throw new Error("synthetic session verification outage");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(issueSession(env, userId)).rejects.toMatchObject({
+      status: 503,
+      code: "session_verification_pending",
+    });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?")
+      .get(userId)).toMatchObject({ n: 1 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE user_id = ? AND event_type = 'session.created'`).get(userId)).toMatchObject({ n: 1 });
   } finally { db.close(); }
 });
 
