@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { isIP } from "node:net";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { resolve } from "node:path";
 import worker from "../src/index";
 import type { Env } from "../src/types";
@@ -93,6 +94,7 @@ function accountRoute(method: string, path: string): boolean {
   if (method === "GET") return new Set([
     "/health", "/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
     "/repair", "/repair.js", "/repair-panel", "/style.css", "/api/repair/drafts",
+    "/api/repair/devices", "/api/repair/device/status", "/api/repair/dispatches",
     "/api/runtime", "/api/account", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
     "/api/dashboard/trends", "/api/explore/catalog",
   ]).has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||
@@ -100,10 +102,13 @@ function accountRoute(method: string, path: string): boolean {
   if (method === "POST") return new Set([
     "/api/auth/password-login", "/api/auth/logout", "/api/ingest-tokens", "/api/agent-tokens",
     "/api/account/delete", "/api/explore/chart", "/api/explore/exports", "/api/explore/node",
-    "/api/repair/preview", "/api/repair/drafts",
+    "/api/repair/preview", "/api/repair/drafts", "/api/repair/supplements", "/api/repair/device/enroll",
+    "/api/repair/devices/approve", "/api/repair/dispatch", "/api/repair/dispatch/cancel",
+    "/api/repair/device/claim", "/api/repair/device/resume", "/api/repair/device/decline",
   ]).has(path);
   return method === "DELETE" && (
     /^\/api\/repair\/drafts\/[a-f0-9-]{36}$/u.test(path) ||
+    /^\/api\/repair\/devices\/[a-f0-9-]{36}$/u.test(path) ||
     /^\/api\/ingest-tokens\/[a-f0-9-]{36}$/u.test(path) ||
     /^\/api\/agent-tokens\/[a-f0-9-]{36}$/u.test(path));
 }
@@ -141,13 +146,7 @@ async function respond(request: IncomingMessage, response: ServerResponse, env: 
     });
     response.writeHead(result.status, headers);
     if (!result.body) { response.end(); return; }
-    await new Promise<void>((done, fail) => {
-      const output = Readable.fromWeb(result.body as never);
-      output.on("error", fail);
-      response.on("error", fail);
-      response.on("finish", done);
-      output.pipe(response);
-    });
+    await pipeline(Readable.fromWeb(result.body as never), response);
   } catch {
     // Never log request data, credentials, response bodies or exception text.
     if (!response.headersSent) safeError(response, 500);
@@ -221,6 +220,8 @@ export async function runVmServer(): Promise<void> {
     approved: !syntheticOnly && !personalMvp,
     personalMvp,
     syntheticOnly,
+    deviceEnrollment: process.env.CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED === "1",
+    repairDispatch: process.env.CLOUD_REPAIR_DISPATCH_ENABLED === "1",
   });
   const port = Number(process.env.VM_PORT ?? "18788");
   if (!Number.isInteger(port) || port < 1) throw new Error("VM production port must be explicit");

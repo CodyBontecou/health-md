@@ -369,6 +369,31 @@ public struct DirectStatusRequest: Codable, Equatable, Sendable {
     }
 }
 
+public struct DirectHistoryAuthorizationStatus: Codable, Equatable, Sendable {
+    public let state: String
+    public let assessedTypeIdentifiers: [String]
+    public let earliestAuthorizedDates: [String: Date]
+    public let unassessedMetricIDs: [String]
+    public let checkedAt: Date?
+    public let message: String
+
+    public init(
+        state: String,
+        assessedTypeIdentifiers: [String] = [],
+        earliestAuthorizedDates: [String: Date] = [:],
+        unassessedMetricIDs: [String] = [],
+        checkedAt: Date? = nil,
+        message: String
+    ) {
+        self.state = state
+        self.assessedTypeIdentifiers = Array(Set(assessedTypeIdentifiers)).sorted()
+        self.earliestAuthorizedDates = earliestAuthorizedDates
+        self.unassessedMetricIDs = Array(Set(unassessedMetricIDs)).sorted()
+        self.checkedAt = checkedAt
+        self.message = message
+    }
+}
+
 public struct DirectIPhoneStatus: Codable, Equatable, Sendable {
     public let name: String
     public let appActive: Bool
@@ -381,6 +406,10 @@ public struct DirectIPhoneStatus: Codable, Equatable, Sendable {
     public let activeJobID: UUID?
     public let activeQueryRequestID: UUID?
     public let message: String?
+    public let appVersion: String?
+    public let buildVersion: String?
+    public let operatingSystemVersion: String?
+    public let historyAuthorization: DirectHistoryAuthorizationStatus?
 
     public init(
         name: String,
@@ -393,7 +422,11 @@ public struct DirectIPhoneStatus: Codable, Equatable, Sendable {
         canTriggerQueries: Bool? = nil,
         activeJobID: UUID? = nil,
         activeQueryRequestID: UUID? = nil,
-        message: String? = nil
+        message: String? = nil,
+        appVersion: String? = nil,
+        buildVersion: String? = nil,
+        operatingSystemVersion: String? = nil,
+        historyAuthorization: DirectHistoryAuthorizationStatus? = nil
     ) {
         self.name = name
         self.appActive = appActive
@@ -406,6 +439,10 @@ public struct DirectIPhoneStatus: Codable, Equatable, Sendable {
         self.activeJobID = activeJobID
         self.activeQueryRequestID = activeQueryRequestID
         self.message = message
+        self.appVersion = appVersion
+        self.buildVersion = buildVersion
+        self.operatingSystemVersion = operatingSystemVersion
+        self.historyAuthorization = historyAuthorization
     }
 }
 

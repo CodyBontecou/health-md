@@ -128,6 +128,13 @@ function chartCard(metric, first, second, chartType, axisMode) {
       source.append(inspectButton(second.days[index].exportId,
         `/records/${second.days[index].recordIndex}`, `Inspect ${second.days[index].date}`));
     }
+    for (const inspected of new Set([day?.date, second?.days[index]?.date].filter(Boolean))) {
+      const button = element("button", `Review ${inspected} supplements`, "subtle");
+      button.type = "button";
+      button.addEventListener("click", () => document.dispatchEvent(
+        new CustomEvent("healthmd:repair-provenance", { detail: { date: inspected } })));
+      source.append(button);
+    }
     for (const period of periods) {
       const selected = period.days[index];
       if (period.profile === "android_compat" || !selected ||
@@ -197,7 +204,9 @@ async function showLibrary(offset = 0) {
     if (offset === 0) list.replaceChildren();
     for (const item of page.exports) {
       const row = element("li");
-      const description = element("span", `${item.source === "ios" ? "Apple" : "Android"} v${item.dailyVersion} · ${item.dateStart}–${item.dateEnd} · ${item.recordCount} day(s), ${item.externalRecordCount} sidecar(s) · received ${new Date(item.receivedAt).toLocaleString()}`);
+      const role = item.retentionRole === "supplemental" ? "Separate supplement · not a current snapshot" :
+        item.retentionRole === "current" ? "Current for at least one day" : "Unreferenced / older revision";
+      const description = element("span", `${item.source === "ios" ? "Apple" : "Android"} v${item.dailyVersion} · ${role} · ${item.dateStart}–${item.dateEnd} · ${item.recordCount} retained day record(s), ${item.failureCount} failed date(s) in envelope, ${item.externalRecordCount} sidecar(s) · received ${new Date(item.receivedAt).toLocaleString()}`);
       const actions = element("span", undefined, "library-actions");
       if (uuid.test(item.id)) {
         actions.append(inspectButton(item.id, "", "Explore fields"));

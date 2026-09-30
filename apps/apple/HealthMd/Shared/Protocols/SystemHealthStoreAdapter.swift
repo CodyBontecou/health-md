@@ -344,6 +344,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return false
     }
 
+    var supportsHistoryAuthorizationBoundaries: Bool {
+        if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
+            return true
+        }
+        return false
+    }
+
     func requestVisionPrescriptionAuthorization(predicate: NSPredicate?) async throws {
         #if os(watchOS)
         throw NSError(
@@ -368,6 +375,20 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws {
         try await store.requestAuthorization(toShare: toShare, read: read)
+    }
+
+    func earliestAuthorizedSampleDates(for types: Set<HKObjectType>) async throws -> [String: Date] {
+        guard #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) else {
+            throw NSError(
+                domain: "HealthMd.HealthKitCapability",
+                code: 27,
+                userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries require OS 27 or later."]
+            )
+        }
+        let boundaries = try await store.earliestAuthorizedSampleDate(for: types)
+        return Dictionary(uniqueKeysWithValues: boundaries.map { type, date in
+            (type.identifier, date)
+        })
     }
 
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {

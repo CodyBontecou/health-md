@@ -1036,10 +1036,10 @@ struct ExportProfileEditorSheet: View {
         // The sheet covers the app-level toast, so blocked changes surface a
         // sheet-local one (also covering the pushed metric picker), and the
         // toast's settings shortcut dismisses the editor.
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {

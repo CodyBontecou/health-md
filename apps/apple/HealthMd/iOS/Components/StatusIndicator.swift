@@ -311,14 +311,27 @@ struct PartialExportNoticeToast: View {
     var body: some View {
         Group {
             if let notice {
-                ExportStatusBadge(
-                    status: .warning(notice.toastMessage),
-                    onDismiss: {
-                        clearNotice()
-                    },
-                    onTap: {
-                        presentedNotice = notice
-                    }
+                ExportActivityBanner(
+                    title: String(localized: "Partial Export"),
+                    systemImage: "exclamationmark.circle.fill",
+                    tint: Color.warning,
+                    message: notice.toastMessage,
+                    progress: nil,
+                    showsIndeterminateProgress: false,
+                    progressAccessibilityLabel: String(localized: "Export progress"),
+                    details: [],
+                    trailingText: nil,
+                    accessibilityIdentifier: AccessibilityID.Status.exportStatusBadge,
+                    actions: [
+                        ExportActivityBannerAction(
+                            title: String(localized: "Review export issues"),
+                            systemImage: "info.circle",
+                            accessibilityIdentifier: "export.review-issues",
+                            style: .standard,
+                            perform: { presentedNotice = notice }
+                        )
+                    ],
+                    onDismiss: clearNotice
                 )
                 .padding(.horizontal, Spacing.lg)
                 .padding(.bottom, bottomPadding)

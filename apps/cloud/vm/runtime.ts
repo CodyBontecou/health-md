@@ -15,6 +15,8 @@ export function createVmEnvironment(config: {
   approved?: boolean;
   personalMvp?: boolean;
   syntheticOnly?: boolean;
+  deviceEnrollment?: boolean;
+  repairDispatch?: boolean;
 }): { env: Env; db: VmDatabase; objects: VmObjectStore } {
   if (decodeBase64(config.identityKey).byteLength !== 32 ||
       decodeBase64(config.passwordPepper).byteLength !== 32 ||
@@ -51,6 +53,8 @@ export function createVmEnvironment(config: {
     CLOUD_RUNTIME_APPROVED: config.approved ? "healthmd-cloud-v1-reviewed" : undefined,
     VM_PERSONAL_MVP_NO_BACKUP_ACK: config.personalMvp ? "I_ACCEPT_PERMANENT_DATA_LOSS" : undefined,
     SYNTHETIC_PREVIEW_ONLY: config.syntheticOnly ? "1" : undefined,
+    CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED: config.deviceEnrollment ? "1" : undefined,
+    CLOUD_REPAIR_DISPATCH_ENABLED: config.repairDispatch ? "1" : undefined,
   };
   return { env, db, objects };
 }

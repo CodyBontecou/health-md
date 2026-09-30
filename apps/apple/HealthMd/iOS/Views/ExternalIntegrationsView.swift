@@ -29,10 +29,10 @@ struct ExternalIntegrationsView: View {
                 }
             }
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {

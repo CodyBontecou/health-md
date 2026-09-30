@@ -51,7 +51,8 @@ export async function processAccountDeletions(env: Env, perJob = 25): Promise<vo
 }
 
 // Old superseded envelopes only: never remove an export referenced by the
-// current daily-record index, even if it is older than the revision window.
+// current daily-record index or an active supplement, even if it is older
+// than the revision window. Supplements have no supersession rule yet.
 export async function purgeArchivedRevisions(env: Env, retentionDays: number, limit = 25): Promise<number> {
   if (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
     throw new Error("Invalid revision-retention days");
@@ -61,12 +62,21 @@ export async function purgeArchivedRevisions(env: Env, retentionDays: number, li
     `SELECT e.id, e.object_key AS objectKey FROM exports e
      WHERE e.received_at < ? AND NOT EXISTS
        (SELECT 1 FROM daily_records d WHERE d.export_id = e.id)
+       AND NOT EXISTS (SELECT 1 FROM supplemental_exports s WHERE s.export_id = e.id)
      ORDER BY e.received_at LIMIT ?`,
   ).bind(cutoff, limit).all<ExportObjectRow>();
+  let removed = 0;
   for (const row of rows.results) {
+    // Remove metadata only if still unreferenced at commit. If a concurrent
+    // writer attached a supplement, its ciphertext must not disappear.
+    const result = await env.DB.prepare(`DELETE FROM exports WHERE id = ? AND NOT EXISTS
+      (SELECT 1 FROM daily_records WHERE export_id = ?) AND NOT EXISTS
+      (SELECT 1 FROM supplemental_exports WHERE export_id = ?)`).bind(row.id, row.id, row.id).run();
+    if (!result.meta.changes) continue;
+    removed += 1;
+    // Failure leaves an encrypted orphan for reconciliation, never a live
+    // primary/supplement pointer with missing ciphertext.
     await env.EXPORTS.delete(row.objectKey);
-    await env.DB.prepare("DELETE FROM exports WHERE id = ? AND NOT EXISTS (SELECT 1 FROM daily_records WHERE export_id = ?)")
-      .bind(row.id, row.id).run();
   }
-  return rows.results.length;
+  return removed;
 }

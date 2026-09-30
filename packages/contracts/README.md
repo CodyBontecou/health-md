@@ -17,6 +17,7 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`semantic-input/v1`](semantic-input/v1/contract.md) | Internal post-capture semantic envelope, strict schemas, and synthetic cross-language differential corpus |
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
 | [`shared-setup/v2`](shared-setup/v2/contract.md) | Public bounded Apple/Android portable named-profile setup bundle with registry-backed alias union, exact v2 platform extensions, non-operative destination/schedule intent, and language-neutral Add/Replace/Undo transaction semantics; version 2 is the one and only profile version |
+| [`cloud-repair/v1`](cloud-repair/v1/contract.md) | **Staged, not enabled or manifest-registered:** static no-scope app link, encrypted repair draft, review-only approved-device dispatch and synthetic vectors; no upload authorization or verified receipt |
 
 ## Typed provider contracts
 

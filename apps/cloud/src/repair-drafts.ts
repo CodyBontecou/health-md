@@ -145,6 +145,20 @@ export async function createRepairDraft(request: Request, env: Env, userId: stri
   if (!result.meta.changes) throw new HttpError(409, "draft_limit", "Cancel or wait for a saved draft to expire.");
   return json({ id, state: "draft", spec, createdAt, expiresAt, launchable: false }, { status: 201 });
 }
+// For owner-authorized dispatch only. Never let a client-supplied draft ID
+// bypass owner, expiry, state or authenticated-scope verification.
+export async function activeRepairDraft(env: Env, userId: string, id: string): Promise<{
+  spec: RepairDraftSpec; expiresAt: string;
+} | null> {
+  if (!UUID.test(id)) return null;
+  const row = await env.DB.prepare(`SELECT id, user_id AS userId, spec_ciphertext AS specCiphertext,
+    spec_iv AS specIv, source, day_count AS dayCount, state, created_at AS createdAt,
+    expires_at AS expiresAt FROM repair_drafts
+    WHERE id = ? AND user_id = ? AND state = 'draft' AND expires_at > ?`)
+    .bind(id, userId, new Date().toISOString()).first<DraftRow>();
+  if (!row) return null;
+  return { spec: await decryptSpec(row, env, userId), expiresAt: row.expiresAt };
+}
 export async function listRepairDrafts(env: Env, userId: string): Promise<Response> {
   const { results } = await env.DB.prepare(`SELECT id, user_id AS userId, spec_ciphertext AS specCiphertext,
     spec_iv AS specIv, source, day_count AS dayCount, state, created_at AS createdAt,
@@ -158,11 +172,18 @@ export async function cancelRepairDraft(request: Request, env: Env, userId: stri
   assertSameOrigin(request, env);
   if (!UUID.test(id)) throw new HttpError(404, "not_found", "Draft not found.");
   const now = new Date().toISOString();
-  const result = await env.DB.prepare(`UPDATE repair_drafts SET state = 'cancelled',
-    cancelled_at = ?, spec_ciphertext = '', spec_iv = ''
-    WHERE id = ? AND user_id = ? AND state = 'draft' AND expires_at > ?`)
-    .bind(now, id, userId, now).run();
-  if (!result.meta.changes) throw new HttpError(404, "not_found", "Draft not found.");
+  const results = await env.DB.batch([
+    env.DB.prepare(`UPDATE repair_drafts SET state = 'cancelled',
+      cancelled_at = ?, spec_ciphertext = '', spec_iv = ''
+      WHERE id = ? AND user_id = ? AND state = 'draft' AND expires_at > ?`)
+      .bind(now, id, userId, now),
+    env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
+      WHERE draft_id = ? AND user_id = ? AND state IN ('queued', 'claimed')
+      AND EXISTS (SELECT 1 FROM repair_drafts d WHERE d.id = ? AND d.user_id = ?
+        AND d.state = 'cancelled' AND d.cancelled_at = ?)`)
+      .bind(id, userId, id, userId, now),
+  ]);
+  if (results[0]?.meta.changes !== 1) throw new HttpError(404, "not_found", "Draft not found.");
   return json({ cancelled: true });
 }
 export async function purgeExpiredRepairDrafts(env: Env): Promise<void> {

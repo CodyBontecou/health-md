@@ -9,8 +9,9 @@ The portable CLI now lives in the separate
 standalone Rust workspace at [`apps/cli`](https://github.com/CodyBontecou/health-md/tree/main/apps/cli). It is
 the cross-platform Manual IP/Tailscale client and is direct-only: it has no backend option and never
 requires the Mac app. The bundled Swift helper is a separate macOS compatibility client for the
-Mac-app HTTP backend and Apple-only Nearby transport. The portable Rust binary also owns a 19-tool
-direct iPhone MCP server. Direct exports use
+Mac-app HTTP backend and Apple-only Nearby transport. The published Rust `0.1.0-alpha.7` binary owns
+a 19-tool direct iPhone MCP server; current development source has 21 after adding unreleased
+full-corpus raw-artifact tools. Direct exports use
 iPhone v1 or Android v2; capability-gated iPhone queries use additive v3. Every participating client
 must pass the applicable shared fixture before release.
 

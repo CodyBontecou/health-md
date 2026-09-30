@@ -6,6 +6,9 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -42,6 +45,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private var startRoute by mutableStateOf<String?>(null)
+    private var cloudRepairLinkNotice by mutableStateOf(false)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
     private var handledExternalIntent = false
 
@@ -108,6 +112,16 @@ class MainActivity : ComponentActivity() {
                     initialRoute = startRoute,
                     scheduledRecoveryPromptRequestId = scheduledRecoveryPromptRequestId,
                 )
+                if (cloudRepairLinkNotice) {
+                    AlertDialog(
+                        onDismissRequest = { cloudRepairLinkNotice = false },
+                        title = { Text("Cloud requests are not yet available") },
+                        text = { Text("Opening a Cloud link never starts an export. Device approval and safe supplemental uploads must be available before Cloud requests can be reviewed here.") },
+                        confirmButton = {
+                            TextButton(onClick = { cloudRepairLinkNotice = false }) { Text("OK") }
+                        },
+                    )
+                }
             }
         }
     }
@@ -158,6 +172,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleLaunchIntent(intent: Intent?, acceptExternalDocument: Boolean) {
+        if (CloudRepairLink.matches(intent)) {
+            cloudRepairLinkNotice = true
+            return
+        }
         if (acceptExternalDocument) {
             SharedSetupIntentExtractor.uri(intent)?.let { uri ->
                 // Record ownership synchronously. The singleton coordinator keeps provider IO alive

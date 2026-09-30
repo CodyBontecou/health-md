@@ -84,11 +84,11 @@ function createTools(reader: HealthDataReader, principal: ReadPrincipal): McpSer
       scope: "full_export", origin: "Retained healthmd.api_export v1/v2 JSON envelopes uploaded to this account, not live device data",
       coverage: ["Apple daily v8 (all retained summary fields, optional HealthKit archive, optional typed provider sections)",
         "Android compatibility daily v4/v5 when uploaded", "v2 external provider sidecars", "failed-date details",
-        "every retained historical revision, not just the current daily snapshot"],
+        "every retained historical revision and separate supplement, not just the current daily snapshot"],
       notAvailable: ["Health data never exported or already deleted", "Android Raw API Snapshot artifacts (not ingested here)",
         "Apple HealthKit/Android Health Connect data unavailable to the mobile app", "binary files outside retained JSON"],
       steps: ["For one day, health_find_export_for_date(date), then health_read_export_node(exportId, pointer).",
-        "For all history or older revisions, page health_list_exports(cursor) until nextCursor is null.",
+        "For all history, separate supplements or older revisions, page health_list_exports(cursor) until nextCursor is null; inspect retentionRole and original bytes without merging fields.",
         "Start navigation at pointer '' (root); follow items[].pointer. Page arrays/objects with nextOffset.",
         "Strings use UTF-8 base64 chunks; concatenate decoded bytes using nextOffsetBytes. Source binary already appears base64-encoded in original JSON.",
         "For exact integer digits, unavailable JSON Pointer keys, or complete fidelity, page health_read_export_bytes from offsetBytes 0 to nextOffsetBytes null and concatenate decoded bytes."],
@@ -97,12 +97,12 @@ function createTools(reader: HealthDataReader, principal: ReadPrincipal): McpSer
         toolResultBytes: RESULT_BYTES, requestsPerMinute: MAX_REQUESTS_PER_MINUTE },
     })));
     server.registerTool("health_list_exports", {
-      title: "Browse all retained export envelopes", description: "List ALL original, account-owned Health.md API-export envelopes, newest received first, including older revisions, Apple/Android profiles, failed-date details and v2 provider sidecars. No retention-time cutoff. Pass nextCursor until null (empty cursor starts over); request 1–20 entries per page. A listing is not a snapshot across uploads/deletions. Use health_find_export_for_date for the current daily snapshot.",
+      title: "Browse all retained export envelopes", description: "List ALL original, account-owned Health.md API-export envelopes, newest received first, including separate supplements, older revisions, Apple/Android profiles, failed-date details and v2 provider sidecars. retentionRole distinguishes a supplement from the current primary snapshot. No retention-time cutoff. Pass nextCursor until null (empty cursor starts over); request 1–20 entries per page. A listing is not a snapshot across uploads/deletions. Use health_find_export_for_date for the current primary daily snapshot.",
       inputSchema: { cursor: z.string().max(160).default(""), limit: z.number().int().min(1).max(20).default(10) },
     }, async ({ cursor, limit }) => execute("health_list_exports", async () =>
       reader.listExports(principal, cursor, limit)));
     server.registerTool("health_find_export_for_date", {
-      title: "Find the latest export for a calendar day", description: "Return the currently selected YYYY-MM-DD daily snapshot's export ID and JSON Pointer (for example /records/0). To find historical revisions or sidecar-only envelopes, page health_list_exports. Missing dates are not zeros.",
+      title: "Find the current primary export for a calendar day", description: "Return only the current primary YYYY-MM-DD daily snapshot's export ID and JSON Pointer (for example /records/0). To find separate supplements, historical revisions or sidecar-only envelopes, page health_list_exports. Missing primary days are not zeros even when a supplement exists.",
       inputSchema: { date: z.string().length(10) },
     }, async ({ date }) => execute("health_find_export_for_date", async () =>
       reader.findExportForDate(principal, date)));

@@ -64,5 +64,19 @@ struct HealthMdAppShortcuts: AppShortcutsProvider {
             shortTitle: "Set Scheduled Export",
             systemImageName: "clock.arrow.circlepath"
         )
+
+        AppShortcut(
+            intent: RefreshMacContextIntent(),
+            phrases: ["Refresh \(.applicationName) Mac context"],
+            shortTitle: "Refresh Mac Context",
+            systemImageName: "arrow.triangle.2.circlepath.icloud"
+        )
+
+        AppShortcut(
+            intent: GetMacContextRefreshStatusIntent(),
+            phrases: ["Check \(.applicationName) Mac context refresh"],
+            shortTitle: "Mac Context Status",
+            systemImageName: "checkmark.icloud"
+        )
     }
 }

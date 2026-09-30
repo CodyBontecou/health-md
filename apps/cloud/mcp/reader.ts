@@ -85,6 +85,7 @@ interface ExportMetadata extends StoredExport {
   source: string; envelopeSchemaVersion: number; dailyRecordSchemaVersion: number;
   exportedAt: string; receivedAt: string; dateStart: string; dateEnd: string;
   recordCount: number; failureCount: number; externalRecordCount: number;
+  retentionRole: "current" | "supplemental" | "unreferenced";
 }
 interface DailyRecord {
   date?: unknown; schema?: unknown; schema_version?: unknown;
@@ -106,7 +107,10 @@ const exportFields = `e.id AS exportId, e.object_key AS objectKey, e.encryption_
   e.plaintext_sha256 AS plaintextSha256, e.byte_count AS byteCount, e.source AS source,
   e.envelope_schema_version AS envelopeSchemaVersion, e.daily_record_schema_version AS dailyRecordSchemaVersion,
   e.exported_at AS exportedAt, e.received_at AS receivedAt, e.date_start AS dateStart, e.date_end AS dateEnd,
-  e.record_count AS recordCount, e.failure_count AS failureCount, e.external_record_count AS externalRecordCount`;
+  e.record_count AS recordCount, e.failure_count AS failureCount, e.external_record_count AS externalRecordCount,
+  CASE WHEN EXISTS (SELECT 1 FROM supplemental_exports s WHERE s.export_id = e.id)
+    THEN 'supplemental' WHEN EXISTS (SELECT 1 FROM daily_records d WHERE d.export_id = e.id)
+    THEN 'current' ELSE 'unreferenced' END AS retentionRole`;
 function requireFull(principal: ReadPrincipal): void {
   if (principal.scope !== "full_export") throw new ReaderError("forbidden", "Full export scope is required.");
 }
@@ -134,9 +138,10 @@ function decodeCursor(cursor: string): [string, string] | null {
 }
 function publicMetadata(row: ExportMetadata) {
   const { exportId, source, envelopeSchemaVersion, dailyRecordSchemaVersion, exportedAt,
-    receivedAt, dateStart, dateEnd, recordCount, failureCount, externalRecordCount, byteCount } = row;
+    receivedAt, dateStart, dateEnd, recordCount, failureCount, externalRecordCount, byteCount,
+    retentionRole } = row;
   return { exportId, source, envelopeSchemaVersion, dailyRecordSchemaVersion, exportedAt,
-    receivedAt, dateStart, dateEnd, recordCount, failureCount, externalRecordCount, byteCount };
+    receivedAt, dateStart, dateEnd, recordCount, failureCount, externalRecordCount, byteCount, retentionRole };
 }
 function pointerParts(pointer: string): string[] {
   if (pointer === "") return [];
@@ -291,7 +296,7 @@ export class VmHealthDataReader implements HealthDataReader {
     const hasMore = rows.length > limit;
     const page = rows.slice(0, limit);
     return { exports: page.map(publicMetadata), nextCursor: hasMore ? encodeCursor(page.at(-1)!) : null,
-      note: "All retained envelopes, including older replaced revisions and provider sidecars; newest received first. Listing is not a snapshot across concurrent uploads/deletions." };
+      note: "All retained envelopes, including separate supplements, superseded revisions and provider sidecars; newest received first. Supplements do not change current daily aggregates. Listing is not a snapshot across concurrent uploads/deletions." };
   }
 
   async findExportForDate(principal: ReadPrincipal, date: string): Promise<Record<string, unknown>> {
@@ -306,7 +311,7 @@ export class VmHealthDataReader implements HealthDataReader {
       throw new ReaderError("unavailable_data", "No current daily export for this date. List retained exports to inspect historical or sidecar-only envelopes.");
     }
     return { ...publicMetadata(row), date, pointer: `/records/${row.recordIndex}`,
-      note: "This date's newest snapshot; older revisions remain discoverable via health_list_exports." };
+      note: "This date's current primary snapshot only. Separate supplements and older revisions remain discoverable via health_list_exports; never treat this as a merged view." };
   }
 
   async readExportBytes(principal: ReadPrincipal, exportId: string, offset: number): Promise<Record<string, unknown>> {

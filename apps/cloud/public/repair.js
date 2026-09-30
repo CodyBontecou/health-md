@@ -10,6 +10,10 @@ let previewed = null;
 let ready = false;
 let disabled = false;
 let pendingSelection = null;
+let pendingEvidenceDate = null;
+let provenanceSequence = 0;
+let inspectedDate = null;
+let provenanceOffset = null;
 const message = (text) => { if ($("repair-message")) $("repair-message").textContent = text; };
 const element = (name, text) => { const node = document.createElement(name); node.textContent = text; return node; };
 async function api(path, body, method) {
@@ -21,8 +25,14 @@ async function api(path, body, method) {
   if (!response.ok) throw new Error(result.message || "Request failed.");
   return result;
 }
+function clearProvenance() {
+  provenanceSequence++; inspectedDate = null; provenanceOffset = null;
+  if ($("repair-provenance-results")) $("repair-provenance-results").replaceChildren();
+  if ($("repair-provenance-status")) $("repair-provenance-status").textContent = "";
+  if ($("repair-provenance-more")) $("repair-provenance-more").hidden = true;
+}
 function invalidate() { previewed = null; $("repair-save").disabled = true; $("repair-results").replaceChildren();
-  $("repair-status").textContent = "Scope changed. Review coverage before saving."; }
+  $("repair-status").textContent = "Scope changed. Review coverage before saving."; clearProvenance(); }
 function renderDates() {
   const list = $("repair-dates"); list.replaceChildren();
   for (const date of [...dates].sort()) {
@@ -87,6 +97,52 @@ function renderPreview(result) {
   }
   table.append(body); $("repair-results").replaceChildren(table);
   $("repair-status").textContent = `${result.days.length} day(s) reviewed. No device was contacted. No request can launch from this dashboard yet.`;
+}
+function describeMetric(id, result) {
+  if (result?.status === "observed" && typeof result.value === "number" && Number.isFinite(result.value)) {
+    return `${id}: ${result.value} (observed in this export)`;
+  }
+  return `${id}: value unavailable in this uploaded summary (not zero)`;
+}
+function renderEvidenceBlock(label, item) {
+  const block = element("article", ""); block.className = "record-card";
+  block.append(element("h4", label));
+  if (!item) { block.append(element("p", "No current primary snapshot was uploaded for this day.")); return block; }
+  block.append(element("p", `${item.source === "ios" ? "Apple" : "Android"} v${item.dailyVersion} · ${item.status.replaceAll("_", " ")} · original export ${item.exportId}${item.pointer ? ` ${item.pointer}` : " (no retained day record)"}`));
+  block.append(element("p", `Declared calendar timezone: ${item.calendarTimezone || "not reported / not validated"}; compare owner-day boundaries on the phone before exporting.`));
+  if (item.captureStatus) block.append(element("p", `Archive capture: ${item.captureStatus}`));
+  if (item.scope) block.append(element("p", `Declared scope: ${item.scope === "metric_ids" ? item.metricIds.join(", ") : "entire days"} · ${item.detail.replaceAll("_", " ")} · envelope failures: ${item.failureCount} (not attributed to this day)`));
+  if (item.status === "read_limit") block.append(element("p", "Outside this bounded read. Inspect the original export separately."));
+  const metrics = Object.entries(item.metrics || {});
+  if (metrics.length) {
+    const list = element("ul", "");
+    for (const [id, value] of metrics) list.append(element("li", describeMetric(id, value)));
+    block.append(list);
+  }
+  return block;
+}
+async function loadProvenance(date, offset = 0) {
+  if (!ready || disabled || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const sequence = ++provenanceSequence;
+  if (offset === 0) {
+    inspectedDate = date; provenanceOffset = null;
+    $("repair-provenance-results").replaceChildren();
+  }
+  $("repair-provenance-more").hidden = true;
+  $("repair-provenance-status").textContent = `Checking separately retained evidence for ${date}…`;
+  try {
+    const result = await api("/api/repair/supplements", { date, offset });
+    if (sequence !== provenanceSequence || disabled) return;
+    const target = $("repair-provenance-results");
+    if (offset === 0) target.append(renderEvidenceBlock("Current primary snapshot", result.primary));
+    if (!result.supplements.length && offset === 0) target.append(element("p", "No supplemental export retained for this day. This does not establish whether the phone has readings."));
+    for (const entry of result.supplements) target.append(renderEvidenceBlock("Separate supplement · never merged", entry));
+    provenanceOffset = result.nextOffset;
+    $("repair-provenance-more").hidden = provenanceOffset === null;
+    $("repair-provenance-status").textContent = `${date}: original current and supplemental evidence only. Missing values are not zeros; failed-date counts belong to the whole envelope.`;
+  } catch (error) {
+    if (sequence === provenanceSequence && !disabled) $("repair-provenance-status").textContent = error.message;
+  }
 }
 async function loadDrafts() {
   try {
@@ -154,6 +210,14 @@ async function init() {
         previewed = chosen; renderPreview(result); $("repair-save").disabled = false; message("");
       } catch (error) { invalidate(); message(error.message); }
     });
+    $("repair-read-provenance").addEventListener("click", () => {
+      const chosen = $("repair-one").value;
+      if (!chosen) { $("repair-provenance-status").textContent = "Choose one owner day above first."; return; }
+      void loadProvenance(chosen);
+    });
+    $("repair-provenance-more").addEventListener("click", () => {
+      if (inspectedDate && provenanceOffset !== null) void loadProvenance(inspectedDate, provenanceOffset);
+    });
     $("repair-save").addEventListener("click", async () => {
       try { if (!previewed || JSON.stringify(previewed) !== JSON.stringify(spec())) throw new Error("Review the current scope first.");
         const result = await api("/api/repair/drafts", previewed);
@@ -165,6 +229,7 @@ async function init() {
     syncSource(); ready = true;
     if (pendingSelection) { applySelection(pendingSelection); pendingSelection = null; }
     await loadDrafts();
+    if (pendingEvidenceDate) { const day = pendingEvidenceDate; pendingEvidenceDate = null; void loadProvenance(day); }
   } catch (error) {
     if (disabled) return;
     if (error.message === "Sign in to continue.") location.replace("/login");
@@ -213,8 +278,14 @@ function applySelection(selection) {
 }
 if ($("repair-mount")) {
   document.addEventListener("healthmd:repair-select", (event) => applySelection(event.detail));
+  document.addEventListener("healthmd:repair-provenance", (event) => {
+    if (!ready) { pendingEvidenceDate = event.detail?.date; return; }
+    $("repair-planner").scrollIntoView({ behavior: "smooth", block: "start" });
+    void loadProvenance(event.detail?.date);
+  });
   document.addEventListener("healthmd:repair-clear", () => {
-    dates.clear(); previewed = null; pendingSelection = null; ready = false; disabled = true;
+    dates.clear(); previewed = null; pendingSelection = null; pendingEvidenceDate = null; ready = false; disabled = true;
+    clearProvenance();
   });
   document.addEventListener("click", (event) => {
     if (event.target instanceof Element && event.target.closest('a[href="#repair-planner"]') && !ready) {
@@ -222,8 +293,8 @@ if ($("repair-mount")) {
     }
   });
   window.addEventListener("pagehide", () => {
-    dates.clear(); previewed = null; pendingSelection = null; ready = false;
-    $("repair-mount").replaceChildren();
+    dates.clear(); previewed = null; pendingSelection = null; pendingEvidenceDate = null; ready = false;
+    clearProvenance(); $("repair-mount").replaceChildren();
   });
   window.addEventListener("pageshow", (event) => { if (event.persisted) location.reload(); });
   void init();

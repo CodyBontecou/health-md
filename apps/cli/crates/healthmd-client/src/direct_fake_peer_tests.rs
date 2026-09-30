@@ -283,6 +283,10 @@ async fn respond_with_ios_status(port: u16, trust: &FakeMobileTrust, app_active:
                 active_job_id: None,
                 active_query_request_id: None,
                 message: None,
+                app_version: None,
+                build_version: None,
+                operating_system_version: None,
+                history_authorization: None,
             },
         )))
         .await
@@ -631,6 +635,10 @@ async fn respond_with_ios_status_enrolled(
                 active_job_id: None,
                 active_query_request_id: None,
                 message: None,
+                app_version: None,
+                build_version: None,
+                operating_system_version: None,
+                history_authorization: None,
             },
         )))
         .await

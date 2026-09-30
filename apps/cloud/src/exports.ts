@@ -2,9 +2,11 @@ import { audit, limitIngest, requireIngestToken } from "./auth";
 import { decryptExport, encryptExport, parseExportKeyring, sha256Hex } from "./crypto";
 import { EnvelopeValidationError, parseAndValidateEnvelope } from "./envelope";
 import { assertJsonContentType, HttpError, json, parsePositiveInteger, readBoundedBody } from "./http";
+import { parseRepairSpec, type RepairDraftSpec } from "./repair-drafts";
+import { encryptSupplementSpec, supplementScopeDigest } from "./repair-supplements";
 import type { Env, EnvelopeInfo } from "./types";
 
-const MAX_ACCOUNT_BYTES = 1_073_741_824; // pilot quota; not a strict concurrent reservation
+const MAX_ACCOUNT_BYTES = 1_073_741_824; // retained-byte quota; enforced again at metadata commit
 
 interface ExportRow {
   id: string;
@@ -33,13 +35,32 @@ function insertExport(env: Env, userId: string, tokenId: string, exportId: strin
        received_at, date_start, date_end, record_count, failure_count, external_record_count
      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (SELECT 1 FROM ingest_tokens t JOIN users u ON u.id = t.user_id
-         WHERE u.id = ? AND t.id = ? AND u.status = 'active' AND t.revoked_at IS NULL)`,
+         WHERE u.id = ? AND t.id = ? AND u.status = 'active' AND t.revoked_at IS NULL)
+       AND (SELECT COALESCE(SUM(byte_count), 0) FROM exports WHERE user_id = ?) + ? <= ?`,
   ).bind(exportId, userId, objectKey, keyId, digest, bytes, info.envelopeSchemaVersion,
     info.dailyRecordSchemaVersion, info.source, info.exportedAt, receivedAt, info.dateStart,
-    info.dateEnd, info.recordCount, info.failureCount, info.externalRecordCount, userId, tokenId);
+    info.dateEnd, info.recordCount, info.failureCount, info.externalRecordCount, userId, tokenId,
+    userId, bytes, MAX_ACCOUNT_BYTES);
 }
 
 export async function ingest(request: Request, env: Env): Promise<Response> {
+  // Until a separately authenticated, device-bound dispatch and receipt path
+  // exists, never mistake a claimed repair header for an ordinary replacement.
+  request.headers.forEach((_value, name) => {
+    if (name.toLowerCase().startsWith("x-healthmd-repair-")) {
+      throw new HttpError(409, "repair_not_enabled", "Repair uploads need a verified request.");
+    }
+  });
+  return ingestMode(request, env, null);
+}
+
+// Trusted server-internal path only: no public route passes a client-supplied
+// spec here. Step 2 must bind an approved device request before exposing it.
+export async function ingestSupplement(request: Request, env: Env, trustedScope: RepairDraftSpec): Promise<Response> {
+  return ingestMode(request, env, parseRepairSpec(trustedScope));
+}
+
+async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | null): Promise<Response> {
   const principal = await requireIngestToken(request, env);
   await limitIngest(env, principal.tokenId);
   assertJsonContentType(request);
@@ -54,16 +75,46 @@ export async function ingest(request: Request, env: Env): Promise<Response> {
     }
     throw error;
   }
+  if (spec) {
+    const start = Date.parse(`${info.dateStart}T00:00:00Z`);
+    const end = Date.parse(`${info.dateEnd}T00:00:00Z`);
+    const days = (end - start) / 86_400_000 + 1;
+    const allowed = new Set(spec.dates);
+    // Failure timestamps are instants, not trustworthy logical owner dates.
+    // Allow a one-day UTC margin for a mobile calendar zone, but never label a
+    // particular failure as a requested day on this evidence alone.
+    const low = new Date(start - 86_400_000).toISOString().slice(0, 10);
+    const high = new Date(end + 86_400_000).toISOString().slice(0, 10);
+    if (info.source !== spec.source || !Number.isInteger(days) || days < 1 || days > 7 ||
+        info.failureTimestamps.some((instant) => instant.slice(0, 10) < low || instant.slice(0, 10) > high) ||
+        (info.source === "ios" && info.dailyRecordSchemaVersion !== 8) ||
+        (info.source === "android" && ![4, 5].includes(info.dailyRecordSchemaVersion)) ||
+        Array.from({ length: days }, (_, i) => new Date(start + i * 86_400_000).toISOString().slice(0, 10))
+          .some((date) => !allowed.has(date))) {
+      throw new HttpError(422, "scope_mismatch", "Export source, profile or owner-day range does not match the request.");
+    }
+  }
   const keyring = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON);
   const keyId = env.CURRENT_EXPORT_KEY_ID;
   const rootKey = keyring.get(keyId);
   if (!rootKey) throw new Error("Current export encryption key is not configured");
   const digest = await sha256Hex(body);
-  const existing = await env.DB.prepare(
-    `SELECT e.id FROM exports e JOIN users u ON u.id = e.user_id
-     WHERE e.user_id = ? AND e.plaintext_sha256 = ? AND u.status = 'active' LIMIT 1`,
-  ).bind(principal.userId, digest).first<{ id: string }>();
-  if (existing) return json({ accepted: true, duplicate: true, id: existing.id });
+  const scopeDigest = spec ? await supplementScopeDigest(spec, env) : null;
+  const duplicateReceipt = async (): Promise<Response | null> => {
+    const existing = await env.DB.prepare(
+      `SELECT e.id, s.scope_digest AS scopeDigest FROM exports e JOIN users u ON u.id = e.user_id
+       LEFT JOIN supplemental_exports s ON s.export_id = e.id AND s.user_id = e.user_id
+       WHERE e.user_id = ? AND e.plaintext_sha256 = ? AND u.status = 'active' LIMIT 1`,
+    ).bind(principal.userId, digest).first<{ id: string; scopeDigest: string | null }>();
+    if (!existing) return null;
+    if (existing.scopeDigest !== scopeDigest) {
+      throw new HttpError(409, "scope_conflict", "These bytes were retained under a different export scope.");
+    }
+    return json({ accepted: true, duplicate: true, id: existing.id,
+      ...(spec ? { mode: "supplemental", records: info.recordCount, failureCount: info.failureCount } : {}) });
+  };
+  const existing = await duplicateReceipt();
+  if (existing) return existing;
   const usage = await env.DB.prepare(
     "SELECT COALESCE(SUM(byte_count), 0) AS bytes FROM exports WHERE user_id = ?",
   ).bind(principal.userId).first<{ bytes: number }>();
@@ -74,12 +125,22 @@ export async function ingest(request: Request, env: Env): Promise<Response> {
   const objectKey = `v1/${crypto.randomUUID()}`;
   const ciphertext = await encryptExport(body, rootKey, principal.userId, exportId);
   const receivedAt = new Date().toISOString();
+  const encryptedSpec = spec ? await encryptSupplementSpec(spec, env, principal.userId, exportId) : null;
   await env.EXPORTS.put(objectKey, ciphertext, {
     httpMetadata: { contentType: "application/octet-stream", cacheControl: "no-store" },
   });
   const statements: D1PreparedStatement[] = [
     insertExport(env, principal.userId, principal.tokenId, exportId, objectKey, keyId, digest, body.byteLength, info, receivedAt),
-    ...info.dailyRecords.map((record) => env.DB.prepare(
+    ...(encryptedSpec ? [env.DB.prepare(`INSERT INTO supplemental_exports
+      (export_id, user_id, spec_ciphertext, spec_iv, scope_digest, created_at)
+      SELECT ?, ?, ?, ?, ?, ? FROM exports WHERE id = ? AND user_id = ?`)
+      .bind(exportId, principal.userId, encryptedSpec.specCiphertext, encryptedSpec.specIv,
+        encryptedSpec.scopeDigest, receivedAt, exportId, principal.userId)] : []),
+    ...info.dailyRecords.map((record) => env.DB.prepare(spec ?
+      `INSERT INTO supplemental_records
+       (user_id, owner_date, export_id, record_index, schema_version, capture_status)
+       SELECT ?, ?, ?, ?, ?, ? FROM supplemental_exports
+       WHERE export_id = ? AND user_id = ?` :
       `INSERT INTO daily_records (
          user_id, owner_date, export_id, record_index, schema_version, capture_status, exported_at, received_at
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -92,20 +153,28 @@ export async function ingest(request: Request, env: Env): Promise<Response> {
          received_at = excluded.received_at
        WHERE excluded.exported_at > daily_records.exported_at OR
          (excluded.exported_at = daily_records.exported_at AND excluded.received_at > daily_records.received_at)`,
-    ).bind(principal.userId, record.date, exportId, record.index, record.schemaVersion,
-      record.captureStatus, info.exportedAt, receivedAt)),
+    ).bind(...(spec ? [principal.userId, record.date, exportId, record.index,
+      record.schemaVersion, record.captureStatus, exportId, principal.userId] :
+      [principal.userId, record.date, exportId, record.index, record.schemaVersion,
+        record.captureStatus, info.exportedAt, receivedAt]))),
     env.DB.prepare(
       "UPDATE ingest_tokens SET last_used_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
     ).bind(receivedAt, principal.tokenId, principal.userId),
     env.DB.prepare(
       `INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
        SELECT ?, ?, ?, ?, ? FROM exports WHERE id = ?`,
-    ).bind(crypto.randomUUID(), principal.userId, "export.accepted", exportId, receivedAt, exportId),
+    ).bind(crypto.randomUUID(), principal.userId,
+      spec ? "supplement.accepted" : "export.accepted", exportId, receivedAt, exportId),
   ];
   try {
     // D1 batch is transactional; a failed metadata commit does not acknowledge the payload.
     const results = await env.DB.batch(statements);
     if (results[0]?.meta.changes !== 1) {
+      const current = await env.DB.prepare("SELECT COALESCE(SUM(byte_count), 0) AS bytes FROM exports WHERE user_id = ?")
+        .bind(principal.userId).first<{ bytes: number }>();
+      if ((current?.bytes ?? 0) + body.byteLength > MAX_ACCOUNT_BYTES) {
+        throw new HttpError(413, "account_quota", "Account export storage quota reached.");
+      }
       throw new HttpError(401, "unauthorized", "Export token is no longer active.");
     }
   } catch (error) {
@@ -114,16 +183,12 @@ export async function ingest(request: Request, env: Env): Promise<Response> {
     } catch {
       // Reconcile orphaned encrypted objects before production deployment.
     }
-    const concurrentDuplicate = await env.DB.prepare(
-      `SELECT e.id FROM exports e JOIN users u ON u.id = e.user_id
-       WHERE e.user_id = ? AND e.plaintext_sha256 = ? AND u.status = 'active' LIMIT 1`,
-    ).bind(principal.userId, digest).first<{ id: string }>();
-    if (concurrentDuplicate) {
-      return json({ accepted: true, duplicate: true, id: concurrentDuplicate.id });
-    }
+    const concurrentDuplicate = await duplicateReceipt();
+    if (concurrentDuplicate) return concurrentDuplicate;
     throw error;
   }
-  return json({ accepted: true, duplicate: false, id: exportId, records: info.recordCount }, { status: 201 });
+  return json({ accepted: true, duplicate: false, id: exportId, records: info.recordCount,
+    ...(spec ? { mode: "supplemental", failureCount: info.failureCount } : {}) }, { status: 201 });
 }
 
 export async function listExports(env: Env, userId: string): Promise<Response> {
@@ -133,7 +198,11 @@ export async function listExports(env: Env, userId: string): Promise<Response> {
               daily_record_schema_version AS dailyRecordSchemaVersion, source,
               exported_at AS exportedAt, received_at AS receivedAt, date_start AS dateStart,
               date_end AS dateEnd, record_count AS recordCount, failure_count AS failureCount,
-              external_record_count AS externalRecordCount
+              external_record_count AS externalRecordCount,
+              CASE WHEN EXISTS (SELECT 1 FROM supplemental_exports s WHERE s.export_id = exports.id)
+                THEN 'supplemental'
+                WHEN EXISTS (SELECT 1 FROM daily_records d WHERE d.export_id = exports.id)
+                THEN 'current' ELSE 'unreferenced' END AS retentionRole
        FROM exports WHERE user_id = ? ORDER BY received_at DESC, id DESC LIMIT 50`,
     ).bind(userId).all(),
     env.DB.prepare(
@@ -166,7 +235,11 @@ export async function listExportPage(env: Env, userId: string, offset: number): 
             daily_record_schema_version AS dailyRecordSchemaVersion, source,
             exported_at AS exportedAt, received_at AS receivedAt, date_start AS dateStart,
             date_end AS dateEnd, record_count AS recordCount, failure_count AS failureCount,
-            external_record_count AS externalRecordCount
+            external_record_count AS externalRecordCount,
+            CASE WHEN EXISTS (SELECT 1 FROM supplemental_exports s WHERE s.export_id = exports.id)
+              THEN 'supplemental'
+              WHEN EXISTS (SELECT 1 FROM daily_records d WHERE d.export_id = exports.id)
+              THEN 'current' ELSE 'unreferenced' END AS retentionRole
      FROM exports WHERE user_id = ? ORDER BY received_at DESC, id DESC LIMIT 51 OFFSET ?`,
   ).bind(userId, offset).all();
   return json({ exports: result.results.slice(0, 50),

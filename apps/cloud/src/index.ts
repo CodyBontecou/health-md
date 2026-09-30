@@ -9,6 +9,11 @@ import { createAgentToken, listAgentTokens, revokeAgentToken } from "./agent-tok
 import { passwordLogin } from "./password";
 import { cancelRepairDraft, createRepairDraft, listRepairDrafts, previewRepairRequest,
   purgeExpiredRepairDrafts } from "./repair-drafts";
+import { approveRepairDevice, listRepairDevices, purgeExpiredRepairDevices,
+  repairDeviceStatus, revokeRepairDevice, startRepairDeviceEnrollment } from "./repair-devices";
+import { readSupplementEvidence } from "./repair-supplements";
+import { cancelRepairDispatch, claimRepairDispatch, declineRepairDispatch,
+  listRepairDispatches, queueRepairDispatch, resumeRepairDispatch } from "./repair-dispatch";
 import { processAccountDeletions, purgeArchivedRevisions, requestAccountDeletion } from "./lifecycle";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
 import type { Env } from "./types";
@@ -146,11 +151,48 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (method === "GET" && path === "/api/dashboard/trends") {
     return dashboardTrends(env, (await requireSession(request, env)).id);
   }
+  if (method === "POST" && path === "/api/repair/device/enroll") {
+    return startRepairDeviceEnrollment(request, env);
+  }
+  if (method === "GET" && path === "/api/repair/device/status") {
+    return repairDeviceStatus(request, env);
+  }
+  if (method === "GET" && path === "/api/repair/devices") {
+    return listRepairDevices(env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/repair/devices/approve") {
+    return approveRepairDevice(request, env, (await requireSession(request, env)).id);
+  }
+  const revokeDevice = /^\/api\/repair\/devices\/([a-f0-9-]{36})$/u.exec(path);
+  if (method === "DELETE" && revokeDevice?.[1]) {
+    return revokeRepairDevice(request, env, (await requireSession(request, env)).id, revokeDevice[1]);
+  }
+  if (method === "GET" && path === "/api/repair/dispatches") {
+    return listRepairDispatches(env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/repair/dispatch") {
+    return queueRepairDispatch(request, env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/repair/dispatch/cancel") {
+    return cancelRepairDispatch(request, env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/repair/device/claim") {
+    return claimRepairDispatch(request, env);
+  }
+  if (method === "POST" && path === "/api/repair/device/resume") {
+    return resumeRepairDispatch(request, env);
+  }
+  if (method === "POST" && path === "/api/repair/device/decline") {
+    return declineRepairDispatch(request, env);
+  }
   if (method === "GET" && path === "/api/repair/drafts") {
     return listRepairDrafts(env, (await requireSession(request, env)).id);
   }
   if (method === "POST" && path === "/api/repair/preview") {
     return previewRepairRequest(request, env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/repair/supplements") {
+    return readSupplementEvidence(request, env, (await requireSession(request, env)).id);
   }
   if (method === "POST" && path === "/api/repair/drafts") {
     return createRepairDraft(request, env, (await requireSession(request, env)).id);
@@ -212,5 +254,6 @@ export default {
       env.DB.prepare("DELETE FROM auth_rate_limits WHERE expires_at < ?").bind(now),
     ]);
     await purgeExpiredRepairDrafts(env);
+    await purgeExpiredRepairDevices(env);
   },
 };

@@ -142,10 +142,11 @@ export function parseAndValidateEnvelope(bytes: Uint8Array): EnvelopeInfo {
   if (records.length + failures.length > 7) {
     throw new EnvelopeValidationError("An API export batch may contain at most 7 dates");
   }
-  failures.forEach((value, index) => {
+  const failureTimestamps = failures.map((value, index) => {
     const failure = object(value, `failed_date_details[${index}]`);
-    canonicalTimestamp(failure.date, `failed_date_details[${index}].date`);
+    const at = canonicalTimestamp(failure.date, `failed_date_details[${index}].date`);
     string(failure.reason, `failed_date_details[${index}].reason`);
+    return at;
   });
   if (records.length + failures.length === 0) {
     throw new EnvelopeValidationError("Envelope contains no retained or failed dates");
@@ -185,6 +186,7 @@ export function parseAndValidateEnvelope(bytes: Uint8Array): EnvelopeInfo {
     dateEnd,
     recordCount,
     failureCount: failures.length,
+    failureTimestamps,
     externalRecordCount,
     dailyRecords,
   };

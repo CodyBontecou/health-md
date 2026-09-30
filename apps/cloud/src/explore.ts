@@ -13,21 +13,25 @@ interface NodeRequest { exportId?: unknown; pointer?: unknown; offset?: unknown 
 interface ExportRecord extends EnvelopeRow {
   id: string; exportedAt: string; receivedAt: string; dateStart: string; dateEnd: string;
   failureCount: number; externalRecordCount: number;
+  retentionRole: "current" | "supplemental" | "unreferenced";
 }
 const fields = `e.id AS id, e.id AS exportId, e.source AS source,
   e.envelope_schema_version AS envelopeVersion, e.daily_record_schema_version AS dailyVersion,
   e.object_key AS objectKey, e.encryption_key_id AS keyId, e.plaintext_sha256 AS digest,
   e.byte_count AS byteCount, e.record_count AS recordCount, e.failure_count AS failureCount,
   e.external_record_count AS externalRecordCount, e.exported_at AS exportedAt,
-  e.received_at AS receivedAt, e.date_start AS dateStart, e.date_end AS dateEnd`;
+  e.received_at AS receivedAt, e.date_start AS dateStart, e.date_end AS dateEnd,
+  CASE WHEN EXISTS (SELECT 1 FROM supplemental_exports s WHERE s.export_id = e.id)
+    THEN 'supplemental' WHEN EXISTS (SELECT 1 FROM daily_records d WHERE d.export_id = e.id)
+    THEN 'current' ELSE 'unreferenced' END AS retentionRole`;
 function integer(value: unknown, max: number): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= max;
 }
 function publicRow(row: ExportRecord) {
   const { id, source, envelopeVersion, dailyVersion, byteCount, recordCount, failureCount,
-    externalRecordCount, exportedAt, receivedAt, dateStart, dateEnd } = row;
+    externalRecordCount, exportedAt, receivedAt, dateStart, dateEnd, retentionRole } = row;
   return { id, source, envelopeVersion, dailyVersion, byteCount, recordCount, failureCount,
-    externalRecordCount, exportedAt, receivedAt, dateStart, dateEnd };
+    externalRecordCount, exportedAt, receivedAt, dateStart, dateEnd, retentionRole };
 }
 
 // Metadata filters describe actual retained envelope fields, never an app's
@@ -59,7 +63,7 @@ export async function exploreExports(request: Request, env: Env, userId: string)
     .bind(...values, input.offset).all<ExportRecord>();
   return json({ exports: rows.results.slice(0, PAGE_SIZE).map(publicRow),
     nextOffset: rows.results.length > PAGE_SIZE ? input.offset + PAGE_SIZE : null,
-    note: "Date filters overlap the envelope's declared range, including failed dates. Saved export profile names are not in this envelope." });
+    note: "Date filters overlap declared ranges, including failed dates. Supplements remain separate from the current daily pointer. Saved app profile names are not in this envelope." });
 }
 
 function pointerParts(pointer: string): string[] {

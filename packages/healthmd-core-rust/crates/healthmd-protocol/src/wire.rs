@@ -341,6 +341,25 @@ pub struct StatusRequest {
     pub requested_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct HistoryAuthorizationStatus {
+    pub state: String,
+    #[serde(rename = "assessedTypeIdentifiers", default)]
+    pub assessed_type_identifiers: Vec<String>,
+    #[serde(rename = "earliestAuthorizedDates", default)]
+    pub earliest_authorized_dates: std::collections::BTreeMap<String, String>,
+    #[serde(rename = "unassessedMetricIDs", default)]
+    pub unassessed_metric_ids: Vec<String>,
+    #[serde(
+        rename = "checkedAt",
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "time::option"
+    )]
+    pub checked_at: Option<DateTime<Utc>>,
+    pub message: String,
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct IphoneStatus {
@@ -377,6 +396,30 @@ pub struct IphoneStatus {
     pub active_query_request_id: Option<SwiftUuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    #[serde(
+        rename = "appVersion",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub app_version: Option<String>,
+    #[serde(
+        rename = "buildVersion",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub build_version: Option<String>,
+    #[serde(
+        rename = "operatingSystemVersion",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub operating_system_version: Option<String>,
+    #[serde(
+        rename = "historyAuthorization",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub history_authorization: Option<HistoryAuthorizationStatus>,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

@@ -166,7 +166,7 @@ function renderTrend(metric, days) {
   caption.textContent = `${metric.label} from retained daily exports`;
   const head = document.createElement("thead");
   const headerRow = document.createElement("tr");
-  for (const text of ["Date", "Value or reason", "Plan this day"]) {
+  for (const text of ["Date", "Value or reason", "Evidence & plan"]) {
     const cell = document.createElement("th");
     cell.scope = "col";
     cell.textContent = text;
@@ -191,6 +191,14 @@ function renderTrend(metric, days) {
       button.addEventListener("click", () => planFromRow({ date: day.date, source: "ios", metricId: metric.id }));
       action.append(button);
     }
+    const provenance = document.createElement("button");
+    provenance.type = "button";
+    provenance.className = "subtle";
+    provenance.textContent = "Review supplements";
+    provenance.setAttribute("aria-label", `Review separately retained evidence for ${day.date}`);
+    provenance.addEventListener("click", () => document.dispatchEvent(
+      new CustomEvent("healthmd:repair-provenance", { detail: { date: day.date } })));
+    action.append(provenance);
     row.append(action);
     body.append(row);
   }
@@ -223,7 +231,7 @@ function appendExports(exports) {
     link.href = `/api/exports/${item.id}/download`;
     link.textContent = "Download JSON";
     addTextRow(list, `${item.dateStart} – ${item.dateEnd}`,
-      `${item.recordCount} days · ${item.source} · ${new Date(item.receivedAt).toLocaleString()}`, link);
+      `${item.recordCount} retained day record(s) · ${item.source} · ${item.retentionRole === "supplemental" ? "separate supplement, not current" : item.retentionRole === "current" ? "current for at least one day" : "unreferenced/revision"} · ${new Date(item.receivedAt).toLocaleString()}`, link);
   }
 }
 
@@ -235,8 +243,15 @@ function appendDays(days) {
     action.textContent = "Plan entire day";
     action.setAttribute("aria-label", `Plan entire ${day.source === "ios" ? "Apple" : "Android"} day ${day.date}`);
     action.addEventListener("click", () => planFromRow({ date: day.date, source: day.source, entireDay: true }));
+    const buttons = document.createElement("span"); buttons.append(action);
+    const provenance = document.createElement("button"); provenance.type = "button";
+    provenance.className = "subtle"; provenance.textContent = "Review supplements";
+    provenance.setAttribute("aria-label", `Review separately retained evidence for ${day.date}`);
+    provenance.addEventListener("click", () => document.dispatchEvent(
+      new CustomEvent("healthmd:repair-provenance", { detail: { date: day.date } })));
+    buttons.append(provenance);
     addTextRow($("day-list"), day.date,
-      `${day.source === "ios" ? "Apple" : "Android"} v${day.schemaVersion} · ${day.captureStatus || "status not reported"}`, action);
+      `${day.source === "ios" ? "Apple" : "Android"} v${day.schemaVersion} · ${day.captureStatus || "status not reported"}`, buttons);
   }
 }
 

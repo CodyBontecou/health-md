@@ -35,6 +35,57 @@ final class EncryptedHealthContextStoreTests: XCTestCase {
         }
     }
 
+    func testStorageMetricsReportReferencedEncryptedBytesWithoutReadingHealthValues() async throws {
+        let root = try makeRoot()
+        let store = EncryptedHealthContextStore(
+            rootURL: root,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider(keyData: fixedKey(0x19))
+        )
+        try await store.upsert([
+            makeDay("2026-01-01", marker: "one"),
+            makeDay("2026-01-02", marker: "two")
+        ])
+
+        let metrics = try await store.storageMetrics()
+        let referencedBytes = try storedFiles(root).reduce(Int64(0)) { partial, url in
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            return partial + ((attributes[.size] as? NSNumber)?.int64Value ?? 0)
+        }
+
+        XCTAssertEqual(metrics.ownerDateCount, 2)
+        XCTAssertEqual(metrics.encryptedByteCount, referencedBytes)
+        XCTAssertGreaterThan(metrics.manifestByteCount, 0)
+        XCTAssertGreaterThan(metrics.dayBlobByteCount, metrics.manifestByteCount)
+        XCTAssertEqual(metrics.averageEncryptedBytesPerOwnerDate, metrics.dayBlobByteCount / 2)
+    }
+
+    func testSynthetic365DayContextSizingStaysBoundedAndReportsExactTotals() async throws {
+        let root = try makeRoot()
+        let store = EncryptedHealthContextStore(
+            rootURL: root,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider(keyData: fixedKey(0x1A))
+        )
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2025, month: 1, day: 1)))
+        let days = try (0..<365).map { offset -> HealthMdCompactContextDay in
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: start))
+            return makeDay(formatter.string(from: date), marker: "synthetic-\(offset)")
+        }
+
+        try await store.upsert(days)
+
+        let metrics = try await store.storageMetrics()
+        XCTAssertEqual(metrics.ownerDateCount, 365)
+        XCTAssertGreaterThan(metrics.encryptedByteCount, 0)
+        XCTAssertLessThan(metrics.encryptedByteCount, 50 * 1_024 * 1_024)
+        XCTAssertNotNil(metrics.averageEncryptedBytesPerOwnerDate)
+    }
+
     func testSubmillisecondDatesRemainReadableAcrossDigestValidation() async throws {
         let root = try makeRoot()
         let store = EncryptedHealthContextStore(

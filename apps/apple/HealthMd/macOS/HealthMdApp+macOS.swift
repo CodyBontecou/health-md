@@ -274,6 +274,7 @@ struct HealthMdApp: App {
     @StateObject private var encryptedHealthContextManager: MacEncryptedHealthContextManager
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
+    @State private var shortcutContextRefreshJobIDs: Set<UUID> = []
     private let macExportJobExecutor = MacExportJobExecutor()
     private let encryptedHealthContextStore: EncryptedHealthContextStore
     private let encryptedHealthContextQueryExecutor: EncryptedHealthContextQueryExecutor
@@ -491,6 +492,8 @@ struct HealthMdApp: App {
                         syncService: syncService,
                         destinationStatus: makeMacDestinationStatus()
                     )
+                case .iphoneContextRefreshRequest(let request):
+                    await handleIPhoneContextRefreshRequest(request)
                 case .macExportRequest(let job):
                     await executeMacExportJob(job)
                 case .macExportStreamStart(let start):
@@ -624,7 +627,8 @@ struct HealthMdApp: App {
                     }
                     _ = iphoneExportRequestCoordinator.complete(with: failure)
                 case .macExportAccepted, .macExportProgress, .macExportResult, .macExportFailed,
-                     .macExportStreamChunkAck, .connectedTransferAck, .connectedTransferFinalAck:
+                     .macExportStreamChunkAck, .connectedTransferAck, .connectedTransferFinalAck,
+                     .iphoneContextRefreshStatus:
                     break // macOS only sends these acknowledgements/results
                 case .iphoneExportRequest, .iphoneExportCancel:
                     break // iOS receives these requests
@@ -718,6 +722,89 @@ struct HealthMdApp: App {
                     break // macOS doesn't serve data — only iOS does
                 }
             }
+        }
+    }
+
+    private func handleIPhoneContextRefreshRequest(
+        _ request: IPhoneContextRefreshRequest
+    ) async {
+        guard syncService.remoteCapabilities?.supportsIPhoneInitiatedContextRefresh == true,
+              syncService.localCapabilities.supportsIPhoneInitiatedContextRefresh else {
+            syncService.send(.iphoneContextRefreshStatus(IPhoneContextRefreshStatus(
+                jobID: request.jobID,
+                state: .failed,
+                message: "Phone-initiated context refresh was not negotiated by both devices.",
+                failureReason: "unsupported_context_refresh"
+            )))
+            return
+        }
+        guard !request.selection.metricIDs.isEmpty,
+              request.selection.sourceIDs == ["apple_health"],
+              request.selection.objectPaths.isEmpty,
+              request.selection.fieldPointers.isEmpty else {
+            syncService.send(.iphoneContextRefreshStatus(IPhoneContextRefreshStatus(
+                jobID: request.jobID,
+                state: .failed,
+                message: "The requested encrypted-context scope is invalid.",
+                failureReason: "invalid_context_selection"
+            )))
+            return
+        }
+
+        shortcutContextRefreshJobIDs.insert(request.jobID)
+        let response = await iphoneExportRequestCoordinator.requestExport(
+            .init(
+                jobID: request.jobID,
+                dateSelection: request.dateSelection,
+                startDate: request.dateRangeStart,
+                endDate: request.dateRangeEnd,
+                requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly,
+                responseMode: .contextStore,
+                rawProfile: nil,
+                canonicalSelection: request.selection,
+                waitTimeoutSeconds: 1
+            ),
+            syncService: syncService,
+            destinationStatus: makeMacDestinationStatus(
+                activeJobID: iphoneExportRequestCoordinator.activeJobID
+            )
+        )
+
+        let state: IPhoneContextRefreshStatus.State
+        switch response.status {
+        case .success, .partialSuccess:
+            state = .completed
+        case .accepted, .preparing, .timedOut:
+            state = .pending
+        case .failure, .cancelled, .unavailable:
+            state = .failed
+        }
+        publishShortcutContextRefreshStatusIfNeeded(
+            jobID: request.jobID,
+            state: state,
+            message: response.message,
+            failureReason: response.failureReason,
+            terminal: state == .completed || state == .failed
+        )
+    }
+
+    private func publishShortcutContextRefreshStatusIfNeeded(
+        jobID: UUID,
+        state: IPhoneContextRefreshStatus.State,
+        message: String,
+        failureReason: String? = nil,
+        terminal: Bool
+    ) {
+        guard shortcutContextRefreshJobIDs.contains(jobID) else { return }
+        syncService.send(.iphoneContextRefreshStatus(IPhoneContextRefreshStatus(
+            jobID: jobID,
+            state: state,
+            message: message,
+            failureReason: failureReason
+        )))
+        if terminal {
+            shortcutContextRefreshJobIDs.remove(jobID)
         }
     }
 
@@ -944,6 +1031,13 @@ struct HealthMdApp: App {
                     syncService.lastMacExportResult = fileResult
                     syncService.lastMacExportFailure = nil
                     _ = iphoneExportRequestCoordinator.complete(with: fileResult)
+                    publishShortcutContextRefreshStatusIfNeeded(
+                        jobID: finalize.jobID,
+                        state: fileResult.status == .success ? .completed : .failed,
+                        message: fileResult.message,
+                        failureReason: fileResult.status == .success ? nil : fileResult.status.rawValue,
+                        terminal: true
+                    )
                     syncService.send(.macExportResult(fileResult))
                 }
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
@@ -953,6 +1047,13 @@ struct HealthMdApp: App {
             case .failed(let failure, let acknowledgement):
                 syncService.lastMacExportFailure = failure
                 _ = iphoneExportRequestCoordinator.complete(with: failure)
+                publishShortcutContextRefreshStatusIfNeeded(
+                    jobID: finalize.jobID,
+                    state: .failed,
+                    message: failure.message,
+                    failureReason: failure.reason.rawValue,
+                    terminal: true
+                )
                 // Publish the application failure first. The rejected ACK is terminal
                 // only because both messages were durably bound in the corpus journal.
                 syncService.send(.macExportFailed(failure))
@@ -964,6 +1065,13 @@ struct HealthMdApp: App {
                 syncService.lastMacExportResult = result
                 syncService.lastMacExportFailure = nil
                 _ = iphoneExportRequestCoordinator.complete(with: result)
+                publishShortcutContextRefreshStatusIfNeeded(
+                    jobID: finalize.jobID,
+                    state: result.status == .success ? .completed : .failed,
+                    message: result.message,
+                    failureReason: result.status == .success ? nil : result.status.rawValue,
+                    terminal: true
+                )
                 syncService.send(.macExportResult(result))
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
                 if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
@@ -1032,6 +1140,13 @@ struct HealthMdApp: App {
             }
             syncService.lastMacExportFailure = failure
             _ = iphoneExportRequestCoordinator.complete(with: failure)
+            publishShortcutContextRefreshStatusIfNeeded(
+                jobID: finalize.jobID,
+                state: .failed,
+                message: failure.message,
+                failureReason: failure.reason.rawValue,
+                terminal: true
+            )
             syncService.send(.macExportFailed(failure))
             syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
             publishMacDestinationStatus()

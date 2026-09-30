@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Export progress and results now use one bottom status card throughout the iPhone app. The same card updates from preparation and progress to success, warning, cancellation, or failure, while independent settings-lock feedback stacks in the same bottom status area.
+
 ## [3.4.2] - 2026-09-17
 
 ### Changed

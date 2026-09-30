@@ -22,6 +22,8 @@ export interface Env {
   AUTH_INVITE_EMAILS?: string;
   DEV_SHOW_MAGIC_LINK?: string;
   SYNTHETIC_PREVIEW_ONLY?: string;
+  CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED?: string;
+  CLOUD_REPAIR_DISPATCH_ENABLED?: string;
 }
 
 export interface UserRow {
@@ -60,6 +62,7 @@ export interface EnvelopeInfo {
   dateEnd: string;
   recordCount: number;
   failureCount: number;
+  failureTimestamps: string[];
   externalRecordCount: number;
   dailyRecords: DailyRecordInfo[];
 }
