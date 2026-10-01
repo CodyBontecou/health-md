@@ -268,6 +268,7 @@ for (const fragment of [
 for (const fragment of [
   "EMAIL_PROVIDER_TIMEOUT_MS = 10_000", "setTimeout(() => controller.abort()",
   "signal: controller.signal", "response.body?.cancel().catch",
+  "It expires in ${ttlMinutes} minutes", "sendMagicLink(env, email, token, ttlMinutes)",
   'recordAccountSecurityMetric(env, "email_delivery_failed")',
   "discardUndeliveredMagicLink", "attempt < 2",
   "DELETE FROM magic_links WHERE id = ? AND token_hash = ?",

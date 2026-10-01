@@ -217,6 +217,52 @@ it("bounds a stalled email provider and records only a fixed delivery-failure si
   } finally { db.close(); }
 });
 
+it("uses the configured link expiry and discards a non-success provider body", async () => {
+  const { env, db } = setup();
+  const email = "provider-rejected@example.test";
+  const points: unknown[] = [];
+  let providerBodyCancelled = false;
+  let outgoingBody = "";
+  env.ENVIRONMENT = "production";
+  env.AUTH_MODE = "email_link";
+  env.AUTH_SIGNUP_MODE = "invite";
+  env.AUTH_INVITE_EMAILS = email;
+  env.DEV_SHOW_MAGIC_LINK = "0";
+  env.RESEND_API_KEY = "synthetic-provider-secret";
+  env.AUTH_EMAIL_FROM = "Health.md Cloud <cloud@example.test>";
+  env.MAGIC_LINK_TTL_MINUTES = "7";
+  env.METRICS = { writeDataPoint: (point: unknown) => { points.push(point); } } as AnalyticsEngineDataset;
+  vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+    outgoingBody = String(init?.body ?? "");
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new TextEncoder().encode("synthetic private provider body")); },
+      cancel() { providerBodyCancelled = true; },
+    });
+    return Promise.resolve(new Response(body, { status: 503 }));
+  });
+  try {
+    const response = await requestMagicLink(new Request(`${origin}/api/auth/request-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json",
+        "CF-Connecting-IP": "203.0.113.34" },
+      body: JSON.stringify({ email }),
+    }), env);
+    await Promise.resolve();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      message: "If this address is eligible, a sign-in link is on its way.",
+    });
+    const providerRequest = JSON.parse(outgoingBody) as { text: string };
+    expect(providerRequest.text).toContain("expires in 7 minutes");
+    expect(providerBodyCancelled).toBe(true);
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM magic_links").get())
+      .toMatchObject({ count: 0 });
+    expect(points).toContainEqual({ indexes: ["account"],
+      blobs: ["email_delivery_failed", "blocked", "not_applicable", "not_applicable"], doubles: [1] });
+    expect(JSON.stringify(points)).not.toContain(email);
+  } finally { db.close(); }
+});
+
 it("admits split-account signup through a one-time hashed invite only", async () => {
   const { env, db } = setup();
   try {

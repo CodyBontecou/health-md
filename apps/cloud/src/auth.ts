@@ -122,7 +122,7 @@ async function signupAllowed(email: string, inviteLookup: string, env: Env): Pro
 
 const EMAIL_PROVIDER_TIMEOUT_MS = 10_000;
 
-async function sendMagicLink(env: Env, email: string, token: string): Promise<boolean> {
+async function sendMagicLink(env: Env, email: string, token: string, ttlMinutes: number): Promise<boolean> {
   if (env.ENVIRONMENT === "development" && env.DEV_SHOW_MAGIC_LINK === "1") return true;
   if (!env.RESEND_API_KEY) return false;
   const link = `${env.PUBLIC_ORIGIN}/login#token=${encodeURIComponent(token)}`;
@@ -140,7 +140,7 @@ async function sendMagicLink(env: Env, email: string, token: string): Promise<bo
         from: env.AUTH_EMAIL_FROM,
         to: [email],
         subject: "Sign in to Health.md Cloud",
-        text: `You requested a Health.md Cloud sign-in link. It expires in 15 minutes.\n\n${link}\n\nIf you didn't request it, ignore this message.`,
+        text: `You requested a Health.md Cloud sign-in link. It expires in ${ttlMinutes} minutes.\n\n${link}\n\nIf you didn't request it, ignore this message.`,
       }),
       signal: controller.signal,
     });
@@ -283,7 +283,7 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
   }
   let sent = false;
   try {
-    sent = await sendMagicLink(env, email, token);
+    sent = await sendMagicLink(env, email, token, ttlMinutes);
   } catch {
     // Never log provider responses; they can contain account identifiers.
   }
