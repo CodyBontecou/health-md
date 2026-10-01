@@ -4,12 +4,12 @@ import { resolve } from "node:path";
 const cloud = resolve(import.meta.dirname, "..");
 const repository = resolve(cloud, "../..");
 const failures = [];
-const checked = [];
+const checked = new Set();
 
 function read(relative, base = cloud) {
   const path = resolve(base, relative);
   if (!existsSync(path)) { failures.push(`missing ${path}`); return ""; }
-  checked.push(path.replace(`${repository}/`, ""));
+  checked.add(path.replace(`${repository}/`, ""));
   return readFileSync(path, "utf8");
 }
 function requireText(text, fragment, label) {
@@ -26,6 +26,7 @@ const profiles = [
 ];
 for (const [file, profile, entry] of profiles) {
   const text = read(file);
+  const entrySource = read(entry);
   requireText(text, `main = "${entry}"`, file);
   requireText(text, `SERVICE_PROFILE = "${profile}"`, file);
   requireText(text, "DEPLOYMENT_REVISION = \"REPLACE_WITH_FULL_GIT_COMMIT_SHA\"", file);
@@ -39,12 +40,16 @@ for (const [file, profile, entry] of profiles) {
   requireText(text, 'CURRENT_ACCOUNT_WRAPPING_KEY_ID = "kek-v1"', file);
   forbid(text, /^routes?\s*=/mu, file);
   forbid(text, /^(?:IDENTITY_KEY_B64|EXPORT_ENCRYPTION_KEYS_JSON|ACCOUNT_KEY_WRAPPING_KEYS_JSON|RESEND_API_KEY|PASSWORD_PEPPER_B64|AUTH_INVITE_EMAILS|CLOUD_RUNTIME_APPROVED|CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED|CLOUD_REPAIR_DISPATCH_ENABLED)\s*=/mu, file);
+  requireText(entrySource, `env.SERVICE_PROFILE !== "${profile}"`, entry);
   if (profile === "ingest") {
     requireText(text, 'INGEST_TOKEN_HOURLY_LIMIT = "120"', file);
     requireText(text, 'INGEST_ACCOUNT_HOURLY_LIMIT = "240"', file);
     forbid(text, /^\[assets\]$/mu, file);
     forbid(text, /^\[\[queues\./mu, file);
     forbid(text, /^binding\s*=\s*"LIFECYCLE_QUEUE"$/mu, file);
+    requireText(entrySource, 'request.method === "POST" && path === "/api/v1/exports"', entry);
+    requireText(entrySource, 'headers.delete("Cookie")', entry);
+    requireText(entrySource, 'responseHeaders.delete("Set-Cookie")', entry);
   } else if (profile === "account") {
     requireText(text, "[assets]", file);
     requireText(text, 'binding = "ASSETS"', file);
@@ -54,6 +59,7 @@ for (const [file, profile, entry] of profiles) {
     requireText(text, 'EMAIL_SEND_HOURLY_LIMIT = "100"', file);
     requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
     forbid(text, /^\[\[queues\.consumers\]\]$/mu, file);
+    forbid(entrySource, /["']\/api\/v1\/exports["']/u, entry);
   } else {
     requireText(text, "[triggers]", file);
     requireText(text, 'crons = ["*/5 * * * *"]', file);
@@ -63,6 +69,9 @@ for (const [file, profile, entry] of profiles) {
     requireText(text, 'REVISION_RETENTION_DAYS = "30"', file);
     requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
     forbid(text, /^\[assets\]$/mu, file);
+    requireText(entrySource, "validateConfiguration(env)", entry);
+    requireText(entrySource, "message.retry()", entry);
+    requireText(entrySource, "Endpoint not found.", entry);
   }
 }
 const combined = read("wrangler.toml");
@@ -102,10 +111,25 @@ requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
 forbid(loadRunner, /console\.(?:log|error)\([^\n]*(?:token|endpoint|body)/u, "staging load runner output");
 const migrations = readdirSync(resolve(cloud, "migrations"))
   .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-if (migrations.length !== 17 || migrations[0]?.slice(0, 4) !== "0001" ||
-    migrations.at(-1)?.slice(0, 4) !== "0017") {
-  failures.push(`migrations: expected contiguous source set 0001-0017, found ${migrations.join(",")}`);
+const expectedMigrationPrefixes = Array.from({ length: 17 }, (_, index) =>
+  String(index + 1).padStart(4, "0"));
+const migrationPrefixes = migrations.map((name) => name.slice(0, 4));
+if (JSON.stringify(migrationPrefixes) !== JSON.stringify(expectedMigrationPrefixes)) {
+  failures.push(`migrations: expected exactly one contiguous source migration per prefix 0001-0017, found ${migrations.join(",")}`);
 }
+const ingestMigration = read("migrations/0010_multi_user_ingest.sql");
+requireText(ingestMigration, "CREATE TABLE upload_intents", "migration 0010");
+requireText(ingestMigration, "CREATE TRIGGER upload_intents_reserve", "migration 0010");
+requireText(ingestMigration, "RAISE(ABORT, 'upload_reservation_rejected')", "migration 0010");
+const deletionAuthorityMigration = read("migrations/0015_deletion_receipt_authorities.sql");
+requireText(deletionAuthorityMigration, "CREATE TABLE account_deletion_receipts", "migration 0015");
+requireText(deletionAuthorityMigration, "UPDATE account_deletions", "migration 0015");
+const magicLinkMigration = read("migrations/0016_magic_link_session_claims.sql");
+requireText(magicLinkMigration, "ADD COLUMN claim_nonce", "migration 0016");
+requireText(magicLinkMigration, "CREATE UNIQUE INDEX magic_links_claim_nonce", "migration 0016");
+const rateLimitMigration = read("migrations/0017_rate_limit_attempts.sql");
+requireText(rateLimitMigration, "CREATE TABLE auth_rate_limit_attempts", "migration 0017");
+requireText(rateLimitMigration, "CREATE TRIGGER auth_rate_limit_attempt_applied", "migration 0017");
 
 const workflow = read(".github/workflows/cloud-ci.yml", repository);
 for (const line of workflow.split("\n")) {
@@ -114,6 +138,11 @@ for (const line of workflow.split("\n")) {
   }
 }
 requireText(workflow, "permissions:\n  contents: read", "Cloud CI");
+for (const command of [
+  "npm ci", "npm run check", "npm run verify:production-safety", "npm run test:smoke",
+  "npm run build:vm", "--config wrangler.ingest.toml", "--config wrangler.account.toml",
+  "--config wrangler.maintenance.toml", "npm audit --audit-level=moderate",
+]) requireText(workflow, command, "Cloud CI");
 
 if (failures.length) {
   console.error(JSON.stringify({ safe: false, failures }, null, 2));
@@ -126,5 +155,5 @@ console.log(JSON.stringify({
   uncheckedAcceptanceGates: unchecked,
   unassignedOwners,
   migrations: `${migrations[0]}..${migrations.at(-1)}`,
-  checkedFiles: checked.length,
+  checkedFiles: checked.size,
 }, null, 2));

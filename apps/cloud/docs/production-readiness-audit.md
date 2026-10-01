@@ -60,7 +60,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Twice-beta/twice-GA load and cost gates | fail-closed `qualify:staging-load` harness/runbook covers revision-bound 500-concurrent, 50/s × 10-minute and exact-25-MiB probes with health-free aggregates | **provider run, native metrics and accepted cost model absent** |
 | Controlled cohorts | sequence documented | **not started/authorized** |
 | Cutover/rollback | plan and recovery runbook | documented, not exercised against production |
-| Signup and deployment closed | all split configs `closed`, route-free, placeholder-bound and secret-free; the CI safety verifier enforces profile-specific assets/Queue/schedule/origin/budget/retention boundaries and forbids checked-in approval, identity, key, invite, password and repair-flag secrets | satisfied fail-closed state; this is not launch approval |
+| Signup and deployment closed | all split configs `closed`, route-free, placeholder-bound and secret-free; the CI safety verifier checks profile entrypoint route/cookie boundaries, exact migrations 0001–0017 plus critical trigger/authority semantics, required test/smoke/VM/split-dry-run/audit workflow commands, and forbids checked-in approval, secrets or any non-dry-run deploy | satisfied fail-closed state; this is not launch approval |
 
 ## Audited source artifact surface
 
@@ -84,7 +84,7 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 - `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.
 - `npm audit --audit-level=moderate`: zero known vulnerabilities at audit time; this is a dependency advisory check, not an application/infrastructure security assessment.
 - `git diff --check`: passes; this proves whitespace validity only.
-- `npm run verify:production-safety`: passes with 13 unchecked gates, five unassigned owners and migrations `0001`–`0017`; it asserts production is still closed, placeholder-bound and unapproved. A passing result means **blocked safely**, not ready.
+- `npm run verify:production-safety`: passes after semantically checking 26 unique files, 13 unchecked gates, five unassigned owners, exact migrations `0001`–`0017`, split entrypoint boundaries, and every required CI source gate; it asserts production is still closed, placeholder-bound and unapproved. A passing result means **blocked safely**, not ready.
 - Live boundary recheck: API/account health return 200, anonymous ingest and MCP return 401, account-host ingest returns 404, the ten actual writer/account/ingest/MCP proxy and Tunnel units are active, and `systemctl --failed` reports none after clearing a stale transient login helper. These checks prove current pilot availability only.
 
 ## Current blockers and next required inputs
