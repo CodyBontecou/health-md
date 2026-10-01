@@ -196,13 +196,27 @@ export async function processAccountDeletions(env: Env, perJob = 100): Promise<v
   if (failures > 0) throw new Error("One or more account deletion jobs require retry");
 }
 
-export async function purgeExpiredDeletionReceipts(env: Env): Promise<void> {
-  const now = new Date().toISOString();
+export async function purgeExpiredDeletionReceipts(
+  env: Env,
+  limit = 100,
+  now = new Date(),
+): Promise<void> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error("Invalid deletion-receipt cleanup limit");
+  }
+  const instant = now.toISOString();
   await env.DB.batch([
+    env.DB.prepare(`DELETE FROM account_deletion_receipts WHERE status_token_hash IN (
+      SELECT status_token_hash FROM account_deletion_receipts
+      WHERE status_expires_at <= ? ORDER BY status_expires_at, status_token_hash LIMIT ?
+    )`).bind(instant, limit),
     // An overdue deletion job survives even after every status authority expires.
-    env.DB.prepare("DELETE FROM account_deletion_receipts WHERE status_expires_at <= ?").bind(now),
-    env.DB.prepare(`DELETE FROM account_deletions WHERE completed_at IS NOT NULL
-      AND NOT EXISTS (SELECT 1 FROM account_deletion_receipts r WHERE r.deletion_id = account_deletions.id)`),
+    env.DB.prepare(`DELETE FROM account_deletions WHERE id IN (
+      SELECT id FROM account_deletions WHERE completed_at IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM account_deletion_receipts r
+          WHERE r.deletion_id = account_deletions.id)
+      ORDER BY completed_at, id LIMIT ?
+    )`).bind(limit),
   ]);
 }
 

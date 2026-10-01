@@ -143,6 +143,39 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
   } finally { db.close(); }
 });
 
+it("purges deletion status authorities and completed tombstones in bounded pages", async () => {
+  const { env, db } = await setup();
+  try {
+    const expired = ["2020-01-01T00:00:00.000Z", "2020-01-02T00:00:00.000Z",
+      "2020-01-03T00:00:00.000Z"];
+    const current = "2030-01-01T00:00:00.000Z";
+    for (const expiresAt of [...expired, current]) {
+      const deletionId = randomUUID();
+      db.connection.prepare(`INSERT INTO account_deletions
+        (id, user_id, requested_at, completed_at) VALUES (?, ?, ?, ?)`)
+        .run(deletionId, randomUUID(), expiresAt, expiresAt);
+      db.connection.prepare(`INSERT INTO account_deletion_receipts
+        (deletion_id, status_token_hash, status_expires_at) VALUES (?, ?, ?)`)
+        .run(deletionId, randomUUID(), expiresAt);
+    }
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await purgeExpiredDeletionReceipts(env, 2, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM account_deletion_receipts
+      WHERE status_expires_at <= ?`).get(now.toISOString())).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 2 });
+    await purgeExpiredDeletionReceipts(env, 2, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM account_deletion_receipts
+      WHERE status_expires_at <= ?`).get(now.toISOString())).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 1 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM account_deletion_receipts
+      WHERE status_expires_at > ?`).get(now.toISOString())).toMatchObject({ n: 1 });
+    await expect(purgeExpiredDeletionReceipts(env, 0, now))
+      .rejects.toThrow("Invalid deletion-receipt cleanup limit");
+  } finally { db.close(); }
+});
+
 it("binds concurrent client-known receipts to one deletion job", async () => {
   const { env, db, userId } = await setup();
   const queued: LifecycleMessage[] = [];

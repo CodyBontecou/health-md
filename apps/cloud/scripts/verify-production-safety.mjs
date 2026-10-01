@@ -103,6 +103,19 @@ const requiredEvidence = [
   "src/upload-intents.ts", "src/account-export-keys.ts", "src/telemetry.ts",
 ];
 for (const path of requiredEvidence) read(path);
+const authSource = read("src/auth.ts");
+for (const fragment of [
+  "magicLinksPerRun: 500", "sessionsPerRun: 500", "rateAttemptsPerRun: 50_000",
+  "rateBucketsPerRun: 5_000", "ORDER BY expires_at, id LIMIT ?",
+]) requireText(authSource, fragment, "bounded auth cleanup");
+const lifecycleSource = read("src/lifecycle.ts");
+for (const fragment of [
+  "Invalid deletion-receipt cleanup limit", "ORDER BY status_expires_at, status_token_hash LIMIT ?",
+  "ORDER BY completed_at, id LIMIT ?",
+]) requireText(lifecycleSource, fragment, "bounded deletion-receipt cleanup");
+const indexSource = read("src/index.ts");
+requireText(indexSource, "phase(() => purgeExpiredAuthState(env))", "scheduled bounded auth cleanup");
+requireText(indexSource, "phase(() => purgeExpiredDeletionReceipts(env))", "scheduled bounded receipt cleanup");
 const loadHarness = read("scripts/staging-load-lib.mjs");
 requireText(loadHarness, '"api.healthmd.app"', "staging load harness");
 requireText(loadHarness, "Refusing a live or non-staging hostname", "staging load harness");
