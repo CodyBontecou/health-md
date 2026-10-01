@@ -69,6 +69,114 @@ it("creates distinct wrapped data keys per account and binds unwrap to the owner
   } finally { db.close(); }
 });
 
+it("counts an exact KEK rewrap after its D1 response is lost", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = addUser(db);
+    const accountKey = await currentExportKey(env, userId);
+    const oldWrappingKey = JSON.parse(env.ACCOUNT_KEY_WRAPPING_KEYS_JSON ?? "{}")["kek-v1"] as string;
+    const newWrappingKey = secret();
+    env.CURRENT_ACCOUNT_WRAPPING_KEY_ID = "kek-v2";
+    env.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({
+      "kek-v1": oldWrappingKey, "kek-v2": newWrappingKey,
+    });
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("UPDATE account_export_keys SET wrapping_key_id")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "run") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost key-rewrap response");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    expect(await rewrapAccountExportKeys(env)).toBe(1);
+    env.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({ "kek-v2": newWrappingKey });
+    expect(await resolveExportKey(env, userId, accountKey.keyId)).toBe(accountKey.key);
+  } finally { db.close(); }
+});
+
+it("retries safely when KEK rewrap verification is unavailable", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = addUser(db);
+    const accountKey = await currentExportKey(env, userId);
+    const oldWrappingKey = JSON.parse(env.ACCOUNT_KEY_WRAPPING_KEYS_JSON ?? "{}")["kek-v1"] as string;
+    const newWrappingKey = secret();
+    env.CURRENT_ACCOUNT_WRAPPING_KEY_ID = "kek-v2";
+    env.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({
+      "kek-v1": oldWrappingKey, "kek-v2": newWrappingKey,
+    });
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (query.includes("UPDATE account_export_keys SET wrapping_key_id")) {
+          return new Proxy(statement, { get(prepared, statementProperty) {
+            if (statementProperty !== "bind") {
+              const value = Reflect.get(prepared, statementProperty);
+              return typeof value === "function" ? value.bind(prepared) : value;
+            }
+            return (...values: unknown[]) => {
+              const bound = prepared.bind(...values);
+              return new Proxy(bound, { get(boundStatement, boundProperty) {
+                if (boundProperty === "run") return async () => {
+                  await boundStatement.run();
+                  throw new Error("synthetic lost key-rewrap response");
+                };
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              } });
+            };
+          } });
+        }
+        if (!query.includes("rewrapped_at AS rewrappedAt")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => {
+                throw new Error("synthetic key-rewrap verification outage");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(rewrapAccountExportKeys(env)).rejects.toThrow(
+      "Account export key rewrap verification is unavailable",
+    );
+    env.DB = original;
+    expect(await rewrapAccountExportKeys(env)).toBe(0);
+    env.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({ "kek-v2": newWrappingKey });
+    expect(await resolveExportKey(env, userId, accountKey.keyId)).toBe(accountKey.key);
+  } finally { db.close(); }
+});
+
 it("stores and reads new exports with an account key while preserving exact bytes", async () => {
   const { env, db } = setup();
   try {

@@ -7,6 +7,7 @@ interface AccountKeyRow {
   wrappingKeyId: string;
   wrappedKey: string;
   wrapIv: string;
+  rewrappedAt?: string | null;
 }
 
 function wrappingKeys(env: Env): ReadonlyMap<string, string> {
@@ -87,12 +88,37 @@ export async function rewrapAccountExportKeys(env: Env, limit = 25): Promise<num
     const plaintext = await unwrap(env, row.userId, row);
     const wrapped = await wrapAccountExportKey(plaintext.key, currentWrappingKey, row.userId,
       row.keyId, currentWrappingKeyId);
-    const result = await env.DB.prepare(
-      `UPDATE account_export_keys SET wrapping_key_id = ?, wrapped_key = ?, wrap_iv = ?, rewrapped_at = ?
-       WHERE user_id = ? AND key_id = ? AND wrapping_key_id = ? AND wrapped_key = ? AND wrap_iv = ?`,
-    ).bind(currentWrappingKeyId, wrapped.wrappedKey, wrapped.iv, new Date().toISOString(),
-      row.userId, row.keyId, row.wrappingKeyId, row.wrappedKey, row.wrapIv).run();
-    changed += result.meta.changes ?? 0;
+    const rewrappedAt = new Date().toISOString();
+    try {
+      await env.DB.prepare(
+        `UPDATE account_export_keys SET wrapping_key_id = ?, wrapped_key = ?, wrap_iv = ?, rewrapped_at = ?
+         WHERE user_id = ? AND key_id = ? AND wrapping_key_id = ? AND wrapped_key = ? AND wrap_iv = ?`,
+      ).bind(currentWrappingKeyId, wrapped.wrappedKey, wrapped.iv, rewrappedAt,
+        row.userId, row.keyId, row.wrappingKeyId, row.wrappedKey, row.wrapIv).run();
+    } catch {
+      // A D1 response may be lost after the conditional update commits. Match
+      // the exact newly wrapped bytes below rather than trusting change metadata.
+    }
+    let durable: AccountKeyRow | null;
+    try {
+      durable = await env.DB.prepare(
+        `SELECT key_id AS keyId, wrapping_key_id AS wrappingKeyId,
+                wrapped_key AS wrappedKey, wrap_iv AS wrapIv, rewrapped_at AS rewrappedAt
+         FROM account_export_keys WHERE user_id = ? AND key_id = ? LIMIT 1`,
+      ).bind(row.userId, row.keyId).first<AccountKeyRow>();
+    } catch {
+      throw new Error("Account export key rewrap verification is unavailable");
+    }
+    if (durable?.wrappingKeyId === currentWrappingKeyId &&
+        durable.wrappedKey === wrapped.wrappedKey && durable.wrapIv === wrapped.iv &&
+        durable.rewrappedAt === rewrappedAt) {
+      changed += 1;
+      continue;
+    }
+    // A concurrent invocation may have won with independently randomized wrap
+    // bytes, or account deletion may have removed the row. Both are safe no-ops.
+    if (!durable || durable.wrappingKeyId === currentWrappingKeyId) continue;
+    throw new Error("Account export key rewrap was not recorded");
   }
   return changed;
 }
