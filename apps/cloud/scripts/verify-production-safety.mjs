@@ -169,6 +169,8 @@ requireText(rateLimitMigration, "CREATE TRIGGER auth_rate_limit_attempt_applied"
 const inviteMigration = read("migrations/0018_account_invites.sql");
 requireText(inviteMigration, "CREATE TABLE account_invites", "migration 0018");
 requireText(inviteMigration, "CHECK (length(invite_lookup) = 64)", "migration 0018");
+requireText(inviteMigration, "expires_at TEXT NOT NULL", "migration 0018");
+requireText(inviteMigration, "CHECK (expires_at > created_at)", "migration 0018");
 requireText(inviteMigration, "CREATE INDEX account_invites_expiry", "migration 0018");
 
 const workflow = read(".github/workflows/cloud-ci.yml", repository);

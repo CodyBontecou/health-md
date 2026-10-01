@@ -105,7 +105,7 @@ async function signupAllowed(email: string, inviteLookup: string, env: Env): Pro
   if (env.AUTH_SIGNUP_MODE === "invite") {
     if (env.SERVICE_PROFILE === "account") {
       const invite = await env.DB.prepare(`SELECT 1 AS eligible FROM account_invites
-        WHERE invite_lookup = ? AND (expires_at IS NULL OR expires_at > ?)`)
+        WHERE invite_lookup = ? AND expires_at > ?`)
         .bind(inviteLookup, new Date().toISOString()).first<{ eligible: number }>();
       return invite?.eligible === 1;
     }
@@ -206,7 +206,7 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
          (id, email_lookup, email_ciphertext, email_iv, status, created_at)
          SELECT ?, ?, ?, ?, 'active', ? WHERE EXISTS (
            SELECT 1 FROM account_invites WHERE invite_lookup = ?
-             AND (expires_at IS NULL OR expires_at > ?)
+             AND expires_at > ?
          )`,
       ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now, inviteLookup, now) : env.DB.prepare(
         `INSERT OR IGNORE INTO users
@@ -563,7 +563,7 @@ export async function purgeExpiredAuthState(
   const instant = now.toISOString();
   await env.DB.batch([
     env.DB.prepare(`DELETE FROM account_invites WHERE invite_lookup IN (
-      SELECT invite_lookup FROM account_invites WHERE expires_at IS NOT NULL AND expires_at < ?
+      SELECT invite_lookup FROM account_invites WHERE expires_at < ?
       ORDER BY expires_at, invite_lookup LIMIT ?
     )`).bind(instant, limits.invitesPerRun),
     env.DB.prepare(`DELETE FROM magic_links WHERE id IN (

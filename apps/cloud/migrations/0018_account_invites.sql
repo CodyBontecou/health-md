@@ -5,11 +5,9 @@
 CREATE TABLE account_invites (
   invite_lookup TEXT PRIMARY KEY,
   created_at TEXT NOT NULL,
-  expires_at TEXT,
+  expires_at TEXT NOT NULL,
   CHECK (length(invite_lookup) = 64),
-  CHECK (expires_at IS NULL OR expires_at > created_at)
+  CHECK (expires_at > created_at)
 ) STRICT;
 
-CREATE INDEX account_invites_expiry
-  ON account_invites(expires_at)
-  WHERE expires_at IS NOT NULL;
+CREATE INDEX account_invites_expiry ON account_invites(expires_at);

@@ -103,6 +103,8 @@ it("admits split-account signup through a one-time hashed invite only", async ()
   try {
     const invited = "invited@example.test";
     const lookup = await keyedLookup(invited, env.IDENTITY_KEY_B64, "account-invite-v1");
+    expect(() => db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z')`).run("f".repeat(64))).toThrow();
     db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at, expires_at)
       VALUES (?, '2025-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z')`).run(lookup);
     env.AUTH_INVITE_EMAILS = "not-authoritative@example.test";
@@ -137,8 +139,8 @@ it("rechecks split-account invite authority inside the account-creation transact
   try {
     const email = "revoked@example.test";
     const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1");
-    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at)
-      VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at, expires_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z')`).run(lookup);
     const database = env.DB;
     let intercepted = false;
     env.DB = new Proxy(database, { get(target, property) {
@@ -165,8 +167,8 @@ it("lets concurrent split-account requests consume one invite without duplicate 
   try {
     const email = "concurrent-invite@example.test";
     const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1");
-    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at)
-      VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at, expires_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z')`).run(lookup);
     const responses = await Promise.all([
       splitInviteRequest(env, email, "203.0.113.30"),
       splitInviteRequest(env, email, "203.0.113.31"),
@@ -185,8 +187,8 @@ it("reconciles a lost split-account invite transaction response", async () => {
   try {
     const email = "ambiguous-invite@example.test";
     const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1");
-    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at)
-      VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at, expires_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z')`).run(lookup);
     const database = env.DB;
     let lostAccountBatch = false;
     env.DB = new Proxy(database, { get(target, property) {
