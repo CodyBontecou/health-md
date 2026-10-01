@@ -1035,7 +1035,7 @@ struct HealthMdApp: App {
                         jobID: finalize.jobID,
                         state: fileResult.status == .success ? .completed : .failed,
                         message: activityFailureMessage(for: fileResult)
-                            ?? String(localized: "Mac export completed."),
+                            ?? String(localized: "Export complete"),
                         failureReason: fileResult.status == .success ? nil : fileResult.status.rawValue,
                         terminal: true
                     )
@@ -1070,7 +1070,7 @@ struct HealthMdApp: App {
                     jobID: finalize.jobID,
                     state: result.status == .success ? .completed : .failed,
                     message: activityFailureMessage(for: result)
-                        ?? String(localized: "Mac export completed."),
+                        ?? String(localized: "Export complete"),
                     failureReason: result.status == .success ? nil : result.status.rawValue,
                     terminal: true
                 )
