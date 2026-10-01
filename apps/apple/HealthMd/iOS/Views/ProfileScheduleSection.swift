@@ -18,7 +18,12 @@ struct ProfileScheduleSection: View {
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @ObservedObject private var profileStore: ExportProfileStore
     @ObservedObject private var entryStore: ScheduledExportEntryStore
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var editingProfile: ExportProfile?
+    @State private var recoveryProfile: ExportProfile?
+    @State private var showDiscardConfirmation = false
+    @State private var isDiscardingRecovery = false
+    @State private var showRecoveryError = false
 
     init(coordinator: ExportProfileCoordinator) {
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
@@ -83,24 +88,66 @@ struct ProfileScheduleSection: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        .confirmationDialog("Discard Pending Recovery?", isPresented: $showDiscardConfirmation, titleVisibility: .visible) {
+            Button("Discard Pending Recovery", role: .destructive) {
+                guard let profile = recoveryProfile else { return }
+                // Protection may have been enabled while the confirmation was open.
+                configurationProtection.performConfigurationChange {
+                    isDiscardingRecovery = true
+                    defer { isDiscardingRecovery = false }
+                    do {
+                        try schedulingManager.discardPendingRecovery(profileID: profile.id)
+                        _ = entryStore.allEntries()
+                    } catch {
+                        showRecoveryError = true
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let profile = recoveryProfile {
+                Text("Discard unresolved scheduled exports for \(profile.name)? Your profile, API credentials, export history, completed files and completed-run progress stay unchanged. No export starts now; an enabled schedule waits for its next ordinary occurrence.")
+            }
+        }
+        .alert("Unable to discard pending recovery", isPresented: $showRecoveryError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Pending recovery could not be fully cleared. Please try again. Your profile and credentials were not removed.")
+        }
     }
 
     // MARK: - Rows
 
     private func profileRow(_ profile: ExportProfile) -> some View {
         let entry = entryStore.entry(profileID: profile.id)
-        return SchedulingProfileRow(
-            name: profile.name,
-            summary: cadenceSummary(for: entry),
-            isEnabled: Binding(
-                get: { entry?.isEnabled ?? false },
-                set: { isEnabled in
-                    setEntryEnabled(isEnabled, for: profile, existing: entry)
+        return VStack(alignment: .leading, spacing: Spacing.s2) {
+            SchedulingProfileRow(
+                name: profile.name,
+                summary: cadenceSummary(for: entry),
+                isEnabled: Binding(
+                    get: { entry?.isEnabled ?? false },
+                    set: { isEnabled in
+                        setEntryEnabled(isEnabled, for: profile, existing: entry)
+                    }
+                ),
+                identifier: "schedule.profile.\(profile.id.uuidString)",
+                onEdit: { editingProfile = profile }
+            )
+            if schedulingManager.pendingRecoveryProfileIDs.contains(profile.id), entry != nil {
+                SchedulingProfileManagementAction(
+                    icon: "trash", title: String(localized: "Discard Pending Recovery"), isDestructive: true
+                ) {
+                    configurationProtection.performConfigurationChange {
+                        recoveryProfile = profile
+                        showDiscardConfirmation = true
+                    }
                 }
-            ),
-            identifier: "schedule.profile.\(profile.id.uuidString)",
-            onEdit: { editingProfile = profile }
-        )
+                .accessibilityIdentifier("schedule.profile.\(profile.id.uuidString).discardRecovery")
+                .accessibilityLabel(Text("Discard pending recovery for \(profile.name)"))
+                .accessibilityHint("Keeps credentials, history and completed exports. Requires confirmation.")
+                .disabled(isDiscardingRecovery)
+            }
+        }
         .padding(.horizontal, Spacing.s4)
         .padding(.vertical, Spacing.s2)
     }

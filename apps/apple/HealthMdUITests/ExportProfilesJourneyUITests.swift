@@ -169,6 +169,8 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         app.swipeUp()
         if !card.isHittable { app.swipeUp() }
         snap("07-schedule-tab-profiles")
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier ENDSWITH '.discardRecovery'")).count, 0,
+                       "a profile with no pending recovery must not offer discard")
 
         XCTAssertTrue(
             app.staticTexts["No profile schedules enabled."].waitForExistence(timeout: 5),

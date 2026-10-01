@@ -46,6 +46,7 @@ class ProductCapabilityManifestTest {
         )
         assertEquals(
             setOf(
+                "automation.api-recovery-authority",
                 "cloud.opt-in-export-receiver",
                 "cloud.read-only-mcp",
                 "core.shared-rust-profile-engine",
@@ -117,6 +118,7 @@ class ProductCapabilityManifestTest {
             "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
+            "automation.discard-pending-recovery",
             "direct-cli.shared-qr-pairing",
             "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
@@ -143,6 +145,7 @@ class ProductCapabilityManifestTest {
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "authorization.history-window-detection",
+            "automation.api-recovery-authority",
             "cloud.opt-in-export-receiver",
             "cloud.read-only-mcp",
             "source.private-platform-database",
