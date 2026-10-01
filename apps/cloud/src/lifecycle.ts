@@ -152,12 +152,30 @@ export async function processAccountDeletionById(env: Env, deletionId: string, p
     (SELECT COUNT(*) FROM upload_intents WHERE user_id = ? AND state IN ('reserved', 'object_written')) AS count`)
     .bind(job.userId, job.userId).first<{ count: number }>();
   if ((remaining?.count ?? 0) > 0) return false;
-  const results = await env.DB.batch([
-    env.DB.prepare("DELETE FROM users WHERE id = ? AND status = 'disabled'").bind(job.userId),
-    env.DB.prepare("UPDATE account_deletions SET completed_at = ? WHERE id = ? AND completed_at IS NULL")
-      .bind(new Date().toISOString(), job.id),
-  ]);
-  if (results[1]?.meta.changes !== 1) throw new Error("Account deletion completion was not recorded");
+  const completedAt = new Date().toISOString();
+  try {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM users WHERE id = ? AND status = 'disabled'").bind(job.userId),
+      env.DB.prepare("UPDATE account_deletions SET completed_at = ? WHERE id = ? AND completed_at IS NULL")
+        .bind(completedAt, job.id),
+    ]);
+  } catch {
+    // A D1 response can be lost after both statements commit. Verify the exact
+    // terminal job marker and user erasure rather than trusting adapter metadata.
+  }
+  let completed: { completedAt: string; userPresent: number } | null;
+  try {
+    completed = await env.DB.prepare(`SELECT completed_at AS completedAt,
+      EXISTS(SELECT 1 FROM users WHERE id = ?) AS userPresent
+      FROM account_deletions WHERE id = ? AND user_id = ?`)
+      .bind(job.userId, job.id, job.userId)
+      .first<{ completedAt: string; userPresent: number }>();
+  } catch {
+    throw new Error("Account deletion completion verification is unavailable");
+  }
+  if (completed?.completedAt !== completedAt || completed.userPresent !== 0) {
+    throw new Error("Account deletion completion was not recorded");
+  }
   return true;
 }
 

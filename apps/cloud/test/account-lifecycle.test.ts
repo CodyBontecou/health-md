@@ -184,6 +184,78 @@ it("binds concurrent client-known receipts to one deletion job", async () => {
   } finally { db.close(); }
 });
 
+it("accepts an exact account-deletion completion after its D1 response is lost", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const deletion = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken: deletionStatusToken() }), cookie);
+    expect(deletion.status).toBe(202);
+    const job = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        await target.batch(statements);
+        throw new Error("synthetic lost deletion-completion batch response");
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    expect(await processAccountDeletionById(env, job.id)).toBe(true);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?").get(job.id))
+      .toMatchObject({ completed_at: expect.any(String) });
+  } finally { db.close(); }
+});
+
+it("retries idempotently when deletion-completion verification is unavailable", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const deletion = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken: deletionStatusToken() }), cookie);
+    expect(deletion.status).toBe(202);
+    const job = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        await target.batch(statements);
+        throw new Error("synthetic lost deletion-completion batch response");
+      };
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("SELECT completed_at AS completedAt")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => {
+                throw new Error("synthetic deletion-completion verification outage");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(processAccountDeletionById(env, job.id)).rejects.toThrow(
+      "Account deletion completion verification is unavailable",
+    );
+    env.DB = original;
+    expect(await processAccountDeletionById(env, job.id)).toBe(true);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
 it("keeps a client-known receipt when a deletion commit response and verification are unavailable", async () => {
   const { env, db, userId } = await setup();
   try {
