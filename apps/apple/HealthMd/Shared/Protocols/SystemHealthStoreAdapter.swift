@@ -345,9 +345,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     var supportsHistoryAuthorizationBoundaries: Bool {
+        // Xcode 26 can parse OS 27 availability checks but its HealthKit SDK does
+        // not declare this API. Compile the call only once the matching Swift
+        // toolchain ships; older builds must continue to fail closed.
+        #if compiler(>=6.3)
         if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
             return true
         }
+        #endif
         return false
     }
 
@@ -378,17 +383,29 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     func earliestAuthorizedSampleDates(for types: Set<HKObjectType>) async throws -> [String: Date] {
+        #if compiler(>=6.3)
         guard #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) else {
-            throw NSError(
-                domain: "HealthMd.HealthKitCapability",
-                code: 27,
-                userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries require OS 27 or later."]
-            )
+            throw historyAuthorizationBoundaryUnavailableError()
         }
         let boundaries = try await store.earliestAuthorizedSampleDate(for: types)
         return Dictionary(uniqueKeysWithValues: boundaries.map { type, date in
             (type.identifier, date)
         })
+        #else
+        _ = types
+        throw historyAuthorizationBoundaryUnavailableError()
+        #endif
+    }
+
+    private func historyAuthorizationBoundaryUnavailableError() -> NSError {
+        NSError(
+            domain: "HealthMd.HealthKitCapability",
+            code: 27,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "Health history authorization boundaries require an OS 27 SDK and runtime."
+            ]
+        )
     }
 
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {
