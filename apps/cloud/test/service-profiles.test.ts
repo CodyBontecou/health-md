@@ -40,6 +40,7 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
     INGEST_TOKEN_HOURLY_LIMIT: kind === "ingest" ? "120" : undefined,
     INGEST_ACCOUNT_HOURLY_LIMIT: kind === "ingest" ? "240" : undefined,
     REVISION_RETENTION_DAYS: kind === "maintenance" ? "30" : undefined,
+    AUDIT_RETENTION_DAYS: kind === "maintenance" ? "365" : undefined,
     DELETION_STATUS_TTL_DAYS: kind === "ingest" ? undefined : "30",
   } as Env;
 }
@@ -245,6 +246,21 @@ describe("split production Worker profiles", () => {
     unlimitedProductionRevisions.REVISION_RETENTION_DAYS = "unlimited";
     await expect(maintenanceWorker.scheduled({} as ScheduledEvent, unlimitedProductionRevisions))
       .rejects.toThrow("configuration is incomplete");
+
+    const noAuditRetention = profile("maintenance", "https://maintenance.healthmd.app");
+    noAuditRetention.AUDIT_RETENTION_DAYS = undefined;
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, noAuditRetention))
+      .rejects.toThrow("configuration is incomplete");
+
+    const unlimitedAuditRetention = profile("maintenance", "https://maintenance.healthmd.app");
+    unlimitedAuditRetention.AUDIT_RETENTION_DAYS = "unlimited";
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, unlimitedAuditRetention))
+      .rejects.toThrow("configuration is incomplete");
+
+    const excessAccountAuditRetention = profile("account", "https://account.healthmd.app");
+    excessAccountAuditRetention.AUDIT_RETENTION_DAYS = "365";
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      excessAccountAuditRetention)).status).toBe(500);
 
     const placeholderRevision = profile("account", "https://account.healthmd.app");
     placeholderRevision.DEPLOYMENT_REVISION = "REPLACE_WITH_FULL_GIT_COMMIT_SHA";

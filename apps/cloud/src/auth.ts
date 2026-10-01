@@ -506,6 +506,22 @@ export async function audit(env: Env, userId: string, type: string, targetId: st
   ).bind(crypto.randomUUID(), userId, type, targetId, new Date().toISOString()).run();
 }
 
+export async function purgeExpiredAuditEvents(
+  env: Env,
+  retentionDays: number,
+  limit = 100,
+  now = new Date(),
+): Promise<void> {
+  if (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650 ||
+      !Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error("Invalid audit-event retention policy");
+  }
+  const cutoff = new Date(now.getTime() - retentionDays * 86400000).toISOString();
+  await env.DB.prepare(`DELETE FROM audit_events WHERE id IN (
+    SELECT id FROM audit_events WHERE occurred_at < ? ORDER BY occurred_at, id LIMIT ?
+  )`).bind(cutoff, limit).run();
+}
+
 export async function listSecurityActivity(env: Env, userId: string): Promise<Response> {
   // This explicit allowlist is the public security-history vocabulary. Target
   // IDs remain server-side because they are unnecessary correlation metadata.

@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
-import { getSession, issueSession } from "../src/auth";
+import { getSession, issueSession, purgeExpiredAuditEvents } from "../src/auth";
 import { processAccountDeletionById, processAccountDeletions, purgeExpiredDeletionReceipts,
   requestAccountDeletion } from "../src/lifecycle";
 import maintenanceWorker from "../src/maintenance-worker";
@@ -584,6 +584,33 @@ it("keeps session, token administration, and deletion isolated between active ac
       .get(secondToken.id)).toMatchObject({ revoked_at: null });
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?")
       .get(secondUser)).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("purges only a bounded oldest page of expired security audit events", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const insert = db.connection.prepare(`INSERT INTO audit_events
+      (id, user_id, event_type, target_id, occurred_at) VALUES (?, ?, ?, NULL, ?)`);
+    for (let index = 0; index < 105; index += 1) {
+      insert.run(randomUUID(), userId, "synthetic.expired", `2020-01-01T00:00:${String(index % 60).padStart(2, "0")}.000Z`);
+    }
+    insert.run(randomUUID(), userId, "synthetic.current", "2026-03-20T00:00:00.000Z");
+    const now = new Date("2026-04-01T00:00:00.000Z");
+    await purgeExpiredAuditEvents(env, 30, 100, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.expired'`).get()).toMatchObject({ n: 5 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.current'`).get()).toMatchObject({ n: 1 });
+    await purgeExpiredAuditEvents(env, 30, 100, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.expired'`).get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.current'`).get()).toMatchObject({ n: 1 });
+    await expect(purgeExpiredAuditEvents(env, 0)).rejects.toThrow("Invalid audit-event retention policy");
+    await expect(purgeExpiredAuditEvents(env, 30, 501)).rejects.toThrow(
+      "Invalid audit-event retention policy",
+    );
   } finally { db.close(); }
 });
 

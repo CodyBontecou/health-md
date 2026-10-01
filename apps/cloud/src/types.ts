@@ -25,6 +25,7 @@ export interface Env {
   RESEND_API_KEY: string;
   PASSWORD_PEPPER_B64?: string;
   REVISION_RETENTION_DAYS?: string;
+  AUDIT_RETENTION_DAYS?: string;
   DELETION_STATUS_TTL_DAYS?: string;
   CLOUD_RUNTIME_APPROVED?: string;
   VM_PERSONAL_MVP_NO_BACKUP_ACK?: string;

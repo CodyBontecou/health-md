@@ -32,7 +32,7 @@ These targets are provisional until the product and operations owners approve th
 | Eligible-email send budget | no exhaustion outside a declared abuse/load exercise | ticket on any `email_budget_exhausted`; page if repeated in three 5-min windows |
 | Magic-link persistence | no failed durable-link postcondition | page on any `magic_link_persistence_failed`; investigate D1 without inspecting identities |
 | Lifecycle queue | no `failed`; retry returns to zero within 15 min | page on any `failed` or retries in three consecutive 5-min windows |
-| Scheduled maintenance | one `ok` each scheduled interval; deletion jobs and independent expiry/retention/reconciliation/rotation phases continue through peer failure and produce one identifier-free aggregate `failed` after all eligible bounded work | page after two missed/failed intervals |
+| Scheduled maintenance | one `ok` each scheduled interval; deletion jobs and independent credential/audit/revision/deletion-receipt expiry, reconciliation and rotation phases continue through peer failure and produce one identifier-free aggregate `failed` after all eligible bounded work | page after two missed/failed intervals |
 
 A 429 caused by the documented two-active-upload account limit is correct load shedding, but sustained aggregate 429 rates still require investigation. Never relax quota/concurrency safety solely to clear an alert.
 

@@ -49,6 +49,8 @@ MAX_EXPORT_BYTES = "26214400"
 SESSION_TTL_DAYS = "30"
 MAGIC_LINK_TTL_MINUTES = "15"
 REVISION_RETENTION_DAYS = "30"
+# Provisional source default only; privacy/legal/operations must approve before deployment.
+AUDIT_RETENTION_DAYS = "365"
 DELETION_STATUS_TTL_DAYS = "30"
 
 # Required secrets:

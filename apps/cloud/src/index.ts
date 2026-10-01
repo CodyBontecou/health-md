@@ -1,6 +1,7 @@
 import {
   accountSummary, consumeMagicLink, createIngestToken, getSession, listIngestTokens, listSecurityActivity,
-  listSessions, logout, requestMagicLink, requireSession, revokeIngestToken, revokeOtherSessions, revokeSession,
+  listSessions, logout, purgeExpiredAuditEvents, requestMagicLink, requireSession, revokeIngestToken,
+  revokeOtherSessions, revokeSession,
 } from "./auth";
 import { downloadExport, ingest, listDayPage, listExportPage, listExports } from "./exports";
 import { downloadAccountExportPage } from "./account-export";
@@ -86,9 +87,10 @@ export function validateConfiguration(env: Env): void {
       (profile === "account" && (!env.ASSETS || !env.LIFECYCLE_QUEUE)) ||
       (profile === "ingest" && (!!env.ASSETS || !!env.LIFECYCLE_QUEUE)) ||
       (profile === "maintenance" && (!env.LIFECYCLE_QUEUE || !!env.ASSETS)));
-    const invalidExcessSecrets = splitNonIdentity && (!!env.IDENTITY_KEY_B64 || !!env.RESEND_API_KEY ||
+    const invalidExcessSecrets = (splitNonIdentity && (!!env.IDENTITY_KEY_B64 || !!env.RESEND_API_KEY ||
       !!env.AUTH_EMAIL_FROM || !!env.AUTH_INVITE_EMAILS ||
-      (profile === "maintenance" && !!env.EXPORT_ENCRYPTION_KEYS_JSON));
+      (profile === "maintenance" && !!env.EXPORT_ENCRYPTION_KEYS_JSON))) ||
+      ((profile === "ingest" || profile === "account") && !!env.AUDIT_RETENTION_DAYS);
     const invalidRepairFlags = profile !== "combined" &&
       (!!env.CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED || !!env.CLOUD_REPAIR_DISPATCH_ENABLED);
     const invalidDeploymentRevision = profile !== "combined" &&
@@ -114,10 +116,12 @@ export function validateConfiguration(env: Env): void {
         parsePositiveInteger(env.MAGIC_LINK_TTL_MINUTES, "MAGIC_LINK_TTL_MINUTES", 5, 30);
       }
       if (profile === "maintenance") {
-        if (!env.REVISION_RETENTION_DAYS || env.REVISION_RETENTION_DAYS === "unlimited") {
+        if (!env.REVISION_RETENTION_DAYS || env.REVISION_RETENTION_DAYS === "unlimited" ||
+            !env.AUDIT_RETENTION_DAYS || env.AUDIT_RETENTION_DAYS === "unlimited") {
           invalidRuntimeLimits = true;
         } else {
           parsePositiveInteger(env.REVISION_RETENTION_DAYS, "REVISION_RETENTION_DAYS", 1, 3650);
+          parsePositiveInteger(env.AUDIT_RETENTION_DAYS, "AUDIT_RETENTION_DAYS", 1, 3650);
         }
       }
     } catch { invalidRuntimeLimits = true; }
@@ -416,6 +420,11 @@ export default {
     await phase(() => purgeExpiredRepairDrafts(env));
     await phase(() => purgeExpiredRepairDevices(env));
     await phase(() => purgeExpiredDeletionReceipts(env));
+    const auditRetentionDays = env.AUDIT_RETENTION_DAYS;
+    if (auditRetentionDays) {
+      await phase(() => purgeExpiredAuditEvents(env, parsePositiveInteger(auditRetentionDays,
+        "AUDIT_RETENTION_DAYS", 1, 3650)));
+    }
     await phase(() => reconcileUploadIntents(env));
     if (env.SERVICE_PROFILE === "maintenance") await phase(() => reconcileOrphanExportObjects(env));
     if (env.ACCOUNT_KEY_MODE === "per_account") await phase(() => rewrapAccountExportKeys(env));
