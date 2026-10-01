@@ -470,7 +470,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
         expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
         expect(authenticateReadToken(readOnly, `Bearer ${issued.token}`)).toBeNull();
       } finally { readOnly.close(); }
-      expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(404);
+      expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
       expect((await req("/api/v1/exports", "POST", {}, cookie)).status).toBe(404);
     } finally { await account.close(); accountDb.close(); db.close(); }
   }, 30_000);

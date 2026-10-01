@@ -144,6 +144,20 @@ for (const route of [/\/api\/auth\/password-login/u, /\/api\/agent-tokens/u,
   /\/api\/repair\/device/u, /\/api\/repair\/devices/u, /\/api\/repair\/dispatch/u]) {
   forbid(splitAccountSource, route, "split account pilot-only routes");
 }
+const agentTokenSource = read("src/agent-tokens.ts");
+for (const fragment of [
+  "(SELECT COUNT(*) FROM mcp_read_tokens", "< 10", "AND status = 'active'",
+  "'agent_token.created'", "t.token_hash AS tokenHash", "AS audited",
+  '"agent_token_verification_pending"', "t.revoked_at AS revokedAt",
+  "'agent_token.revoked'", "durable.revokedAt !== now || durable.audited === 1",
+  '"agent_token_revocation_pending"',
+]) requireText(agentTokenSource, fragment, "commit-verifiable pilot MCP read tokens");
+forbid(agentTokenSource, /meta\.changes/u, "pilot MCP read-token correctness");
+const agentTokenVerify = agentTokenSource.indexOf("committed = await env.DB.prepare");
+const agentTokenRelease = agentTokenSource.indexOf("return json({ id, token, expiresAt");
+if (agentTokenVerify < 0 || agentTokenRelease < agentTokenVerify) {
+  failures.push("agent-tokens.ts: plaintext read credential returned before exact durable verification");
+}
 const uploadIntentSource = read("src/upload-intents.ts");
 for (const fragment of [
   "INSERT INTO upload_admissions", "FROM upload_admissions WHERE id = ? LIMIT 1",

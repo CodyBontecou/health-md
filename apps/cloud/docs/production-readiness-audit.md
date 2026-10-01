@@ -55,6 +55,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Mobile Apple Cloud destination | existing manual compatibility API Endpoint only; split production rejects repair enrollment/dispatch flags | **deliberate production enrollment/retry UX and physical matrix absent** |
 | Mobile Android Cloud destination | existing manual compatibility API Endpoint only; raw snapshot and split-production repair flags rejected | **deliberate production enrollment/retry UX and physical matrix absent** |
 | Public contract parity | no mobile envelope/schema change; compatibility fixtures remain | preserved, but phase-3 product work absent |
+| Pilot MCP credential administration | password/consent-gated owner-only issuance uses a serialized ten-active cap, transaction-coupled reviewed audit row and exact durable verification before releasing one-time plaintext; revocation exactly verifies durable revoked/audited state, recovers lost responses and is idempotent without adapter change counts; split account omits this route | source verified with concurrent-cap, lost-response, unreadable-verification, cross-owner and live-reader revocation tests; no live credential changed |
 | Production MCP | explicitly deferred; pilot credentials isolated | correctly excluded from v1 |
 | Privacy/terms/consent/store/support | requirements recorded in ADR/plan/threat model | **not supplied or approved** |
 | Independent security assessment | required by ADR/plan | **not performed** |
@@ -80,7 +81,7 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 
 ## Verification commands and coverage
 
-- `npm run check`: on the audited head, 32 files and 210 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
+- `npm run check`: on the audited head, 33 files and 213 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
 - `npm run test:smoke`: passes in an isolated worktree against local Wrangler D1/R2 with synthetic Apple v1/v2 and Android v4 envelopes, replacement ordering, encrypted roundtrip, tenant denial and revocation. The repository worktree's pre-existing owner-only `.dev.vars` is not overwritten or read by the harness.
 - `npm run dry-run:profiles`: all three profiles bundle and list only their intended bindings. It proves buildability, not resource correctness or deployment isolation.
 - `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.
