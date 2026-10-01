@@ -68,7 +68,7 @@ End-to-end completion means all of the following, not merely source implementati
 
 ## Audited source artifact surface
 
-Fresh audit snapshot, updated on 2026-10-01: draft PR #163 tracks `feat/cloud-multi-user-production-foundation`, is mergeable with a clean merge state, and contains 160 changed files. There are no reviews or assigned reviewers, and the PR remains draft. Commit-specific head and check evidence must be read from the PR rather than copied here, so this record cannot silently present an older revision or an in-progress check as current. The changed files map to deliverables as follows:
+Fresh audit snapshot, updated on 2026-10-01: draft PR #163 tracks `feat/cloud-multi-user-production-foundation`, is mergeable with a clean merge state, and contains 164 changed files. There are no reviews or assigned reviewers, and the PR remains draft. Commit-specific head and check evidence must be read from the PR rather than copied here, so this record cannot silently present an older revision or an in-progress check as current. The changed files map to deliverables as follows:
 
 - Trust-boundary/deployment: `.github/workflows/cloud-ci.yml`; `wrangler.{ingest,account,maintenance}.toml`; `src/{ingest-worker,account-worker,maintenance-worker,telemetry,http,index,types}.ts`; `package.json`.
 - Ingest/storage/crypto/lifecycle: migrations `0010`–`0018`; `src/{upload-intents,exports,account-export-keys,account-export,crypto,lifecycle,object-reconciliation,auth,dashboard}.ts`.

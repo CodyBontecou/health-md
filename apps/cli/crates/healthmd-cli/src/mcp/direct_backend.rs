@@ -261,6 +261,7 @@ impl HealthDataBackend for DirectIphoneBackend {
             .map_err(|error| backend_error(&error, Some(job_id)))
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn start_raw_export(
         &self,
         context: &CallContext,
