@@ -63,6 +63,13 @@ export async function readJson<T>(request: Request, maximumBytes = 16_384): Prom
   }
 }
 
+function cancelBodyReader(reader: ReadableStreamDefaultReader<Uint8Array>): void {
+  // Cancellation is advisory cleanup, never authority for releasing a durable
+  // admission or returning a stable 408/413. A provider stream may reject or
+  // never settle its cancellation promise, so observe rejection without await.
+  try { void reader.cancel().catch(() => undefined); } catch { /* Preserve the caller's fixed error. */ }
+}
+
 export async function readBoundedBody(
   request: Request,
   maximumBytes: number,
@@ -89,7 +96,7 @@ export async function readBoundedBody(
     while (true) {
       const remainingMs = deadlineEpochMs === undefined ? undefined : deadlineEpochMs - Date.now();
       if (remainingMs !== undefined && remainingMs <= 0) {
-        try { await reader.cancel(); } catch { /* Preserve the stable lease-timeout error. */ }
+        cancelBodyReader(reader);
         throw new HttpError(408, "request_timeout", "Export upload exceeded its admission lease.");
       }
       let timer: ReturnType<typeof setTimeout> | undefined;
@@ -107,9 +114,7 @@ export async function readBoundedBody(
           }),
         ]);
       } catch (error) {
-        if (timedOut) {
-          try { await reader.cancel(); } catch { /* Preserve the stable lease-timeout error. */ }
-        }
+        if (timedOut) cancelBodyReader(reader);
         throw error;
       } finally {
         if (timer !== undefined) clearTimeout(timer);
@@ -118,7 +123,7 @@ export async function readBoundedBody(
       if (done) break;
       const required = total + value.byteLength;
       if (required > maximumBytes) {
-        try { await reader.cancel(); } catch { /* Preserve the stable bounded-body error. */ }
+        cancelBodyReader(reader);
         throw new HttpError(413, "payload_too_large", "Export payload is too large.");
       }
       if (required > buffer.byteLength) {
@@ -132,7 +137,10 @@ export async function readBoundedBody(
       total = required;
     }
   } finally {
-    reader.releaseLock();
+    // A timed-out read can remain pending when provider cancellation never
+    // settles. Releasing that reader may then throw; cleanup must not mask the
+    // authoritative body/deadline result or hold the account admission.
+    try { reader.releaseLock(); } catch { /* Best-effort reader cleanup only. */ }
   }
   if (total === 0) throw new HttpError(400, "empty_body", "Request body is required.");
   return buffer.subarray(0, total);

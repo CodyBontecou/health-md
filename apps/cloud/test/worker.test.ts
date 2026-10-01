@@ -138,6 +138,23 @@ describe("Worker deployment and request policy", () => {
     });
   });
 
+  it("returns the stable size error when stream cancellation never settles", async () => {
+    let cancelCalled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array(5)); },
+      cancel() { cancelCalled = true; return new Promise<void>(() => undefined); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const outcome = await Promise.race([
+      readBoundedBody(request, 4).catch((error: unknown) => error),
+      new Promise<string>((resolve) => setTimeout(() => resolve("hung"), 100)),
+    ]);
+    expect(outcome).toMatchObject({ status: 413, code: "payload_too_large" });
+    expect(cancelCalled).toBe(true);
+  });
+
   it("cancels a stalled body at its upload-admission deadline", async () => {
     let cancelled = false;
     const body = new ReadableStream<Uint8Array>({
@@ -162,6 +179,22 @@ describe("Worker deployment and request policy", () => {
     await expect(readBoundedBody(request, 1024, Date.now() + 10)).rejects.toMatchObject({
       status: 408, code: "request_timeout",
     });
+  });
+
+  it("returns the stable lease timeout when stream cancellation never settles", async () => {
+    let cancelCalled = false;
+    const body = new ReadableStream<Uint8Array>({
+      cancel() { cancelCalled = true; return new Promise<void>(() => undefined); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const outcome = await Promise.race([
+      readBoundedBody(request, 1024, Date.now() + 10).catch((error: unknown) => error),
+      new Promise<string>((resolve) => setTimeout(() => resolve("hung"), 100)),
+    ]);
+    expect(outcome).toMatchObject({ status: 408, code: "request_timeout" });
+    expect(cancelCalled).toBe(true);
   });
 
   it("rejects malformed UTF-8 after a bounded fragmented read", async () => {

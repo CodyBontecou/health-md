@@ -175,11 +175,12 @@ requireText(httpSource, "!url.search && !url.hash", "query-free split request UR
 for (const fragment of [
   "const initialCapacity = declared === null ? Math.min(maximumBytes, 16 * 1024) : Number(declared)",
   "Math.min(maximumBytes,", "grown.set(buffer.subarray(0, total))",
-  "return buffer.subarray(0, total)", "Preserve the stable bounded-body error",
-  "deadlineEpochMs - Date.now()", 'new HttpError(408, "request_timeout"',
-  "Preserve the stable lease-timeout error",
+  "return buffer.subarray(0, total)", "deadlineEpochMs - Date.now()",
+  'new HttpError(408, "request_timeout"', "Cancellation is advisory cleanup",
+  "void reader.cancel().catch", "try { reader.releaseLock(); } catch",
 ]) requireText(httpSource, fragment, "bounded contiguous request body");
 forbid(httpSource, /chunks:\s*Uint8Array\[\]/u, "unbounded fragmented request body");
+forbid(httpSource, /await\s+reader\.cancel/u, "blocking request-body cancellation");
 const exportsSource = read("src/exports.ts");
 const authenticateIngest = exportsSource.indexOf("requireIngestToken(request, env)");
 const budgetIngest = exportsSource.indexOf("limitIngest(env, principal.tokenId, principal.userId)");
