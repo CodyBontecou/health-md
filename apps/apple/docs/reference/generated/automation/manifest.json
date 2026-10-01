@@ -112,14 +112,14 @@
       "sha256" : "b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b"
     },
     {
-      "bytes" : 128225,
+      "bytes" : 130202,
       "path" : "message-fields.md",
-      "sha256" : "ebd628b630e5965867deb3ed3037c0041ebcf1b735c05e8e5b43d31af03d773d"
+      "sha256" : "f3fc7995fab5c78924168dde428d73138769eae4d833fb561f52439341d8ee9a"
     },
     {
-      "bytes" : 1635,
+      "bytes" : 1685,
       "path" : "peer-capabilities.json",
-      "sha256" : "05dc5c44551072f0b90af5b076271afb81de30f153ee6767430a8a54b2127f37"
+      "sha256" : "38e63c7875a51fb0b9e84088a88878417b1b0f4bb12f1161b156e3d81670df55"
     },
     {
       "bytes" : 3240,
@@ -179,6 +179,6 @@
   "generated_group" : "automation",
   "generator" : "HealthMdTests/Documentation/GeneratedAutomationReferenceDocumentation.swift",
   "hashed_artifact_count" : 31,
-  "sync_message_count" : 38,
+  "sync_message_count" : 40,
   "synthetic_data_only" : true
 }

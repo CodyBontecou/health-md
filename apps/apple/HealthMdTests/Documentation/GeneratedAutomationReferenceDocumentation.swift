@@ -548,6 +548,7 @@ enum GeneratedAutomationReferenceDocumentation {
             supportsRollupSummaries: true,
             supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true,
+            supportsIPhoneInitiatedContextRefresh: true,
             supportsAllAvailableHistoryExportRequests: true,
             supportsRequestScopedContextAcquisition: true,
             supportsChunkedMacExportJobs: true,
@@ -1024,6 +1025,29 @@ enum GeneratedAutomationReferenceDocumentation {
                 message: "Synthetic export write failed.",
                 underlyingError: "Synthetic fixture filesystem rejection.",
                 occurredAt: createdAt
+            )),
+            .iphoneContextRefreshRequest(IPhoneContextRefreshRequest(
+                jobID: jobID,
+                createdAt: createdAt,
+                dateSelection: .explicitRange,
+                dateRangeStart: dayStart,
+                dateRangeEnd: dayEnd,
+                selection: CanonicalHealthDataSelection(
+                    metricIDs: ["sleep_total", "steps"],
+                    sourceIDs: ["apple_health"],
+                    detailLevel: .summary,
+                    objectPaths: ["/workouts"],
+                    fieldPointers: ["/activity/steps"]
+                ),
+                profileID: secondJobID,
+                profileName: "Synthetic Context Profile"
+            )),
+            .iphoneContextRefreshStatus(IPhoneContextRefreshStatus(
+                jobID: jobID,
+                state: .failed,
+                updatedAt: createdAt,
+                message: "Synthetic context refresh failed.",
+                failureReason: "synthetic_fixture_failure"
             )),
             .iphoneExportRequest(strictRawRequest),
             .iphoneExportAccepted(IPhoneExportAcknowledgement(
