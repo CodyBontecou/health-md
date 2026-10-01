@@ -60,6 +60,27 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         return element.exists && element.isHittable
     }
 
+    /// Once the pinned protection toast is visible, XCUITest can still report an action beneath it
+    /// as hittable. Move each later action fully outside the toast before tapping it.
+    private func scrollUntilHittableAboveProtectionToast(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        maxSwipes: Int = 8
+    ) -> Bool {
+        for _ in 0..<maxSwipes {
+            let toast = app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
+                .allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
+            let isOutsideToast = toast.map { !element.frame.intersects($0.frame) } ?? true
+            if element.exists, element.isHittable, isOutsideToast {
+                return true
+            }
+            app.swipeUp()
+        }
+        let toast = app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
+            .allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
+        return element.exists && element.isHittable && (toast.map { !element.frame.intersects($0.frame) } ?? true)
+    }
+
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
         let settingsTab = app.tabBars.buttons["Settings"]
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
@@ -285,18 +306,23 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         editSchedule.tap()
         XCTAssertFalse(app.switches["Enabled"].waitForExistence(timeout: 1))
-        guard followProtectionToastAndReopenDetail(app) else { return }
 
-        // Duplicating is rejected without creating a copy.
+        // Keep the pinned toast as evidence while exercising the adjacent blocked actions. Moving
+        // each action outside the toast is substantially faster and safer than another app launch.
         let duplicate = app.buttons["Duplicate"]
-        XCTAssertTrue(scrollUntilHittable(duplicate, in: app), "The Duplicate action should be reachable")
+        XCTAssertTrue(
+            scrollUntilHittableAboveProtectionToast(duplicate, in: app),
+            "The Duplicate action should be reachable above the protection toast"
+        )
         duplicate.tap()
         XCTAssertFalse(app.buttons["export.profiles.row.Default 2"].waitForExistence(timeout: 1))
-        guard followProtectionToastAndReopenDetail(app) else { return }
 
         // Renaming never presents the rename alert.
         let rename = app.buttons["Rename…"]
-        XCTAssertTrue(scrollUntilHittable(rename, in: app), "The Rename action should be reachable")
+        XCTAssertTrue(
+            scrollUntilHittableAboveProtectionToast(rename, in: app),
+            "The Rename action should be reachable above the protection toast"
+        )
         rename.tap()
         XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.alerts.firstMatch.waitForExistence(timeout: 1))
