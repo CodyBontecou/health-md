@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertThrows
@@ -57,7 +58,9 @@ class SharedSetupIntentCoordinatorTest {
     }
 
     @Test
-    fun `newer async uri is not blocked by an older stalled provider read`() = runTest {
+    fun `newer async uri is not blocked by an older stalled provider read`() = runBlocking {
+        // The coordinator intentionally reads on real Dispatchers.IO. Keep timeout progression on
+        // real time too; runTest's virtual clock can outrun a correctly scheduled provider read.
         val store = mockk<SharedSetupDocumentStore>()
         val firstUri = Uri.parse("content://synthetic/first.healthmdconfig")
         val secondUri = Uri.parse("content://synthetic/second.healthmdconfig")
@@ -97,7 +100,9 @@ class SharedSetupIntentCoordinatorTest {
     }
 
     @Test
-    fun `finish prevents a cancelled stalled read from publishing later`() = runTest {
+    fun `finish prevents a cancelled stalled read from publishing later`() = runBlocking {
+        // Match the coordinator's real IO dispatcher so the post-release check cannot advance a
+        // virtual delay before the cancelled blocking reader has had a chance to return.
         val store = mockk<SharedSetupDocumentStore>()
         val uri = Uri.parse("content://synthetic/stalled.healthmdconfig")
         val started = CountDownLatch(1)
