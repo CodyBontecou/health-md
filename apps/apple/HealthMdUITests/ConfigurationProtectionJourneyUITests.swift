@@ -125,18 +125,12 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         XCTAssertTrue(exportButton.isHittable, "Manual export must remain available while configuration is protected")
 
-        let protectedControl = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
-        scrollUntilExists(protectedControl, in: app)
-        XCTAssertTrue(protectedControl.waitForExistence(timeout: 5))
-        // The preset row can be only partially exposed above the tab bar while XCUITest still
-        // reports the button as hittable. Move it a bounded distance before tapping.
-        let scrollView = app.scrollViews.firstMatch
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
-        XCTAssertTrue(waitHittable(protectedControl))
-        protectedControl.tap()
+        // Tap the protection overlay itself. Reaching through it to a disabled child can report
+        // the child as hittable while a loaded simulator sends the tap outside the overlay.
+        let protectedRegion = app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion]
+            .firstMatch
+        XCTAssertTrue(waitHittable(protectedRegion), "A protected export region should be tappable")
+        protectedRegion.tap()
 
         guard let toast = waitForHittableToast(in: app) else {
             XCTFail("The visible configuration-protection toast should be tappable")
