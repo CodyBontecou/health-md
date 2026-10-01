@@ -56,7 +56,7 @@ Cloudflare terminates TLS before application encryption and hosts compute/storag
 | Ingest `POST /api/v1/exports` | active write-only ingest bearer | cookie, account session, read/agent/MCP/deletion token |
 | Ingest `/health` | none | all data/account behavior |
 | Account auth | invite + email-link proof | account enumeration, open signup, support bypass |
-| Account APIs/assets | valid owner session; same-origin intent on mutations | ingest, MCP, cross-account IDs |
+| Account APIs/assets | `run_worker_first=true` forces every asset through full configuration validation, an exact method/path allowlist, fixed telemetry and security-header wrapping; valid owner session plus same-origin intent on mutations | ingest, MCP, cross-account IDs |
 | Deletion status | high-entropy hashed-at-rest receipt | account/read/write authority; identity/content disclosure |
 | Maintenance | scheduled event or bound Queue | public HTTP, browser/device credentials |
 | Metrics | Worker binding only | raw request context and joins to account data |

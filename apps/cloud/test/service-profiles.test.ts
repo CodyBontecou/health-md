@@ -47,6 +47,16 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
 }
 
 describe("split production Worker profiles", () => {
+  it("forces account assets through Worker validation and gives no assets to peer profiles", () => {
+    const account = readFileSync(new URL("../wrangler.account.toml", import.meta.url), "utf8");
+    expect(account).toContain("[assets]\ndirectory = \"./public\"\nbinding = \"ASSETS\"\nrun_worker_first = true");
+    for (const name of ["ingest", "maintenance"]) {
+      const config = readFileSync(new URL(`../wrangler.${name}.toml`, import.meta.url), "utf8");
+      expect(config).not.toContain("[assets]");
+      expect(config).not.toContain('binding = "ASSETS"');
+    }
+  });
+
   it("disables persisted Worker logs, invocation logs, traces and Logpush", () => {
     for (const name of ["ingest", "account", "maintenance"]) {
       const config = readFileSync(new URL(`../wrangler.${name}.toml`, import.meta.url), "utf8");

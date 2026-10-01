@@ -63,6 +63,7 @@ for (const [file, profile, entry] of profiles) {
   } else if (profile === "account") {
     requireText(text, "[assets]", file);
     requireText(text, 'binding = "ASSETS"', file);
+    requireText(text, "run_worker_first = true", file);
     requireText(text, "[[queues.producers]]", file);
     requireText(text, 'binding = "LIFECYCLE_QUEUE"', file);
     requireText(text, 'EXPORT_ENDPOINT_ORIGIN = "https://api.healthmd.app"', file);
