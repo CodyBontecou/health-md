@@ -3,8 +3,10 @@ import { readFileSync, statSync } from "node:fs";
 export const TWO_X_CONCURRENCY = 500;
 export const TWO_X_UPLOADS_PER_SECOND = 50;
 export const DEFAULT_DURATION_SECONDS = 600;
+export const TWO_X_BURST_UPLOADS_PER_SECOND = 200;
+export const BURST_DURATION_SECONDS = 60;
 export const MAX_REQUESTS_PER_ACCOUNT = 50;
-export const SUSTAINED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCOUNT - 3;
+export const PACED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCOUNT - 3;
 export const DEDICATED_SLOW_BODY_ACCOUNTS = 1;
 export const ADMISSION_LEASE_SECONDS = 15 * 60;
 export const SLOW_BODY_TIMEOUT_MS = (ADMISSION_LEASE_SECONDS + 2 * 60) * 1_000;
@@ -44,9 +46,14 @@ export function parseStagingLoadConfig(environment = process.env) {
     TWO_X_UPLOADS_PER_SECOND, 1, 100, "Uploads per second");
   const durationSeconds = integer(environment.HEALTHMD_LOAD_DURATION_SECONDS,
     DEFAULT_DURATION_SECONDS, 1, 3_600, "Duration seconds");
+  const burstUploadsPerSecond = integer(environment.HEALTHMD_LOAD_BURST_UPLOADS_PER_SECOND,
+    TWO_X_BURST_UPLOADS_PER_SECOND, 1, TWO_X_BURST_UPLOADS_PER_SECOND, "Burst uploads per second");
+  const burstDurationSeconds = integer(environment.HEALTHMD_LOAD_BURST_DURATION_SECONDS,
+    BURST_DURATION_SECONDS, 1, BURST_DURATION_SECONDS, "Burst duration seconds");
   const largeConcurrency = integer(environment.HEALTHMD_LOAD_LARGE_CONCURRENCY, 10, 1, 10,
     "Large concurrency");
-  return { endpoint, expectedRevision, concurrency, uploadsPerSecond, durationSeconds, largeConcurrency };
+  return { endpoint, expectedRevision, concurrency, uploadsPerSecond, durationSeconds,
+    burstUploadsPerSecond, burstDurationSeconds, largeConcurrency };
 }
 
 export function readDistinctAccountTokens(path, requiredCount) {
@@ -66,9 +73,10 @@ export function readDistinctAccountTokens(path, requiredCount) {
 }
 
 export function requiredDistinctAccounts(config) {
-  const sustained = config.uploadsPerSecond * config.durationSeconds;
+  const paced = config.uploadsPerSecond * config.durationSeconds +
+    config.burstUploadsPerSecond * config.burstDurationSeconds;
   return Math.max(Math.ceil(config.concurrency / 2), config.largeConcurrency,
-    Math.ceil(sustained / SUSTAINED_REQUESTS_PER_ACCOUNT)) + DEDICATED_SLOW_BODY_ACCOUNTS;
+    Math.ceil(paced / PACED_REQUESTS_PER_ACCOUNT)) + DEDICATED_SLOW_BODY_ACCOUNTS;
 }
 
 export function validRetryAfter(value) {
@@ -110,7 +118,7 @@ export function nextEligibleAccount(active, launched, cursor) {
   }
   for (let offset = 0; offset < active.length; offset += 1) {
     const candidate = (cursor + offset) % active.length;
-    if (active[candidate] < 2 && launched[candidate] < SUSTAINED_REQUESTS_PER_ACCOUNT) return candidate;
+    if (active[candidate] < 2 && launched[candidate] < PACED_REQUESTS_PER_ACCOUNT) return candidate;
   }
   return -1;
 }

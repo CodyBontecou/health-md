@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import {
   ADMISSION_LEASE_SECONDS, DEDICATED_SLOW_BODY_ACCOUNTS, MAX_EXPORT_BYTES,
-  MAX_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS, SUSTAINED_REQUESTS_PER_ACCOUNT,
+  MAX_REQUESTS_PER_ACCOUNT, PACED_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS,
   buildSyntheticEnvelope, fragmentedRequestBody, nextEligibleAccount, parseStagingLoadConfig,
   percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody, validRetryAfter,
 } from "./staging-load-lib.mjs";
@@ -100,16 +100,15 @@ async function runSlowBodyAdmission(config, token) {
   return { stalled, backpressure, recovery, passed };
 }
 
-async function runSustained(config, tokens) {
-  const total = config.uploadsPerSecond * config.durationSeconds;
+async function runPacedPhase(config, tokens, launchedPerToken, rate, durationSeconds, marker) {
+  const total = rate * durationSeconds;
   const active = new Set();
   const activePerToken = Array(tokens.length).fill(0);
-  const launchedPerToken = Array(tokens.length).fill(0);
   const results = [];
   let cursor = 0;
   const started = performance.now();
   for (let index = 0; index < total; index += 1) {
-    const due = started + index * (1_000 / config.uploadsPerSecond);
+    const due = started + index * (1_000 / rate);
     const delay = due - performance.now();
     if (delay > 0) await sleep(delay);
     while (active.size >= config.concurrency) await Promise.race(active);
@@ -123,7 +122,7 @@ async function runSustained(config, tokens) {
     activePerToken[tokenIndex] += 1;
     launchedPerToken[tokenIndex] += 1;
     const operation = upload(config.endpoint, tokens[tokenIndex],
-      buildSyntheticEnvelope(1_024, `synthetic-sustained-${index}`))
+      buildSyntheticEnvelope(1_024, `synthetic-${marker}-${index}`))
       .then((result) => { results.push(result); })
       .finally(() => { activePerToken[tokenIndex] -= 1; active.delete(operation); });
     active.add(operation);
@@ -146,10 +145,15 @@ async function main() {
   const workloadTokens = tokens.slice(0, -DEDICATED_SLOW_BODY_ACCOUNTS);
   await verifyRevision(config.endpoint, config.expectedRevision);
   const wave = await runWave(config, workloadTokens);
-  const sustained = await runSustained(config, workloadTokens);
+  const launchedPerToken = Array(workloadTokens.length).fill(0);
+  const sustained = await runPacedPhase(config, workloadTokens, launchedPerToken,
+    config.uploadsPerSecond, config.durationSeconds, "sustained");
+  const burst = await runPacedPhase(config, workloadTokens, launchedPerToken,
+    config.burstUploadsPerSecond, config.burstDurationSeconds, "burst");
   const large = await runLarge(config, workloadTokens);
   const slowBody = await runSlowBodyAdmission(config, slowBodyToken);
   const achievedLaunchRate = sustained.results.length / (sustained.lastLaunchElapsedMs / 1_000);
+  const achievedBurstRate = burst.results.length / (burst.lastLaunchElapsedMs / 1_000);
   const report = {
     syntheticOnly: true,
     deployedRevision: config.expectedRevision.slice(0, 12),
@@ -158,10 +162,12 @@ async function main() {
       concurrency: config.concurrency,
       uploadsPerSecond: config.uploadsPerSecond,
       durationSeconds: config.durationSeconds,
+      burstUploadsPerSecond: config.burstUploadsPerSecond,
+      burstDurationSeconds: config.burstDurationSeconds,
       largeConcurrency: config.largeConcurrency,
       largePayloadBytes: MAX_EXPORT_BYTES,
       maximumRequestsPerAccount: MAX_REQUESTS_PER_ACCOUNT,
-      maximumSustainedRequestsPerAccount: SUSTAINED_REQUESTS_PER_ACCOUNT,
+      maximumPacedRequestsPerAccount: PACED_REQUESTS_PER_ACCOUNT,
       dedicatedSlowBodyAccounts: DEDICATED_SLOW_BODY_ACCOUNTS,
       admissionLeaseSeconds: ADMISSION_LEASE_SECONDS,
       largeRequestProfiles: { declaredLength: Math.ceil(config.largeConcurrency / 2),
@@ -169,7 +175,9 @@ async function main() {
     },
     wave: summary(wave),
     sustained: { ...summary(sustained.results), achievedLaunchesPerSecond: fixed(achievedLaunchRate),
-      maximumRequestsPerAccount: sustained.maximumRequestsPerAccount },
+      cumulativeMaximumRequestsPerAccount: sustained.maximumRequestsPerAccount },
+    burst: { ...summary(burst.results), achievedLaunchesPerSecond: fixed(achievedBurstRate),
+      cumulativeMaximumRequestsPerAccount: burst.maximumRequestsPerAccount },
     worstCasePayload: summary(large),
     slowBodyAdmission: {
       expectedLeaseExpiries: outcomeSummary(slowBody.stalled),
@@ -180,10 +188,11 @@ async function main() {
       passed: slowBody.passed,
     },
   };
-  report.pass = report.wave.failed === 0 && report.sustained.failed === 0 &&
+  report.pass = report.wave.failed === 0 && report.sustained.failed === 0 && report.burst.failed === 0 &&
     report.worstCasePayload.failed === 0 && report.slowBodyAdmission.passed &&
     achievedLaunchRate >= config.uploadsPerSecond * 0.98 &&
-    sustained.maximumRequestsPerAccount <= SUSTAINED_REQUESTS_PER_ACCOUNT;
+    achievedBurstRate >= config.burstUploadsPerSecond * 0.98 &&
+    burst.maximumRequestsPerAccount <= PACED_REQUESTS_PER_ACCOUNT;
   console.log(JSON.stringify(report, null, 2));
   if (!report.pass) process.exitCode = 1;
 }

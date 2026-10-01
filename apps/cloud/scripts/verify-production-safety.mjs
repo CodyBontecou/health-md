@@ -296,9 +296,11 @@ requireText(loadHarness, "Refusing a live or non-staging hostname", "staging loa
 requireText(loadHarness, "Expected full deployment revision is required", "staging load harness");
 requireText(loadHarness, "Synthetic token file must be a regular owner-only file", "staging load harness");
 requireText(loadHarness, "HEALTHMD_LOAD_DISTINCT_ACCOUNTS", "staging load harness");
-requireText(loadHarness, "SUSTAINED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCOUNT - 3",
+requireText(loadHarness, "PACED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCOUNT - 3",
   "staging load account budget");
-requireText(loadHarness, "launched[candidate] < SUSTAINED_REQUESTS_PER_ACCOUNT",
+requireText(loadHarness, "TWO_X_BURST_UPLOADS_PER_SECOND = 200", "staging load burst target");
+requireText(loadHarness, "BURST_DURATION_SECONDS = 60", "staging load burst target");
+requireText(loadHarness, "launched[candidate] < PACED_REQUESTS_PER_ACCOUNT",
   "staging load account budget");
 requireText(loadHarness, "DEDICATED_SLOW_BODY_ACCOUNTS = 1", "staging load slow-body isolation");
 requireText(loadHarness, "ADMISSION_LEASE_SECONDS = 15 * 60", "staging load admission lease");
@@ -308,8 +310,10 @@ requireText(uploadIntentSource, "const ADMISSION_LEASE_MS = 15 * 60_000", "uploa
 const loadRunner = read("scripts/qualify-staging-load.mjs");
 requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
 requireText(loadRunner, "launchedPerToken[tokenIndex] += 1", "staging load account budget");
-requireText(loadRunner, "maximumRequestsPerAccount <= SUSTAINED_REQUESTS_PER_ACCOUNT",
+requireText(loadRunner, "burst.maximumRequestsPerAccount <= PACED_REQUESTS_PER_ACCOUNT",
   "staging load account budget");
+requireText(loadRunner, "achievedBurstRate >= config.burstUploadsPerSecond * 0.98",
+  "staging load burst target");
 requireText(loadRunner, "streamed ? fragmentedRequestBody(body) : body",
   "staging load transfer fragmentation");
 requireText(loadRunner, 'result.outcome === "http_408"', "staging load admission expiry");

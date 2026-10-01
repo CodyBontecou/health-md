@@ -3,8 +3,9 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
-  ADMISSION_LEASE_SECONDS, DEDICATED_SLOW_BODY_ACCOUNTS, MAX_EXPORT_BYTES,
-  MAX_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS, SUSTAINED_REQUESTS_PER_ACCOUNT,
+  ADMISSION_LEASE_SECONDS, BURST_DURATION_SECONDS, DEDICATED_SLOW_BODY_ACCOUNTS, MAX_EXPORT_BYTES,
+  MAX_REQUESTS_PER_ACCOUNT, PACED_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS,
+  TWO_X_BURST_UPLOADS_PER_SECOND,
   buildSyntheticEnvelope, fragmentedRequestBody, nextEligibleAccount, parseStagingLoadConfig,
   percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody, validRetryAfter,
 } from "../scripts/staging-load-lib.mjs";
@@ -21,14 +22,16 @@ afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: 
 it("defaults to the documented 2x gate and calculates a budget-safe account count", () => {
   const config = parseStagingLoadConfig(base);
   expect(config).toMatchObject({
-    concurrency: 500, uploadsPerSecond: 50, durationSeconds: 600, largeConcurrency: 10,
+    concurrency: 500, uploadsPerSecond: 50, durationSeconds: 600,
+    burstUploadsPerSecond: 200, burstDurationSeconds: 60, largeConcurrency: 10,
   });
-  expect(requiredDistinctAccounts(config)).toBe(640);
-  expect({ maximum: MAX_REQUESTS_PER_ACCOUNT, sustained: SUSTAINED_REQUESTS_PER_ACCOUNT,
+  expect(requiredDistinctAccounts(config)).toBe(895);
+  expect({ maximum: MAX_REQUESTS_PER_ACCOUNT, paced: PACED_REQUESTS_PER_ACCOUNT,
+    burstRate: TWO_X_BURST_UPLOADS_PER_SECOND, burstDuration: BURST_DURATION_SECONDS,
     dedicatedSlowBodyAccounts: DEDICATED_SLOW_BODY_ACCOUNTS,
     admissionLeaseSeconds: ADMISSION_LEASE_SECONDS, slowBodyTimeoutMs: SLOW_BODY_TIMEOUT_MS })
-    .toEqual({ maximum: 50, sustained: 47, dedicatedSlowBodyAccounts: 1,
-      admissionLeaseSeconds: 900, slowBodyTimeoutMs: 1_020_000 });
+    .toEqual({ maximum: 50, paced: 47, burstRate: 200, burstDuration: 60,
+      dedicatedSlowBodyAccounts: 1, admissionLeaseSeconds: 900, slowBodyTimeoutMs: 1_020_000 });
 });
 
 it("accepts only bounded Retry-After delta seconds", () => {
@@ -63,10 +66,10 @@ it("enforces cumulative and active per-account scheduler limits", () => {
   expect(nextEligibleAccount([2, 0, 2], [1, 47, 46], 0)).toBe(-1);
   expect(() => nextEligibleAccount([0], [], 0)).toThrow("scheduler state is invalid");
 
-  const launched = Array(639).fill(0) as number[];
-  const active = Array(639).fill(0) as number[];
+  const launched = Array(894).fill(0) as number[];
+  const active = Array(894).fill(0) as number[];
   let cursor = 0;
-  for (let request = 0; request < 30_000; request += 1) {
+  for (let request = 0; request < 42_000; request += 1) {
     const account = nextEligibleAccount(active, launched, cursor);
     if (account < 0) throw new Error("scheduler exhausted unexpectedly");
     launched[account] = (launched[account] ?? 0) + 1;
@@ -84,6 +87,8 @@ it.each([
   [{ ...base, HEALTHMD_LOAD_EXPECTED_REVISION: "short" }],
   [{ ...base, HEALTHMD_LOAD_CONFIRM_SYNTHETIC_ONLY: "no" }],
   [{ ...base, HEALTHMD_LOAD_DISTINCT_ACCOUNTS: "no" }],
+  [{ ...base, HEALTHMD_LOAD_BURST_UPLOADS_PER_SECOND: "201" }],
+  [{ ...base, HEALTHMD_LOAD_BURST_DURATION_SECONDS: "61" }],
 ])("rejects live, ambiguous, credential-bearing or unattested targets", (environment) => {
   expect(() => parseStagingLoadConfig(environment)).toThrow();
 });

@@ -1,8 +1,10 @@
 export const TWO_X_CONCURRENCY: number;
 export const TWO_X_UPLOADS_PER_SECOND: number;
 export const DEFAULT_DURATION_SECONDS: number;
+export const TWO_X_BURST_UPLOADS_PER_SECOND: number;
+export const BURST_DURATION_SECONDS: number;
 export const MAX_REQUESTS_PER_ACCOUNT: number;
-export const SUSTAINED_REQUESTS_PER_ACCOUNT: number;
+export const PACED_REQUESTS_PER_ACCOUNT: number;
 export const DEDICATED_SLOW_BODY_ACCOUNTS: number;
 export const ADMISSION_LEASE_SECONDS: number;
 export const SLOW_BODY_TIMEOUT_MS: number;
@@ -13,6 +15,8 @@ export interface StagingLoadConfig {
   concurrency: number;
   uploadsPerSecond: number;
   durationSeconds: number;
+  burstUploadsPerSecond: number;
+  burstDurationSeconds: number;
   largeConcurrency: number;
 }
 export function parseStagingLoadConfig(environment?: Record<string, string | undefined>): StagingLoadConfig;
