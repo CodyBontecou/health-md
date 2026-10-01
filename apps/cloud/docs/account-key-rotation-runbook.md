@@ -8,7 +8,7 @@ Each account has a random 256-bit export data-encryption key (DEK). D1 stores on
 
 The bounded maintenance operation unwraps with the row's historical KEK and wraps the same DEK under `CURRENT_ACCOUNT_WRAPPING_KEY_ID`. It does **not** decrypt or rewrite health objects, does not change DEK IDs, and does not rotate a compromised account DEK. A DEK/ciphertext rotation requires a separate resumable object-migration design and approval.
 
-The checked-in JSON keyring is only the Worker-secret interface. Before production, security/operations owners must approve the key custody system, independent escrow/recovery, access policy, rotation interval and incident procedure. Never put key bytes in D1, configuration files, command lines, CI output, telemetry, tickets or chat.
+The checked-in account-KEK JSON keyring is only the Worker-secret interface. It is distinct from the legacy global export keyring: only account receives that legacy read authority, while ingest and maintenance reject it. Before production, security/operations owners must approve the key custody system, independent escrow/recovery, access policy, rotation interval and incident procedure. Never put key bytes in D1, configuration files, command lines, CI output, telemetry, tickets or chat.
 
 ## Routine KEK rotation
 

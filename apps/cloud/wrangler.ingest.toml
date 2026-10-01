@@ -27,7 +27,6 @@ DEPLOYMENT_REVISION = "REPLACE_WITH_FULL_GIT_COMMIT_SHA"
 PUBLIC_ORIGIN = "https://api.healthmd.app"
 AUTH_SIGNUP_MODE = "closed"
 AUTH_EMAIL_FROM = ""
-CURRENT_EXPORT_KEY_ID = "v1"
 ACCOUNT_KEY_MODE = "per_account"
 CURRENT_ACCOUNT_WRAPPING_KEY_ID = "kek-v1"
 HEALTH_FREE_METRICS_REQUIRED = "1"
@@ -38,6 +37,6 @@ INGEST_TOKEN_HOURLY_LIMIT = "120"
 INGEST_ACCOUNT_HOURLY_LIMIT = "240"
 
 # Required secrets:
-#   EXPORT_ENCRYPTION_KEYS_JSON (legacy-read compatibility during migration)
 #   ACCOUNT_KEY_WRAPPING_KEYS_JSON (for example {"kek-v1":"<32-byte-base64>"})
+# Ingest must not receive legacy EXPORT_ENCRYPTION_KEYS_JSON/CURRENT_EXPORT_KEY_ID authority.
 #   CLOUD_RUNTIME_APPROVED=healthmd-cloud-v1-reviewed

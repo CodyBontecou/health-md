@@ -243,7 +243,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const { env, db, directory } = createTestEnv("personal-mvp");
     const { env: accountEnv, db: accountDb } = createVmEnvironment({
       dataDirectory: directory, sourceDirectory, publicOrigin: "https://account.example.test",
-      identityKey: env.IDENTITY_KEY_B64, exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON,
+      identityKey: env.IDENTITY_KEY_B64, exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON ?? "",
       currentKeyId: "v1", passwordPepper: env.PASSWORD_PEPPER_B64 ?? "",
       personalMvp: true, revisionRetention: "unlimited",
     });
@@ -332,7 +332,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const { env: apiEnv, db: apiDb } = createVmEnvironment({
       dataDirectory: directory, sourceDirectory,
       publicOrigin: "https://api.example.test", identityKey: env.IDENTITY_KEY_B64,
-      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON, currentKeyId: "v1",
+      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON ?? "", currentKeyId: "v1",
       passwordPepper: env.PASSWORD_PEPPER_B64 ?? "", personalMvp: true,
       revisionRetention: "unlimited",
     });
@@ -398,7 +398,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const { env: accountEnv, db: accountDb } = createVmEnvironment({
       dataDirectory: directory, sourceDirectory,
       publicOrigin: "https://account.example.test", identityKey: env.IDENTITY_KEY_B64,
-      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON, currentKeyId: "v1",
+      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON ?? "", currentKeyId: "v1",
       passwordPepper: env.PASSWORD_PEPPER_B64 ?? "", personalMvp: true,
       revisionRetention: "unlimited",
     });

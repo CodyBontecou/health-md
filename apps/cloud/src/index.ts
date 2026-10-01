@@ -74,10 +74,10 @@ export function validateConfiguration(env: Env): void {
     }
     let invalidLegacyKeys = false;
     let legacyKeyMaterials: string[] = [];
-    if (profile === "ingest" || profile === "account" || profile === "combined") {
+    if (profile === "account" || profile === "combined") {
       try {
         const keyring = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "");
-        invalidLegacyKeys = !keyring.has(env.CURRENT_EXPORT_KEY_ID);
+        invalidLegacyKeys = !env.CURRENT_EXPORT_KEY_ID || !keyring.has(env.CURRENT_EXPORT_KEY_ID);
         legacyKeyMaterials = [...keyring.values()].map(normalizedKeyMaterial);
       } catch { invalidLegacyKeys = true; }
     }
@@ -89,7 +89,8 @@ export function validateConfiguration(env: Env): void {
       (profile === "maintenance" && (!env.LIFECYCLE_QUEUE || !!env.ASSETS)));
     const invalidExcessSecrets = (splitNonIdentity && (!!env.IDENTITY_KEY_B64 || !!env.RESEND_API_KEY ||
       !!env.AUTH_EMAIL_FROM || !!env.AUTH_INVITE_EMAILS ||
-      (profile === "maintenance" && !!env.EXPORT_ENCRYPTION_KEYS_JSON))) ||
+      ((profile === "ingest" || profile === "maintenance") &&
+        (!!env.EXPORT_ENCRYPTION_KEYS_JSON || !!env.CURRENT_EXPORT_KEY_ID)))) ||
       (profile === "account" && !!env.AUTH_INVITE_EMAILS) ||
       ((profile === "ingest" || profile === "account") && !!env.AUDIT_RETENTION_DAYS);
     const invalidRepairFlags = profile !== "combined" &&
@@ -175,7 +176,8 @@ export function validateConfiguration(env: Env): void {
             invalidExcessSecrets || invalidRepairFlags || invalidMetrics || invalidRuntimeLimits ||
             invalidDeletionTtl || invalidAbuseLimits ||
             invalidDeploymentRevision || invalidExportEndpoint)) ||
-        env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
+        ((profile === "account" || profile === "combined") &&
+          (!env.CURRENT_EXPORT_KEY_ID || env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")))) {
       throw new Error("Production or personal-MVP configuration is incomplete");
     }
   }

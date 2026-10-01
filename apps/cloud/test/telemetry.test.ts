@@ -20,8 +20,9 @@ function env(profile: "ingest" | "account", points: unknown[]): Env {
     AUTH_EMAIL_FROM: profile === "account" ? "Health.md Cloud <cloud@healthmd.app>" : "",
     RESEND_API_KEY: profile === "account" ? "synthetic-provider-secret" : "",
     IDENTITY_KEY_B64: profile === "account" ? Buffer.alloc(32, 8).toString("base64") : undefined,
-    EXPORT_ENCRYPTION_KEYS_JSON: JSON.stringify({ v1: Buffer.alloc(32, 7).toString("base64") }),
-    CURRENT_EXPORT_KEY_ID: "v1",
+    EXPORT_ENCRYPTION_KEYS_JSON: profile === "account" ?
+      JSON.stringify({ v1: Buffer.alloc(32, 7).toString("base64") }) : undefined,
+    CURRENT_EXPORT_KEY_ID: profile === "account" ? "v1" : undefined,
     ACCOUNT_KEY_MODE: "per_account",
     CURRENT_ACCOUNT_WRAPPING_KEY_ID: "kek-v1",
     ACCOUNT_KEY_WRAPPING_KEYS_JSON: JSON.stringify({ "kek-v1": wrapping }),

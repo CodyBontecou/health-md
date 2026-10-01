@@ -10,7 +10,7 @@ export interface Env {
   AUTH_SIGNUP_MODE: "closed" | "invite" | "open";
   AUTH_MODE?: "email_link" | "password";
   AUTH_EMAIL_FROM: string;
-  CURRENT_EXPORT_KEY_ID: string;
+  CURRENT_EXPORT_KEY_ID?: string;
   ACCOUNT_KEY_MODE?: "legacy" | "per_account";
   CURRENT_ACCOUNT_WRAPPING_KEY_ID?: string;
   ACCOUNT_KEY_WRAPPING_KEYS_JSON?: string;
@@ -21,7 +21,7 @@ export interface Env {
   INGEST_TOKEN_HOURLY_LIMIT?: string;
   INGEST_ACCOUNT_HOURLY_LIMIT?: string;
   IDENTITY_KEY_B64: string;
-  EXPORT_ENCRYPTION_KEYS_JSON: string;
+  EXPORT_ENCRYPTION_KEYS_JSON?: string;
   RESEND_API_KEY: string;
   PASSWORD_PEPPER_B64?: string;
   REVISION_RETENTION_DAYS?: string;

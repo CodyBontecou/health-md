@@ -65,7 +65,19 @@ it("creates distinct wrapped data keys per account and binds unwrap to the owner
     expect(await resolveExportKey(env, firstUser, first.keyId)).toBe(first.key);
     await expect(resolveExportKey(env, secondUser, first.keyId)).rejects.toThrow();
     expect(await resolveExportKey(env, firstUser, "v1"))
-      .toBe(JSON.parse(env.EXPORT_ENCRYPTION_KEYS_JSON).v1);
+      .toBe(JSON.parse(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "{}").v1);
+  } finally { db.close(); }
+});
+
+it("creates per-account keys without legacy global decryption authority", async () => {
+  const { env, db } = setup();
+  try {
+    env.EXPORT_ENCRYPTION_KEYS_JSON = undefined;
+    env.CURRENT_EXPORT_KEY_ID = undefined;
+    const userId = addUser(db);
+    const key = await currentExportKey(env, userId);
+    expect(key.keyId).not.toBe("v1");
+    expect(await resolveExportKey(env, userId, key.keyId)).toBe(key.key);
   } finally { db.close(); }
 });
 

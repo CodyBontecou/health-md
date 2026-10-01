@@ -135,7 +135,7 @@ it("keeps a narrow existing-day repair separate from the primary and shows origi
     const original = await request(`/api/exports/${result.id}/download`, "GET", undefined, cookie);
     expect(await original.json()).toEqual(selected);
     expect(await objects.reconcile(db)).toBe(0);
-    const reader = new VmHealthDataReader(directory, env.EXPORT_ENCRYPTION_KEYS_JSON);
+    const reader = new VmHealthDataReader(directory, env.EXPORT_ENCRYPTION_KEYS_JSON ?? "");
     const principal: ReadPrincipal = { userId, tokenId: "synthetic", scope: "full_export" };
     const aggregates: ReadPrincipal = { ...principal, scope: "aggregates" };
     try {

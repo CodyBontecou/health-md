@@ -50,14 +50,14 @@ Use new, production-only resources and credentials:
    - Exposes only `POST /api/v1/exports` and `GET /health`.
    - Authenticates the write token before admission.
    - Applies token, account, IP-risk, payload, and edge abuse limits.
-   - Writes application-encrypted objects to a private production R2 bucket.
+   - Writes application-encrypted objects with per-account DEKs/KEKs to a private production R2 bucket; it rejects the historical global decrypt keyring and legacy key ID.
    - Has no dashboard, download, session, MCP, signup, or read route.
 
 2. **Account Worker** at `account.healthmd.app`
    - Owns signup/sign-in, sessions, token management, inventory, download, export, and deletion requests.
    - Uses a separate deployment identity and explicit route allowlist.
    - Serves first-party assets only, with strict CSP and no analytics or session replay.
-   - Cannot accept exports or MCP requests.
+   - Cannot accept exports or MCP requests. It alone receives the legacy-read keyring during controlled migration because it serves owner-authorized historical downloads.
 
 3. **Control and metadata storage**
    - Use a new production D1 database initially, subject to the load gate below.
@@ -73,6 +73,7 @@ Use new, production-only resources and credentials:
    - Keep historical key versions until every referenced object is re-encrypted or verifiably deleted.
 
 5. **Maintenance and lifecycle Worker**
+   - Deletes ciphertext and rewraps DEKs with account KEKs without plaintext access; it rejects the historical global decrypt keyring and legacy key ID.
    - **Source milestone:** finite revision retention conditionally deletes only metadata still unreferenced by current or supplemental pointers, reads back durable absence after normal/lost D1 responses before deleting ciphertext, and preserves ciphertext when verification is unreadable. Migration `0014_maintenance_cursors.sql` and `object-reconciliation.ts` then persist only an opaque provider cursor, scan at most 25 exact `v1/<uuid>` objects per invocation, preserve every export/upload-intent reference, delete only unreferenced ciphertext (including a safe orphan left by an unreadable retention outcome), and refuse cursor advancement on list/delete/unexpected-key failure. It runs only in the split maintenance profile; the VM keeps its existing local reconciliation. No production bucket was scanned.
    - Use Queues or another durable job mechanism for deletion, expired-session cleanup, revision retention, orphan reconciliation, and key rotation.
    - Do not rely on one daily cron processing only a few global rows.

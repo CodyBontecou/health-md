@@ -26,11 +26,13 @@ async function unwrap(env: Env, userId: string, row: AccountKeyRow): Promise<{ k
 }
 
 export async function currentExportKey(env: Env, userId: string): Promise<{ keyId: string; key: string }> {
-  const legacyKeys = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON);
   if (env.ACCOUNT_KEY_MODE !== "per_account") {
-    const key = legacyKeys.get(env.CURRENT_EXPORT_KEY_ID);
+    const legacyKeys = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "");
+    const legacyKeyId = env.CURRENT_EXPORT_KEY_ID;
+    if (!legacyKeyId) throw new Error("Current export encryption key is not configured");
+    const key = legacyKeys.get(legacyKeyId);
     if (!key) throw new Error("Current export encryption key is not configured");
-    return { keyId: env.CURRENT_EXPORT_KEY_ID, key };
+    return { keyId: legacyKeyId, key };
   }
   const wrappingKeyId = env.CURRENT_ACCOUNT_WRAPPING_KEY_ID;
   if (!wrappingKeyId || !/^[A-Za-z0-9._-]{1,32}$/u.test(wrappingKeyId)) {
@@ -129,7 +131,8 @@ export async function resolveExportKey(
   keyId: string,
 ): Promise<string> {
   // Legacy root-key exports remain readable during an explicit migration.
-  const legacy = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON).get(keyId);
+  const legacy = env.EXPORT_ENCRYPTION_KEYS_JSON ?
+    parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON).get(keyId) : undefined;
   if (legacy) return legacy;
   if (env.ACCOUNT_KEY_MODE !== "per_account") throw new Error("Encrypted export key is unavailable");
   const row = await env.DB.prepare(

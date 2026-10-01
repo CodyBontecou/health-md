@@ -21,10 +21,10 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
     AUTH_EMAIL_FROM: kind === "account" ? "Health.md Cloud <cloud@healthmd.app>" : "",
     RESEND_API_KEY: kind === "account" ? "synthetic-provider-secret" : "",
     IDENTITY_KEY_B64: kind === "account" ? Buffer.alloc(32, 5).toString("base64") : undefined,
-    EXPORT_ENCRYPTION_KEYS_JSON: kind === "maintenance" ? undefined : JSON.stringify({
+    EXPORT_ENCRYPTION_KEYS_JSON: kind === "account" ? JSON.stringify({
       v1: Buffer.alloc(32, 6).toString("base64"),
-    }),
-    CURRENT_EXPORT_KEY_ID: "v1",
+    }) : undefined,
+    CURRENT_EXPORT_KEY_ID: kind === "account" ? "v1" : undefined,
     ACCOUNT_KEY_MODE: "per_account",
     CURRENT_ACCOUNT_WRAPPING_KEY_ID: "kek-v1",
     ACCOUNT_KEY_WRAPPING_KEYS_JSON: JSON.stringify({
@@ -112,9 +112,10 @@ describe("split production Worker profiles", () => {
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
       malformedIdentityKey)).status).toBe(500);
 
-    const noLegacyKeys = profile("ingest", "https://api.healthmd.app");
+    const noLegacyKeys = profile("account", "https://account.healthmd.app");
     delete (noLegacyKeys as Partial<Env>).EXPORT_ENCRYPTION_KEYS_JSON;
-    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), noLegacyKeys)).status).toBe(500);
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"), noLegacyKeys)).status)
+      .toBe(500);
 
     const missingCurrentLegacyKey = profile("account", "https://account.healthmd.app");
     missingCurrentLegacyKey.EXPORT_ENCRYPTION_KEYS_JSON = JSON.stringify({
@@ -128,11 +129,11 @@ describe("split production Worker profiles", () => {
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
       reusedIdentityKey)).status).toBe(500);
 
-    const reusedWrappingKey = profile("ingest", "https://api.healthmd.app");
+    const reusedWrappingKey = profile("account", "https://account.healthmd.app");
     reusedWrappingKey.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({
       "kek-v1": Buffer.alloc(32, 6).toString("base64"),
     });
-    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
       reusedWrappingKey)).status).toBe(500);
 
     const duplicateHistoricalKek = profile("maintenance", "https://maintenance.healthmd.app");
@@ -177,6 +178,14 @@ describe("split production Worker profiles", () => {
     expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
       excessIngestIdentity)).status).toBe(500);
 
+    const excessIngestLegacyKey = profile("ingest", "https://api.healthmd.app");
+    excessIngestLegacyKey.EXPORT_ENCRYPTION_KEYS_JSON = JSON.stringify({
+      v1: Buffer.alloc(32, 6).toString("base64"),
+    });
+    excessIngestLegacyKey.CURRENT_EXPORT_KEY_ID = "v1";
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
+      excessIngestLegacyKey)).status).toBe(500);
+
     const noLifecycleQueue = profile("account", "https://account.healthmd.app");
     noLifecycleQueue.LIFECYCLE_QUEUE = undefined;
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
@@ -212,6 +221,11 @@ describe("split production Worker profiles", () => {
       v1: Buffer.alloc(32, 6).toString("base64"),
     });
     await expect(maintenanceWorker.scheduled({} as ScheduledEvent, excessMaintenanceLegacyKey))
+      .rejects.toThrow("configuration is incomplete");
+
+    const excessMaintenanceLegacyId = profile("maintenance", "https://maintenance.healthmd.app");
+    excessMaintenanceLegacyId.CURRENT_EXPORT_KEY_ID = "v1";
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, excessMaintenanceLegacyId))
       .rejects.toThrow("configuration is incomplete");
 
     const unapprovedRepair = profile("account", "https://account.healthmd.app");

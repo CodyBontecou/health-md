@@ -45,6 +45,8 @@ for (const [file, profile, entry] of profiles) {
   if (profile === "ingest") {
     requireText(text, 'INGEST_TOKEN_HOURLY_LIMIT = "120"', file);
     requireText(text, 'INGEST_ACCOUNT_HOURLY_LIMIT = "240"', file);
+    requireText(text, "Ingest must not receive legacy EXPORT_ENCRYPTION_KEYS_JSON/CURRENT_EXPORT_KEY_ID authority", file);
+    forbid(text, /^CURRENT_EXPORT_KEY_ID\s*=/mu, file);
     forbid(text, /^\[assets\]$/mu, file);
     forbid(text, /^\[\[queues\./mu, file);
     forbid(text, /^binding\s*=\s*"LIFECYCLE_QUEUE"$/mu, file);
@@ -59,6 +61,8 @@ for (const [file, profile, entry] of profiles) {
     requireText(text, 'EXPORT_ENDPOINT_ORIGIN = "https://api.healthmd.app"', file);
     requireText(text, 'EMAIL_SEND_HOURLY_LIMIT = "100"', file);
     requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
+    requireText(text, 'CURRENT_EXPORT_KEY_ID = "v1"', file);
+    requireText(text, "EXPORT_ENCRYPTION_KEYS_JSON (legacy-read compatibility during migration)", file);
     requireText(text, "Split production rejects raw AUTH_INVITE_EMAILS configuration", file);
     forbid(text, /^AUTH_INVITE_EMAILS\s*=/mu, file);
     forbid(text, /^\[\[queues\.consumers\]\]$/mu, file);
@@ -73,6 +77,8 @@ for (const [file, profile, entry] of profiles) {
     requireText(text, 'AUDIT_RETENTION_DAYS = "365"', file);
     requireText(text, "privacy/legal/operations must approve", file);
     requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
+    requireText(text, "Maintenance must not receive legacy EXPORT_ENCRYPTION_KEYS_JSON/CURRENT_EXPORT_KEY_ID authority", file);
+    forbid(text, /^CURRENT_EXPORT_KEY_ID\s*=/mu, file);
     forbid(text, /^\[assets\]$/mu, file);
     requireText(entrySource, "validateConfiguration(env)", entry);
     requireText(entrySource, "message.retry()", entry);
@@ -105,6 +111,10 @@ const requiredEvidence = [
   "src/upload-intents.ts", "src/account-export-keys.ts", "src/telemetry.ts",
 ];
 for (const path of requiredEvidence) read(path);
+const accountKeySource = read("src/account-export-keys.ts");
+requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
+requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',
+  "legacy account-read key path");
 const authSource = read("src/auth.ts");
 for (const fragment of [
   'keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1")',
@@ -118,6 +128,10 @@ for (const fragment of [
   "ORDER BY completed_at, id LIMIT ?",
 ]) requireText(lifecycleSource, fragment, "bounded deletion-receipt cleanup");
 const indexSource = read("src/index.ts");
+requireText(indexSource, '(profile === "ingest" || profile === "maintenance") &&',
+  "legacy decrypt authority rejection");
+requireText(indexSource, '!!env.EXPORT_ENCRYPTION_KEYS_JSON || !!env.CURRENT_EXPORT_KEY_ID',
+  "legacy decrypt authority rejection");
 requireText(indexSource, "phase(() => purgeExpiredAuthState(env))", "scheduled bounded auth cleanup");
 requireText(indexSource, "phase(() => purgeExpiredDeletionReceipts(env))", "scheduled bounded receipt cleanup");
 const repairDraftSource = read("src/repair-drafts.ts");
