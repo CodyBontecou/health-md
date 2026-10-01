@@ -1,3 +1,4 @@
+import { deleteExportObjectExactly } from "./export-object-deletion";
 import type { Env } from "./types";
 
 const CURSOR_NAME = "r2-orphan-scan-v1";
@@ -6,27 +7,6 @@ const OBJECT_KEY = /^v1\/[a-f0-9-]{36}$/u;
 interface CursorRow {
   cursorValue: string;
   updatedAt: string;
-}
-
-async function verifyAndDeleteOrphan(env: Env, key: string): Promise<void> {
-  let deletionFailure: unknown;
-  try {
-    await env.EXPORTS.delete(key);
-  } catch (error) {
-    // R2 may have committed a delete before its response was lost. Verify the
-    // exact key without materializing ciphertext.
-    deletionFailure = error;
-  }
-  let durable: R2Object | null;
-  try {
-    durable = await env.EXPORTS.head(key);
-  } catch {
-    throw new Error("R2 orphan deletion verification is unavailable");
-  }
-  if (durable) {
-    if (deletionFailure) throw deletionFailure;
-    throw new Error("Orphan export object was not removed");
-  }
 }
 
 async function advanceCursor(
@@ -100,7 +80,7 @@ export async function reconcileOrphanExportObjects(
     if (reference.referenced === 1) continue;
     // Every normal write creates its random-key intent before R2. Therefore an
     // unreferenced exact v1 key cannot become a legitimate write concurrently.
-    await verifyAndDeleteOrphan(env, object.key);
+    await deleteExportObjectExactly(env, object.key);
     removed += 1;
   }
   const nextCursor = page.truncated ? page.cursor ?? "" : "";

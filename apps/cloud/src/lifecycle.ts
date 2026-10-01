@@ -1,4 +1,5 @@
 import { sha256Hex } from "./crypto";
+import { deleteExportObjectExactly } from "./export-object-deletion";
 import { assertSameOrigin, HttpError, json, parsePositiveInteger, readJson } from "./http";
 import { verifyAccountPassword } from "./password";
 import type { Env, LifecycleMessage, SessionUser } from "./types";
@@ -133,7 +134,7 @@ export async function processAccountDeletionById(env: Env, deletionId: string, p
     "SELECT id, object_key AS objectKey FROM exports WHERE user_id = ? ORDER BY received_at LIMIT ?",
   ).bind(job.userId, perJob).all<ExportObjectRow>();
   for (const entry of exports.results) {
-    await env.EXPORTS.delete(entry.objectKey);
+    await deleteExportObjectExactly(env, entry.objectKey);
     await env.DB.prepare("DELETE FROM exports WHERE id = ? AND user_id = ?")
       .bind(entry.id, job.userId).run();
   }
@@ -142,7 +143,7 @@ export async function processAccountDeletionById(env: Env, deletionId: string, p
      WHERE user_id = ? AND state IN ('reserved', 'object_written', 'aborting') ORDER BY created_at LIMIT ?`,
   ).bind(job.userId, perJob).all<ExportObjectRow>();
   for (const entry of intents.results) {
-    await env.EXPORTS.delete(entry.objectKey);
+    await deleteExportObjectExactly(env, entry.objectKey);
     await env.DB.prepare(
       "DELETE FROM upload_intents WHERE id = ? AND user_id = ? AND state IN ('reserved', 'object_written', 'aborting')",
     ).bind(entry.id, job.userId).run();
@@ -260,7 +261,7 @@ export async function purgeArchivedRevisions(env: Env, retentionDays: number, li
     removed += 1;
     // Failure leaves an encrypted orphan for reconciliation, never a live
     // primary/supplement pointer with missing ciphertext.
-    await env.EXPORTS.delete(row.objectKey);
+    await deleteExportObjectExactly(env, row.objectKey);
   }
   return removed;
 }

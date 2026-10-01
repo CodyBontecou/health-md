@@ -54,7 +54,7 @@ Run at the approved interval and after storage/migration/key/region changes:
 
 ## Deletion and retention
 
-Primary account deletion is ciphertext-first and immediate authority revocation. Recovery media/PITR may retain deleted ciphertext until the disclosed expiry. The product/privacy owners must set and publish that maximum, and restore automation must replay deletion tombstones/jobs so a restore does not make deleted data active. A key must not be destroyed until references are zero in primary and restored evidence and the recovery window has expired; conversely, key retention must not exceed the approved legal/security policy without escalation.
+Primary account deletion is ciphertext-first and immediate authority revocation. Source paths verify exact-key absence through metadata-only R2 reads before erasing account/intent metadata; unreadable or false-success outcomes remain retryable rather than claiming deletion. Recovery media/PITR may retain deleted ciphertext until the disclosed expiry. The product/privacy owners must set and publish that maximum, and restore automation must replay deletion tombstones/jobs so a restore does not make deleted data active. A key must not be destroyed until references are zero in primary and restored evidence and the recovery window has expired; conversely, key retention must not exceed the approved legal/security policy without escalation.
 
 ## Blocked decisions
 

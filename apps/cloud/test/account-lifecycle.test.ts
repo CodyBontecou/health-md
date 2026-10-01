@@ -289,6 +289,45 @@ it("retries idempotently when deletion-completion verification is unavailable", 
   } finally { db.close(); }
 });
 
+it("keeps account metadata until ciphertext deletion is exactly verified", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    const exportId = randomUUID();
+    const objectKey = `v1/${randomUUID()}`;
+    const now = new Date().toISOString();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare("INSERT INTO account_deletions (id, user_id, requested_at) VALUES (?, ?, ?)")
+      .run(jobId, userId, now);
+    db.connection.prepare(`INSERT INTO exports
+      (id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
+       envelope_schema_version, daily_record_schema_version, source, exported_at, received_at,
+       date_start, date_end, record_count, failure_count, external_record_count)
+      VALUES (?, ?, ?, 'v1', ?, 3, 1, 1, 'ios', ?, ?, '2026-01-01', '2026-01-01', 1, 0, 0)`)
+      .run(exportId, userId, objectKey, "a".repeat(64), now, now);
+    await env.EXPORTS.put(objectKey, new Uint8Array([1, 2, 3]));
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "delete") return async () => undefined;
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Encrypted export object was not removed",
+    );
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM exports WHERE id = ?").get(exportId))
+      .toEqual({ count: 1 });
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "disabled" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
+    expect(await objects.get(objectKey)).not.toBeNull();
+    env.EXPORTS = objects;
+    expect(await processAccountDeletionById(env, jobId)).toBe(true);
+    expect(await objects.get(objectKey)).toBeNull();
+  } finally { db.close(); }
+});
+
 it("does not let one scheduled deletion failure starve another account", async () => {
   const { env, db, userId: firstUserId } = await setup();
   try {

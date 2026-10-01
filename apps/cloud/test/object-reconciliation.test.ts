@@ -130,7 +130,7 @@ it("does not advance after a false-success or unreadable R2 delete", async () =>
       delete: async () => undefined,
       head: async () => ({ key }),
     } as unknown as R2Bucket;
-    await expect(reconcileOrphanExportObjects(env)).rejects.toThrow("Orphan export object was not removed");
+    await expect(reconcileOrphanExportObjects(env)).rejects.toThrow("Encrypted export object was not removed");
     expect(db.connection.prepare("SELECT COUNT(*) AS count FROM maintenance_cursors").get())
       .toEqual({ count: 0 });
 
@@ -140,7 +140,7 @@ it("does not advance after a false-success or unreadable R2 delete", async () =>
       head: async () => { throw new Error("synthetic R2 head outage"); },
     } as unknown as R2Bucket;
     await expect(reconcileOrphanExportObjects(env)).rejects.toThrow(
-      "R2 orphan deletion verification is unavailable",
+      "Encrypted export object deletion verification is unavailable",
     );
     expect(db.connection.prepare("SELECT COUNT(*) AS count FROM maintenance_cursors").get())
       .toEqual({ count: 0 });
@@ -412,7 +412,7 @@ it("does not advance the cursor after delete failure or touch unexpected keys", 
       delete: async () => { throw new Error("synthetic R2 delete failure"); },
       head: async () => ({ key: failedKey }),
     } as unknown as R2Bucket;
-    await expect(reconcileOrphanExportObjects(env)).rejects.toThrow("synthetic R2 delete failure");
+    await expect(reconcileOrphanExportObjects(env)).rejects.toThrow("Encrypted export object was not removed");
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM maintenance_cursors").get())
       .toMatchObject({ n: 0 });
 

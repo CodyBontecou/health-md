@@ -511,6 +511,33 @@ it("reconciles lost cleanup-claim and intent-delete responses exactly", async ()
   } finally { db.close(); }
 });
 
+it("keeps an aborting reservation until ciphertext absence is verified", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const intent = await reserveUploadIntent(env, principal, "c".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "delete") return async () => undefined;
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    await expect(abandonUploadIntent(env, intent)).rejects.toThrow(
+      "Encrypted export object was not removed",
+    );
+    expect(db.connection.prepare("SELECT state FROM upload_intents WHERE id = ?").get(intent.id))
+      .toEqual({ state: "aborting" });
+    expect(db.connection.prepare("SELECT reserved_bytes AS reservedBytes FROM account_storage WHERE user_id = ?")
+      .get(principal.userId)).toEqual({ reservedBytes: 3 });
+    expect(await objects.get(intent.objectKey)).not.toBeNull();
+    env.EXPORTS = objects;
+    await expect(abandonUploadIntent(env, intent)).resolves.toBeUndefined();
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents WHERE id = ?")
+      .get(intent.id)).toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
 it("does not report abandonment while deletion or verification is unreadable", async () => {
   const { env, db } = setup();
   try {

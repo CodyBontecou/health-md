@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { lstat, mkdir, open, readFile, readdir, rename, unlink } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, readdir, rename, stat, unlink } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -190,6 +190,16 @@ export class VmObjectStore {
     return { size: bytes.byteLength, arrayBuffer: async () => Uint8Array.from(bytes).buffer };
   }
 
+  async head(key: string): Promise<{ key: string; size: number } | null> {
+    try {
+      const info = await stat(this.path(key));
+      return { key, size: info.size };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
   async delete(key: string): Promise<void> {
     try { await unlink(this.path(key)); }
     catch (error) {
@@ -214,7 +224,7 @@ export class VmObjectStore {
     this.assertSafeDirectory(directory);
     const rows = await db.prepare(`SELECT object_key AS objectKey FROM exports
       UNION SELECT object_key AS objectKey FROM upload_intents
-      WHERE state IN ('reserved', 'object_written')`).all<{ objectKey: string }>();
+      WHERE state IN ('reserved', 'object_written', 'aborting')`).all<{ objectKey: string }>();
     const expected = new Set(rows.results.map(({ objectKey }) => {
       this.path(objectKey);
       return objectKey.slice(3);

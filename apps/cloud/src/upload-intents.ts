@@ -1,3 +1,4 @@
+import { deleteExportObjectExactly } from "./export-object-deletion";
 import { HttpError } from "./http";
 import type { Env, IngestPrincipal } from "./types";
 
@@ -268,7 +269,7 @@ async function claimIntentForCleanup(
 async function deleteAbortingIntent(env: Env, row: CleanupIntentRow): Promise<void> {
   // Claiming `aborting` first prevents object-written/final-commit transitions.
   // Keep the row and reservation until the possibly-written object is gone.
-  await env.EXPORTS.delete(row.objectKey);
+  await deleteExportObjectExactly(env, row.objectKey);
   try {
     await env.DB.prepare("DELETE FROM upload_intents WHERE id = ? AND state = 'aborting'")
       .bind(row.id).run();
@@ -469,7 +470,7 @@ export async function abandonUploadIntent(env: Env, intent: UploadIntent): Promi
     // Expiry cleanup may already have removed the row before a slow writer put
     // its object. With export insertion gated on an active intent, this key can
     // only be an orphan and is safe to delete.
-    await env.EXPORTS.delete(intent.objectKey);
+    await deleteExportObjectExactly(env, intent.objectKey);
     return;
   }
   if (claimed.objectKey !== intent.objectKey) throw new Error("Upload-intent cleanup object is inconsistent");

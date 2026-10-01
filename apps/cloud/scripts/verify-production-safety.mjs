@@ -176,10 +176,21 @@ requireText(exportsSource, "if (!admissionConsumed) await releaseUploadAdmission
   "pre-intent admission release");
 requireText(exportsSource, "AND EXISTS (SELECT 1 FROM upload_intents i", "active-intent export commit gate");
 requireText(exportsSource, "i.state IN ('reserved', 'object_written')", "active-intent export commit gate");
+const vmStorageSource = read("vm/storage.ts");
+requireText(vmStorageSource, "async head(key: string)", "VM metadata-only ciphertext verification");
+requireText(vmStorageSource, "state IN ('reserved', 'object_written', 'aborting')",
+  "VM reconciliation preserves aborting ciphertext");
+const objectDeletionSource = read("src/export-object-deletion.ts");
+for (const fragment of [
+  "await env.EXPORTS.delete(objectKey)", "await env.EXPORTS.head(objectKey)",
+  "Encrypted export object deletion verification is unavailable",
+  "Encrypted export object was not removed",
+]) requireText(objectDeletionSource, fragment, "exact ciphertext deletion");
+requireText(uploadIntentSource, "await deleteExportObjectExactly(env, row.objectKey)",
+  "ciphertext-first upload-intent cleanup");
 const objectReconciliationSource = read("src/object-reconciliation.ts");
 for (const fragment of [
-  "await env.EXPORTS.head(key)", "R2 orphan deletion verification is unavailable",
-  "Orphan export object was not removed", "R2 orphan reference verification is unavailable",
+  "deleteExportObjectExactly(env, object.key)", "R2 orphan reference verification is unavailable",
   "WHERE name = ? AND cursor_value = ? AND updated_at = ?",
   "R2 reconciliation cursor verification is unavailable",
   "R2 reconciliation cursor was not advanced", "R2 reconciliation cursor did not progress",
@@ -208,6 +219,22 @@ for (const fragment of [
 ]) requireText(lifecycleSource, fragment, "bounded deletion-receipt cleanup");
 requireText(lifecycleSource, "state IN ('reserved', 'object_written', 'aborting')",
   "account deletion includes claimed upload cleanup");
+requireText(lifecycleSource, "await deleteExportObjectExactly(env, entry.objectKey)",
+  "ciphertext-first account deletion");
+requireText(lifecycleSource, "await deleteExportObjectExactly(env, row.objectKey)",
+  "exact retained-revision ciphertext deletion");
+const deletionFunction = lifecycleSource.slice(lifecycleSource.indexOf("export async function processAccountDeletionById"));
+if (deletionFunction.indexOf("deleteExportObjectExactly(env, entry.objectKey)") < 0 ||
+    deletionFunction.indexOf("DELETE FROM exports WHERE id = ? AND user_id = ?") <
+      deletionFunction.indexOf("deleteExportObjectExactly(env, entry.objectKey)")) {
+  failures.push("lifecycle.ts: account metadata may be removed before verified ciphertext deletion");
+}
+const abortingCleanup = uploadIntentSource.slice(uploadIntentSource.indexOf("async function deleteAbortingIntent"));
+if (abortingCleanup.indexOf("deleteExportObjectExactly(env, row.objectKey)") < 0 ||
+    abortingCleanup.indexOf("DELETE FROM upload_intents WHERE id = ? AND state = 'aborting'") <
+      abortingCleanup.indexOf("deleteExportObjectExactly(env, row.objectKey)")) {
+  failures.push("upload-intents.ts: reservation may be released before verified ciphertext deletion");
+}
 const indexSource = read("src/index.ts");
 requireText(indexSource, '(profile === "ingest" || profile === "maintenance") &&',
   "legacy decrypt authority rejection");
