@@ -614,6 +614,11 @@
     <string name="profile_schedule_refresh_interval">Intervalo de atualização</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Atualiza hoje a cada %1$d h</string>
+    <string name="profile_schedule_discard_recovery">Descartar recuperação pendente</string>
+    <string name="profile_schedule_discard_recovery_named">Descartar a recuperação pendente de %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Descartar a recuperação pendente de %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Interrompa a nova tentativa agendada deste perfil e esqueça as datas pendentes e as configurações de exportação congeladas. A próxima execução agendada usará o perfil e o agendamento atuais. Seu perfil, as credenciais da API, o histórico de exportação e os dados já exportados serão mantidos. Isso não pode desfazer um upload ou um arquivo que já tenha sido gravado.</string>
+    <string name="profile_schedule_discard_recovery_failed">Não foi possível descartar completamente a recuperação pendente. Verifique o perfil e tente novamente.</string>
     <string name="schedule_date_window_today">Hoje</string>
     <string name="schedule_export_past_days">Exportar dias anteriores</string>
     <string name="schedule_today_summary">Cada execução exporta os dados de hoje para manter seu arquivo diário atualizado. Use o modo de gravação Sobrescrever ou Atualizar para evitar conteúdo duplicado do mesmo dia.</string>

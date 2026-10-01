@@ -496,6 +496,11 @@
     <string name="profile_schedule_refresh_interval">ਰਿਫਰੈਸ਼ ਅੰਤਰਾਲ</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ਘੰਟੇ</string>
     <string name="profile_schedule_refresh_summary">ਅੱਜ ਹਰ %1$d ਘੰਟੇ ਬਾਅਦ ਰਿਫਰੈਸ਼ ਕਰਦਾ ਹੈ</string>
+    <string name="profile_schedule_discard_recovery">ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s ਲਈ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s ਲਈ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰਨੀ ਹੈ?</string>
+    <string name="profile_schedule_discard_recovery_body">ਇਸ ਪ੍ਰੋਫਾਈਲ ਦੀ ਨਿਯਤ ਮੁੜ-ਕੋਸ਼ਿਸ਼ ਰੋਕੋ ਅਤੇ ਇਸ ਦੀਆਂ ਬਕਾਇਆ ਮਿਤੀਆਂ ਅਤੇ ਜਮੀਆਂ ਹੋਈਆਂ ਐਕਸਪੋਰਟ ਸੈਟਿੰਗਾਂ ਭੁੱਲ ਜਾਓ। ਅਗਲੀ ਨਿਯਤ ਕਾਰਵਾਈ ਮੌਜੂਦਾ ਪ੍ਰੋਫਾਈਲ ਅਤੇ ਸਮਾਂ-ਸਾਰਣੀ ਵਰਤੇਗੀ। ਤੁਹਾਡਾ ਪ੍ਰੋਫਾਈਲ, API ਪ੍ਰਮਾਣ-ਪੱਤਰ, ਐਕਸਪੋਰਟ ਇਤਿਹਾਸ ਅਤੇ ਪਹਿਲਾਂ ਹੀ ਐਕਸਪੋਰਟ ਕੀਤਾ ਡਾਟਾ ਬਰਕਰਾਰ ਰਹੇਗਾ। ਇਹ ਪਹਿਲਾਂ ਹੀ ਹੋਏ ਅੱਪਲੋਡ ਜਾਂ ਲਿਖੀ ਗਈ ਫਾਈਲ ਨੂੰ ਵਾਪਸ ਨਹੀਂ ਕਰ ਸਕਦਾ।</string>
+    <string name="profile_schedule_discard_recovery_failed">ਬਕਾਇਆ ਰਿਕਵਰੀ ਪੂਰੀ ਤਰ੍ਹਾਂ ਰੱਦ ਨਹੀਂ ਕੀਤੀ ਜਾ ਸਕੀ। ਪ੍ਰੋਫਾਈਲ ਦੀ ਜਾਂਚ ਕਰੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="schedule_date_window_today">ਅੱਜ</string>
     <string name="schedule_export_past_days">ਪਿਛਲੇ ਦਿਨਾਂ ਨੂੰ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="schedule_today_summary">ਹਰ ਵਾਰ ਅੱਜ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ, ਤਾਂ ਜੋ ਮੌਜੂਦਾ ਰੋਜ਼ਾਨਾ ਫਾਈਲ ਅੱਪ-ਟੂ-ਡੇਟ ਰਹੇ। ਇੱਕੋ ਦਿਨ ਦੀ ਸਮੱਗਰੀ ਦੋ ਵਾਰ ਜੁੜਨ ਤੋਂ ਬਚਾਉਣ ਲਈ Overwrite ਜਾਂ Update ਲਿਖਣ ਮੋਡ ਵਰਤੋ।</string>

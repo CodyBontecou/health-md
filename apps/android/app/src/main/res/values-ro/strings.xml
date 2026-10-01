@@ -614,6 +614,11 @@
     <string name="profile_schedule_refresh_interval">Interval de reîmprospătare</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Reîmprospătează astăzi la fiecare %1$d h</string>
+    <string name="profile_schedule_discard_recovery">Renunță la recuperarea în așteptare</string>
+    <string name="profile_schedule_discard_recovery_named">Renunță la recuperarea în așteptare pentru %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Renunți la recuperarea în așteptare pentru %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Oprește reîncercarea programată a acestui profil și uită datele în așteptare și setările de export înghețate. Următoarea rulare programată va folosi profilul și programarea curente. Profilul, acreditările API, istoricul exporturilor și datele deja exportate vor fi păstrate. Această acțiune nu poate anula o încărcare sau un fișier deja scris.</string>
+    <string name="profile_schedule_discard_recovery_failed">Recuperarea în așteptare nu a putut fi eliminată complet. Verifică profilul și încearcă din nou.</string>
     <string name="schedule_date_window_today">Astăzi</string>
     <string name="schedule_export_past_days">Exportați zilele trecute</string>
     <string name="schedule_today_summary">Fiecare executare exportă datele de astăzi, astfel încât fișierul zilnic curent să rămână actualizat. Utilizați modul de scriere Suprascriere sau Actualizare pentru a evita conținutul duplicat din aceeași zi.</string>

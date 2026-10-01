@@ -81,6 +81,10 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
 
     private func openProtectedDefaultProfileDetail(_ app: XCUIApplication) {
         openProfilesManagementSheet(app)
+        openDefaultProfileDetailFromManagement(app)
+    }
+
+    private func openDefaultProfileDetailFromManagement(_ app: XCUIApplication) {
         let defaultRow = app.buttons["export.profiles.row.Default"]
         XCTAssertTrue(waitHittable(defaultRow), "The Default profile row should be tappable")
         defaultRow.tap()
@@ -91,12 +95,21 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
     }
 
     /// UI tests deliberately pin protection toasts so loaded runners cannot
-    /// miss their hittable window. Relaunch between independent blocked-action
-    /// assertions so the prior toast cannot cover or delay the next control.
-    private func relaunchProtectedDefaultProfileDetail(_ app: XCUIApplication) {
-        app.terminate()
-        app.launch()
+    /// miss their hittable window. Follow the toast's supported Settings route,
+    /// then reopen the detail before testing another independent blocked action.
+    private func followProtectionToastAndReopenDetail(_ app: XCUIApplication) -> Bool {
+        guard let toast = waitForHittableToast(in: app) else {
+            XCTFail("A blocked profile action must show a tappable protection toast")
+            return false
+        }
+        toast.tap()
+        guard app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
+            .waitForExistence(timeout: 5) else {
+            XCTFail("The protection toast must route to the protection setting")
+            return false
+        }
         openProtectedDefaultProfileDetail(app)
+        return true
     }
 
     func testBlockedChangeToastNavigatesToProtectionToggle() {
@@ -240,6 +253,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
     }
 
     func testProtectedProfileDetailActionsAreBlocked() {
+        executionTimeAllowance = 300
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
             vaultSelected: true,
@@ -258,16 +272,16 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         delete.tap()
         XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
 
-        relaunchProtectedDefaultProfileDetail(app)
+        // Return to a fresh top-of-detail position after the delete assertion.
+        app.navigationBars.buttons.firstMatch.tap()
+        openDefaultProfileDetailFromManagement(app)
 
         // Editing the frozen snapshot is rejected with the shared toast.
         let editButton = app.buttons["export.profiles.edit.button"]
         XCTAssertTrue(waitHittable(editButton))
         editButton.tap()
-        XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.navigationBars["Edit Profile"].waitForExistence(timeout: 1))
-
-        relaunchProtectedDefaultProfileDetail(app)
+        guard followProtectionToastAndReopenDetail(app) else { return }
 
         // Schedule editing never opens the cadence sheet.
         let editSchedule = app.buttons["Edit Schedule…"]
@@ -276,19 +290,15 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             "The Edit Schedule action should be reachable in the scrollable profile detail"
         )
         editSchedule.tap()
-        XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.switches["Enabled"].waitForExistence(timeout: 1))
-
-        relaunchProtectedDefaultProfileDetail(app)
+        guard followProtectionToastAndReopenDetail(app) else { return }
 
         // Duplicating is rejected without creating a copy.
         let duplicate = app.buttons["Duplicate"]
         XCTAssertTrue(scrollUntilHittable(duplicate, in: app), "The Duplicate action should be reachable")
         duplicate.tap()
-        XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.buttons["export.profiles.row.Default 2"].waitForExistence(timeout: 1))
-
-        relaunchProtectedDefaultProfileDetail(app)
+        guard followProtectionToastAndReopenDetail(app) else { return }
 
         // Renaming never presents the rename alert.
         let rename = app.buttons["Rename…"]
