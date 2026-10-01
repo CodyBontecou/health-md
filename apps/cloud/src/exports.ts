@@ -6,7 +6,8 @@ import { assertJsonContentType, HttpError, json, parsePositiveInteger, readBound
 import { parseRepairSpec, type RepairDraftSpec } from "./repair-drafts";
 import { encryptSupplementSpec, supplementScopeDigest } from "./repair-supplements";
 import { abandonUploadIntent, acquireUploadAdmission, commitUploadIntentStatement,
-  markUploadObjectWritten, releaseUploadAdmission, reserveUploadIntent } from "./upload-intents";
+  markUploadObjectWritten, releaseUploadAdmission, renewUploadAdmission,
+  reserveUploadIntent } from "./upload-intents";
 import type { Env, EnvelopeInfo } from "./types";
 
 interface ExportRow {
@@ -72,7 +73,8 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
   const admission = await acquireUploadAdmission(env, principal);
   let admissionConsumed = false;
   try {
-  const body = await readBoundedBody(request, maximumBytes);
+  const body = await readBoundedBody(request, maximumBytes, Date.parse(admission.expiresAt));
+  await renewUploadAdmission(env, admission);
   let info: EnvelopeInfo;
   try {
     info = parseAndValidateEnvelope(body);

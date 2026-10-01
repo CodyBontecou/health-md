@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { createVmEnvironment } from "../vm/runtime";
 import { abandonUploadIntent, acquireUploadAdmission, markUploadObjectWritten,
   reconcileUploadAdmissions, reconcileUploadIntents,
-  releaseUploadAdmission, reserveUploadIntent as reserveWithAdmission,
+  releaseUploadAdmission, renewUploadAdmission, reserveUploadIntent as reserveWithAdmission,
   uploadIntentPolicy } from "../src/upload-intents";
 import type { IngestPrincipal } from "../src/types";
 
@@ -66,6 +66,9 @@ function reservationDatabase(original: D1Database, options: {
   completedDelete?: "normal" | "lost_response" | "false_success";
   failCleanupClaimVerification?: boolean;
   failIntentDeleteVerification?: boolean;
+  admissionRenewal?: "normal" | "lost_response" | "false_success";
+  failAdmissionRenewalVerification?: boolean;
+  renewSelectedAdmissionTo?: string;
 }): D1Database {
   return new Proxy(original, { get(target, property) {
     if (property !== "prepare") {
@@ -82,6 +85,17 @@ function reservationDatabase(original: D1Database, options: {
         return (...values: unknown[]) => {
           const bound = prepared.bind(...values);
           return new Proxy(bound, { get(boundStatement, boundProperty) {
+            if (boundProperty === "all" && options.renewSelectedAdmissionTo &&
+                query.includes("SELECT id, expires_at AS expiresAt FROM upload_admissions")) {
+              return async () => {
+                const selected = await boundStatement.all<{ id: string }>();
+                for (const row of selected.results) {
+                  await target.prepare("UPDATE upload_admissions SET expires_at = ? WHERE id = ?")
+                    .bind(options.renewSelectedAdmissionTo, row.id).run();
+                }
+                return selected;
+              };
+            }
             if (boundProperty === "run" && query.includes("INSERT INTO upload_intents")) {
               if (options.insert === "false_success") {
                 return async () => target.prepare("SELECT 1").run();
@@ -98,6 +112,15 @@ function reservationDatabase(original: D1Database, options: {
               if (options.admissionInsert === "lost_response") return async () => {
                 await boundStatement.run();
                 throw new Error("synthetic lost upload-admission response");
+              };
+            }
+            if (boundProperty === "run" && query.includes("UPDATE upload_admissions SET expires_at")) {
+              if (options.admissionRenewal === "false_success") {
+                return async () => target.prepare("SELECT 1").run();
+              }
+              if (options.admissionRenewal === "lost_response") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost upload-admission renewal response");
               };
             }
             if (boundProperty === "run" && query.includes("DELETE FROM upload_admissions") &&
@@ -129,6 +152,10 @@ function reservationDatabase(original: D1Database, options: {
                 await boundStatement.run();
                 throw new Error("synthetic lost completed-intent delete response");
               };
+            }
+            if (boundProperty === "first" && options.failAdmissionRenewalVerification &&
+                query.includes("FROM upload_admissions WHERE id = ? LIMIT 1")) {
+              return async () => { throw new Error("synthetic admission-renewal verification outage"); };
             }
             if (boundProperty === "first" && options.failAdmissionVerification &&
                 query.includes("FROM upload_admissions WHERE id = ? LIMIT 1")) {
@@ -192,6 +219,44 @@ it("recovers lost admission insert and release responses", async () => {
     await expect(releaseUploadAdmission(env, admission)).resolves.toBeUndefined();
     expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_admissions").get())
       .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("recovers a lost admission-renewal response by exact read-back", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const admission = await acquireUploadAdmission(env, principal);
+    const now = new Date(Date.parse(admission.createdAt) + 1_000);
+    env.DB = reservationDatabase(env.DB, { admissionRenewal: "lost_response" });
+    const renewed = await renewUploadAdmission(env, admission, now);
+    expect(renewed.expiresAt).toBe(
+      new Date(now.getTime() + uploadIntentPolicy.admissionLeaseMs).toISOString(),
+    );
+    expect(db.connection.prepare("SELECT expires_at AS expiresAt FROM upload_admissions WHERE id = ?")
+      .get(admission.id)).toEqual({ expiresAt: renewed.expiresAt });
+  } finally { db.close(); }
+});
+
+it("withholds an admission after false or unreadable renewal verification", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const admission = await acquireUploadAdmission(env, principal);
+    const original = env.DB;
+    const now = new Date(Date.parse(admission.createdAt) + 1_000);
+    env.DB = reservationDatabase(original, { admissionRenewal: "false_success" });
+    await expect(renewUploadAdmission(env, admission, now))
+      .rejects.toMatchObject({ status: 503, code: "admission_renewal_pending" });
+    expect(db.connection.prepare("SELECT expires_at AS expiresAt FROM upload_admissions WHERE id = ?")
+      .get(admission.id)).toEqual({ expiresAt: admission.expiresAt });
+    env.DB = reservationDatabase(original, { failAdmissionRenewalVerification: true });
+    await expect(renewUploadAdmission(env, admission, now))
+      .rejects.toMatchObject({ status: 503, code: "admission_renewal_pending" });
+    expect(db.connection.prepare("SELECT expires_at AS expiresAt FROM upload_admissions WHERE id = ?")
+      .get(admission.id)).toEqual({
+        expiresAt: new Date(now.getTime() + uploadIntentPolicy.admissionLeaseMs).toISOString(),
+      });
   } finally { db.close(); }
 });
 
@@ -518,6 +583,22 @@ it("reserves quota atomically before writing an object", async () => {
     expect(db.connection.prepare(`SELECT committed_bytes AS committedBytes,
       reserved_bytes AS reservedBytes FROM account_storage WHERE user_id = ?`)
       .get(principal.userId)).toMatchObject({ committedBytes: 0, reservedBytes: 100 });
+  } finally { db.close(); }
+});
+
+it("does not let a stale expiry page delete a concurrently renewed admission", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const admission = await acquireUploadAdmission(env, principal);
+    db.connection.prepare("UPDATE upload_admissions SET created_at = ?, expires_at = ? WHERE id = ?")
+      .run("2019-12-31T00:00:00.000Z", "2020-01-01T00:00:00.000Z", admission.id);
+    const renewedExpiry = "2030-01-01T00:00:00.000Z";
+    env.DB = reservationDatabase(env.DB, { renewSelectedAdmissionTo: renewedExpiry });
+    expect(await reconcileUploadAdmissions(env, 25, new Date("2026-01-01T00:00:00.000Z")))
+      .toBe(0);
+    expect(db.connection.prepare("SELECT expires_at AS expiresAt FROM upload_admissions WHERE id = ?")
+      .get(admission.id)).toEqual({ expiresAt: renewedExpiry });
   } finally { db.close(); }
 });
 

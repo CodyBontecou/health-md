@@ -53,24 +53,41 @@ interface StorageRow {
   quotaBytes: number;
 }
 
-async function deleteAdmissionRows(env: Env, rows: Array<{ id: string }>): Promise<number> {
+interface ExpiredAdmissionRow {
+  id: string;
+  expiresAt: string;
+}
+
+async function deleteAdmissionRows(
+  env: Env,
+  rows: ExpiredAdmissionRow[],
+  expiredBefore: string,
+): Promise<number> {
   let removed = 0;
   for (const row of rows) {
     try {
-      await env.DB.prepare("DELETE FROM upload_admissions WHERE id = ?")
-        .bind(row.id).run();
+      await env.DB.prepare(`DELETE FROM upload_admissions
+        WHERE id = ? AND expires_at = ? AND expires_at <= ?`)
+        .bind(row.id, row.expiresAt, expiredBefore).run();
     } catch {
-      // A lost response may follow a committed delete. Verify absence below.
+      // A lost response may follow a committed delete. Verify state below.
     }
-    let durable: { id: string } | null;
+    let durable: ExpiredAdmissionRow | null;
     try {
-      durable = await env.DB.prepare("SELECT id FROM upload_admissions WHERE id = ?")
-        .bind(row.id).first<{ id: string }>();
+      durable = await env.DB.prepare(
+        "SELECT id, expires_at AS expiresAt FROM upload_admissions WHERE id = ?",
+      ).bind(row.id).first<ExpiredAdmissionRow>();
     } catch {
       throw new Error("Upload admission cleanup verification is unavailable");
     }
-    if (durable) throw new Error("Expired upload admission was not removed");
-    removed += 1;
+    if (!durable) {
+      removed += 1;
+      continue;
+    }
+    // A body reader may renew after the bounded expiry page is selected.
+    // Stale cleanup must not remove its live slot.
+    if (durable.expiresAt !== row.expiresAt || durable.expiresAt > expiredBefore) continue;
+    throw new Error("Expired upload admission was not removed");
   }
   return removed;
 }
@@ -80,10 +97,10 @@ async function reconcileAccountUploadAdmissions(
   userId: string,
   now: string,
 ): Promise<number> {
-  const rows = await env.DB.prepare(`SELECT id FROM upload_admissions
+  const rows = await env.DB.prepare(`SELECT id, expires_at AS expiresAt FROM upload_admissions
     WHERE user_id = ? AND expires_at <= ? ORDER BY expires_at, id LIMIT 4`)
-    .bind(userId, now).all<{ id: string }>();
-  return deleteAdmissionRows(env, rows.results);
+    .bind(userId, now).all<ExpiredAdmissionRow>();
+  return deleteAdmissionRows(env, rows.results, now);
 }
 
 async function classifyAdmissionFailure(
@@ -146,6 +163,45 @@ export async function acquireUploadAdmission(
   }
   if (durable) throw new Error("Upload admission durable state is inconsistent");
   return classifyAdmissionFailure(env, principal, createdAt);
+}
+
+export async function renewUploadAdmission(
+  env: Env,
+  admission: UploadAdmission,
+  now = new Date(),
+): Promise<UploadAdmission> {
+  const renewed: UploadAdmission = {
+    ...admission,
+    expiresAt: new Date(now.getTime() + ADMISSION_LEASE_MS).toISOString(),
+  };
+  const nowText = now.toISOString();
+  try {
+    await env.DB.prepare(`UPDATE upload_admissions SET expires_at = ?
+      WHERE id = ? AND user_id = ? AND token_id = ? AND created_at = ?
+        AND expires_at = ? AND expires_at > ?`)
+      .bind(renewed.expiresAt, admission.id, admission.userId, admission.tokenId,
+        admission.createdAt, admission.expiresAt, nowText).run();
+  } catch {
+    // A response may be lost after the renewal commits. Verify exact state.
+  }
+  let durable: UploadAdmission | null;
+  try {
+    durable = await env.DB.prepare(`SELECT id, user_id AS userId, token_id AS tokenId,
+      created_at AS createdAt, expires_at AS expiresAt
+      FROM upload_admissions WHERE id = ? LIMIT 1`)
+      .bind(admission.id).first<UploadAdmission>();
+  } catch {
+    throw new HttpError(503, "admission_renewal_pending",
+      "Upload admission renewal could not be verified. Retry shortly.");
+  }
+  if (durable?.userId === renewed.userId && durable.tokenId === renewed.tokenId &&
+      durable.createdAt === renewed.createdAt && durable.expiresAt === renewed.expiresAt) return renewed;
+  if (durable && (durable.userId !== admission.userId || durable.tokenId !== admission.tokenId ||
+      durable.createdAt !== admission.createdAt)) {
+    throw new Error("Upload admission durable state is inconsistent");
+  }
+  throw new HttpError(503, "admission_renewal_pending",
+    "Upload admission renewal could not be verified. Retry shortly.");
 }
 
 export async function releaseUploadAdmission(env: Env, admission: UploadAdmission): Promise<void> {
@@ -443,10 +499,11 @@ export async function reconcileUploadAdmissions(
   now = new Date(),
 ): Promise<number> {
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Invalid upload-admission limit");
-  const rows = await env.DB.prepare(`SELECT id FROM upload_admissions
+  const expiredBefore = now.toISOString();
+  const rows = await env.DB.prepare(`SELECT id, expires_at AS expiresAt FROM upload_admissions
     WHERE expires_at <= ? ORDER BY expires_at, id LIMIT ?`)
-    .bind(now.toISOString(), limit).all<{ id: string }>();
-  return deleteAdmissionRows(env, rows.results);
+    .bind(expiredBefore, limit).all<ExpiredAdmissionRow>();
+  return deleteAdmissionRows(env, rows.results, expiredBefore);
 }
 
 export async function reconcileUploadIntents(

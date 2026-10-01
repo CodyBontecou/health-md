@@ -138,6 +138,32 @@ describe("Worker deployment and request policy", () => {
     });
   });
 
+  it("cancels a stalled body at its upload-admission deadline", async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      cancel() { cancelled = true; },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readBoundedBody(request, 1024, Date.now() + 10)).rejects.toMatchObject({
+      status: 408, code: "request_timeout",
+    });
+    expect(cancelled).toBe(true);
+  });
+
+  it("preserves the stable lease timeout when stream cancellation fails", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      cancel() { throw new Error("synthetic cancellation failure"); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readBoundedBody(request, 1024, Date.now() + 10)).rejects.toMatchObject({
+      status: 408, code: "request_timeout",
+    });
+  });
+
   it("rejects malformed UTF-8 after a bounded fragmented read", async () => {
     const body = new ReadableStream<Uint8Array>({
       start(controller) { controller.enqueue(Uint8Array.of(0x7b, 0xc3));

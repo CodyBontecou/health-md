@@ -40,7 +40,7 @@ export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
     return json({ error: error.code, message: error.message }, {
       status: error.status,
-      ...([429, 503].includes(error.status) ? { headers: { "Retry-After": "2" } } : {}),
+      ...([408, 429, 503].includes(error.status) ? { headers: { "Retry-After": "2" } } : {}),
     });
   }
   return json({ error: "internal_error", message: "The request could not be completed." }, { status: 500 });
@@ -63,7 +63,11 @@ export async function readJson<T>(request: Request, maximumBytes = 16_384): Prom
   }
 }
 
-export async function readBoundedBody(request: Request, maximumBytes: number): Promise<Uint8Array> {
+export async function readBoundedBody(
+  request: Request,
+  maximumBytes: number,
+  deadlineEpochMs?: number,
+): Promise<Uint8Array> {
   const declared = request.headers.get("Content-Length");
   if (declared !== null) {
     const length = Number(declared);
@@ -83,7 +87,34 @@ export async function readBoundedBody(request: Request, maximumBytes: number): P
   let total = 0;
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const remainingMs = deadlineEpochMs === undefined ? undefined : deadlineEpochMs - Date.now();
+      if (remainingMs !== undefined && remainingMs <= 0) {
+        try { await reader.cancel(); } catch { /* Preserve the stable lease-timeout error. */ }
+        throw new HttpError(408, "request_timeout", "Export upload exceeded its admission lease.");
+      }
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let timedOut = false;
+      const pendingRead = reader.read();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = remainingMs === undefined ? await pendingRead : await Promise.race([
+          pendingRead,
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => {
+              timedOut = true;
+              reject(new HttpError(408, "request_timeout", "Export upload exceeded its admission lease."));
+            }, remainingMs);
+          }),
+        ]);
+      } catch (error) {
+        if (timedOut) {
+          try { await reader.cancel(); } catch { /* Preserve the stable lease-timeout error. */ }
+        }
+        throw error;
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+      const { done, value } = chunk;
       if (done) break;
       const required = total + value.byteLength;
       if (required > maximumBytes) {

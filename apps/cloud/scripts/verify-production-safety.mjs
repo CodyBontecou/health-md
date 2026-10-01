@@ -131,7 +131,9 @@ for (const route of [/\/api\/auth\/password-login/u, /\/api\/agent-tokens/u,
 const uploadIntentSource = read("src/upload-intents.ts");
 for (const fragment of [
   "INSERT INTO upload_admissions", "FROM upload_admissions WHERE id = ? LIMIT 1",
-  '"admission_verification_pending"', "releaseUploadAdmission",
+  '"admission_verification_pending"', "releaseUploadAdmission", "renewUploadAdmission",
+  '"admission_renewal_pending"', "AND expires_at = ? AND expires_at > ?",
+  "WHERE id = ? AND expires_at = ? AND expires_at <= ?", "durable.expiresAt !== row.expiresAt",
   "ORDER BY expires_at, id LIMIT ?", "Upload admission cleanup verification is unavailable",
 ]) requireText(uploadIntentSource, fragment, "durable pre-body upload admission");
 for (const fragment of [
@@ -155,16 +157,20 @@ for (const fragment of [
   "const initialCapacity = declared === null ? Math.min(maximumBytes, 16 * 1024) : Number(declared)",
   "Math.min(maximumBytes,", "grown.set(buffer.subarray(0, total))",
   "return buffer.subarray(0, total)", "Preserve the stable bounded-body error",
+  "deadlineEpochMs - Date.now()", 'new HttpError(408, "request_timeout"',
+  "Preserve the stable lease-timeout error",
 ]) requireText(httpSource, fragment, "bounded contiguous request body");
 forbid(httpSource, /chunks:\s*Uint8Array\[\]/u, "unbounded fragmented request body");
 const exportsSource = read("src/exports.ts");
 const authenticateIngest = exportsSource.indexOf("requireIngestToken(request, env)");
 const budgetIngest = exportsSource.indexOf("limitIngest(env, principal.tokenId, principal.userId)");
 const acquireAdmission = exportsSource.indexOf("acquireUploadAdmission(env, principal)");
-const materializeBody = exportsSource.indexOf("readBoundedBody(request, maximumBytes)");
+const materializeBody = exportsSource.indexOf("readBoundedBody(request, maximumBytes,");
+const renewAdmission = exportsSource.indexOf("renewUploadAdmission(env, admission)");
+const parseEnvelope = exportsSource.indexOf("parseAndValidateEnvelope(body)");
 if (authenticateIngest < 0 || budgetIngest < authenticateIngest || acquireAdmission < budgetIngest ||
-    materializeBody < acquireAdmission) {
-  failures.push("exports.ts: auth and abuse budget must precede durable admission, which must precede body materialization");
+    materializeBody < acquireAdmission || renewAdmission < materializeBody || parseEnvelope < renewAdmission) {
+  failures.push("exports.ts: auth/budget/admission/body/deadline-renewal/parse ordering is not fail-closed");
 }
 requireText(exportsSource, "if (!admissionConsumed) await releaseUploadAdmission(env, admission)",
   "pre-intent admission release");
