@@ -364,7 +364,7 @@ it("preserves ciphertext when archived-delete verification is unavailable", asyn
             };
           } });
         }
-        if (!query.includes("SELECT 1 AS present FROM exports WHERE id = ?")) return statement;
+        if (!query.includes("SELECT EXISTS(SELECT 1 FROM exports WHERE id = ?) AS present")) return statement;
         return new Proxy(statement, { get(prepared, statementProperty) {
           if (statementProperty !== "bind") {
             const value = Reflect.get(prepared, statementProperty);
@@ -400,6 +400,44 @@ it("preserves ciphertext when archived-delete verification is unavailable", asyn
     } as unknown as R2Bucket;
     expect(await reconcileOrphanExportObjects(env)).toMatchObject({ removed: 1 });
     expect(await objects.get(archived.key)).toBeNull();
+  } finally { db.close(); }
+});
+
+it("preserves archived ciphertext when absence verification returns no row", async () => {
+  const { env, db } = setup();
+  try {
+    const archived = await archivedExport(env, db);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("SELECT EXISTS(SELECT 1 FROM exports WHERE id = ?) AS present")) {
+          return statement;
+        }
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => null;
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(purgeArchivedRevisions(env, 30)).rejects.toThrow(
+      "Archived export deletion verification is unavailable",
+    );
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM exports WHERE id = ?").get(archived.id))
+      .toEqual({ count: 0 });
+    expect(await env.EXPORTS.get(archived.key)).not.toBeNull();
   } finally { db.close(); }
 });
 

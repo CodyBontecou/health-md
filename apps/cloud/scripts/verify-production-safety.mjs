@@ -238,6 +238,10 @@ requireText(lifecycleSource, "await deleteExportObjectExactly(env, entry.objectK
   "ciphertext-first account deletion");
 requireText(lifecycleSource, "await deleteExportObjectExactly(env, row.objectKey)",
   "exact retained-revision ciphertext deletion");
+requireText(lifecycleSource, "SELECT EXISTS(SELECT 1 FROM exports WHERE id = ?) AS present",
+  "non-nullable retained-revision absence proof");
+requireText(lifecycleSource, "if (!retained || ![0, 1].includes(retained.present))",
+  "non-nullable retained-revision absence proof");
 for (const fragment of [
   "SELECT ?, ?, ? WHERE EXISTS", "status = 'disabled'",
   "AS invalidUser", "committed.invalidUser !== 0", "job.invalidUser !== 0",

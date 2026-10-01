@@ -264,14 +264,18 @@ export async function purgeArchivedRevisions(env: Env, retentionDays: number, li
     }
     let retained: { present: number } | null;
     try {
-      retained = await env.DB.prepare("SELECT 1 AS present FROM exports WHERE id = ?")
-        .bind(row.id).first<{ present: number }>();
+      retained = await env.DB.prepare(
+        "SELECT EXISTS(SELECT 1 FROM exports WHERE id = ?) AS present",
+      ).bind(row.id).first<{ present: number }>();
     } catch {
       // An unreadable outcome preserves ciphertext. If metadata committed, the
       // bounded orphan scanner can later remove it after an exact reference check.
       throw new Error("Archived export deletion verification is unavailable");
     }
-    if (retained?.present === 1) continue;
+    if (!retained || ![0, 1].includes(retained.present)) {
+      throw new Error("Archived export deletion verification is unavailable");
+    }
+    if (retained.present === 1) continue;
     removed += 1;
     // Failure leaves an encrypted orphan for reconciliation, never a live
     // primary/supplement pointer with missing ciphertext.
