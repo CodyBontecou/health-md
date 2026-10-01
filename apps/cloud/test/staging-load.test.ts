@@ -3,7 +3,8 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
-  MAX_EXPORT_BYTES, buildSyntheticEnvelope, parseStagingLoadConfig, percentile,
+  MAX_EXPORT_BYTES, MAX_REQUESTS_PER_ACCOUNT, SUSTAINED_REQUESTS_PER_ACCOUNT,
+  buildSyntheticEnvelope, nextEligibleAccount, parseStagingLoadConfig, percentile,
   readDistinctAccountTokens, requiredDistinctAccounts,
 } from "../scripts/staging-load-lib.mjs";
 
@@ -22,6 +23,26 @@ it("defaults to the documented 2x gate and calculates a budget-safe account coun
     concurrency: 500, uploadsPerSecond: 50, durationSeconds: 600, largeConcurrency: 10,
   });
   expect(requiredDistinctAccounts(config)).toBe(639);
+  expect({ maximum: MAX_REQUESTS_PER_ACCOUNT, sustained: SUSTAINED_REQUESTS_PER_ACCOUNT })
+    .toEqual({ maximum: 50, sustained: 47 });
+});
+
+it("enforces cumulative and active per-account scheduler limits", () => {
+  expect(nextEligibleAccount([2, 0, 1], [1, 47, 46], 0)).toBe(2);
+  expect(nextEligibleAccount([2, 0, 2], [1, 47, 46], 0)).toBe(-1);
+  expect(() => nextEligibleAccount([0], [], 0)).toThrow("scheduler state is invalid");
+
+  const launched = Array(639).fill(0) as number[];
+  const active = Array(639).fill(0) as number[];
+  let cursor = 0;
+  for (let request = 0; request < 30_000; request += 1) {
+    const account = nextEligibleAccount(active, launched, cursor);
+    if (account < 0) throw new Error("scheduler exhausted unexpectedly");
+    launched[account] = (launched[account] ?? 0) + 1;
+    cursor = (account + 1) % launched.length;
+  }
+  expect(Math.max(...launched)).toBe(47);
+  expect(Math.min(...launched)).toBe(46);
 });
 
 it.each([

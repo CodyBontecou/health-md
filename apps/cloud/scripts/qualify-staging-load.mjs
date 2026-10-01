@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import {
-  MAX_EXPORT_BYTES, buildSyntheticEnvelope, parseStagingLoadConfig, percentile,
+  MAX_EXPORT_BYTES, MAX_REQUESTS_PER_ACCOUNT, SUSTAINED_REQUESTS_PER_ACCOUNT,
+  buildSyntheticEnvelope, nextEligibleAccount, parseStagingLoadConfig, percentile,
   readDistinctAccountTokens, requiredDistinctAccounts,
 } from "./staging-load-lib.mjs";
 
@@ -76,7 +77,8 @@ async function runLarge(config, tokens) {
 async function runSustained(config, tokens) {
   const total = config.uploadsPerSecond * config.durationSeconds;
   const active = new Set();
-  const perToken = Array(tokens.length).fill(0);
+  const activePerToken = Array(tokens.length).fill(0);
+  const launchedPerToken = Array(tokens.length).fill(0);
   const results = [];
   let cursor = 0;
   const started = performance.now();
@@ -85,23 +87,28 @@ async function runSustained(config, tokens) {
     const delay = due - performance.now();
     if (delay > 0) await sleep(delay);
     while (active.size >= config.concurrency) await Promise.race(active);
-    let tokenIndex = -1;
-    for (let offset = 0; offset < tokens.length; offset += 1) {
-      const candidate = (cursor + offset) % tokens.length;
-      if (perToken[candidate] < 2) { tokenIndex = candidate; break; }
+    let tokenIndex = nextEligibleAccount(activePerToken, launchedPerToken, cursor);
+    while (tokenIndex < 0) {
+      if (active.size === 0) throw new Error("Synthetic scheduler exhausted account request budgets");
+      await Promise.race(active);
+      tokenIndex = nextEligibleAccount(activePerToken, launchedPerToken, cursor);
     }
-    if (tokenIndex < 0) throw new Error("Synthetic scheduler exhausted account concurrency");
     cursor = (tokenIndex + 1) % tokens.length;
-    perToken[tokenIndex] += 1;
+    activePerToken[tokenIndex] += 1;
+    launchedPerToken[tokenIndex] += 1;
     const operation = upload(config.endpoint, tokens[tokenIndex],
       buildSyntheticEnvelope(1_024, `synthetic-sustained-${index}`))
       .then((result) => { results.push(result); })
-      .finally(() => { perToken[tokenIndex] -= 1; active.delete(operation); });
+      .finally(() => { activePerToken[tokenIndex] -= 1; active.delete(operation); });
     active.add(operation);
   }
   const lastLaunchElapsedMs = performance.now() - started;
   await Promise.all(active);
-  return { results, lastLaunchElapsedMs };
+  return {
+    results,
+    lastLaunchElapsedMs,
+    maximumRequestsPerAccount: Math.max(...launchedPerToken),
+  };
 }
 
 async function main() {
@@ -123,13 +130,17 @@ async function main() {
       durationSeconds: config.durationSeconds,
       largeConcurrency: config.largeConcurrency,
       largePayloadBytes: MAX_EXPORT_BYTES,
+      maximumRequestsPerAccount: MAX_REQUESTS_PER_ACCOUNT,
+      maximumSustainedRequestsPerAccount: SUSTAINED_REQUESTS_PER_ACCOUNT,
     },
     wave: summary(wave),
-    sustained: { ...summary(sustained.results), achievedLaunchesPerSecond: fixed(achievedLaunchRate) },
+    sustained: { ...summary(sustained.results), achievedLaunchesPerSecond: fixed(achievedLaunchRate),
+      maximumRequestsPerAccount: sustained.maximumRequestsPerAccount },
     worstCasePayload: summary(large),
   };
   report.pass = report.wave.failed === 0 && report.sustained.failed === 0 &&
-    report.worstCasePayload.failed === 0 && achievedLaunchRate >= config.uploadsPerSecond * 0.98;
+    report.worstCasePayload.failed === 0 && achievedLaunchRate >= config.uploadsPerSecond * 0.98 &&
+    sustained.maximumRequestsPerAccount <= SUSTAINED_REQUESTS_PER_ACCOUNT;
   console.log(JSON.stringify(report, null, 2));
   if (!report.pass) process.exitCode = 1;
 }

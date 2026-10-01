@@ -4,6 +4,7 @@ export const TWO_X_CONCURRENCY = 500;
 export const TWO_X_UPLOADS_PER_SECOND = 50;
 export const DEFAULT_DURATION_SECONDS = 600;
 export const MAX_REQUESTS_PER_ACCOUNT = 50;
+export const SUSTAINED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCOUNT - 3;
 export const MAX_EXPORT_BYTES = 25 * 1024 * 1024;
 
 const LIVE_HOSTS = new Set([
@@ -63,9 +64,20 @@ export function readDistinctAccountTokens(path, requiredCount) {
 
 export function requiredDistinctAccounts(config) {
   const sustained = config.uploadsPerSecond * config.durationSeconds;
-  const perAccountAfterProbes = MAX_REQUESTS_PER_ACCOUNT - 3; // two wave requests plus one large probe
   return Math.max(Math.ceil(config.concurrency / 2), config.largeConcurrency,
-    Math.ceil(sustained / perAccountAfterProbes));
+    Math.ceil(sustained / SUSTAINED_REQUESTS_PER_ACCOUNT));
+}
+
+export function nextEligibleAccount(active, launched, cursor) {
+  if (!Array.isArray(active) || !Array.isArray(launched) || active.length === 0 ||
+      active.length !== launched.length || !Number.isInteger(cursor) || cursor < 0 || cursor >= active.length) {
+    throw new Error("Synthetic account scheduler state is invalid");
+  }
+  for (let offset = 0; offset < active.length; offset += 1) {
+    const candidate = (cursor + offset) % active.length;
+    if (active[candidate] < 2 && launched[candidate] < SUSTAINED_REQUESTS_PER_ACCOUNT) return candidate;
+  }
+  return -1;
 }
 
 export function buildSyntheticEnvelope(targetBytes = 1_024, marker = "synthetic") {

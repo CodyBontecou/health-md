@@ -296,8 +296,15 @@ requireText(loadHarness, "Refusing a live or non-staging hostname", "staging loa
 requireText(loadHarness, "Expected full deployment revision is required", "staging load harness");
 requireText(loadHarness, "Synthetic token file must be a regular owner-only file", "staging load harness");
 requireText(loadHarness, "HEALTHMD_LOAD_DISTINCT_ACCOUNTS", "staging load harness");
+requireText(loadHarness, "SUSTAINED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCOUNT - 3",
+  "staging load account budget");
+requireText(loadHarness, "launched[candidate] < SUSTAINED_REQUESTS_PER_ACCOUNT",
+  "staging load account budget");
 const loadRunner = read("scripts/qualify-staging-load.mjs");
 requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
+requireText(loadRunner, "launchedPerToken[tokenIndex] += 1", "staging load account budget");
+requireText(loadRunner, "maximumRequestsPerAccount <= SUSTAINED_REQUESTS_PER_ACCOUNT",
+  "staging load account budget");
 forbid(loadRunner, /console\.(?:log|error)\([^\n]*(?:token|endpoint|body)/u, "staging load runner output");
 const migrations = readdirSync(resolve(cloud, "migrations"))
   .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
