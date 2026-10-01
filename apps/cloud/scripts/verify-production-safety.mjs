@@ -125,7 +125,7 @@ for (const path of ["src/ingest-worker.ts", "src/account-worker.ts", "src/mainte
   const source = read(path);
   const validation = source.indexOf("validateConfiguration(env);");
   const routeDecision = source.indexOf("env.SERVICE_PROFILE !==");
-  const originDecision = source.indexOf("!requestMatchesPublicOrigin(request, env)");
+  const originDecision = source.indexOf("!requestMatchesPublicEndpoint(request, env)");
   if (validation < 0 || routeDecision < 0 || validation > routeDecision) {
     failures.push(`${path}: full configuration validation must precede every HTTP route decision`);
   }
@@ -169,8 +169,9 @@ if (reservationRead < 0 || reservationReturn < reservationRead) {
   failures.push("upload-intents.ts: candidate reservation returned before durable exact read-back");
 }
 const httpSource = read("src/http.ts");
-requireText(httpSource, "new URL(request.url).origin === new URL(env.PUBLIC_ORIGIN).origin",
-  "exact split public-origin matching");
+requireText(httpSource, "url.origin === new URL(env.PUBLIC_ORIGIN).origin", "exact split public-origin matching");
+requireText(httpSource, "!url.username && !url.password", "credential-free split request URL");
+requireText(httpSource, "!url.search && !url.hash", "query-free split request URL");
 for (const fragment of [
   "const initialCapacity = declared === null ? Math.min(maximumBytes, 16 * 1024) : Number(declared)",
   "Math.min(maximumBytes,", "grown.set(buffer.subarray(0, total))",

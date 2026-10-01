@@ -1,5 +1,5 @@
 import core, { validateConfiguration } from "./index";
-import { errorResponse, json, requestMatchesPublicOrigin, withSecurityHeaders } from "./http";
+import { errorResponse, json, requestMatchesPublicEndpoint, withSecurityHeaders } from "./http";
 import { processAccountDeletionById } from "./lifecycle";
 import { recordHttpMetric, recordMaintenanceMetric } from "./telemetry";
 import type { Env, LifecycleMessage } from "./types";
@@ -12,7 +12,7 @@ export default {
       validateConfiguration(env);
       if (env.SERVICE_PROFILE !== "maintenance") {
         response = withSecurityHeaders(errorResponse(new Error()), env);
-      } else if (!requestMatchesPublicOrigin(request, env)) {
+      } else if (!requestMatchesPublicEndpoint(request, env)) {
         response = withSecurityHeaders(json({ error: "not_found", message: "Endpoint not found." },
           { status: 404 }), env);
       } else {

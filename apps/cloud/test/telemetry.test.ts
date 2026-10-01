@@ -58,7 +58,7 @@ it("records only low-cardinality buckets without request identifiers, credential
     `https://account.healthmd.app/api/exports/${exportId}/download?private=secret`, {
       headers: { Cookie: "private=session", Authorization: "Bearer private" },
     }), accountEnv);
-  expect(response.status).toBe(400);
+  expect(response.status).toBe(404); // Query-bearing split routes are denied before authentication or download.
 
   expect(points).toHaveLength(2);
   expect(points).toEqual([

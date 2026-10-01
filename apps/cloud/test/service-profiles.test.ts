@@ -96,10 +96,10 @@ describe("split production Worker profiles", () => {
     }
   });
 
-  it("rejects allowed paths arriving through an alternate hostname", async () => {
+  it("rejects allowed paths arriving through an alternate origin or query-bearing URL", async () => {
     const ingest = profile("ingest", "https://api.healthmd.app");
     for (const url of ["https://alternate.example.test/health", "http://api.healthmd.app/health",
-      "https://api.healthmd.app:8443/health"]) {
+      "https://api.healthmd.app:8443/health", "https://api.healthmd.app/health?unexpected=1"]) {
       expect((await ingestWorker.fetch(new Request(url), ingest)).status).toBe(404);
     }
 
@@ -109,6 +109,10 @@ describe("split production Worker profiles", () => {
     expect((await accountWorker.fetch(new Request("https://alternate.example.test/style.css"), account)).status)
       .toBe(404);
     expect((await accountWorker.fetch(new Request("https://alternate.example.test/health"), account)).status)
+      .toBe(404);
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/style.css?version=1"), account)).status)
+      .toBe(404);
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health?probe=1"), account)).status)
       .toBe(404);
     expect(assetCalls).toBe(0);
 

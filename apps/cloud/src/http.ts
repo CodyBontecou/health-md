@@ -146,8 +146,10 @@ export function parsePositiveInteger(value: string, name: string, minimum: numbe
   return parsed;
 }
 
-export function requestMatchesPublicOrigin(request: Request, env: Env): boolean {
-  return new URL(request.url).origin === new URL(env.PUBLIC_ORIGIN).origin;
+export function requestMatchesPublicEndpoint(request: Request, env: Env): boolean {
+  const url = new URL(request.url);
+  return url.origin === new URL(env.PUBLIC_ORIGIN).origin && !url.username && !url.password &&
+    !url.search && !url.hash;
 }
 
 export function assertSameOrigin(request: Request, env: Env): void {
