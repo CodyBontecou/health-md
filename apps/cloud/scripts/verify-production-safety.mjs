@@ -452,6 +452,30 @@ requireText(inviteMigration, "expires_at TEXT NOT NULL", "migration 0018");
 requireText(inviteMigration, "CHECK (expires_at > created_at)", "migration 0018");
 requireText(inviteMigration, "CREATE INDEX account_invites_expiry", "migration 0018");
 
+const androidApiClient = read(
+  "apps/android/app/src/main/java/com/healthmd/data/export/APIExportClient.kt", repository);
+for (const fragment of [
+  ".followRedirects(false)", ".followSslRedirects(false)",
+  "response.code != 307 && response.code != 308", "redirectCount < MAX_REDIRECTS",
+  "it.scheme == originalUrl.scheme && it.host == originalUrl.host && it.port == originalUrl.port",
+]) requireText(androidApiClient, fragment, "Android compatibility redirect boundary");
+const androidApiClientTest = read(
+  "apps/android/app/src/test/java/com/healthmd/export/APIExportClientTest.kt", repository);
+requireText(androidApiClientTest, "rejectsCrossOriginRedirectBeforeReplayingBodyOrHeaders",
+  "Android compatibility redirect evidence");
+requireText(androidApiClientTest, "rejectsMethodChangingRedirectWithoutFollowingIt",
+  "Android compatibility redirect evidence");
+const appleApiClient = read("apps/apple/HealthMd/Shared/Managers/APIExportClient.swift", repository);
+for (const fragment of [
+  "redirectHandler: Self.safeRedirect", "response.statusCode == 307 || response.statusCode == 308",
+  "sameOrigin(source, target)", "private static let maximumRedirects = 5",
+]) requireText(appleApiClient, fragment, "Apple compatibility redirect boundary");
+const appleApiClientTest = read("apps/apple/HealthMdTests/Managers/APIExportClientTests.swift", repository);
+requireText(appleApiClientTest, "testCompatibilityRedirectAllowsOnlySameOrigin307Or308Post",
+  "Apple compatibility redirect evidence");
+requireText(appleApiClientTest, "testCompatibilityRedirectRejectsOriginOrCredentialChanges",
+  "Apple compatibility redirect evidence");
+
 const workflow = read(".github/workflows/cloud-ci.yml", repository);
 for (const line of workflow.split("\n")) {
   if (line.includes("wrangler deploy") && !line.includes("--dry-run")) {

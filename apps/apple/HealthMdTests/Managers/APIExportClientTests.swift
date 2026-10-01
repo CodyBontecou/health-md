@@ -543,6 +543,49 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertFalse(error.localizedDescription.contains("health_payload"))
     }
 
+    func testCompatibilityRedirectAllowsOnlySameOrigin307Or308Post() throws {
+        let original = try XCTUnwrap(URL(string: "https://api.example.com:443/upload"))
+        let allowed = try XCTUnwrap(URL(string: "https://api.example.com/next"))
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: original,
+            statusCode: 307,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Location": allowed.absoluteString]
+        ))
+        var request = URLRequest(url: allowed)
+        request.httpMethod = "POST"
+
+        XCTAssertNotNil(APIExportClient.safeRedirect(response: response, request: request))
+
+        let methodChanging = try XCTUnwrap(HTTPURLResponse(
+            url: original,
+            statusCode: 302,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Location": allowed.absoluteString]
+        ))
+        XCTAssertNil(APIExportClient.safeRedirect(response: methodChanging, request: request))
+    }
+
+    func testCompatibilityRedirectRejectsOriginOrCredentialChanges() throws {
+        let original = try XCTUnwrap(URL(string: "https://api.example.com/upload"))
+        let response = try XCTUnwrap(HTTPURLResponse(
+            url: original,
+            statusCode: 308,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        ))
+        for target in [
+            "http://api.example.com/next",
+            "https://other.example.com/next",
+            "https://api.example.com:8443/next",
+            "https://user:password@api.example.com/next",
+        ] {
+            var request = URLRequest(url: try XCTUnwrap(URL(string: target)))
+            request.httpMethod = "POST"
+            XCTAssertNil(APIExportClient.safeRedirect(response: response, request: request), target)
+        }
+    }
+
     func testDisabledConnectedAppsKeepsActiveEnvelopeV1() throws {
         let date = Self.day(2026, 7, 13)
         var healthData = HealthData(date: date)
