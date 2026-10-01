@@ -67,17 +67,18 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         in app: XCUIApplication,
         maxSwipes: Int = 8
     ) -> Bool {
+        let toastQuery = app.buttons.matching(
+            identifier: UITestLaunchHelper.ConfigurationProtection.toast
+        )
         for _ in 0..<maxSwipes {
-            let toast = app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
-                .allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
+            let toast = toastQuery.allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
             let isOutsideToast = toast.map { !element.frame.intersects($0.frame) } ?? true
             if element.exists, element.isHittable, isOutsideToast {
                 return true
             }
             app.swipeUp()
         }
-        let toast = app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
-            .allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
+        let toast = toastQuery.allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
         return element.exists && element.isHittable && (toast.map { !element.frame.intersects($0.frame) } ?? true)
     }
 
