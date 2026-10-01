@@ -240,6 +240,7 @@ struct StatusArgs {
     long_about = "Export either a validated platform-native raw artifact or production-generated Health.md files. Every execution requires exactly one date selection. Raw mode requires --raw; generated-file mode requires an existing absolute --destination directory. Running `healthmd export` with an incomplete request returns local guidance and never contacts a device.",
     after_help = "MODES:\n  Raw artifact:\n    healthmd export --last 7 --raw --output week.json\n    healthmd export --all --raw --full-corpus --output corpus.json\n    Omit --output to stream validated JSON/NDJSON to stdout. --full-corpus requests\n    every public type supported by the source and authorized by the user; it cannot read\n    a platform-private database.\n\n  Generated files:\n    healthmd export --yesterday --destination <EXISTING_ABSOLUTE_DIRECTORY>\n    The mobile app's production exporters create files; the host validates and binds\n    the destination before transfer.\n\nDATE SELECTION (choose exactly one):\n  --yesterday | --last DAYS | --from YYYY-MM-DD --to YYYY-MM-DD | --all\n\nDISCOVERY:\n  Run `healthmd export` without a complete mode/date selection to receive structured\n  requirements, platform constraints, and argv examples without contacting a device."
 )]
+#[allow(clippy::struct_excessive_bools)]
 struct ExportArgs {
     #[command(flatten)]
     dates: DateArgs,
