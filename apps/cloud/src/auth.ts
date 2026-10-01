@@ -120,24 +120,38 @@ async function signupAllowed(email: string, inviteLookup: string, env: Env): Pro
   return false;
 }
 
+const EMAIL_PROVIDER_TIMEOUT_MS = 10_000;
+
 async function sendMagicLink(env: Env, email: string, token: string): Promise<boolean> {
   if (env.ENVIRONMENT === "development" && env.DEV_SHOW_MAGIC_LINK === "1") return true;
   if (!env.RESEND_API_KEY) return false;
   const link = `${env.PUBLIC_ORIGIN}/login#token=${encodeURIComponent(token)}`;
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: env.AUTH_EMAIL_FROM,
-      to: [email],
-      subject: "Sign in to Health.md Cloud",
-      text: `You requested a Health.md Cloud sign-in link. It expires in 15 minutes.\n\n${link}\n\nIf you didn't request it, ignore this message.`,
-    }),
-  });
-  return response.ok;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), EMAIL_PROVIDER_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.AUTH_EMAIL_FROM,
+        to: [email],
+        subject: "Sign in to Health.md Cloud",
+        text: `You requested a Health.md Cloud sign-in link. It expires in 15 minutes.\n\n${link}\n\nIf you didn't request it, ignore this message.`,
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+  const accepted = response.ok;
+  // Provider bodies are unnecessary and can contain address/request details.
+  // Cancellation is advisory cleanup and must never delay auth behavior.
+  try { void response.body?.cancel().catch(() => undefined); } catch { /* Fixed outcome only. */ }
+  return accepted;
 }
 
 async function discardUndeliveredMagicLink(env: Env, linkId: string, tokenHash: string): Promise<boolean> {
@@ -274,6 +288,7 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
     // Never log provider responses; they can contain account identifiers.
   }
   if (!sent) {
+    recordAccountSecurityMetric(env, "email_delivery_failed");
     if (!await discardUndeliveredMagicLink(env, linkId, tokenHash)) {
       recordAccountSecurityMetric(env, "magic_link_cleanup_pending");
     }

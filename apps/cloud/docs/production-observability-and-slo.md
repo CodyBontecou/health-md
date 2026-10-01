@@ -30,6 +30,7 @@ These targets are provisional until the product and operations owners approve th
 | Ingest admission pressure | <1% 429 responses outside an announced load test | page at >=5% for 5 min; ticket at >=1% for 30 min |
 | Ingest latency | >=95% below 5 s and >=99% below 15 s, evaluated from buckets | page when `gte_15s` >=1% for 10 min with >=20 successes |
 | Eligible-email send budget | no exhaustion outside a declared abuse/load exercise | ticket on any `email_budget_exhausted`; page if repeated in three 5-min windows |
+| Email delivery dependency | no timeout or non-2xx after an admitted eligible request; provider calls abort after 10 seconds and response bodies are discarded | ticket on any fixed `email_delivery_failed`; page if repeated in three 5-min windows; investigate only aggregate provider status, never identities or provider bodies |
 | Magic-link persistence | no failed durable-link postcondition | page on any `magic_link_persistence_failed`; investigate D1 without inspecting identities |
 | Undelivered-link cleanup | no candidate link left for bounded expiry after two exact discard attempts | ticket on any `magic_link_cleanup_pending`; page if repeated in three 5-min windows, using no address/link/account dimensions |
 | Lifecycle queue | no `failed`; retry returns to zero within 15 min | page on any `failed` or retries in three consecutive 5-min windows |
@@ -44,7 +45,7 @@ Build aggregate panels grouped only by `index1`, `blob1`, `blob2`, `blob3`, `blo
 1. request count and status class by profile/route class;
 2. ingest latency and coarse size buckets;
 3. ingest 429 and 5xx ratios;
-4. account API 5xx ratio and fixed email-budget/persistence/cleanup events;
+4. account API 5xx ratio and fixed email-budget/delivery/persistence/cleanup events;
 5. maintenance outcomes;
 6. provider-native D1 latency/error, R2 error, Queue backlog/DLQ and Worker CPU/subrequest limits, with no request dimensions.
 

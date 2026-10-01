@@ -266,11 +266,15 @@ for (const fragment of [
   "rateBucketsPerRun: 5_000", "ORDER BY expires_at, id LIMIT ?",
 ]) requireText(authSource, fragment, "bounded auth cleanup");
 for (const fragment of [
+  "EMAIL_PROVIDER_TIMEOUT_MS = 10_000", "setTimeout(() => controller.abort()",
+  "signal: controller.signal", "response.body?.cancel().catch",
+  'recordAccountSecurityMetric(env, "email_delivery_failed")',
   "discardUndeliveredMagicLink", "attempt < 2",
   "DELETE FROM magic_links WHERE id = ? AND token_hash = ?",
   "SELECT EXISTS(SELECT 1 FROM magic_links WHERE id = ? AND token_hash = ?) AS present",
   'recordAccountSecurityMetric(env, "magic_link_cleanup_pending")',
-]) requireText(authSource, fragment, "anti-enumerating magic-link delivery cleanup");
+]) requireText(authSource, fragment, "bounded anti-enumerating magic-link delivery");
+forbid(authSource, /response\.(?:text|json|arrayBuffer)\(/u, "email-provider response materialization");
 const failedDelivery = authSource.indexOf("if (!sent)");
 const genericAfterCleanup = authSource.indexOf("return generic();", failedDelivery);
 if (failedDelivery < 0 || genericAfterCleanup < failedDelivery) {

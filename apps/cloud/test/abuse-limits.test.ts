@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -31,6 +31,8 @@ function setup() {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
@@ -168,6 +170,51 @@ it("keeps failed email delivery generic while exactly reconciling magic-link cle
     expect(db.connection.prepare("SELECT COUNT(*) AS count FROM magic_links").get())
       .toMatchObject({ count: 0 });
   } finally { env.DB = original; db.close(); }
+});
+
+it("bounds a stalled email provider and records only a fixed delivery-failure signal", async () => {
+  const { env, db } = setup();
+  const email = "provider-timeout@example.test";
+  const points: unknown[] = [];
+  env.ENVIRONMENT = "production";
+  env.AUTH_MODE = "email_link";
+  env.AUTH_SIGNUP_MODE = "invite";
+  env.AUTH_INVITE_EMAILS = email;
+  env.DEV_SHOW_MAGIC_LINK = "0";
+  env.RESEND_API_KEY = "synthetic-provider-secret";
+  env.AUTH_EMAIL_FROM = "Health.md Cloud <cloud@example.test>";
+  env.METRICS = { writeDataPoint: (point: unknown) => { points.push(point); } } as AnalyticsEngineDataset;
+  vi.useFakeTimers();
+  let notifyStarted!: () => void;
+  const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+  vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+    notifyStarted();
+    return new Promise<Response>((_resolve, reject) => {
+      const abort = () => reject(new DOMException("Synthetic provider timeout", "AbortError"));
+      if (init?.signal?.aborted) abort();
+      else init?.signal?.addEventListener("abort", abort, { once: true });
+    });
+  });
+  try {
+    const pending = requestMagicLink(new Request(`${origin}/api/auth/request-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json",
+        "CF-Connecting-IP": "203.0.113.33" },
+      body: JSON.stringify({ email }),
+    }), env);
+    await started;
+    await vi.advanceTimersByTimeAsync(10_000);
+    const response = await pending;
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      message: "If this address is eligible, a sign-in link is on its way.",
+    });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM magic_links").get())
+      .toMatchObject({ count: 0 });
+    expect(points).toContainEqual({ indexes: ["account"],
+      blobs: ["email_delivery_failed", "blocked", "not_applicable", "not_applicable"], doubles: [1] });
+    expect(JSON.stringify(points)).not.toContain(email);
+  } finally { db.close(); }
 });
 
 it("admits split-account signup through a one-time hashed invite only", async () => {

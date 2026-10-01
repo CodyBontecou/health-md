@@ -81,7 +81,8 @@ export function recordHttpMetric(
 
 export function recordAccountSecurityMetric(
   env: Env,
-  event: "email_budget_exhausted" | "magic_link_persistence_failed" | "magic_link_cleanup_pending",
+  event: "email_budget_exhausted" | "email_delivery_failed" |
+    "magic_link_persistence_failed" | "magic_link_cleanup_pending",
 ): void {
   write(env, "account", event, "blocked", "not_applicable", "not_applicable");
 }
