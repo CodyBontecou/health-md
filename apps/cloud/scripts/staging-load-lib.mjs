@@ -111,6 +111,17 @@ export function stalledRequestBody() {
   });
 }
 
+export function recordAccountRequest(counts, index) {
+  if (!Array.isArray(counts) || !Number.isInteger(index) || index < 0 || index >= counts.length ||
+      !Number.isSafeInteger(counts[index]) || counts[index] < 0) {
+    throw new Error("Synthetic account request ledger is invalid");
+  }
+  if (counts[index] >= MAX_REQUESTS_PER_ACCOUNT) {
+    throw new Error("Synthetic account request budget is exhausted");
+  }
+  counts[index] += 1;
+}
+
 export function nextEligibleAccount(active, launched, cursor) {
   if (!Array.isArray(active) || !Array.isArray(launched) || active.length === 0 ||
       active.length !== launched.length || !Number.isInteger(cursor) || cursor < 0 || cursor >= active.length) {

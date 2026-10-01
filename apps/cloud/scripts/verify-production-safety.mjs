@@ -302,6 +302,8 @@ requireText(loadHarness, "TWO_X_BURST_UPLOADS_PER_SECOND = 200", "staging load b
 requireText(loadHarness, "BURST_DURATION_SECONDS = 60", "staging load burst target");
 requireText(loadHarness, "launched[candidate] < PACED_REQUESTS_PER_ACCOUNT",
   "staging load account budget");
+requireText(loadHarness, "counts[index] >= MAX_REQUESTS_PER_ACCOUNT",
+  "staging load total account budget");
 requireText(loadHarness, "DEDICATED_SLOW_BODY_ACCOUNTS = 1", "staging load slow-body isolation");
 requireText(loadHarness, "ADMISSION_LEASE_SECONDS = 15 * 60", "staging load admission lease");
 requireText(loadHarness, "fragmentedRequestBody", "staging load transfer fragmentation");
@@ -312,6 +314,9 @@ requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
 requireText(loadRunner, "launchedPerToken[tokenIndex] += 1", "staging load account budget");
 requireText(loadRunner, "burst.maximumRequestsPerAccount <= PACED_REQUESTS_PER_ACCOUNT",
   "staging load account budget");
+requireText(loadRunner, "recordAccountRequest(totalPerToken", "staging load total account budget");
+requireText(loadRunner, "maximumObservedRequestsPerAccount <= MAX_REQUESTS_PER_ACCOUNT",
+  "staging load total account budget");
 requireText(loadRunner, "achievedBurstRate >= config.burstUploadsPerSecond * 0.98",
   "staging load burst target");
 requireText(loadRunner, "streamed ? fragmentedRequestBody(body) : body",

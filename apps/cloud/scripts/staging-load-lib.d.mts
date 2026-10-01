@@ -25,6 +25,7 @@ export function requiredDistinctAccounts(config: StagingLoadConfig): number;
 export function validRetryAfter(value: string | null): boolean;
 export function fragmentedRequestBody(bytes: Uint8Array, chunkBytes?: number): ReadableStream<Uint8Array>;
 export function stalledRequestBody(): ReadableStream<Uint8Array>;
+export function recordAccountRequest(counts: number[], index: number): void;
 export function nextEligibleAccount(active: number[], launched: number[], cursor: number): number;
 export function buildSyntheticEnvelope(targetBytes?: number, marker?: string): Uint8Array;
 export function percentile(values: number[], quantile: number): number | null;

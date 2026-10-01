@@ -7,7 +7,8 @@ import {
   MAX_REQUESTS_PER_ACCOUNT, PACED_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS,
   TWO_X_BURST_UPLOADS_PER_SECOND,
   buildSyntheticEnvelope, fragmentedRequestBody, nextEligibleAccount, parseStagingLoadConfig,
-  percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody, validRetryAfter,
+  percentile, readDistinctAccountTokens, recordAccountRequest, requiredDistinctAccounts,
+  stalledRequestBody, validRetryAfter,
 } from "../scripts/staging-load-lib.mjs";
 
 const roots: string[] = [];
@@ -68,15 +69,25 @@ it("enforces cumulative and active per-account scheduler limits", () => {
 
   const launched = Array(894).fill(0) as number[];
   const active = Array(894).fill(0) as number[];
+  const total = Array(894).fill(0) as number[];
+  for (let request = 0; request < 500; request += 1) {
+    recordAccountRequest(total, Math.floor(request / 2));
+  }
   let cursor = 0;
   for (let request = 0; request < 42_000; request += 1) {
     const account = nextEligibleAccount(active, launched, cursor);
     if (account < 0) throw new Error("scheduler exhausted unexpectedly");
     launched[account] = (launched[account] ?? 0) + 1;
+    recordAccountRequest(total, account);
     cursor = (account + 1) % launched.length;
   }
+  for (let account = 0; account < 10; account += 1) recordAccountRequest(total, account);
   expect(Math.max(...launched)).toBe(47);
   expect(Math.min(...launched)).toBe(46);
+  expect(Math.max(...total)).toBe(50);
+  expect(Math.min(...total)).toBe(46);
+  expect(() => recordAccountRequest(total, 0)).toThrow("request budget is exhausted");
+  expect(() => recordAccountRequest(total, -1)).toThrow("ledger is invalid");
 });
 
 it.each([
