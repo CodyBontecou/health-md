@@ -49,13 +49,13 @@ Use new, production-only resources and credentials:
 1. **Write-only ingest Worker** at `api.healthmd.app`
    - Exposes only `POST /api/v1/exports` and `GET /health`.
    - Authenticates the write token before admission.
-   - Applies token, account, IP-risk, payload, and edge abuse limits.
+   - Applies token, account, IP-risk, payload, and edge abuse limits; it rejects account/maintenance runtime settings such as session, magic-link, deletion and retention controls.
    - Writes application-encrypted objects with per-account DEKs/KEKs to a private production R2 bucket; it rejects the historical global decrypt keyring and legacy key ID.
    - Has no dashboard, download, session, MCP, signup, or read route.
 
 2. **Account Worker** at `account.healthmd.app`
    - Owns signup/sign-in, sessions, token management, inventory, download, export, and deletion requests.
-   - Uses a separate deployment identity and explicit route allowlist.
+   - Uses a separate deployment identity and explicit route allowlist. It receives browser/session/magic-link/email/deletion settings but rejects ingest budgets and maintenance retention controls.
    - Serves first-party assets only, with strict CSP and no analytics or session replay.
    - Cannot accept exports or MCP requests. Password login, pilot MCP agent-token administration, and unapproved repair device/dispatch handoff are omitted from its route allowlist rather than left dormant behind runtime checks. It alone receives the legacy-read keyring during controlled migration because it serves owner-authorized historical downloads.
 
@@ -73,7 +73,7 @@ Use new, production-only resources and credentials:
    - Keep historical key versions until every referenced object is re-encrypted or verifiably deleted.
 
 5. **Maintenance and lifecycle Worker**
-   - Deletes ciphertext and rewraps DEKs with account KEKs without plaintext access; it rejects the historical global decrypt keyring and legacy key ID.
+   - Deletes ciphertext and rewraps DEKs with account KEKs without plaintext access; it rejects the historical global decrypt keyring and legacy key ID, plus payload/session/magic-link/email/ingest settings that it does not use.
    - **Source milestone:** finite revision retention conditionally deletes only metadata still unreferenced by current or supplemental pointers, reads back durable absence after normal/lost D1 responses before deleting ciphertext, and preserves ciphertext when verification is unreadable. Migration `0014_maintenance_cursors.sql` and `object-reconciliation.ts` then persist only an opaque provider cursor, scan at most 25 exact `v1/<uuid>` objects per invocation, preserve every export/upload-intent reference, delete only unreferenced ciphertext (including a safe orphan left by an unreadable retention outcome), and refuse cursor advancement on list/delete/unexpected-key failure. It runs only in the split maintenance profile; the VM keeps its existing local reconciliation. No production bucket was scanned.
    - Use Queues or another durable job mechanism for deletion, expired-session cleanup, revision retention, orphan reconciliation, and key rotation.
    - Do not rely on one daily cron processing only a few global rows.

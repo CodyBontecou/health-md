@@ -93,6 +93,17 @@ export function validateConfiguration(env: Env): void {
         (!!env.EXPORT_ENCRYPTION_KEYS_JSON || !!env.CURRENT_EXPORT_KEY_ID)))) ||
       (profile === "account" && !!env.AUTH_INVITE_EMAILS) ||
       ((profile === "ingest" || profile === "account") && !!env.AUDIT_RETENTION_DAYS);
+    const present = (value: string | undefined): boolean => value !== undefined;
+    const invalidExcessSettings =
+      (profile === "ingest" && [env.EXPORT_ENDPOINT_ORIGIN, env.SESSION_TTL_DAYS,
+        env.MAGIC_LINK_TTL_MINUTES, env.EMAIL_SEND_HOURLY_LIMIT, env.DELETION_STATUS_TTL_DAYS,
+        env.REVISION_RETENTION_DAYS, env.AUDIT_RETENTION_DAYS].some(present)) ||
+      (profile === "account" && [env.INGEST_TOKEN_HOURLY_LIMIT,
+        env.INGEST_ACCOUNT_HOURLY_LIMIT, env.REVISION_RETENTION_DAYS,
+        env.AUDIT_RETENTION_DAYS].some(present)) ||
+      (profile === "maintenance" && [env.EXPORT_ENDPOINT_ORIGIN, env.MAX_EXPORT_BYTES,
+        env.SESSION_TTL_DAYS, env.MAGIC_LINK_TTL_MINUTES, env.EMAIL_SEND_HOURLY_LIMIT,
+        env.INGEST_TOKEN_HOURLY_LIMIT, env.INGEST_ACCOUNT_HOURLY_LIMIT].some(present));
     const invalidRepairFlags = profile !== "combined" &&
       (!!env.CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED || !!env.CLOUD_REPAIR_DISPATCH_ENABLED);
     const invalidDeploymentRevision = profile !== "combined" &&
@@ -173,7 +184,7 @@ export function validateConfiguration(env: Env): void {
           invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation) :
           (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
             invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation || invalidBindings ||
-            invalidExcessSecrets || invalidRepairFlags || invalidMetrics || invalidRuntimeLimits ||
+            invalidExcessSecrets || invalidExcessSettings || invalidRepairFlags || invalidMetrics || invalidRuntimeLimits ||
             invalidDeletionTtl || invalidAbuseLimits ||
             invalidDeploymentRevision || invalidExportEndpoint)) ||
         ((profile === "account" || profile === "combined") &&

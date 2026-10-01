@@ -18,8 +18,8 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
     PUBLIC_ORIGIN: origin,
     EXPORT_ENDPOINT_ORIGIN: kind === "account" ? "https://api.healthmd.app" : undefined,
     AUTH_SIGNUP_MODE: "closed",
-    AUTH_EMAIL_FROM: kind === "account" ? "Health.md Cloud <cloud@healthmd.app>" : "",
-    RESEND_API_KEY: kind === "account" ? "synthetic-provider-secret" : "",
+    AUTH_EMAIL_FROM: kind === "account" ? "Health.md Cloud <cloud@healthmd.app>" : undefined,
+    RESEND_API_KEY: kind === "account" ? "synthetic-provider-secret" : undefined,
     IDENTITY_KEY_B64: kind === "account" ? Buffer.alloc(32, 5).toString("base64") : undefined,
     EXPORT_ENCRYPTION_KEYS_JSON: kind === "account" ? JSON.stringify({
       v1: Buffer.alloc(32, 6).toString("base64"),
@@ -33,9 +33,9 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
     CLOUD_RUNTIME_APPROVED: "healthmd-cloud-v1-reviewed",
     HEALTH_FREE_METRICS_REQUIRED: "1",
     METRICS: { writeDataPoint: () => undefined } as AnalyticsEngineDataset,
-    MAX_EXPORT_BYTES: "26214400",
-    SESSION_TTL_DAYS: "30",
-    MAGIC_LINK_TTL_MINUTES: "15",
+    MAX_EXPORT_BYTES: kind === "maintenance" ? undefined : "26214400",
+    SESSION_TTL_DAYS: kind === "account" ? "30" : undefined,
+    MAGIC_LINK_TTL_MINUTES: kind === "account" ? "15" : undefined,
     EMAIL_SEND_HOURLY_LIMIT: kind === "account" ? "100" : undefined,
     INGEST_TOKEN_HOURLY_LIMIT: kind === "ingest" ? "120" : undefined,
     INGEST_ACCOUNT_HOURLY_LIMIT: kind === "ingest" ? "240" : undefined,
@@ -269,6 +269,21 @@ describe("split production Worker profiles", () => {
     const unapprovedQueue = profile("maintenance", "https://maintenance.healthmd.app");
     unapprovedQueue.CLOUD_RUNTIME_APPROVED = undefined;
     await expect(maintenanceWorker.queue(emptyBatch, unapprovedQueue))
+      .rejects.toThrow("configuration is incomplete");
+
+    const excessIngestSessionTtl = profile("ingest", "https://api.healthmd.app");
+    excessIngestSessionTtl.SESSION_TTL_DAYS = "30";
+    expect((await ingestWorker.fetch(new Request("https://api.healthmd.app/health"),
+      excessIngestSessionTtl)).status).toBe(500);
+
+    const excessAccountIngestBudget = profile("account", "https://account.healthmd.app");
+    excessAccountIngestBudget.INGEST_TOKEN_HOURLY_LIMIT = "120";
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      excessAccountIngestBudget)).status).toBe(500);
+
+    const excessMaintenancePayloadLimit = profile("maintenance", "https://maintenance.healthmd.app");
+    excessMaintenancePayloadLimit.MAX_EXPORT_BYTES = "26214400";
+    await expect(maintenanceWorker.scheduled({} as ScheduledEvent, excessMaintenancePayloadLimit))
       .rejects.toThrow("configuration is incomplete");
 
     const noPayloadLimit = profile("ingest", "https://api.healthmd.app");

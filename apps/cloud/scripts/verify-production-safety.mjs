@@ -43,8 +43,10 @@ for (const [file, profile, entry] of profiles) {
   forbid(text, /^(?:IDENTITY_KEY_B64|EXPORT_ENCRYPTION_KEYS_JSON|ACCOUNT_KEY_WRAPPING_KEYS_JSON|RESEND_API_KEY|PASSWORD_PEPPER_B64|AUTH_INVITE_EMAILS|CLOUD_RUNTIME_APPROVED|CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED|CLOUD_REPAIR_DISPATCH_ENABLED)\s*=/mu, file);
   requireText(entrySource, `env.SERVICE_PROFILE !== "${profile}"`, entry);
   if (profile === "ingest") {
+    requireText(text, 'MAX_EXPORT_BYTES = "26214400"', file);
     requireText(text, 'INGEST_TOKEN_HOURLY_LIMIT = "120"', file);
     requireText(text, 'INGEST_ACCOUNT_HOURLY_LIMIT = "240"', file);
+    forbid(text, /^(?:AUTH_EMAIL_FROM|EXPORT_ENDPOINT_ORIGIN|SESSION_TTL_DAYS|MAGIC_LINK_TTL_MINUTES|EMAIL_SEND_HOURLY_LIMIT|DELETION_STATUS_TTL_DAYS|REVISION_RETENTION_DAYS)\s*=/mu, file);
     requireText(text, "Ingest must not receive legacy EXPORT_ENCRYPTION_KEYS_JSON/CURRENT_EXPORT_KEY_ID authority", file);
     forbid(text, /^CURRENT_EXPORT_KEY_ID\s*=/mu, file);
     forbid(text, /^\[assets\]$/mu, file);
@@ -65,6 +67,7 @@ for (const [file, profile, entry] of profiles) {
     requireText(text, "EXPORT_ENCRYPTION_KEYS_JSON (legacy-read compatibility during migration)", file);
     requireText(text, "Split production rejects raw AUTH_INVITE_EMAILS configuration", file);
     forbid(text, /^AUTH_INVITE_EMAILS\s*=/mu, file);
+    forbid(text, /^(?:INGEST_TOKEN_HOURLY_LIMIT|INGEST_ACCOUNT_HOURLY_LIMIT|REVISION_RETENTION_DAYS)\s*=/mu, file);
     forbid(text, /^\[\[queues\.consumers\]\]$/mu, file);
     forbid(entrySource, /["']\/api\/v1\/exports["']/u, entry);
   } else {
@@ -78,6 +81,7 @@ for (const [file, profile, entry] of profiles) {
     requireText(text, "privacy/legal/operations must approve", file);
     requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
     requireText(text, "Maintenance must not receive legacy EXPORT_ENCRYPTION_KEYS_JSON/CURRENT_EXPORT_KEY_ID authority", file);
+    forbid(text, /^(?:AUTH_EMAIL_FROM|EXPORT_ENDPOINT_ORIGIN|MAX_EXPORT_BYTES|SESSION_TTL_DAYS|MAGIC_LINK_TTL_MINUTES|EMAIL_SEND_HOURLY_LIMIT|INGEST_TOKEN_HOURLY_LIMIT|INGEST_ACCOUNT_HOURLY_LIMIT)\s*=/mu, file);
     forbid(text, /^CURRENT_EXPORT_KEY_ID\s*=/mu, file);
     forbid(text, /^\[assets\]$/mu, file);
     requireText(entrySource, "validateConfiguration(env)", entry);
@@ -151,6 +155,10 @@ requireText(indexSource, '(profile === "ingest" || profile === "maintenance") &&
   "legacy decrypt authority rejection");
 requireText(indexSource, '!!env.EXPORT_ENCRYPTION_KEYS_JSON || !!env.CURRENT_EXPORT_KEY_ID',
   "legacy decrypt authority rejection");
+requireText(indexSource, "invalidExcessSettings", "split profile runtime-setting isolation");
+requireText(indexSource, "[env.EXPORT_ENDPOINT_ORIGIN, env.SESSION_TTL_DAYS", "ingest runtime-setting isolation");
+requireText(indexSource, "[env.INGEST_TOKEN_HOURLY_LIMIT", "account runtime-setting isolation");
+requireText(indexSource, "[env.EXPORT_ENDPOINT_ORIGIN, env.MAX_EXPORT_BYTES", "maintenance runtime-setting isolation");
 requireText(indexSource, "phase(() => purgeExpiredAuthState(env))", "scheduled bounded auth cleanup");
 requireText(indexSource, "phase(() => purgeExpiredDeletionReceipts(env))", "scheduled bounded receipt cleanup");
 const repairDraftSource = read("src/repair-drafts.ts");
