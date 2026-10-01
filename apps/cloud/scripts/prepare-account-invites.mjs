@@ -49,13 +49,13 @@ if (emails.length < 1 || emails.length > 1_000 || emails.some((email) =>
 }
 if (new Set(emails).size !== emails.length) fail("Invite input contains duplicate normalized addresses.");
 const lookups = emails.map((email) => createHmac("sha256", key)
-  .update(`email-lookup-v1\0${email}`, "utf8").digest("hex"));
+  .update(`account-invite-v1\0${email}`, "utf8").digest("hex"));
 const createdAt = now.toISOString();
 const sql = [
   "BEGIN TRANSACTION;",
   ...lookups.map((lookup) => operation === "grant" ?
-    `INSERT INTO account_invites (email_lookup, created_at, expires_at) VALUES ('${lookup}', '${createdAt}', '${canonicalExpiry}') ON CONFLICT(email_lookup) DO UPDATE SET created_at = excluded.created_at, expires_at = excluded.expires_at;` :
-    `DELETE FROM account_invites WHERE email_lookup = '${lookup}';`),
+    `INSERT INTO account_invites (invite_lookup, created_at, expires_at) VALUES ('${lookup}', '${createdAt}', '${canonicalExpiry}') ON CONFLICT(invite_lookup) DO UPDATE SET created_at = excluded.created_at, expires_at = excluded.expires_at;` :
+    `DELETE FROM account_invites WHERE invite_lookup = '${lookup}';`),
   "COMMIT;",
   "",
 ].join("\n");

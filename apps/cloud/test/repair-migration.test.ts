@@ -65,6 +65,8 @@ for (const priorCount of [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]) it(`applies 
         .toMatchObject({ n: 0 });
       expect(after.connection.prepare("SELECT COUNT(*) AS n FROM account_invites").get())
         .toMatchObject({ n: 0 });
+      expect(after.connection.prepare(`SELECT COUNT(*) AS n FROM pragma_table_info('account_invites')
+        WHERE name = 'invite_lookup'`).get()).toMatchObject({ n: 1 });
     } finally { after.close(); }
   } finally { process.umask(originalUmask); }
 });

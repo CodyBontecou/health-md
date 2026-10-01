@@ -102,13 +102,15 @@ it("admits split-account signup through a one-time hashed invite only", async ()
   const { env, db } = setup();
   try {
     const invited = "invited@example.test";
-    const lookup = await keyedLookup(invited, env.IDENTITY_KEY_B64, "email-lookup-v1");
-    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at, expires_at)
+    const lookup = await keyedLookup(invited, env.IDENTITY_KEY_B64, "account-invite-v1");
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at, expires_at)
       VALUES (?, '2025-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z')`).run(lookup);
     env.AUTH_INVITE_EMAILS = "not-authoritative@example.test";
     const admitted = await splitInviteRequest(env, invited);
     expect(await admitted.json()).toMatchObject({ message: "Development sign-in link generated." });
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT email_lookup AS lookup FROM users").get())
+      .not.toMatchObject({ lookup });
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_invites").get()).toMatchObject({ n: 0 });
 
     // An existing active account can request another link without another invite.
@@ -120,8 +122,8 @@ it("admits split-account signup through a one-time hashed invite only", async ()
     });
 
     const expired = "expired@example.test";
-    const expiredLookup = await keyedLookup(expired, env.IDENTITY_KEY_B64, "email-lookup-v1");
-    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at, expires_at)
+    const expiredLookup = await keyedLookup(expired, env.IDENTITY_KEY_B64, "account-invite-v1");
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at, expires_at)
       VALUES (?, '2019-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z')`).run(expiredLookup);
     expect(await (await splitInviteRequest(env, expired, "203.0.113.23")).json()).toEqual({
       message: "If this address is eligible, a sign-in link is on its way.",
@@ -134,8 +136,8 @@ it("rechecks split-account invite authority inside the account-creation transact
   const { env, db } = setup();
   try {
     const email = "revoked@example.test";
-    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "email-lookup-v1");
-    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at)
+    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1");
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at)
       VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
     const database = env.DB;
     let intercepted = false;
@@ -143,7 +145,7 @@ it("rechecks split-account invite authority inside the account-creation transact
       if (property === "batch") return async (statements: D1PreparedStatement[]) => {
         if (!intercepted) {
           intercepted = true;
-          await target.prepare("DELETE FROM account_invites WHERE email_lookup = ?").bind(lookup).run();
+          await target.prepare("DELETE FROM account_invites WHERE invite_lookup = ?").bind(lookup).run();
         }
         return target.batch(statements);
       };
@@ -162,8 +164,8 @@ it("lets concurrent split-account requests consume one invite without duplicate 
   const { env, db } = setup();
   try {
     const email = "concurrent-invite@example.test";
-    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "email-lookup-v1");
-    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at)
+    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1");
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at)
       VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
     const responses = await Promise.all([
       splitInviteRequest(env, email, "203.0.113.30"),
@@ -182,8 +184,8 @@ it("reconciles a lost split-account invite transaction response", async () => {
   const { env, db } = setup();
   try {
     const email = "ambiguous-invite@example.test";
-    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "email-lookup-v1");
-    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at)
+    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1");
+    db.connection.prepare(`INSERT INTO account_invites (invite_lookup, created_at)
       VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
     const database = env.DB;
     let lostAccountBatch = false;
@@ -666,7 +668,7 @@ it("cleans expired authentication state in bounded oldest-first pages", async ()
     const current = "2030-01-01T00:00:00.000Z";
     for (const [index, expiresAt] of [...expired, current].entries()) {
       db.connection.prepare(`INSERT INTO account_invites
-        (email_lookup, created_at, expires_at) VALUES (?, '2019-01-01T00:00:00.000Z', ?)`)
+        (invite_lookup, created_at, expires_at) VALUES (?, '2019-01-01T00:00:00.000Z', ?)`)
         .run(`${"a".repeat(62)}${index.toString().padStart(2, "0")}`, expiresAt);
       db.connection.prepare(`INSERT INTO magic_links
         (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`)

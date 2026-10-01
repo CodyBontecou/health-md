@@ -2,7 +2,7 @@
 
 **Status:** source procedure only; no staging or production invite/resource is provisioned or approved.
 
-Split account Workers admit a first account only when D1 contains an unexpired `account_invites.email_lookup` row from migration `0018_account_invites.sql`. The lookup is `HMAC-SHA256(identity key, "email-lookup-v1\0" + normalized email)`. Raw invite addresses are never stored in D1 or split Worker configuration. The account-creation transaction rechecks authority, creates at most one account for the lookup, consumes the invite, and creates the one-time magic link. A revoked or expired row cannot authorize an account even if an earlier eligibility read raced with revocation.
+Split account Workers admit a first account only when D1 contains an unexpired `account_invites.invite_lookup` row from migration `0018_account_invites.sql`. The lookup is `HMAC-SHA256(identity key, "account-invite-v1\0" + normalized email)`. This domain is distinct from the durable user `email-lookup-v1` domain, so invite rows cannot be joined directly to accounts. Raw invite addresses are never stored in D1 or split Worker configuration. The account-creation transaction rechecks authority, creates at most one account for the lookup, consumes the invite, and creates the one-time magic link. A revoked or expired row cannot authorize an account even if an earlier eligibility read raced with revocation.
 
 The combined development/VM profile retains its small `AUTH_INVITE_EMAILS` compatibility behavior. Split production rejects that variable.
 

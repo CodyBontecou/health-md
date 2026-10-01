@@ -8,7 +8,7 @@ Status: proposed review artifact; no production resources or approvals. Scope: t
 |---|---|---|
 | Health content | complete compatibility envelopes, free text, embedded binary, metric values | TLS; application-encrypted R2 only; decrypt only for owner reads; never logs/telemetry/D1 |
 | Sensitive health metadata | owner dates, schema/source, object/export relations, byte counts, status | minimum owner-bound D1; no logs/support tools |
-| Identity/authentication | encrypted email, lookup HMAC, session/token hashes, one-time invite state | D1 ciphertext/hash only; split invites contain only the same purpose-separated email HMAC plus bounded timestamps, never raw addresses; secrets outside D1; generic responses |
+| Identity/authentication | encrypted email, lookup HMAC, session/token hashes, one-time invite state | D1 ciphertext/hash only; split invites contain only an independently domain-separated email HMAC plus bounded timestamps and cannot be joined directly to durable user lookups, never raw addresses; secrets outside D1; generic responses |
 | Operational aggregate | fixed route/status/latency/size buckets and counts | isolated Analytics Engine; no identifiers, URLs, exact sizes/durations, dates or values |
 | Key material | identity key, legacy read keys, account KEKs, password/email provider credentials | approved secret/key system only; separate deployment access; never D1/R2/logs/CLI arguments |
 

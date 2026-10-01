@@ -107,7 +107,9 @@ const requiredEvidence = [
 for (const path of requiredEvidence) read(path);
 const authSource = read("src/auth.ts");
 for (const fragment of [
-  "invitesPerRun: 500", "magicLinksPerRun: 500", "sessionsPerRun: 500", "rateAttemptsPerRun: 50_000",
+  'keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1")',
+  "WHERE invite_lookup = ?", "invitesPerRun: 500", "magicLinksPerRun: 500",
+  "sessionsPerRun: 500", "rateAttemptsPerRun: 50_000",
   "rateBucketsPerRun: 5_000", "ORDER BY expires_at, id LIMIT ?",
 ]) requireText(authSource, fragment, "bounded auth cleanup");
 const lifecycleSource = read("src/lifecycle.ts");
@@ -131,7 +133,7 @@ const inviteTool = read("scripts/prepare-account-invites.mjs");
 for (const fragment of [
   'privateRegularFile(emailFile, "Invite email input")', "must be a regular owner-only file",
   "Invite SQL output already exists",
-  "email-lookup-v1\\0", 'openSync(outputFile, "wx", 0o600)', "more than 90 days away",
+  "account-invite-v1\\0", 'openSync(outputFile, "wx", 0o600)', "more than 90 days away",
 ]) requireText(inviteTool, fragment, "account invite provisioning");
 forbid(inviteTool, /console\.(?:log|error)/u, "account invite provisioning output");
 const loadHarness = read("scripts/staging-load-lib.mjs");
@@ -166,7 +168,7 @@ requireText(rateLimitMigration, "CREATE TABLE auth_rate_limit_attempts", "migrat
 requireText(rateLimitMigration, "CREATE TRIGGER auth_rate_limit_attempt_applied", "migration 0017");
 const inviteMigration = read("migrations/0018_account_invites.sql");
 requireText(inviteMigration, "CREATE TABLE account_invites", "migration 0018");
-requireText(inviteMigration, "CHECK (length(email_lookup) = 64)", "migration 0018");
+requireText(inviteMigration, "CHECK (length(invite_lookup) = 64)", "migration 0018");
 requireText(inviteMigration, "CREATE INDEX account_invites_expiry", "migration 0018");
 
 const workflow = read(".github/workflows/cloud-ci.yml", repository);

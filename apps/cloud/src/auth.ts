@@ -100,13 +100,13 @@ export async function rateLimit(env: Env, bucket: string, limit: number): Promis
   return decision.accepted === 1;
 }
 
-async function signupAllowed(email: string, emailLookup: string, env: Env): Promise<boolean> {
+async function signupAllowed(email: string, inviteLookup: string, env: Env): Promise<boolean> {
   if (env.AUTH_SIGNUP_MODE === "closed") return false;
   if (env.AUTH_SIGNUP_MODE === "invite") {
     if (env.SERVICE_PROFILE === "account") {
       const invite = await env.DB.prepare(`SELECT 1 AS eligible FROM account_invites
-        WHERE email_lookup = ? AND (expires_at IS NULL OR expires_at > ?)`)
-        .bind(emailLookup, new Date().toISOString()).first<{ eligible: number }>();
+        WHERE invite_lookup = ? AND (expires_at IS NULL OR expires_at > ?)`)
+        .bind(inviteLookup, new Date().toISOString()).first<{ eligible: number }>();
       return invite?.eligible === 1;
     }
     // Combined development and the isolated VM profile retain their existing
@@ -145,6 +145,7 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
   const { email: input } = await readJson<{ email?: unknown }>(request);
   const email = normalizeEmail(input);
   const emailLookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "email-lookup-v1");
+  const inviteLookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1");
   const ip = request.headers.get("CF-Connecting-IP") ?? "missing";
   const ipLookup = await keyedLookup(ip, env.IDENTITY_KEY_B64, "auth-ip-rate-v1");
   const allowedByRate = await rateLimit(env, `auth-ip:${ipLookup}`, 20);
@@ -159,7 +160,7 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
   if (user && user.status !== "active") return generic();
   if (!user) {
     try {
-      if (!await signupAllowed(email, emailLookup, env)) return generic();
+      if (!await signupAllowed(email, inviteLookup, env)) return generic();
     } catch {
       // Admission storage is authoritative. Fail closed with the same response
       // rather than revealing whether an address or invite exists.
@@ -204,10 +205,10 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
         `INSERT OR IGNORE INTO users
          (id, email_lookup, email_ciphertext, email_iv, status, created_at)
          SELECT ?, ?, ?, ?, 'active', ? WHERE EXISTS (
-           SELECT 1 FROM account_invites WHERE email_lookup = ?
+           SELECT 1 FROM account_invites WHERE invite_lookup = ?
              AND (expires_at IS NULL OR expires_at > ?)
          )`,
-      ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now, emailLookup, now) : env.DB.prepare(
+      ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now, inviteLookup, now) : env.DB.prepare(
         `INSERT OR IGNORE INTO users
          (id, email_lookup, email_ciphertext, email_iv, status, created_at)
          VALUES (?, ?, ?, ?, 'active', ?)`,
@@ -215,9 +216,9 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
       await env.DB.batch([
         createUser,
         ...(env.SERVICE_PROFILE === "account" ? [env.DB.prepare(`DELETE FROM account_invites
-          WHERE email_lookup = ? AND EXISTS (
+          WHERE invite_lookup = ? AND EXISTS (
             SELECT 1 FROM users WHERE email_lookup = ? AND status = 'active'
-          )`).bind(emailLookup, emailLookup)] : []),
+          )`).bind(inviteLookup, emailLookup)] : []),
         createLink,
       ]);
     } else {
@@ -561,9 +562,9 @@ export async function purgeExpiredAuthState(
   }
   const instant = now.toISOString();
   await env.DB.batch([
-    env.DB.prepare(`DELETE FROM account_invites WHERE email_lookup IN (
-      SELECT email_lookup FROM account_invites WHERE expires_at IS NOT NULL AND expires_at < ?
-      ORDER BY expires_at, email_lookup LIMIT ?
+    env.DB.prepare(`DELETE FROM account_invites WHERE invite_lookup IN (
+      SELECT invite_lookup FROM account_invites WHERE expires_at IS NOT NULL AND expires_at < ?
+      ORDER BY expires_at, invite_lookup LIMIT ?
     )`).bind(instant, limits.invitesPerRun),
     env.DB.prepare(`DELETE FROM magic_links WHERE id IN (
       SELECT id FROM magic_links WHERE expires_at < ? ORDER BY expires_at, id LIMIT ?

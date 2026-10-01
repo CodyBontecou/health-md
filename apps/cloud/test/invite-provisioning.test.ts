@@ -43,10 +43,13 @@ it("prepares owner-only SQL containing hashes rather than invite addresses", () 
   expect(statSync(input.outputFile).mode & 0o777).toBe(0o600);
   const sql = readFileSync(input.outputFile, "utf8");
   const expected = createHmac("sha256", input.key)
+    .update("account-invite-v1\0first@example.test", "utf8").digest("hex");
+  const durableUserLookup = createHmac("sha256", input.key)
     .update("email-lookup-v1\0first@example.test", "utf8").digest("hex");
   expect(sql).toContain("BEGIN TRANSACTION;");
   expect(sql).toContain(expected);
-  expect(sql).toContain("ON CONFLICT(email_lookup) DO UPDATE");
+  expect(sql).not.toContain(durableUserLookup);
+  expect(sql).toContain("ON CONFLICT(invite_lookup) DO UPDATE");
   expect(sql).toContain("COMMIT;");
   expect(sql).not.toMatch(/first@|second@|example\.test/iu);
 });
@@ -57,7 +60,7 @@ it("prepares privacy-preserving invite revocation SQL", () => {
   expect({ status: result.status, stdout: result.stdout, stderr: result.stderr })
     .toEqual({ status: 0, stdout: "Prepared 2 hashed account invite revocations.\n", stderr: "" });
   const sql = readFileSync(input.outputFile, "utf8");
-  expect(sql).toContain("DELETE FROM account_invites WHERE email_lookup = '");
+  expect(sql).toContain("DELETE FROM account_invites WHERE invite_lookup = '");
   expect(sql).not.toContain("INSERT INTO account_invites");
   expect(sql).not.toMatch(/first@|second@|example\.test/iu);
 });
