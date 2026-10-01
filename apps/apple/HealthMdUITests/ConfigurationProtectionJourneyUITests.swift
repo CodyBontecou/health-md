@@ -76,7 +76,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             if element.exists, element.isHittable, isOutsideToast {
                 return true
             }
-            app.swipeUp()
+            app.scrollViews.firstMatch.swipeUp()
         }
         let toast = toastQuery.allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable })
         return element.exists && element.isHittable && (toast.map { !element.frame.intersects($0.frame) } ?? true)
@@ -309,7 +309,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertFalse(app.switches["Enabled"].waitForExistence(timeout: 1))
 
         // Keep the pinned toast as evidence while exercising the adjacent blocked actions. Moving
-        // each action outside the toast is substantially faster and safer than another app launch.
+        // each action outside the toast is substantially faster than another toast-to-Settings cycle.
         let duplicate = app.buttons["Duplicate"]
         XCTAssertTrue(
             scrollUntilHittableAboveProtectionToast(duplicate, in: app),
