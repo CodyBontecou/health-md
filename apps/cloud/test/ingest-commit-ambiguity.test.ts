@@ -7,6 +7,7 @@ import worker from "../src/index";
 import { sha256Hex } from "../src/crypto";
 import { createVmEnvironment } from "../vm/runtime";
 import { reconcileUploadIntents } from "../src/upload-intents";
+import { stageExportObjectExactly } from "../src/export-object-deletion";
 
 const roots: string[] = [];
 const sourceDirectory = resolve(import.meta.dirname, "..");
@@ -129,6 +130,35 @@ it("releases its pre-body admission when envelope validation fails", async () =>
     expect(response.status).toBe(422);
     expect(db.connection.prepare(`SELECT COUNT(*) AS count FROM upload_admissions
       WHERE user_id = ?`).get(userId)).toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("creates staged ciphertext conditionally without replacing an existing opaque key", async () => {
+  const { env, db } = await setup();
+  try {
+    const key = `v1/${randomUUID()}`;
+    const first = Uint8Array.from([1, 2, 3, 4]);
+    const second = Uint8Array.from([4, 3, 2, 1]);
+    let observedOptions: R2PutOptions | undefined;
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "put") return async (objectKey: string,
+        value: ReadableStream | ArrayBuffer | ArrayBufferView | string | Blob,
+        options?: R2PutOptions) => {
+        observedOptions = options;
+        return target.put(objectKey, value, options);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+
+    await stageExportObjectExactly(env, key, first);
+    expect(observedOptions?.onlyIf).toEqual({ etagDoesNotMatch: "*" });
+    await expect(stageExportObjectExactly(env, key, second))
+      .rejects.toThrow("Encrypted export object staging is inconsistent");
+    const retained = await objects.get(key);
+    expect(retained).not.toBeNull();
+    expect(Array.from(new Uint8Array(await retained!.arrayBuffer()))).toEqual(Array.from(first));
   } finally { db.close(); }
 });
 

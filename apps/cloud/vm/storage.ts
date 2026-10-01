@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { createReadStream, lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { lstat, mkdir, open, readFile, readdir, rename, stat, unlink } from "node:fs/promises";
+import { link, lstat, mkdir, open, readFile, readdir, stat, unlink } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 
@@ -171,7 +171,11 @@ export class VmObjectStore {
       await file.close();
     }
     try {
-      await rename(temp, destination);
+      // Publishing through link(2) is atomic and create-only. A retry after a
+      // lost response can verify the existing bytes through head(), while an
+      // opaque-key collision can never replace previously retained ciphertext.
+      await link(temp, destination);
+      await unlink(temp);
       const dir = await open(directory, "r");
       try { await dir.sync(); } finally { await dir.close(); }
     } catch (error) {

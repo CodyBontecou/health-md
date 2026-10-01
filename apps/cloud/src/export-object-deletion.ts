@@ -19,6 +19,10 @@ export async function stageExportObjectExactly(
   const expectedSha256 = await crypto.subtle.digest("SHA-256", digestSource);
   try {
     await env.EXPORTS.put(objectKey, ciphertext, {
+      // Object keys are generated server-side, but creation must still be
+      // collision-safe: a broken RNG or stale authority may never overwrite
+      // ciphertext that is already durable under the same key.
+      onlyIf: { etagDoesNotMatch: "*" },
       httpMetadata: { contentType: "application/octet-stream", cacheControl: "no-store" },
       sha256: expectedSha256,
     });

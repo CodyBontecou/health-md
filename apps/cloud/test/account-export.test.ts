@@ -129,6 +129,9 @@ it("streams paged owner-only TAR archives with exact verified legacy and account
     const objectKey = (db.connection.prepare(
       "SELECT object_key AS objectKey FROM exports ORDER BY received_at, id LIMIT 1")
       .get() as { objectKey: string }).objectKey;
+    // Simulate provider-side corruption without relying on a same-key overwrite;
+    // normal ciphertext publication is intentionally create-only.
+    await env.EXPORTS.delete(objectKey);
     await env.EXPORTS.put(objectKey, new Uint8Array([1, 2, 3]));
     const corrupt = await worker.fetch(new Request(`${origin}/api/account/export/page/1`, {
       headers: { Cookie: ownerCookie },
