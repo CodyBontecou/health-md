@@ -420,6 +420,42 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertEqual(manager.resumableSnapshots.map(\.jobID), [fixture.session.jobID])
     }
 
+    func testDiscardScheduledCorpusRecoveryRetainsJournalAndDoesNotTouchInteractiveJobs() throws {
+        for origin in [ConnectedCorpusOutboundOrigin.scheduledIPhone, .interactiveIPhone, .macInitiated] {
+            let fixture = try makeFixture(dayCount: 1, origin: origin)
+            _ = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+                expectedIndex: 0, jobID: fixture.session.jobID)
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store)
+            Self.retainedRecoveryManagers.append(manager)
+            try manager.discardScheduledRecovery(jobID: fixture.session.jobID)
+            let journal = try XCTUnwrap(manager.journal(jobID: fixture.session.jobID))
+            XCTAssertEqual(journal.state, origin == .scheduledIPhone ? .cancelled : .paused)
+            XCTAssertEqual(journal.items.count, 1, "discard must not remove spool bytes while a sender may unwind")
+            XCTAssertEqual(fixture.store.resumableJournals().count, origin == .scheduledIPhone ? 0 : 1)
+        }
+    }
+
+    func testScheduledCorpusRecoveryChecksCurrentScheduleAuthorityBeforeOpeningTransport() throws {
+        let sync = SyncService()
+        let remoteID = UUID()
+        let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone,
+            sourceInstallationID: sync.installationID, destinationInstallationID: remoteID)
+        let harness = FastReconnectHarness()
+        let capabilities = SyncPeerCapabilities.current(platform: .macOS, installationID: remoteID)
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store,
+            transportProvider: { _ in harness.transport() }, connectedPeerProvider: { _ in capabilities })
+        Self.retainedRecoveryManagers.append(manager)
+        manager.isScheduledRecoveryAuthorized = { _ in false }
+        let suite = "ScheduledCorpusAuthority.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        manager.configure(syncService: sync,
+            healthKitManager: HealthKitManager(store: FakeHealthStore(), userDefaults: defaults), externalIntegrations: nil)
+        XCTAssertNil(manager.resumeEligibleJob())
+        XCTAssertFalse(manager.hasRunningExport)
+        XCTAssertEqual(harness.openCount, 0)
+    }
+
     func testFastReconnectResumesAfterOldSenderReleasesOwnershipAndKeepsAssertion() async throws {
         let syncService = SyncService()
         let remoteInstallationID = UUID()
