@@ -82,7 +82,7 @@ it("restores an isolated encrypted synthetic snapshot with exact hashes and tena
     restored.env.ACCOUNT_KEY_WRAPPING_KEYS_JSON = JSON.stringify({ "kek-v1": wrappingKey });
     expect(restored.db.connection.prepare("PRAGMA integrity_check").get()).toMatchObject({ integrity_check: "ok" });
     expect(restored.db.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get())
-      .toMatchObject({ n: 16 });
+      .toMatchObject({ n: 17 });
     const ownerCookie = await cookie(restored.env, ownerId);
     const exact = await worker.fetch(new Request(`${origin}/api/exports/${exportId}/download`, {
       headers: { Cookie: ownerCookie },

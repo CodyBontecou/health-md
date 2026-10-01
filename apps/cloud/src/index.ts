@@ -399,6 +399,7 @@ export default {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM magic_links WHERE expires_at < ?").bind(now),
       env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now),
+      env.DB.prepare("DELETE FROM auth_rate_limit_attempts WHERE expires_at < ?").bind(now),
       env.DB.prepare("DELETE FROM auth_rate_limits WHERE expires_at < ?").bind(now),
     ]);
     await purgeExpiredRepairDrafts(env);

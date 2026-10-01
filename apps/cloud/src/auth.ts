@@ -74,13 +74,30 @@ export async function requireIngestToken(request: Request, env: Env): Promise<In
 export async function rateLimit(env: Env, bucket: string, limit: number): Promise<boolean> {
   const start = new Date(Math.floor(Date.now() / 3600000) * 3600000).toISOString();
   const expiry = new Date(Date.now() + 2 * 3600000).toISOString();
-  const result = await env.DB.prepare(
-    `INSERT INTO auth_rate_limits (bucket_key, window_start, request_count, expires_at)
-     VALUES (?, ?, 1, ?)
-     ON CONFLICT (bucket_key, window_start) DO UPDATE SET request_count = request_count + 1
-     WHERE request_count < ?`,
-  ).bind(bucket, start, expiry, limit).run();
-  return (result.meta.changes ?? 0) > 0;
+  const attemptId = crypto.randomUUID();
+  try {
+    await env.DB.prepare(`INSERT OR IGNORE INTO auth_rate_limit_attempts
+      (id, bucket_key, window_start, accepted, expires_at)
+      SELECT ?, ?, ?, CASE WHEN COALESCE((SELECT request_count FROM auth_rate_limits
+        WHERE bucket_key = ? AND window_start = ?), 0) < ? THEN 1 ELSE 0 END, ?`)
+      .bind(attemptId, bucket, start, bucket, start, limit, expiry).run();
+  } catch {
+    // The attempt row and its accepted-counter trigger may have committed even
+    // when the adapter loses the response. Read the opaque decision below.
+  }
+  let decision: { accepted: number } | null;
+  try {
+    decision = await env.DB.prepare(`SELECT accepted FROM auth_rate_limit_attempts
+      WHERE id = ? AND bucket_key = ? AND window_start = ?`)
+      .bind(attemptId, bucket, start).first<{ accepted: number }>();
+  } catch {
+    throw new HttpError(503, "rate_limit_verification_pending",
+      "Request admission could not yet be verified. Please try again.");
+  }
+  if (!decision || (decision.accepted !== 0 && decision.accepted !== 1)) {
+    throw new HttpError(503, "rate_limit_unavailable", "Request admission is unavailable. Please try again.");
+  }
+  return decision.accepted === 1;
 }
 
 function signupAllowed(email: string, env: Env): boolean {

@@ -49,7 +49,7 @@ End-to-end completion means all of the following, not merely source implementati
 | KEK rotation | migration 0013, bounded conditional rewrap, rotation runbook/tests | source verified; provider key custody/restore drill absent |
 | Backup/restore | local encrypted `test:restore-drill`; `production-recovery-runbook.md` | local invariant verified; **not D1/R2/PITR/RPO/RTO proof** |
 | Health-free metrics/SLOs | `telemetry.ts`, prohibited-field tests, AE placeholders, observability/SLO runbook | source verified; no dataset/dashboard/alerts/on-call deployed |
-| Abuse/load shedding | token/account/email budgets and tests | source verified; WAF/bot controls and 2x load/cost evidence absent |
+| Abuse/load shedding | token/account/email budgets use migration 0017's expiring opaque attempt decisions and trigger-applied counters; concurrent-limit, accepted/rejected lost-response and unreadable-verification tests | source verified; WAF/bot controls and 2x load/cost evidence absent |
 | Mobile Apple Cloud destination | existing manual compatibility API Endpoint only; split production rejects repair enrollment/dispatch flags | **deliberate production enrollment/retry UX and physical matrix absent** |
 | Mobile Android Cloud destination | existing manual compatibility API Endpoint only; raw snapshot and split-production repair flags rejected | **deliberate production enrollment/retry UX and physical matrix absent** |
 | Public contract parity | no mobile envelope/schema change; compatibility fixtures remain | preserved, but phase-3 product work absent |
@@ -64,10 +64,10 @@ End-to-end completion means all of the following, not merely source implementati
 
 ## Audited source artifact surface
 
-Fresh audit snapshot, updated on 2026-09-30: draft PR #163 tracks `feat/cloud-multi-user-production-foundation`, is mergeable with a clean merge state, and contains 68 changed files. Every repository check triggered for the current audited source passed; there are no reviews or assigned reviewers. The PR remains draft. Commit-specific head and check evidence must be read from the PR rather than copied here, so this record cannot silently present an older revision as current. The changed files map to deliverables as follows:
+Fresh audit snapshot, updated on 2026-09-30: draft PR #163 tracks `feat/cloud-multi-user-production-foundation`, is mergeable with a clean merge state, and contains 69 changed files. Every repository check triggered for the current audited source passed; there are no reviews or assigned reviewers. The PR remains draft. Commit-specific head and check evidence must be read from the PR rather than copied here, so this record cannot silently present an older revision as current. The changed files map to deliverables as follows:
 
 - Trust-boundary/deployment: `.github/workflows/cloud-ci.yml`; `wrangler.{ingest,account,maintenance}.toml`; `src/{ingest-worker,account-worker,maintenance-worker,telemetry,http,index,types}.ts`; `package.json`.
-- Ingest/storage/crypto/lifecycle: migrations `0010`–`0016`; `src/{upload-intents,exports,account-export-keys,account-export,crypto,lifecycle,object-reconciliation,auth,dashboard}.ts`.
+- Ingest/storage/crypto/lifecycle: migrations `0010`–`0017`; `src/{upload-intents,exports,account-export-keys,account-export,crypto,lifecycle,object-reconciliation,auth,dashboard}.ts`.
 - Account UI: `public/{dashboard.html,dashboard.js,deletion-status.html,deletion-status.js}` and `docs/public-account-dashboard.md`.
 - VM compatibility and disconnect safety: `vm/{server,storage}.ts`, `test/vm.test.ts`, and ADR-0007 clarification. The deployed disconnect hotfix remains the separately scoped commit `4f748cc5338a7dc3b122a3d2503b91c9b55d3370`.
 - Qualification/gates: `scripts/{qualify-staging-load,staging-load-lib,verify-production-safety}.mjs`, `scripts/staging-load-lib.d.mts`, and the Cloud workflow.
@@ -78,13 +78,13 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 
 ## Verification commands and coverage
 
-- `npm run check`: on the audited head, 31 files and 130 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
+- `npm run check`: on the audited head, 31 files and 134 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
 - `npm run test:smoke`: passes in an isolated worktree against local Wrangler D1/R2 with synthetic Apple v1/v2 and Android v4 envelopes, replacement ordering, encrypted roundtrip, tenant denial and revocation. The repository worktree's pre-existing owner-only `.dev.vars` is not overwritten or read by the harness.
 - `npm run dry-run:profiles`: all three profiles bundle and list only their intended bindings. It proves buildability, not resource correctness or deployment isolation.
 - `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.
 - `npm audit --audit-level=moderate`: zero known vulnerabilities at audit time; this is a dependency advisory check, not an application/infrastructure security assessment.
 - `git diff --check`: passes; this proves whitespace validity only.
-- `npm run verify:production-safety`: passes with 13 unchecked gates, five unassigned owners and migrations `0001`–`0016`; it asserts production is still closed, placeholder-bound and unapproved. A passing result means **blocked safely**, not ready.
+- `npm run verify:production-safety`: passes with 13 unchecked gates, five unassigned owners and migrations `0001`–`0017`; it asserts production is still closed, placeholder-bound and unapproved. A passing result means **blocked safely**, not ready.
 - Live boundary recheck: API/account health return 200, anonymous ingest and MCP return 401, account-host ingest returns 404, the ten actual writer/account/ingest/MCP proxy and Tunnel units are active, and `systemctl --failed` reports none after clearing a stale transient login helper. These checks prove current pilot availability only.
 
 ## Current blockers and next required inputs

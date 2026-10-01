@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
-import { issueSession, limitIngest } from "../src/auth";
+import { issueSession, limitIngest, rateLimit } from "../src/auth";
 import { createVmEnvironment } from "../vm/runtime";
 
 const roots: string[] = [];
@@ -403,6 +403,123 @@ it("keeps magic-link persistence failures generic and health-data-free", async (
       doubles: [1],
     }]);
     expect(JSON.stringify(points)).not.toContain("failure@example.test");
+  } finally { db.close(); }
+});
+
+it("recovers accepted and rejected rate-limit decisions after lost D1 responses", async () => {
+  const { env, db } = setup();
+  try {
+    const original = env.DB;
+    let lost = 0;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("INSERT OR IGNORE INTO auth_rate_limit_attempts")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "run") return async () => {
+                await boundStatement.run();
+                lost += 1;
+                throw new Error("synthetic lost rate-limit write response");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    expect(await rateLimit(env, "synthetic-lost", 1)).toBe(true);
+    expect(await rateLimit(env, "synthetic-lost", 1)).toBe(false);
+    expect(lost).toBe(2);
+    expect(db.connection.prepare(`SELECT request_count AS count FROM auth_rate_limits
+      WHERE bucket_key = 'synthetic-lost'`).get()).toMatchObject({ count: 1 });
+    expect(db.connection.prepare(`SELECT accepted, COUNT(*) AS n FROM auth_rate_limit_attempts
+      WHERE bucket_key = 'synthetic-lost' GROUP BY accepted ORDER BY accepted`).all())
+      .toMatchObject([{ accepted: 0, n: 1 }, { accepted: 1, n: 1 }]);
+  } finally { db.close(); }
+});
+
+it("admits exactly the configured number of concurrent rate-limit attempts", async () => {
+  const { env, db } = setup();
+  try {
+    const decisions = await Promise.all(Array.from({ length: 20 }, () =>
+      rateLimit(env, "synthetic-concurrent", 7)));
+    expect(decisions.filter(Boolean)).toHaveLength(7);
+    expect(db.connection.prepare(`SELECT request_count AS count FROM auth_rate_limits
+      WHERE bucket_key = 'synthetic-concurrent'`).get()).toMatchObject({ count: 7 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM auth_rate_limit_attempts
+      WHERE bucket_key = 'synthetic-concurrent'`).get()).toMatchObject({ n: 20 });
+    db.connection.prepare(`UPDATE auth_rate_limit_attempts
+      SET expires_at = '2020-01-01T00:00:00.000Z' WHERE bucket_key = 'synthetic-concurrent'`).run();
+    env.ENVIRONMENT = "development";
+    await worker.scheduled({} as ScheduledEvent, env);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM auth_rate_limit_attempts
+      WHERE bucket_key = 'synthetic-concurrent'`).get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("fails closed when a committed rate-limit decision cannot be read", async () => {
+  const { env, db } = setup();
+  try {
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (query.includes("INSERT OR IGNORE INTO auth_rate_limit_attempts")) {
+          return new Proxy(statement, { get(prepared, statementProperty) {
+            if (statementProperty !== "bind") {
+              const value = Reflect.get(prepared, statementProperty);
+              return typeof value === "function" ? value.bind(prepared) : value;
+            }
+            return (...values: unknown[]) => {
+              const bound = prepared.bind(...values);
+              return new Proxy(bound, { get(boundStatement, boundProperty) {
+                if (boundProperty === "run") return async () => {
+                  await boundStatement.run();
+                  throw new Error("synthetic lost rate-limit write response");
+                };
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              } });
+            };
+          } });
+        }
+        if (!query.includes("SELECT accepted FROM auth_rate_limit_attempts")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => {
+                throw new Error("synthetic rate-limit verification outage");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(rateLimit(env, "synthetic-unreadable", 1)).rejects.toMatchObject({
+      status: 503,
+      code: "rate_limit_verification_pending",
+    });
+    expect(db.connection.prepare(`SELECT request_count AS count FROM auth_rate_limits
+      WHERE bucket_key = 'synthetic-unreadable'`).get()).toMatchObject({ count: 1 });
   } finally { db.close(); }
 });
 
