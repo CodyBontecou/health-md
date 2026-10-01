@@ -1,4 +1,4 @@
-import core from "./index";
+import core, { validateConfiguration } from "./index";
 import { errorResponse, json, withSecurityHeaders } from "./http";
 import { recordHttpMetric } from "./telemetry";
 import type { Env } from "./types";
@@ -17,19 +17,24 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const started = Date.now();
     let response: Response;
-    if (env.SERVICE_PROFILE !== "ingest") response = withSecurityHeaders(errorResponse(new Error()), env);
-    else if (!allowed(request)) response = denied(env);
-    else {
-      const headers = new Headers(request.headers);
-      headers.delete("Cookie");
-      const result = await core.fetch(new Request(request, { headers }), env);
-      const responseHeaders = new Headers(result.headers);
-      responseHeaders.delete("Set-Cookie");
-      response = new Response(result.body, {
-        status: result.status,
-        statusText: result.statusText,
-        headers: responseHeaders,
-      });
+    try {
+      validateConfiguration(env);
+      if (env.SERVICE_PROFILE !== "ingest") response = withSecurityHeaders(errorResponse(new Error()), env);
+      else if (!allowed(request)) response = denied(env);
+      else {
+        const headers = new Headers(request.headers);
+        headers.delete("Cookie");
+        const result = await core.fetch(new Request(request, { headers }), env);
+        const responseHeaders = new Headers(result.headers);
+        responseHeaders.delete("Set-Cookie");
+        response = new Response(result.body, {
+          status: result.status,
+          statusText: result.statusText,
+          headers: responseHeaders,
+        });
+      }
+    } catch {
+      response = withSecurityHeaders(errorResponse(new Error()), env);
     }
     recordHttpMetric(env, "ingest", request, response, started);
     return response;

@@ -7,9 +7,15 @@ import type { Env, LifecycleMessage } from "./types";
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const started = Date.now();
-    const response = env.SERVICE_PROFILE !== "maintenance" ?
-      withSecurityHeaders(errorResponse(new Error()), env) :
-      withSecurityHeaders(json({ error: "not_found", message: "Endpoint not found." }, { status: 404 }), env);
+    let response: Response;
+    try {
+      validateConfiguration(env);
+      response = env.SERVICE_PROFILE !== "maintenance" ?
+        withSecurityHeaders(errorResponse(new Error()), env) :
+        withSecurityHeaders(json({ error: "not_found", message: "Endpoint not found." }, { status: 404 }), env);
+    } catch {
+      response = withSecurityHeaders(errorResponse(new Error()), env);
+    }
     recordHttpMetric(env, "maintenance", request, response, started);
     return response;
   },

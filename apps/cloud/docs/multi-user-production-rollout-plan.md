@@ -42,7 +42,7 @@ Load tests must use synthetic envelopes and include worst-case valid 25 MiB requ
 
 ## Target production topology
 
-**Source milestone:** positive-route entrypoints `src/ingest-worker.ts` and `src/account-worker.ts`, scheduled-only `src/maintenance-worker.ts`, separate placeholder Wrangler profiles, CI dry-runs, and route-boundary tests are implemented. Placeholder IDs keep every profile non-deployable; no production resources, secrets, routes, or approval marker have been provisioned.
+**Source milestone:** positive-route entrypoints `src/ingest-worker.ts` and `src/account-worker.ts`, scheduled-only `src/maintenance-worker.ts`, separate placeholder Wrangler profiles, CI dry-runs, full pre-decision configuration validation on every HTTP/scheduled/Queue invocation, and route-boundary tests are implemented. Placeholder IDs keep every profile non-deployable; no production resources, secrets, routes, or approval marker have been provisioned.
 
 Use new, production-only resources and credentials:
 

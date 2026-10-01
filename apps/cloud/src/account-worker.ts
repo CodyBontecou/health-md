@@ -1,4 +1,4 @@
-import core from "./index";
+import core, { validateConfiguration } from "./index";
 import { errorResponse, json, withSecurityHeaders } from "./http";
 import { recordHttpMetric } from "./telemetry";
 import type { Env } from "./types";
@@ -44,9 +44,14 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const started = Date.now();
     let response: Response;
-    if (env.SERVICE_PROFILE !== "account") response = withSecurityHeaders(errorResponse(new Error()), env);
-    else if (!allowed(request)) response = denied(env);
-    else response = await core.fetch(request, env);
+    try {
+      validateConfiguration(env);
+      if (env.SERVICE_PROFILE !== "account") response = withSecurityHeaders(errorResponse(new Error()), env);
+      else if (!allowed(request)) response = denied(env);
+      else response = await core.fetch(request, env);
+    } catch {
+      response = withSecurityHeaders(errorResponse(new Error()), env);
+    }
     recordHttpMetric(env, "account", request, response, started);
     return response;
   },

@@ -111,6 +111,14 @@ const requiredEvidence = [
   "src/upload-intents.ts", "src/account-export-keys.ts", "src/telemetry.ts",
 ];
 for (const path of requiredEvidence) read(path);
+for (const path of ["src/ingest-worker.ts", "src/account-worker.ts", "src/maintenance-worker.ts"]) {
+  const source = read(path);
+  const validation = source.indexOf("validateConfiguration(env);");
+  const routeDecision = source.indexOf("env.SERVICE_PROFILE !==");
+  if (validation < 0 || routeDecision < 0 || validation > routeDecision) {
+    failures.push(`${path}: full configuration validation must precede every HTTP route decision`);
+  }
+}
 const accountKeySource = read("src/account-export-keys.ts");
 requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
 requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',

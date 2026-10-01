@@ -92,6 +92,28 @@ describe("split production Worker profiles", () => {
     });
   });
 
+  it("validates complete configuration before returning any split-profile route denial", async () => {
+    const invalidIngest = profile("ingest", "https://api.healthmd.app");
+    invalidIngest.CLOUD_RUNTIME_APPROVED = undefined;
+    const ingestDenied = await ingestWorker.fetch(new Request(
+      "https://api.healthmd.app/api/security-events"), invalidIngest);
+    expect(ingestDenied.status).toBe(500);
+    expect(await ingestDenied.json()).toEqual({
+      error: "internal_error", message: "The request could not be completed.",
+    });
+
+    const invalidAccount = profile("account", "https://account.healthmd.app");
+    invalidAccount.CLOUD_RUNTIME_APPROVED = undefined;
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/mcp", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+    }), invalidAccount)).status).toBe(500);
+
+    const invalidMaintenance = profile("maintenance", "https://maintenance.healthmd.app");
+    invalidMaintenance.CLOUD_RUNTIME_APPROVED = undefined;
+    expect((await maintenanceWorker.fetch(new Request("https://maintenance.healthmd.app/health"),
+      invalidMaintenance)).status).toBe(500);
+  });
+
   it("fails closed when required telemetry or account wrapping keys are absent", async () => {
     const noMetrics = profile("ingest", "https://api.healthmd.app");
     noMetrics.METRICS = undefined;
