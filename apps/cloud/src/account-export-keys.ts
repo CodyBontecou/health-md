@@ -7,6 +7,7 @@ interface AccountKeyRow {
   wrappingKeyId: string;
   wrappedKey: string;
   wrapIv: string;
+  createdAt?: string;
   rewrappedAt?: string | null;
 }
 
@@ -50,23 +51,34 @@ export async function currentExportKey(env: Env, userId: string): Promise<{ keyI
   const keyId = crypto.randomUUID();
   const dataKey = encodeBase64(crypto.getRandomValues(new Uint8Array(32)));
   const wrapped = await wrapAccountExportKey(dataKey, wrapping, userId, keyId, wrappingKeyId);
+  const createdAt = new Date().toISOString();
   try {
-    const result = await env.DB.prepare(
+    await env.DB.prepare(
       `INSERT INTO account_export_keys
        (user_id, key_id, wrapping_key_id, wrapped_key, wrap_iv, created_at)
        SELECT ?, ?, ?, ?, ?, ? FROM users WHERE id = ? AND status = 'active'`,
     ).bind(userId, keyId, wrappingKeyId, wrapped.wrappedKey, wrapped.iv,
-      new Date().toISOString(), userId).run();
-    if ((result.meta.changes ?? 0) === 1) return { keyId, key: dataKey };
+      createdAt, userId).run();
   } catch {
-    // Another isolate may have created the one active account key first.
+    // A concurrent isolate may have won, or the D1 response may have been lost
+    // after this candidate committed. Verify the durable row below.
   }
-  const winner = await env.DB.prepare(
-    `SELECT key_id AS keyId, wrapping_key_id AS wrappingKeyId,
-            wrapped_key AS wrappedKey, wrap_iv AS wrapIv
-     FROM account_export_keys WHERE user_id = ? AND retired_at IS NULL LIMIT 1`,
-  ).bind(userId).first<AccountKeyRow>();
+  let winner: AccountKeyRow | null;
+  try {
+    winner = await env.DB.prepare(
+      `SELECT key_id AS keyId, wrapping_key_id AS wrappingKeyId,
+              wrapped_key AS wrappedKey, wrap_iv AS wrapIv, created_at AS createdAt
+       FROM account_export_keys WHERE user_id = ? AND retired_at IS NULL LIMIT 1`,
+    ).bind(userId).first<AccountKeyRow>();
+  } catch {
+    throw new Error("Account export key creation verification is unavailable");
+  }
   if (!winner) throw new Error("Active account export key could not be created");
+  if (winner.keyId === keyId && winner.wrappingKeyId === wrappingKeyId &&
+      winner.wrappedKey === wrapped.wrappedKey && winner.wrapIv === wrapped.iv &&
+      winner.createdAt === createdAt) {
+    return { keyId, key: dataKey };
+  }
   return unwrap(env, userId, winner);
 }
 

@@ -4,7 +4,7 @@ Status: source-only procedure for future split-profile production. Do not apply 
 
 ## Model and limits
 
-Each account has a random 256-bit export data-encryption key (DEK). D1 stores only an AES-256-GCM-wrapped DEK with the account ID, DEK ID and KEK version bound as authenticated data. Export objects retain the stable DEK ID. `0013_account_key_rewrap.sql` records the last rewrap time.
+Each account has a random 256-bit export data-encryption key (DEK). D1 stores only an AES-256-GCM-wrapped DEK with the account ID, DEK ID and KEK version bound as authenticated data. Creation does not trust adapter change counts: ingest uses its new plaintext candidate only after reading back the exact key ID, KEK ID, wrapped bytes, IV and creation timestamp; it safely adopts a concurrent winner and withholds all candidates if verification is unreadable. Export objects retain the stable DEK ID. `0013_account_key_rewrap.sql` records the last rewrap time.
 
 The bounded maintenance operation unwraps with the row's historical KEK and wraps the same DEK under `CURRENT_ACCOUNT_WRAPPING_KEY_ID`. It does **not** decrypt or rewrite health objects, does not change DEK IDs, and does not rotate a compromised account DEK. A DEK/ciphertext rotation requires a separate resumable object-migration design and approval.
 

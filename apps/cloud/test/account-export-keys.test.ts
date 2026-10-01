@@ -43,6 +43,45 @@ function addUser(db: ReturnType<typeof setup>["db"]): string {
   return id;
 }
 
+function accountKeyCreationDatabase(original: D1Database, options: {
+  insert?: "normal" | "lost_response" | "false_positive";
+  failVerification?: boolean;
+}): D1Database {
+  return new Proxy(original, { get(target, property) {
+    if (property === "prepare") return (query: string) => {
+      const statement = target.prepare(query);
+      return new Proxy(statement, { get(prepared, statementProperty) {
+        if (statementProperty !== "bind") {
+          const value = Reflect.get(prepared, statementProperty);
+          return typeof value === "function" ? value.bind(prepared) : value;
+        }
+        return (...values: unknown[]) => {
+          const bound = prepared.bind(...values);
+          return new Proxy(bound, { get(boundStatement, boundProperty) {
+            if (boundProperty === "run" && query.includes("INSERT INTO account_export_keys")) {
+              if (options.insert === "false_positive") {
+                return async () => target.prepare("SELECT 1").run();
+              }
+              if (options.insert === "lost_response") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost account-key creation response");
+              };
+            }
+            if (boundProperty === "first" && options.failVerification &&
+                query.includes("created_at AS createdAt")) {
+              return async () => { throw new Error("synthetic account-key verification outage"); };
+            }
+            const value = Reflect.get(boundStatement, boundProperty);
+            return typeof value === "function" ? value.bind(boundStatement) : value;
+          } });
+        };
+      } });
+    };
+    const value = Reflect.get(target, property);
+    return typeof value === "function" ? value.bind(target) : value;
+  } }) as D1Database;
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -78,6 +117,56 @@ it("creates per-account keys without legacy global decryption authority", async 
     const key = await currentExportKey(env, userId);
     expect(key.keyId).not.toBe("v1");
     expect(await resolveExportKey(env, userId, key.keyId)).toBe(key.key);
+  } finally { db.close(); }
+});
+
+it("returns a newly created account key only after exact durable verification", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = addUser(db);
+    const original = env.DB;
+    env.DB = accountKeyCreationDatabase(original, { insert: "lost_response" });
+    const created = await currentExportKey(env, userId);
+    env.DB = original;
+    expect(await resolveExportKey(env, userId, created.keyId)).toBe(created.key);
+
+    const secondUser = addUser(db);
+    env.DB = accountKeyCreationDatabase(original, { insert: "false_positive" });
+    await expect(currentExportKey(env, secondUser)).rejects.toThrow(
+      "Active account export key could not be created",
+    );
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM account_export_keys WHERE user_id = ?")
+      .get(secondUser)).toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("withholds a committed account key while durable verification is unreadable", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = addUser(db);
+    const original = env.DB;
+    env.DB = accountKeyCreationDatabase(original, { failVerification: true });
+    await expect(currentExportKey(env, userId)).rejects.toThrow(
+      "Account export key creation verification is unavailable",
+    );
+    env.DB = original;
+    const retried = await currentExportKey(env, userId);
+    expect(await resolveExportKey(env, userId, retried.keyId)).toBe(retried.key);
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM account_export_keys WHERE user_id = ?")
+      .get(userId)).toEqual({ count: 1 });
+  } finally { db.close(); }
+});
+
+it("concurrent account-key callers converge on one durable key", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = addUser(db);
+    const [first, second] = await Promise.all([
+      currentExportKey(env, userId), currentExportKey(env, userId),
+    ]);
+    expect(second).toEqual(first);
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM account_export_keys WHERE user_id = ?")
+      .get(userId)).toEqual({ count: 1 });
   } finally { db.close(); }
 });
 

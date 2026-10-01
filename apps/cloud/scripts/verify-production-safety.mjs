@@ -123,6 +123,12 @@ const accountKeySource = read("src/account-export-keys.ts");
 requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
 requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',
   "legacy account-read key path");
+for (const fragment of [
+  "created_at AS createdAt", "winner.wrappedKey === wrapped.wrappedKey",
+  "winner.wrapIv === wrapped.iv", "winner.createdAt === createdAt",
+  "Account export key creation verification is unavailable",
+]) requireText(accountKeySource, fragment, "durable account-key creation");
+forbid(accountKeySource, /meta\.changes/u, "account-key creation/rewrap correctness");
 const authSource = read("src/auth.ts");
 for (const fragment of [
   'keyedLookup(email, env.IDENTITY_KEY_B64, "account-invite-v1")',

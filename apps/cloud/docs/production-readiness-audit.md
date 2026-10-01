@@ -45,7 +45,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Deletion Queue/status/SLA | lifecycle Queue source, migrations 0012/0015, multiple client-known hashed authorities per unique job, bounded oldest-first receipt/tombstone expiry, request and maintenance-completion ambiguous-commit/concurrent-request/concurrent-completion/exact-retry plus cross-account scheduled-failure-isolation tests | source verified; Queue/DLQ/backup-expiry/SLA deployment absent |
 | Account data export | five-envelope verified TAR pages, exact pre-materialization ciphertext-size bounds and cross-account tests | source verified; production streaming qualification absent |
 | Cross-tenant route matrix | `production-authorization-matrix.md` mapping current routes to tests; 2-account lifecycle/export/repair/MCP evidence | source verified; independent deployed-revision assessment absent |
-| Per-account DEKs | migration 0011, account key resolver, legacy compatibility/tamper/isolation tests | source verified; approved production key provider absent |
+| Per-account DEKs | migration 0011; account-key creation always reads back the active row and returns its local plaintext candidate only when key ID, KEK ID, wrapped bytes, IV and creation timestamp match exactly; otherwise it safely adopts a concurrent winner or withholds the key while verification is unreadable; lost-response, false-positive change metadata, concurrent caller, tamper, isolation and legacy compatibility tests | source verified; approved production key provider absent |
 | KEK rotation | migration 0013, bounded conditional rewrap with exact durable read-back after lost/zero-change responses, concurrent-winner and unreadable-verification tests, rotation runbook | source verified; provider key custody/restore drill absent |
 | Backup/restore | local encrypted `test:restore-drill`; `production-recovery-runbook.md` | local invariant verified; **not D1/R2/PITR/RPO/RTO proof** |
 | Health-free metrics/SLOs | `telemetry.ts`, prohibited-field tests, AE placeholders, observability/SLO runbook | source verified; no dataset/dashboard/alerts/on-call deployed |
@@ -78,7 +78,7 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 
 ## Verification commands and coverage
 
-- `npm run check`: on the audited head, 32 files and 156 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
+- `npm run check`: on the audited head, 32 files and 159 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
 - `npm run test:smoke`: passes in an isolated worktree against local Wrangler D1/R2 with synthetic Apple v1/v2 and Android v4 envelopes, replacement ordering, encrypted roundtrip, tenant denial and revocation. The repository worktree's pre-existing owner-only `.dev.vars` is not overwritten or read by the harness.
 - `npm run dry-run:profiles`: all three profiles bundle and list only their intended bindings. It proves buildability, not resource correctness or deployment isolation.
 - `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.
