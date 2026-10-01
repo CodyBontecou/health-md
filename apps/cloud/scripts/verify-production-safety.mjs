@@ -230,12 +230,21 @@ for (const fragment of [
   "Invalid deletion-receipt cleanup limit", "ORDER BY status_expires_at, status_token_hash LIMIT ?",
   "ORDER BY completed_at, id LIMIT ?",
 ]) requireText(lifecycleSource, fragment, "bounded deletion-receipt cleanup");
-requireText(lifecycleSource, "state IN ('reserved', 'object_written', 'aborting')",
-  "account deletion includes claimed upload cleanup");
+requireText(lifecycleSource, "SELECT id, object_key AS objectKey FROM upload_intents",
+  "account deletion includes every upload-intent state");
+requireText(lifecycleSource, "DELETE FROM upload_intents WHERE id = ? AND user_id = ?",
+  "account deletion removes every upload-intent state");
 requireText(lifecycleSource, "await deleteExportObjectExactly(env, entry.objectKey)",
   "ciphertext-first account deletion");
 requireText(lifecycleSource, "await deleteExportObjectExactly(env, row.objectKey)",
   "exact retained-revision ciphertext deletion");
+for (const fragment of [
+  "SELECT ?, ?, ? WHERE EXISTS", "status = 'disabled'",
+  "AS invalidUser", "committed.invalidUser !== 0", "job.invalidUser !== 0",
+  "Account deletion disablement is not durable",
+  "Account deletion remaining-state verification is unavailable",
+  "AND NOT EXISTS (SELECT 1 FROM users WHERE id = account_deletions.user_id)",
+]) requireText(lifecycleSource, fragment, "durable account deletion disablement/completion");
 const deletionFunction = lifecycleSource.slice(lifecycleSource.indexOf("export async function processAccountDeletionById"));
 if (deletionFunction.indexOf("deleteExportObjectExactly(env, entry.objectKey)") < 0 ||
     deletionFunction.indexOf("DELETE FROM exports WHERE id = ? AND user_id = ?") <

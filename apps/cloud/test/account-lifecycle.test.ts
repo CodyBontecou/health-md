@@ -10,7 +10,8 @@ import { processAccountDeletionById, processAccountDeletions, purgeExpiredDeleti
 import maintenanceWorker from "../src/maintenance-worker";
 import { createVmEnvironment } from "../vm/runtime";
 import { createSingleUserAccount } from "../vm/bootstrap";
-import type { Env, LifecycleMessage } from "../src/types";
+import { acquireUploadAdmission, reserveUploadIntent } from "../src/upload-intents";
+import type { Env, IngestPrincipal, LifecycleMessage } from "../src/types";
 
 const roots: string[] = [];
 const sourceDirectory = resolve(import.meta.dirname, "..");
@@ -140,6 +141,111 @@ it("uses a fresh email-link session as deletion step-up and durably queues erasu
     ).run();
     await purgeExpiredDeletionReceipts(env);
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("does not create deletion authority unless account disablement is durable", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) =>
+        target.batch(statements.slice(1));
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    const response = await request(env, "/api/account/delete", "POST", deletionInput(), cookie);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "deletion_conflict" });
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "active" });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM account_deletions").get())
+      .toEqual({ count: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM account_deletion_receipts").get())
+      .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("refuses deletion work for a job whose user is still active", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z')`).run(jobId, userId);
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Account deletion disablement is not durable",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "active" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
+  } finally { db.close(); }
+});
+
+it("never treats an unreadable deletion remainder as zero", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z')`).run(jobId, userId);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("SELECT COUNT(*) FROM exports WHERE user_id")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => null;
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Account deletion remaining-state verification is unavailable",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "disabled" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
+  } finally { db.close(); }
+});
+
+it("does not mark deletion complete if the disabled-user delete becomes a no-op", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z')`).run(jobId, userId);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        await target.prepare("UPDATE users SET status = 'active' WHERE id = ?").bind(userId).run();
+        return target.batch(statements);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Account deletion completion was not recorded",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "active" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
   } finally { db.close(); }
 });
 
@@ -325,6 +431,33 @@ it("keeps account metadata until ciphertext deletion is exactly verified", async
     env.EXPORTS = objects;
     expect(await processAccountDeletionById(env, jobId)).toBe(true);
     expect(await objects.get(objectKey)).toBeNull();
+  } finally { db.close(); }
+});
+
+it("erases committed-intent ciphertext even when export metadata is already absent", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const tokenId = randomUUID();
+    const now = new Date().toISOString();
+    db.connection.prepare(`INSERT INTO ingest_tokens
+      (id, user_id, name, token_hash, last_four, created_at)
+      VALUES (?, ?, 'Synthetic device', ?, 'test', ?)`).run(tokenId, userId, randomUUID(), now);
+    const principal: IngestPrincipal = { userId, tokenId };
+    const admission = await acquireUploadAdmission(env, principal);
+    const intent = await reserveUploadIntent(env, principal, admission, "b".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    db.connection.prepare("UPDATE upload_intents SET state = 'committed', updated_at = ? WHERE id = ?")
+      .run(now, intent.id);
+    const jobId = randomUUID();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare("INSERT INTO account_deletions (id, user_id, requested_at) VALUES (?, ?, ?)")
+      .run(jobId, userId, now);
+    expect(await processAccountDeletionById(env, jobId)).toBe(true);
+    expect(await env.EXPORTS.get(intent.objectKey)).toBeNull();
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents WHERE id = ?")
+      .get(intent.id)).toEqual({ count: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?")
+      .get(userId)).toEqual({ count: 0 });
   } finally { db.close(); }
 });
 
