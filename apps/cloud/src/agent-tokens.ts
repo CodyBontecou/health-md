@@ -125,9 +125,12 @@ export async function revokeAgentToken(request: Request, env: Env, userId: strin
       env.DB.prepare(`UPDATE mcp_read_tokens SET revoked_at = ?
         WHERE id = ? AND user_id = ? AND revoked_at IS NULL`).bind(now, id, userId),
       env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
-        SELECT ?, ?, 'agent_token.revoked', ?, ? FROM mcp_read_tokens
-        WHERE id = ? AND user_id = ? AND revoked_at = ?`)
-        .bind(auditId, userId, id, now, id, userId, now),
+        SELECT ?, ?, 'agent_token.revoked', ?, t.revoked_at FROM mcp_read_tokens t
+        WHERE t.id = ? AND t.user_id = ? AND t.revoked_at IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM audit_events a WHERE a.user_id = t.user_id
+            AND a.event_type = 'agent_token.revoked' AND a.target_id = t.id
+            AND a.occurred_at = t.revoked_at)`)
+        .bind(auditId, userId, id, id, userId),
     ]);
   } catch {
     // A lost response may hide a committed revocation. Verify below.
@@ -135,21 +138,19 @@ export async function revokeAgentToken(request: Request, env: Env, userId: strin
   let durable: { revokedAt: string | null; audited: number } | null;
   try {
     durable = await env.DB.prepare(`SELECT t.revoked_at AS revokedAt,
-      EXISTS(SELECT 1 FROM audit_events a WHERE a.id = ? AND a.user_id = t.user_id
+      EXISTS(SELECT 1 FROM audit_events a WHERE a.user_id = t.user_id
         AND a.event_type = 'agent_token.revoked' AND a.target_id = t.id
         AND a.occurred_at = t.revoked_at) AS audited
       FROM mcp_read_tokens t WHERE t.id = ? AND t.user_id = ?`)
-      .bind(auditId, id, userId).first<{ revokedAt: string | null; audited: number }>();
+      .bind(id, userId).first<{ revokedAt: string | null; audited: number }>();
   } catch {
     throw new HttpError(503, "agent_token_revocation_pending",
       "Agent credential revocation verification is temporarily unavailable. Review credentials before retrying.");
   }
   if (!durable) throw new HttpError(404, "not_found", "Agent credential not found.");
-  // An earlier exact retry may already have revoked this owner-bound token. A
-  // newly committed revocation also requires its transaction-coupled audit row.
-  if (durable.revokedAt && (durable.revokedAt !== now || durable.audited === 1)) {
-    return json({ revoked: true });
-  }
+  // An exact retry may already have revoked this owner-bound token. The batch
+  // repairs a missing reviewed marker and success always requires that marker.
+  if (durable.revokedAt && durable.audited === 1) return json({ revoked: true });
   throw new HttpError(503, "agent_token_revocation_pending",
     "Agent credential revocation verification is temporarily unavailable. Review credentials before retrying.");
 }

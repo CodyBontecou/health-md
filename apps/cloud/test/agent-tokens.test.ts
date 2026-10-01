@@ -105,6 +105,8 @@ it("recovers lost create and revoke responses from exact durable read-token stat
     env.DB = ambiguousDatabase(original, { loseBatchResponse: true });
     expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", cookie)).status).toBe(200);
     env.DB = original;
+    db.connection.prepare(`DELETE FROM audit_events
+      WHERE target_id = ? AND event_type = 'agent_token.revoked'`).run(issued.id);
     expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", cookie)).status).toBe(200);
     expect(db.connection.prepare("SELECT revoked_at AS revokedAt FROM mcp_read_tokens WHERE id = ?")
       .get(issued.id)).toMatchObject({ revokedAt: expect.any(String) });

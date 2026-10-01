@@ -1,4 +1,4 @@
-import { audit, rateLimit } from "./auth";
+import { rateLimit } from "./auth";
 import { keyedLookup, randomToken, sha256Hex } from "./crypto";
 import { assertSameOrigin, HttpError, json, readJson } from "./http";
 import { verifyAccountPassword } from "./password";
@@ -15,6 +15,10 @@ interface DeviceRow {
   approvedAt: string | null; revokedAt: string | null;
   pairingExpiresAt: string; grantExpiresAt: string | null;
 }
+interface EnrollmentRow extends DeviceRow { tokenHash: string; codeHash: string | null; createdAt: string }
+interface ApprovalRow { userId: string | null; approvedAt: string | null; grantExpiresAt: string | null;
+  codeHash: string | null; revokedAt: string | null; audited: number }
+interface RevocationRow { revokedAt: string | null; activeDispatch: number; audited: number }
 
 function code8(): string {
   // Rejection sampling prevents modulo bias when mapping 32 random bits.
@@ -75,6 +79,7 @@ export async function startRepairDeviceEnrollment(request: Request, env: Env): P
   const expiresAt = new Date(Date.now() + PAIR_TTL).toISOString();
   const id = crypto.randomUUID();
   const token = `hmd_dev_${randomToken(32)}`;
+  const tokenHash = await sha256Hex(token);
   // Eight decimal digits never cross into a URL, cookie or audit record.
   for (let attempt = 0; attempt < 4; attempt++) {
     const code = code8();
@@ -82,12 +87,32 @@ export async function startRepairDeviceEnrollment(request: Request, env: Env): P
     try {
       await env.DB.prepare(`INSERT INTO repair_devices
         (id, token_hash, code_hash, source, created_at, pairing_expires_at)
-        VALUES (?, ?, ?, ?, ?, ?)`).bind(id, await sha256Hex(token), codeHash,
+        VALUES (?, ?, ?, ?, ?, ?)`).bind(id, tokenHash, codeHash,
           input.source, now, expiresAt).run();
-      return json({ version: 1, token, code, source: input.source, expiresAt }, { status: 201 });
     } catch {
-      // A hash collision is vanishingly rare; bounded retry avoids revealing
-      // database internals. No other exception may create an approved grant.
+      // The insert can commit before its response is lost. Verify below. An
+      // exact code-hash collision with no candidate row receives a bounded retry.
+    }
+    let durable: EnrollmentRow | null;
+    try {
+      durable = await env.DB.prepare(`SELECT id, user_id AS userId, token_hash AS tokenHash,
+        code_hash AS codeHash, source, created_at AS createdAt,
+        pairing_expires_at AS pairingExpiresAt, grant_expires_at AS grantExpiresAt,
+        approved_at AS approvedAt, revoked_at AS revokedAt
+        FROM repair_devices WHERE id = ?`).bind(id).first<EnrollmentRow>();
+    } catch {
+      throw new HttpError(503, "device_enrollment_verification_pending",
+        "Device enrollment verification is temporarily unavailable. Wait for this enrollment to expire before retrying.");
+    }
+    if (durable && durable.userId === null && durable.tokenHash === tokenHash &&
+        durable.codeHash === codeHash && durable.source === input.source && durable.createdAt === now &&
+        durable.pairingExpiresAt === expiresAt && durable.grantExpiresAt === null &&
+        durable.approvedAt === null && durable.revokedAt === null) {
+      return json({ version: 1, token, code, source: input.source, expiresAt }, { status: 201 });
+    }
+    if (durable) {
+      throw new HttpError(503, "device_enrollment_verification_pending",
+        "Device enrollment verification is temporarily unavailable. Wait for this enrollment to expire before retrying.");
     }
   }
   throw new HttpError(503, "unavailable", "Enrollment is temporarily unavailable.");
@@ -123,13 +148,42 @@ export async function approveRepairDevice(request: Request, env: Env, userId: st
     AND user_id IS NULL AND approved_at IS NULL AND revoked_at IS NULL AND pairing_expires_at > ?`)
     .bind(codeHash, now).first<Pick<DeviceRow, "id" | "source">>();
   if (!device) throw new HttpError(401, "invalid_approval", "Invalid enrollment code or account password.");
-  const changed = await env.DB.prepare(`UPDATE repair_devices SET user_id = ?, approved_at = ?,
-    grant_expires_at = ?, code_hash = NULL WHERE id = ? AND code_hash = ? AND user_id IS NULL
-    AND pairing_expires_at > ? AND revoked_at IS NULL`)
-    .bind(userId, now, expiresAt, device.id, codeHash, now).run();
-  if (!changed.meta.changes) throw new HttpError(409, "already_claimed", "Enrollment was already used.");
-  await audit(env, userId, "repair_device.approved", device.id);
-  return json({ deviceId: device.id, source: device.source, expiresAt, approved: true });
+  const auditId = crypto.randomUUID();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE repair_devices SET user_id = ?, approved_at = ?,
+        grant_expires_at = ?, code_hash = NULL WHERE id = ? AND code_hash = ? AND user_id IS NULL
+        AND pairing_expires_at > ? AND revoked_at IS NULL`)
+        .bind(userId, now, expiresAt, device.id, codeHash, now),
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'repair_device.approved', ?, ? FROM repair_devices
+        WHERE id = ? AND user_id = ? AND approved_at = ? AND grant_expires_at = ?
+          AND code_hash IS NULL AND revoked_at IS NULL`)
+        .bind(auditId, userId, device.id, now, device.id, userId, now, expiresAt),
+    ]);
+  } catch {
+    // The atomic approval/audit batch can commit before its response is lost.
+  }
+  let durable: ApprovalRow | null;
+  try {
+    durable = await env.DB.prepare(`SELECT d.user_id AS userId, d.approved_at AS approvedAt,
+      d.grant_expires_at AS grantExpiresAt, d.code_hash AS codeHash, d.revoked_at AS revokedAt,
+      EXISTS(SELECT 1 FROM audit_events a WHERE a.id = ? AND a.user_id = d.user_id
+        AND a.event_type = 'repair_device.approved' AND a.target_id = d.id
+        AND a.occurred_at = d.approved_at) AS audited
+      FROM repair_devices d WHERE d.id = ?`).bind(auditId, device.id).first<ApprovalRow>();
+  } catch {
+    throw new HttpError(503, "device_approval_verification_pending",
+      "Device approval verification is temporarily unavailable. Review approved devices before retrying.");
+  }
+  if (durable?.userId === userId && durable.approvedAt === now && durable.grantExpiresAt === expiresAt &&
+      durable.codeHash === null && durable.revokedAt === null && durable.audited === 1) {
+    return json({ deviceId: device.id, source: device.source, expiresAt, approved: true });
+  }
+  if (durable?.userId || durable?.approvedAt || durable?.revokedAt) {
+    throw new HttpError(409, "already_claimed", "Enrollment was already used.");
+  }
+  throw new HttpError(503, "device_approval_failed", "Device approval is temporarily unavailable.");
 }
 export async function listRepairDevices(env: Env, userId: string): Promise<Response> {
   const { results } = await env.DB.prepare(`SELECT id, source, created_at AS createdAt,
@@ -142,13 +196,47 @@ export async function revokeRepairDevice(request: Request, env: Env, userId: str
   assertSameOrigin(request, env);
   if (!UUID.test(id)) throw new HttpError(404, "not_found", "Device not found.");
   const now = new Date().toISOString();
-  const result = await env.DB.prepare(`UPDATE repair_devices SET revoked_at = ?
-    WHERE id = ? AND user_id = ? AND revoked_at IS NULL`).bind(now, id, userId).run();
-  if (!result.meta.changes) throw new HttpError(404, "not_found", "Device not found.");
-  await env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
-    WHERE device_id = ? AND user_id = ? AND state IN ('queued', 'claimed')`).bind(id, userId).run();
-  await audit(env, userId, "repair_device.revoked", id);
-  return json({ revoked: true });
+  const auditId = crypto.randomUUID();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE repair_devices SET revoked_at = ?
+        WHERE id = ? AND user_id = ? AND revoked_at IS NULL`).bind(now, id, userId),
+      env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
+        WHERE device_id = ? AND user_id = ? AND state IN ('queued', 'claimed')
+          AND EXISTS (SELECT 1 FROM repair_devices d WHERE d.id = ? AND d.user_id = ?
+            AND d.revoked_at IS NOT NULL)`)
+        .bind(id, userId, id, userId),
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'repair_device.revoked', ?, d.revoked_at FROM repair_devices d
+        WHERE d.id = ? AND d.user_id = ? AND d.revoked_at IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM audit_events a WHERE a.user_id = d.user_id
+            AND a.event_type = 'repair_device.revoked' AND a.target_id = d.id
+            AND a.occurred_at = d.revoked_at)`)
+        .bind(auditId, userId, id, id, userId),
+    ]);
+  } catch {
+    // A lost response can hide committed disablement, dispatch cancellation and audit.
+  }
+  let durable: RevocationRow | null;
+  try {
+    durable = await env.DB.prepare(`SELECT d.revoked_at AS revokedAt,
+      EXISTS(SELECT 1 FROM repair_dispatches x WHERE x.device_id = d.id AND x.user_id = d.user_id
+        AND x.state IN ('queued', 'claimed')) AS activeDispatch,
+      EXISTS(SELECT 1 FROM audit_events a WHERE a.user_id = d.user_id
+        AND a.event_type = 'repair_device.revoked' AND a.target_id = d.id
+        AND a.occurred_at = d.revoked_at) AS audited
+      FROM repair_devices d WHERE d.id = ? AND d.user_id = ?`)
+      .bind(id, userId).first<RevocationRow>();
+  } catch {
+    throw new HttpError(503, "device_revocation_verification_pending",
+      "Device revocation verification is temporarily unavailable. Review approved devices before retrying.");
+  }
+  if (!durable) throw new HttpError(404, "not_found", "Device not found.");
+  if (durable.revokedAt && durable.activeDispatch === 0 && durable.audited === 1) {
+    return json({ revoked: true });
+  }
+  throw new HttpError(503, "device_revocation_verification_pending",
+    "Device revocation verification is temporarily unavailable. Review approved devices before retrying.");
 }
 export async function purgeExpiredRepairDevices(
   env: Env,

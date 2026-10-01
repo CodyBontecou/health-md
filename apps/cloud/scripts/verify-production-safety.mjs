@@ -149,7 +149,8 @@ for (const fragment of [
   "(SELECT COUNT(*) FROM mcp_read_tokens", "< 10", "AND status = 'active'",
   "'agent_token.created'", "t.token_hash AS tokenHash", "AS audited",
   '"agent_token_verification_pending"', "t.revoked_at AS revokedAt",
-  "'agent_token.revoked'", "durable.revokedAt !== now || durable.audited === 1",
+  "'agent_token.revoked'", "t.revoked_at FROM mcp_read_tokens t",
+  "durable.revokedAt && durable.audited === 1",
   '"agent_token_revocation_pending"',
 ]) requireText(agentTokenSource, fragment, "commit-verifiable pilot MCP read tokens");
 forbid(agentTokenSource, /meta\.changes/u, "pilot MCP read-token correctness");
@@ -322,6 +323,14 @@ const repairDeviceSource = read("src/repair-devices.ts");
 requireText(repairDeviceSource, "ORDER BY COALESCE(grant_expires_at, pairing_expires_at), id LIMIT ?",
   "bounded repair-device cleanup");
 requireText(repairDeviceSource, "Invalid repair-device cleanup limit", "bounded repair-device cleanup");
+for (const fragment of [
+  "token_hash AS tokenHash", '"device_enrollment_verification_pending"',
+  "'repair_device.approved'", "d.grant_expires_at AS grantExpiresAt",
+  '"device_approval_verification_pending"', "'repair_device.revoked'",
+  "AS activeDispatch", "durable.activeDispatch === 0 && durable.audited === 1",
+  "AND NOT EXISTS (SELECT 1 FROM audit_events", '"device_revocation_verification_pending"',
+]) requireText(repairDeviceSource, fragment, "commit-verifiable staged repair devices");
+forbid(repairDeviceSource, /meta\.changes/u, "repair-device correctness");
 requireText(indexSource, "phase(() => purgeExpiredRepairDrafts(env))", "scheduled bounded repair-draft cleanup");
 requireText(indexSource, "phase(() => purgeExpiredRepairDevices(env))", "scheduled bounded repair-device cleanup");
 const inviteTool = read("scripts/prepare-account-invites.mjs");
