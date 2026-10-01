@@ -213,48 +213,77 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
   return generic();
 }
 
-export async function issueSession(env: Env, userId: string): Promise<Response> {
-  const sessionToken = `hmd_ses_${randomToken()}`;
-  const sessionHash = await sha256Hex(sessionToken);
-  const sessionId = crypto.randomUUID();
-  const auditId = crypto.randomUUID();
+type SessionMaterial = {
+  token: string;
+  hash: string;
+  id: string;
+  auditId: string;
+  ttlDays: number;
+  now: string;
+  expires: string;
+};
+
+async function sessionMaterial(env: Env): Promise<SessionMaterial> {
+  const token = `hmd_ses_${randomToken()}`;
   const ttlDays = parsePositiveInteger(env.SESSION_TTL_DAYS, "SESSION_TTL_DAYS", 1, 30);
   const now = new Date().toISOString();
-  const expires = new Date(Date.now() + ttlDays * 86400000).toISOString();
+  return {
+    token,
+    hash: await sha256Hex(token),
+    id: crypto.randomUUID(),
+    auditId: crypto.randomUUID(),
+    ttlDays,
+    now,
+    expires: new Date(Date.now() + ttlDays * 86400000).toISOString(),
+  };
+}
+
+function sessionResponse(env: Env, material: SessionMaterial): Response {
+  return json({ signedIn: true }, {
+    headers: { "Set-Cookie": sessionCookie(material.token, material.ttlDays, env.ENVIRONMENT === "production") },
+  });
+}
+
+async function durableSession(env: Env, userId: string, material: SessionMaterial): Promise<boolean> {
+  const row = await env.DB.prepare(`SELECT 1 AS valid FROM sessions s
+    JOIN audit_events a ON a.id = ? AND a.user_id = s.user_id
+      AND a.event_type = 'session.created' AND a.target_id IS NULL
+    JOIN users u ON u.id = s.user_id AND u.status = 'active'
+    WHERE s.id = ? AND s.user_id = ? AND s.token_hash = ? AND s.expires_at = ?`)
+    .bind(material.auditId, material.id, userId, material.hash, material.expires)
+    .first<{ valid: number }>();
+  return row?.valid === 1;
+}
+
+export async function issueSession(env: Env, userId: string): Promise<Response> {
+  const material = await sessionMaterial(env);
   try {
     await env.DB.batch([
       env.DB.prepare(
         `INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at, last_seen_at)
          SELECT ?, id, ?, ?, ?, ? FROM users WHERE id = ? AND status = 'active'`,
-      ).bind(sessionId, sessionHash, expires, now, now, userId),
+      ).bind(material.id, material.hash, material.expires, material.now, material.now, userId),
       env.DB.prepare(
         `INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
          SELECT ?, user_id, 'session.created', NULL, ? FROM sessions
          WHERE id = ? AND user_id = ? AND token_hash = ? AND expires_at = ?`,
-      ).bind(auditId, now, sessionId, userId, sessionHash, expires),
+      ).bind(material.auditId, material.now, material.id, userId, material.hash, material.expires),
     ]);
   } catch {
     // A D1 response can be lost after the atomic batch commits. The cookie is
     // returned only after the exact session and its reviewed audit record are readable.
   }
-  let durable: { valid: number } | null;
+  let durable: boolean;
   try {
-    durable = await env.DB.prepare(`SELECT 1 AS valid FROM sessions s
-      JOIN audit_events a ON a.id = ? AND a.user_id = s.user_id
-        AND a.event_type = 'session.created' AND a.target_id IS NULL
-      JOIN users u ON u.id = s.user_id AND u.status = 'active'
-      WHERE s.id = ? AND s.user_id = ? AND s.token_hash = ? AND s.expires_at = ?`)
-      .bind(auditId, sessionId, userId, sessionHash, expires).first<{ valid: number }>();
+    durable = await durableSession(env, userId, material);
   } catch {
     throw new HttpError(503, "session_verification_pending",
       "Session creation could not yet be verified. Sign in again and try again.");
   }
-  if (durable?.valid !== 1) {
+  if (!durable) {
     throw new HttpError(503, "session_creation_failed", "Session creation failed. Please try again.");
   }
-  return json({ signedIn: true }, {
-    headers: { "Set-Cookie": sessionCookie(sessionToken, ttlDays, env.ENVIRONMENT === "production") },
-  });
+  return sessionResponse(env, material);
 }
 
 export async function consumeMagicLink(request: Request, env: Env): Promise<Response> {
@@ -264,16 +293,58 @@ export async function consumeMagicLink(request: Request, env: Env): Promise<Resp
     throw new HttpError(400, "invalid_link", "The sign-in link is invalid or expired.");
   }
   const hash = await sha256Hex(token);
-  const now = new Date().toISOString();
-  // D1 RETURNING makes the single-use claim atomic across concurrent requests.
-  const row = await env.DB.prepare(
-    `UPDATE magic_links SET consumed_at = ?
-     WHERE token_hash = ? AND consumed_at IS NULL AND expires_at > ?
-     AND user_id IN (SELECT id FROM users WHERE status = 'active')
-     RETURNING user_id AS userId`,
-  ).bind(now, hash, now).first<{ userId: string }>();
-  if (!row) throw new HttpError(400, "invalid_link", "The sign-in link is invalid or expired.");
-  return issueSession(env, row.userId);
+  const candidate = await env.DB.prepare(`SELECT m.user_id AS userId FROM magic_links m
+    JOIN users u ON u.id = m.user_id AND u.status = 'active'
+    WHERE m.token_hash = ? AND m.consumed_at IS NULL AND m.expires_at > ?`)
+    .bind(hash, new Date().toISOString()).first<{ userId: string }>();
+  if (!candidate) throw new HttpError(400, "invalid_link", "The sign-in link is invalid or expired.");
+  const claimNonce = crypto.randomUUID();
+  const material = await sessionMaterial(env);
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE magic_links SET consumed_at = ?, claim_nonce = ?
+        WHERE token_hash = ? AND user_id = ? AND consumed_at IS NULL AND expires_at > ?
+          AND user_id IN (SELECT id FROM users WHERE status = 'active')`)
+        .bind(material.now, claimNonce, hash, candidate.userId, material.now),
+      env.DB.prepare(`INSERT INTO sessions
+        (id, user_id, token_hash, expires_at, created_at, last_seen_at)
+        SELECT ?, m.user_id, ?, ?, ?, ? FROM magic_links m
+        JOIN users u ON u.id = m.user_id AND u.status = 'active'
+        WHERE m.token_hash = ? AND m.user_id = ? AND m.consumed_at = ? AND m.claim_nonce = ?`)
+        .bind(material.id, material.hash, material.expires, material.now, material.now,
+          hash, candidate.userId, material.now, claimNonce),
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, user_id, 'session.created', NULL, ? FROM sessions
+        WHERE id = ? AND user_id = ? AND token_hash = ? AND expires_at = ?`)
+        .bind(material.auditId, material.now, material.id, candidate.userId, material.hash, material.expires),
+    ]);
+  } catch {
+    // Reconcile the claim/session/audit transaction after a possibly lost response.
+  }
+  try {
+    if (await durableSession(env, candidate.userId, material)) {
+      const claimed = await env.DB.prepare(`SELECT 1 AS valid FROM magic_links
+        WHERE token_hash = ? AND user_id = ? AND consumed_at = ? AND claim_nonce = ?`)
+        .bind(hash, candidate.userId, material.now, claimNonce).first<{ valid: number }>();
+      if (claimed?.valid === 1) return sessionResponse(env, material);
+    }
+    const state = await env.DB.prepare(`SELECT consumed_at AS consumedAt, claim_nonce AS claimNonce,
+      CASE WHEN expires_at > ? THEN 1 ELSE 0 END AS unexpired
+      FROM magic_links WHERE token_hash = ? AND user_id = ?`)
+      .bind(new Date().toISOString(), hash, candidate.userId)
+      .first<{ consumedAt: string | null; claimNonce: string | null; unexpired: number }>();
+    if (state?.consumedAt === null && state.claimNonce === null && state.unexpired === 1) {
+      throw new HttpError(503, "link_consumption_failed", "Sign-in could not be completed. Please try again.");
+    }
+    if (state?.consumedAt === material.now && state.claimNonce === claimNonce) {
+      throw new HttpError(503, "session_creation_failed", "Session creation failed. Please try again.");
+    }
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    throw new HttpError(503, "session_verification_pending",
+      "Session creation could not yet be verified. Sign in again and try again.");
+  }
+  throw new HttpError(400, "invalid_link", "The sign-in link is invalid or expired.");
 }
 
 export async function logout(request: Request, env: Env, user: SessionUser): Promise<Response> {

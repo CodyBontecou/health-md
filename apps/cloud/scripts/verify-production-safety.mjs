@@ -102,9 +102,9 @@ requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
 forbid(loadRunner, /console\.(?:log|error)\([^\n]*(?:token|endpoint|body)/u, "staging load runner output");
 const migrations = readdirSync(resolve(cloud, "migrations"))
   .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-if (migrations.length !== 15 || migrations[0]?.slice(0, 4) !== "0001" ||
-    migrations.at(-1)?.slice(0, 4) !== "0015") {
-  failures.push(`migrations: expected contiguous source set 0001-0015, found ${migrations.join(",")}`);
+if (migrations.length !== 16 || migrations[0]?.slice(0, 4) !== "0001" ||
+    migrations.at(-1)?.slice(0, 4) !== "0016") {
+  failures.push(`migrations: expected contiguous source set 0001-0016, found ${migrations.join(",")}`);
 }
 
 const workflow = read(".github/workflows/cloud-ci.yml", repository);

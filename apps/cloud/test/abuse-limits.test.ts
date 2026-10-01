@@ -32,6 +32,52 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+async function developmentMagicLink(env: ReturnType<typeof setup>["env"], email: string, ip: string): Promise<string> {
+  env.ENVIRONMENT = "development";
+  env.AUTH_MODE = "email_link";
+  env.AUTH_SIGNUP_MODE = "invite";
+  env.AUTH_INVITE_EMAILS = email;
+  env.DEV_SHOW_MAGIC_LINK = "1";
+  const response = await worker.fetch(new Request(`${origin}/api/auth/request-link`, {
+    method: "POST",
+    headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": ip },
+    body: JSON.stringify({ email }),
+  }), env);
+  expect(response.status).toBe(200);
+  return (await response.json() as { devLink: string }).devLink;
+}
+
+function ambiguousSessionBatch(database: D1Database, verificationUnavailable = false): D1Database {
+  return new Proxy(database, { get(target, property) {
+    if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+      await target.batch(statements);
+      throw new Error("synthetic lost session batch response");
+    };
+    if (property === "prepare") return (query: string) => {
+      const statement = target.prepare(query);
+      if (!verificationUnavailable || !query.includes("SELECT 1 AS valid FROM sessions s")) return statement;
+      return new Proxy(statement, { get(prepared, statementProperty) {
+        if (statementProperty !== "bind") {
+          const value = Reflect.get(prepared, statementProperty);
+          return typeof value === "function" ? value.bind(prepared) : value;
+        }
+        return (...values: unknown[]) => {
+          const bound = prepared.bind(...values);
+          return new Proxy(bound, { get(boundStatement, boundProperty) {
+            if (boundProperty === "first") return async () => {
+              throw new Error("synthetic session verification outage");
+            };
+            const value = Reflect.get(boundStatement, boundProperty);
+            return typeof value === "function" ? value.bind(boundStatement) : value;
+          } });
+        };
+      } });
+    };
+    const value = Reflect.get(target, property);
+    return typeof value === "function" ? value.bind(target) : value;
+  } }) as D1Database;
+}
+
 it("enforces an eligible-email provider send budget without changing the generic response", async () => {
   const { env, db } = setup();
   try {
@@ -181,6 +227,66 @@ it("sends a durably committed magic link after its D1 batch response is lost", a
       body: JSON.stringify({ token }),
     }), env);
     expect(consumed.status).toBe(200);
+  } finally { db.close(); }
+});
+
+it("returns the magic-link session after its atomic D1 response is lost", async () => {
+  const { env, db } = setup();
+  try {
+    const link = await developmentMagicLink(env, "claim-lost@example.test", "192.0.2.31");
+    env.DB = ambiguousSessionBatch(env.DB);
+    const token = new URL(link).hash.slice("#token=".length);
+    const response = await worker.fetch(new Request(`${origin}/api/auth/consume-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }), env);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Set-Cookie")).toContain("=hmd_ses_");
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM magic_links
+      WHERE consumed_at IS NOT NULL AND claim_nonce IS NOT NULL`).get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'session.created'`).get()).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("allows exactly one concurrent consumer to claim a magic link", async () => {
+  const { env, db } = setup();
+  try {
+    const link = await developmentMagicLink(env, "claim-race@example.test", "192.0.2.32");
+    const token = new URL(link).hash.slice("#token=".length);
+    const consume = () => worker.fetch(new Request(`${origin}/api/auth/consume-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }), env);
+    const responses = await Promise.all([consume(), consume()]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 400]);
+    expect(responses.filter((response) => response.headers.has("Set-Cookie"))).toHaveLength(1);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'session.created'`).get()).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("withholds a magic-link session cookie while commit verification is unavailable", async () => {
+  const { env, db } = setup();
+  try {
+    const link = await developmentMagicLink(env, "claim-unreadable@example.test", "192.0.2.33");
+    env.DB = ambiguousSessionBatch(env.DB, true);
+    const token = new URL(link).hash.slice("#token=".length);
+    const response = await worker.fetch(new Request(`${origin}/api/auth/consume-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    }), env);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "session_verification_pending" });
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM magic_links
+      WHERE consumed_at IS NOT NULL AND claim_nonce IS NOT NULL`).get()).toMatchObject({ n: 1 });
   } finally { db.close(); }
 });
 
