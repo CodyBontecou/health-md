@@ -300,11 +300,20 @@ requireText(loadHarness, "SUSTAINED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCO
   "staging load account budget");
 requireText(loadHarness, "launched[candidate] < SUSTAINED_REQUESTS_PER_ACCOUNT",
   "staging load account budget");
+requireText(loadHarness, "DEDICATED_SLOW_BODY_ACCOUNTS = 1", "staging load slow-body isolation");
+requireText(loadHarness, "ADMISSION_LEASE_SECONDS = 15 * 60", "staging load admission lease");
+requireText(loadHarness, "fragmentedRequestBody", "staging load transfer fragmentation");
+requireText(uploadIntentSource, "const ADMISSION_LEASE_MS = 15 * 60_000", "upload admission lease");
 const loadRunner = read("scripts/qualify-staging-load.mjs");
 requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
 requireText(loadRunner, "launchedPerToken[tokenIndex] += 1", "staging load account budget");
 requireText(loadRunner, "maximumRequestsPerAccount <= SUSTAINED_REQUESTS_PER_ACCOUNT",
   "staging load account budget");
+requireText(loadRunner, "streamed ? fragmentedRequestBody(body) : body",
+  "staging load transfer fragmentation");
+requireText(loadRunner, 'result.outcome === "http_408"', "staging load admission expiry");
+requireText(loadRunner, 'backpressure.outcome === "http_429"', "staging load admission backpressure");
+requireText(loadRunner, "recovery.accepted", "staging load admission recovery");
 forbid(loadRunner, /console\.(?:log|error)\([^\n]*(?:token|endpoint|body)/u, "staging load runner output");
 const migrations = readdirSync(resolve(cloud, "migrations"))
   .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();

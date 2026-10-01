@@ -3,9 +3,10 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
-  MAX_EXPORT_BYTES, MAX_REQUESTS_PER_ACCOUNT, SUSTAINED_REQUESTS_PER_ACCOUNT,
-  buildSyntheticEnvelope, nextEligibleAccount, parseStagingLoadConfig, percentile,
-  readDistinctAccountTokens, requiredDistinctAccounts,
+  ADMISSION_LEASE_SECONDS, DEDICATED_SLOW_BODY_ACCOUNTS, MAX_EXPORT_BYTES,
+  MAX_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS, SUSTAINED_REQUESTS_PER_ACCOUNT,
+  buildSyntheticEnvelope, fragmentedRequestBody, nextEligibleAccount, parseStagingLoadConfig,
+  percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody,
 } from "../scripts/staging-load-lib.mjs";
 
 const roots: string[] = [];
@@ -22,9 +23,32 @@ it("defaults to the documented 2x gate and calculates a budget-safe account coun
   expect(config).toMatchObject({
     concurrency: 500, uploadsPerSecond: 50, durationSeconds: 600, largeConcurrency: 10,
   });
-  expect(requiredDistinctAccounts(config)).toBe(639);
-  expect({ maximum: MAX_REQUESTS_PER_ACCOUNT, sustained: SUSTAINED_REQUESTS_PER_ACCOUNT })
-    .toEqual({ maximum: 50, sustained: 47 });
+  expect(requiredDistinctAccounts(config)).toBe(640);
+  expect({ maximum: MAX_REQUESTS_PER_ACCOUNT, sustained: SUSTAINED_REQUESTS_PER_ACCOUNT,
+    dedicatedSlowBodyAccounts: DEDICATED_SLOW_BODY_ACCOUNTS,
+    admissionLeaseSeconds: ADMISSION_LEASE_SECONDS, slowBodyTimeoutMs: SLOW_BODY_TIMEOUT_MS })
+    .toEqual({ maximum: 50, sustained: 47, dedicatedSlowBodyAccounts: 1,
+      admissionLeaseSeconds: 900, slowBodyTimeoutMs: 1_020_000 });
+});
+
+it("constructs bounded fragmented and deliberately stalled request streams", async () => {
+  const bytes = new TextEncoder().encode("synthetic-fragmented-body");
+  const reader = fragmentedRequestBody(bytes, 7).getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const result = await reader.read();
+    if (result.done) break;
+    chunks.push(result.value);
+  }
+  expect(chunks.length).toBe(4);
+  expect(new TextDecoder().decode(Buffer.concat(chunks))).toBe("synthetic-fragmented-body");
+  expect(() => fragmentedRequestBody(bytes, 0)).toThrow("configuration is invalid");
+
+  const stalled = stalledRequestBody().getReader();
+  const prefix = await stalled.read();
+  expect(prefix.done).toBe(false);
+  expect(new TextDecoder().decode(prefix.value)).toContain("synthetic_stalled");
+  await stalled.cancel();
 });
 
 it("enforces cumulative and active per-account scheduler limits", () => {

@@ -3,6 +3,9 @@ export const TWO_X_UPLOADS_PER_SECOND: number;
 export const DEFAULT_DURATION_SECONDS: number;
 export const MAX_REQUESTS_PER_ACCOUNT: number;
 export const SUSTAINED_REQUESTS_PER_ACCOUNT: number;
+export const DEDICATED_SLOW_BODY_ACCOUNTS: number;
+export const ADMISSION_LEASE_SECONDS: number;
+export const SLOW_BODY_TIMEOUT_MS: number;
 export const MAX_EXPORT_BYTES: number;
 export interface StagingLoadConfig {
   endpoint: URL;
@@ -15,6 +18,8 @@ export interface StagingLoadConfig {
 export function parseStagingLoadConfig(environment?: Record<string, string | undefined>): StagingLoadConfig;
 export function readDistinctAccountTokens(path: string | undefined, requiredCount: number): string[];
 export function requiredDistinctAccounts(config: StagingLoadConfig): number;
+export function fragmentedRequestBody(bytes: Uint8Array, chunkBytes?: number): ReadableStream<Uint8Array>;
+export function stalledRequestBody(): ReadableStream<Uint8Array>;
 export function nextEligibleAccount(active: number[], launched: number[], cursor: number): number;
 export function buildSyntheticEnvelope(targetBytes?: number, marker?: string): Uint8Array;
 export function percentile(values: number[], quantile: number): number | null;

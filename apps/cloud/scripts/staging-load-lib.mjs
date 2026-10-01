@@ -5,6 +5,9 @@ export const TWO_X_UPLOADS_PER_SECOND = 50;
 export const DEFAULT_DURATION_SECONDS = 600;
 export const MAX_REQUESTS_PER_ACCOUNT = 50;
 export const SUSTAINED_REQUESTS_PER_ACCOUNT = MAX_REQUESTS_PER_ACCOUNT - 3;
+export const DEDICATED_SLOW_BODY_ACCOUNTS = 1;
+export const ADMISSION_LEASE_SECONDS = 15 * 60;
+export const SLOW_BODY_TIMEOUT_MS = (ADMISSION_LEASE_SECONDS + 2 * 60) * 1_000;
 export const MAX_EXPORT_BYTES = 25 * 1024 * 1024;
 
 const LIVE_HOSTS = new Set([
@@ -65,7 +68,33 @@ export function readDistinctAccountTokens(path, requiredCount) {
 export function requiredDistinctAccounts(config) {
   const sustained = config.uploadsPerSecond * config.durationSeconds;
   return Math.max(Math.ceil(config.concurrency / 2), config.largeConcurrency,
-    Math.ceil(sustained / SUSTAINED_REQUESTS_PER_ACCOUNT));
+    Math.ceil(sustained / SUSTAINED_REQUESTS_PER_ACCOUNT)) + DEDICATED_SLOW_BODY_ACCOUNTS;
+}
+
+export function fragmentedRequestBody(bytes, chunkBytes = 16_381) {
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 ||
+      !Number.isSafeInteger(chunkBytes) || chunkBytes < 1 || chunkBytes > 64 * 1024) {
+    throw new Error("Synthetic fragmented request configuration is invalid");
+  }
+  let offset = 0;
+  return new ReadableStream({
+    pull(controller) {
+      if (offset >= bytes.byteLength) {
+        controller.close();
+        return;
+      }
+      const end = Math.min(bytes.byteLength, offset + chunkBytes);
+      controller.enqueue(bytes.subarray(offset, end));
+      offset = end;
+    },
+  });
+}
+
+export function stalledRequestBody() {
+  const prefix = new TextEncoder().encode('{"schema":"healthmd.api_export","synthetic_stalled":');
+  return new ReadableStream({
+    start(controller) { controller.enqueue(prefix); },
+  });
 }
 
 export function nextEligibleAccount(active, launched, cursor) {

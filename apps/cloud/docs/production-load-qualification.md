@@ -20,7 +20,7 @@ The source harness tests request-path capacity. It does not by itself prove Clou
 
 Obtain named operations, security and product authorization for a disposable **synthetic-only** staging environment. Record the exact 40-character deployed Git revision and verify its split-profile `/health` response. Never point this harness at the pilot or a production hostname; it refuses the known live hosts and requires a hostname containing a distinct `staging` or `synthetic` label.
 
-Provision at least 639 disposable synthetic accounts, each with one distinct write-only ingest token. Seed only their reserved-domain synthetic addresses through the owner-only hashed procedure in `account-invite-runbook.md`; migration 0018 and the account transaction must consume those rows without putting addresses in D1 or split configuration. This count keeps the default run at no more than 50 requests/account: two concurrent-wave requests, at most 47 sustained requests and one large probe. The scheduler enforces both two active requests and the cumulative 47-request sustained cap for every token, waits rather than reusing an exhausted/active account, reports only the aggregate maximum, and fails if that maximum exceeds the cap. Do not reuse a token/account or raise production abuse budgets merely to obtain a pass. Put one token per line in an owner-only file:
+Provision at least 640 disposable synthetic accounts, each with one distinct write-only ingest token. The last account is reserved exclusively for the slow-body admission drill; the other 639 serve the wave, sustained and worst-case-payload phases. Seed only their reserved-domain synthetic addresses through the owner-only hashed procedure in `account-invite-runbook.md`; migration 0018 and the account transaction must consume those rows without putting addresses in D1 or split configuration. This count keeps the default run at no more than 50 requests/account: two concurrent-wave requests, at most 47 sustained requests and one large probe. The scheduler enforces both two active requests and the cumulative 47-request sustained cap for every token, waits rather than reusing an exhausted/active account, reports only the aggregate maximum, and fails if that maximum exceeds the cap. Do not reuse a token/account or raise production abuse budgets merely to obtain a pass. Put one token per line in an owner-only file:
 
 ```bash
 chmod 600 /owner-only/path/synthetic-ingest-tokens
@@ -28,7 +28,7 @@ chmod 600 /owner-only/path/synthetic-ingest-tokens
 
 The file must not enter the repository, shell history, CI artifacts, chat, logs or reports. The operator attests that every token belongs to a different disposable synthetic account. The harness validates file mode, syntax, uniqueness and count but cannot independently infer token ownership.
 
-Budget approximately 30,510 requests and at least 281 MiB of plaintext input for the default run, plus encryption/storage/database/provider overhead. Confirm D1/R2/Analytics Engine/Queue quotas and an approved teardown plan before starting. Do not run concurrent drills.
+Budget approximately 30,514 requests, at least 281 MiB of plaintext input and at least 27 minutes for the default run, plus encryption/storage/database/provider overhead. The slow-body phase deliberately waits for two production 15-minute admission leases and gives the client a two-minute response margin; do not lower the server lease or skip this phase to manufacture a pass. Confirm D1/R2/Analytics Engine/Queue quotas and an approved teardown plan before starting. Do not run concurrent drills.
 
 ## Execute
 
@@ -46,9 +46,9 @@ Then run from `apps/cloud`:
 npm run qualify:staging-load > staging-load-report.json
 ```
 
-Defaults are the complete 2× gate. The bounded `HEALTHMD_LOAD_CONCURRENCY`, `HEALTHMD_LOAD_UPLOADS_PER_SECOND`, `HEALTHMD_LOAD_DURATION_SECONDS`, and `HEALTHMD_LOAD_LARGE_CONCURRENCY` overrides are for rehearsal only; a reduced run is not acceptance evidence.
+Defaults are the complete 2× gate. The ten exact-limit probes alternate declared-length bodies and 16,381-byte streamed fragments. After those phases, the dedicated account starts two incomplete streamed JSON bodies, verifies a third valid request receives `429`, waits for both server-issued `408` lease expiries, and verifies a final valid request succeeds. The bounded `HEALTHMD_LOAD_CONCURRENCY`, `HEALTHMD_LOAD_UPLOADS_PER_SECOND`, `HEALTHMD_LOAD_DURATION_SECONDS`, and `HEALTHMD_LOAD_LARGE_CONCURRENCY` overrides are for rehearsal only; a reduced run is not acceptance evidence.
 
-Payloads are obvious synthetic Apple-v8 compatibility envelopes dated 2020-01-01, contain no person or real health value, and vary only by a synthetic marker/padding. The report contains the 12-character revision, account/request counts, fixed HTTP status classes, aggregate latency percentiles, launch rate and pass/fail. It never includes endpoint, token, payload, response body, export ID, account ID or object key.
+Payloads are obvious synthetic Apple-v8 compatibility envelopes dated 2020-01-01, contain no person or real health value, and vary only by a synthetic marker/padding. The report contains the 12-character revision, account/request counts, fixed HTTP status classes, aggregate latency percentiles, launch rate, declared/fragmented probe counts, the slow-body `408`/`429`/recovery outcomes and pass/fail. It never includes endpoint, token, payload, response body, export ID, account ID or object key.
 
 ## Observe and accept
 

@@ -58,7 +58,7 @@ End-to-end completion means all of the following, not merely source implementati
 | Privacy/terms/consent/store/support | requirements recorded in ADR/plan/threat model | **not supplied or approved** |
 | Independent security assessment | required by ADR/plan | **not performed** |
 | Staging restore/key/deletion/failure drills | runbooks and local tests | **provider-backed drills absent** |
-| Twice-beta/twice-GA load and cost gates | fail-closed `qualify:staging-load` harness/runbook covers revision-bound 500-concurrent, 50/s × 10-minute and exact-25-MiB probes with health-free aggregates; its scheduler enforces two active and at most 47 sustained requests/token so wave+sustained+large probes cannot silently exceed 50/account | **provider run, native metrics and accepted cost model absent** |
+| Twice-beta/twice-GA load and cost gates | fail-closed `qualify:staging-load` harness/runbook covers revision-bound 500-concurrent, 50/s × 10-minute, alternating declared-length/fragmented exact-25-MiB probes and a dedicated two-stall production-lease `408`/third-request `429`/recovery probe with health-free aggregates; its scheduler enforces two active and at most 47 sustained requests/token so wave+sustained+large probes cannot silently exceed 50/account, while the slow-body account is excluded from those phases | **provider run, native metrics and accepted cost model absent** |
 | Controlled cohorts | sequence documented | **not started/authorized** |
 | Cutover/rollback | plan and recovery runbook | documented, not exercised against production |
 | Signup and deployment closed | all split configs `closed`, route-free, placeholder-bound and secret-free; the CI safety verifier checks profile entrypoint route/cookie boundaries, exact migrations 0001–0018 plus critical trigger/authority/invite semantics, required test/smoke/VM/split-dry-run/audit workflow commands, and forbids checked-in approval, secrets or any non-dry-run deploy | satisfied fail-closed state; this is not launch approval |
@@ -79,7 +79,7 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 
 ## Verification commands and coverage
 
-- `npm run check`: on the audited head, 32 files and 198 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
+- `npm run check`: on the audited head, 32 files and 199 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
 - `npm run test:smoke`: passes in an isolated worktree against local Wrangler D1/R2 with synthetic Apple v1/v2 and Android v4 envelopes, replacement ordering, encrypted roundtrip, tenant denial and revocation. The repository worktree's pre-existing owner-only `.dev.vars` is not overwritten or read by the harness.
 - `npm run dry-run:profiles`: all three profiles bundle and list only their intended bindings. It proves buildability, not resource correctness or deployment isolation.
 - `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.

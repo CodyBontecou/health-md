@@ -1,22 +1,20 @@
 #!/usr/bin/env node
 import {
-  MAX_EXPORT_BYTES, MAX_REQUESTS_PER_ACCOUNT, SUSTAINED_REQUESTS_PER_ACCOUNT,
-  buildSyntheticEnvelope, nextEligibleAccount, parseStagingLoadConfig, percentile,
-  readDistinctAccountTokens, requiredDistinctAccounts,
+  ADMISSION_LEASE_SECONDS, DEDICATED_SLOW_BODY_ACCOUNTS, MAX_EXPORT_BYTES,
+  MAX_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS, SUSTAINED_REQUESTS_PER_ACCOUNT,
+  buildSyntheticEnvelope, fragmentedRequestBody, nextEligibleAccount, parseStagingLoadConfig,
+  percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody,
 } from "./staging-load-lib.mjs";
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 function fixed(value) { return Math.round(value * 10) / 10; }
-function summary(results) {
+function outcomeSummary(results) {
   const statusClasses = {};
   for (const result of results) statusClasses[result.outcome] = (statusClasses[result.outcome] ?? 0) + 1;
   const latencies = results.map((result) => result.durationMs);
-  const accepted = results.filter((result) => result.accepted).length;
   return {
     requests: results.length,
-    accepted,
-    failed: results.length - accepted,
     statusClasses,
     latencyMs: {
       p50: percentile(latencies, 0.5), p95: percentile(latencies, 0.95),
@@ -24,17 +22,23 @@ function summary(results) {
     },
   };
 }
+function summary(results) {
+  const accepted = results.filter((result) => result.accepted).length;
+  return { ...outcomeSummary(results), accepted, failed: results.length - accepted };
+}
 
-async function upload(endpoint, token, body) {
+async function upload(endpoint, token, body, { streamed = false, timeoutMs = 120_000 } = {}) {
   const started = performance.now();
   try {
-    const response = await fetch(endpoint, {
+    const request = {
       method: "POST",
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
       body,
       redirect: "error",
-      signal: AbortSignal.timeout(120_000),
-    });
+      signal: AbortSignal.timeout(timeoutMs),
+      ...(streamed ? { duplex: "half" } : {}),
+    };
+    const response = await fetch(endpoint, request);
     let accepted = false;
     try {
       const value = await response.json();
@@ -68,10 +72,29 @@ async function runWave(config, tokens) {
 }
 
 async function runLarge(config, tokens) {
-  return Promise.all(Array.from({ length: config.largeConcurrency }, (_, index) => upload(
-    config.endpoint, tokens[index],
-    buildSyntheticEnvelope(MAX_EXPORT_BYTES, `synthetic-large-${index}`),
-  )));
+  return Promise.all(Array.from({ length: config.largeConcurrency }, (_, index) => {
+    const body = buildSyntheticEnvelope(MAX_EXPORT_BYTES, `synthetic-large-${index}`);
+    const streamed = index % 2 === 1;
+    return upload(config.endpoint, tokens[index], streamed ? fragmentedRequestBody(body) : body, { streamed });
+  }));
+}
+
+async function runSlowBodyAdmission(config, token) {
+  const first = upload(config.endpoint, token, stalledRequestBody(),
+    { streamed: true, timeoutMs: SLOW_BODY_TIMEOUT_MS });
+  await sleep(1_000);
+  const second = upload(config.endpoint, token, stalledRequestBody(),
+    { streamed: true, timeoutMs: SLOW_BODY_TIMEOUT_MS });
+  // Give both authenticated partial streams time to acquire their durable slots.
+  await sleep(5_000);
+  const backpressure = await upload(config.endpoint, token,
+    buildSyntheticEnvelope(1_024, "synthetic-slow-body-backpressure"));
+  const stalled = await Promise.all([first, second]);
+  const recovery = await upload(config.endpoint, token,
+    buildSyntheticEnvelope(1_024, "synthetic-slow-body-recovery"));
+  const passed = stalled.every((result) => result.outcome === "http_408") &&
+    backpressure.outcome === "http_429" && recovery.accepted;
+  return { stalled, backpressure, recovery, passed };
 }
 
 async function runSustained(config, tokens) {
@@ -115,10 +138,14 @@ async function main() {
   const config = parseStagingLoadConfig();
   const needed = requiredDistinctAccounts(config);
   const tokens = readDistinctAccountTokens(process.env.HEALTHMD_LOAD_TOKEN_FILE, needed);
+  const slowBodyToken = tokens.at(-1);
+  if (!slowBodyToken) throw new Error("Dedicated slow-body account is unavailable");
+  const workloadTokens = tokens.slice(0, -DEDICATED_SLOW_BODY_ACCOUNTS);
   await verifyRevision(config.endpoint, config.expectedRevision);
-  const wave = await runWave(config, tokens);
-  const sustained = await runSustained(config, tokens);
-  const large = await runLarge(config, tokens);
+  const wave = await runWave(config, workloadTokens);
+  const sustained = await runSustained(config, workloadTokens);
+  const large = await runLarge(config, workloadTokens);
+  const slowBody = await runSlowBodyAdmission(config, slowBodyToken);
   const achievedLaunchRate = sustained.results.length / (sustained.lastLaunchElapsedMs / 1_000);
   const report = {
     syntheticOnly: true,
@@ -132,14 +159,25 @@ async function main() {
       largePayloadBytes: MAX_EXPORT_BYTES,
       maximumRequestsPerAccount: MAX_REQUESTS_PER_ACCOUNT,
       maximumSustainedRequestsPerAccount: SUSTAINED_REQUESTS_PER_ACCOUNT,
+      dedicatedSlowBodyAccounts: DEDICATED_SLOW_BODY_ACCOUNTS,
+      admissionLeaseSeconds: ADMISSION_LEASE_SECONDS,
+      largeRequestProfiles: { declaredLength: Math.ceil(config.largeConcurrency / 2),
+        transferFragmented: Math.floor(config.largeConcurrency / 2) },
     },
     wave: summary(wave),
     sustained: { ...summary(sustained.results), achievedLaunchesPerSecond: fixed(achievedLaunchRate),
       maximumRequestsPerAccount: sustained.maximumRequestsPerAccount },
     worstCasePayload: summary(large),
+    slowBodyAdmission: {
+      expectedLeaseExpiries: outcomeSummary(slowBody.stalled),
+      backpressureOutcome: slowBody.backpressure.outcome,
+      recoveryOutcome: slowBody.recovery.outcome,
+      passed: slowBody.passed,
+    },
   };
   report.pass = report.wave.failed === 0 && report.sustained.failed === 0 &&
-    report.worstCasePayload.failed === 0 && achievedLaunchRate >= config.uploadsPerSecond * 0.98 &&
+    report.worstCasePayload.failed === 0 && report.slowBodyAdmission.passed &&
+    achievedLaunchRate >= config.uploadsPerSecond * 0.98 &&
     sustained.maximumRequestsPerAccount <= SUSTAINED_REQUESTS_PER_ACCOUNT;
   console.log(JSON.stringify(report, null, 2));
   if (!report.pass) process.exitCode = 1;
