@@ -280,10 +280,36 @@ export async function logout(request: Request, env: Env, user: SessionUser): Pro
   assertSameOrigin(request, env);
   const token = cookieToken(request, env);
   if (token) {
-    await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ? AND user_id = ?")
-      .bind(await sha256Hex(token), user.id).run();
+    const tokenHash = await sha256Hex(token);
+    const auditId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    try {
+      await env.DB.batch([
+        env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+          SELECT ?, user_id, 'session.revoked', NULL, ? FROM sessions
+          WHERE token_hash = ? AND user_id = ?`).bind(auditId, now, tokenHash, user.id),
+        env.DB.prepare("DELETE FROM sessions WHERE token_hash = ? AND user_id = ?")
+          .bind(tokenHash, user.id),
+      ]);
+    } catch {
+      // Reconcile the exact audit marker below: it commits atomically before deletion.
+    }
+    let committed: { valid: number } | null;
+    try {
+      committed = await env.DB.prepare(`SELECT 1 AS valid FROM audit_events
+        WHERE id = ? AND user_id = ? AND event_type = 'session.revoked' AND target_id IS NULL`)
+        .bind(auditId, user.id).first<{ valid: number }>();
+      if (committed?.valid !== 1) {
+        const remaining = await env.DB.prepare(
+          "SELECT 1 AS valid FROM sessions WHERE token_hash = ? AND user_id = ?",
+        ).bind(tokenHash, user.id).first<{ valid: number }>();
+        if (remaining?.valid === 1) throw new Error("session remains active");
+      }
+    } catch {
+      throw new HttpError(503, "session_revocation_verification_pending",
+        "Session revocation could not yet be verified. Please try again.");
+    }
   }
-  await audit(env, user.id, "session.revoked", null);
   return json({ signedIn: false }, {
     headers: { "Set-Cookie": clearSessionCookie(env.ENVIRONMENT === "production") },
   });
@@ -309,10 +335,41 @@ export async function revokeSession(
 ): Promise<Response> {
   assertSameOrigin(request, env);
   if (!/^[a-f0-9-]{36}$/u.test(sessionId)) throw new HttpError(404, "not_found", "Session not found.");
-  const result = await env.DB.prepare("DELETE FROM sessions WHERE id = ? AND user_id = ?")
-    .bind(sessionId, user.id).run();
-  if ((result.meta.changes ?? 0) !== 1) throw new HttpError(404, "not_found", "Session not found.");
-  await audit(env, user.id, "session.revoked", sessionId);
+  const auditId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, user_id, 'session.revoked', id, ? FROM sessions
+        WHERE id = ? AND user_id = ?`).bind(auditId, now, sessionId, user.id),
+      env.DB.prepare("DELETE FROM sessions WHERE id = ? AND user_id = ?").bind(sessionId, user.id),
+    ]);
+  } catch {
+    // A lost response is reconciled by the operation-specific audit marker.
+  }
+  let committed: { valid: number } | null;
+  try {
+    committed = await env.DB.prepare(`SELECT 1 AS valid FROM audit_events
+      WHERE id = ? AND user_id = ? AND event_type = 'session.revoked' AND target_id = ?`)
+      .bind(auditId, user.id, sessionId).first<{ valid: number }>();
+  } catch {
+    throw new HttpError(503, "session_revocation_verification_pending",
+      "Session revocation could not yet be verified. Please try again.");
+  }
+  if (committed?.valid !== 1) {
+    let owned: { valid: number } | null;
+    try {
+      owned = await env.DB.prepare("SELECT 1 AS valid FROM sessions WHERE id = ? AND user_id = ?")
+        .bind(sessionId, user.id).first<{ valid: number }>();
+    } catch {
+      throw new HttpError(503, "session_revocation_verification_pending",
+        "Session revocation could not yet be verified. Please try again.");
+    }
+    if (owned?.valid === 1) {
+      throw new HttpError(503, "session_revocation_failed", "Session revocation failed. Please try again.");
+    }
+    throw new HttpError(404, "not_found", "Session not found.");
+  }
   const current = sessionId === user.sessionId;
   return json({ revoked: true, current }, current ? {
     headers: { "Set-Cookie": clearSessionCookie(env.ENVIRONMENT === "production") },
@@ -321,10 +378,33 @@ export async function revokeSession(
 
 export async function revokeOtherSessions(request: Request, env: Env, user: SessionUser): Promise<Response> {
   assertSameOrigin(request, env);
-  const result = await env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?")
-    .bind(user.id, user.sessionId).run();
-  await audit(env, user.id, "session.others_revoked", user.sessionId);
-  return json({ revoked: result.meta.changes ?? 0 });
+  const auditId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'session.others_revoked', 'count:' || COUNT(*), ? FROM sessions
+        WHERE user_id = ? AND id != ?`).bind(auditId, user.id, now, user.id, user.sessionId),
+      env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?")
+        .bind(user.id, user.sessionId),
+    ]);
+  } catch {
+    // A committed count marker proves the following delete shared its transaction.
+  }
+  let committed: { revokedCount: string } | null;
+  try {
+    committed = await env.DB.prepare(`SELECT target_id AS revokedCount FROM audit_events
+      WHERE id = ? AND user_id = ? AND event_type = 'session.others_revoked'
+        AND target_id GLOB 'count:[0-9]*'`)
+      .bind(auditId, user.id).first<{ revokedCount: string }>();
+  } catch {
+    throw new HttpError(503, "session_revocation_verification_pending",
+      "Session revocation could not yet be verified. Please try again.");
+  }
+  if (!committed || !/^count:\d+$/u.test(committed.revokedCount)) {
+    throw new HttpError(503, "session_revocation_failed", "Session revocation failed. Please try again.");
+  }
+  return json({ revoked: Number(committed.revokedCount.slice("count:".length)) });
 }
 
 export async function accountSummary(env: Env, user: SessionUser): Promise<Response> {
