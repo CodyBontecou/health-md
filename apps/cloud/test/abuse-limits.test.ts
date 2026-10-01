@@ -4,7 +4,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
-import { authCleanupPolicy, issueSession, limitIngest, purgeExpiredAuthState, rateLimit } from "../src/auth";
+import { authCleanupPolicy, issueSession, limitIngest, purgeExpiredAuthState, rateLimit,
+  requestMagicLink } from "../src/auth";
+import { keyedLookup } from "../src/crypto";
 import { createVmEnvironment } from "../vm/runtime";
 
 const roots: string[] = [];
@@ -47,6 +49,24 @@ async function developmentMagicLink(env: ReturnType<typeof setup>["env"], email:
   return (await response.json() as { devLink: string }).devLink;
 }
 
+async function splitInviteRequest(
+  env: ReturnType<typeof setup>["env"],
+  email: string,
+  ip = "203.0.113.20",
+): Promise<Response> {
+  env.ENVIRONMENT = "development";
+  env.SERVICE_PROFILE = "account";
+  env.AUTH_MODE = "email_link";
+  env.AUTH_SIGNUP_MODE = "invite";
+  env.AUTH_INVITE_EMAILS = undefined;
+  env.DEV_SHOW_MAGIC_LINK = "1";
+  return requestMagicLink(new Request(`${origin}/api/auth/request-link`, {
+    method: "POST",
+    headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": ip },
+    body: JSON.stringify({ email }),
+  }), env);
+}
+
 function ambiguousSessionBatch(database: D1Database, verificationUnavailable = false): D1Database {
   return new Proxy(database, { get(target, property) {
     if (property === "batch") return async (statements: D1PreparedStatement[]) => {
@@ -77,6 +97,116 @@ function ambiguousSessionBatch(database: D1Database, verificationUnavailable = f
     return typeof value === "function" ? value.bind(target) : value;
   } }) as D1Database;
 }
+
+it("admits split-account signup through a one-time hashed invite only", async () => {
+  const { env, db } = setup();
+  try {
+    const invited = "invited@example.test";
+    const lookup = await keyedLookup(invited, env.IDENTITY_KEY_B64, "email-lookup-v1");
+    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at, expires_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z', '2030-01-01T00:00:00.000Z')`).run(lookup);
+    env.AUTH_INVITE_EMAILS = "not-authoritative@example.test";
+    const admitted = await splitInviteRequest(env, invited);
+    expect(await admitted.json()).toMatchObject({ message: "Development sign-in link generated." });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_invites").get()).toMatchObject({ n: 0 });
+
+    // An existing active account can request another link without another invite.
+    expect(await (await splitInviteRequest(env, invited, "203.0.113.21")).json())
+      .toMatchObject({ message: "Development sign-in link generated." });
+    const rawOnly = await splitInviteRequest(env, "not-authoritative@example.test", "203.0.113.22");
+    expect(await rawOnly.json()).toEqual({
+      message: "If this address is eligible, a sign-in link is on its way.",
+    });
+
+    const expired = "expired@example.test";
+    const expiredLookup = await keyedLookup(expired, env.IDENTITY_KEY_B64, "email-lookup-v1");
+    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at, expires_at)
+      VALUES (?, '2019-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z')`).run(expiredLookup);
+    expect(await (await splitInviteRequest(env, expired, "203.0.113.23")).json()).toEqual({
+      message: "If this address is eligible, a sign-in link is on its way.",
+    });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("rechecks split-account invite authority inside the account-creation transaction", async () => {
+  const { env, db } = setup();
+  try {
+    const email = "revoked@example.test";
+    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "email-lookup-v1");
+    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
+    const database = env.DB;
+    let intercepted = false;
+    env.DB = new Proxy(database, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        if (!intercepted) {
+          intercepted = true;
+          await target.prepare("DELETE FROM account_invites WHERE email_lookup = ?").bind(lookup).run();
+        }
+        return target.batch(statements);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    expect(await (await splitInviteRequest(env, email)).json()).toEqual({
+      message: "If this address is eligible, a sign-in link is on its way.",
+    });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM magic_links").get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("lets concurrent split-account requests consume one invite without duplicate accounts", async () => {
+  const { env, db } = setup();
+  try {
+    const email = "concurrent-invite@example.test";
+    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "email-lookup-v1");
+    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
+    const responses = await Promise.all([
+      splitInviteRequest(env, email, "203.0.113.30"),
+      splitInviteRequest(env, email, "203.0.113.31"),
+    ]);
+    for (const body of await Promise.all(responses.map((response) => response.json()))) {
+      expect(body).toMatchObject({ message: "Development sign-in link generated." });
+    }
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM magic_links").get()).toMatchObject({ n: 2 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_invites").get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("reconciles a lost split-account invite transaction response", async () => {
+  const { env, db } = setup();
+  try {
+    const email = "ambiguous-invite@example.test";
+    const lookup = await keyedLookup(email, env.IDENTITY_KEY_B64, "email-lookup-v1");
+    db.connection.prepare(`INSERT INTO account_invites (email_lookup, created_at)
+      VALUES (?, '2025-01-01T00:00:00.000Z')`).run(lookup);
+    const database = env.DB;
+    let lostAccountBatch = false;
+    env.DB = new Proxy(database, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        const result = await target.batch(statements);
+        if (!lostAccountBatch && statements.length === 3) {
+          lostAccountBatch = true;
+          throw new Error("synthetic lost invite transaction response");
+        }
+        return result;
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    expect(await (await splitInviteRequest(env, email)).json())
+      .toMatchObject({ message: "Development sign-in link generated." });
+    expect(lostAccountBatch).toBe(true);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM magic_links").get()).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_invites").get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
 
 it("enforces an eligible-email provider send budget without changing the generic response", async () => {
   const { env, db } = setup();
@@ -535,6 +665,9 @@ it("cleans expired authentication state in bounded oldest-first pages", async ()
       "2020-01-03T00:00:00.000Z"];
     const current = "2030-01-01T00:00:00.000Z";
     for (const [index, expiresAt] of [...expired, current].entries()) {
+      db.connection.prepare(`INSERT INTO account_invites
+        (email_lookup, created_at, expires_at) VALUES (?, '2019-01-01T00:00:00.000Z', ?)`)
+        .run(`${"a".repeat(62)}${index.toString().padStart(2, "0")}`, expiresAt);
       db.connection.prepare(`INSERT INTO magic_links
         (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`)
         .run(randomUUID(), userId, randomUUID(), expiresAt, expiresAt);
@@ -548,20 +681,22 @@ it("cleans expired authentication state in bounded oldest-first pages", async ()
         (bucket_key, window_start, request_count, expires_at) VALUES (?, ?, 1, ?)`)
         .run(`bucket-${index}`, expiresAt, expiresAt);
     }
-    expect(authCleanupPolicy).toEqual({ magicLinksPerRun: 500, sessionsPerRun: 500,
-      rateAttemptsPerRun: 50_000, rateBucketsPerRun: 5_000 });
-    const limits = { magicLinksPerRun: 2, sessionsPerRun: 2,
+    expect(authCleanupPolicy).toEqual({ invitesPerRun: 500, magicLinksPerRun: 500,
+      sessionsPerRun: 500, rateAttemptsPerRun: 50_000, rateBucketsPerRun: 5_000 });
+    const limits = { invitesPerRun: 2, magicLinksPerRun: 2, sessionsPerRun: 2,
       rateAttemptsPerRun: 2, rateBucketsPerRun: 2 };
     const now = new Date("2026-01-01T00:00:00.000Z");
     await purgeExpiredAuthState(env, now, limits);
-    for (const table of ["magic_links", "sessions", "auth_rate_limit_attempts", "auth_rate_limits"]) {
+    const tables = ["account_invites", "magic_links", "sessions", "auth_rate_limit_attempts",
+      "auth_rate_limits"];
+    for (const table of tables) {
       expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at < ?`)
         .get(now.toISOString())).toMatchObject({ n: 1 });
       expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at > ?`)
         .get(now.toISOString())).toMatchObject({ n: 1 });
     }
     await purgeExpiredAuthState(env, now, limits);
-    for (const table of ["magic_links", "sessions", "auth_rate_limit_attempts", "auth_rate_limits"]) {
+    for (const table of tables) {
       expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at < ?`)
         .get(now.toISOString())).toMatchObject({ n: 0 });
       expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at > ?`)

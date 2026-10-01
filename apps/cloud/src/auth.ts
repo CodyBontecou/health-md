@@ -100,9 +100,17 @@ export async function rateLimit(env: Env, bucket: string, limit: number): Promis
   return decision.accepted === 1;
 }
 
-function signupAllowed(email: string, env: Env): boolean {
+async function signupAllowed(email: string, emailLookup: string, env: Env): Promise<boolean> {
   if (env.AUTH_SIGNUP_MODE === "closed") return false;
   if (env.AUTH_SIGNUP_MODE === "invite") {
+    if (env.SERVICE_PROFILE === "account") {
+      const invite = await env.DB.prepare(`SELECT 1 AS eligible FROM account_invites
+        WHERE email_lookup = ? AND (expires_at IS NULL OR expires_at > ?)`)
+        .bind(emailLookup, new Date().toISOString()).first<{ eligible: number }>();
+      return invite?.eligible === 1;
+    }
+    // Combined development and the isolated VM profile retain their existing
+    // small-list behavior. Split production rejects raw invite configuration.
     return (env.AUTH_INVITE_EMAILS ?? "")
       .split(",")
       .map((entry) => entry.trim().toLowerCase())
@@ -149,7 +157,15 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
     "SELECT * FROM users WHERE email_lookup = ?",
   ).bind(emailLookup).first<UserRow>();
   if (user && user.status !== "active") return generic();
-  if (!user && !signupAllowed(email, env)) return generic();
+  if (!user) {
+    try {
+      if (!await signupAllowed(email, emailLookup, env)) return generic();
+    } catch {
+      // Admission storage is authoritative. Fail closed with the same response
+      // rather than revealing whether an address or invite exists.
+      return generic();
+    }
+  }
   const sendBudget = env.EMAIL_SEND_HOURLY_LIMIT ?
     parsePositiveInteger(env.EMAIL_SEND_HOURLY_LIMIT, "EMAIL_SEND_HOURLY_LIMIT", 1, 100_000) : 100;
   if (!await rateLimit(env, "auth-send:global", sendBudget)) {
@@ -184,12 +200,24 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
     if (newUser) {
       // Concurrent first requests may both observe no account. D1 serializes
       // these transactions: one user wins, the other deliberately reuses it.
+      const createUser = env.SERVICE_PROFILE === "account" ? env.DB.prepare(
+        `INSERT OR IGNORE INTO users
+         (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+         SELECT ?, ?, ?, ?, 'active', ? WHERE EXISTS (
+           SELECT 1 FROM account_invites WHERE email_lookup = ?
+             AND (expires_at IS NULL OR expires_at > ?)
+         )`,
+      ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now, emailLookup, now) : env.DB.prepare(
+        `INSERT OR IGNORE INTO users
+         (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+         VALUES (?, ?, ?, ?, 'active', ?)`,
+      ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now);
       await env.DB.batch([
-        env.DB.prepare(
-          `INSERT OR IGNORE INTO users
-           (id, email_lookup, email_ciphertext, email_iv, status, created_at)
-           VALUES (?, ?, ?, ?, 'active', ?)`,
-        ).bind(user.id, emailLookup, user.email_ciphertext, user.email_iv, now),
+        createUser,
+        ...(env.SERVICE_PROFILE === "account" ? [env.DB.prepare(`DELETE FROM account_invites
+          WHERE email_lookup = ? AND EXISTS (
+            SELECT 1 FROM users WHERE email_lookup = ? AND status = 'active'
+          )`).bind(emailLookup, emailLookup)] : []),
         createLink,
       ]);
     } else {
@@ -507,6 +535,7 @@ export async function audit(env: Env, userId: string, type: string, targetId: st
 }
 
 export const authCleanupPolicy = {
+  invitesPerRun: 500,
   magicLinksPerRun: 500,
   sessionsPerRun: 500,
   rateAttemptsPerRun: 50_000,
@@ -514,6 +543,7 @@ export const authCleanupPolicy = {
 } as const;
 
 type AuthCleanupLimits = {
+  invitesPerRun: number;
   magicLinksPerRun: number;
   sessionsPerRun: number;
   rateAttemptsPerRun: number;
@@ -531,6 +561,10 @@ export async function purgeExpiredAuthState(
   }
   const instant = now.toISOString();
   await env.DB.batch([
+    env.DB.prepare(`DELETE FROM account_invites WHERE email_lookup IN (
+      SELECT email_lookup FROM account_invites WHERE expires_at IS NOT NULL AND expires_at < ?
+      ORDER BY expires_at, email_lookup LIMIT ?
+    )`).bind(instant, limits.invitesPerRun),
     env.DB.prepare(`DELETE FROM magic_links WHERE id IN (
       SELECT id FROM magic_links WHERE expires_at < ? ORDER BY expires_at, id LIMIT ?
     )`).bind(instant, limits.magicLinksPerRun),

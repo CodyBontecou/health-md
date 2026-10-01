@@ -7,7 +7,7 @@ import { VmDatabase } from "../vm/storage";
 
 const dirs: string[] = [];
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
-for (const priorCount of [7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) it(`applies forward-only migrations from v${priorCount} to v17`, () => {
+for (const priorCount of [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]) it(`applies forward-only migrations from v${priorCount} to v18`, () => {
   const root = mkdtempSync(join(tmpdir(), "healthmd-repair-migrate-")); dirs.push(root);
   const prior = join(root, "prior"); const data = join(root, "data");
   mkdirSync(prior, { mode: 0o700 }); mkdirSync(data, { mode: 0o700 });
@@ -34,7 +34,7 @@ for (const priorCount of [7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) it(`applies forw
     } finally { before.close(); }
     const after = new VmDatabase(data, current);
     try {
-      expect((after.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get() as { n: number }).n).toBe(17);
+      expect((after.connection.prepare("SELECT COUNT(*) AS n FROM vm_migrations").get() as { n: number }).n).toBe(18);
       expect((after.connection.prepare("SELECT id FROM users WHERE id = ?").get(id) as { id: string }).id).toBe(id);
       expect((after.connection.prepare("PRAGMA integrity_check").get() as { integrity_check: string }).integrity_check)
         .toBe("ok");
@@ -62,6 +62,8 @@ for (const priorCount of [7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) it(`applies forw
       expect(after.connection.prepare(`SELECT COUNT(*) AS n FROM pragma_table_info('magic_links')
         WHERE name = 'claim_nonce'`).get()).toMatchObject({ n: 1 });
       expect(after.connection.prepare("SELECT COUNT(*) AS n FROM auth_rate_limit_attempts").get())
+        .toMatchObject({ n: 0 });
+      expect(after.connection.prepare("SELECT COUNT(*) AS n FROM account_invites").get())
         .toMatchObject({ n: 0 });
     } finally { after.close(); }
   } finally { process.umask(originalUmask); }

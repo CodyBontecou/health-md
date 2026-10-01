@@ -262,6 +262,11 @@ describe("split production Worker profiles", () => {
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
       excessAccountAuditRetention)).status).toBe(500);
 
+    const rawAccountInvites = profile("account", "https://account.healthmd.app");
+    rawAccountInvites.AUTH_INVITE_EMAILS = "person@example.test";
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),
+      rawAccountInvites)).status).toBe(500);
+
     const placeholderRevision = profile("account", "https://account.healthmd.app");
     placeholderRevision.DEPLOYMENT_REVISION = "REPLACE_WITH_FULL_GIT_COMMIT_SHA";
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/health"),

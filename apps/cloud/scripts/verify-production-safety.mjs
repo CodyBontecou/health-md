@@ -59,6 +59,8 @@ for (const [file, profile, entry] of profiles) {
     requireText(text, 'EXPORT_ENDPOINT_ORIGIN = "https://api.healthmd.app"', file);
     requireText(text, 'EMAIL_SEND_HOURLY_LIMIT = "100"', file);
     requireText(text, 'DELETION_STATUS_TTL_DAYS = "30"', file);
+    requireText(text, "Split production rejects raw AUTH_INVITE_EMAILS configuration", file);
+    forbid(text, /^AUTH_INVITE_EMAILS\s*=/mu, file);
     forbid(text, /^\[\[queues\.consumers\]\]$/mu, file);
     forbid(entrySource, /["']\/api\/v1\/exports["']/u, entry);
   } else {
@@ -98,14 +100,14 @@ const requiredEvidence = [
   "docs/production-load-qualification.md",
   "docs/production-readiness-audit.md",
   "docs/production-recovery-runbook.md",
-  "docs/account-key-rotation-runbook.md",
+  "docs/account-key-rotation-runbook.md", "docs/account-invite-runbook.md",
   "src/ingest-worker.ts", "src/account-worker.ts", "src/maintenance-worker.ts",
   "src/upload-intents.ts", "src/account-export-keys.ts", "src/telemetry.ts",
 ];
 for (const path of requiredEvidence) read(path);
 const authSource = read("src/auth.ts");
 for (const fragment of [
-  "magicLinksPerRun: 500", "sessionsPerRun: 500", "rateAttemptsPerRun: 50_000",
+  "invitesPerRun: 500", "magicLinksPerRun: 500", "sessionsPerRun: 500", "rateAttemptsPerRun: 50_000",
   "rateBucketsPerRun: 5_000", "ORDER BY expires_at, id LIMIT ?",
 ]) requireText(authSource, fragment, "bounded auth cleanup");
 const lifecycleSource = read("src/lifecycle.ts");
@@ -125,6 +127,13 @@ requireText(repairDeviceSource, "ORDER BY COALESCE(grant_expires_at, pairing_exp
 requireText(repairDeviceSource, "Invalid repair-device cleanup limit", "bounded repair-device cleanup");
 requireText(indexSource, "phase(() => purgeExpiredRepairDrafts(env))", "scheduled bounded repair-draft cleanup");
 requireText(indexSource, "phase(() => purgeExpiredRepairDevices(env))", "scheduled bounded repair-device cleanup");
+const inviteTool = read("scripts/prepare-account-invites.mjs");
+for (const fragment of [
+  'privateRegularFile(emailFile, "Invite email input")', "must be a regular owner-only file",
+  "Invite SQL output already exists",
+  "email-lookup-v1\\0", 'openSync(outputFile, "wx", 0o600)', "more than 90 days away",
+]) requireText(inviteTool, fragment, "account invite provisioning");
+forbid(inviteTool, /console\.(?:log|error)/u, "account invite provisioning output");
 const loadHarness = read("scripts/staging-load-lib.mjs");
 requireText(loadHarness, '"api.healthmd.app"', "staging load harness");
 requireText(loadHarness, "Refusing a live or non-staging hostname", "staging load harness");
@@ -136,11 +145,11 @@ requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
 forbid(loadRunner, /console\.(?:log|error)\([^\n]*(?:token|endpoint|body)/u, "staging load runner output");
 const migrations = readdirSync(resolve(cloud, "migrations"))
   .filter((name) => /^\d{4}_.+\.sql$/u.test(name)).sort();
-const expectedMigrationPrefixes = Array.from({ length: 17 }, (_, index) =>
+const expectedMigrationPrefixes = Array.from({ length: 18 }, (_, index) =>
   String(index + 1).padStart(4, "0"));
 const migrationPrefixes = migrations.map((name) => name.slice(0, 4));
 if (JSON.stringify(migrationPrefixes) !== JSON.stringify(expectedMigrationPrefixes)) {
-  failures.push(`migrations: expected exactly one contiguous source migration per prefix 0001-0017, found ${migrations.join(",")}`);
+  failures.push(`migrations: expected exactly one contiguous source migration per prefix 0001-0018, found ${migrations.join(",")}`);
 }
 const ingestMigration = read("migrations/0010_multi_user_ingest.sql");
 requireText(ingestMigration, "CREATE TABLE upload_intents", "migration 0010");
@@ -155,6 +164,10 @@ requireText(magicLinkMigration, "CREATE UNIQUE INDEX magic_links_claim_nonce", "
 const rateLimitMigration = read("migrations/0017_rate_limit_attempts.sql");
 requireText(rateLimitMigration, "CREATE TABLE auth_rate_limit_attempts", "migration 0017");
 requireText(rateLimitMigration, "CREATE TRIGGER auth_rate_limit_attempt_applied", "migration 0017");
+const inviteMigration = read("migrations/0018_account_invites.sql");
+requireText(inviteMigration, "CREATE TABLE account_invites", "migration 0018");
+requireText(inviteMigration, "CHECK (length(email_lookup) = 64)", "migration 0018");
+requireText(inviteMigration, "CREATE INDEX account_invites_expiry", "migration 0018");
 
 const workflow = read(".github/workflows/cloud-ci.yml", repository);
 for (const line of workflow.split("\n")) {

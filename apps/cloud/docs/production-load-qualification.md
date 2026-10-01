@@ -19,7 +19,7 @@ The source harness tests request-path capacity. It does not by itself prove Clou
 
 Obtain named operations, security and product authorization for a disposable **synthetic-only** staging environment. Record the exact 40-character deployed Git revision and verify its split-profile `/health` response. Never point this harness at the pilot or a production hostname; it refuses the known live hosts and requires a hostname containing a distinct `staging` or `synthetic` label.
 
-Provision at least 639 disposable synthetic accounts, each with one distinct write-only ingest token. This count keeps the default run at no more than 50 requests/account: two concurrent-wave requests, at most 47 sustained requests and one large probe. Do not reuse a token/account or raise production abuse budgets merely to obtain a pass. Put one token per line in an owner-only file:
+Provision at least 639 disposable synthetic accounts, each with one distinct write-only ingest token. Seed only their reserved-domain synthetic addresses through the owner-only hashed procedure in `account-invite-runbook.md`; migration 0018 and the account transaction must consume those rows without putting addresses in D1 or split configuration. This count keeps the default run at no more than 50 requests/account: two concurrent-wave requests, at most 47 sustained requests and one large probe. Do not reuse a token/account or raise production abuse budgets merely to obtain a pass. Put one token per line in an owner-only file:
 
 ```bash
 chmod 600 /owner-only/path/synthetic-ingest-tokens

@@ -12,7 +12,7 @@ The checked-in JSON keyring is only the Worker-secret interface. Before producti
 
 ## Routine KEK rotation
 
-1. Freeze unrelated deployments and record the reviewed source revision. Confirm all migrations through `0017` and a recent synthetic restore exercise.
+1. Freeze unrelated deployments and record the reviewed source revision. Confirm all migrations through `0018` and a recent synthetic restore exercise.
 2. Generate the new independent 32-byte KEK in the approved key system. Keep every still-referenced historical KEK.
 3. Update the ingest, account and maintenance secret keyrings to include the new version while leaving the old version current. Verify all profiles pass their health/configuration checks.
 4. Change `CURRENT_ACCOUNT_WRAPPING_KEY_ID` consistently in ingest, account and maintenance. New accounts/exports now use DEKs wrapped by the new KEK.

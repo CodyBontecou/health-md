@@ -53,5 +53,5 @@ DELETION_STATUS_TTL_DAYS = "30"
 #   ACCOUNT_KEY_WRAPPING_KEYS_JSON (for example {"kek-v1":"<32-byte-base64>"})
 #   RESEND_API_KEY
 #   CLOUD_RUNTIME_APPROVED=healthmd-cloud-v1-reviewed
-# Optional while signup remains invite-only:
-#   AUTH_INVITE_EMAILS
+# Invite-only admission uses purpose-hashed rows in D1 account_invites.
+# Split production rejects raw AUTH_INVITE_EMAILS configuration.

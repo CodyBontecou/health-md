@@ -90,6 +90,7 @@ export function validateConfiguration(env: Env): void {
     const invalidExcessSecrets = (splitNonIdentity && (!!env.IDENTITY_KEY_B64 || !!env.RESEND_API_KEY ||
       !!env.AUTH_EMAIL_FROM || !!env.AUTH_INVITE_EMAILS ||
       (profile === "maintenance" && !!env.EXPORT_ENCRYPTION_KEYS_JSON))) ||
+      (profile === "account" && !!env.AUTH_INVITE_EMAILS) ||
       ((profile === "ingest" || profile === "account") && !!env.AUDIT_RETENTION_DAYS);
     const invalidRepairFlags = profile !== "combined" &&
       (!!env.CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED || !!env.CLOUD_REPAIR_DISPATCH_ENABLED);
