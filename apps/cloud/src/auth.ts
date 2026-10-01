@@ -644,8 +644,14 @@ export async function limitIngest(env: Env, tokenId: string, userId: string): Pr
     parsePositiveInteger(env.INGEST_TOKEN_HOURLY_LIMIT, "INGEST_TOKEN_HOURLY_LIMIT", 1, 100_000) : 120;
   const accountLimit = env.INGEST_ACCOUNT_HOURLY_LIMIT ?
     parsePositiveInteger(env.INGEST_ACCOUNT_HOURLY_LIMIT, "INGEST_ACCOUNT_HOURLY_LIMIT", 1, 100_000) : 240;
-  if (!await rateLimit(env, `ingest:${tokenId}`, tokenLimit) ||
-      !await rateLimit(env, `ingest-account:${userId}`, accountLimit)) {
+  // D1 needs stable per-authority buckets, not the raw internal UUIDs. Purpose-
+  // separated hashes avoid granting the ingest profile the identity HMAC key.
+  const [tokenBucket, accountBucket] = await Promise.all([
+    sha256Hex(`ingest-token-rate-v1\0${tokenId}`),
+    sha256Hex(`ingest-account-rate-v1\0${userId}`),
+  ]);
+  if (!await rateLimit(env, `ingest:${tokenBucket}`, tokenLimit) ||
+      !await rateLimit(env, `ingest-account:${accountBucket}`, accountLimit)) {
     throw new HttpError(429, "rate_limited", "Export request limit exceeded. Retry later.");
   }
 }

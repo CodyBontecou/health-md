@@ -537,6 +537,13 @@ it("enforces token and account ingest budgets before payload processing", async 
     await limitIngest(env, "token-b", "account-2");
     await expect(limitIngest(env, "token-c", "account-2")).rejects.toMatchObject({ status: 429 });
     expect(db.connection.prepare(`SELECT request_count AS count FROM auth_rate_limits
-      WHERE bucket_key = 'ingest-account:account-2'`).get()).toMatchObject({ count: 2 });
+      WHERE bucket_key LIKE 'ingest-account:%' ORDER BY request_count DESC LIMIT 1`).get())
+      .toMatchObject({ count: 2 });
+    const buckets = db.connection.prepare("SELECT bucket_key AS bucketKey FROM auth_rate_limits")
+      .all() as Array<{ bucketKey: string }>;
+    expect(buckets).toHaveLength(6);
+    expect(buckets.every(({ bucketKey }) => /^(?:ingest|ingest-account):[a-f0-9]{64}$/u.test(bucketKey)))
+      .toBe(true);
+    expect(JSON.stringify(buckets)).not.toMatch(/token-[1abc]|account-[12]/u);
   } finally { db.close(); }
 });
