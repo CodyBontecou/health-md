@@ -139,17 +139,17 @@ export async function processAccountDeletionById(env: Env, deletionId: string, p
   }
   const intents = await env.DB.prepare(
     `SELECT id, object_key AS objectKey FROM upload_intents
-     WHERE user_id = ? AND state IN ('reserved', 'object_written') ORDER BY created_at LIMIT ?`,
+     WHERE user_id = ? AND state IN ('reserved', 'object_written', 'aborting') ORDER BY created_at LIMIT ?`,
   ).bind(job.userId, perJob).all<ExportObjectRow>();
   for (const entry of intents.results) {
     await env.EXPORTS.delete(entry.objectKey);
     await env.DB.prepare(
-      "DELETE FROM upload_intents WHERE id = ? AND user_id = ? AND state IN ('reserved', 'object_written')",
+      "DELETE FROM upload_intents WHERE id = ? AND user_id = ? AND state IN ('reserved', 'object_written', 'aborting')",
     ).bind(entry.id, job.userId).run();
   }
   const remaining = await env.DB.prepare(`SELECT
     (SELECT COUNT(*) FROM exports WHERE user_id = ?) +
-    (SELECT COUNT(*) FROM upload_intents WHERE user_id = ? AND state IN ('reserved', 'object_written')) AS count`)
+    (SELECT COUNT(*) FROM upload_intents WHERE user_id = ? AND state IN ('reserved', 'object_written', 'aborting')) AS count`)
     .bind(job.userId, job.userId).first<{ count: number }>();
   if ((remaining?.count ?? 0) > 0) return false;
   const completedAt = new Date().toISOString();

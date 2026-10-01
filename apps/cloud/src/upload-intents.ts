@@ -32,7 +32,7 @@ interface IntentRow {
   id: string;
   objectKey: string;
   scopeDigest: string | null;
-  state: "reserved" | "object_written" | "committed";
+  state: "reserved" | "object_written" | "aborting" | "committed";
 }
 
 interface DurableIntentRow extends IntentRow {
@@ -170,16 +170,73 @@ export async function releaseUploadAdmission(env: Env, admission: UploadAdmissio
   }
 }
 
-async function deleteExpiredRows(env: Env, rows: Array<{ id: string; objectKey: string }>): Promise<number> {
+interface CleanupIntentRow {
+  id: string;
+  userId: string;
+  objectKey: string;
+  state: IntentRow["state"];
+}
+
+async function claimIntentForCleanup(
+  env: Env,
+  id: string,
+  userId: string,
+  expiredBefore?: string,
+): Promise<CleanupIntentRow | null> {
+  const updatedAt = new Date().toISOString();
+  try {
+    await env.DB.prepare(`UPDATE upload_intents SET state = 'aborting', updated_at = ?
+      WHERE id = ? AND user_id = ? AND state IN ('reserved', 'object_written')
+        ${expiredBefore === undefined ? "" : "AND expires_at <= ?"}`)
+      .bind(...(expiredBefore === undefined ? [updatedAt, id, userId] :
+        [updatedAt, id, userId, expiredBefore])).run();
+  } catch {
+    // A response may be lost after the claim commits. Read durable state below.
+  }
+  let durable: CleanupIntentRow | null;
+  try {
+    durable = await env.DB.prepare(`SELECT id, user_id AS userId, object_key AS objectKey, state
+      FROM upload_intents WHERE id = ? LIMIT 1`).bind(id).first<CleanupIntentRow>();
+  } catch {
+    throw new Error("Upload-intent cleanup claim verification is unavailable");
+  }
+  if (!durable) return null;
+  if (durable.userId !== userId) throw new Error("Upload-intent cleanup owner is inconsistent");
+  if (durable.state === "committed") return durable;
+  if (durable.state !== "aborting") {
+    throw new Error("Upload-intent cleanup claim was not recorded");
+  }
+  return durable;
+}
+
+async function deleteAbortingIntent(env: Env, row: CleanupIntentRow): Promise<void> {
+  // Claiming `aborting` first prevents object-written/final-commit transitions.
+  // Keep the row and reservation until the possibly-written object is gone.
+  await env.EXPORTS.delete(row.objectKey);
+  try {
+    await env.DB.prepare("DELETE FROM upload_intents WHERE id = ? AND state = 'aborting'")
+      .bind(row.id).run();
+  } catch {
+    // A response may be lost after trigger-backed quota release commits.
+  }
+  let durable: { state: string } | null;
+  try {
+    durable = await env.DB.prepare("SELECT state FROM upload_intents WHERE id = ?")
+      .bind(row.id).first<{ state: string }>();
+  } catch {
+    throw new Error("Upload-intent cleanup verification is unavailable");
+  }
+  if (durable) throw new Error("Aborting upload intent was not removed");
+}
+
+async function deleteExpiredRows(env: Env, rows: CleanupIntentRow[], expiredBefore: string): Promise<number> {
   let removed = 0;
   for (const row of rows) {
-    // Do not release the durable reservation until the possibly-written object
-    // is gone. A provider deletion failure remains retryable and fail-closed.
-    await env.EXPORTS.delete(row.objectKey);
-    const result = await env.DB.prepare(
-      "DELETE FROM upload_intents WHERE id = ? AND state IN ('reserved', 'object_written')",
-    ).bind(row.id).run();
-    removed += result.meta.changes ?? 0;
+    const claimed = await claimIntentForCleanup(env, row.id, row.userId, expiredBefore);
+    if (!claimed || claimed.state === "committed") continue;
+    if (claimed.objectKey !== row.objectKey) throw new Error("Upload-intent cleanup object is inconsistent");
+    await deleteAbortingIntent(env, claimed);
+    removed += 1;
   }
   return removed;
 }
@@ -190,11 +247,11 @@ export async function reconcileAccountUploadIntents(
   now = new Date().toISOString(),
 ): Promise<number> {
   const expired = await env.DB.prepare(
-    `SELECT id, object_key AS objectKey FROM upload_intents
-     WHERE user_id = ? AND state IN ('reserved', 'object_written') AND expires_at <= ?
+    `SELECT id, user_id AS userId, object_key AS objectKey, state FROM upload_intents
+     WHERE user_id = ? AND state IN ('reserved', 'object_written', 'aborting') AND expires_at <= ?
      ORDER BY expires_at LIMIT 4`,
-  ).bind(userId, now).all<{ id: string; objectKey: string }>();
-  return deleteExpiredRows(env, expired.results);
+  ).bind(userId, now).all<CleanupIntentRow>();
+  return deleteExpiredRows(env, expired.results, now);
 }
 
 async function classifyReservationFailure(
@@ -348,11 +405,36 @@ export function commitUploadIntentStatement(
 }
 
 export async function abandonUploadIntent(env: Env, intent: UploadIntent): Promise<void> {
-  await env.EXPORTS.delete(intent.objectKey);
-  await env.DB.prepare(
-    `DELETE FROM upload_intents
-     WHERE id = ? AND user_id = ? AND state IN ('reserved', 'object_written')`,
-  ).bind(intent.id, intent.userId).run();
+  const claimed = await claimIntentForCleanup(env, intent.id, intent.userId);
+  if (claimed?.state === "committed") {
+    throw new Error("Committed upload intent cannot be abandoned");
+  }
+  if (!claimed) {
+    // Expiry cleanup may already have removed the row before a slow writer put
+    // its object. With export insertion gated on an active intent, this key can
+    // only be an orphan and is safe to delete.
+    await env.EXPORTS.delete(intent.objectKey);
+    return;
+  }
+  if (claimed.objectKey !== intent.objectKey) throw new Error("Upload-intent cleanup object is inconsistent");
+  await deleteAbortingIntent(env, claimed);
+}
+
+async function deleteCommittedIntent(env: Env, id: string): Promise<void> {
+  try {
+    await env.DB.prepare("DELETE FROM upload_intents WHERE id = ? AND state = 'committed'")
+      .bind(id).run();
+  } catch {
+    // Verify a possibly committed retention delete below.
+  }
+  let durable: { state: string } | null;
+  try {
+    durable = await env.DB.prepare("SELECT state FROM upload_intents WHERE id = ?")
+      .bind(id).first<{ state: string }>();
+  } catch {
+    throw new Error("Completed upload-intent cleanup verification is unavailable");
+  }
+  if (durable) throw new Error("Completed upload intent was not removed");
 }
 
 export async function reconcileUploadAdmissions(
@@ -375,11 +457,11 @@ export async function reconcileUploadIntents(
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Invalid upload-intent limit");
   const instant = now.toISOString();
   const expiredRows = await env.DB.prepare(
-    `SELECT id, object_key AS objectKey FROM upload_intents
-     WHERE state IN ('reserved', 'object_written') AND expires_at <= ?
+    `SELECT id, user_id AS userId, object_key AS objectKey, state FROM upload_intents
+     WHERE state IN ('reserved', 'object_written', 'aborting') AND expires_at <= ?
      ORDER BY expires_at LIMIT ?`,
-  ).bind(instant, limit).all<{ id: string; objectKey: string }>();
-  const expired = await deleteExpiredRows(env, expiredRows.results);
+  ).bind(instant, limit).all<CleanupIntentRow>();
+  const expired = await deleteExpiredRows(env, expiredRows.results, instant);
   const cutoff = new Date(now.getTime() - COMPLETED_INTENT_RETENTION_MS).toISOString();
   const completedRows = await env.DB.prepare(
     `SELECT id FROM upload_intents WHERE state = 'committed' AND updated_at < ?
@@ -387,10 +469,8 @@ export async function reconcileUploadIntents(
   ).bind(cutoff, limit).all<{ id: string }>();
   let completed = 0;
   for (const row of completedRows.results) {
-    const result = await env.DB.prepare(
-      "DELETE FROM upload_intents WHERE id = ? AND state = 'committed'",
-    ).bind(row.id).run();
-    completed += result.meta.changes ?? 0;
+    await deleteCommittedIntent(env, row.id);
+    completed += 1;
   }
   return { expired, completed };
 }

@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import worker from "../src/index";
 import { sha256Hex } from "../src/crypto";
 import { createVmEnvironment } from "../vm/runtime";
+import { reconcileUploadIntents } from "../src/upload-intents";
 
 const roots: string[] = [];
 const sourceDirectory = resolve(import.meta.dirname, "..");
@@ -128,6 +129,48 @@ it("releases its pre-body admission when envelope validation fails", async () =>
     expect(response.status).toBe(422);
     expect(db.connection.prepare(`SELECT COUNT(*) AS count FROM upload_admissions
       WHERE user_id = ?`).get(userId)).toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("cannot commit metadata after expiry cleanup claims and removes its active intent", async () => {
+  const { env, db, token, userId } = await setup();
+  try {
+    const objectKeys: string[] = [];
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "put") return async (key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView |
+        string | Blob, options?: R2PutOptions) => {
+        objectKeys.push(key);
+        return target.put(key, value, options);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    const original = env.DB;
+    let cleanupRan = false;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        if (!cleanupRan) {
+          cleanupRan = true;
+          await target.prepare(`UPDATE upload_intents SET expires_at = ?
+            WHERE user_id = ? AND state = 'object_written'`)
+            .bind("2020-01-01T00:00:00.000Z", userId).run();
+          await reconcileUploadIntents(env, 25, new Date("2026-01-01T00:00:00.000Z"));
+        }
+        return target.batch(statements);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    const response = await worker.fetch(request(token), env);
+    expect(response.status).toBe(500);
+    expect(cleanupRan).toBe(true);
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM exports WHERE user_id = ?")
+      .get(userId)).toEqual({ count: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents WHERE user_id = ?")
+      .get(userId)).toEqual({ count: 0 });
+    expect(objectKeys).toHaveLength(1);
+    expect(await objects.get(objectKeys[0]!)).toBeNull();
   } finally { db.close(); }
 });
 

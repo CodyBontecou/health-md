@@ -135,11 +135,16 @@ for (const fragment of [
   "ORDER BY expires_at, id LIMIT ?", "Upload admission cleanup verification is unavailable",
 ]) requireText(uploadIntentSource, fragment, "durable pre-body upload admission");
 for (const fragment of [
+  "SET state = 'aborting'", "Upload-intent cleanup claim verification is unavailable",
+  "DELETE FROM upload_intents WHERE id = ? AND state = 'aborting'",
+  "Upload-intent cleanup verification is unavailable",
+  "Completed upload-intent cleanup verification is unavailable",
   "FROM upload_intents WHERE id = ? LIMIT 1", "durable.userId === intent.userId",
   "durable.objectKey === intent.objectKey", "durable.digest === intent.digest",
   'durable.state === "reserved"', "durable.createdAt === intent.createdAt",
   "durable.expiresAt === intent.expiresAt", '"reservation_verification_pending"',
 ]) requireText(uploadIntentSource, fragment, "durable upload reservation creation");
+forbid(uploadIntentSource, /meta\.changes/u, "upload-intent correctness");
 const reservationRead = uploadIntentSource.indexOf("FROM upload_intents WHERE id = ? LIMIT 1");
 const reservationReturn = uploadIntentSource.indexOf("return intent;");
 if (reservationRead < 0 || reservationReturn < reservationRead) {
@@ -163,6 +168,8 @@ if (authenticateIngest < 0 || budgetIngest < authenticateIngest || acquireAdmiss
 }
 requireText(exportsSource, "if (!admissionConsumed) await releaseUploadAdmission(env, admission)",
   "pre-intent admission release");
+requireText(exportsSource, "AND EXISTS (SELECT 1 FROM upload_intents i", "active-intent export commit gate");
+requireText(exportsSource, "i.state IN ('reserved', 'object_written')", "active-intent export commit gate");
 const accountKeySource = read("src/account-export-keys.ts");
 requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
 requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',
@@ -185,6 +192,8 @@ for (const fragment of [
   "Invalid deletion-receipt cleanup limit", "ORDER BY status_expires_at, status_token_hash LIMIT ?",
   "ORDER BY completed_at, id LIMIT ?",
 ]) requireText(lifecycleSource, fragment, "bounded deletion-receipt cleanup");
+requireText(lifecycleSource, "state IN ('reserved', 'object_written', 'aborting')",
+  "account deletion includes claimed upload cleanup");
 const indexSource = read("src/index.ts");
 requireText(indexSource, '(profile === "ingest" || profile === "maintenance") &&',
   "legacy decrypt authority rejection");
@@ -238,6 +247,8 @@ requireText(ingestMigration, "CREATE TABLE upload_intents", "migration 0010");
 requireText(ingestMigration, "admission_id TEXT NOT NULL UNIQUE", "migration 0010");
 requireText(ingestMigration, "CREATE TRIGGER upload_intents_reserve", "migration 0010");
 requireText(ingestMigration, "CREATE TRIGGER upload_intents_consume_admission", "migration 0010");
+requireText(ingestMigration, "'reserved', 'object_written', 'aborting', 'committed'", "migration 0010");
+requireText(ingestMigration, "WHEN OLD.state IN ('reserved', 'object_written', 'aborting')", "migration 0010");
 requireText(ingestMigration, "RAISE(ABORT, 'upload_admission_rejected')", "migration 0010");
 requireText(ingestMigration, "RAISE(ABORT, 'upload_reservation_rejected')", "migration 0010");
 const deletionAuthorityMigration = read("migrations/0015_deletion_receipt_authorities.sql");

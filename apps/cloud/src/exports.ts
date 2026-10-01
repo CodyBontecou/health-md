@@ -27,8 +27,9 @@ interface ExportRow {
   externalRecordCount: number;
 }
 
-function insertExport(env: Env, userId: string, tokenId: string, exportId: string, objectKey: string, keyId: string,
-  digest: string, bytes: number, info: EnvelopeInfo, receivedAt: string): D1PreparedStatement {
+function insertExport(env: Env, userId: string, tokenId: string, intentId: string, exportId: string,
+  objectKey: string, keyId: string, digest: string, bytes: number, info: EnvelopeInfo,
+  receivedAt: string): D1PreparedStatement {
   return env.DB.prepare(
     `INSERT INTO exports (
        id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
@@ -36,10 +37,14 @@ function insertExport(env: Env, userId: string, tokenId: string, exportId: strin
        received_at, date_start, date_end, record_count, failure_count, external_record_count
      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (SELECT 1 FROM ingest_tokens t JOIN users u ON u.id = t.user_id
-         WHERE u.id = ? AND t.id = ? AND u.status = 'active' AND t.revoked_at IS NULL)`,
+         WHERE u.id = ? AND t.id = ? AND u.status = 'active' AND t.revoked_at IS NULL)
+         AND EXISTS (SELECT 1 FROM upload_intents i
+           WHERE i.id = ? AND i.user_id = ? AND i.token_id = ? AND i.export_id = ?
+             AND i.state IN ('reserved', 'object_written'))`,
   ).bind(exportId, userId, objectKey, keyId, digest, bytes, info.envelopeSchemaVersion,
     info.dailyRecordSchemaVersion, info.source, info.exportedAt, receivedAt, info.dateStart,
-    info.dateEnd, info.recordCount, info.failureCount, info.externalRecordCount, userId, tokenId);
+    info.dateEnd, info.recordCount, info.failureCount, info.externalRecordCount, userId, tokenId,
+    intentId, userId, tokenId, exportId);
 }
 
 export async function ingest(request: Request, env: Env): Promise<Response> {
@@ -144,8 +149,8 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
     throw error;
   }
   const statements: D1PreparedStatement[] = [
-    insertExport(env, principal.userId, principal.tokenId, intent.exportId, intent.objectKey,
-      keyId, digest, body.byteLength, info, receivedAt),
+    insertExport(env, principal.userId, principal.tokenId, intent.id, intent.exportId,
+      intent.objectKey, keyId, digest, body.byteLength, info, receivedAt),
     ...(encryptedSpec ? [env.DB.prepare(`INSERT INTO supplemental_exports
       (export_id, user_id, spec_ciphertext, spec_iv, scope_digest, created_at)
       SELECT ?, ?, ?, ?, ?, ? FROM exports WHERE id = ? AND user_id = ?`)

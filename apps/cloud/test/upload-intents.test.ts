@@ -61,6 +61,11 @@ function reservationDatabase(original: D1Database, options: {
   admissionInsert?: "normal" | "lost_response" | "false_success";
   failAdmissionVerification?: boolean;
   admissionDelete?: "normal" | "lost_response";
+  cleanupClaim?: "normal" | "lost_response";
+  abortingDelete?: "normal" | "lost_response" | "false_success";
+  completedDelete?: "normal" | "lost_response" | "false_success";
+  failCleanupClaimVerification?: boolean;
+  failIntentDeleteVerification?: boolean;
 }): D1Database {
   return new Proxy(original, { get(target, property) {
     if (property !== "prepare") {
@@ -100,9 +105,42 @@ function reservationDatabase(original: D1Database, options: {
               await boundStatement.run();
               throw new Error("synthetic lost upload-admission delete response");
             };
+            if (boundProperty === "run" && query.includes("SET state = 'aborting'") &&
+                options.cleanupClaim === "lost_response") return async () => {
+              await boundStatement.run();
+              throw new Error("synthetic lost cleanup-claim response");
+            };
+            if (boundProperty === "run" && query.includes("state = 'aborting'") &&
+                query.includes("DELETE FROM upload_intents")) {
+              if (options.abortingDelete === "false_success") {
+                return async () => target.prepare("SELECT 1").run();
+              }
+              if (options.abortingDelete === "lost_response") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost aborting-intent delete response");
+              };
+            }
+            if (boundProperty === "run" && query.includes("state = 'committed'") &&
+                query.includes("DELETE FROM upload_intents")) {
+              if (options.completedDelete === "false_success") {
+                return async () => target.prepare("SELECT 1").run();
+              }
+              if (options.completedDelete === "lost_response") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost completed-intent delete response");
+              };
+            }
             if (boundProperty === "first" && options.failAdmissionVerification &&
                 query.includes("FROM upload_admissions WHERE id = ? LIMIT 1")) {
               return async () => { throw new Error("synthetic admission verification outage"); };
+            }
+            if (boundProperty === "first" && options.failCleanupClaimVerification &&
+                query.includes("user_id AS userId, object_key AS objectKey, state")) {
+              return async () => { throw new Error("synthetic cleanup-claim verification outage"); };
+            }
+            if (boundProperty === "first" && options.failIntentDeleteVerification &&
+                query.includes("SELECT state FROM upload_intents WHERE id = ?")) {
+              return async () => { throw new Error("synthetic intent-delete verification outage"); };
             }
             if (boundProperty === "first" && options.failVerification &&
                 query.includes("FROM upload_intents WHERE id = ? LIMIT 1")) {
@@ -387,6 +425,84 @@ it("fails safely when object-written verification is unavailable", async () => {
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM upload_intents WHERE id = ?").get(intent.id))
       .toMatchObject({ n: 0 });
     expect(await env.EXPORTS.get(intent.objectKey)).toBeNull();
+  } finally { db.close(); }
+});
+
+it("reconciles lost cleanup-claim and intent-delete responses exactly", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const intent = await reserveUploadIntent(env, principal, "c".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    env.DB = reservationDatabase(env.DB, {
+      cleanupClaim: "lost_response", abortingDelete: "lost_response",
+    });
+    await expect(abandonUploadIntent(env, intent)).resolves.toBeUndefined();
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents WHERE id = ?")
+      .get(intent.id)).toEqual({ count: 0 });
+    expect(db.connection.prepare("SELECT reserved_bytes AS reservedBytes FROM account_storage WHERE user_id = ?")
+      .get(principal.userId)).toEqual({ reservedBytes: 0 });
+    expect(await env.EXPORTS.get(intent.objectKey)).toBeNull();
+  } finally { db.close(); }
+});
+
+it("does not report abandonment while deletion or verification is unreadable", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const intent = await reserveUploadIntent(env, principal, "c".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    const original = env.DB;
+    env.DB = reservationDatabase(original, { abortingDelete: "false_success" });
+    await expect(abandonUploadIntent(env, intent)).rejects.toThrow("Aborting upload intent was not removed");
+    expect(db.connection.prepare("SELECT state FROM upload_intents WHERE id = ?").get(intent.id))
+      .toEqual({ state: "aborting" });
+    env.DB = reservationDatabase(original, { failIntentDeleteVerification: true });
+    await expect(abandonUploadIntent(env, intent)).rejects.toThrow(
+      "Upload-intent cleanup verification is unavailable",
+    );
+    env.DB = original;
+    await expect(abandonUploadIntent(env, intent)).resolves.toBeUndefined();
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents WHERE id = ?")
+      .get(intent.id)).toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("withholds object deletion while an expiry cleanup claim is unreadable", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const intent = await reserveUploadIntent(env, principal, "c".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    db.connection.prepare("UPDATE upload_intents SET expires_at = ? WHERE id = ?")
+      .run("2020-01-01T00:00:00.000Z", intent.id);
+    const original = env.DB;
+    env.DB = reservationDatabase(original, { failCleanupClaimVerification: true });
+    await expect(reconcileUploadIntents(env, 25, new Date("2026-01-01T00:00:00.000Z")))
+      .rejects.toThrow("Upload-intent cleanup claim verification is unavailable");
+    expect(await env.EXPORTS.get(intent.objectKey)).not.toBeNull();
+    expect(db.connection.prepare("SELECT state FROM upload_intents WHERE id = ?").get(intent.id))
+      .toEqual({ state: "aborting" });
+    env.DB = original;
+    expect(await reconcileUploadIntents(env, 25, new Date("2026-01-01T00:00:00.000Z")))
+      .toEqual({ expired: 1, completed: 0 });
+  } finally { db.close(); }
+});
+
+it("verifies completed-intent retention deletes instead of trusting change metadata", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const intent = await reserveUploadIntent(env, principal, "c".repeat(64), null, 3);
+    db.connection.prepare("UPDATE upload_intents SET state = 'committed', updated_at = ? WHERE id = ?")
+      .run("2020-01-01T00:00:00.000Z", intent.id);
+    const original = env.DB;
+    env.DB = reservationDatabase(original, { completedDelete: "false_success" });
+    await expect(reconcileUploadIntents(env, 25, new Date("2026-01-01T00:00:00.000Z")))
+      .rejects.toThrow("Completed upload intent was not removed");
+    env.DB = reservationDatabase(original, { completedDelete: "lost_response" });
+    expect(await reconcileUploadIntents(env, 25, new Date("2026-01-01T00:00:00.000Z")))
+      .toEqual({ expired: 0, completed: 1 });
   } finally { db.close(); }
 });
 

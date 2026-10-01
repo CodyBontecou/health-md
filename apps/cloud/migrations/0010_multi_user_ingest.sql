@@ -48,7 +48,7 @@ CREATE TABLE upload_intents (
   plaintext_sha256 TEXT NOT NULL,
   scope_digest TEXT,
   byte_count INTEGER NOT NULL CHECK (byte_count > 0),
-  state TEXT NOT NULL CHECK (state IN ('reserved', 'object_written', 'committed')),
+  state TEXT NOT NULL CHECK (state IN ('reserved', 'object_written', 'aborting', 'committed')),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   expires_at TEXT NOT NULL,
@@ -163,7 +163,7 @@ END;
 
 CREATE TRIGGER upload_intents_release_on_delete
 AFTER DELETE ON upload_intents
-WHEN OLD.state IN ('reserved', 'object_written')
+WHEN OLD.state IN ('reserved', 'object_written', 'aborting')
 BEGIN
   UPDATE account_storage
   SET reserved_bytes = MAX(reserved_bytes - OLD.byte_count, 0),

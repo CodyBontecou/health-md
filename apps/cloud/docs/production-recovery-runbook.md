@@ -36,8 +36,9 @@ Run at the approved interval and after storage/migration/key/region changes:
    - tenant isolation for inventory, download, portability and lifecycle routes;
    - wrong/missing key and tampered ciphertext fail closed;
    - deletion requested before the recovery point resumes safely;
-   - deletion completed before the recovery point is absent or is re-erased according to disclosed backup expiry; and
-   - Queue jobs can be reconstructed/retried without duplicate acknowledgement.
+   - deletion completed before the recovery point is absent or is re-erased according to disclosed backup expiry;
+   - Queue jobs can be reconstructed/retried without duplicate acknowledgement; and
+   - expired or `aborting` upload intents resume ciphertext-first cleanup, release quota exactly once, and cannot produce metadata that points to deleted ciphertext.
 7. Measure recovery-point lag and elapsed restore/service-validation time. Compare with the approved RPO/RTO; do not average away a miss.
 8. Destroy the isolated restore resources and ephemeral credentials under two-person verification. Retain only the health-free signed evidence record for the approved period.
 
