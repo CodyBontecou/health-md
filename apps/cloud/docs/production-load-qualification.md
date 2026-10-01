@@ -8,7 +8,7 @@ Before the 1,000-user cohort, qualify the exact reviewed split-Worker revision a
 
 - 500 simultaneous compatibility uploads;
 - 50 launched uploads/second for 600 seconds;
-- ten simultaneous exact 25 MiB compatibility envelopes;
+- ten simultaneous exact 25 MiB compatibility envelopes, including declared-length and transfer-fragmented requests; source tests prove one capped contiguous accumulator without a final full-body copy, but only provider metrics can qualify actual isolate memory;
 - zero unexpected HTTP/transport failures;
 - at least 98% of the planned launch rate; and
 - measured Worker CPU/memory, D1 contention, R2 latency, Queue health, per-account admission, cost and health-free alert behavior within approved limits.

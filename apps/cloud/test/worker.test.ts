@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import worker from "../src/index";
 import type { Env } from "../src/types";
-import { assertSameOrigin, HttpError, readBoundedBody } from "../src/http";
+import { assertSameOrigin, HttpError, readBoundedBody, readJson } from "../src/http";
 
 const production = {
   ENVIRONMENT: "production",
@@ -90,6 +90,63 @@ describe("Worker deployment and request policy", () => {
     expect(() => assertSameOrigin(new Request("https://cloud.health.md/api/auth/logout", {
       method: "POST", headers: { Origin: "https://attacker.test" },
     }), production)).toThrow(HttpError);
+  });
+
+  it("coalesces highly fragmented chunked bodies within one bounded buffer", async () => {
+    const length = 20_000;
+    let offset = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (offset === length) { controller.close(); return; }
+        controller.enqueue(Uint8Array.of(offset % 251));
+        offset += 1;
+      },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const bytes = await readBoundedBody(request, 32_768);
+    expect(bytes.byteLength).toBe(length);
+    expect(bytes.buffer.byteLength).toBeLessThanOrEqual(32_768);
+    expect([bytes[0], bytes[251], bytes[length - 1]]).toEqual([0, 0, (length - 1) % 251]);
+  });
+
+  it("uses a validated Content-Length as exact initial body capacity", async () => {
+    const payload = new TextEncoder().encode("synthetic-body");
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(payload.subarray(0, 3)); controller.enqueue(payload.subarray(3));
+        controller.close(); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", headers: { "Content-Length": String(payload.byteLength) }, body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const bytes = await readBoundedBody(request, 1024);
+    expect(new TextDecoder().decode(bytes)).toBe("synthetic-body");
+    expect(bytes.buffer.byteLength).toBe(payload.byteLength);
+  });
+
+  it("preserves the stable size error when stream cancellation fails", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array(5)); },
+      cancel() { throw new Error("synthetic cancellation failure"); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readBoundedBody(request, 4)).rejects.toMatchObject({
+      status: 413, code: "payload_too_large",
+    });
+  });
+
+  it("rejects malformed UTF-8 after a bounded fragmented read", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(Uint8Array.of(0x7b, 0xc3));
+        controller.enqueue(Uint8Array.of(0x28, 0x7d)); controller.close(); },
+    });
+    const request = new Request("http://localhost:8787/api/example", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readJson(request)).rejects.toMatchObject({ status: 400, code: "invalid_json" });
   });
 
   it("enforces request limits even without Content-Length", async () => {

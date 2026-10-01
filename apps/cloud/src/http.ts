@@ -74,30 +74,37 @@ export async function readBoundedBody(request: Request, maximumBytes: number): P
   }
   if (request.body === null) throw new HttpError(400, "empty_body", "Request body is required.");
   const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
+  // Keep fragmentation from creating an attacker-controlled array of chunk
+  // objects, and avoid a second full-body allocation after the read. A valid
+  // Content-Length gives the exact initial capacity; chunked bodies grow
+  // geometrically but can never allocate beyond the configured maximum.
+  const initialCapacity = declared === null ? Math.min(maximumBytes, 16 * 1024) : Number(declared);
+  let buffer = new Uint8Array(initialCapacity);
   let total = 0;
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      total += value.byteLength;
-      if (total > maximumBytes) {
-        await reader.cancel();
+      const required = total + value.byteLength;
+      if (required > maximumBytes) {
+        try { await reader.cancel(); } catch { /* Preserve the stable bounded-body error. */ }
         throw new HttpError(413, "payload_too_large", "Export payload is too large.");
       }
-      chunks.push(value);
+      if (required > buffer.byteLength) {
+        const capacity = Math.min(maximumBytes,
+          Math.max(required, Math.max(1, buffer.byteLength) * 2));
+        const grown = new Uint8Array(capacity);
+        grown.set(buffer.subarray(0, total));
+        buffer = grown;
+      }
+      buffer.set(value, total);
+      total = required;
     }
   } finally {
     reader.releaseLock();
   }
   if (total === 0) throw new HttpError(400, "empty_body", "Request body is required.");
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return result;
+  return buffer.subarray(0, total);
 }
 
 export function parsePositiveInteger(value: string, name: string, minimum: number, maximum: number): number {

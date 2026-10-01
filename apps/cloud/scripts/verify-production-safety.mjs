@@ -145,6 +145,13 @@ const reservationReturn = uploadIntentSource.indexOf("return intent;");
 if (reservationRead < 0 || reservationReturn < reservationRead) {
   failures.push("upload-intents.ts: candidate reservation returned before durable exact read-back");
 }
+const httpSource = read("src/http.ts");
+for (const fragment of [
+  "const initialCapacity = declared === null ? Math.min(maximumBytes, 16 * 1024) : Number(declared)",
+  "Math.min(maximumBytes,", "grown.set(buffer.subarray(0, total))",
+  "return buffer.subarray(0, total)", "Preserve the stable bounded-body error",
+]) requireText(httpSource, fragment, "bounded contiguous request body");
+forbid(httpSource, /chunks:\s*Uint8Array\[\]/u, "unbounded fragmented request body");
 const exportsSource = read("src/exports.ts");
 const authenticateIngest = exportsSource.indexOf("requireIngestToken(request, env)");
 const budgetIngest = exportsSource.indexOf("limitIngest(env, principal.tokenId, principal.userId)");
