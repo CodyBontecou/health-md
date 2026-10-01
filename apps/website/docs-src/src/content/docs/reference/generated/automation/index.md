@@ -32,9 +32,9 @@ This group contains 32 deterministic artifacts. Checksums are SHA-256 hashes of 
 | `mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `manifest.json` | 5848 | `dc1fe79020977ccbf6a77b6d84cdb94e52140bd15544a36a88dcab27b78dd547` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `message-fields.md` | 128225 | `ebd628b630e5965867deb3ed3037c0041ebcf1b735c05e8e5b43d31af03d773d` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `peer-capabilities.json` | 1635 | `05dc5c44551072f0b90af5b076271afb81de30f153ee6767430a8a54b2127f37` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `manifest.json` | 5848 | `1b34bb86b8915158b23fa4cf0da859a4c1a97789b8df4ce18e4ecc53304723d2` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `message-fields.md` | 130211 | `a29417083ffa113e78d01f4bc496cf0a6c4a45df120cce355f03f89f91ea02cb` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `peer-capabilities.json` | 1685 | `38e63c7875a51fb0b9e84088a88878417b1b0f4bb12f1161b156e3d81670df55` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `raw-result-complete.json` | 3240 | `d82df3876394ac05761c2fdc44db41b6b4021ebc8b4becba20bf51793c25f6c6` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `raw-result-partial.json` | 5280 | `311e1f6b6225226b0a3000aab2322114e47067bfc36a54cc78f7a9e3a0482d33` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |
