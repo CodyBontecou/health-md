@@ -350,15 +350,15 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneContextRefreshRequest._0.profileID` | string |
 | `$.iphoneContextRefreshRequest._0.profileName` | string |
 | `$.iphoneContextRefreshRequest._0.selection` | object |
-| `$.iphoneContextRefreshRequest._0.selection.detailLevel` | string |
-| `$.iphoneContextRefreshRequest._0.selection.fieldPointers` | array |
-| `$.iphoneContextRefreshRequest._0.selection.fieldPointers[]` | string |
-| `$.iphoneContextRefreshRequest._0.selection.metricIDs` | array |
-| `$.iphoneContextRefreshRequest._0.selection.metricIDs[]` | string |
-| `$.iphoneContextRefreshRequest._0.selection.objectPaths` | array |
-| `$.iphoneContextRefreshRequest._0.selection.objectPaths[]` | string |
-| `$.iphoneContextRefreshRequest._0.selection.sourceIDs` | array |
-| `$.iphoneContextRefreshRequest._0.selection.sourceIDs[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.detail_level` | string |
+| `$.iphoneContextRefreshRequest._0.selection.field_pointers` | array |
+| `$.iphoneContextRefreshRequest._0.selection.field_pointers[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.metric_ids` | array |
+| `$.iphoneContextRefreshRequest._0.selection.metric_ids[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.object_paths` | array |
+| `$.iphoneContextRefreshRequest._0.selection.object_paths[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.source_ids` | array |
+| `$.iphoneContextRefreshRequest._0.selection.source_ids[]` | string |
 
 ### `iphoneContextRefreshStatus`
 

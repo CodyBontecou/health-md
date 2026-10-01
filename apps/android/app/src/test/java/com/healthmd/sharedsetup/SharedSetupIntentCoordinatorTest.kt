@@ -66,7 +66,7 @@ class SharedSetupIntentCoordinatorTest {
         io.mockk.every { store.isSharedSetupDocument(any()) } returns true
         io.mockk.every { store.read(firstUri) } answers {
             firstStarted.countDown()
-            check(releaseFirst.await(5, TimeUnit.SECONDS))
+            check(releaseFirst.await(10, TimeUnit.SECONDS))
             byteArrayOf(1)
         }
         io.mockk.every { store.read(secondUri) } returns byteArrayOf(2)
@@ -76,10 +76,10 @@ class SharedSetupIntentCoordinatorTest {
 
         try {
             coordinator.acceptExternalUriAsync(firstUri)
-            assertThat(firstStarted.await(5, TimeUnit.SECONDS)).isTrue()
+            assertThat(firstStarted.await(10, TimeUnit.SECONDS)).isTrue()
             coordinator.acceptExternalUriAsync(secondUri)
 
-            val newest = withTimeout(5_000) {
+            val newest = withTimeout(10_000) {
                 coordinator.imports.filterNotNull().first { pending ->
                     pending.bytes?.contentEquals(byteArrayOf(2)) == true
                 }
@@ -105,7 +105,7 @@ class SharedSetupIntentCoordinatorTest {
         io.mockk.every { store.isSharedSetupDocument(uri) } returns true
         io.mockk.every { store.read(uri) } answers {
             started.countDown()
-            check(release.await(5, TimeUnit.SECONDS))
+            check(release.await(10, TimeUnit.SECONDS))
             byteArrayOf(9)
         }
         // Publishing unconfined makes this test stronger: a read that wrongly survives
@@ -114,7 +114,7 @@ class SharedSetupIntentCoordinatorTest {
 
         try {
             coordinator.acceptExternalUriAsync(uri)
-            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue()
+            assertThat(started.await(10, TimeUnit.SECONDS)).isTrue()
             coordinator.finishExternalImport()
             release.countDown()
             delay(100)

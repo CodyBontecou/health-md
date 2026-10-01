@@ -96,7 +96,7 @@ struct APIExportClient {
         self.maximumResponseBytes = max(1, maximumResponseBytes)
     }
 
-    static func safeRedirect(
+    nonisolated static func safeRedirect(
         response: HTTPURLResponse,
         request: URLRequest
     ) -> URLRequest? {
@@ -112,12 +112,12 @@ struct APIExportClient {
         return request
     }
 
-    private static func sameOrigin(_ first: URL, _ second: URL) -> Bool {
+    private nonisolated static func sameOrigin(_ first: URL, _ second: URL) -> Bool {
         guard let left = origin(of: first), let right = origin(of: second) else { return false }
         return left.0 == right.0 && left.1 == right.1 && left.2 == right.2
     }
 
-    private static func origin(of url: URL) -> (String, String, Int)? {
+    private nonisolated static func origin(of url: URL) -> (String, String, Int)? {
         guard let scheme = url.scheme?.lowercased(),
               let host = url.host?.lowercased() else { return nil }
         let port = url.port ?? (scheme == "https" ? 443 : (scheme == "http" ? 80 : -1))
@@ -125,7 +125,7 @@ struct APIExportClient {
         return (scheme, host, port)
     }
 
-    private static let maximumRedirects = 5
+    private nonisolated static let maximumRedirects = 5
 
     @MainActor
     func upload(

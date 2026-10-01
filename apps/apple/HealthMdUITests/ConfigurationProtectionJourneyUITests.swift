@@ -268,9 +268,29 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertNotNil(waitForHittableToast(in: app))
         XCTAssertFalse(app.alerts.firstMatch.waitForExistence(timeout: 1))
 
-        // With the migrated single Default profile, Delete is additionally
-        // disabled by the last-profile guard, so tapping it must present
-        // neither the confirmation dialog nor mutate anything.
+    }
+
+    func testProtectedLastProfileDeleteRemainsDisabled() {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            configurationProtectionEnabled: true
+        )
+        app.launch()
+
+        openProfilesManagementSheet(app)
+        let defaultRow = app.buttons["export.profiles.row.Default"]
+        XCTAssertTrue(waitHittable(defaultRow), "The Default profile row should be tappable")
+        defaultRow.tap()
+        XCTAssertTrue(
+            app.buttons["export.profiles.edit.button"].waitForExistence(timeout: 5),
+            "Profile detail should stay inspectable while protected"
+        )
+
+        // Test this before producing a deliberately pinned protection toast.
+        // The migrated single Default profile is additionally guarded against
+        // deletion, so tapping it must present neither confirmation nor mutation.
         let delete = app.buttons["Delete Profile…"]
         XCTAssertTrue(scrollUntilHittable(delete, in: app), "The Delete action should be reachable")
         XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
