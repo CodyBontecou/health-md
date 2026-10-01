@@ -1,5 +1,5 @@
 import core, { validateConfiguration } from "./index";
-import { errorResponse, json, withSecurityHeaders } from "./http";
+import { errorResponse, json, requestMatchesPublicOrigin, withSecurityHeaders } from "./http";
 import { processAccountDeletionById } from "./lifecycle";
 import { recordHttpMetric, recordMaintenanceMetric } from "./telemetry";
 import type { Env, LifecycleMessage } from "./types";
@@ -10,9 +10,15 @@ export default {
     let response: Response;
     try {
       validateConfiguration(env);
-      response = env.SERVICE_PROFILE !== "maintenance" ?
-        withSecurityHeaders(errorResponse(new Error()), env) :
-        withSecurityHeaders(json({ error: "not_found", message: "Endpoint not found." }, { status: 404 }), env);
+      if (env.SERVICE_PROFILE !== "maintenance") {
+        response = withSecurityHeaders(errorResponse(new Error()), env);
+      } else if (!requestMatchesPublicOrigin(request, env)) {
+        response = withSecurityHeaders(json({ error: "not_found", message: "Endpoint not found." },
+          { status: 404 }), env);
+      } else {
+        response = withSecurityHeaders(json({ error: "not_found", message: "Endpoint not found." },
+          { status: 404 }), env);
+      }
     } catch {
       response = withSecurityHeaders(errorResponse(new Error()), env);
     }

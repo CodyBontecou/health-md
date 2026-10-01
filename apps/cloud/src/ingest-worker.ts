@@ -1,5 +1,5 @@
 import core, { validateConfiguration } from "./index";
-import { errorResponse, json, withSecurityHeaders } from "./http";
+import { errorResponse, json, requestMatchesPublicOrigin, withSecurityHeaders } from "./http";
 import { recordHttpMetric } from "./telemetry";
 import type { Env } from "./types";
 
@@ -20,7 +20,7 @@ export default {
     try {
       validateConfiguration(env);
       if (env.SERVICE_PROFILE !== "ingest") response = withSecurityHeaders(errorResponse(new Error()), env);
-      else if (!allowed(request)) response = denied(env);
+      else if (!requestMatchesPublicOrigin(request, env) || !allowed(request)) response = denied(env);
       else {
         const headers = new Headers(request.headers);
         headers.delete("Cookie");

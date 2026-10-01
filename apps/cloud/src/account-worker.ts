@@ -1,5 +1,5 @@
 import core, { validateConfiguration } from "./index";
-import { errorResponse, json, withSecurityHeaders } from "./http";
+import { errorResponse, json, requestMatchesPublicOrigin, withSecurityHeaders } from "./http";
 import { recordHttpMetric } from "./telemetry";
 import type { Env } from "./types";
 
@@ -42,7 +42,7 @@ export default {
     try {
       validateConfiguration(env);
       if (env.SERVICE_PROFILE !== "account") response = withSecurityHeaders(errorResponse(new Error()), env);
-      else if (!allowed(request)) response = denied(env);
+      else if (!requestMatchesPublicOrigin(request, env) || !allowed(request)) response = denied(env);
       else response = await core.fetch(request, env);
     } catch {
       response = withSecurityHeaders(errorResponse(new Error()), env);

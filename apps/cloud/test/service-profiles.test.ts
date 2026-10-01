@@ -96,6 +96,27 @@ describe("split production Worker profiles", () => {
     }
   });
 
+  it("rejects allowed paths arriving through an alternate hostname", async () => {
+    const ingest = profile("ingest", "https://api.healthmd.app");
+    for (const url of ["https://alternate.example.test/health", "http://api.healthmd.app/health",
+      "https://api.healthmd.app:8443/health"]) {
+      expect((await ingestWorker.fetch(new Request(url), ingest)).status).toBe(404);
+    }
+
+    const account = profile("account", "https://account.healthmd.app");
+    let assetCalls = 0;
+    account.ASSETS = { fetch: async () => { assetCalls += 1; return new Response("unexpected"); } } as unknown as Fetcher;
+    expect((await accountWorker.fetch(new Request("https://alternate.example.test/style.css"), account)).status)
+      .toBe(404);
+    expect((await accountWorker.fetch(new Request("https://alternate.example.test/health"), account)).status)
+      .toBe(404);
+    expect(assetCalls).toBe(0);
+
+    const maintenance = profile("maintenance", "https://maintenance.healthmd.app");
+    expect((await maintenanceWorker.fetch(new Request("https://alternate.example.test/health"), maintenance)).status)
+      .toBe(404);
+  });
+
   it("keeps the ingest Worker write-only and strips browser authority", async () => {
     const env = profile("ingest", "https://api.healthmd.app");
     const health = await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), env);
