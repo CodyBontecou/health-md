@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import accountWorker from "../src/account-worker";
 import ingestWorker from "../src/ingest-worker";
 import maintenanceWorker from "../src/maintenance-worker";
@@ -46,6 +47,17 @@ function profile(kind: "ingest" | "account" | "maintenance", origin: string): En
 }
 
 describe("split production Worker profiles", () => {
+  it("disables persisted Worker logs, invocation logs, traces and Logpush", () => {
+    for (const name of ["ingest", "account", "maintenance"]) {
+      const config = readFileSync(new URL(`../wrangler.${name}.toml`, import.meta.url), "utf8");
+      expect(config).toContain("logpush = false");
+      expect(config).toContain("[observability]\nenabled = false\nredact_query_string = true");
+      expect(config).toContain("[observability.logs]\nenabled = false\ninvocation_logs = false\npersist = false");
+      expect(config).toContain("[observability.traces]\nenabled = false\npersist = false");
+      expect(config).not.toMatch(/\[observability(?:\.(?:logs|traces))?\]\s+enabled = true/u);
+    }
+  });
+
   it("keeps the ingest Worker write-only and strips browser authority", async () => {
     const env = profile("ingest", "https://api.healthmd.app");
     const health = await ingestWorker.fetch(new Request("https://api.healthmd.app/health"), env);

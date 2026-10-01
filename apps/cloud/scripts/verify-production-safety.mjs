@@ -33,6 +33,11 @@ for (const [file, profile, entry] of profiles) {
   requireText(text, "AUTH_SIGNUP_MODE = \"closed\"", file);
   requireText(text, "workers_dev = false", file);
   requireText(text, "preview_urls = false", file);
+  requireText(text, "logpush = false", file);
+  requireText(text, "[observability]\nenabled = false\nredact_query_string = true", file);
+  requireText(text, "[observability.logs]\nenabled = false\ninvocation_logs = false\npersist = false", file);
+  requireText(text, "[observability.traces]\nenabled = false\npersist = false", file);
+  forbid(text, /\[observability(?:\.(?:logs|traces))?\]\s+enabled\s*=\s*true/u, file);
   requireText(text, "00000000-0000-0000-0000-000000000000", file);
   requireText(text, "placeholder", file);
   requireText(text, "HEALTH_FREE_METRICS_REQUIRED = \"1\"", file);

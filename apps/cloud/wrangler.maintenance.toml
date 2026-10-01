@@ -3,6 +3,23 @@ main = "src/maintenance-worker.ts"
 compatibility_date = "2026-08-01"
 workers_dev = false
 preview_urls = false
+logpush = false
+
+# Health-data boundary: retain only fixed Analytics Engine buckets below.
+# Disable persisted Worker logs, invocation metadata and traces so account URLs,
+# exception details and provider request context cannot become a second dataset.
+[observability]
+enabled = false
+redact_query_string = true
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+persist = false
+
+[observability.traces]
+enabled = false
+persist = false
 
 [triggers]
 crons = ["*/5 * * * *"]
