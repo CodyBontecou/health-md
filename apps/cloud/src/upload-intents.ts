@@ -25,6 +25,17 @@ interface IntentRow {
   state: "reserved" | "object_written" | "committed";
 }
 
+interface DurableIntentRow extends IntentRow {
+  userId: string;
+  tokenId: string;
+  exportId: string;
+  digest: string;
+  byteCount: number;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+}
+
 interface StorageRow {
   committedBytes: number;
   reservedBytes: number;
@@ -123,10 +134,8 @@ export async function reserveUploadIntent(
     expiresAt: new Date(Date.parse(createdAt) + INTENT_LEASE_MS).toISOString(),
   };
   try {
-    // A plain INSERT either succeeds or throws (including trigger RAISE/unique
-    // failures). D1's `meta.changes` is not portable across local/remote
-    // adapters when triggers also update the storage ledger, so it must not be
-    // used to decide whether this reservation exists.
+    // A response may be lost after the trigger-bearing insert commits. Adapter
+    // change metadata is not portable, so verify the exact candidate below.
     await env.DB.prepare(
       `INSERT INTO upload_intents
        (id, user_id, token_id, export_id, object_key, plaintext_sha256, scope_digest,
@@ -136,9 +145,32 @@ export async function reserveUploadIntent(
       intent.digest, intent.scopeDigest, intent.byteCount, intent.createdAt, intent.createdAt,
       intent.expiresAt).run();
   } catch {
-    return await classifyReservationFailure(env, principal, digest, scopeDigest, byteCount, createdAt);
+    // The exact candidate read distinguishes a lost successful response from a
+    // true trigger/uniqueness rejection without relying on error text.
   }
-  return intent;
+  let durable: DurableIntentRow | null;
+  try {
+    durable = await env.DB.prepare(
+      `SELECT id, user_id AS userId, token_id AS tokenId, export_id AS exportId,
+              object_key AS objectKey, plaintext_sha256 AS digest, scope_digest AS scopeDigest,
+              byte_count AS byteCount, state, created_at AS createdAt,
+              updated_at AS updatedAt, expires_at AS expiresAt
+       FROM upload_intents WHERE id = ? LIMIT 1`,
+    ).bind(intent.id).first<DurableIntentRow>();
+  } catch {
+    throw new HttpError(503, "reservation_verification_pending",
+      "Upload reservation status could not be verified. Retry shortly.");
+  }
+  if (durable && durable.userId === intent.userId && durable.tokenId === intent.tokenId &&
+      durable.exportId === intent.exportId && durable.objectKey === intent.objectKey &&
+      durable.digest === intent.digest && durable.scopeDigest === intent.scopeDigest &&
+      durable.byteCount === intent.byteCount && durable.state === "reserved" &&
+      durable.createdAt === intent.createdAt && durable.updatedAt === intent.createdAt &&
+      durable.expiresAt === intent.expiresAt) {
+    return intent;
+  }
+  if (durable) throw new Error("Upload reservation durable state is inconsistent");
+  return await classifyReservationFailure(env, principal, digest, scopeDigest, byteCount, createdAt);
 }
 
 export async function markUploadObjectWritten(env: Env, intent: UploadIntent): Promise<void> {

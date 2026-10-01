@@ -42,6 +42,47 @@ function account(db: ReturnType<typeof setup>["db"]): IngestPrincipal {
   return { userId, tokenId };
 }
 
+function reservationDatabase(original: D1Database, options: {
+  insert?: "normal" | "lost_response" | "false_success";
+  failVerification?: boolean;
+}): D1Database {
+  return new Proxy(original, { get(target, property) {
+    if (property !== "prepare") {
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    }
+    return (query: string) => {
+      const statement = target.prepare(query);
+      return new Proxy(statement, { get(prepared, statementProperty) {
+        if (statementProperty !== "bind") {
+          const value = Reflect.get(prepared, statementProperty);
+          return typeof value === "function" ? value.bind(prepared) : value;
+        }
+        return (...values: unknown[]) => {
+          const bound = prepared.bind(...values);
+          return new Proxy(bound, { get(boundStatement, boundProperty) {
+            if (boundProperty === "run" && query.includes("INSERT INTO upload_intents")) {
+              if (options.insert === "false_success") {
+                return async () => target.prepare("SELECT 1").run();
+              }
+              if (options.insert === "lost_response") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost upload-reservation response");
+              };
+            }
+            if (boundProperty === "first" && options.failVerification &&
+                query.includes("FROM upload_intents WHERE id = ? LIMIT 1")) {
+              return async () => { throw new Error("synthetic reservation verification outage"); };
+            }
+            const value = Reflect.get(boundStatement, boundProperty);
+            return typeof value === "function" ? value.bind(boundStatement) : value;
+          } });
+        };
+      } });
+    };
+  } }) as D1Database;
+}
+
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
@@ -110,6 +151,47 @@ it("accepts a successful D1 insert even when adapter change metadata is zero", a
     expect(intent.userId).toBe(principal.userId);
     expect(db.connection.prepare("SELECT state FROM upload_intents WHERE id = ?").get(intent.id))
       .toMatchObject({ state: "reserved" });
+  } finally { db.close(); }
+});
+
+it("recovers an exact upload reservation after its D1 response is lost", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    env.DB = reservationDatabase(env.DB, { insert: "lost_response" });
+    const intent = await reserveUploadIntent(env, principal, "b".repeat(64), null, 100);
+    expect(db.connection.prepare(`SELECT user_id AS userId, token_id AS tokenId, state
+      FROM upload_intents WHERE id = ?`).get(intent.id)).toEqual({
+      userId: principal.userId, tokenId: principal.tokenId, state: "reserved",
+    });
+  } finally { db.close(); }
+});
+
+it("does not return a reservation after a false-success insert response", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    env.DB = reservationDatabase(env.DB, { insert: "false_success" });
+    await expect(reserveUploadIntent(env, principal, "b".repeat(64), null, 100))
+      .rejects.toMatchObject({ status: 503, code: "ingest_busy" });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents").get())
+      .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("withholds a committed reservation while its verification is unreadable", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const original = env.DB;
+    env.DB = reservationDatabase(original, { failVerification: true });
+    await expect(reserveUploadIntent(env, principal, "b".repeat(64), null, 100))
+      .rejects.toMatchObject({ status: 503, code: "reservation_verification_pending" });
+    env.DB = original;
+    expect(db.connection.prepare(`SELECT state, byte_count AS byteCount FROM upload_intents
+      WHERE user_id = ?`).get(principal.userId)).toEqual({ state: "reserved", byteCount: 100 });
+    await expect(reserveUploadIntent(env, principal, "b".repeat(64), null, 100))
+      .rejects.toMatchObject({ status: 429, code: "upload_in_progress" });
   } finally { db.close(); }
 });
 

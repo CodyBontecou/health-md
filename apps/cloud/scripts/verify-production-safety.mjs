@@ -128,6 +128,18 @@ for (const route of [/\/api\/auth\/password-login/u, /\/api\/agent-tokens/u,
   /\/api\/repair\/device/u, /\/api\/repair\/devices/u, /\/api\/repair\/dispatch/u]) {
   forbid(splitAccountSource, route, "split account pilot-only routes");
 }
+const uploadIntentSource = read("src/upload-intents.ts");
+for (const fragment of [
+  "FROM upload_intents WHERE id = ? LIMIT 1", "durable.userId === intent.userId",
+  "durable.objectKey === intent.objectKey", "durable.digest === intent.digest",
+  'durable.state === "reserved"', "durable.createdAt === intent.createdAt",
+  "durable.expiresAt === intent.expiresAt", '"reservation_verification_pending"',
+]) requireText(uploadIntentSource, fragment, "durable upload reservation creation");
+const reservationRead = uploadIntentSource.indexOf("FROM upload_intents WHERE id = ? LIMIT 1");
+const reservationReturn = uploadIntentSource.indexOf("return intent;");
+if (reservationRead < 0 || reservationReturn < reservationRead) {
+  failures.push("upload-intents.ts: candidate reservation returned before durable exact read-back");
+}
 const accountKeySource = read("src/account-export-keys.ts");
 requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
 requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',
