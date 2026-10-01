@@ -348,7 +348,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         // Xcode 26 can parse OS 27 availability checks but its HealthKit SDK does
         // not declare this API. Compile the call only once the matching Swift
         // toolchain ships; older builds must continue to fail closed.
-        #if compiler(>=6.3)
+        #if compiler(>=6.4)
         if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
             return true
         }
@@ -383,7 +383,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     func earliestAuthorizedSampleDates(for types: Set<HKObjectType>) async throws -> [String: Date] {
-        #if compiler(>=6.3)
+        #if compiler(>=6.4)
         guard #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) else {
             throw historyAuthorizationBoundaryUnavailableError()
         }
