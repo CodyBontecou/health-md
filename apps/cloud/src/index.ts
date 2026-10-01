@@ -388,25 +388,37 @@ export default {
   },
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
     validateConfiguration(env);
+    let failures = 0;
+    const phase = async (operation: () => Promise<unknown>): Promise<void> => {
+      try {
+        await operation();
+      } catch {
+        // Keep independent bounded work moving. The maintenance profile emits
+        // one fixed aggregate failure metric after this handler rejects.
+        failures += 1;
+      }
+    };
     if (env.SYNTHETIC_PREVIEW_ONLY !== "1") {
-      await processAccountDeletions(env);
-      if (env.REVISION_RETENTION_DAYS && env.REVISION_RETENTION_DAYS !== "unlimited") {
-        await purgeArchivedRevisions(env, parsePositiveInteger(env.REVISION_RETENTION_DAYS,
-          "REVISION_RETENTION_DAYS", 1, 3650));
+      await phase(() => processAccountDeletions(env));
+      const retentionDays = env.REVISION_RETENTION_DAYS;
+      if (retentionDays && retentionDays !== "unlimited") {
+        await phase(() => purgeArchivedRevisions(env, parsePositiveInteger(retentionDays,
+          "REVISION_RETENTION_DAYS", 1, 3650)));
       }
     }
     const now = new Date().toISOString();
-    await env.DB.batch([
+    await phase(() => env.DB.batch([
       env.DB.prepare("DELETE FROM magic_links WHERE expires_at < ?").bind(now),
       env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now),
       env.DB.prepare("DELETE FROM auth_rate_limit_attempts WHERE expires_at < ?").bind(now),
       env.DB.prepare("DELETE FROM auth_rate_limits WHERE expires_at < ?").bind(now),
-    ]);
-    await purgeExpiredRepairDrafts(env);
-    await purgeExpiredRepairDevices(env);
-    await purgeExpiredDeletionReceipts(env);
-    await reconcileUploadIntents(env);
-    if (env.SERVICE_PROFILE === "maintenance") await reconcileOrphanExportObjects(env);
-    if (env.ACCOUNT_KEY_MODE === "per_account") await rewrapAccountExportKeys(env);
+    ]));
+    await phase(() => purgeExpiredRepairDrafts(env));
+    await phase(() => purgeExpiredRepairDevices(env));
+    await phase(() => purgeExpiredDeletionReceipts(env));
+    await phase(() => reconcileUploadIntents(env));
+    if (env.SERVICE_PROFILE === "maintenance") await phase(() => reconcileOrphanExportObjects(env));
+    if (env.ACCOUNT_KEY_MODE === "per_account") await phase(() => rewrapAccountExportKeys(env));
+    if (failures > 0) throw new Error("One or more scheduled maintenance phases require retry");
   },
 };

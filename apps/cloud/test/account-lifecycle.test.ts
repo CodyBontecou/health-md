@@ -310,6 +310,45 @@ it("does not let one scheduled deletion failure starve another account", async (
   } finally { db.close(); }
 });
 
+it("continues independent scheduled cleanup after a deletion provider failure", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    await session(env, userId);
+    db.connection.prepare("UPDATE sessions SET expires_at = '2020-01-01T00:00:00.000Z'").run();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    const jobId = randomUUID();
+    const exportId = randomUUID();
+    const objectKey = `v1/${randomUUID()}`;
+    const now = new Date().toISOString();
+    db.connection.prepare("INSERT INTO account_deletions (id, user_id, requested_at) VALUES (?, ?, ?)")
+      .run(jobId, userId, now);
+    db.connection.prepare(`INSERT INTO exports
+      (id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
+       envelope_schema_version, daily_record_schema_version, source, exported_at, received_at,
+       date_start, date_end, record_count, failure_count, external_record_count)
+      VALUES (?, ?, ?, 'v1', ?, 3, 1, 1, 'ios', ?, ?, '2026-01-01', '2026-01-01', 1, 0, 0)`)
+      .run(exportId, userId, objectKey, "a".repeat(64), now, now);
+    await env.EXPORTS.put(objectKey, new Uint8Array([1, 2, 3]));
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "delete") return async (key: string) => {
+        if (key === objectKey) throw new Error("synthetic deletion-phase R2 outage");
+        return target.delete(key);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    await expect(worker.scheduled({} as ScheduledEvent, env)).rejects.toThrow(
+      "One or more scheduled maintenance phases require retry",
+    );
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?").get(userId))
+      .toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?").get(jobId))
+      .toMatchObject({ completed_at: null });
+    expect(await objects.get(objectKey)).not.toBeNull();
+  } finally { db.close(); }
+});
+
 it("keeps a client-known receipt when a deletion commit response and verification are unavailable", async () => {
   const { env, db, userId } = await setup();
   try {
