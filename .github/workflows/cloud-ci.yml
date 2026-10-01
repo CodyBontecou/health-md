@@ -6,6 +6,12 @@ on:
     branches: [main]
     paths:
       - 'apps/cloud/**'
+      - 'apps/android/app/src/main/java/com/healthmd/data/export/APIExportClient.kt'
+      - 'apps/android/app/src/test/java/com/healthmd/export/APIExportClientTest.kt'
+      - 'apps/apple/HealthMd/Shared/Managers/APIExportClient.swift'
+      - 'apps/apple/HealthMd/Shared/Models/APIExportSettings.swift'
+      - 'apps/apple/HealthMd/Shared/Utilities/BoundedURLSessionDataLoader.swift'
+      - 'apps/apple/HealthMdTests/Managers/APIExportClientTests.swift'
       - 'docs/architecture/adr-0007-healthmd-cloud.md'
       - 'docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md'
       - 'packages/contracts/product-capabilities.json'

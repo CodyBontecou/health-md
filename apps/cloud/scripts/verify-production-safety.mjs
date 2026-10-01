@@ -505,6 +505,14 @@ for (const command of [
   "npm run build:vm", "--config wrangler.ingest.toml", "--config wrangler.account.toml",
   "--config wrangler.maintenance.toml", "npm audit --audit-level=moderate",
 ]) requireText(workflow, command, "Cloud CI");
+for (const guardedPath of [
+  "apps/android/app/src/main/java/com/healthmd/data/export/APIExportClient.kt",
+  "apps/android/app/src/test/java/com/healthmd/export/APIExportClientTest.kt",
+  "apps/apple/HealthMd/Shared/Managers/APIExportClient.swift",
+  "apps/apple/HealthMd/Shared/Models/APIExportSettings.swift",
+  "apps/apple/HealthMd/Shared/Utilities/BoundedURLSessionDataLoader.swift",
+  "apps/apple/HealthMdTests/Managers/APIExportClientTests.swift",
+]) requireText(workflow, guardedPath, "Cloud CI mobile redirect trigger");
 
 if (failures.length) {
   console.error(JSON.stringify({ safe: false, failures }, null, 2));
