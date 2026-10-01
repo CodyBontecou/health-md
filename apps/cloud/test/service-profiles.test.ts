@@ -57,6 +57,34 @@ describe("split production Worker profiles", () => {
     }
   });
 
+  it("wraps allowlisted assets and denies unknown/protected paths before the asset binding", async () => {
+    const env = profile("account", "https://account.healthmd.app");
+    const requested: string[] = [];
+    env.ASSETS = {
+      fetch: async (request: Request) => {
+        requested.push(new URL(request.url).pathname);
+        return new Response("synthetic asset", {
+          headers: { "Cache-Control": "public, max-age=3600", "Content-Type": "text/css" },
+        });
+      },
+    } as unknown as Fetcher;
+
+    const asset = await accountWorker.fetch(new Request("https://account.healthmd.app/style.css"), env);
+    expect(asset.status).toBe(200);
+    expect(await asset.text()).toBe("synthetic asset");
+    expect(asset.headers.get("cache-control")).toBe("no-store");
+    expect(asset.headers.get("content-security-policy")).toContain("default-src 'none'");
+    expect(asset.headers.get("x-frame-options")).toBe("DENY");
+    expect(requested).toEqual(["/style.css"]);
+
+    const unknown = await accountWorker.fetch(new Request("https://account.healthmd.app/unknown.js"), env);
+    expect(unknown.status).toBe(404);
+    const protectedAsset = await accountWorker.fetch(new Request("https://account.healthmd.app/dashboard"), env);
+    expect(protectedAsset.status).toBe(303);
+    expect(protectedAsset.headers.get("location")).toBe("/login");
+    expect(requested).toEqual(["/style.css"]);
+  });
+
   it("disables persisted Worker logs, invocation logs, traces and Logpush", () => {
     for (const name of ["ingest", "account", "maintenance"]) {
       const config = readFileSync(new URL(`../wrangler.${name}.toml`, import.meta.url), "utf8");
