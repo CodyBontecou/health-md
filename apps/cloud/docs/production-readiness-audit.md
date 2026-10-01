@@ -49,7 +49,7 @@ End-to-end completion means all of the following, not merely source implementati
 | KEK rotation | migration 0013, bounded conditional rewrap with exact durable read-back after lost/zero-change responses, concurrent-winner and unreadable-verification tests, rotation runbook | source verified; provider key custody/restore drill absent |
 | Backup/restore | local encrypted `test:restore-drill`; `production-recovery-runbook.md` | local invariant verified; **not D1/R2/PITR/RPO/RTO proof** |
 | Health-free metrics/SLOs | `telemetry.ts`, prohibited-field tests, AE placeholders, observability/SLO runbook | source verified; no dataset/dashboard/alerts/on-call deployed |
-| Abuse/load shedding | token/account/email budgets use migration 0017's expiring opaque attempt decisions and trigger-applied counters; ingest identifiers are purpose-separated hashes rather than raw token/account UUIDs; concurrent-limit, accepted/rejected lost-response and unreadable-verification tests | source verified; WAF/bot controls and 2x load/cost evidence absent |
+| Abuse/load shedding | token/account/email budgets use migration 0017's expiring opaque attempt decisions and trigger-applied counters; ingest identifiers are purpose-separated hashes rather than raw token/account UUIDs; concurrent-limit, accepted/rejected lost-response, unreadable-verification and bounded multi-page expiry tests | source verified; WAF/bot controls and 2x load/cost evidence absent |
 | Mobile Apple Cloud destination | existing manual compatibility API Endpoint only; split production rejects repair enrollment/dispatch flags | **deliberate production enrollment/retry UX and physical matrix absent** |
 | Mobile Android Cloud destination | existing manual compatibility API Endpoint only; raw snapshot and split-production repair flags rejected | **deliberate production enrollment/retry UX and physical matrix absent** |
 | Public contract parity | no mobile envelope/schema change; compatibility fixtures remain | preserved, but phase-3 product work absent |
@@ -78,7 +78,7 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 
 ## Verification commands and coverage
 
-- `npm run check`: on the audited head, 31 files and 143 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
+- `npm run check`: on the audited head, 31 files and 144 tests pass, including Worker and VM TypeScript checks plus all synthetic unit/integration tests. It verifies source behavior; it does not exercise Cloudflare production bindings, physical devices or external providers.
 - `npm run test:smoke`: passes in an isolated worktree against local Wrangler D1/R2 with synthetic Apple v1/v2 and Android v4 envelopes, replacement ordering, encrypted roundtrip, tenant denial and revocation. The repository worktree's pre-existing owner-only `.dev.vars` is not overwritten or read by the harness.
 - `npm run dry-run:profiles`: all three profiles bundle and list only their intended bindings. It proves buildability, not resource correctness or deployment isolation.
 - `npm run test:restore-drill`: local encrypted snapshot invariants pass only; this is explicitly not provider recovery proof.

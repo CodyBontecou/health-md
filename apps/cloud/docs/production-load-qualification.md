@@ -59,8 +59,9 @@ During the run, capture provider-native evidence for:
 4. Analytics Engine availability and fixed-bucket alert delivery;
 5. no logs containing authorization, URL, account/object/export IDs, dates, values or bodies;
 6. no active reservation over two for any synthetic account and no leaked reservations after completion;
-7. bounded orphan reconciliation after an approved fault-injection pass; and
-8. exact deployed revision and configuration snapshot.
+7. bounded orphan reconciliation after an approved fault-injection pass;
+8. after the two-hour decision expiry horizon, provider-native proof that five-minute maintenance with the 50,000-row decision page reduces rather than accumulates the 2x rate-limit-attempt backlog, including D1 latency and cost; and
+9. exact deployed revision and configuration snapshot.
 
 A harness `pass` is necessary but not sufficient. Operations and security owners must sign the provider evidence and cost model. Any 401/403/408/429/5xx, transport timeout, revision mismatch, missing telemetry, quota violation, health-data-bearing log or unexplained object/intent discrepancy fails the gate.
 

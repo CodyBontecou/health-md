@@ -506,6 +506,47 @@ export async function audit(env: Env, userId: string, type: string, targetId: st
   ).bind(crypto.randomUUID(), userId, type, targetId, new Date().toISOString()).run();
 }
 
+export const authCleanupPolicy = {
+  magicLinksPerRun: 500,
+  sessionsPerRun: 500,
+  rateAttemptsPerRun: 50_000,
+  rateBucketsPerRun: 5_000,
+} as const;
+
+type AuthCleanupLimits = {
+  magicLinksPerRun: number;
+  sessionsPerRun: number;
+  rateAttemptsPerRun: number;
+  rateBucketsPerRun: number;
+};
+
+export async function purgeExpiredAuthState(
+  env: Env,
+  now = new Date(),
+  limits: AuthCleanupLimits = authCleanupPolicy,
+): Promise<void> {
+  const values = Object.values(limits);
+  if (values.some((value) => !Number.isInteger(value) || value < 1 || value > 100_000)) {
+    throw new Error("Invalid expired-auth cleanup limit");
+  }
+  const instant = now.toISOString();
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM magic_links WHERE id IN (
+      SELECT id FROM magic_links WHERE expires_at < ? ORDER BY expires_at, id LIMIT ?
+    )`).bind(instant, limits.magicLinksPerRun),
+    env.DB.prepare(`DELETE FROM sessions WHERE id IN (
+      SELECT id FROM sessions WHERE expires_at < ? ORDER BY expires_at, id LIMIT ?
+    )`).bind(instant, limits.sessionsPerRun),
+    env.DB.prepare(`DELETE FROM auth_rate_limit_attempts WHERE id IN (
+      SELECT id FROM auth_rate_limit_attempts WHERE expires_at < ? ORDER BY expires_at, id LIMIT ?
+    )`).bind(instant, limits.rateAttemptsPerRun),
+    env.DB.prepare(`DELETE FROM auth_rate_limits WHERE rowid IN (
+      SELECT rowid FROM auth_rate_limits WHERE expires_at < ?
+      ORDER BY expires_at, bucket_key, window_start LIMIT ?
+    )`).bind(instant, limits.rateBucketsPerRun),
+  ]);
+}
+
 export async function purgeExpiredAuditEvents(
   env: Env,
   retentionDays: number,

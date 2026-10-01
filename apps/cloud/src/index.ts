@@ -1,6 +1,6 @@
 import {
   accountSummary, consumeMagicLink, createIngestToken, getSession, listIngestTokens, listSecurityActivity,
-  listSessions, logout, purgeExpiredAuditEvents, requestMagicLink, requireSession, revokeIngestToken,
+  listSessions, logout, purgeExpiredAuditEvents, purgeExpiredAuthState, requestMagicLink, requireSession, revokeIngestToken,
   revokeOtherSessions, revokeSession,
 } from "./auth";
 import { downloadExport, ingest, listDayPage, listExportPage, listExports } from "./exports";
@@ -410,13 +410,7 @@ export default {
           "REVISION_RETENTION_DAYS", 1, 3650)));
       }
     }
-    const now = new Date().toISOString();
-    await phase(() => env.DB.batch([
-      env.DB.prepare("DELETE FROM magic_links WHERE expires_at < ?").bind(now),
-      env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now),
-      env.DB.prepare("DELETE FROM auth_rate_limit_attempts WHERE expires_at < ?").bind(now),
-      env.DB.prepare("DELETE FROM auth_rate_limits WHERE expires_at < ?").bind(now),
-    ]));
+    await phase(() => purgeExpiredAuthState(env));
     await phase(() => purgeExpiredRepairDrafts(env));
     await phase(() => purgeExpiredRepairDevices(env));
     await phase(() => purgeExpiredDeletionReceipts(env));

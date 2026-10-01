@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
-import { issueSession, limitIngest, rateLimit } from "../src/auth";
+import { authCleanupPolicy, issueSession, limitIngest, purgeExpiredAuthState, rateLimit } from "../src/auth";
 import { createVmEnvironment } from "../vm/runtime";
 
 const roots: string[] = [];
@@ -520,6 +520,55 @@ it("fails closed when a committed rate-limit decision cannot be read", async () 
     });
     expect(db.connection.prepare(`SELECT request_count AS count FROM auth_rate_limits
       WHERE bucket_key = 'synthetic-unreadable'`).get()).toMatchObject({ count: 1 });
+  } finally { db.close(); }
+});
+
+it("cleans expired authentication state in bounded oldest-first pages", async () => {
+  const { env, db } = setup();
+  try {
+    const userId = randomUUID();
+    db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`)
+      .run(userId, randomUUID(), new Date().toISOString());
+    const expired = ["2020-01-01T00:00:00.000Z", "2020-01-02T00:00:00.000Z",
+      "2020-01-03T00:00:00.000Z"];
+    const current = "2030-01-01T00:00:00.000Z";
+    for (const [index, expiresAt] of [...expired, current].entries()) {
+      db.connection.prepare(`INSERT INTO magic_links
+        (id, user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`)
+        .run(randomUUID(), userId, randomUUID(), expiresAt, expiresAt);
+      db.connection.prepare(`INSERT INTO sessions
+        (id, user_id, token_hash, expires_at, created_at, last_seen_at) VALUES (?, ?, ?, ?, ?, ?)`)
+        .run(randomUUID(), userId, randomUUID(), expiresAt, expiresAt, expiresAt);
+      db.connection.prepare(`INSERT INTO auth_rate_limit_attempts
+        (id, bucket_key, window_start, accepted, expires_at) VALUES (?, ?, ?, 0, ?)`)
+        .run(randomUUID(), `attempt-${index}`, expiresAt, expiresAt);
+      db.connection.prepare(`INSERT INTO auth_rate_limits
+        (bucket_key, window_start, request_count, expires_at) VALUES (?, ?, 1, ?)`)
+        .run(`bucket-${index}`, expiresAt, expiresAt);
+    }
+    expect(authCleanupPolicy).toEqual({ magicLinksPerRun: 500, sessionsPerRun: 500,
+      rateAttemptsPerRun: 50_000, rateBucketsPerRun: 5_000 });
+    const limits = { magicLinksPerRun: 2, sessionsPerRun: 2,
+      rateAttemptsPerRun: 2, rateBucketsPerRun: 2 };
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await purgeExpiredAuthState(env, now, limits);
+    for (const table of ["magic_links", "sessions", "auth_rate_limit_attempts", "auth_rate_limits"]) {
+      expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at < ?`)
+        .get(now.toISOString())).toMatchObject({ n: 1 });
+      expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at > ?`)
+        .get(now.toISOString())).toMatchObject({ n: 1 });
+    }
+    await purgeExpiredAuthState(env, now, limits);
+    for (const table of ["magic_links", "sessions", "auth_rate_limit_attempts", "auth_rate_limits"]) {
+      expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at < ?`)
+        .get(now.toISOString())).toMatchObject({ n: 0 });
+      expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE expires_at > ?`)
+        .get(now.toISOString())).toMatchObject({ n: 1 });
+    }
+    await expect(purgeExpiredAuthState(env, now, { ...limits, sessionsPerRun: 0 }))
+      .rejects.toThrow("Invalid expired-auth cleanup limit");
   } finally { db.close(); }
 });
 
