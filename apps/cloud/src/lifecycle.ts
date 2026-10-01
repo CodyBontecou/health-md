@@ -183,7 +183,17 @@ export async function processAccountDeletions(env: Env, perJob = 100): Promise<v
   const jobs = await env.DB.prepare(
     "SELECT id FROM account_deletions WHERE completed_at IS NULL ORDER BY requested_at LIMIT 10",
   ).all<{ id: string }>();
-  for (const job of jobs.results) await processAccountDeletionById(env, job.id, perJob);
+  let failures = 0;
+  for (const job of jobs.results) {
+    try {
+      await processAccountDeletionById(env, job.id, perJob);
+    } catch {
+      // Continue through the bounded page so one provider failure cannot starve
+      // another tenant. Surface only an aggregate failure after every job ran.
+      failures += 1;
+    }
+  }
+  if (failures > 0) throw new Error("One or more account deletion jobs require retry");
 }
 
 export async function purgeExpiredDeletionReceipts(env: Env): Promise<void> {

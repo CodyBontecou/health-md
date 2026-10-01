@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import worker from "../src/index";
 import { getSession, issueSession } from "../src/auth";
-import { processAccountDeletionById, purgeExpiredDeletionReceipts,
+import { processAccountDeletionById, processAccountDeletions, purgeExpiredDeletionReceipts,
   requestAccountDeletion } from "../src/lifecycle";
 import maintenanceWorker from "../src/maintenance-worker";
 import { createVmEnvironment } from "../vm/runtime";
@@ -253,6 +253,60 @@ it("retries idempotently when deletion-completion verification is unavailable", 
     expect(await processAccountDeletionById(env, job.id)).toBe(true);
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(userId))
       .toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("does not let one scheduled deletion failure starve another account", async () => {
+  const { env, db, userId: firstUserId } = await setup();
+  try {
+    const secondUserId = randomUUID();
+    const firstJobId = randomUUID();
+    const secondJobId = randomUUID();
+    const firstExportId = randomUUID();
+    const firstObjectKey = `v1/${randomUUID()}`;
+    db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`)
+      .run(secondUserId, randomUUID(), new Date().toISOString());
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id IN (?, ?)")
+      .run(firstUserId, secondUserId);
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z'), (?, ?, '2020-01-02T00:00:00.000Z')`)
+      .run(firstJobId, firstUserId, secondJobId, secondUserId);
+    db.connection.prepare(`INSERT INTO exports
+      (id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
+       envelope_schema_version, daily_record_schema_version, source, exported_at, received_at,
+       date_start, date_end, record_count, failure_count, external_record_count)
+      VALUES (?, ?, ?, 'v1', ?, 3, 1, 1, 'ios', ?, ?, '2020-01-01', '2020-01-01', 1, 0, 0)`)
+      .run(firstExportId, firstUserId, firstObjectKey, "a".repeat(64),
+        "2020-01-01T00:00:00.000Z", "2020-01-01T00:00:00.000Z");
+    await env.EXPORTS.put(firstObjectKey, new Uint8Array([1, 2, 3]));
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "delete") return async (key: string) => {
+        if (key === firstObjectKey) throw new Error("synthetic first-account R2 outage");
+        return target.delete(key);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    await expect(processAccountDeletions(env)).rejects.toThrow(
+      "One or more account deletion jobs require retry",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(firstUserId))
+      .toMatchObject({ status: "disabled" });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(firstJobId)).toMatchObject({ completed_at: null });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(secondUserId))
+      .toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(secondJobId)).toMatchObject({ completed_at: expect.any(String) });
+
+    env.EXPORTS = objects;
+    await expect(processAccountDeletions(env)).resolves.toBeUndefined();
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(firstUserId))
+      .toMatchObject({ n: 0 });
+    expect(await objects.get(firstObjectKey)).toBeNull();
   } finally { db.close(); }
 });
 
