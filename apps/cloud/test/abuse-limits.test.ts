@@ -223,6 +223,7 @@ it("uses the configured link expiry and discards a non-success provider body", a
   const points: unknown[] = [];
   let providerBodyCancelled = false;
   let outgoingBody = "";
+  let outgoingRequestInit: RequestInit | undefined;
   env.ENVIRONMENT = "production";
   env.AUTH_MODE = "email_link";
   env.AUTH_SIGNUP_MODE = "invite";
@@ -233,6 +234,7 @@ it("uses the configured link expiry and discards a non-success provider body", a
   env.MAGIC_LINK_TTL_MINUTES = "7";
   env.METRICS = { writeDataPoint: (point: unknown) => { points.push(point); } } as AnalyticsEngineDataset;
   vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => {
+    outgoingRequestInit = init;
     outgoingBody = String(init?.body ?? "");
     const body = new ReadableStream<Uint8Array>({
       start(controller) { controller.enqueue(new TextEncoder().encode("synthetic private provider body")); },
@@ -254,6 +256,13 @@ it("uses the configured link expiry and discards a non-success provider body", a
     });
     const providerRequest = JSON.parse(outgoingBody) as { text: string };
     expect(providerRequest.text).toContain("expires in 7 minutes");
+    expect(outgoingRequestInit).toMatchObject({
+      method: "POST", redirect: "error", credentials: "omit", cache: "no-store",
+      referrerPolicy: "no-referrer",
+    });
+    const providerHeaderNames: string[] = [];
+    new Headers(outgoingRequestInit?.headers).forEach((_value, name) => providerHeaderNames.push(name));
+    expect(providerHeaderNames.sort()).toEqual(["authorization", "content-type"]);
     expect(providerBodyCancelled).toBe(true);
     expect(db.connection.prepare("SELECT COUNT(*) AS count FROM magic_links").get())
       .toMatchObject({ count: 0 });

@@ -142,6 +142,10 @@ async function sendMagicLink(env: Env, email: string, token: string, ttlMinutes:
         subject: "Sign in to Health.md Cloud",
         text: `You requested a Health.md Cloud sign-in link. It expires in ${ttlMinutes} minutes.\n\n${link}\n\nIf you didn't request it, ignore this message.`,
       }),
+      redirect: "error",
+      credentials: "omit",
+      cache: "no-store",
+      referrerPolicy: "no-referrer",
       signal: controller.signal,
     });
   } finally {

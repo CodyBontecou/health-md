@@ -267,7 +267,8 @@ for (const fragment of [
 ]) requireText(authSource, fragment, "bounded auth cleanup");
 for (const fragment of [
   "EMAIL_PROVIDER_TIMEOUT_MS = 10_000", "setTimeout(() => controller.abort()",
-  "signal: controller.signal", "response.body?.cancel().catch",
+  'redirect: "error"', 'credentials: "omit"', 'cache: "no-store"',
+  'referrerPolicy: "no-referrer"', "signal: controller.signal", "response.body?.cancel().catch",
   "It expires in ${ttlMinutes} minutes", "sendMagicLink(env, email, token, ttlMinutes)",
   'recordAccountSecurityMetric(env, "email_delivery_failed")',
   "discardUndeliveredMagicLink", "attempt < 2",
