@@ -142,11 +142,28 @@ export async function reserveUploadIntent(
 }
 
 export async function markUploadObjectWritten(env: Env, intent: UploadIntent): Promise<void> {
-  const result = await env.DB.prepare(
-    `UPDATE upload_intents SET state = 'object_written', updated_at = ?
-     WHERE id = ? AND user_id = ? AND export_id = ? AND state = 'reserved'`,
-  ).bind(new Date().toISOString(), intent.id, intent.userId, intent.exportId).run();
-  if ((result.meta.changes ?? 0) !== 1) throw new Error("Upload reservation is no longer active");
+  const updatedAt = new Date().toISOString();
+  try {
+    await env.DB.prepare(
+      `UPDATE upload_intents SET state = 'object_written', updated_at = ?
+       WHERE id = ? AND user_id = ? AND export_id = ? AND state = 'reserved'`,
+    ).bind(updatedAt, intent.id, intent.userId, intent.exportId).run();
+  } catch {
+    // A response may be lost after the staged-object transition commits.
+    // Verify its exact durable marker rather than adapter change metadata.
+  }
+  let durable: { state: string; updatedAt: string } | null;
+  try {
+    durable = await env.DB.prepare(`SELECT state, updated_at AS updatedAt FROM upload_intents
+      WHERE id = ? AND user_id = ? AND export_id = ?`)
+      .bind(intent.id, intent.userId, intent.exportId)
+      .first<{ state: string; updatedAt: string }>();
+  } catch {
+    throw new Error("Upload object-written verification is unavailable");
+  }
+  if (durable?.state !== "object_written" || durable.updatedAt !== updatedAt) {
+    throw new Error("Upload reservation is no longer active");
+  }
 }
 
 export function commitUploadIntentStatement(

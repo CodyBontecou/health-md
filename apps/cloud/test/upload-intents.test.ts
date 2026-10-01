@@ -113,6 +113,105 @@ it("accepts a successful D1 insert even when adapter change metadata is zero", a
   } finally { db.close(); }
 });
 
+it("accepts an exact object-written transition after its D1 response is lost", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const intent = await reserveUploadIntent(env, principal, "a".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("UPDATE upload_intents SET state = 'object_written'")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "run") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost object-written response");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(markUploadObjectWritten(env, intent)).resolves.toBeUndefined();
+    expect(db.connection.prepare("SELECT state FROM upload_intents WHERE id = ?").get(intent.id))
+      .toMatchObject({ state: "object_written" });
+  } finally { db.close(); }
+});
+
+it("fails safely when object-written verification is unavailable", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const intent = await reserveUploadIntent(env, principal, "a".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (query.includes("UPDATE upload_intents SET state = 'object_written'")) {
+          return new Proxy(statement, { get(prepared, statementProperty) {
+            if (statementProperty !== "bind") {
+              const value = Reflect.get(prepared, statementProperty);
+              return typeof value === "function" ? value.bind(prepared) : value;
+            }
+            return (...values: unknown[]) => {
+              const bound = prepared.bind(...values);
+              return new Proxy(bound, { get(boundStatement, boundProperty) {
+                if (boundProperty === "run") return async () => {
+                  await boundStatement.run();
+                  throw new Error("synthetic lost object-written response");
+                };
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              } });
+            };
+          } });
+        }
+        if (!query.includes("SELECT state, updated_at AS updatedAt FROM upload_intents")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => {
+                throw new Error("synthetic object-written verification outage");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(markUploadObjectWritten(env, intent)).rejects.toThrow(
+      "Upload object-written verification is unavailable",
+    );
+    env.DB = original;
+    await abandonUploadIntent(env, intent);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM upload_intents WHERE id = ?").get(intent.id))
+      .toMatchObject({ n: 0 });
+    expect(await env.EXPORTS.get(intent.objectKey)).toBeNull();
+  } finally { db.close(); }
+});
+
 it("reserves quota atomically before writing an object", async () => {
   const { env, db } = setup();
   try {
