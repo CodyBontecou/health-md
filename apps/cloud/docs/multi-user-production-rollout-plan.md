@@ -57,7 +57,7 @@ Use new, production-only resources and credentials:
    - Owns signup/sign-in, sessions, token management, inventory, download, export, and deletion requests.
    - Uses a separate deployment identity and explicit route allowlist.
    - Serves first-party assets only, with strict CSP and no analytics or session replay.
-   - Cannot accept exports or MCP requests. It alone receives the legacy-read keyring during controlled migration because it serves owner-authorized historical downloads.
+   - Cannot accept exports or MCP requests. Password login, pilot MCP agent-token administration, and unapproved repair device/dispatch handoff are omitted from its route allowlist rather than left dormant behind runtime checks. It alone receives the legacy-read keyring during controlled migration because it serves owner-authorized historical downloads.
 
 3. **Control and metadata storage**
    - Use a new production D1 database initially, subject to the load gate below.

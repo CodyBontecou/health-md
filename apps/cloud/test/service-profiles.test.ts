@@ -78,6 +78,14 @@ describe("split production Worker profiles", () => {
     }), env)).status).toBe(404);
     expect((await accountWorker.fetch(new Request("https://account.healthmd.app/api/security-events"), env)).status)
       .toBe(401);
+    for (const request of [
+      new Request("https://account.healthmd.app/api/agent-tokens"),
+      new Request("https://account.healthmd.app/api/auth/password-login", { method: "POST" }),
+      new Request("https://account.healthmd.app/api/repair/device/status"),
+      new Request("https://account.healthmd.app/api/repair/dispatch", { method: "POST" }),
+      new Request("https://account.healthmd.app/api/repair/devices/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        { method: "DELETE" }),
+    ]) expect((await accountWorker.fetch(request, env)).status).toBe(404);
   });
 
   it("gives maintenance no public HTTP surface and fails closed on profile mismatch", async () => {

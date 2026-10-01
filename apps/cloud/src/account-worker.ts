@@ -6,18 +6,15 @@ import type { Env } from "./types";
 const GET_ROUTES = new Set([
   "/", "/health", "/login", "/login.html", "/dashboard", "/dashboard.html", "/dashboard.js",
   "/explore", "/explore.js", "/repair", "/repair.js", "/repair-panel", "/deletion-status",
-  "/deletion-status.js", "/style.css", "/api/runtime", "/api/account", "/api/account/deletion-status", "/api/sessions", "/api/security-events", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
-  "/api/dashboard/trends", "/api/explore/catalog", "/api/repair/drafts", "/api/repair/devices",
-  "/api/repair/device/status", "/api/repair/dispatches",
+  "/deletion-status.js", "/style.css", "/api/runtime", "/api/account", "/api/account/deletion-status", "/api/sessions", "/api/security-events", "/api/ingest-tokens", "/api/exports",
+  "/api/dashboard/trends", "/api/explore/catalog", "/api/repair/drafts",
 ]);
 
 const POST_ROUTES = new Set([
-  "/api/auth/request-link", "/api/auth/consume-link", "/api/auth/password-login", "/api/auth/logout",
-  "/api/sessions/revoke-others", "/api/ingest-tokens", "/api/agent-tokens", "/api/account/delete", "/api/explore/chart",
+  "/api/auth/request-link", "/api/auth/consume-link", "/api/auth/logout",
+  "/api/sessions/revoke-others", "/api/ingest-tokens", "/api/account/delete", "/api/explore/chart",
   "/api/explore/exports", "/api/explore/node", "/api/repair/preview", "/api/repair/drafts",
-  "/api/repair/supplements", "/api/repair/device/enroll", "/api/repair/devices/approve",
-  "/api/repair/dispatch", "/api/repair/dispatch/cancel", "/api/repair/device/claim",
-  "/api/repair/device/resume", "/api/repair/device/decline",
+  "/api/repair/supplements",
 ]);
 
 function allowed(request: Request): boolean {
@@ -30,10 +27,8 @@ function allowed(request: Request): boolean {
   if (request.method === "POST") return POST_ROUTES.has(path);
   return request.method === "DELETE" && (
     /^\/api\/repair\/drafts\/[a-f0-9-]{36}$/u.test(path) ||
-    /^\/api\/repair\/devices\/[a-f0-9-]{36}$/u.test(path) ||
     /^\/api\/sessions\/[a-f0-9-]{36}$/u.test(path) ||
-    /^\/api\/ingest-tokens\/[a-f0-9-]{36}$/u.test(path) ||
-    /^\/api\/agent-tokens\/[a-f0-9-]{36}$/u.test(path));
+    /^\/api\/ingest-tokens\/[a-f0-9-]{36}$/u.test(path));
 }
 
 function denied(env: Env): Response {

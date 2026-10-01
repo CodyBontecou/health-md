@@ -119,6 +119,11 @@ for (const path of ["src/ingest-worker.ts", "src/account-worker.ts", "src/mainte
     failures.push(`${path}: full configuration validation must precede every HTTP route decision`);
   }
 }
+const splitAccountSource = read("src/account-worker.ts");
+for (const route of [/\/api\/auth\/password-login/u, /\/api\/agent-tokens/u,
+  /\/api\/repair\/device/u, /\/api\/repair\/devices/u, /\/api\/repair\/dispatch/u]) {
+  forbid(splitAccountSource, route, "split account pilot-only routes");
+}
 const accountKeySource = read("src/account-export-keys.ts");
 requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
 requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',
