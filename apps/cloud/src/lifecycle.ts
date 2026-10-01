@@ -215,10 +215,24 @@ export async function purgeArchivedRevisions(env: Env, retentionDays: number, li
   for (const row of rows.results) {
     // Remove metadata only if still unreferenced at commit. If a concurrent
     // writer attached a supplement, its ciphertext must not disappear.
-    const result = await env.DB.prepare(`DELETE FROM exports WHERE id = ? AND NOT EXISTS
-      (SELECT 1 FROM daily_records WHERE export_id = ?) AND NOT EXISTS
-      (SELECT 1 FROM supplemental_exports WHERE export_id = ?)`).bind(row.id, row.id, row.id).run();
-    if (!result.meta.changes) continue;
+    try {
+      await env.DB.prepare(`DELETE FROM exports WHERE id = ? AND NOT EXISTS
+        (SELECT 1 FROM daily_records WHERE export_id = ?) AND NOT EXISTS
+        (SELECT 1 FROM supplemental_exports WHERE export_id = ?)`).bind(row.id, row.id, row.id).run();
+    } catch {
+      // The conditional metadata delete may have committed before its response
+      // was lost. Confirm absence before touching ciphertext.
+    }
+    let retained: { present: number } | null;
+    try {
+      retained = await env.DB.prepare("SELECT 1 AS present FROM exports WHERE id = ?")
+        .bind(row.id).first<{ present: number }>();
+    } catch {
+      // An unreadable outcome preserves ciphertext. If metadata committed, the
+      // bounded orphan scanner can later remove it after an exact reference check.
+      throw new Error("Archived export deletion verification is unavailable");
+    }
+    if (retained?.present === 1) continue;
     removed += 1;
     // Failure leaves an encrypted orphan for reconciliation, never a live
     // primary/supplement pointer with missing ciphertext.

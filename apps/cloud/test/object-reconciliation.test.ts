@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createVmEnvironment } from "../vm/runtime";
 import { reconcileOrphanExportObjects } from "../src/object-reconciliation";
+import { purgeArchivedRevisions } from "../src/lifecycle";
 import { reserveUploadIntent } from "../src/upload-intents";
 import type { IngestPrincipal } from "../src/types";
 
@@ -45,6 +46,22 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+async function archivedExport(env: ReturnType<typeof setup>["env"],
+  db: ReturnType<typeof setup>["db"]): Promise<{ id: string; key: string }> {
+  const principal = account(db);
+  const id = randomUUID();
+  const key = `v1/${randomUUID()}`;
+  await env.EXPORTS.put(key, new Uint8Array([1, 2, 3]));
+  db.connection.prepare(`INSERT INTO exports
+    (id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
+     envelope_schema_version, daily_record_schema_version, source, exported_at, received_at,
+     date_start, date_end, record_count, failure_count, external_record_count)
+    VALUES (?, ?, ?, 'v1', ?, 3, 1, 1, 'ios', ?, '2020-01-01T00:00:00.000Z',
+      '2020-01-01', '2020-01-01', 1, 0, 0)`)
+    .run(id, principal.userId, key, "a".repeat(64), "2020-01-01T00:00:00.000Z");
+  return { id, key };
+}
+
 it("deletes only unreferenced ciphertext across bounded cursor pages", async () => {
   const { env, db } = setup();
   try {
@@ -79,6 +96,108 @@ it("deletes only unreferenced ciphertext across bounded cursor pages", async () 
     expect(deleted).toEqual([orphanA, orphanB]);
     expect(db.connection.prepare("SELECT cursor_value AS cursor FROM maintenance_cursors").get())
       .toMatchObject({ cursor: "" });
+  } finally { db.close(); }
+});
+
+it("removes archived ciphertext after a lost metadata-delete response", async () => {
+  const { env, db } = setup();
+  try {
+    const archived = await archivedExport(env, db);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("DELETE FROM exports WHERE id = ? AND NOT EXISTS")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "run") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost archived-delete response");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    expect(await purgeArchivedRevisions(env, 30)).toBe(1);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM exports WHERE id = ?").get(archived.id))
+      .toMatchObject({ n: 0 });
+    expect(await env.EXPORTS.get(archived.key)).toBeNull();
+  } finally { db.close(); }
+});
+
+it("preserves ciphertext when archived-delete verification is unavailable", async () => {
+  const { env, db } = setup();
+  try {
+    const archived = await archivedExport(env, db);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (query.includes("DELETE FROM exports WHERE id = ? AND NOT EXISTS")) {
+          return new Proxy(statement, { get(prepared, statementProperty) {
+            if (statementProperty !== "bind") {
+              const value = Reflect.get(prepared, statementProperty);
+              return typeof value === "function" ? value.bind(prepared) : value;
+            }
+            return (...values: unknown[]) => {
+              const bound = prepared.bind(...values);
+              return new Proxy(bound, { get(boundStatement, boundProperty) {
+                if (boundProperty === "run") return async () => {
+                  await boundStatement.run();
+                  throw new Error("synthetic lost archived-delete response");
+                };
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              } });
+            };
+          } });
+        }
+        if (!query.includes("SELECT 1 AS present FROM exports WHERE id = ?")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => {
+                throw new Error("synthetic archived-delete verification outage");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(purgeArchivedRevisions(env, 30)).rejects.toThrow(
+      "Archived export deletion verification is unavailable",
+    );
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM exports WHERE id = ?").get(archived.id))
+      .toMatchObject({ n: 0 });
+    const objects = env.EXPORTS;
+    expect(await objects.get(archived.key)).not.toBeNull();
+    env.DB = original;
+    env.EXPORTS = {
+      list: async () => ({ objects: [{ key: archived.key }], truncated: false }),
+      delete: async (key: string) => objects.delete(key),
+    } as unknown as R2Bucket;
+    expect(await reconcileOrphanExportObjects(env)).toMatchObject({ removed: 1 });
+    expect(await objects.get(archived.key)).toBeNull();
   } finally { db.close(); }
 });
 
