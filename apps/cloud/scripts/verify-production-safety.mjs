@@ -331,6 +331,20 @@ for (const fragment of [
   "AND NOT EXISTS (SELECT 1 FROM audit_events", '"device_revocation_verification_pending"',
 ]) requireText(repairDeviceSource, fragment, "commit-verifiable staged repair devices");
 forbid(repairDeviceSource, /meta\.changes/u, "repair-device correctness");
+const repairDispatchSource = read("src/repair-dispatch.ts");
+for (const fragment of [
+  "readDispatchVerification", "'repair_dispatch.queued'", '"dispatch_verification_pending"',
+  "'repair_dispatch.cancelled'", '"dispatch_cancellation_pending"',
+  "'repair_dispatch.claimed'", '"dispatch_claim_verification_pending"',
+  "'repair_dispatch.declined'", '"dispatch_decline_verification_pending"',
+  "AND EXISTS (SELECT 1 FROM audit_events a WHERE a.id = ?",
+]) requireText(repairDispatchSource, fragment, "commit-verifiable staged repair dispatch");
+forbid(repairDispatchSource, /meta\.changes/u, "repair-dispatch correctness");
+const dispatchVerification = repairDispatchSource.indexOf("durable = await readDispatchVerification");
+const dispatchRelease = repairDispatchSource.indexOf("return json({ version: 1, id, deviceId");
+if (dispatchVerification < 0 || dispatchRelease < dispatchVerification) {
+  failures.push("repair-dispatch.ts: queued dispatch returned before exact durable verification");
+}
 requireText(indexSource, "phase(() => purgeExpiredRepairDrafts(env))", "scheduled bounded repair-draft cleanup");
 requireText(indexSource, "phase(() => purgeExpiredRepairDevices(env))", "scheduled bounded repair-device cleanup");
 const inviteTool = read("scripts/prepare-account-invites.mjs");
