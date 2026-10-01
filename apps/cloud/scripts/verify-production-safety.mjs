@@ -178,16 +178,29 @@ requireText(exportsSource, "AND EXISTS (SELECT 1 FROM upload_intents i", "active
 requireText(exportsSource, "i.state IN ('reserved', 'object_written')", "active-intent export commit gate");
 const vmStorageSource = read("vm/storage.ts");
 requireText(vmStorageSource, "async head(key: string)", "VM metadata-only ciphertext verification");
+requireText(vmStorageSource, 'createHash("sha256")', "VM staged-ciphertext checksum verification");
 requireText(vmStorageSource, "state IN ('reserved', 'object_written', 'aborting')",
   "VM reconciliation preserves aborting ciphertext");
 const objectDeletionSource = read("src/export-object-deletion.ts");
 for (const fragment of [
+  "stageExportObjectExactly", 'crypto.subtle.digest("SHA-256", digestSource)',
+  "sha256: expectedSha256", "durable.size !== ciphertext.byteLength",
+  "equalBytes(expectedSha256, durableSha256)",
+  "Encrypted export object staging verification is unavailable",
+  "Encrypted export object staging is inconsistent",
   "await env.EXPORTS.delete(objectKey)", "await env.EXPORTS.head(objectKey)",
   "Encrypted export object deletion verification is unavailable",
   "Encrypted export object was not removed",
 ]) requireText(objectDeletionSource, fragment, "exact ciphertext deletion");
 requireText(uploadIntentSource, "await deleteExportObjectExactly(env, row.objectKey)",
   "ciphertext-first upload-intent cleanup");
+requireText(exportsSource, "await stageExportObjectExactly(env, intent.objectKey, ciphertext)",
+  "exact staged ciphertext verification");
+const stagedPut = exportsSource.indexOf("stageExportObjectExactly(env, intent.objectKey, ciphertext)");
+const stagedMarker = exportsSource.indexOf("markUploadObjectWritten(env, intent)");
+if (stagedPut < 0 || stagedMarker < stagedPut) {
+  failures.push("exports.ts: upload intent may advance before staged ciphertext verification");
+}
 const objectReconciliationSource = read("src/object-reconciliation.ts");
 for (const fragment of [
   "deleteExportObjectExactly(env, object.key)", "R2 orphan reference verification is unavailable",

@@ -132,6 +132,86 @@ it("releases its pre-body admission when envelope validation fails", async () =>
   } finally { db.close(); }
 });
 
+it("recovers a lost successful R2 put only after exact staged-byte verification", async () => {
+  const { env, db, token } = await setup();
+  try {
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "put") return async (key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView |
+        string | Blob, options?: R2PutOptions) => {
+        await target.put(key, value, options);
+        throw new Error("synthetic lost R2 put response");
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    const response = await worker.fetch(request(token), env);
+    expect(response.status).toBe(201);
+    expect((await retainedState(env, db)).row.state).toBe("committed");
+  } finally { db.close(); }
+});
+
+it("rejects false-success and corrupt R2 puts before metadata commit", async () => {
+  for (const mode of ["missing", "corrupt"] as const) {
+    const { env, db, token, userId } = await setup();
+    try {
+      const objectKeys: string[] = [];
+      const objects = env.EXPORTS;
+      env.EXPORTS = new Proxy(objects, { get(target, property) {
+        if (property === "put") return async (key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView |
+          string | Blob, options?: R2PutOptions) => {
+          objectKeys.push(key);
+          if (mode === "missing") return undefined;
+          if (!(value instanceof Uint8Array)) throw new Error("expected synthetic byte body");
+          const altered = Uint8Array.from(value);
+          const last = altered.byteLength - 1;
+          altered[last] = (altered[last] ?? 0) ^ 0xff;
+          return target.put(key, altered, options);
+        };
+        const value = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      } }) as R2Bucket;
+      const response = await worker.fetch(request(token), env);
+      expect(response.status).toBe(500);
+      expect(db.connection.prepare("SELECT COUNT(*) AS count FROM exports WHERE user_id = ?")
+        .get(userId)).toEqual({ count: 0 });
+      expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents WHERE user_id = ?")
+        .get(userId)).toEqual({ count: 0 });
+      expect(objectKeys).toHaveLength(1);
+      expect(await objects.get(objectKeys[0]!)).toBeNull();
+    } finally { db.close(); }
+  }
+});
+
+it("retains cleanup authority when staged-object verification is unreadable", async () => {
+  const { env, db, token, userId } = await setup();
+  try {
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "head") return async () => {
+        throw new Error("synthetic R2 head outage");
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    const response = await worker.fetch(request(token), env);
+    expect(response.status).toBe(500);
+    expect(db.connection.prepare("SELECT state FROM upload_intents WHERE user_id = ?").get(userId))
+      .toEqual({ state: "aborting" });
+    const retainedReservation = db.connection.prepare(
+      "SELECT reserved_bytes AS reservedBytes FROM account_storage WHERE user_id = ?",
+    ).get(userId) as { reservedBytes: number };
+    expect(retainedReservation.reservedBytes).toBeGreaterThan(0);
+    db.connection.prepare("UPDATE upload_intents SET expires_at = ? WHERE user_id = ?")
+      .run("2020-01-01T00:00:00.000Z", userId);
+    env.EXPORTS = objects;
+    expect(await reconcileUploadIntents(env, 25, new Date("2026-01-01T00:00:00.000Z")))
+      .toEqual({ expired: 1, completed: 0 });
+    expect(db.connection.prepare("SELECT reserved_bytes AS reservedBytes FROM account_storage WHERE user_id = ?")
+      .get(userId)).toEqual({ reservedBytes: 0 });
+  } finally { db.close(); }
+});
+
 it("cannot commit metadata after expiry cleanup claims and removes its active intent", async () => {
   const { env, db, token, userId } = await setup();
   try {

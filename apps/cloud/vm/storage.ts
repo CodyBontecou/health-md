@@ -1,8 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
-import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { createReadStream, lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { lstat, mkdir, open, readFile, readdir, rename, stat, unlink } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const OBJECT_KEY = /^v1\/[a-f0-9-]{36}$/u;
 const ASSETS = new Map([
@@ -190,10 +190,24 @@ export class VmObjectStore {
     return { size: bytes.byteLength, arrayBuffer: async () => Uint8Array.from(bytes).buffer };
   }
 
-  async head(key: string): Promise<{ key: string; size: number } | null> {
+  async head(key: string): Promise<{
+    key: string;
+    size: number;
+    checksums: { sha256: ArrayBuffer; toJSON: () => { sha256: string } };
+  } | null> {
     try {
-      const info = await stat(this.path(key));
-      return { key, size: info.size };
+      const path = this.path(key);
+      const info = await stat(path);
+      const hasher = createHash("sha256");
+      for await (const chunk of createReadStream(path)) hasher.update(chunk);
+      const digest = hasher.digest();
+      const sha256 = digest.buffer.slice(digest.byteOffset, digest.byteOffset + digest.byteLength) as ArrayBuffer;
+      const sha256Hex = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      return {
+        key,
+        size: info.size,
+        checksums: { sha256, toJSON: () => ({ sha256: sha256Hex }) },
+      };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;

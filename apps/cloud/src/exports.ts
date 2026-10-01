@@ -1,6 +1,7 @@
 import { audit, limitIngest, requireIngestToken } from "./auth";
 import { decryptExport, encryptedExportByteCount, encryptExport, sha256Hex } from "./crypto";
 import { currentExportKey, resolveExportKey } from "./account-export-keys";
+import { stageExportObjectExactly } from "./export-object-deletion";
 import { EnvelopeValidationError, parseAndValidateEnvelope } from "./envelope";
 import { assertJsonContentType, HttpError, json, parsePositiveInteger, readBoundedBody } from "./http";
 import { parseRepairSpec, type RepairDraftSpec } from "./repair-drafts";
@@ -142,9 +143,7 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
   const receivedAt = new Date().toISOString();
   const encryptedSpec = spec ? await encryptSupplementSpec(spec, env, principal.userId, intent.exportId) : null;
   try {
-    await env.EXPORTS.put(intent.objectKey, ciphertext, {
-      httpMetadata: { contentType: "application/octet-stream", cacheControl: "no-store" },
-    });
+    await stageExportObjectExactly(env, intent.objectKey, ciphertext);
     await markUploadObjectWritten(env, intent);
   } catch (error) {
     try { await abandonUploadIntent(env, intent); } catch { /* Durable reconciliation retains the reservation. */ }
