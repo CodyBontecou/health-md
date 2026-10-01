@@ -3,7 +3,7 @@ import {
   ADMISSION_LEASE_SECONDS, DEDICATED_SLOW_BODY_ACCOUNTS, MAX_EXPORT_BYTES,
   MAX_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS, SUSTAINED_REQUESTS_PER_ACCOUNT,
   buildSyntheticEnvelope, fragmentedRequestBody, nextEligibleAccount, parseStagingLoadConfig,
-  percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody,
+  percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody, validRetryAfter,
 } from "./staging-load-lib.mjs";
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -44,11 +44,14 @@ async function upload(endpoint, token, body, { streamed = false, timeoutMs = 120
       const value = await response.json();
       accepted = (response.status === 200 || response.status === 201) && value?.accepted === true;
     } catch { /* response bodies are deliberately never reported */ }
-    return { accepted, outcome: `http_${response.status}`, durationMs: Math.round(performance.now() - started) };
+    return { accepted, outcome: `http_${response.status}`,
+      retryAfterValid: validRetryAfter(response.headers.get("Retry-After")),
+      durationMs: Math.round(performance.now() - started) };
   } catch (error) {
     return {
       accepted: false,
       outcome: error?.name === "TimeoutError" ? "timeout" : "transport_error",
+      retryAfterValid: false,
       durationMs: Math.round(performance.now() - started),
     };
   }
@@ -92,8 +95,8 @@ async function runSlowBodyAdmission(config, token) {
   const stalled = await Promise.all([first, second]);
   const recovery = await upload(config.endpoint, token,
     buildSyntheticEnvelope(1_024, "synthetic-slow-body-recovery"));
-  const passed = stalled.every((result) => result.outcome === "http_408") &&
-    backpressure.outcome === "http_429" && recovery.accepted;
+  const passed = stalled.every((result) => result.outcome === "http_408" && result.retryAfterValid) &&
+    backpressure.outcome === "http_429" && backpressure.retryAfterValid && recovery.accepted;
   return { stalled, backpressure, recovery, passed };
 }
 
@@ -170,7 +173,9 @@ async function main() {
     worstCasePayload: summary(large),
     slowBodyAdmission: {
       expectedLeaseExpiries: outcomeSummary(slowBody.stalled),
+      leaseExpiryRetryAfterValid: slowBody.stalled.every((result) => result.retryAfterValid),
       backpressureOutcome: slowBody.backpressure.outcome,
+      backpressureRetryAfterValid: slowBody.backpressure.retryAfterValid,
       recoveryOutcome: slowBody.recovery.outcome,
       passed: slowBody.passed,
     },

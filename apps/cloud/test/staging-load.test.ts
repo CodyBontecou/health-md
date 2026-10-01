@@ -6,7 +6,7 @@ import {
   ADMISSION_LEASE_SECONDS, DEDICATED_SLOW_BODY_ACCOUNTS, MAX_EXPORT_BYTES,
   MAX_REQUESTS_PER_ACCOUNT, SLOW_BODY_TIMEOUT_MS, SUSTAINED_REQUESTS_PER_ACCOUNT,
   buildSyntheticEnvelope, fragmentedRequestBody, nextEligibleAccount, parseStagingLoadConfig,
-  percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody,
+  percentile, readDistinctAccountTokens, requiredDistinctAccounts, stalledRequestBody, validRetryAfter,
 } from "../scripts/staging-load-lib.mjs";
 
 const roots: string[] = [];
@@ -29,6 +29,13 @@ it("defaults to the documented 2x gate and calculates a budget-safe account coun
     admissionLeaseSeconds: ADMISSION_LEASE_SECONDS, slowBodyTimeoutMs: SLOW_BODY_TIMEOUT_MS })
     .toEqual({ maximum: 50, sustained: 47, dedicatedSlowBodyAccounts: 1,
       admissionLeaseSeconds: 900, slowBodyTimeoutMs: 1_020_000 });
+});
+
+it("accepts only bounded Retry-After delta seconds", () => {
+  expect([validRetryAfter("1"), validRetryAfter("2"), validRetryAfter("3600")]).toEqual([true, true, true]);
+  for (const value of [null, "", "0", "3601", "1.5", " 2", "2 ", "soon", "00001"]) {
+    expect(validRetryAfter(value)).toBe(false);
+  }
 });
 
 it("constructs bounded fragmented and deliberately stalled request streams", async () => {

@@ -18,6 +18,7 @@ export interface StagingLoadConfig {
 export function parseStagingLoadConfig(environment?: Record<string, string | undefined>): StagingLoadConfig;
 export function readDistinctAccountTokens(path: string | undefined, requiredCount: number): string[];
 export function requiredDistinctAccounts(config: StagingLoadConfig): number;
+export function validRetryAfter(value: string | null): boolean;
 export function fragmentedRequestBody(bytes: Uint8Array, chunkBytes?: number): ReadableStream<Uint8Array>;
 export function stalledRequestBody(): ReadableStream<Uint8Array>;
 export function nextEligibleAccount(active: number[], launched: number[], cursor: number): number;

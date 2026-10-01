@@ -303,6 +303,7 @@ requireText(loadHarness, "launched[candidate] < SUSTAINED_REQUESTS_PER_ACCOUNT",
 requireText(loadHarness, "DEDICATED_SLOW_BODY_ACCOUNTS = 1", "staging load slow-body isolation");
 requireText(loadHarness, "ADMISSION_LEASE_SECONDS = 15 * 60", "staging load admission lease");
 requireText(loadHarness, "fragmentedRequestBody", "staging load transfer fragmentation");
+requireText(loadHarness, "validRetryAfter", "staging load retry guidance");
 requireText(uploadIntentSource, "const ADMISSION_LEASE_MS = 15 * 60_000", "upload admission lease");
 const loadRunner = read("scripts/qualify-staging-load.mjs");
 requireText(loadRunner, 'syntheticOnly: true', "staging load runner");
@@ -313,6 +314,8 @@ requireText(loadRunner, "streamed ? fragmentedRequestBody(body) : body",
   "staging load transfer fragmentation");
 requireText(loadRunner, 'result.outcome === "http_408"', "staging load admission expiry");
 requireText(loadRunner, 'backpressure.outcome === "http_429"', "staging load admission backpressure");
+requireText(loadRunner, "result.retryAfterValid", "staging load admission retry guidance");
+requireText(loadRunner, "backpressure.retryAfterValid", "staging load admission retry guidance");
 requireText(loadRunner, "recovery.accepted", "staging load admission recovery");
 forbid(loadRunner, /console\.(?:log|error)\([^\n]*(?:token|endpoint|body)/u, "staging load runner output");
 const migrations = readdirSync(resolve(cloud, "migrations"))

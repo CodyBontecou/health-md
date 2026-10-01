@@ -71,6 +71,12 @@ export function requiredDistinctAccounts(config) {
     Math.ceil(sustained / SUSTAINED_REQUESTS_PER_ACCOUNT)) + DEDICATED_SLOW_BODY_ACCOUNTS;
 }
 
+export function validRetryAfter(value) {
+  if (value === null || !/^\d{1,4}$/u.test(value)) return false;
+  const seconds = Number(value);
+  return seconds >= 1 && seconds <= 3_600;
+}
+
 export function fragmentedRequestBody(bytes, chunkBytes = 16_381) {
   if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0 ||
       !Number.isSafeInteger(chunkBytes) || chunkBytes < 1 || chunkBytes > 64 * 1024) {
