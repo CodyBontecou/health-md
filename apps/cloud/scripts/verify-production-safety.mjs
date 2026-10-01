@@ -176,6 +176,14 @@ requireText(exportsSource, "if (!admissionConsumed) await releaseUploadAdmission
   "pre-intent admission release");
 requireText(exportsSource, "AND EXISTS (SELECT 1 FROM upload_intents i", "active-intent export commit gate");
 requireText(exportsSource, "i.state IN ('reserved', 'object_written')", "active-intent export commit gate");
+const objectReconciliationSource = read("src/object-reconciliation.ts");
+for (const fragment of [
+  "await env.EXPORTS.head(key)", "R2 orphan deletion verification is unavailable",
+  "Orphan export object was not removed", "R2 orphan reference verification is unavailable",
+  "WHERE name = ? AND cursor_value = ? AND updated_at = ?",
+  "R2 reconciliation cursor verification is unavailable",
+  "R2 reconciliation cursor was not advanced", "R2 reconciliation cursor did not progress",
+]) requireText(objectReconciliationSource, fragment, "bounded exact orphan reconciliation");
 const accountKeySource = read("src/account-export-keys.ts");
 requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
 requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',
