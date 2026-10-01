@@ -67,6 +67,41 @@ async function splitInviteRequest(
   }), env);
 }
 
+function failedMagicLinkCleanupDatabase(database: D1Database, loseCommittedResponse: boolean): D1Database {
+  let responseLost = false;
+  return new Proxy(database, { get(target, property) {
+    if (property === "prepare") return (query: string) => {
+      const statement = target.prepare(query);
+      if (query !== "DELETE FROM magic_links WHERE id = ? AND token_hash = ?") return statement;
+      return new Proxy(statement, { get(prepared, statementProperty) {
+        if (statementProperty !== "bind") {
+          const value = Reflect.get(prepared, statementProperty);
+          return typeof value === "function" ? value.bind(prepared) : value;
+        }
+        return (...values: unknown[]) => {
+          const bound = prepared.bind(...values);
+          return new Proxy(bound, { get(boundStatement, boundProperty) {
+            if (boundProperty !== "run") {
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            }
+            return async () => {
+              if (loseCommittedResponse && !responseLost) {
+                const result = await boundStatement.run();
+                responseLost = true;
+                throw new Error("synthetic lost magic-link cleanup response");
+              }
+              throw new Error("synthetic magic-link cleanup outage");
+            };
+          } });
+        };
+      } });
+    }
+    const value = Reflect.get(target, property);
+    return typeof value === "function" ? value.bind(target) : value;
+  } }) as D1Database;
+}
+
 function ambiguousSessionBatch(database: D1Database, verificationUnavailable = false): D1Database {
   return new Proxy(database, { get(target, property) {
     if (property === "batch") return async (statements: D1PreparedStatement[]) => {
@@ -97,6 +132,43 @@ function ambiguousSessionBatch(database: D1Database, verificationUnavailable = f
     return typeof value === "function" ? value.bind(target) : value;
   } }) as D1Database;
 }
+
+it("keeps failed email delivery generic while exactly reconciling magic-link cleanup", async () => {
+  const { env, db } = setup();
+  const original = env.DB;
+  const email = "cleanup-invited@example.test";
+  const request = (address: string, ip: string) => requestMagicLink(new Request(
+    `${origin}/api/auth/request-link`, {
+      method: "POST",
+      headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": ip },
+      body: JSON.stringify({ email: address }),
+    }), env);
+  env.ENVIRONMENT = "production";
+  env.AUTH_MODE = "email_link";
+  env.AUTH_SIGNUP_MODE = "invite";
+  env.AUTH_INVITE_EMAILS = email;
+  env.DEV_SHOW_MAGIC_LINK = "0";
+  env.RESEND_API_KEY = "";
+  try {
+    env.DB = failedMagicLinkCleanupDatabase(original, false);
+    const cleanupUnavailable = await request(email, "203.0.113.30");
+    const ineligible = await request("not-invited@example.test", "203.0.113.31");
+    expect(cleanupUnavailable.status).toBe(200);
+    expect(await cleanupUnavailable.json()).toEqual(await ineligible.json());
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM magic_links").get())
+      .toMatchObject({ count: 1 });
+
+    db.connection.prepare("DELETE FROM magic_links").run();
+    env.DB = failedMagicLinkCleanupDatabase(original, true);
+    const lostCleanupResponse = await request(email, "203.0.113.32");
+    expect(lostCleanupResponse.status).toBe(200);
+    expect(await lostCleanupResponse.json()).toEqual({
+      message: "If this address is eligible, a sign-in link is on its way.",
+    });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM magic_links").get())
+      .toMatchObject({ count: 0 });
+  } finally { env.DB = original; db.close(); }
+});
 
 it("admits split-account signup through a one-time hashed invite only", async () => {
   const { env, db } = setup();

@@ -140,6 +140,31 @@ async function sendMagicLink(env: Env, email: string, token: string): Promise<bo
   return response.ok;
 }
 
+async function discardUndeliveredMagicLink(env: Env, linkId: string, tokenHash: string): Promise<boolean> {
+  // Email admission always keeps a generic public response. Reconcile both a
+  // false-success adapter and a response lost after commit without exposing
+  // address eligibility; bounded expiry remains the final fail-safe.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await env.DB.prepare("DELETE FROM magic_links WHERE id = ? AND token_hash = ?")
+        .bind(linkId, tokenHash).run();
+    } catch {
+      // The exact delete may have committed before the response was lost.
+    }
+    let state: { present: number } | null;
+    try {
+      state = await env.DB.prepare(
+        "SELECT EXISTS(SELECT 1 FROM magic_links WHERE id = ? AND token_hash = ?) AS present",
+      ).bind(linkId, tokenHash).first<{ present: number }>();
+    } catch {
+      return false;
+    }
+    if (state?.present === 0) return true;
+    if (state?.present !== 1) return false;
+  }
+  return false;
+}
+
 export async function requestMagicLink(request: Request, env: Env): Promise<Response> {
   assertSameOrigin(request, env);
   const { email: input } = await readJson<{ email?: unknown }>(request);
@@ -249,7 +274,9 @@ export async function requestMagicLink(request: Request, env: Env): Promise<Resp
     // Never log provider responses; they can contain account identifiers.
   }
   if (!sent) {
-    await env.DB.prepare("DELETE FROM magic_links WHERE id = ?").bind(linkId).run();
+    if (!await discardUndeliveredMagicLink(env, linkId, tokenHash)) {
+      recordAccountSecurityMetric(env, "magic_link_cleanup_pending");
+    }
     return generic();
   }
   if (env.ENVIRONMENT === "development" && env.DEV_SHOW_MAGIC_LINK === "1") {

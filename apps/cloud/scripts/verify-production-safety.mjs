@@ -121,6 +121,11 @@ const requiredEvidence = [
   "src/upload-intents.ts", "src/account-export-keys.ts", "src/telemetry.ts",
 ];
 for (const path of requiredEvidence) read(path);
+for (const entry of readdirSync(resolve(cloud, "src"), { withFileTypes: true })) {
+  if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
+  forbid(read(`src/${entry.name}`), /meta\.changes/u,
+    "provider-portable source mutation correctness");
+}
 for (const path of ["src/ingest-worker.ts", "src/account-worker.ts", "src/maintenance-worker.ts"]) {
   const source = read(path);
   const validation = source.indexOf("validateConfiguration(env);");
@@ -260,6 +265,19 @@ for (const fragment of [
   "sessionsPerRun: 500", "rateAttemptsPerRun: 50_000",
   "rateBucketsPerRun: 5_000", "ORDER BY expires_at, id LIMIT ?",
 ]) requireText(authSource, fragment, "bounded auth cleanup");
+for (const fragment of [
+  "discardUndeliveredMagicLink", "attempt < 2",
+  "DELETE FROM magic_links WHERE id = ? AND token_hash = ?",
+  "SELECT EXISTS(SELECT 1 FROM magic_links WHERE id = ? AND token_hash = ?) AS present",
+  'recordAccountSecurityMetric(env, "magic_link_cleanup_pending")',
+]) requireText(authSource, fragment, "anti-enumerating magic-link delivery cleanup");
+const failedDelivery = authSource.indexOf("if (!sent)");
+const genericAfterCleanup = authSource.indexOf("return generic();", failedDelivery);
+if (failedDelivery < 0 || genericAfterCleanup < failedDelivery) {
+  failures.push("auth.ts: failed magic-link delivery does not preserve the generic response");
+}
+const telemetrySource = read("src/telemetry.ts");
+requireText(telemetrySource, '"magic_link_cleanup_pending"', "health-free auth cleanup telemetry");
 const lifecycleSource = read("src/lifecycle.ts");
 for (const fragment of [
   "Invalid deletion-receipt cleanup limit", "ORDER BY status_expires_at, status_token_hash LIMIT ?",
