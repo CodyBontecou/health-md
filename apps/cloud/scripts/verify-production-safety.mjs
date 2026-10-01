@@ -116,6 +116,15 @@ for (const fragment of [
 const indexSource = read("src/index.ts");
 requireText(indexSource, "phase(() => purgeExpiredAuthState(env))", "scheduled bounded auth cleanup");
 requireText(indexSource, "phase(() => purgeExpiredDeletionReceipts(env))", "scheduled bounded receipt cleanup");
+const repairDraftSource = read("src/repair-drafts.ts");
+requireText(repairDraftSource, "ORDER BY expires_at, id LIMIT ?", "bounded repair-draft cleanup");
+requireText(repairDraftSource, "Invalid repair-draft cleanup limit", "bounded repair-draft cleanup");
+const repairDeviceSource = read("src/repair-devices.ts");
+requireText(repairDeviceSource, "ORDER BY COALESCE(grant_expires_at, pairing_expires_at), id LIMIT ?",
+  "bounded repair-device cleanup");
+requireText(repairDeviceSource, "Invalid repair-device cleanup limit", "bounded repair-device cleanup");
+requireText(indexSource, "phase(() => purgeExpiredRepairDrafts(env))", "scheduled bounded repair-draft cleanup");
+requireText(indexSource, "phase(() => purgeExpiredRepairDevices(env))", "scheduled bounded repair-device cleanup");
 const loadHarness = read("scripts/staging-load-lib.mjs");
 requireText(loadHarness, '"api.healthmd.app"', "staging load harness");
 requireText(loadHarness, "Refusing a live or non-staging hostname", "staging load harness");

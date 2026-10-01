@@ -186,7 +186,16 @@ export async function cancelRepairDraft(request: Request, env: Env, userId: stri
   if (results[0]?.meta.changes !== 1) throw new HttpError(404, "not_found", "Draft not found.");
   return json({ cancelled: true });
 }
-export async function purgeExpiredRepairDrafts(env: Env): Promise<void> {
-  await env.DB.prepare("DELETE FROM repair_drafts WHERE expires_at <= ? OR state = 'cancelled'")
-    .bind(new Date().toISOString()).run();
+export async function purgeExpiredRepairDrafts(
+  env: Env,
+  limit = 100,
+  now = new Date(),
+): Promise<void> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error("Invalid repair-draft cleanup limit");
+  }
+  await env.DB.prepare(`DELETE FROM repair_drafts WHERE id IN (
+    SELECT id FROM repair_drafts WHERE expires_at <= ? OR state = 'cancelled'
+    ORDER BY expires_at, id LIMIT ?
+  )`).bind(now.toISOString(), limit).run();
 }

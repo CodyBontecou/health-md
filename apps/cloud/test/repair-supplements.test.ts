@@ -11,7 +11,8 @@ import { errorResponse } from "../src/http";
 import { purgeArchivedRevisions, processAccountDeletions } from "../src/lifecycle";
 import { VmHealthDataReader, type ReadPrincipal } from "../mcp/reader";
 import { sha256Hex } from "../src/crypto";
-import type { RepairDraftSpec } from "../src/repair-drafts";
+import { purgeExpiredRepairDrafts, type RepairDraftSpec } from "../src/repair-drafts";
+import { purgeExpiredRepairDevices } from "../src/repair-devices";
 import worker from "../src/index";
 
 const root = resolve(import.meta.dirname, "..");
@@ -344,6 +345,43 @@ it("rolls back failed commits, protects supplements from revision cleanup and er
     expect(await objects.reconcile(db)).toBe(0);
   } finally { db.close(); }
 }, 30_000);
+
+it("purges legacy repair state in bounded oldest-first pages", async () => {
+  const test = setup();
+  try {
+    const { userId } = await owner(test);
+    const expired = ["2020-01-01T00:00:00.000Z", "2020-01-02T00:00:00.000Z",
+      "2020-01-03T00:00:00.000Z"];
+    const current = "2030-01-01T00:00:00.000Z";
+    for (const expiresAt of [...expired, current]) {
+      test.db.connection.prepare(`INSERT INTO repair_drafts
+        (id, user_id, spec_ciphertext, spec_iv, source, day_count, state, created_at, expires_at)
+        VALUES (?, ?, 'synthetic', 'synthetic', 'ios', 1, 'draft', ?, ?)`)
+        .run(randomUUID(), userId, expiresAt, expiresAt);
+      test.db.connection.prepare(`INSERT INTO repair_devices
+        (id, token_hash, source, created_at, pairing_expires_at)
+        VALUES (?, ?, 'ios', ?, ?)`)
+        .run(randomUUID(), randomUUID(), expiresAt, expiresAt);
+    }
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await purgeExpiredRepairDrafts(test.env, 2, now);
+    await purgeExpiredRepairDevices(test.env, 2, now);
+    for (const table of ["repair_drafts", "repair_devices"]) {
+      expect(test.db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get())
+        .toMatchObject({ n: 2 });
+    }
+    await purgeExpiredRepairDrafts(test.env, 2, now);
+    await purgeExpiredRepairDevices(test.env, 2, now);
+    for (const table of ["repair_drafts", "repair_devices"]) {
+      expect(test.db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get())
+        .toMatchObject({ n: 1 });
+    }
+    await expect(purgeExpiredRepairDrafts(test.env, 0, now))
+      .rejects.toThrow("Invalid repair-draft cleanup limit");
+    await expect(purgeExpiredRepairDevices(test.env, 501, now))
+      .rejects.toThrow("Invalid repair-device cleanup limit");
+  } finally { test.db.close(); }
+});
 
 it("keeps read authority owner-scoped and rejects supplement requests on the write-only listener", async () => {
   const test = setup(); const { env, db, request } = test;

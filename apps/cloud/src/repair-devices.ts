@@ -150,9 +150,19 @@ export async function revokeRepairDevice(request: Request, env: Env, userId: str
   await audit(env, userId, "repair_device.revoked", id);
   return json({ revoked: true });
 }
-export async function purgeExpiredRepairDevices(env: Env): Promise<void> {
-  const now = new Date().toISOString();
-  await env.DB.prepare(`DELETE FROM repair_devices WHERE
-    (user_id IS NULL AND pairing_expires_at <= ?) OR
-    (user_id IS NOT NULL AND grant_expires_at <= ?)`).bind(now, now).run();
+export async function purgeExpiredRepairDevices(
+  env: Env,
+  limit = 100,
+  now = new Date(),
+): Promise<void> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error("Invalid repair-device cleanup limit");
+  }
+  const instant = now.toISOString();
+  await env.DB.prepare(`DELETE FROM repair_devices WHERE id IN (
+    SELECT id FROM repair_devices WHERE
+      (user_id IS NULL AND pairing_expires_at <= ?) OR
+      (user_id IS NOT NULL AND grant_expires_at <= ?)
+    ORDER BY COALESCE(grant_expires_at, pairing_expires_at), id LIMIT ?
+  )`).bind(instant, instant, limit).run();
 }
