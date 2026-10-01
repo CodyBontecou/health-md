@@ -296,6 +296,13 @@ requireText(indexSource, "phase(() => purgeExpiredDeletionReceipts(env))", "sche
 const repairDraftSource = read("src/repair-drafts.ts");
 requireText(repairDraftSource, "ORDER BY expires_at, id LIMIT ?", "bounded repair-draft cleanup");
 requireText(repairDraftSource, "Invalid repair-draft cleanup limit", "bounded repair-draft cleanup");
+for (const fragment of [
+  'durable.specCiphertext !== encrypted.ciphertext', 'durable.specIv !== encrypted.iv',
+  '"draft_verification_pending"', 'd.spec_ciphertext AS specCiphertext',
+  "AS activeDispatch", 'durable.specCiphertext === ""', 'durable.activeDispatch === 0',
+  '"draft_cancellation_pending"',
+]) requireText(repairDraftSource, fragment, "commit-verifiable repair drafts");
+forbid(repairDraftSource, /meta\.changes/u, "repair-draft correctness");
 const repairDeviceSource = read("src/repair-devices.ts");
 requireText(repairDeviceSource, "ORDER BY COALESCE(grant_expires_at, pairing_expires_at), id LIMIT ?",
   "bounded repair-device cleanup");
