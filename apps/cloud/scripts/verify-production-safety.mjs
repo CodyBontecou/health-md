@@ -458,12 +458,15 @@ for (const fragment of [
   ".followRedirects(false)", ".followSslRedirects(false)",
   "response.code != 307 && response.code != 308", "redirectCount < MAX_REDIRECTS",
   "it.scheme == originalUrl.scheme && it.host == originalUrl.host && it.port == originalUrl.port",
+  "if (!it.isSuccessful)", "APIExportUploadResult(it.code, responsePreview(it))",
 ]) requireText(androidApiClient, fragment, "Android compatibility redirect boundary");
 const androidApiClientTest = read(
   "apps/android/app/src/test/java/com/healthmd/export/APIExportClientTest.kt", repository);
 requireText(androidApiClientTest, "rejectsCrossOriginRedirectBeforeReplayingBodyOrHeaders",
   "Android compatibility redirect evidence");
 requireText(androidApiClientTest, "rejectsMethodChangingRedirectWithoutFollowingIt",
+  "Android compatibility redirect evidence");
+requireText(androidApiClientTest, "rejectsCredentialBearingRedirectWithoutReplayingSecrets",
   "Android compatibility redirect evidence");
 const appleApiClient = read("apps/apple/HealthMd/Shared/Managers/APIExportClient.swift", repository);
 for (const fragment of [
@@ -475,6 +478,20 @@ requireText(appleApiClientTest, "testCompatibilityRedirectAllowsOnlySameOrigin30
   "Apple compatibility redirect evidence");
 requireText(appleApiClientTest, "testCompatibilityRedirectRejectsOriginOrCredentialChanges",
   "Apple compatibility redirect evidence");
+requireText(appleApiClientTest, "testEndpointSettingsRejectEmbeddedCredentialsAndFragments",
+  "Apple endpoint credential evidence");
+const appleApiSettings = read(
+  "apps/apple/HealthMd/Shared/Models/APIExportSettings.swift", repository);
+for (const fragment of ["url.user == nil", "url.password == nil", "url.fragment == nil"]) {
+  requireText(appleApiSettings, fragment, "Apple endpoint credential boundary");
+}
+const boundedAppleLoader = read(
+  "apps/apple/HealthMd/Shared/Utilities/BoundedURLSessionDataLoader.swift", repository);
+for (const fragment of [
+  "if redirectHandler == nil",
+  "An explicit loader redirect handler is the final authority.",
+  "completionHandler(proposed)",
+]) requireText(boundedAppleLoader, fragment, "Apple injected-session redirect boundary");
 
 const workflow = read(".github/workflows/cloud-ci.yml", repository);
 for (const line of workflow.split("\n")) {

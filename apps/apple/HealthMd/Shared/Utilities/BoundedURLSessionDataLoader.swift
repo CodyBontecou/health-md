@@ -216,16 +216,23 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
                 completionHandler(nil)
                 return
             }
-            let forwarded: Void? = forwardingDelegate?.urlSession?(
-                session,
-                task: task,
-                willPerformHTTPRedirection: response,
-                newRequest: proposed,
-                completionHandler: completionHandler
-            )
-            if forwarded == nil {
-                completionHandler(proposed)
+            if redirectHandler == nil {
+                let forwarded: Void? = forwardingDelegate?.urlSession?(
+                    session,
+                    task: task,
+                    willPerformHTTPRedirection: response,
+                    newRequest: proposed,
+                    completionHandler: completionHandler
+                )
+                if forwarded == nil { completionHandler(proposed) }
+                return
             }
+            // An explicit loader redirect handler is the final authority.
+            // Forwarding this callback would let an injected session delegate
+            // replace the validated request with a cross-origin request after
+            // the Health.md policy check. Authentication and body-stream
+            // callbacks are still forwarded independently.
+            completionHandler(proposed)
         }
     }
 
@@ -285,8 +292,9 @@ nonisolated final class BoundedURLSessionDataLoader: NSObject, @unchecked Sendab
 
     /// Uses the supplied session itself instead of cloning only its
     /// configuration. This is intentionally a separate path because URLSession
-    /// does not expose a safe way to replace its data delegate while forwarding
-    /// every custom authentication and task-delegate behavior.
+    /// does not expose a safe way to replace its data delegate. Authentication
+    /// and body-stream behavior are forwarded; the loader's redirect policy is
+    /// deliberately final so a session delegate cannot bypass it.
     init(
         session: URLSession,
         redirectHandler: RedirectHandler? = nil,

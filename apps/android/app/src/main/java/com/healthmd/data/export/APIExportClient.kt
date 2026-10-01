@@ -105,10 +105,10 @@ class APIExportClient @Inject constructor(
                     return@use
                 }
 
-                val preview = responsePreview(it)
                 if (!it.isSuccessful) {
                     // Response bodies are untrusted and may echo request data or
-                    // credentials. Keep every durable/UI failure status-only.
+                    // credentials. Do not materialize them for rejected requests;
+                    // keep every durable/UI failure status-only.
                     throw APIExportClientException(
                         failureReason = ExportFailureReason.API_REJECTED,
                         retryable = it.code == 408 || it.code == 429 || it.code >= 500,
@@ -116,7 +116,7 @@ class APIExportClient @Inject constructor(
                         message = "API endpoint returned HTTP ${it.code}.",
                     )
                 }
-                return@withContext APIExportUploadResult(it.code, preview)
+                return@withContext APIExportUploadResult(it.code, responsePreview(it))
             }
         }
         @Suppress("UNREACHABLE_CODE")

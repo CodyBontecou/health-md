@@ -225,14 +225,15 @@ struct APIExportClient {
             throw APIExportClientError.invalidResponse
         }
 
-        let responsePreview = Self.responsePreview(from: data)
         guard (200..<300).contains(httpResponse.statusCode) else {
+            // Never decode an untrusted rejection body: it may echo request
+            // credentials or health payload bytes. Preserve status only.
             throw APIExportClientError.serverRejected(
                 statusCode: httpResponse.statusCode,
-                body: responsePreview
+                body: nil
             )
         }
-
+        let responsePreview = Self.responsePreview(from: data)
         return APIExportUploadResult(
             statusCode: httpResponse.statusCode,
             responseBodyPreview: responsePreview
@@ -290,13 +291,14 @@ struct APIExportClient {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIExportClientError.invalidResponse
         }
-        let responsePreview = Self.responsePreview(from: data)
         guard (200..<300).contains(httpResponse.statusCode) else {
+            // Keep streamed-upload rejection errors status-only as well.
             throw APIExportClientError.serverRejected(
                 statusCode: httpResponse.statusCode,
-                body: responsePreview
+                body: nil
             )
         }
+        let responsePreview = Self.responsePreview(from: data)
         return APIExportUploadResult(
             statusCode: httpResponse.statusCode,
             responseBodyPreview: responsePreview

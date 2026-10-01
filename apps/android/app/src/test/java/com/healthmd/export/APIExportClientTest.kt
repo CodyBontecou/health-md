@@ -158,6 +158,28 @@ class APIExportClientTest {
     }
 
     @Test
+    fun rejectsCredentialBearingRedirectWithoutReplayingSecrets() = runTest {
+        val target = server.url("/collect").newBuilder()
+            .username("unexpected-user")
+            .password("unexpected-password")
+            .build()
+        server.enqueue(MockResponse().setResponseCode(308).addHeader("Location", target))
+
+        val error = runCatching {
+            client.upload(
+                endpointUrl = server.url("/redirect").toString(),
+                payload = "{\"health\":\"private\"}",
+                authorizationHeader = "Bearer secret",
+                requestHeaders = listOf(APIExportRequestHeader("X-API-Key", "api-secret")),
+            )
+        }.exceptionOrNull() as APIExportClientException
+
+        assertThat(error.statusCode).isEqualTo(308)
+        assertThat(error.message).isEqualTo("API endpoint returned HTTP 308.")
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
     fun rejectsMethodChangingRedirectWithoutFollowingIt() = runTest {
         server.enqueue(MockResponse().setResponseCode(302).addHeader("Location", server.url("/collect")))
 

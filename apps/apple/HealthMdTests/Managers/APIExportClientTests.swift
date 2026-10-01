@@ -532,6 +532,43 @@ final class APIExportClientTests: XCTestCase {
         }
     }
 
+    func testRejectedUploadDoesNotRetainUntrustedResponseBody() async throws {
+        ExternalIntegrationURLProtocolStub.reset()
+        defer { ExternalIntegrationURLProtocolStub.reset() }
+        let endpoint = try XCTUnwrap(URL(string: "https://api.example.com/healthmd"))
+        ExternalIntegrationURLProtocolStub.setHandler { _ in
+            (
+                HTTPURLResponse(
+                    url: endpoint,
+                    statusCode: 401,
+                    httpVersion: "HTTP/1.1",
+                    headerFields: nil
+                )!,
+                Data("Authorization: Bearer secret-token; health_payload=private".utf8)
+            )
+        }
+
+        do {
+            _ = try await APIExportClient(session: .externalIntegrationTestSession()).upload(
+                payload: Data("{}".utf8),
+                destination: APIExportDestinationSnapshot(
+                    endpointURL: endpoint,
+                    authorizationHeaderValue: "Bearer secret-token",
+                    displayName: "api.example.com",
+                    redactedEndpointDescription: endpoint.absoluteString
+                )
+            )
+            XCTFail("Expected a rejected response")
+        } catch let error as APIExportClientError {
+            guard case .serverRejected(let statusCode, let body) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+            XCTAssertEqual(statusCode, 401)
+            XCTAssertNil(body)
+            XCTAssertEqual(error.localizedDescription, "API endpoint returned HTTP 401.")
+        }
+    }
+
     func testServerRejectionDescriptionOmitsUntrustedResponseBody() {
         let error = APIExportClientError.serverRejected(
             statusCode: 413,
@@ -541,6 +578,27 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertEqual(error.localizedDescription, "API endpoint returned HTTP 413.")
         XCTAssertFalse(error.localizedDescription.contains("secret-token"))
         XCTAssertFalse(error.localizedDescription.contains("health_payload"))
+    }
+
+    func testEndpointSettingsRejectEmbeddedCredentialsAndFragments() throws {
+        let suiteName = "APIExportClientTests.endpoint.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let settings = APIExportSettings(
+            userDefaults: defaults,
+            keychain: FakeKeychainStore()
+        )
+
+        for rejected in [
+            "https://user:password@api.example.com/upload",
+            "https://api.example.com/upload#credential",
+        ] {
+            settings.endpointURLString = rejected
+            XCTAssertNil(settings.destinationSnapshot, rejected)
+        }
+
+        settings.endpointURLString = "https://api.example.com/upload?tenant=synthetic"
+        XCTAssertNotNil(settings.destinationSnapshot)
     }
 
     func testCompatibilityRedirectAllowsOnlySameOrigin307Or308Post() throws {

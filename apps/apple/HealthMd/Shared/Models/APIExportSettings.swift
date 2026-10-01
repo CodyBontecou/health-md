@@ -90,7 +90,10 @@ final class APIExportSettings: ObservableObject {
               let url = URL(string: trimmed),
               let scheme = url.scheme?.lowercased(),
               ["https", "http"].contains(scheme),
-              url.host?.isEmpty == false else {
+              url.host?.isEmpty == false,
+              url.user == nil,
+              url.password == nil,
+              url.fragment == nil else {
             return nil
         }
         return url
