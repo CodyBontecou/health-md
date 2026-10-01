@@ -471,7 +471,7 @@ requireText(androidApiClientTest, "rejectsCredentialBearingRedirectWithoutReplay
 const appleApiClient = read("apps/apple/HealthMd/Shared/Managers/APIExportClient.swift", repository);
 for (const fragment of [
   "redirectHandler: Self.safeRedirect", "response.statusCode == 307 || response.statusCode == 308",
-  "sameOrigin(source, target)", "private static let maximumRedirects = 5",
+  "sameOrigin(source, target)", "private nonisolated static let maximumRedirects = 5",
 ]) requireText(appleApiClient, fragment, "Apple compatibility redirect boundary");
 const appleApiClientTest = read("apps/apple/HealthMdTests/Managers/APIExportClientTests.swift", repository);
 requireText(appleApiClientTest, "testCompatibilityRedirectAllowsOnlySameOrigin307Or308Post",
