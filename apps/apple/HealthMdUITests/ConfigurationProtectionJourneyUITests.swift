@@ -307,18 +307,16 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         editSchedule.tap()
         XCTAssertFalse(app.switches["Enabled"].waitForExistence(timeout: 1))
+        guard followProtectionToastAndReopenDetail(app) else { return }
 
-        // Keep the pinned toast as evidence while exercising the adjacent blocked actions. Moving
-        // each action outside the toast is substantially faster than another toast-to-Settings cycle.
+        // Duplicating is rejected without creating a copy.
         let duplicate = app.buttons["Duplicate"]
-        XCTAssertTrue(
-            scrollUntilHittableAboveProtectionToast(duplicate, in: app),
-            "The Duplicate action should be reachable above the protection toast"
-        )
+        XCTAssertTrue(scrollUntilHittable(duplicate, in: app), "The Duplicate action should be reachable")
         duplicate.tap()
         XCTAssertFalse(app.buttons["export.profiles.row.Default 2"].waitForExistence(timeout: 1))
 
-        // Renaming never presents the rename alert.
+        // Keep the duplicate toast pinned, then move the preceding Rename row above it rather than
+        // paying for a third toast-to-Settings navigation cycle.
         let rename = app.buttons["Rename…"]
         XCTAssertTrue(
             scrollUntilHittableAboveProtectionToast(rename, in: app),
