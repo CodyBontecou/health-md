@@ -4,8 +4,10 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createVmEnvironment } from "../vm/runtime";
-import { abandonUploadIntent, markUploadObjectWritten, reconcileUploadIntents,
-  reserveUploadIntent, uploadIntentPolicy } from "../src/upload-intents";
+import { abandonUploadIntent, acquireUploadAdmission, markUploadObjectWritten,
+  reconcileUploadAdmissions, reconcileUploadIntents,
+  releaseUploadAdmission, reserveUploadIntent as reserveWithAdmission,
+  uploadIntentPolicy } from "../src/upload-intents";
 import type { IngestPrincipal } from "../src/types";
 
 const roots: string[] = [];
@@ -29,6 +31,17 @@ function setup() {
   });
 }
 
+async function reserveUploadIntent(env: ReturnType<typeof setup>["env"], principal: IngestPrincipal,
+  digest: string, scopeDigest: string | null, byteCount: number) {
+  const admission = await acquireUploadAdmission(env, principal);
+  try {
+    return await reserveWithAdmission(env, principal, admission, digest, scopeDigest, byteCount);
+  } catch (error) {
+    await releaseUploadAdmission(env, admission);
+    throw error;
+  }
+}
+
 function account(db: ReturnType<typeof setup>["db"]): IngestPrincipal {
   const userId = randomUUID();
   const tokenId = randomUUID();
@@ -45,6 +58,9 @@ function account(db: ReturnType<typeof setup>["db"]): IngestPrincipal {
 function reservationDatabase(original: D1Database, options: {
   insert?: "normal" | "lost_response" | "false_success";
   failVerification?: boolean;
+  admissionInsert?: "normal" | "lost_response" | "false_success";
+  failAdmissionVerification?: boolean;
+  admissionDelete?: "normal" | "lost_response";
 }): D1Database {
   return new Proxy(original, { get(target, property) {
     if (property !== "prepare") {
@@ -70,6 +86,24 @@ function reservationDatabase(original: D1Database, options: {
                 throw new Error("synthetic lost upload-reservation response");
               };
             }
+            if (boundProperty === "run" && query.includes("INSERT INTO upload_admissions")) {
+              if (options.admissionInsert === "false_success") {
+                return async () => target.prepare("SELECT 1").run();
+              }
+              if (options.admissionInsert === "lost_response") return async () => {
+                await boundStatement.run();
+                throw new Error("synthetic lost upload-admission response");
+              };
+            }
+            if (boundProperty === "run" && query.includes("DELETE FROM upload_admissions") &&
+                options.admissionDelete === "lost_response") return async () => {
+              await boundStatement.run();
+              throw new Error("synthetic lost upload-admission delete response");
+            };
+            if (boundProperty === "first" && options.failAdmissionVerification &&
+                query.includes("FROM upload_admissions WHERE id = ? LIMIT 1")) {
+              return async () => { throw new Error("synthetic admission verification outage"); };
+            }
             if (boundProperty === "first" && options.failVerification &&
                 query.includes("FROM upload_intents WHERE id = ? LIMIT 1")) {
               return async () => { throw new Error("synthetic reservation verification outage"); };
@@ -87,6 +121,66 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+it("bounds pre-body admissions per account and releases them exactly", async () => {
+  const { env, db } = setup();
+  try {
+    const firstAccount = account(db);
+    const secondAccount = account(db);
+    const [first, second, otherFirst, otherSecond] = await Promise.all([
+      acquireUploadAdmission(env, firstAccount), acquireUploadAdmission(env, firstAccount),
+      acquireUploadAdmission(env, secondAccount), acquireUploadAdmission(env, secondAccount),
+    ]);
+    await expect(acquireUploadAdmission(env, firstAccount))
+      .rejects.toMatchObject({ status: 429, code: "account_busy" });
+    await releaseUploadAdmission(env, first);
+    const replacement = await acquireUploadAdmission(env, firstAccount);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS count FROM upload_admissions
+      WHERE user_id = ?`).get(firstAccount.userId)).toEqual({ count: 2 });
+    await Promise.all([releaseUploadAdmission(env, second), releaseUploadAdmission(env, replacement),
+      releaseUploadAdmission(env, otherFirst), releaseUploadAdmission(env, otherSecond)]);
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_admissions").get())
+      .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("recovers lost admission insert and release responses", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    const original = env.DB;
+    env.DB = reservationDatabase(original, { admissionInsert: "lost_response" });
+    const admission = await acquireUploadAdmission(env, principal);
+    env.DB = reservationDatabase(original, { admissionDelete: "lost_response" });
+    await expect(releaseUploadAdmission(env, admission)).resolves.toBeUndefined();
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_admissions").get())
+      .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("does not return an admission after a false-success insert response", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    env.DB = reservationDatabase(env.DB, { admissionInsert: "false_success" });
+    await expect(acquireUploadAdmission(env, principal))
+      .rejects.toMatchObject({ status: 503, code: "ingest_busy" });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_admissions").get())
+      .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("withholds an admission while its durable verification is unreadable", async () => {
+  const { env, db } = setup();
+  try {
+    const principal = account(db);
+    env.DB = reservationDatabase(env.DB, { failAdmissionVerification: true });
+    await expect(acquireUploadAdmission(env, principal))
+      .rejects.toMatchObject({ status: 503, code: "admission_verification_pending" });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS count FROM upload_admissions
+      WHERE user_id = ?`).get(principal.userId)).toEqual({ count: 1 });
+  } finally { db.close(); }
+});
+
 it("bounds active uploads per account without imposing a process-global account limit", async () => {
   const { env, db } = setup();
   try {
@@ -100,6 +194,8 @@ it("bounds active uploads per account without imposing a process-global account 
     ]);
     expect(new Set([first.userId, second.userId])).toEqual(new Set([firstAccount.userId]));
     expect(new Set([otherFirst.userId, otherSecond.userId])).toEqual(new Set([secondAccount.userId]));
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_admissions").get())
+      .toEqual({ count: 0 });
     await expect(reserveUploadIntent(env, firstAccount, "e".repeat(64), null, 100))
       .rejects.toMatchObject({ status: 429, code: "account_busy" });
     expect(db.connection.prepare(`SELECT reserved_bytes AS reservedBytes FROM account_storage
@@ -318,7 +414,12 @@ it("removes expired staged ciphertext before releasing its durable reservation",
     await markUploadObjectWritten(env, intent);
     db.connection.prepare("UPDATE upload_intents SET expires_at = ? WHERE id = ?")
       .run("2020-01-01T00:00:00.000Z", intent.id);
+    const expiredAdmission = await acquireUploadAdmission(env, principal);
+    db.connection.prepare(`UPDATE upload_admissions SET created_at = ?, expires_at = ? WHERE id = ?`)
+      .run("2019-12-31T00:00:00.000Z", "2020-01-01T00:00:00.000Z", expiredAdmission.id);
 
+    expect(await reconcileUploadAdmissions(env, 25, new Date("2026-01-01T00:00:00.000Z")))
+      .toBe(1);
     expect(await reconcileUploadIntents(env, 25, new Date("2026-01-01T00:00:00.000Z")))
       .toEqual({ expired: 1, completed: 0 });
     expect(db.connection.prepare("SELECT COUNT(*) AS n FROM upload_intents").get()).toMatchObject({ n: 0 });
@@ -326,5 +427,6 @@ it("removes expired staged ciphertext before releasing its durable reservation",
       .get(principal.userId)).toMatchObject({ reserved_bytes: 0 });
     expect(await env.EXPORTS.get(intent.objectKey)).toBeNull();
     expect(uploadIntentPolicy.maxActivePerAccount).toBe(2);
+    expect(uploadIntentPolicy.admissionLeaseMs).toBe(15 * 60_000);
   } finally { db.close(); }
 });

@@ -8,14 +8,14 @@
 
 ADR-0007 authorizes only an isolated, disposable, unbacked single-owner pilot with explicitly accepted data-loss and review risks. Those exceptions cannot become general product defaults. Multi-user Cloud needs tenant isolation, durable admission/quota state, recoverability, lifecycle completion, accountable operations, and product/privacy decisions before real users are invited.
 
-Source milestones now exist for split Worker profiles, durable upload reservations, per-account envelope keys and KEK rewrapping, account/session/token lifecycle, deletion status, bounded data portability, and health-data-free telemetry. They are test evidence, not approval, infrastructure, or a deployed service.
+Source milestones now exist for split Worker profiles, durable pre-body upload admissions and quota reservations, per-account envelope keys and KEK rewrapping, account/session/token lifecycle, deletion status, bounded data portability, and health-data-free telemetry. They are test evidence, not approval, infrastructure, or a deployed service.
 
 ## Decision (proposed)
 
 1. Build general production on fresh Cloudflare resources. Do not reuse the pilot VM, SQLite/files, keys, credentials, Tunnel, DNS target, or account.
 2. Deploy separate ingest, account, and maintenance Workers with separate deployment identities, positive route allowlists, and least-privilege bindings. Ingest uses account KEKs only to create new per-account ciphertext; maintenance uses them only to delete ciphertext and rewrap DEKs. Both reject the legacy global decrypt keyring/key ID, which remains account-only for controlled owner-authorized historical reads. Maintenance has no public HTTP route.
 3. Use a private production D1 database for initial cohorts, a private R2 bucket, a lifecycle Queue/DLQ, separate Analytics Engine datasets, and an approved independent key-custody/recovery system. D1 must pass the twice-target transaction benchmark or a new ADR chooses account-sharded D1 or account-scoped Durable Objects before rollout.
-4. Keep ingestion credentials write-only. Authenticate before durable account-scoped admission; permit at most two active commits per account; reserve quota atomically; acknowledge only after encrypted object and metadata commit; reconcile crashes and exact retries.
+4. Keep ingestion credentials write-only. Authenticate before durable account-scoped admission and before body materialization; trigger-cap active admissions plus write intents at two per account; atomically consume an admission while reserving quota; acknowledge only after encrypted object and metadata commit; reconcile crashes and exact retries.
 5. Encrypt each account's export objects with a random account DEK wrapped by a versioned KEK. Preserve legacy reads only for controlled migration. Historical KEKs remain until primary and restored evidence has no references and the recovery-retention window expires.
 6. Start invite-only with verified email-link sign-in. Split production stores only expiring one-time purpose-HMAC invite rows in D1, rechecks and consumes them with first-account creation, and rejects raw invite-address configuration; offline grant/revocation remains an approved operator action. There is no support bypass or manual email reassignment in v1. Loss of email access has no recovery path during the invite beta; this limitation must be disclosed. Passkeys plus recovery codes remain the recommended prerequisite for open signup and require a separate threat-model update.
 7. Retain current daily snapshots until user deletion or documented quota action. Retain superseded revisions for 30 days. Use a 1 GiB/account beta quota. Deletion disables all authority immediately, drives ciphertext-first erasure, and exposes only an opaque bounded status receipt. Backup/PITR deletion follows the disclosed provider expiry.
@@ -31,7 +31,7 @@ These values are design inputs, not approved promises:
 |---|---|---|
 | Staff/private beta | 10 then 100 invited accounts | product, security, privacy, operations |
 | GA planning capacity | 10,000 accounts; 250 concurrent uploads; 25 sustained uploads/s | 2x staging benchmark and cost review |
-| Account upload concurrency | 2 active intents | synthetic fault/concurrency tests |
+| Account upload concurrency | 2 active pre-body admissions plus write intents | synthetic fault/concurrency/expiry tests |
 | Account quota | 1 GiB beta | pricing and storage-cost review |
 | Current snapshot retention | until deletion/quota action | privacy/product approval and user copy |
 | Superseded revision retention | 30 days | privacy/product approval |

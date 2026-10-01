@@ -19,7 +19,7 @@ import { cancelRepairDispatch, claimRepairDispatch, declineRepairDispatch,
   listRepairDispatches, queueRepairDispatch, resumeRepairDispatch } from "./repair-dispatch";
 import { getAccountDeletionStatus, processAccountDeletions, purgeArchivedRevisions,
   purgeExpiredDeletionReceipts, requestAccountDeletion } from "./lifecycle";
-import { reconcileUploadIntents } from "./upload-intents";
+import { reconcileUploadAdmissions, reconcileUploadIntents } from "./upload-intents";
 import { reconcileOrphanExportObjects } from "./object-reconciliation";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
 import { decodeBase64, parseExportKeyring } from "./crypto";
@@ -433,6 +433,7 @@ export default {
       await phase(() => purgeExpiredAuditEvents(env, parsePositiveInteger(auditRetentionDays,
         "AUDIT_RETENTION_DAYS", 1, 3650)));
     }
+    await phase(() => reconcileUploadAdmissions(env));
     await phase(() => reconcileUploadIntents(env));
     if (env.SERVICE_PROFILE === "maintenance") await phase(() => reconcileOrphanExportObjects(env));
     if (env.ACCOUNT_KEY_MODE === "per_account") await phase(() => rewrapAccountExportKeys(env));

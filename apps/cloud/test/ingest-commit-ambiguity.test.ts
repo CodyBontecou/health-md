@@ -117,6 +117,20 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+it("releases its pre-body admission when envelope validation fails", async () => {
+  const { env, db, token, userId } = await setup();
+  try {
+    const response = await worker.fetch(new Request(`${origin}/api/v1/exports`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      body: "{}",
+    }), env);
+    expect(response.status).toBe(422);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS count FROM upload_admissions
+      WHERE user_id = ?`).get(userId)).toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
 it("accepts a committed upload when the D1 batch response is lost", async () => {
   const { env, db, token } = await setup();
   try {

@@ -130,6 +130,11 @@ for (const route of [/\/api\/auth\/password-login/u, /\/api\/agent-tokens/u,
 }
 const uploadIntentSource = read("src/upload-intents.ts");
 for (const fragment of [
+  "INSERT INTO upload_admissions", "FROM upload_admissions WHERE id = ? LIMIT 1",
+  '"admission_verification_pending"', "releaseUploadAdmission",
+  "ORDER BY expires_at, id LIMIT ?", "Upload admission cleanup verification is unavailable",
+]) requireText(uploadIntentSource, fragment, "durable pre-body upload admission");
+for (const fragment of [
   "FROM upload_intents WHERE id = ? LIMIT 1", "durable.userId === intent.userId",
   "durable.objectKey === intent.objectKey", "durable.digest === intent.digest",
   'durable.state === "reserved"', "durable.createdAt === intent.createdAt",
@@ -140,6 +145,17 @@ const reservationReturn = uploadIntentSource.indexOf("return intent;");
 if (reservationRead < 0 || reservationReturn < reservationRead) {
   failures.push("upload-intents.ts: candidate reservation returned before durable exact read-back");
 }
+const exportsSource = read("src/exports.ts");
+const authenticateIngest = exportsSource.indexOf("requireIngestToken(request, env)");
+const budgetIngest = exportsSource.indexOf("limitIngest(env, principal.tokenId, principal.userId)");
+const acquireAdmission = exportsSource.indexOf("acquireUploadAdmission(env, principal)");
+const materializeBody = exportsSource.indexOf("readBoundedBody(request, maximumBytes)");
+if (authenticateIngest < 0 || budgetIngest < authenticateIngest || acquireAdmission < budgetIngest ||
+    materializeBody < acquireAdmission) {
+  failures.push("exports.ts: auth and abuse budget must precede durable admission, which must precede body materialization");
+}
+requireText(exportsSource, "if (!admissionConsumed) await releaseUploadAdmission(env, admission)",
+  "pre-intent admission release");
 const accountKeySource = read("src/account-export-keys.ts");
 requireText(accountKeySource, 'if (env.ACCOUNT_KEY_MODE !== "per_account")', "per-account ingest key path");
 requireText(accountKeySource, 'parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "")',
@@ -172,6 +188,8 @@ requireText(indexSource, "[env.EXPORT_ENDPOINT_ORIGIN, env.SESSION_TTL_DAYS", "i
 requireText(indexSource, "[env.INGEST_TOKEN_HOURLY_LIMIT", "account runtime-setting isolation");
 requireText(indexSource, "[env.EXPORT_ENDPOINT_ORIGIN, env.MAX_EXPORT_BYTES", "maintenance runtime-setting isolation");
 requireText(indexSource, "phase(() => purgeExpiredAuthState(env))", "scheduled bounded auth cleanup");
+requireText(indexSource, "phase(() => reconcileUploadAdmissions(env))", "scheduled bounded admission cleanup");
+requireText(indexSource, "phase(() => reconcileUploadIntents(env))", "scheduled bounded intent cleanup");
 requireText(indexSource, "phase(() => purgeExpiredDeletionReceipts(env))", "scheduled bounded receipt cleanup");
 const repairDraftSource = read("src/repair-drafts.ts");
 requireText(repairDraftSource, "ORDER BY expires_at, id LIMIT ?", "bounded repair-draft cleanup");
@@ -207,8 +225,13 @@ if (JSON.stringify(migrationPrefixes) !== JSON.stringify(expectedMigrationPrefix
   failures.push(`migrations: expected exactly one contiguous source migration per prefix 0001-0018, found ${migrations.join(",")}`);
 }
 const ingestMigration = read("migrations/0010_multi_user_ingest.sql");
+requireText(ingestMigration, "CREATE TABLE upload_admissions", "migration 0010");
+requireText(ingestMigration, "CREATE TRIGGER upload_admissions_reserve", "migration 0010");
 requireText(ingestMigration, "CREATE TABLE upload_intents", "migration 0010");
+requireText(ingestMigration, "admission_id TEXT NOT NULL UNIQUE", "migration 0010");
 requireText(ingestMigration, "CREATE TRIGGER upload_intents_reserve", "migration 0010");
+requireText(ingestMigration, "CREATE TRIGGER upload_intents_consume_admission", "migration 0010");
+requireText(ingestMigration, "RAISE(ABORT, 'upload_admission_rejected')", "migration 0010");
 requireText(ingestMigration, "RAISE(ABORT, 'upload_reservation_rejected')", "migration 0010");
 const deletionAuthorityMigration = read("migrations/0015_deletion_receipt_authorities.sql");
 requireText(deletionAuthorityMigration, "CREATE TABLE account_deletion_receipts", "migration 0015");

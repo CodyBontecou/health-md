@@ -1,12 +1,22 @@
 import { HttpError } from "./http";
 import type { Env, IngestPrincipal } from "./types";
 
+const ADMISSION_LEASE_MS = 15 * 60_000;
 const INTENT_LEASE_MS = 15 * 60_000;
 const COMPLETED_INTENT_RETENTION_MS = 24 * 60 * 60_000;
 const MAX_ACTIVE_UPLOADS_PER_ACCOUNT = 2;
 
+export interface UploadAdmission {
+  id: string;
+  userId: string;
+  tokenId: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface UploadIntent {
   id: string;
+  admissionId: string;
   userId: string;
   tokenId: string;
   exportId: string;
@@ -26,6 +36,7 @@ interface IntentRow {
 }
 
 interface DurableIntentRow extends IntentRow {
+  admissionId: string;
   userId: string;
   tokenId: string;
   exportId: string;
@@ -40,6 +51,123 @@ interface StorageRow {
   committedBytes: number;
   reservedBytes: number;
   quotaBytes: number;
+}
+
+async function deleteAdmissionRows(env: Env, rows: Array<{ id: string }>): Promise<number> {
+  let removed = 0;
+  for (const row of rows) {
+    try {
+      await env.DB.prepare("DELETE FROM upload_admissions WHERE id = ?")
+        .bind(row.id).run();
+    } catch {
+      // A lost response may follow a committed delete. Verify absence below.
+    }
+    let durable: { id: string } | null;
+    try {
+      durable = await env.DB.prepare("SELECT id FROM upload_admissions WHERE id = ?")
+        .bind(row.id).first<{ id: string }>();
+    } catch {
+      throw new Error("Upload admission cleanup verification is unavailable");
+    }
+    if (durable) throw new Error("Expired upload admission was not removed");
+    removed += 1;
+  }
+  return removed;
+}
+
+async function reconcileAccountUploadAdmissions(
+  env: Env,
+  userId: string,
+  now: string,
+): Promise<number> {
+  const rows = await env.DB.prepare(`SELECT id FROM upload_admissions
+    WHERE user_id = ? AND expires_at <= ? ORDER BY expires_at, id LIMIT 4`)
+    .bind(userId, now).all<{ id: string }>();
+  return deleteAdmissionRows(env, rows.results);
+}
+
+async function classifyAdmissionFailure(
+  env: Env,
+  principal: IngestPrincipal,
+  now: string,
+): Promise<never> {
+  const token = await env.DB.prepare(
+    `SELECT 1 AS active FROM ingest_tokens t JOIN users u ON u.id = t.user_id
+     WHERE t.id = ? AND t.user_id = ? AND t.revoked_at IS NULL AND u.status = 'active'`,
+  ).bind(principal.tokenId, principal.userId).first<{ active: number }>();
+  if (!token) throw new HttpError(401, "unauthorized", "Export token is no longer active.");
+  const active = await env.DB.prepare(`SELECT
+    (SELECT COUNT(*) FROM upload_admissions
+      WHERE user_id = ? AND expires_at > ?) +
+    (SELECT COUNT(*) FROM upload_intents
+      WHERE user_id = ? AND state IN ('reserved', 'object_written') AND expires_at > ?) AS count`)
+    .bind(principal.userId, now, principal.userId, now).first<{ count: number }>();
+  if ((active?.count ?? 0) >= MAX_ACTIVE_UPLOADS_PER_ACCOUNT) {
+    throw new HttpError(429, "account_busy", "This account already has two uploads in progress. Retry shortly.");
+  }
+  throw new HttpError(503, "ingest_busy", "Export ingestion is temporarily busy. Retry shortly.");
+}
+
+export async function acquireUploadAdmission(
+  env: Env,
+  principal: IngestPrincipal,
+): Promise<UploadAdmission> {
+  const createdAt = new Date().toISOString();
+  await reconcileAccountUploadAdmissions(env, principal.userId, createdAt);
+  const admission: UploadAdmission = {
+    id: crypto.randomUUID(),
+    userId: principal.userId,
+    tokenId: principal.tokenId,
+    createdAt,
+    expiresAt: new Date(Date.parse(createdAt) + ADMISSION_LEASE_MS).toISOString(),
+  };
+  try {
+    await env.DB.prepare(`INSERT INTO upload_admissions
+      (id, user_id, token_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?)`)
+      .bind(admission.id, admission.userId, admission.tokenId,
+        admission.createdAt, admission.expiresAt).run();
+  } catch {
+    // Distinguish a lost successful response from a real trigger rejection by
+    // reading the random candidate ID rather than parsing provider errors.
+  }
+  let durable: UploadAdmission | null;
+  try {
+    durable = await env.DB.prepare(`SELECT id, user_id AS userId, token_id AS tokenId,
+      created_at AS createdAt, expires_at AS expiresAt
+      FROM upload_admissions WHERE id = ? LIMIT 1`)
+      .bind(admission.id).first<UploadAdmission>();
+  } catch {
+    throw new HttpError(503, "admission_verification_pending",
+      "Upload admission status could not be verified. Retry shortly.");
+  }
+  if (durable && durable.userId === admission.userId && durable.tokenId === admission.tokenId &&
+      durable.createdAt === admission.createdAt && durable.expiresAt === admission.expiresAt) {
+    return admission;
+  }
+  if (durable) throw new Error("Upload admission durable state is inconsistent");
+  return classifyAdmissionFailure(env, principal, createdAt);
+}
+
+export async function releaseUploadAdmission(env: Env, admission: UploadAdmission): Promise<void> {
+  try {
+    await env.DB.prepare(`DELETE FROM upload_admissions
+      WHERE id = ? AND user_id = ? AND token_id = ?`)
+      .bind(admission.id, admission.userId, admission.tokenId).run();
+  } catch {
+    // Verify a possibly committed delete rather than leaking an account slot.
+  }
+  let durable: { id: string } | null;
+  try {
+    durable = await env.DB.prepare("SELECT id FROM upload_admissions WHERE id = ?")
+      .bind(admission.id).first<{ id: string }>();
+  } catch {
+    throw new HttpError(503, "admission_release_pending",
+      "Upload admission release could not be verified. Retry shortly.");
+  }
+  if (durable) {
+    throw new HttpError(503, "admission_release_pending",
+      "Upload admission release could not be verified. Retry shortly.");
+  }
 }
 
 async function deleteExpiredRows(env: Env, rows: Array<{ id: string; objectKey: string }>): Promise<number> {
@@ -100,10 +228,12 @@ async function classifyReservationFailure(
   if (storage.committedBytes + storage.reservedBytes + bytes > storage.quotaBytes) {
     throw new HttpError(413, "account_quota", "Account export storage quota reached.");
   }
-  const active = await env.DB.prepare(
-    `SELECT COUNT(*) AS count FROM upload_intents
-     WHERE user_id = ? AND state IN ('reserved', 'object_written') AND expires_at > ?`,
-  ).bind(principal.userId, now).first<{ count: number }>();
+  const active = await env.DB.prepare(`SELECT
+    (SELECT COUNT(*) FROM upload_admissions
+      WHERE user_id = ? AND expires_at > ?) +
+    (SELECT COUNT(*) FROM upload_intents
+      WHERE user_id = ? AND state IN ('reserved', 'object_written') AND expires_at > ?) AS count`)
+    .bind(principal.userId, now, principal.userId, now).first<{ count: number }>();
   if ((active?.count ?? 0) >= MAX_ACTIVE_UPLOADS_PER_ACCOUNT) {
     throw new HttpError(429, "account_busy", "This account already has two uploads in progress. Retry shortly.");
   }
@@ -115,14 +245,19 @@ async function classifyReservationFailure(
 export async function reserveUploadIntent(
   env: Env,
   principal: IngestPrincipal,
+  admission: UploadAdmission,
   digest: string,
   scopeDigest: string | null,
   byteCount: number,
 ): Promise<UploadIntent> {
   const createdAt = new Date().toISOString();
   await reconcileAccountUploadIntents(env, principal.userId, createdAt);
+  if (admission.userId !== principal.userId || admission.tokenId !== principal.tokenId) {
+    throw new Error("Upload admission principal does not match");
+  }
   const intent: UploadIntent = {
     id: crypto.randomUUID(),
+    admissionId: admission.id,
     userId: principal.userId,
     tokenId: principal.tokenId,
     exportId: crypto.randomUUID(),
@@ -138,12 +273,12 @@ export async function reserveUploadIntent(
     // change metadata is not portable, so verify the exact candidate below.
     await env.DB.prepare(
       `INSERT INTO upload_intents
-       (id, user_id, token_id, export_id, object_key, plaintext_sha256, scope_digest,
+       (id, admission_id, user_id, token_id, export_id, object_key, plaintext_sha256, scope_digest,
         byte_count, state, created_at, updated_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?)`,
-    ).bind(intent.id, intent.userId, intent.tokenId, intent.exportId, intent.objectKey,
-      intent.digest, intent.scopeDigest, intent.byteCount, intent.createdAt, intent.createdAt,
-      intent.expiresAt).run();
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?)`,
+    ).bind(intent.id, intent.admissionId, intent.userId, intent.tokenId, intent.exportId,
+      intent.objectKey, intent.digest, intent.scopeDigest, intent.byteCount, intent.createdAt,
+      intent.createdAt, intent.expiresAt).run();
   } catch {
     // The exact candidate read distinguishes a lost successful response from a
     // true trigger/uniqueness rejection without relying on error text.
@@ -151,8 +286,9 @@ export async function reserveUploadIntent(
   let durable: DurableIntentRow | null;
   try {
     durable = await env.DB.prepare(
-      `SELECT id, user_id AS userId, token_id AS tokenId, export_id AS exportId,
-              object_key AS objectKey, plaintext_sha256 AS digest, scope_digest AS scopeDigest,
+      `SELECT id, admission_id AS admissionId, user_id AS userId, token_id AS tokenId,
+              export_id AS exportId, object_key AS objectKey,
+              plaintext_sha256 AS digest, scope_digest AS scopeDigest,
               byte_count AS byteCount, state, created_at AS createdAt,
               updated_at AS updatedAt, expires_at AS expiresAt
        FROM upload_intents WHERE id = ? LIMIT 1`,
@@ -161,7 +297,8 @@ export async function reserveUploadIntent(
     throw new HttpError(503, "reservation_verification_pending",
       "Upload reservation status could not be verified. Retry shortly.");
   }
-  if (durable && durable.userId === intent.userId && durable.tokenId === intent.tokenId &&
+  if (durable && durable.admissionId === intent.admissionId &&
+      durable.userId === intent.userId && durable.tokenId === intent.tokenId &&
       durable.exportId === intent.exportId && durable.objectKey === intent.objectKey &&
       durable.digest === intent.digest && durable.scopeDigest === intent.scopeDigest &&
       durable.byteCount === intent.byteCount && durable.state === "reserved" &&
@@ -218,6 +355,18 @@ export async function abandonUploadIntent(env: Env, intent: UploadIntent): Promi
   ).bind(intent.id, intent.userId).run();
 }
 
+export async function reconcileUploadAdmissions(
+  env: Env,
+  limit = 25,
+  now = new Date(),
+): Promise<number> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Invalid upload-admission limit");
+  const rows = await env.DB.prepare(`SELECT id FROM upload_admissions
+    WHERE expires_at <= ? ORDER BY expires_at, id LIMIT ?`)
+    .bind(now.toISOString(), limit).all<{ id: string }>();
+  return deleteAdmissionRows(env, rows.results);
+}
+
 export async function reconcileUploadIntents(
   env: Env,
   limit = 25,
@@ -247,6 +396,7 @@ export async function reconcileUploadIntents(
 }
 
 export const uploadIntentPolicy = {
+  admissionLeaseMs: ADMISSION_LEASE_MS,
   leaseMs: INTENT_LEASE_MS,
   completedRetentionMs: COMPLETED_INTENT_RETENTION_MS,
   maxActivePerAccount: MAX_ACTIVE_UPLOADS_PER_ACCOUNT,

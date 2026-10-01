@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { createVmEnvironment } from "../vm/runtime";
 import { reconcileOrphanExportObjects } from "../src/object-reconciliation";
 import { purgeArchivedRevisions } from "../src/lifecycle";
-import { reserveUploadIntent } from "../src/upload-intents";
+import { acquireUploadAdmission, reserveUploadIntent } from "../src/upload-intents";
 import type { IngestPrincipal } from "../src/types";
 
 const roots: string[] = [];
@@ -65,7 +65,9 @@ async function archivedExport(env: ReturnType<typeof setup>["env"],
 it("deletes only unreferenced ciphertext across bounded cursor pages", async () => {
   const { env, db } = setup();
   try {
-    const intent = await reserveUploadIntent(env, account(db), "a".repeat(64), null, 10);
+    const principal = account(db);
+    const admission = await acquireUploadAdmission(env, principal);
+    const intent = await reserveUploadIntent(env, principal, admission, "a".repeat(64), null, 10);
     const orphanA = `v1/${randomUUID()}`;
     const orphanB = `v1/${randomUUID()}`;
     const keys = [orphanA, intent.objectKey, orphanB];

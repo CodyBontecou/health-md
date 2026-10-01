@@ -89,13 +89,14 @@ The production path should use Cloudflare's Worker route directly rather than th
 
 ## Ingest concurrency and consistency design
 
-**Source milestone:** migration `0010_multi_user_ingest.sql`, `src/upload-intents.ts`, and the ingest integration implement the account reservation ledger, two-active-upload limit, committed/reserved byte triggers, bounded exact-retry wait, exact full-field reservation creation read-back after normal/lost/false-success D1 responses, exact reserved→object-written state/timestamp verification after lost D1 responses, ambiguous final D1 commit-response reconciliation, and expired-intent reconciliation. A lost batch response is accepted only after the export+committed-intent postcondition is read back; an unavailable post-commit read returns retryable backpressure without deleting possibly committed ciphertext. Synthetic VM and local-D1 migration tests cover this source state. It has not been applied to the live pilot or any production resource.
+**Source milestone:** migration `0010_multi_user_ingest.sql`, `src/upload-intents.ts`, and the ingest integration acquire and exactly verify one of two durable account-scoped positions immediately after authentication/rate limiting and before body materialization; active admissions plus write intents are trigger-capped together, successful intent creation atomically consumes its admission, every normal pre-intent exit exactly releases it, and an independent bounded maintenance phase expires abandoned admissions without starving intent/object cleanup after peer failure. They also implement the account reservation ledger, committed/reserved byte triggers, bounded exact-retry wait, exact full-field reservation creation read-back after normal/lost/false-success D1 responses, exact reserved→object-written state/timestamp verification after lost D1 responses, ambiguous final D1 commit-response reconciliation, and expired-intent reconciliation. A lost batch response is accepted only after the export+committed-intent postcondition is read back; an unavailable post-commit read returns retryable backpressure without deleting possibly committed ciphertext. Synthetic VM and local-D1 migration tests cover this source state. It has not been applied to the live pilot or any production resource.
 
 Do not replace the four-slot VM gate with a larger process-global number. The production Worker should horizontally serve different accounts and enforce fairness with durable account-scoped state.
 
 Add these concepts to the production data model:
 
 - `account_storage`: committed bytes, reserved bytes, quota, and version;
+- `upload_admissions`: short-lived pre-body account/token positions acquired before materialization;
 - `upload_intents`: account, token, idempotency key or digest, expected bytes, state, lease expiry, and timestamps;
 - explicit states such as `reserved`, `object_written`, `committed`, `aborted`, and `reconciling`;
 - a unique account-scoped payload digest and, when mobile clients support it, an account-scoped idempotency key;
@@ -103,13 +104,13 @@ Add these concepts to the production data model:
 
 An upload should follow this state machine:
 
-1. Validate host, method, token shape, token activity, content type, and declared size.
-2. Read and validate a bounded body; compute its exact digest. Abort promptly on client disconnect.
-3. In one D1 transaction, claim an idempotent intent, enforce at most two active uploads for that account, and reserve quota.
+1. Validate host, method, token shape/activity, rate budget, content type, and declared size; durably acquire one of two account positions before accepting the body.
+2. Read and validate a bounded body; compute its exact digest. Abort promptly on client disconnect and exactly release the admission on every pre-intent exit.
+3. In one D1 transaction, consume that admission, claim an idempotent intent, keep admissions plus active intents at no more than two for the account, and reserve quota.
 4. Encrypt and write the object under a random staging key.
 5. In one D1 transaction, re-check account/token activity, insert metadata, update daily pointers, convert reserved bytes to committed bytes, and mark the intent committed.
 6. Return 2xx only after step 5. Exact retries return the original receipt.
-7. On failure, release the reservation and delete the staged object. A durable reconciler handles crashes between steps.
+7. On later failure, release the reservation and delete the staged object. A bounded durable reconciler expires abandoned admissions and handles crashes between later steps.
 
 There should be no long in-memory queue. Return `429` with `Retry-After` for an account concurrency or token rate limit, and `503` with `Retry-After` for global dependency/load shedding. Mobile clients must use bounded exponential backoff and retain exact pending bytes for retry.
 

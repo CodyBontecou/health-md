@@ -5,8 +5,8 @@ import { EnvelopeValidationError, parseAndValidateEnvelope } from "./envelope";
 import { assertJsonContentType, HttpError, json, parsePositiveInteger, readBoundedBody } from "./http";
 import { parseRepairSpec, type RepairDraftSpec } from "./repair-drafts";
 import { encryptSupplementSpec, supplementScopeDigest } from "./repair-supplements";
-import { abandonUploadIntent, commitUploadIntentStatement, markUploadObjectWritten,
-  reserveUploadIntent } from "./upload-intents";
+import { abandonUploadIntent, acquireUploadAdmission, commitUploadIntentStatement,
+  markUploadObjectWritten, releaseUploadAdmission, reserveUploadIntent } from "./upload-intents";
 import type { Env, EnvelopeInfo } from "./types";
 
 interface ExportRow {
@@ -64,6 +64,9 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
   await limitIngest(env, principal.tokenId, principal.userId);
   assertJsonContentType(request);
   const maximumBytes = parsePositiveInteger(env.MAX_EXPORT_BYTES, "MAX_EXPORT_BYTES", 1024, 25 * 1024 * 1024);
+  const admission = await acquireUploadAdmission(env, principal);
+  let admissionConsumed = false;
+  try {
   const body = await readBoundedBody(request, maximumBytes);
   let info: EnvelopeInfo;
   try {
@@ -113,7 +116,8 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
   if (existing) return existing;
   let intent: Awaited<ReturnType<typeof reserveUploadIntent>>;
   try {
-    intent = await reserveUploadIntent(env, principal, digest, scopeDigest, body.byteLength);
+    intent = await reserveUploadIntent(env, principal, admission, digest, scopeDigest, body.byteLength);
+    admissionConsumed = true;
   } catch (error) {
     if (error instanceof HttpError && error.code === "upload_in_progress") {
       // Preserve the existing exact-retry contract without admitting another
@@ -220,6 +224,9 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
   }
   return json({ accepted: true, duplicate: false, id: intent.exportId, records: info.recordCount,
     ...(spec ? { mode: "supplemental", failureCount: info.failureCount } : {}) }, { status: 201 });
+  } finally {
+    if (!admissionConsumed) await releaseUploadAdmission(env, admission);
+  }
 }
 
 export async function listExports(env: Env, userId: string): Promise<Response> {
