@@ -7,6 +7,7 @@ on:
     paths:
       - 'apps/cloud/**'
       - 'docs/architecture/adr-0007-healthmd-cloud.md'
+      - 'docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md'
       - 'packages/contracts/product-capabilities.json'
       - 'packages/contracts/manifest.json'
       - '.github/workflows/cloud-ci.yml'
@@ -38,13 +39,18 @@ jobs:
         run: npm ci
       - name: Typecheck and unit tests (synthetic only)
         run: npm run check
-      - name: Verify platform capability inventory
-        run: python3 ../../packages/contracts/validate.py --product-parity-only
+      - name: Verify production remains fail-closed and unapproved
+        run: npm run verify:production-safety
       - name: Exercise isolated local D1/R2 authentication and ingestion
         run: npm run test:smoke
       - name: Build VM-native adapter without publishing
         run: npm run build:vm
-      - name: Build Worker without publishing
+      - name: Build combined Worker without publishing
         run: npm exec -- wrangler deploy --dry-run --outdir "$RUNNER_TEMP/healthmd-cloud-dry-run"
+      - name: Build split production profiles without publishing
+        run: |
+          npm exec -- wrangler deploy --dry-run --config wrangler.ingest.toml --outdir "$RUNNER_TEMP/healthmd-cloud-ingest-dry-run"
+          npm exec -- wrangler deploy --dry-run --config wrangler.account.toml --outdir "$RUNNER_TEMP/healthmd-cloud-account-dry-run"
+          npm exec -- wrangler deploy --dry-run --config wrangler.maintenance.toml --outdir "$RUNNER_TEMP/healthmd-cloud-maintenance-dry-run"
       - name: Audit dependencies
         run: npm audit --audit-level=moderate

@@ -222,7 +222,8 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect(statSync(join(directory, "objects", saved.object_key), { throwIfNoEntry: false })).toBeUndefined();
       expect(statSync(join(directory, "objects", latest.object_key)).isFile()).toBe(true);
       const deletion = await proxiedRequest(service.port, "/api/account/delete", "POST",
-        { password: fakePassword, confirmation: "DELETE" }, cookie);
+        { password: fakePassword, confirmation: "DELETE",
+          statusToken: `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}` }, cookie);
       expect(deletion.status).toBe(202);
       const unauthorizedAfterDeletion = await proxiedRequest(service.port, "/api/account", "GET",
         undefined, cookie);
@@ -242,7 +243,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const { env, db, directory } = createTestEnv("personal-mvp");
     const { env: accountEnv, db: accountDb } = createVmEnvironment({
       dataDirectory: directory, sourceDirectory, publicOrigin: "https://account.example.test",
-      identityKey: env.IDENTITY_KEY_B64, exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON,
+      identityKey: env.IDENTITY_KEY_B64, exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON ?? "",
       currentKeyId: "v1", passwordPepper: env.PASSWORD_PEPPER_B64 ?? "",
       personalMvp: true, revisionRetention: "unlimited",
     });
@@ -331,7 +332,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const { env: apiEnv, db: apiDb } = createVmEnvironment({
       dataDirectory: directory, sourceDirectory,
       publicOrigin: "https://api.example.test", identityKey: env.IDENTITY_KEY_B64,
-      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON, currentKeyId: "v1",
+      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON ?? "", currentKeyId: "v1",
       passwordPepper: env.PASSWORD_PEPPER_B64 ?? "", personalMvp: true,
       revisionRetention: "unlimited",
     });
@@ -397,7 +398,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const { env: accountEnv, db: accountDb } = createVmEnvironment({
       dataDirectory: directory, sourceDirectory,
       publicOrigin: "https://account.example.test", identityKey: env.IDENTITY_KEY_B64,
-      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON, currentKeyId: "v1",
+      exportKeys: env.EXPORT_ENCRYPTION_KEYS_JSON ?? "", currentKeyId: "v1",
       passwordPepper: env.PASSWORD_PEPPER_B64 ?? "", personalMvp: true,
       revisionRetention: "unlimited",
     });
@@ -469,7 +470,7 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
         expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
         expect(authenticateReadToken(readOnly, `Bearer ${issued.token}`)).toBeNull();
       } finally { readOnly.close(); }
-      expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(404);
+      expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
       expect((await req("/api/v1/exports", "POST", {}, cookie)).status).toBe(404);
     } finally { await account.close(); accountDb.close(); db.close(); }
   }, 30_000);

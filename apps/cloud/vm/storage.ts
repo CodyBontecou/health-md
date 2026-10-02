@@ -1,8 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
-import { lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { lstat, mkdir, open, readFile, readdir, rename, unlink } from "node:fs/promises";
+import { createReadStream, lstatSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { link, lstat, mkdir, open, readFile, readdir, stat, unlink } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const OBJECT_KEY = /^v1\/[a-f0-9-]{36}$/u;
 const ASSETS = new Map([
@@ -171,7 +171,11 @@ export class VmObjectStore {
       await file.close();
     }
     try {
-      await rename(temp, destination);
+      // Publishing through link(2) is atomic and create-only. A retry after a
+      // lost response can verify the existing bytes through head(), while an
+      // opaque-key collision can never replace previously retained ciphertext.
+      await link(temp, destination);
+      await unlink(temp);
       const dir = await open(directory, "r");
       try { await dir.sync(); } finally { await dir.close(); }
     } catch (error) {
@@ -180,14 +184,38 @@ export class VmObjectStore {
     }
   }
 
-  async get(key: string): Promise<{ arrayBuffer: () => Promise<ArrayBuffer> } | null> {
+  async get(key: string): Promise<{ size: number; arrayBuffer: () => Promise<ArrayBuffer> } | null> {
     let bytes: Uint8Array;
     try { bytes = await readFile(this.path(key)); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;
     }
-    return { arrayBuffer: async () => Uint8Array.from(bytes).buffer };
+    return { size: bytes.byteLength, arrayBuffer: async () => Uint8Array.from(bytes).buffer };
+  }
+
+  async head(key: string): Promise<{
+    key: string;
+    size: number;
+    checksums: { sha256: ArrayBuffer; toJSON: () => { sha256: string } };
+  } | null> {
+    try {
+      const path = this.path(key);
+      const info = await stat(path);
+      const hasher = createHash("sha256");
+      for await (const chunk of createReadStream(path)) hasher.update(chunk);
+      const digest = hasher.digest();
+      const sha256 = digest.buffer.slice(digest.byteOffset, digest.byteOffset + digest.byteLength) as ArrayBuffer;
+      const sha256Hex = Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      return {
+        key,
+        size: info.size,
+        checksums: { sha256, toJSON: () => ({ sha256: sha256Hex }) },
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
   }
 
   async delete(key: string): Promise<void> {
@@ -195,7 +223,12 @@ export class VmObjectStore {
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
-    const dir = await open(join(this.root, "v1"), "r");
+    let dir;
+    try { dir = await open(join(this.root, "v1"), "r"); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+      throw error;
+    }
     try { await dir.sync(); } finally { await dir.close(); }
   }
 
@@ -207,7 +240,9 @@ export class VmObjectStore {
     await mkdir(directory, { recursive: true, mode: vmReaderGroupId() === null ? 0o700 : 0o750 });
     this.assertSafeDirectory(this.root);
     this.assertSafeDirectory(directory);
-    const rows = await db.prepare("SELECT object_key AS objectKey FROM exports").all<{ objectKey: string }>();
+    const rows = await db.prepare(`SELECT object_key AS objectKey FROM exports
+      UNION SELECT object_key AS objectKey FROM upload_intents
+      WHERE state IN ('reserved', 'object_written', 'aborting')`).all<{ objectKey: string }>();
     const expected = new Set(rows.results.map(({ objectKey }) => {
       this.path(objectKey);
       return objectKey.slice(3);

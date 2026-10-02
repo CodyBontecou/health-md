@@ -1,4 +1,5 @@
-import { decryptExport, parseExportKeyring, sha256Hex } from "./crypto";
+import { decryptExport, encryptedExportByteCount, sha256Hex } from "./crypto";
+import { resolveExportKey } from "./account-export-keys";
 import { HttpError, json, readJson, assertSameOrigin } from "./http";
 import type { Env } from "./types";
 import registry from "../../../packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json" with { type: "json" };
@@ -29,7 +30,6 @@ const catalog = projections.map((projection) => {
 });
 const DAY = 86_400_000;
 const MAX_DECRYPTED_BYTES = 48 * 1024 * 1024;
-const MAX_OBJECT_BYTES = 25 * 1024 * 1024 + 256;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const OBJECT_KEY = /^v1\/[a-f0-9-]{36}$/u;
 const EXPORT_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u;
@@ -73,13 +73,12 @@ export async function readVerifiedEnvelope(row: EnvelopeRow, env: Env, userId: s
     throw new HttpError(503, "unavailable_data", "A retained export is unavailable.");
   }
   const objectData = await env.EXPORTS.get(row.objectKey);
-  if (!objectData) throw new HttpError(503, "unavailable_data", "A retained export is unavailable.");
-  const encrypted = new Uint8Array(await objectData.arrayBuffer());
-  const key = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON).get(row.keyId);
-  if (!key || encrypted.byteLength > MAX_OBJECT_BYTES) {
+  if (!objectData || objectData.size !== encryptedExportByteCount(row.byteCount)) {
     throw new HttpError(503, "unavailable_data", "A retained export is unavailable.");
   }
+  const encrypted = new Uint8Array(await objectData.arrayBuffer());
   try {
+    const key = await resolveExportKey(env, userId, row.keyId);
     const plaintext = await decryptExport(encrypted, key, userId, row.exportId);
     if (plaintext.byteLength !== row.byteCount || await sha256Hex(plaintext) !== row.digest) throw new Error("integrity");
     const envelope = object(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(plaintext)));

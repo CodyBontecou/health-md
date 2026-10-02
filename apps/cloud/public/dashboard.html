@@ -51,6 +51,12 @@
         <h3 id="storage-title">Export history</h3>
         <p id="storage" class="note">Loading…</p>
         <p class="note">Ordinary repeated dates replace the current daily pointer; a narrow ordinary export could hide older fields. Separately retained supplements (when available) do not replace that pointer. Downloads are original, sensitive JSON—not normalized reports.</p>
+        <div id="account-export-panel" class="token-panel" hidden>
+          <p><strong>Account data export</strong></p><p class="note">Each uncompressed TAR page contains up to five exact, integrity-verified retained JSON envelopes plus a manifest. Keep these sensitive files private.</p>
+          <label for="account-export-page">Archive page <span id="account-export-pages"></span></label>
+          <input id="account-export-page" type="number" min="1" value="1">
+          <a id="download-account-export" class="subtle-link" href="/api/account/export/page/1" download>Download archive page</a>
+        </div>
         <ul id="export-list" class="record-list"></ul>
         <button type="button" id="more-exports" class="subtle" hidden>Load more exports</button>
       </section>
@@ -91,11 +97,25 @@
     </div>
 
     <section id="deletion-section" class="danger-section" aria-labelledby="deletion-title" hidden>
+      <h3 id="sessions-title">Signed-in browsers</h3>
+      <p class="note">Review active browser sessions and revoke any you no longer recognize.</p>
+      <ul id="session-list" class="record-list"></ul>
+      <button type="button" id="revoke-other-sessions" class="subtle">Sign out other browsers</button>
+      <h3 id="security-activity-title">Recent security activity</h3>
+      <p class="note">Up to 50 recent sign-in, session, credential, download, and approved repair-device events. Target identifiers and health metadata are never shown.</p>
+      <ul id="security-activity-list" class="record-list" aria-labelledby="security-activity-title"></ul>
       <h3 id="deletion-title">Delete this account</h3>
-      <p>Deleting your account disables sign-in and uploads immediately. Stored exports are then erased by the background deletion job. This unbacked pilot has no off-host backup or recovery.</p>
-      <form id="delete-account-form"><label for="delete-password">Enter your password again</label><input id="delete-password" type="password" autocomplete="current-password" required minlength="16"><label for="delete-confirmation">Type DELETE to confirm</label><input id="delete-confirmation" required autocomplete="off" pattern="DELETE"><button type="submit" class="danger-button">Request permanent deletion</button></form>
+      <p id="deletion-copy">Deleting your account disables sign-in, uploads, and read credentials immediately. Stored exports are then erased by a durable background deletion job.</p>
+      <form id="delete-account-form"><span id="delete-password-field"><label for="delete-password">Enter your password again</label><input id="delete-password" type="password" autocomplete="current-password" minlength="16"></span><label for="delete-confirmation">Type DELETE to confirm</label><input id="delete-confirmation" required autocomplete="off" pattern="DELETE"><button type="submit" class="danger-button">Request permanent deletion</button></form>
     </section>
-    <footer>Health.md Cloud · Your data, your choice · Single-owner unbacked pilot</footer>
+    <section id="deletion-receipt-section" class="token-panel" hidden>
+      <h3>Save your deletion status receipt</h3>
+      <p class="note">This credential is shown once. Save it securely if you want to check deletion after sign-out. Do not put it in a URL, chat, or support message.</p>
+      <label for="deletion-status-token">Deletion status receipt</label>
+      <input id="deletion-status-token" readonly autocomplete="off" spellcheck="false">
+      <a href="/deletion-status">Open the status checker</a>
+    </section>
+    <footer>Health.md Cloud · Your data, your choice · Optional retained exports</footer>
   </main>
 </body>
 </html>

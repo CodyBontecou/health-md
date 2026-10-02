@@ -1,0 +1,866 @@
+import { afterEach, expect, it } from "vitest";
+import { randomBytes, randomUUID } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import worker from "../src/index";
+import { getSession, issueSession, purgeExpiredAuditEvents } from "../src/auth";
+import { processAccountDeletionById, processAccountDeletions, purgeExpiredDeletionReceipts,
+  requestAccountDeletion } from "../src/lifecycle";
+import maintenanceWorker from "../src/maintenance-worker";
+import { createVmEnvironment } from "../vm/runtime";
+import { createSingleUserAccount } from "../vm/bootstrap";
+import { acquireUploadAdmission, reserveUploadIntent } from "../src/upload-intents";
+import type { Env, IngestPrincipal, LifecycleMessage } from "../src/types";
+
+const roots: string[] = [];
+const sourceDirectory = resolve(import.meta.dirname, "..");
+const origin = "https://account.example.test";
+
+function secret(): string { return Buffer.from(randomBytes(32)).toString("base64"); }
+function deletionStatusToken(): string {
+  return `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}`;
+}
+function deletionInput(extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return { confirmation: "DELETE", statusToken: deletionStatusToken(), ...extra };
+}
+
+async function setup() {
+  const directory = mkdtempSync(join(tmpdir(), "healthmd-account-lifecycle-"));
+  roots.push(directory);
+  const created = createVmEnvironment({
+    dataDirectory: directory,
+    sourceDirectory,
+    publicOrigin: origin,
+    identityKey: secret(),
+    exportKeys: JSON.stringify({ v1: secret() }),
+    currentKeyId: "v1",
+    passwordPepper: secret(),
+    revisionRetention: 30,
+    approved: true,
+  });
+  created.env.AUTH_MODE = "email_link";
+  created.env.AUTH_SIGNUP_MODE = "invite";
+  created.env.AUTH_EMAIL_FROM = "Health.md Cloud <cloud@healthmd.app>";
+  created.env.RESEND_API_KEY = "synthetic-provider-secret";
+  await createSingleUserAccount(created.env, "synthetic-owner", "owner@example.test",
+    "synthetic-password-not-for-production");
+  const user = created.db.connection.prepare("SELECT id FROM users").get() as { id: string };
+  return { ...created, userId: user.id };
+}
+
+async function session(env: Env, userId: string): Promise<string> {
+  const response = await issueSession(env, userId);
+  const cookie = response.headers.get("set-cookie")?.split(";", 1)[0];
+  if (!cookie) throw new Error("Synthetic session cookie was not issued");
+  return cookie;
+}
+
+async function request(env: Env, path: string, method = "GET", body?: unknown, cookie?: string): Promise<Response> {
+  return worker.fetch(new Request(`${origin}${path}`, {
+    method,
+    headers: {
+      ...(body === undefined ? {} : { "Content-Type": "application/json", Origin: origin }),
+      ...(method === "GET" ? {} : { Origin: origin }),
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  }), env);
+}
+
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+
+it("uses a fresh email-link session as deletion step-up and durably queues erasure", async () => {
+  const { env, db, userId } = await setup();
+  const queued: LifecycleMessage[] = [];
+  env.LIFECYCLE_QUEUE = { send: async (message: LifecycleMessage) => { queued.push(message); } } as
+    unknown as Queue<LifecycleMessage>;
+  try {
+    const cookie = await session(env, userId);
+    const token = await request(env, "/api/ingest-tokens", "POST", { name: "Synthetic phone" }, cookie);
+    const bearer = (await token.json() as { token: string }).token;
+    const fixture = readFileSync(resolve(sourceDirectory,
+      "../apple/docs/reference/generated/automation/api-export-v1.json"), "utf8");
+    const upload = await worker.fetch(new Request(`${origin}/api/v1/exports`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+      body: fixture,
+    }), env);
+    expect(upload.status).toBe(201);
+
+    const requestedStatusToken = deletionStatusToken();
+    const deletion = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken: requestedStatusToken }), cookie);
+    expect(deletion.status).toBe(202);
+    const receipt = await deletion.json() as {
+      status: string; statusToken: string; statusExpiresAt: string
+    };
+    expect(receipt).toEqual({ status: "pending", statusToken: requestedStatusToken,
+      statusExpiresAt: expect.any(String) });
+    expect(Date.parse(receipt.statusExpiresAt)).toBeGreaterThan(Date.now());
+    expect(queued).toHaveLength(1);
+    expect(queued[0]).toMatchObject({ version: 1, type: "account.delete",
+      deletionId: expect.stringMatching(/^[a-f0-9-]{36}$/u) });
+    const deletionId = queued[0]!.deletionId;
+    const pending = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${receipt.statusToken}` },
+    }), env);
+    expect(await pending.json()).toEqual({ status: "pending" });
+    expect((await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer hmd_del_${"A".repeat(43)}` },
+    }), env)).status).toBe(401);
+    expect(db.connection.prepare(
+      "SELECT status_token_hash AS hash FROM account_deletion_receipts WHERE deletion_id = ?",
+    ).get(deletionId)).not.toMatchObject({ hash: receipt.statusToken });
+    expect((await request(env, "/api/account", "GET", undefined, cookie)).status).toBe(401);
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "disabled" });
+
+    let acknowledged = false;
+    let retried = false;
+    // Exercise the Queue adapter locally; production-profile validation is covered separately.
+    env.ENVIRONMENT = "development";
+    env.SERVICE_PROFILE = "maintenance";
+    await maintenanceWorker.queue({ messages: [{ body: queued[0],
+      ack: () => { acknowledged = true; }, retry: () => { retried = true; } }] } as
+      unknown as MessageBatch<LifecycleMessage>, env);
+    expect({ acknowledged, retried }).toEqual({ acknowledged: true, retried: false });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM exports").get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(deletionId)).toMatchObject({ completed_at: expect.any(String) });
+    env.SERVICE_PROFILE = undefined;
+    const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${receipt.statusToken}` },
+    }), env);
+    expect(await completed.json()).toEqual({ status: "completed" });
+    db.connection.prepare(
+      "UPDATE account_deletion_receipts SET status_expires_at = '2020-01-01T00:00:00.000Z'",
+    ).run();
+    await purgeExpiredDeletionReceipts(env);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get()).toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("does not create deletion authority unless account disablement is durable", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) =>
+        target.batch(statements.slice(1));
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    const response = await request(env, "/api/account/delete", "POST", deletionInput(), cookie);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "deletion_conflict" });
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "active" });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM account_deletions").get())
+      .toEqual({ count: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM account_deletion_receipts").get())
+      .toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("refuses deletion work for a job whose user is still active", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z')`).run(jobId, userId);
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Account deletion disablement is not durable",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "active" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
+  } finally { db.close(); }
+});
+
+it("never treats an unreadable deletion remainder as zero", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z')`).run(jobId, userId);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("SELECT COUNT(*) FROM exports WHERE user_id")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => null;
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Account deletion remaining-state verification is unavailable",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "disabled" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
+  } finally { db.close(); }
+});
+
+it("does not mark deletion complete if the disabled-user delete becomes a no-op", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z')`).run(jobId, userId);
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        await target.prepare("UPDATE users SET status = 'active' WHERE id = ?").bind(userId).run();
+        return target.batch(statements);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Account deletion completion was not recorded",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "active" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
+  } finally { db.close(); }
+});
+
+it("purges deletion status authorities and completed tombstones in bounded pages", async () => {
+  const { env, db } = await setup();
+  try {
+    const expired = ["2020-01-01T00:00:00.000Z", "2020-01-02T00:00:00.000Z",
+      "2020-01-03T00:00:00.000Z"];
+    const current = "2030-01-01T00:00:00.000Z";
+    for (const expiresAt of [...expired, current]) {
+      const deletionId = randomUUID();
+      db.connection.prepare(`INSERT INTO account_deletions
+        (id, user_id, requested_at, completed_at) VALUES (?, ?, ?, ?)`)
+        .run(deletionId, randomUUID(), expiresAt, expiresAt);
+      db.connection.prepare(`INSERT INTO account_deletion_receipts
+        (deletion_id, status_token_hash, status_expires_at) VALUES (?, ?, ?)`)
+        .run(deletionId, randomUUID(), expiresAt);
+    }
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await purgeExpiredDeletionReceipts(env, 2, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM account_deletion_receipts
+      WHERE status_expires_at <= ?`).get(now.toISOString())).toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 2 });
+    await purgeExpiredDeletionReceipts(env, 2, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM account_deletion_receipts
+      WHERE status_expires_at <= ?`).get(now.toISOString())).toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 1 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM account_deletion_receipts
+      WHERE status_expires_at > ?`).get(now.toISOString())).toMatchObject({ n: 1 });
+    await expect(purgeExpiredDeletionReceipts(env, 0, now))
+      .rejects.toThrow("Invalid deletion-receipt cleanup limit");
+  } finally { db.close(); }
+});
+
+it("binds concurrent client-known receipts to one deletion job", async () => {
+  const { env, db, userId } = await setup();
+  const queued: LifecycleMessage[] = [];
+  env.LIFECYCLE_QUEUE = { send: async (message: LifecycleMessage) => { queued.push(message); } } as
+    unknown as Queue<LifecycleMessage>;
+  try {
+    const cookie = await session(env, userId);
+    const user = await getSession(new Request(`${origin}/api/account`, { headers: { Cookie: cookie } }), env);
+    if (!user) throw new Error("Synthetic session was not created");
+    const statusTokens = [deletionStatusToken(), deletionStatusToken()];
+    const deletionRequest = (statusToken: string) => new Request(`${origin}/api/account/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin },
+      body: JSON.stringify(deletionInput({ statusToken })),
+    });
+    const responses = await Promise.all(statusTokens.map((statusToken) =>
+      requestAccountDeletion(deletionRequest(statusToken), env, user)));
+    for (let index = 0; index < responses.length; index += 1) {
+      expect(responses[index]!.status).toBe(202);
+      expect(await responses[index]!.json()).toEqual({ status: "pending",
+        statusToken: statusTokens[index], statusExpiresAt: expect.any(String) });
+    }
+    const exactRetry = await requestAccountDeletion(deletionRequest(statusTokens[0]!), env, user);
+    expect(await exactRetry.json()).toEqual({ status: "pending", statusToken: statusTokens[0],
+      statusExpiresAt: expect.any(String) });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 1 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletion_receipts").get())
+      .toMatchObject({ n: 2 });
+    expect(new Set(queued.map((message) => message.deletionId)).size).toBe(1);
+    const job = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    expect(await processAccountDeletionById(env, job.id)).toBe(true);
+    for (const statusToken of statusTokens) {
+      const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+        headers: { Authorization: `Bearer ${statusToken}` },
+      }), env);
+      expect(await completed.json()).toEqual({ status: "completed" });
+    }
+  } finally { db.close(); }
+});
+
+it("accepts an exact account-deletion completion after its D1 response is lost", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const deletion = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken: deletionStatusToken() }), cookie);
+    expect(deletion.status).toBe(202);
+    const job = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        await target.batch(statements);
+        throw new Error("synthetic lost deletion-completion batch response");
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    expect(await processAccountDeletionById(env, job.id)).toBe(true);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?").get(job.id))
+      .toMatchObject({ completed_at: expect.any(String) });
+  } finally { db.close(); }
+});
+
+it("retries idempotently when deletion-completion verification is unavailable", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const deletion = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken: deletionStatusToken() }), cookie);
+    expect(deletion.status).toBe(202);
+    const job = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    const original = env.DB;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        await target.batch(statements);
+        throw new Error("synthetic lost deletion-completion batch response");
+      };
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (!query.includes("SELECT completed_at AS completedAt")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty === "first") return async () => {
+                throw new Error("synthetic deletion-completion verification outage");
+              };
+              const value = Reflect.get(boundStatement, boundProperty);
+              return typeof value === "function" ? value.bind(boundStatement) : value;
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+    await expect(processAccountDeletionById(env, job.id)).rejects.toThrow(
+      "Account deletion completion verification is unavailable",
+    );
+    env.DB = original;
+    expect(await processAccountDeletionById(env, job.id)).toBe(true);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("keeps account metadata until ciphertext deletion is exactly verified", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const jobId = randomUUID();
+    const exportId = randomUUID();
+    const objectKey = `v1/${randomUUID()}`;
+    const now = new Date().toISOString();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare("INSERT INTO account_deletions (id, user_id, requested_at) VALUES (?, ?, ?)")
+      .run(jobId, userId, now);
+    db.connection.prepare(`INSERT INTO exports
+      (id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
+       envelope_schema_version, daily_record_schema_version, source, exported_at, received_at,
+       date_start, date_end, record_count, failure_count, external_record_count)
+      VALUES (?, ?, ?, 'v1', ?, 3, 1, 1, 'ios', ?, ?, '2026-01-01', '2026-01-01', 1, 0, 0)`)
+      .run(exportId, userId, objectKey, "a".repeat(64), now, now);
+    await env.EXPORTS.put(objectKey, new Uint8Array([1, 2, 3]));
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "delete") return async () => undefined;
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    await expect(processAccountDeletionById(env, jobId)).rejects.toThrow(
+      "Encrypted export object was not removed",
+    );
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM exports WHERE id = ?").get(exportId))
+      .toEqual({ count: 1 });
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toEqual({ status: "disabled" });
+    expect(db.connection.prepare("SELECT completed_at AS completedAt FROM account_deletions WHERE id = ?")
+      .get(jobId)).toEqual({ completedAt: null });
+    expect(await objects.get(objectKey)).not.toBeNull();
+    env.EXPORTS = objects;
+    expect(await processAccountDeletionById(env, jobId)).toBe(true);
+    expect(await objects.get(objectKey)).toBeNull();
+  } finally { db.close(); }
+});
+
+it("erases committed-intent ciphertext even when export metadata is already absent", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const tokenId = randomUUID();
+    const now = new Date().toISOString();
+    db.connection.prepare(`INSERT INTO ingest_tokens
+      (id, user_id, name, token_hash, last_four, created_at)
+      VALUES (?, ?, 'Synthetic device', ?, 'test', ?)`).run(tokenId, userId, randomUUID(), now);
+    const principal: IngestPrincipal = { userId, tokenId };
+    const admission = await acquireUploadAdmission(env, principal);
+    const intent = await reserveUploadIntent(env, principal, admission, "b".repeat(64), null, 3);
+    await env.EXPORTS.put(intent.objectKey, new Uint8Array([1, 2, 3]));
+    db.connection.prepare("UPDATE upload_intents SET state = 'committed', updated_at = ? WHERE id = ?")
+      .run(now, intent.id);
+    const jobId = randomUUID();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    db.connection.prepare("INSERT INTO account_deletions (id, user_id, requested_at) VALUES (?, ?, ?)")
+      .run(jobId, userId, now);
+    expect(await processAccountDeletionById(env, jobId)).toBe(true);
+    expect(await env.EXPORTS.get(intent.objectKey)).toBeNull();
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM upload_intents WHERE id = ?")
+      .get(intent.id)).toEqual({ count: 0 });
+    expect(db.connection.prepare("SELECT COUNT(*) AS count FROM users WHERE id = ?")
+      .get(userId)).toEqual({ count: 0 });
+  } finally { db.close(); }
+});
+
+it("does not let one scheduled deletion failure starve another account", async () => {
+  const { env, db, userId: firstUserId } = await setup();
+  try {
+    const secondUserId = randomUUID();
+    const firstJobId = randomUUID();
+    const secondJobId = randomUUID();
+    const firstExportId = randomUUID();
+    const firstObjectKey = `v1/${randomUUID()}`;
+    db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`)
+      .run(secondUserId, randomUUID(), new Date().toISOString());
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id IN (?, ?)")
+      .run(firstUserId, secondUserId);
+    db.connection.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+      VALUES (?, ?, '2020-01-01T00:00:00.000Z'), (?, ?, '2020-01-02T00:00:00.000Z')`)
+      .run(firstJobId, firstUserId, secondJobId, secondUserId);
+    db.connection.prepare(`INSERT INTO exports
+      (id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
+       envelope_schema_version, daily_record_schema_version, source, exported_at, received_at,
+       date_start, date_end, record_count, failure_count, external_record_count)
+      VALUES (?, ?, ?, 'v1', ?, 3, 1, 1, 'ios', ?, ?, '2020-01-01', '2020-01-01', 1, 0, 0)`)
+      .run(firstExportId, firstUserId, firstObjectKey, "a".repeat(64),
+        "2020-01-01T00:00:00.000Z", "2020-01-01T00:00:00.000Z");
+    await env.EXPORTS.put(firstObjectKey, new Uint8Array([1, 2, 3]));
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "delete") return async (key: string) => {
+        if (key === firstObjectKey) throw new Error("synthetic first-account R2 outage");
+        return target.delete(key);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    await expect(processAccountDeletions(env)).rejects.toThrow(
+      "One or more account deletion jobs require retry",
+    );
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(firstUserId))
+      .toMatchObject({ status: "disabled" });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(firstJobId)).toMatchObject({ completed_at: null });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(secondUserId))
+      .toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(secondJobId)).toMatchObject({ completed_at: expect.any(String) });
+
+    env.EXPORTS = objects;
+    await expect(processAccountDeletions(env)).resolves.toBeUndefined();
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users WHERE id = ?").get(firstUserId))
+      .toMatchObject({ n: 0 });
+    expect(await objects.get(firstObjectKey)).toBeNull();
+  } finally { db.close(); }
+});
+
+it("continues independent scheduled cleanup after a deletion provider failure", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    await session(env, userId);
+    db.connection.prepare("UPDATE sessions SET expires_at = '2020-01-01T00:00:00.000Z'").run();
+    db.connection.prepare("UPDATE users SET status = 'disabled' WHERE id = ?").run(userId);
+    const jobId = randomUUID();
+    const exportId = randomUUID();
+    const objectKey = `v1/${randomUUID()}`;
+    const now = new Date().toISOString();
+    db.connection.prepare("INSERT INTO account_deletions (id, user_id, requested_at) VALUES (?, ?, ?)")
+      .run(jobId, userId, now);
+    db.connection.prepare(`INSERT INTO exports
+      (id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
+       envelope_schema_version, daily_record_schema_version, source, exported_at, received_at,
+       date_start, date_end, record_count, failure_count, external_record_count)
+      VALUES (?, ?, ?, 'v1', ?, 3, 1, 1, 'ios', ?, ?, '2026-01-01', '2026-01-01', 1, 0, 0)`)
+      .run(exportId, userId, objectKey, "a".repeat(64), now, now);
+    await env.EXPORTS.put(objectKey, new Uint8Array([1, 2, 3]));
+    const objects = env.EXPORTS;
+    env.EXPORTS = new Proxy(objects, { get(target, property) {
+      if (property === "delete") return async (key: string) => {
+        if (key === objectKey) throw new Error("synthetic deletion-phase R2 outage");
+        return target.delete(key);
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as R2Bucket;
+    await expect(worker.scheduled({} as ScheduledEvent, env)).rejects.toThrow(
+      "One or more scheduled maintenance phases require retry",
+    );
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?").get(userId))
+      .toMatchObject({ n: 0 });
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?").get(jobId))
+      .toMatchObject({ completed_at: null });
+    expect(await objects.get(objectKey)).not.toBeNull();
+  } finally { db.close(); }
+});
+
+it("keeps a client-known receipt when a deletion commit response and verification are unavailable", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const statusToken = deletionStatusToken();
+    const original = env.DB;
+    let batchResponseLost = false;
+    let verificationUnavailable = false;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+        const result = await target.batch(statements);
+        if (!batchResponseLost) {
+          batchResponseLost = true;
+          throw new Error("synthetic lost D1 deletion response");
+        }
+        return result;
+      };
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (verificationUnavailable ||
+            !query.includes("SELECT d.id, d.completed_at AS completedAt")) {
+          return statement;
+        }
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty !== "first") {
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              }
+              return async () => {
+                verificationUnavailable = true;
+                throw new Error("synthetic D1 deletion verification outage");
+              };
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+
+    const response = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken }), cookie);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "deletion_verification_pending" });
+    env.DB = original;
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "disabled" });
+    const pending = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${statusToken}` },
+    }), env);
+    expect(await pending.json()).toEqual({ status: "pending" });
+    const deletion = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    expect(await processAccountDeletionById(env, deletion.id)).toBe(true);
+    const completed = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${statusToken}` },
+    }), env);
+    expect(await completed.json()).toEqual({ status: "completed" });
+  } finally { db.close(); }
+});
+
+it("preserves the receipt when maintenance completes before commit read-back", async () => {
+  const { env, db, userId } = await setup();
+  const queued: LifecycleMessage[] = [];
+  env.LIFECYCLE_QUEUE = { send: async (message: LifecycleMessage) => { queued.push(message); } } as
+    unknown as Queue<LifecycleMessage>;
+  try {
+    const cookie = await session(env, userId);
+    const statusToken = deletionStatusToken();
+    const original = env.DB;
+    let completedBeforeRead = false;
+    env.DB = new Proxy(original, { get(target, property) {
+      if (property === "prepare") return (query: string) => {
+        const statement = target.prepare(query);
+        if (completedBeforeRead ||
+            !query.includes("SELECT d.id, d.completed_at AS completedAt")) return statement;
+        return new Proxy(statement, { get(prepared, statementProperty) {
+          if (statementProperty !== "bind") {
+            const value = Reflect.get(prepared, statementProperty);
+            return typeof value === "function" ? value.bind(prepared) : value;
+          }
+          return (...values: unknown[]) => {
+            const bound = prepared.bind(...values);
+            return new Proxy(bound, { get(boundStatement, boundProperty) {
+              if (boundProperty !== "first") {
+                const value = Reflect.get(boundStatement, boundProperty);
+                return typeof value === "function" ? value.bind(boundStatement) : value;
+              }
+              return async () => {
+                completedBeforeRead = true;
+                const job = await target.prepare("SELECT id FROM account_deletions WHERE user_id = ?")
+                  .bind(userId).first<{ id: string }>();
+                await target.batch([
+                  target.prepare("DELETE FROM users WHERE id = ? AND status = 'disabled'").bind(userId),
+                  target.prepare(`UPDATE account_deletions SET completed_at = ?
+                    WHERE id = ? AND completed_at IS NULL`)
+                    .bind(new Date().toISOString(), job?.id),
+                ]);
+                return bound.first();
+              };
+            } });
+          };
+        } });
+      };
+      const value = Reflect.get(target, property);
+      return typeof value === "function" ? value.bind(target) : value;
+    } }) as D1Database;
+
+    const response = await request(env, "/api/account/delete", "POST",
+      deletionInput({ statusToken }), cookie);
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ status: "completed", statusToken,
+      statusExpiresAt: expect.any(String) });
+    expect(completedBeforeRead).toBe(true);
+    expect(queued).toEqual([]);
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM users").get()).toMatchObject({ n: 0 });
+    env.DB = original;
+    const statusResponse = await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${statusToken}` },
+    }), env);
+    expect(await statusResponse.json()).toEqual({ status: "completed" });
+  } finally { db.close(); }
+});
+
+it("expires a status credential without discarding an unfinished deletion job", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const deletion = await request(env, "/api/account/delete", "POST", deletionInput(), cookie);
+    const receipt = await deletion.json() as { statusToken: string };
+    const deletionRow = db.connection.prepare("SELECT id FROM account_deletions").get() as { id: string };
+    db.connection.prepare(
+      "UPDATE account_deletion_receipts SET status_expires_at = '2020-01-01T00:00:00.000Z'",
+    ).run();
+    await purgeExpiredDeletionReceipts(env);
+    expect(db.connection.prepare("SELECT completed_at FROM account_deletions WHERE id = ?")
+      .get(deletionRow.id)).toMatchObject({ completed_at: null });
+    expect(db.connection.prepare(
+      "SELECT COUNT(*) AS n FROM account_deletion_receipts WHERE deletion_id = ?",
+    ).get(deletionRow.id)).toMatchObject({ n: 0 });
+    expect((await worker.fetch(new Request(`${origin}/api/account/deletion-status`, {
+      headers: { Authorization: `Bearer ${receipt.statusToken}` },
+    }), env)).status).toBe(401);
+  } finally { db.close(); }
+});
+
+it("requires a client-known high-entropy status receipt before deletion", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    const missing = await request(env, "/api/account/delete", "POST", { confirmation: "DELETE" }, cookie);
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toMatchObject({ error: "invalid_deletion_receipt" });
+    const malformed = await request(env, "/api/account/delete", "POST",
+      { confirmation: "DELETE", statusToken: `hmd_del_${"a".repeat(42)}` }, cookie);
+    expect(malformed.status).toBe(400);
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "active" });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM account_deletions").get())
+      .toMatchObject({ n: 0 });
+  } finally { db.close(); }
+});
+
+it("requires reauthentication when an email-link session is older than fifteen minutes", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const cookie = await session(env, userId);
+    db.connection.prepare("UPDATE sessions SET created_at = '2020-01-01T00:00:00.000Z'").run();
+    const response = await request(env, "/api/account/delete", "POST", deletionInput(), cookie);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: "reauthentication_required" });
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(userId))
+      .toMatchObject({ status: "active" });
+  } finally { db.close(); }
+});
+
+it("keeps session, token administration, and deletion isolated between active accounts", async () => {
+  const { env, db, userId: firstUser } = await setup();
+  try {
+    const secondUser = randomUUID();
+    db.connection.prepare(`INSERT INTO users
+      (id, email_lookup, email_ciphertext, email_iv, status, created_at)
+      VALUES (?, ?, 'synthetic', 'synthetic', 'active', ?)`).run(secondUser, randomUUID(), new Date().toISOString());
+    const firstCookie = await session(env, firstUser);
+    const secondCookie = await session(env, secondUser);
+    const created = await request(env, "/api/ingest-tokens", "POST", { name: "Second phone" }, secondCookie);
+    const secondToken = await created.json() as { id: string };
+    const secondSessions = await request(env, "/api/sessions", "GET", undefined, secondCookie);
+    const secondSession = (await secondSessions.json() as { sessions: Array<{ id: string }> }).sessions[0]!;
+
+    expect((await request(env, `/api/ingest-tokens/${secondToken.id}`, "DELETE", undefined, firstCookie)).status)
+      .toBe(404);
+    expect((await request(env, `/api/sessions/${secondSession.id}`, "DELETE", undefined, firstCookie)).status)
+      .toBe(404);
+    expect(await (await request(env, "/api/ingest-tokens", "GET", undefined, firstCookie)).json())
+      .toMatchObject({ tokens: [] });
+    expect(await (await request(env, "/api/sessions/revoke-others", "POST", {}, firstCookie)).json())
+      .toMatchObject({ revoked: 0 });
+    expect((await request(env, "/api/sessions", "GET", undefined, secondCookie)).status).toBe(200);
+    const hiddenTarget = randomUUID();
+    db.connection.prepare(`INSERT INTO audit_events
+      (id, user_id, event_type, target_id, occurred_at) VALUES (?, ?, 'internal.unreviewed', ?, ?)`)
+      .run(randomUUID(), secondUser, hiddenTarget, new Date().toISOString());
+    const firstActivity = await (await request(env, "/api/security-events", "GET", undefined,
+      firstCookie)).json() as { events: Array<{ type: string }> };
+    const secondActivityResponse = await request(env, "/api/security-events", "GET", undefined,
+      secondCookie);
+    const secondActivityText = await secondActivityResponse.text();
+    const secondActivity = JSON.parse(secondActivityText) as { events: Array<{ type: string }> };
+    expect(firstActivity.events.some((event) => event.type === "ingest_token.created")).toBe(false);
+    expect(secondActivity.events.map((event) => event.type)).toEqual(expect.arrayContaining([
+      "session.created", "ingest_token.created",
+    ]));
+    expect(secondActivity.events.some((event) => event.type === "internal.unreviewed")).toBe(false);
+    expect(secondActivityText).not.toContain(secondToken.id);
+    expect(secondActivityText).not.toContain(hiddenTarget);
+
+    const deletion = await request(env, "/api/account/delete", "POST", deletionInput(), firstCookie);
+    expect(deletion.status).toBe(202);
+    const deletionRow = db.connection.prepare("SELECT id FROM account_deletions WHERE user_id = ?")
+      .get(firstUser) as { id: string };
+    expect(await processAccountDeletionById(env, deletionRow.id)).toBe(true);
+    expect((await request(env, "/api/sessions", "GET", undefined, secondCookie)).status).toBe(200);
+    expect(db.connection.prepare("SELECT status FROM users WHERE id = ?").get(secondUser))
+      .toMatchObject({ status: "active" });
+    expect(db.connection.prepare("SELECT revoked_at FROM ingest_tokens WHERE id = ?")
+      .get(secondToken.id)).toMatchObject({ revoked_at: null });
+    expect(db.connection.prepare("SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?")
+      .get(secondUser)).toMatchObject({ n: 1 });
+  } finally { db.close(); }
+});
+
+it("purges only a bounded oldest page of expired security audit events", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const insert = db.connection.prepare(`INSERT INTO audit_events
+      (id, user_id, event_type, target_id, occurred_at) VALUES (?, ?, ?, NULL, ?)`);
+    for (let index = 0; index < 105; index += 1) {
+      insert.run(randomUUID(), userId, "synthetic.expired", `2020-01-01T00:00:${String(index % 60).padStart(2, "0")}.000Z`);
+    }
+    insert.run(randomUUID(), userId, "synthetic.current", "2026-03-20T00:00:00.000Z");
+    const now = new Date("2026-04-01T00:00:00.000Z");
+    await purgeExpiredAuditEvents(env, 30, 100, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.expired'`).get()).toMatchObject({ n: 5 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.current'`).get()).toMatchObject({ n: 1 });
+    await purgeExpiredAuditEvents(env, 30, 100, now);
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.expired'`).get()).toMatchObject({ n: 0 });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS n FROM audit_events
+      WHERE event_type = 'synthetic.current'`).get()).toMatchObject({ n: 1 });
+    await expect(purgeExpiredAuditEvents(env, 0)).rejects.toThrow("Invalid audit-event retention policy");
+    await expect(purgeExpiredAuditEvents(env, 30, 501)).rejects.toThrow(
+      "Invalid audit-event retention policy",
+    );
+  } finally { db.close(); }
+});
+
+it("bounds reviewed security activity and never returns target identifiers", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const ownerCookie = await session(env, userId);
+    const targets: string[] = [];
+    for (let index = 0; index < 60; index += 1) {
+      const target = randomUUID(); targets.push(target);
+      db.connection.prepare(`INSERT INTO audit_events
+        (id, user_id, event_type, target_id, occurred_at)
+        VALUES (?, ?, 'ingest_token.revoked', ?, ?)`)
+        .run(randomUUID(), userId, target, new Date(Date.now() + index).toISOString());
+    }
+    const response = await request(env, "/api/security-events", "GET", undefined, ownerCookie);
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    const events = (JSON.parse(text) as { events: Array<{ type: string; occurredAt: string }> }).events;
+    expect(events).toHaveLength(50);
+    expect(events.every((event) => event.type === "ingest_token.revoked")).toBe(true);
+    expect(targets.some((target) => text.includes(target))).toBe(false);
+  } finally { db.close(); }
+});
+
+it("lists and revokes only account-owned browser sessions", async () => {
+  const { env, db, userId } = await setup();
+  try {
+    const first = await session(env, userId);
+    const second = await session(env, userId);
+    const inventory = await request(env, "/api/sessions", "GET", undefined, first);
+    const sessions = (await inventory.json() as { sessions: Array<{ id: string; current: boolean }> }).sessions;
+    expect(sessions).toHaveLength(2);
+    const other = sessions.find((entry) => !entry.current);
+    expect(other).toBeDefined();
+    expect((await request(env, `/api/sessions/${other?.id}`, "DELETE", undefined, first)).status).toBe(200);
+    expect((await request(env, "/api/account", "GET", undefined, second)).status).toBe(401);
+
+    const third = await session(env, userId);
+    const revoked = await request(env, "/api/sessions/revoke-others", "POST", {}, first);
+    expect(await revoked.json()).toMatchObject({ revoked: 1 });
+    expect((await request(env, "/api/account", "GET", undefined, third)).status).toBe(401);
+    const current = sessions.find((entry) => entry.current);
+    const self = await request(env, `/api/sessions/${current?.id}`, "DELETE", undefined, first);
+    expect(self.status).toBe(200);
+    expect(self.headers.get("set-cookie")).toContain("Max-Age=0");
+  } finally { db.close(); }
+});

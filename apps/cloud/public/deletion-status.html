@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Deletion status · Health.md Cloud</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/deletion-status.js" defer></script>
+</head>
+<body>
+  <main class="shell narrow">
+    <header><p class="eyebrow">Health.md Cloud</p><h1>Check account deletion</h1></header>
+    <section class="card">
+      <p>Paste the deletion status receipt that was shown when the account was disabled. It stays in this page's memory only and is sent in an authorization header, never a URL.</p>
+      <form id="deletion-status-form">
+        <label for="deletion-status-token">Deletion status receipt</label>
+        <input id="deletion-status-token" required autocomplete="off" spellcheck="false" pattern="hmd_del_[A-Za-z0-9_-]{40,60}">
+        <button type="submit">Check status</button>
+      </form>
+      <p id="status" role="status" aria-live="polite"></p>
+    </section>
+    <p><a href="/login">Return to sign in</a></p>
+  </main>
+</body>
+</html>

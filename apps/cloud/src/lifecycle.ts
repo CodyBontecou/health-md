@@ -1,53 +1,238 @@
-import { assertSameOrigin, HttpError, json, readJson } from "./http";
+import { sha256Hex } from "./crypto";
+import { deleteExportObjectExactly } from "./export-object-deletion";
+import { assertSameOrigin, HttpError, json, parsePositiveInteger, readJson } from "./http";
 import { verifyAccountPassword } from "./password";
-import type { Env } from "./types";
+import type { Env, LifecycleMessage, SessionUser } from "./types";
 
 interface ExportObjectRow { id: string; objectKey: string }
-interface DeletionRow { id: string; userId: string }
-
-export async function requestAccountDeletion(request: Request, env: Env, userId: string): Promise<Response> {
-  assertSameOrigin(request, env);
-  if (env.AUTH_MODE !== "password" || env.SYNTHETIC_PREVIEW_ONLY) {
-    throw new HttpError(403, "deletion_unavailable", "Account deletion is unavailable in this profile.");
-  }
-  const input = await readJson<{ password?: unknown; confirmation?: unknown }>(request);
-  if (input.confirmation !== "DELETE" || !await verifyAccountPassword(env, userId, input.password)) {
-    throw new HttpError(401, "invalid_credentials", "Password confirmation failed.");
-  }
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  const results = await env.DB.batch([
-    env.DB.prepare("UPDATE users SET status = 'disabled' WHERE id = ? AND status = 'active'").bind(userId),
-    env.DB.prepare("INSERT INTO account_deletions (id, user_id, requested_at) VALUES (?, ?, ?)")
-      .bind(id, userId, now),
-  ]);
-  if (results[0]?.meta.changes !== 1) throw new HttpError(409, "account_inactive", "Account is not active.");
-  return json({ deletionId: id, status: "pending" }, { status: 202 });
+interface DeletionRow { id: string; userId: string; invalidUser: number }
+interface DeletionStatusRow { completedAt: string | null }
+interface DeletionCommitRow extends DeletionStatusRow {
+  id: string;
+  statusExpiresAt: string;
+  invalidUser: number;
 }
 
-// Safe to repeat after a crash: the user remains disabled, an object delete is
-// idempotent, and the corresponding metadata row is removed only afterwards.
-export async function processAccountDeletions(env: Env, perJob = 25): Promise<void> {
-  const jobs = await env.DB.prepare(
-    "SELECT id, user_id AS userId FROM account_deletions WHERE completed_at IS NULL ORDER BY requested_at LIMIT 10",
-  ).all<DeletionRow>();
-  for (const job of jobs.results) {
-    const exports = await env.DB.prepare(
-      "SELECT id, object_key AS objectKey FROM exports WHERE user_id = ? ORDER BY received_at LIMIT ?",
-    ).bind(job.userId, perJob).all<ExportObjectRow>();
-    for (const entry of exports.results) {
-      await env.EXPORTS.delete(entry.objectKey);
-      await env.DB.prepare("DELETE FROM exports WHERE id = ? AND user_id = ?")
-        .bind(entry.id, job.userId).run();
+const EMAIL_DELETION_REAUTH_MS = 15 * 60_000;
+const DELETION_STATUS_TOKEN = /^hmd_del_[A-Za-z0-9_-]{43}$/u;
+
+function deletionStatusTtlDays(env: Env): number {
+  return env.DELETION_STATUS_TTL_DAYS ?
+    parsePositiveInteger(env.DELETION_STATUS_TTL_DAYS, "DELETION_STATUS_TTL_DAYS", 1, 90) : 30;
+}
+
+export async function requestAccountDeletion(request: Request, env: Env, user: SessionUser): Promise<Response> {
+  assertSameOrigin(request, env);
+  if (env.SYNTHETIC_PREVIEW_ONLY) {
+    throw new HttpError(403, "deletion_unavailable", "Account deletion is unavailable in this profile.");
+  }
+  const input = await readJson<{
+    password?: unknown; confirmation?: unknown; statusToken?: unknown;
+  }>(request);
+  if (input.confirmation !== "DELETE") {
+    throw new HttpError(401, "invalid_credentials", "Recent sign-in and confirmation are required.");
+  }
+  // The browser generates this high-entropy bearer before submitting the
+  // destructive request. If the response is lost after D1 commits, the user
+  // still has the only credential needed to observe completion.
+  if (typeof input.statusToken !== "string" || !DELETION_STATUS_TOKEN.test(input.statusToken)) {
+    throw new HttpError(400, "invalid_deletion_receipt", "A valid deletion status receipt is required.");
+  }
+  if (env.AUTH_MODE === "password") {
+    if (!await verifyAccountPassword(env, user.id, input.password)) {
+      throw new HttpError(401, "invalid_credentials", "Password confirmation failed.");
     }
-    if (exports.results.length === 0) {
-      await env.DB.batch([
-        env.DB.prepare("DELETE FROM users WHERE id = ? AND status = 'disabled'").bind(job.userId),
-        env.DB.prepare("UPDATE account_deletions SET completed_at = ? WHERE id = ? AND completed_at IS NULL")
-          .bind(new Date().toISOString(), job.id),
-      ]);
+  } else {
+    const sessionAge = Date.now() - Date.parse(user.sessionCreatedAt);
+    if (!Number.isFinite(sessionAge) || sessionAge < -60_000 || sessionAge > EMAIL_DELETION_REAUTH_MS) {
+      throw new HttpError(401, "reauthentication_required", "Sign in again before deleting this account.");
     }
   }
+  const id = crypto.randomUUID();
+  const statusToken = input.statusToken;
+  const statusTokenHash = await sha256Hex(statusToken);
+  const now = new Date().toISOString();
+  const statusExpiresAt = new Date(Date.now() + deletionStatusTtlDays(env) * 86400000).toISOString();
+  let batchCompleted = false;
+  let batchFailure: unknown;
+  try {
+    await env.DB.batch([
+      env.DB.prepare("UPDATE users SET status = 'disabled' WHERE id = ? AND status = 'active'").bind(user.id),
+      env.DB.prepare(`INSERT INTO account_deletions (id, user_id, requested_at)
+        SELECT ?, ?, ? WHERE EXISTS
+          (SELECT 1 FROM users WHERE id = ? AND status = 'disabled')
+        ON CONFLICT(user_id) DO NOTHING`).bind(id, user.id, now, user.id),
+      env.DB.prepare(`INSERT INTO account_deletion_receipts
+        (deletion_id, status_token_hash, status_expires_at)
+        SELECT id, ?, ? FROM account_deletions WHERE user_id = ?
+        ON CONFLICT(status_token_hash) DO NOTHING`)
+        .bind(statusTokenHash, statusExpiresAt, user.id),
+    ]);
+    batchCompleted = true;
+  } catch (error) {
+    batchFailure = error;
+  }
+  let committed: DeletionCommitRow | null;
+  try {
+    // The account has one internal deletion job but may have multiple opaque
+    // authorities pre-generated by concurrent browser requests. The user row
+    // can legitimately disappear if maintenance completes before this read.
+    committed = await env.DB.prepare(`SELECT d.id, d.completed_at AS completedAt,
+        r.status_expires_at AS statusExpiresAt,
+        EXISTS(SELECT 1 FROM users u WHERE u.id = d.user_id AND u.status != 'disabled') AS invalidUser
+      FROM account_deletions d JOIN account_deletion_receipts r ON r.deletion_id = d.id
+      WHERE d.user_id = ? AND r.status_token_hash = ?`)
+      .bind(user.id, statusTokenHash).first<DeletionCommitRow>();
+  } catch {
+    // The caller already owns the receipt and can safely poll it. Do not try to
+    // undo an account disablement whose commit outcome cannot be read.
+    throw new HttpError(503, "deletion_verification_pending",
+      "Account deletion verification is temporarily unavailable. Check the status receipt shortly.");
+  }
+  if (!committed) {
+    if (!batchCompleted) throw batchFailure;
+    throw new HttpError(409, "deletion_conflict", "Account deletion could not be authorized.");
+  }
+  if (committed.invalidUser !== 0) {
+    throw new HttpError(503, "deletion_verification_pending",
+      "Account deletion verification is temporarily unavailable. Check the status receipt shortly.");
+  }
+  if (!committed.completedAt) {
+    const message: LifecycleMessage = { version: 1, type: "account.delete", deletionId: committed.id };
+    try { await env.LIFECYCLE_QUEUE?.send(message); }
+    catch { /* The durable D1 job remains available to scheduled maintenance. */ }
+  }
+  // The internal job ID stays in D1/Queue; the opaque receipt is the complete
+  // user-facing authority and correlation mechanism.
+  return json({ status: committed.completedAt ? "completed" : "pending",
+    statusToken, statusExpiresAt: committed.statusExpiresAt }, { status: 202 });
+}
+
+export async function getAccountDeletionStatus(request: Request, env: Env): Promise<Response> {
+  const authorization = request.headers.get("Authorization") ?? "";
+  const match = /^Bearer (hmd_del_[A-Za-z0-9_-]{40,60})$/u.exec(authorization);
+  if (!match?.[1]) {
+    throw new HttpError(401, "invalid_deletion_receipt", "Deletion status receipt is invalid or expired.");
+  }
+  const row = await env.DB.prepare(
+    `SELECT d.completed_at AS completedAt FROM account_deletion_receipts r
+     JOIN account_deletions d ON d.id = r.deletion_id
+     WHERE r.status_token_hash = ? AND r.status_expires_at > ? LIMIT 1`,
+  ).bind(await sha256Hex(match[1]), new Date().toISOString()).first<DeletionStatusRow>();
+  if (!row) {
+    throw new HttpError(401, "invalid_deletion_receipt", "Deletion status receipt is invalid or expired.");
+  }
+  // This endpoint has no account session by design. The opaque receipt grants
+  // only the minimum pending/completed signal, never account or timing metadata.
+  return json({ status: row.completedAt ? "completed" : "pending" });
+}
+
+// Safe to repeat after a crash: the user remains disabled, object deletion is
+// idempotent, and metadata is removed only after its ciphertext is gone.
+export async function processAccountDeletionById(env: Env, deletionId: string, perJob = 100): Promise<boolean> {
+  if (!/^[a-f0-9-]{36}$/u.test(deletionId) || !Number.isInteger(perJob) || perJob < 1 || perJob > 500) {
+    throw new Error("Invalid account-deletion job");
+  }
+  const job = await env.DB.prepare(
+    `SELECT d.id, d.user_id AS userId,
+       EXISTS(SELECT 1 FROM users u WHERE u.id = d.user_id AND u.status != 'disabled') AS invalidUser
+     FROM account_deletions d WHERE d.id = ? AND d.completed_at IS NULL`,
+  ).bind(deletionId).first<DeletionRow>();
+  if (!job) return true;
+  if (job.invalidUser !== 0) throw new Error("Account deletion disablement is not durable");
+  const exports = await env.DB.prepare(
+    "SELECT id, object_key AS objectKey FROM exports WHERE user_id = ? ORDER BY received_at LIMIT ?",
+  ).bind(job.userId, perJob).all<ExportObjectRow>();
+  for (const entry of exports.results) {
+    await deleteExportObjectExactly(env, entry.objectKey);
+    await env.DB.prepare("DELETE FROM exports WHERE id = ? AND user_id = ?")
+      .bind(entry.id, job.userId).run();
+  }
+  const intents = await env.DB.prepare(
+    `SELECT id, object_key AS objectKey FROM upload_intents
+     WHERE user_id = ? ORDER BY created_at LIMIT ?`,
+  ).bind(job.userId, perJob).all<ExportObjectRow>();
+  for (const entry of intents.results) {
+    await deleteExportObjectExactly(env, entry.objectKey);
+    await env.DB.prepare("DELETE FROM upload_intents WHERE id = ? AND user_id = ?")
+      .bind(entry.id, job.userId).run();
+  }
+  const remaining = await env.DB.prepare(`SELECT
+    (SELECT COUNT(*) FROM exports WHERE user_id = ?) +
+    (SELECT COUNT(*) FROM upload_intents WHERE user_id = ?) AS count`)
+    .bind(job.userId, job.userId).first<{ count: number }>();
+  if (!remaining || !Number.isSafeInteger(remaining.count) || remaining.count < 0) {
+    throw new Error("Account deletion remaining-state verification is unavailable");
+  }
+  if (remaining.count > 0) return false;
+  const completedAt = new Date().toISOString();
+  try {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM users WHERE id = ? AND status = 'disabled'").bind(job.userId),
+      env.DB.prepare(`UPDATE account_deletions SET completed_at = ?
+        WHERE id = ? AND completed_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM users WHERE id = account_deletions.user_id)`)
+        .bind(completedAt, job.id),
+    ]);
+  } catch {
+    // A D1 response can be lost after both statements commit. Verify the exact
+    // terminal job marker and user erasure rather than trusting adapter metadata.
+  }
+  let completed: { completedAt: string; userPresent: number } | null;
+  try {
+    completed = await env.DB.prepare(`SELECT completed_at AS completedAt,
+      EXISTS(SELECT 1 FROM users WHERE id = ?) AS userPresent
+      FROM account_deletions WHERE id = ? AND user_id = ?`)
+      .bind(job.userId, job.id, job.userId)
+      .first<{ completedAt: string; userPresent: number }>();
+  } catch {
+    throw new Error("Account deletion completion verification is unavailable");
+  }
+  if (completed?.completedAt !== completedAt || completed.userPresent !== 0) {
+    throw new Error("Account deletion completion was not recorded");
+  }
+  return true;
+}
+
+export async function processAccountDeletions(env: Env, perJob = 100): Promise<void> {
+  const jobs = await env.DB.prepare(
+    "SELECT id FROM account_deletions WHERE completed_at IS NULL ORDER BY requested_at LIMIT 10",
+  ).all<{ id: string }>();
+  let failures = 0;
+  for (const job of jobs.results) {
+    try {
+      await processAccountDeletionById(env, job.id, perJob);
+    } catch {
+      // Continue through the bounded page so one provider failure cannot starve
+      // another tenant. Surface only an aggregate failure after every job ran.
+      failures += 1;
+    }
+  }
+  if (failures > 0) throw new Error("One or more account deletion jobs require retry");
+}
+
+export async function purgeExpiredDeletionReceipts(
+  env: Env,
+  limit = 100,
+  now = new Date(),
+): Promise<void> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error("Invalid deletion-receipt cleanup limit");
+  }
+  const instant = now.toISOString();
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM account_deletion_receipts WHERE status_token_hash IN (
+      SELECT status_token_hash FROM account_deletion_receipts
+      WHERE status_expires_at <= ? ORDER BY status_expires_at, status_token_hash LIMIT ?
+    )`).bind(instant, limit),
+    // An overdue deletion job survives even after every status authority expires.
+    env.DB.prepare(`DELETE FROM account_deletions WHERE id IN (
+      SELECT id FROM account_deletions WHERE completed_at IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM account_deletion_receipts r
+          WHERE r.deletion_id = account_deletions.id)
+      ORDER BY completed_at, id LIMIT ?
+    )`).bind(limit),
+  ]);
 }
 
 // Old superseded envelopes only: never remove an export referenced by the
@@ -69,14 +254,32 @@ export async function purgeArchivedRevisions(env: Env, retentionDays: number, li
   for (const row of rows.results) {
     // Remove metadata only if still unreferenced at commit. If a concurrent
     // writer attached a supplement, its ciphertext must not disappear.
-    const result = await env.DB.prepare(`DELETE FROM exports WHERE id = ? AND NOT EXISTS
-      (SELECT 1 FROM daily_records WHERE export_id = ?) AND NOT EXISTS
-      (SELECT 1 FROM supplemental_exports WHERE export_id = ?)`).bind(row.id, row.id, row.id).run();
-    if (!result.meta.changes) continue;
+    try {
+      await env.DB.prepare(`DELETE FROM exports WHERE id = ? AND NOT EXISTS
+        (SELECT 1 FROM daily_records WHERE export_id = ?) AND NOT EXISTS
+        (SELECT 1 FROM supplemental_exports WHERE export_id = ?)`).bind(row.id, row.id, row.id).run();
+    } catch {
+      // The conditional metadata delete may have committed before its response
+      // was lost. Confirm absence before touching ciphertext.
+    }
+    let retained: { present: number } | null;
+    try {
+      retained = await env.DB.prepare(
+        "SELECT EXISTS(SELECT 1 FROM exports WHERE id = ?) AS present",
+      ).bind(row.id).first<{ present: number }>();
+    } catch {
+      // An unreadable outcome preserves ciphertext. If metadata committed, the
+      // bounded orphan scanner can later remove it after an exact reference check.
+      throw new Error("Archived export deletion verification is unavailable");
+    }
+    if (!retained || ![0, 1].includes(retained.present)) {
+      throw new Error("Archived export deletion verification is unavailable");
+    }
+    if (retained.present === 1) continue;
     removed += 1;
     // Failure leaves an encrypted orphan for reconciliation, never a live
     // primary/supplement pointer with missing ciphertext.
-    await env.EXPORTS.delete(row.objectKey);
+    await deleteExportObjectExactly(env, row.objectKey);
   }
   return removed;
 }

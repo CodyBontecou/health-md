@@ -1,12 +1,15 @@
 import { audit, limitIngest, requireIngestToken } from "./auth";
-import { decryptExport, encryptExport, parseExportKeyring, sha256Hex } from "./crypto";
+import { decryptExport, encryptedExportByteCount, encryptExport, sha256Hex } from "./crypto";
+import { currentExportKey, resolveExportKey } from "./account-export-keys";
+import { stageExportObjectExactly } from "./export-object-deletion";
 import { EnvelopeValidationError, parseAndValidateEnvelope } from "./envelope";
 import { assertJsonContentType, HttpError, json, parsePositiveInteger, readBoundedBody } from "./http";
 import { parseRepairSpec, type RepairDraftSpec } from "./repair-drafts";
 import { encryptSupplementSpec, supplementScopeDigest } from "./repair-supplements";
+import { abandonUploadIntent, acquireUploadAdmission, commitUploadIntentStatement,
+  markUploadObjectWritten, releaseUploadAdmission, renewUploadAdmission,
+  reserveUploadIntent } from "./upload-intents";
 import type { Env, EnvelopeInfo } from "./types";
-
-const MAX_ACCOUNT_BYTES = 1_073_741_824; // retained-byte quota; enforced again at metadata commit
 
 interface ExportRow {
   id: string;
@@ -26,8 +29,9 @@ interface ExportRow {
   externalRecordCount: number;
 }
 
-function insertExport(env: Env, userId: string, tokenId: string, exportId: string, objectKey: string, keyId: string,
-  digest: string, bytes: number, info: EnvelopeInfo, receivedAt: string): D1PreparedStatement {
+function insertExport(env: Env, userId: string, tokenId: string, intentId: string, exportId: string,
+  objectKey: string, keyId: string, digest: string, bytes: number, info: EnvelopeInfo,
+  receivedAt: string): D1PreparedStatement {
   return env.DB.prepare(
     `INSERT INTO exports (
        id, user_id, object_key, encryption_key_id, plaintext_sha256, byte_count,
@@ -36,11 +40,13 @@ function insertExport(env: Env, userId: string, tokenId: string, exportId: strin
      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE EXISTS (SELECT 1 FROM ingest_tokens t JOIN users u ON u.id = t.user_id
          WHERE u.id = ? AND t.id = ? AND u.status = 'active' AND t.revoked_at IS NULL)
-       AND (SELECT COALESCE(SUM(byte_count), 0) FROM exports WHERE user_id = ?) + ? <= ?`,
+         AND EXISTS (SELECT 1 FROM upload_intents i
+           WHERE i.id = ? AND i.user_id = ? AND i.token_id = ? AND i.export_id = ?
+             AND i.state IN ('reserved', 'object_written'))`,
   ).bind(exportId, userId, objectKey, keyId, digest, bytes, info.envelopeSchemaVersion,
     info.dailyRecordSchemaVersion, info.source, info.exportedAt, receivedAt, info.dateStart,
     info.dateEnd, info.recordCount, info.failureCount, info.externalRecordCount, userId, tokenId,
-    userId, bytes, MAX_ACCOUNT_BYTES);
+    intentId, userId, tokenId, exportId);
 }
 
 export async function ingest(request: Request, env: Env): Promise<Response> {
@@ -62,10 +68,14 @@ export async function ingestSupplement(request: Request, env: Env, trustedScope:
 
 async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | null): Promise<Response> {
   const principal = await requireIngestToken(request, env);
-  await limitIngest(env, principal.tokenId);
+  await limitIngest(env, principal.tokenId, principal.userId);
   assertJsonContentType(request);
   const maximumBytes = parsePositiveInteger(env.MAX_EXPORT_BYTES, "MAX_EXPORT_BYTES", 1024, 25 * 1024 * 1024);
-  const body = await readBoundedBody(request, maximumBytes);
+  const admission = await acquireUploadAdmission(env, principal);
+  let admissionConsumed = false;
+  try {
+  const body = await readBoundedBody(request, maximumBytes, Date.parse(admission.expiresAt));
+  await renewUploadAdmission(env, admission);
   let info: EnvelopeInfo;
   try {
     info = parseAndValidateEnvelope(body);
@@ -94,10 +104,7 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
       throw new HttpError(422, "scope_mismatch", "Export source, profile or owner-day range does not match the request.");
     }
   }
-  const keyring = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON);
-  const keyId = env.CURRENT_EXPORT_KEY_ID;
-  const rootKey = keyring.get(keyId);
-  if (!rootKey) throw new Error("Current export encryption key is not configured");
+  const { keyId, key: exportKey } = await currentExportKey(env, principal.userId);
   const digest = await sha256Hex(body);
   const scopeDigest = spec ? await supplementScopeDigest(spec, env) : null;
   const duplicateReceipt = async (): Promise<Response | null> => {
@@ -115,27 +122,41 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
   };
   const existing = await duplicateReceipt();
   if (existing) return existing;
-  const usage = await env.DB.prepare(
-    "SELECT COALESCE(SUM(byte_count), 0) AS bytes FROM exports WHERE user_id = ?",
-  ).bind(principal.userId).first<{ bytes: number }>();
-  if ((usage?.bytes ?? 0) + body.byteLength > MAX_ACCOUNT_BYTES) {
-    throw new HttpError(413, "account_quota", "Account export storage quota reached.");
+  let intent: Awaited<ReturnType<typeof reserveUploadIntent>>;
+  try {
+    intent = await reserveUploadIntent(env, principal, admission, digest, scopeDigest, body.byteLength);
+    admissionConsumed = true;
+  } catch (error) {
+    if (error instanceof HttpError && error.code === "upload_in_progress") {
+      // Preserve the existing exact-retry contract without admitting another
+      // write. Wait only briefly for the durable winner, then return bounded
+      // backpressure so the client can retry the same bytes later.
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        await new Promise((done) => setTimeout(done, 100));
+        const concurrent = await duplicateReceipt();
+        if (concurrent) return concurrent;
+      }
+    }
+    throw error;
   }
-  const exportId = crypto.randomUUID();
-  const objectKey = `v1/${crypto.randomUUID()}`;
-  const ciphertext = await encryptExport(body, rootKey, principal.userId, exportId);
+  const ciphertext = await encryptExport(body, exportKey, principal.userId, intent.exportId);
   const receivedAt = new Date().toISOString();
-  const encryptedSpec = spec ? await encryptSupplementSpec(spec, env, principal.userId, exportId) : null;
-  await env.EXPORTS.put(objectKey, ciphertext, {
-    httpMetadata: { contentType: "application/octet-stream", cacheControl: "no-store" },
-  });
+  const encryptedSpec = spec ? await encryptSupplementSpec(spec, env, principal.userId, intent.exportId) : null;
+  try {
+    await stageExportObjectExactly(env, intent.objectKey, ciphertext);
+    await markUploadObjectWritten(env, intent);
+  } catch (error) {
+    try { await abandonUploadIntent(env, intent); } catch { /* Durable reconciliation retains the reservation. */ }
+    throw error;
+  }
   const statements: D1PreparedStatement[] = [
-    insertExport(env, principal.userId, principal.tokenId, exportId, objectKey, keyId, digest, body.byteLength, info, receivedAt),
+    insertExport(env, principal.userId, principal.tokenId, intent.id, intent.exportId,
+      intent.objectKey, keyId, digest, body.byteLength, info, receivedAt),
     ...(encryptedSpec ? [env.DB.prepare(`INSERT INTO supplemental_exports
       (export_id, user_id, spec_ciphertext, spec_iv, scope_digest, created_at)
       SELECT ?, ?, ?, ?, ?, ? FROM exports WHERE id = ? AND user_id = ?`)
-      .bind(exportId, principal.userId, encryptedSpec.specCiphertext, encryptedSpec.specIv,
-        encryptedSpec.scopeDigest, receivedAt, exportId, principal.userId)] : []),
+      .bind(intent.exportId, principal.userId, encryptedSpec.specCiphertext, encryptedSpec.specIv,
+        encryptedSpec.scopeDigest, receivedAt, intent.exportId, principal.userId)] : []),
     ...info.dailyRecords.map((record) => env.DB.prepare(spec ?
       `INSERT INTO supplemental_records
        (user_id, owner_date, export_id, record_index, schema_version, capture_status)
@@ -153,9 +174,9 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
          received_at = excluded.received_at
        WHERE excluded.exported_at > daily_records.exported_at OR
          (excluded.exported_at = daily_records.exported_at AND excluded.received_at > daily_records.received_at)`,
-    ).bind(...(spec ? [principal.userId, record.date, exportId, record.index,
-      record.schemaVersion, record.captureStatus, exportId, principal.userId] :
-      [principal.userId, record.date, exportId, record.index, record.schemaVersion,
+    ).bind(...(spec ? [principal.userId, record.date, intent.exportId, record.index,
+      record.schemaVersion, record.captureStatus, intent.exportId, principal.userId] :
+      [principal.userId, record.date, intent.exportId, record.index, record.schemaVersion,
         record.captureStatus, info.exportedAt, receivedAt]))),
     env.DB.prepare(
       "UPDATE ingest_tokens SET last_used_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
@@ -164,31 +185,54 @@ async function ingestMode(request: Request, env: Env, spec: RepairDraftSpec | nu
       `INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
        SELECT ?, ?, ?, ?, ? FROM exports WHERE id = ?`,
     ).bind(crypto.randomUUID(), principal.userId,
-      spec ? "supplement.accepted" : "export.accepted", exportId, receivedAt, exportId),
+      spec ? "supplement.accepted" : "export.accepted", intent.exportId, receivedAt, intent.exportId),
+    commitUploadIntentStatement(env, intent, receivedAt),
   ];
+  let batchCompleted = false;
+  let batchFailure: unknown;
   try {
-    // D1 batch is transactional; a failed metadata commit does not acknowledge the payload.
-    const results = await env.DB.batch(statements);
-    if (results[0]?.meta.changes !== 1) {
-      const current = await env.DB.prepare("SELECT COALESCE(SUM(byte_count), 0) AS bytes FROM exports WHERE user_id = ?")
-        .bind(principal.userId).first<{ bytes: number }>();
-      if ((current?.bytes ?? 0) + body.byteLength > MAX_ACCOUNT_BYTES) {
-        throw new HttpError(413, "account_quota", "Account export storage quota reached.");
-      }
-      throw new HttpError(401, "unauthorized", "Export token is no longer active.");
-    }
+    // D1 batch is transactional, but a transport failure can make its commit
+    // outcome ambiguous to this isolate.
+    await env.DB.batch(statements);
+    batchCompleted = true;
   } catch (error) {
-    try {
-      await env.EXPORTS.delete(objectKey);
-    } catch {
-      // Reconcile orphaned encrypted objects before production deployment.
-    }
-    const concurrentDuplicate = await duplicateReceipt();
-    if (concurrentDuplicate) return concurrentDuplicate;
-    throw error;
+    batchFailure = error;
   }
-  return json({ accepted: true, duplicate: false, id: exportId, records: info.recordCount,
+  let committed: { valid: number } | null;
+  try {
+    // D1 change counts are not portable when the batch also fires storage
+    // ledger triggers. Reconcile the durable postcondition even when the batch
+    // response was lost before deciding that the staged ciphertext is safe to
+    // remove.
+    committed = await env.DB.prepare(`SELECT 1 AS valid FROM exports e
+      JOIN upload_intents i ON i.export_id = e.id AND i.user_id = e.user_id
+      WHERE e.id = ? AND e.user_id = ? AND i.id = ? AND i.state = 'committed'`)
+      .bind(intent.exportId, principal.userId, intent.id).first<{ valid: number }>();
+  } catch {
+    // Never call abandonUploadIntent after an uncertain commit: it deletes the
+    // object before checking intent state. A retry can recover the durable
+    // receipt, while scheduled reconciliation handles a truly abandoned write.
+    throw new HttpError(503, "commit_verification_pending",
+      "Export commit verification is temporarily unavailable. Retry the same export shortly.");
+  }
+  if (committed?.valid !== 1) {
+    let concurrentDuplicate: Response | null;
+    try {
+      concurrentDuplicate = await duplicateReceipt();
+    } catch {
+      throw new HttpError(503, "commit_verification_pending",
+        "Export commit verification is temporarily unavailable. Retry the same export shortly.");
+    }
+    try { await abandonUploadIntent(env, intent); } catch { /* Durable reconciliation retries cleanup. */ }
+    if (concurrentDuplicate) return concurrentDuplicate;
+    if (!batchCompleted) throw batchFailure;
+    throw new HttpError(401, "unauthorized", "Export token is no longer active.");
+  }
+  return json({ accepted: true, duplicate: false, id: intent.exportId, records: info.recordCount,
     ...(spec ? { mode: "supplemental", failureCount: info.failureCount } : {}) }, { status: 201 });
+  } finally {
+    if (!admissionConsumed) await releaseUploadAdmission(env, admission);
+  }
 }
 
 export async function listExports(env: Env, userId: string): Promise<Response> {
@@ -270,10 +314,17 @@ export async function downloadExport(env: Env, userId: string, exportId: string)
   ).bind(exportId, userId).first<Pick<ExportRow,
     "id" | "objectKey" | "encryptionKeyId" | "plaintextSha256" | "byteCount">>();
   if (!row) throw new HttpError(404, "not_found", "Export not found.");
+  const maxBytes = parsePositiveInteger(env.MAX_EXPORT_BYTES, "MAX_EXPORT_BYTES", 1024, 100 * 1024 * 1024);
+  if (!Number.isSafeInteger(row.byteCount) || row.byteCount < 1 || row.byteCount > maxBytes) {
+    throw new HttpError(503, "unavailable_data", "The retained export is unavailable.");
+  }
   const object = await env.EXPORTS.get(row.objectKey);
-  if (!object) throw new Error("Encrypted export object is unavailable");
-  const key = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON).get(row.encryptionKeyId);
-  if (!key) throw new Error("Encrypted export key is unavailable");
+  // Check the exact AEAD container size before materializing an R2 body. This
+  // keeps a corrupt or substituted object from bypassing the plaintext cap.
+  if (!object || object.size !== encryptedExportByteCount(row.byteCount)) {
+    throw new HttpError(503, "unavailable_data", "The retained export is unavailable.");
+  }
+  const key = await resolveExportKey(env, userId, row.encryptionKeyId);
   const plaintext = await decryptExport(new Uint8Array(await object.arrayBuffer()), key, userId, row.id);
   if (plaintext.byteLength !== row.byteCount || await sha256Hex(plaintext) !== row.plaintextSha256) {
     throw new Error("Stored export integrity check failed");

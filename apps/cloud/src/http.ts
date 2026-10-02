@@ -38,7 +38,10 @@ export function redirect(location: string, status = 303): Response {
 
 export function errorResponse(error: unknown): Response {
   if (error instanceof HttpError) {
-    return json({ error: error.code, message: error.message }, { status: error.status });
+    return json({ error: error.code, message: error.message }, {
+      status: error.status,
+      ...([408, 429, 503].includes(error.status) ? { headers: { "Retry-After": "2" } } : {}),
+    });
   }
   return json({ error: "internal_error", message: "The request could not be completed." }, { status: 500 });
 }
@@ -60,7 +63,18 @@ export async function readJson<T>(request: Request, maximumBytes = 16_384): Prom
   }
 }
 
-export async function readBoundedBody(request: Request, maximumBytes: number): Promise<Uint8Array> {
+function cancelBodyReader(reader: ReadableStreamDefaultReader<Uint8Array>): void {
+  // Cancellation is advisory cleanup, never authority for releasing a durable
+  // admission or returning a stable 408/413. A provider stream may reject or
+  // never settle its cancellation promise, so observe rejection without await.
+  try { void reader.cancel().catch(() => undefined); } catch { /* Preserve the caller's fixed error. */ }
+}
+
+export async function readBoundedBody(
+  request: Request,
+  maximumBytes: number,
+  deadlineEpochMs?: number,
+): Promise<Uint8Array> {
   const declared = request.headers.get("Content-Length");
   if (declared !== null) {
     const length = Number(declared);
@@ -71,30 +85,65 @@ export async function readBoundedBody(request: Request, maximumBytes: number): P
   }
   if (request.body === null) throw new HttpError(400, "empty_body", "Request body is required.");
   const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
+  // Keep fragmentation from creating an attacker-controlled array of chunk
+  // objects, and avoid a second full-body allocation after the read. A valid
+  // Content-Length gives the exact initial capacity; chunked bodies grow
+  // geometrically but can never allocate beyond the configured maximum.
+  const initialCapacity = declared === null ? Math.min(maximumBytes, 16 * 1024) : Number(declared);
+  let buffer = new Uint8Array(initialCapacity);
   let total = 0;
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const remainingMs = deadlineEpochMs === undefined ? undefined : deadlineEpochMs - Date.now();
+      if (remainingMs !== undefined && remainingMs <= 0) {
+        cancelBodyReader(reader);
+        throw new HttpError(408, "request_timeout", "Export upload exceeded its admission lease.");
+      }
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let timedOut = false;
+      const pendingRead = reader.read();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = remainingMs === undefined ? await pendingRead : await Promise.race([
+          pendingRead,
+          new Promise<never>((_resolve, reject) => {
+            timer = setTimeout(() => {
+              timedOut = true;
+              reject(new HttpError(408, "request_timeout", "Export upload exceeded its admission lease."));
+            }, remainingMs);
+          }),
+        ]);
+      } catch (error) {
+        if (timedOut) cancelBodyReader(reader);
+        throw error;
+      } finally {
+        if (timer !== undefined) clearTimeout(timer);
+      }
+      const { done, value } = chunk;
       if (done) break;
-      total += value.byteLength;
-      if (total > maximumBytes) {
-        await reader.cancel();
+      const required = total + value.byteLength;
+      if (required > maximumBytes) {
+        cancelBodyReader(reader);
         throw new HttpError(413, "payload_too_large", "Export payload is too large.");
       }
-      chunks.push(value);
+      if (required > buffer.byteLength) {
+        const capacity = Math.min(maximumBytes,
+          Math.max(required, Math.max(1, buffer.byteLength) * 2));
+        const grown = new Uint8Array(capacity);
+        grown.set(buffer.subarray(0, total));
+        buffer = grown;
+      }
+      buffer.set(value, total);
+      total = required;
     }
   } finally {
-    reader.releaseLock();
+    // A timed-out read can remain pending when provider cancellation never
+    // settles. Releasing that reader may then throw; cleanup must not mask the
+    // authoritative body/deadline result or hold the account admission.
+    try { reader.releaseLock(); } catch { /* Best-effort reader cleanup only. */ }
   }
   if (total === 0) throw new HttpError(400, "empty_body", "Request body is required.");
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return result;
+  return buffer.subarray(0, total);
 }
 
 export function parsePositiveInteger(value: string, name: string, minimum: number, maximum: number): number {
@@ -103,6 +152,12 @@ export function parsePositiveInteger(value: string, name: string, minimum: numbe
     throw new Error(`${name} must be an integer from ${minimum} through ${maximum}`);
   }
   return parsed;
+}
+
+export function requestMatchesPublicEndpoint(request: Request, env: Env): boolean {
+  const url = new URL(request.url);
+  return url.origin === new URL(env.PUBLIC_ORIGIN).origin && !url.username && !url.password &&
+    !url.search && !url.hash;
 }
 
 export function assertSameOrigin(request: Request, env: Env): void {
