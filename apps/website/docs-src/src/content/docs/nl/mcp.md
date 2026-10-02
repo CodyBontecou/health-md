@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe MCP</strong>
-<p>De afzonderlijke opzet <code>healthmd mcp serve</code> voor macOS, Linux en Windows is als ongekwalificeerde preview met 19 tools gepubliceerd onder <code>0.1.0-alpha.7</code>. Het cloudvrije beginpunt <code>serve-read-only</code> biedt na lokale koppeling alleen de 13 tools voor gereedheid en queries. Installeer op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>De afzonderlijke opzet <code>healthmd mcp serve</code> voor macOS, Linux en Windows is als ongekwalificeerde preview met 19 tools gepubliceerd onder <code>0.1.0-alpha.6</code> (alpha.7 blijft een ongepubliceerd concept zonder downloads). Het cloudvrije beginpunt <code>serve-read-only</code> biedt na lokale koppeling alleen de 13 tools voor gereedheid en queries. Installeer op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Vereisten voor de gebundelde Mac-versie
@@ -116,7 +116,7 @@ De tools blijven werken als de host MCP Apps niet ondersteunt. `healthmd_metric_
 
 ## Beschikbare tools
 
-De gebundelde Mac-server biedt 21 vaste tools: 13 voor gereedheid/query's, vier voor gegenereerde bestanden en vier voor versleutelde context. De gepubliceerde portable preview `0.1.0-alpha.7` heeft 19 tools. De huidige ontwikkelbron heeft er 21 na toevoeging van volledig corpus en begrensde artefactlezing; neem die twee tools niet aan vóór een latere release.
+De gebundelde Mac-server biedt 21 vaste tools: 13 voor gereedheid/query's, vier voor gegenereerde bestanden en vier voor versleutelde context. De gepubliceerde portable preview `0.1.0-alpha.6` heeft 19 tools. De huidige ontwikkelbron heeft er 21 na toevoeging van volledig corpus en begrensde artefactlezing; neem die twee tools niet aan vóór een latere release.
 
 ### Gereedheid en ontdekking
 

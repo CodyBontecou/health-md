@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>미리보기 · 이식 가능한 직접 MCP</strong>
-<p>macOS, Linux 및 Windows용 별도 <code>healthmd mcp serve</code> 토폴로지는 19개 도구의 미인증 미리보기 <code>0.1.0-alpha.7</code>로 게시되어 있습니다. 클라우드가 필요 없는 <code>serve-read-only</code> 진입점은 로컬 페어링 후 준비 상태/쿼리 도구 13개만 제공합니다. macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 설치합니다.</p>
+<p>macOS, Linux 및 Windows용 별도 <code>healthmd mcp serve</code> 토폴로지는 19개 도구의 미인증 미리보기 <code>0.1.0-alpha.6</code> (alpha.7은 파일 없는 미게시 초안)로 게시되어 있습니다. 클라우드가 필요 없는 <code>serve-read-only</code> 진입점은 로컬 페어링 후 준비 상태/쿼리 도구 13개만 제공합니다. macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 설치합니다.</p>
 </div>
 
 ## 번들 Mac 요구 사항
@@ -116,7 +116,7 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 
 ## 사용 가능한 도구
 
-번들 Mac 서버는 준비 상태/쿼리 13개, 생성 파일 4개, 암호화 컨텍스트 업데이트 4개로 고정 도구 21개를 제공합니다. 게시된 이식형 미리보기 `0.1.0-alpha.7`은 19개 도구입니다. 현재 개발 소스는 전체 데이터와 제한된 아티팩트 읽기를 더해 21개지만, 이후 릴리스 전에는 그 두 도구를 전제로 삼지 마세요.
+번들 Mac 서버는 준비 상태/쿼리 13개, 생성 파일 4개, 암호화 컨텍스트 업데이트 4개로 고정 도구 21개를 제공합니다. 게시된 이식형 미리보기 `0.1.0-alpha.6`은 19개 도구입니다. 현재 개발 소스는 전체 데이터와 제한된 아티팩트 읽기를 더해 21개지만, 이후 릴리스 전에는 그 두 도구를 전제로 삼지 마세요.
 
 ### 준비 상태 및 검색
 

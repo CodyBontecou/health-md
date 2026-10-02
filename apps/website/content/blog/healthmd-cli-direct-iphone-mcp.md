@@ -65,7 +65,7 @@ healthmd setup codex
 
 For Claude or another local MCP host, configure the absolute `healthmd` executable with arguments `mcp serve`. Call `healthmd_doctor` first, list metric IDs, and request an exact date and metric scope.
 
-The published `0.1.0-alpha.7` portable preview exposes 19 tools. Current development source adds two approval-gated full-corpus raw-artifact tools for a total of 21; those tools are not a released alpha.7 promise. The `serve-read-only` entry remains limited to 13 readiness and typed-query tools.
+The published `0.1.0-alpha.6` portable preview exposes 19 tools. Current development source adds two approval-gated full-corpus raw-artifact tools for a total of 21; those tools are not a released alpha.7 promise. The `serve-read-only` entry remains limited to 13 readiness and typed-query tools.
 
 ## What stays private
 
@@ -80,7 +80,7 @@ This is factual data access, not medical advice. Agents should preserve units, e
 
 ## Preview status
 
-The portable package remains an explicitly unqualified preview. Use the exact `healthmd-cli/v<version>` release and matching mobile build named by release evidence. Do not use the repository-wide `/releases/latest` pointer; it remains reserved for Apple app releases.
+The portable package remains an explicitly unqualified preview. Availability audit (2026-10-02): alpha.6 is published with installers, archives, and checksum/signature assets; alpha.7 remains an unpublished draft with zero assets. The tap currently serves alpha.6, not alpha.7. Use the exact `healthmd-cli/v<version>` release and matching mobile build named by release evidence. Do not use the repository-wide `/releases/latest` pointer; it remains reserved for Apple app releases.
 
 Install the published preview on macOS or Linux:
 

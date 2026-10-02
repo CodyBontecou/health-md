@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Preview · portable direct MCP</strong>
-<p>The separate <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is publicly packaged as an explicitly unqualified preview. Published <code>0.1.0-alpha.7</code> exposes 19 tools; current development source has 21 after adding two unreleased full-corpus raw-artifact tools. Its cloud-free <code>serve-read-only</code> entry exposes only the 13 readiness/query tools after local pairing. Install on macOS or Linux with <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>The separate <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is publicly packaged as an explicitly unqualified preview. Published <code>0.1.0-alpha.6</code> exposes 19 tools; alpha.7 remains a pending unpublished draft with zero assets (audited 2026-10-02). Current development source has 21 after adding two unreleased full-corpus raw-artifact tools. Its cloud-free <code>serve-read-only</code> entry exposes only the 13 readiness/query tools after local pairing. Install on macOS or Linux with <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Bundled Mac requirements
@@ -116,7 +116,7 @@ If the host does not support MCP Apps, the tools still work. `healthmd_metric_ch
 
 ## Available tools
 
-The bundled Mac server exposes 21 fixed tools. It has 13 readiness/query tools, four generated-file job tools, and four encrypted-context refresh job tools. The published portable `0.1.0-alpha.7` preview has 19 tools: 13 readiness/query tools, four shared generated/export-job tools, and two direct-pairing tools. Current development source has 21 by adding full-corpus raw export plus bounded job-artifact reads; do not assume those two tools exist until a later versioned release publishes them. The portable topology runs typed queries directly on the foreground iPhone; development raw corpus jobs use iPhone or Android.
+The bundled Mac server exposes 21 fixed tools. It has 13 readiness/query tools, four generated-file job tools, and four encrypted-context refresh job tools. The published portable `0.1.0-alpha.6` preview has 19 tools: 13 readiness/query tools, four shared generated/export-job tools, and two direct-pairing tools. Current development source has 21 by adding full-corpus raw export plus bounded job-artifact reads; do not assume those two tools exist until a later versioned release publishes them. The portable topology runs typed queries directly on the foreground iPhone; development raw corpus jobs use iPhone or Android.
 
 ### Readiness and discovery
 

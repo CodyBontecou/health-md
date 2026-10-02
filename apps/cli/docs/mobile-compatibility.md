@@ -4,7 +4,16 @@ This is the authoritative mobile compatibility ledger for the portable Rust CLI.
 show wire capability; they are not a substitute for an app version/build that completed the physical
 release matrix.
 
-## `healthmd-cli` 0.1.0-alpha.7
+## Publication is separate from compatibility
+
+Availability audit (2026-10-02): `healthmd-cli/v0.1.0-alpha.6` is published with uploaded
+installers, archives, and checksum/signature assets. `healthmd-cli/v0.1.0-alpha.7` is an
+unpublished draft with zero assets. The rows below describe the alpha.7 **source candidate**;
+do not apply its mobile counterpart IDs or APNs behavior to installed alpha.6 binaries.
+See [release availability](release-availability.md) for the deterministic cloud audit.
+No public CLI/mobile pair is qualified for stable release.
+
+## `healthmd-cli` 0.1.0-alpha.7 candidate
 
 | Mobile source and feature | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Public qualification |
 |---|---|---|---|
@@ -45,9 +54,9 @@ store build has a later version/build, update this ledger and release notes befo
 
 - RFC-0005 P1 is a host-side wait-only wake window shared by iOS and Android. It changes no pairing,
   application-protocol, query, or transfer bytes. P2 adds opt-in APNs enrollment for iPhone; current
-  `main` compiles the health-free worker nudge into every desktop CLI build and alpha.7 archives
-  carry that default. Published alpha.6 archives remain P1-only because P2 was source-feature-gated;
-  alpha.7 and later send the best-effort nudge by default. Android FCM remains the
+  `main` compiles the health-free worker nudge into every desktop CLI build and alpha.7 source
+  carries that default. Published alpha.6 archives remain P1-only because P2 was source-feature-gated;
+  alpha.7 source builds send the best-effort nudge by default; its draft has no public archives. Android FCM remains the
   explicit P3 target, so opening Health.md manually unblocks Android in the meantime.
 - Shared pairing selector 3 is independent from iPhone query v3. It adds one 20-digit iOS/Android QR/code without changing application v1/v2 or encrypted transport.
 - Legacy Apple selector 1 and Android selector 2 remain byte-compatible. Android may retry high-entropy selector 2 for an older CLI and never downgrades its application protocol to v1.
