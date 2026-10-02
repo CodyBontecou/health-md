@@ -214,6 +214,9 @@ export class VmHealthDataReader implements HealthDataReader {
   }
   close(): void { this.db.close(); }
 
+  // Filter reviewed current profiles before applying catalog/latest limits.
+  // Unsupported snapshots remain discoverable through the full-export tools;
+  // never fall back to an older Apple revision for an unsupported current day.
   private rows(userId: string, start?: string, end?: string,
     limit = MAX_CATALOG_DAYS + 1, descending = false): DayRow[] {
     const where = start && end ? "AND d.owner_date BETWEEN ? AND ?" : "";
@@ -222,7 +225,9 @@ export class VmHealthDataReader implements HealthDataReader {
       e.byte_count AS byteCount, e.plaintext_sha256 AS plaintextSha256
       FROM daily_records d JOIN exports e ON e.id = d.export_id AND e.user_id = d.user_id
       JOIN users u ON u.id = d.user_id AND u.status = 'active'
-      WHERE d.user_id = ? ${where} ORDER BY d.owner_date ${descending ? "DESC" : "ASC"} LIMIT ?`;
+      WHERE d.user_id = ? AND e.source = 'ios' AND e.envelope_schema_version IN (1, 2)
+        AND e.daily_record_schema_version = 8 AND d.schema_version = 8
+        ${where} ORDER BY d.owner_date ${descending ? "DESC" : "ASC"} LIMIT ?`;
     return this.db.prepare(sql).all(userId, ...(start && end ? [start, end] : []), limit) as unknown as DayRow[];
   }
 
@@ -423,7 +428,7 @@ export class VmHealthDataReader implements HealthDataReader {
 
   async listMetrics(principal: ReadPrincipal): Promise<MetricInfo[]> {
     // An unlimited-retention account may hold years of exports. Intentionally
-    // catalog only the most recent 365 snapshots; do not permanently disable
+    // catalog only the most recent 365 supported snapshots; do not permanently disable
     // discovery when day 366 arrives or pretend the window is all history.
     const rows = this.rows(principal.userId, undefined, undefined, MAX_CATALOG_DAYS, true).reverse();
     const seen = new Map<string, MetricInfo>();
@@ -466,7 +471,7 @@ export class VmHealthDataReader implements HealthDataReader {
 
   async getDailySummary(principal: ReadPrincipal, date: string): Promise<DailySummary> {
     const [day] = await this.summaries(principal, validDate(date), date);
-    if (!day) throw new ReaderError("unavailable_data", "No export is available for that date.");
+    if (!day) throw new ReaderError("unavailable_data", "No supported daily summary is available for that date.");
     return day;
   }
 
@@ -476,7 +481,7 @@ export class VmHealthDataReader implements HealthDataReader {
     validDate(start);
     const end = nextDay(start, 6);
     const days = await this.summaries(principal, start, end);
-    if (days.length === 0) throw new ReaderError("empty_range", "No exports are available in this week.");
+    if (days.length === 0) throw new ReaderError("empty_range", "No supported daily summaries are available in this week.");
     const available = new Set(days.map((day) => day.date));
     const missingDates = Array.from({ length: 7 }, (_, index) => nextDay(start, index))
       .filter((date) => !available.has(date));

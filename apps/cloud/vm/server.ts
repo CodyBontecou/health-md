@@ -52,10 +52,10 @@ function trustedProxyRequest(request: IncomingMessage, env: Env, mode: VmServerM
   } as RequestInit);
 }
 
-// Serialize one-account quota checks and metadata commits. A second legitimate
-// upload waits its turn instead of failing spuriously when maintenance or an
-// earlier daily batch is still in flight. Bound the queue to avoid a tailnet
-// peer holding arbitrarily many streaming requests open.
+// Bound and serialize uploads within this listener. Other listeners/processes
+// are fenced by durable upload intents and quota transactions, not this gate.
+// A second legitimate upload waits behind local maintenance or an earlier
+// batch; no peer may hold arbitrarily many streaming requests open.
 class VmGate {
   private uploadTail: Promise<void> = Promise.resolve();
   private uploadCount = 0;
@@ -93,12 +93,15 @@ class VmGate {
 function accountRoute(method: string, path: string): boolean {
   if (method === "GET") return new Set([
     "/health", "/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
-    "/repair", "/repair.js", "/repair-panel", "/style.css", "/api/repair/drafts",
+    "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js",
+    "/style.css", "/api/repair/drafts",
     "/api/repair/devices", "/api/repair/device/status", "/api/repair/dispatches",
-    "/api/runtime", "/api/account", "/api/sessions", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
+    "/api/runtime", "/api/account", "/api/account/deletion-status", "/api/security-events",
+    "/api/sessions", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",
     "/api/dashboard/trends", "/api/explore/catalog",
   ]).has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||
-    /^\/api\/(?:exports|days)\/page\/[0-9]{1,7}$/u.test(path);
+    /^\/api\/(?:exports|days)\/page\/[0-9]{1,7}$/u.test(path) ||
+    /^\/api\/account\/export\/page\/[0-9]{1,8}$/u.test(path);
   if (method === "POST") return new Set([
     "/api/auth/password-login", "/api/auth/logout", "/api/sessions/revoke-others",
     "/api/ingest-tokens", "/api/agent-tokens",
@@ -230,7 +233,8 @@ export async function runVmServer(): Promise<void> {
   await worker.scheduled({} as ScheduledEvent, env);
   await objects.reconcile(db);
   const service = await startVmServer(env, port);
-  // Keep deletion and orphan cleanup moving, but never race an in-flight upload.
+  // Pause this listener during maintenance. Independent public ingestion is
+  // protected by durable intent references, including its temporary files.
   setInterval(() => {
     void service.runMaintenance(async () => {
       await worker.scheduled({} as ScheduledEvent, env);

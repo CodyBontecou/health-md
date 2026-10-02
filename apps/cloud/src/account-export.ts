@@ -5,6 +5,7 @@ import type { Env } from "./types";
 
 const PAGE_SIZE = 5;
 const TAR_BLOCK = 512;
+const TAR_CHUNK_BYTES = 64 * 1024;
 
 interface ExportRow {
   id: string;
@@ -50,14 +51,6 @@ function tarHeader(name: string, size: number, modifiedAt: string): Uint8Array {
   for (const byte of header) checksum += byte;
   writeAscii(header, 148, 8, checksum.toString(8).padStart(6, "0") + "\0 ");
   return header;
-}
-
-function enqueueTarEntry(controller: ReadableStreamDefaultController<Uint8Array>, name: string,
-  bytes: Uint8Array, modifiedAt: string): void {
-  controller.enqueue(tarHeader(name, bytes.byteLength, modifiedAt));
-  controller.enqueue(bytes);
-  const padding = (TAR_BLOCK - bytes.byteLength % TAR_BLOCK) % TAR_BLOCK;
-  if (padding) controller.enqueue(new Uint8Array(padding));
 }
 
 export async function downloadAccountExportPage(
@@ -107,30 +100,72 @@ export async function downloadAccountExportPage(
     nextPage: page < totalPages ? page + 1 : null,
     files,
   }, null, 2)}\n`);
+  let index = -1; // Manifest first, then one verified export at a time.
+  let bytes: Uint8Array | null = manifest;
+  let position = 0;
+  let padding = 0;
+  let stage: "header" | "body" | "padding" | "next" = "header";
+  let cancelled = false;
   const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
+    async pull(controller) {
       try {
-        enqueueTarEntry(controller, "manifest.json", manifest, generatedAt);
-        for (let index = 0; index < rows.length; index += 1) {
+        if (stage === "next") {
+          index += 1;
+          if (index === rows.length) {
+            controller.enqueue(new Uint8Array(TAR_BLOCK * 2));
+            controller.close();
+            return;
+          }
           const row = rows[index]!;
           const object = await env.EXPORTS.get(row.objectKey);
+          if (cancelled) { await object?.body?.cancel(); return; }
           if (!object || object.size !== encryptedExportByteCount(row.byteCount)) {
             throw new Error("A retained export object is unavailable");
           }
           const key = await resolveExportKey(env, userId, row.keyId);
-          const plaintext = await decryptExport(new Uint8Array(await object.arrayBuffer()), key, userId, row.id);
-          if (plaintext.byteLength !== row.byteCount || await sha256Hex(plaintext) !== row.sha256) {
+          if (cancelled) { await object.body?.cancel(); return; }
+          const encrypted = await object.arrayBuffer();
+          if (cancelled) return;
+          const plaintext = await decryptExport(new Uint8Array(encrypted), key, userId, row.id);
+          if (cancelled) return;
+          const digest = await sha256Hex(plaintext);
+          if (cancelled) return;
+          if (plaintext.byteLength !== row.byteCount || digest !== row.sha256) {
             throw new Error("A retained export failed integrity verification");
           }
-          enqueueTarEntry(controller, files[index]!.filename, plaintext, row.receivedAt);
+          bytes = plaintext;
+          position = 0;
+          stage = "header";
         }
-        controller.enqueue(new Uint8Array(TAR_BLOCK * 2));
-        controller.close();
-      } catch (error) {
-        controller.error(error);
+        if (stage === "header") {
+          controller.enqueue(tarHeader(index < 0 ? "manifest.json" : files[index]!.filename,
+            bytes!.byteLength, index < 0 ? generatedAt : rows[index]!.receivedAt));
+          stage = "body";
+        } else if (stage === "body") {
+          const end = Math.min(position + TAR_CHUNK_BYTES, bytes!.byteLength);
+          // Copy only a bounded chunk so a queued chunk cannot pin a previous
+          // 25 MiB plaintext while the next envelope is read and decrypted.
+          controller.enqueue(bytes!.slice(position, end));
+          position = end;
+          if (position === bytes!.byteLength) {
+            padding = (TAR_BLOCK - position % TAR_BLOCK) % TAR_BLOCK;
+            bytes = null;
+            stage = padding ? "padding" : "next";
+          }
+        } else if (stage === "padding") {
+          controller.enqueue(new Uint8Array(padding));
+          stage = "next";
+        }
+      } catch {
+        bytes = null;
+        if (!cancelled) controller.error(new Error("Account export archive is unavailable."));
       }
     },
-  });
+    cancel() {
+      cancelled = true;
+      bytes = null;
+    },
+  }, { highWaterMark: 0 });
   return new Response(stream, {
     headers: {
       "Content-Type": "application/x-tar",
