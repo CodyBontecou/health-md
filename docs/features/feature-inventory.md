@@ -36,14 +36,13 @@
 | Sample export preview (onboarding) | iOS, Android | Preview a sample export before choosing destination | `OnboardingView.swift` (`sampleExportStepIndex`); android onboarding | 🟡 inside onboarding pages |
 | Obsidian plugin visualization demo | iOS | Embedded HTML/JS demo of the external Obsidian plugin | `iOS/Resources/PluginVisualization/*` | 🟡 inside onboarding |
 | Folder/vault selection | iOS, macOS, Android | Pick Obsidian vault, iCloud Drive/Files, or SAF document-provider folder | `iOS/Views/FolderPicker.swift`, `VaultManager`; android SAF storage | ✅ `vault-folder-selection.md`, `folder-organization.md` |
-| Mac onboarding | macOS | First-run Mac setup | `macOS/Views/MacOnboardingView.swift` | 🟡 iOS-oriented onboarding page |
 | Onboarding analytics | Android | First-party onboarding event funnel | `android docs/onboarding-analytics.md`, `data/attribution/` | 🔧 internal doc only |
 
 ## 2. Metric selection & data scope
 
 | Feature | Products | Description | Evidence | Docs |
 |---|---|---|---|---|
-| Metric selection UI | iOS, macOS, Android | Apple: 225+ definitions, 21 categories, special-access flows. Android: 106 Health Connect metrics, search + category toggles | `iOS/Views/MetricSelectionView.swift`, `HealthKitRecordCatalog`; android `presentation/metrics/MetricSelectionScreen.kt` | ✅ `metric-selection.md`; website `metrics.md` |
+| Metric selection UI | iOS, Android | Apple: 225+ definitions, 21 categories, special-access flows. Android: 106 Health Connect metrics, search + category toggles. Mac applies the selection configured on iPhone. | `iOS/Views/MetricSelectionView.swift`, `HealthKitRecordCatalog`; android `presentation/metrics/MetricSelectionScreen.kt` | ✅ `metric-selection.md`; website `metrics.md` |
 | Shared metric registry | core (all) | Deterministic Rust-owned metric identities, units, aliases, profile order | `healthmd-core/registry/metric-registry-v1.json`, adapters in Apple/Android | ✅ website `shared-metric-registry.md`; 🟡 |
 | HealthKit special-access metrics | iOS | Special permission flows for restricted metric classes | `HealthKitRecordCatalog`, metric-selection doc | ✅ |
 | Android compatibility keys | Android | Legacy compatibility keys for existing scripts | android export settings | 🟡 android README |
@@ -83,7 +82,7 @@
 | Markdown template choice | iOS, macOS, Android | Compact/standard/detailed/custom templates | `MarkdownTemplateView`, `MarkdownExporter` | ✅ `markdown-template-customization.md` |
 | Date/time/unit preferences | iOS, macOS, Android | Date style, time style, metric/imperial | `FormatPreferences`, `FormatCustomizationView` | ✅ `date-time-units.md` (both trees) |
 | Write modes | iOS, macOS, Android | Overwrite / append / update-merge | `WriteMode`, `MarkdownMerger` | ✅ `write-modes.md` |
-| Emoji headers / grouping options | macOS (+iOS) | Section grouping, emoji headers, folder-by-type | `MacSettingsView` Format tab | 🟡 mac settings coverage |
+| Emoji headers / grouping options | iOS, macOS (destination) | Section grouping and emoji headers are configured on iPhone and applied to Mac-targeted exports | `iOS/Views/ExportTabView.swift`, `iOS/Views/FormatCustomizationView.swift`, `Shared/Export/MarkdownExporter.swift` | 🟡 format customization coverage |
 | Configuration protection | iOS | "Prevent Accidental Changes" lock for config edits | `SettingsTabView.configurationProtectionSection` | 🟡 within `manual-export.md` |
 
 ## 5. Export execution & reliability

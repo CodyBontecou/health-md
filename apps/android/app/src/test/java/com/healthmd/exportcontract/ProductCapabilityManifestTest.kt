@@ -110,6 +110,8 @@ class ProductCapabilityManifestTest {
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
             "direct-cli.shared-qr-pairing",
+            // Shipped by the canonical health-corpus/v1 contract on both platforms.
+            "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
         )
 

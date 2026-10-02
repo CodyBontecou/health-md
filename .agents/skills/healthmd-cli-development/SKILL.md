@@ -133,7 +133,7 @@ Never update one side of a wire change and call it complete.
    `healthmd.cli_guidance/1` with `request_sent: false`, requirements, examples, and next actions.
    Keep malformed/contradictory input and runtime failures nonzero, deterministic,
    privacy-safe `healthmd.cli_error/1`; never embed rejected values or escaped Clap output.
-6. Update parser/client/protocol/iPhone tests, help, README, operator guidance, and QA.
+6. Use the [QA consumer checklist](../../../apps/cli/docs/qa.md#cli-change-consumers) to cover workflow smoke, release/signing probes, structured guidance, skills, and public docs as well as parser/client/protocol/iPhone tests.
 
 Do not add `--iphone`; standalone already means direct iPhone.
 
@@ -208,6 +208,7 @@ cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 python3 scripts/update-mcp-shared-assets.py --check
+python3 scripts/smoke-cli.py   # Python 3.11+; same health-free smoke as native CI
 dist plan --allow-dirty
 cargo run --bin healthmd -- --help
 cargo run --bin healthmd -- export

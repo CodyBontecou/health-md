@@ -15,6 +15,19 @@ on:
       - 'packages/contracts/**'
       - 'packages/healthmd-core-rust/**'
       - '.github/workflows/website-ci.yml'
+      - 'AGENTS.md'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'apps/**/AGENTS.md'
+      - 'apps/**/README.md'
+      - 'packages/**/AGENTS.md'
+      - 'packages/**/README.md'
+      - 'docs/agents/**'
+      - 'docs/experiments/**'
+      - 'docs/architecture/monorepo.md'
+      - 'apps/cli/docs/qa.md'
+      - 'apps/apple/scripts/check-documentation-links.py'
+      - 'apps/apple/scripts/tests/test_documentation_links.py'
   schedule:
     - cron: '23 10 * * *'
   workflow_dispatch:
@@ -29,6 +42,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  navigation:
+    name: Contributor navigation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check contributor links and literal paths
+        run: python3 apps/apple/scripts/check-documentation-links.py --navigation-only
+      - name: Test navigation validator
+        run: python3 -m unittest apps/apple/scripts/tests/test_documentation_links.py
+
   changes:
     name: Detect website-affecting changes
     runs-on: ubuntu-latest
@@ -147,7 +171,7 @@ jobs:
   gate:
     name: Website CI
     if: ${{ always() }}
-    needs: [changes, validate]
+    needs: [changes, navigation, validate]
     runs-on: ubuntu-latest
     steps:
       - name: Require website checks
@@ -155,11 +179,13 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           CHANGES_RUN: ${{ needs.changes.outputs.run }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
+          NAVIGATION_RESULT: ${{ needs.navigation.result }}
         run: |
           set -e
+          test "$NAVIGATION_RESULT" = success
           test "$CHANGES_RESULT" = success
           if [ "$CHANGES_RUN" != "true" ]; then
-            echo "No website-affecting changes in this pull request; Website CI skipped."
+            echo "Contributor navigation passed; no website-affecting changes, so the website build was skipped."
             exit 0
           fi
           test "$VALIDATE_RESULT" = success

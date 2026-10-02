@@ -2,7 +2,7 @@
 
 ## Clinical boundary
 
-Everything served after authentication, including identity and request metadata, is inside the clinical/PHI boundary. This component is independent from `apps/website`, every existing Worker, and root `worker/`. Never import from, proxy through, or share stores with those components.
+Everything served after authentication, including identity and request metadata, is inside the clinical/PHI boundary. This component is independent from [the website](../website/), [Apple Workers](../apple/worker/), and every other existing Worker. Never import from, proxy through, or share stores with those components.
 
 The checked-in runtime is **synthetic only**. Use fictional aliases and generated values. Never add real names, dates of birth, MRNs, readings, credentials, tenant URLs, access tokens, screenshots, or production configuration. `PRACTICE_RUNTIME_MODE` accepts only `synthetic`; do not add a production value without an approved architecture, compliance, security, BAA, and release-gate change.
 

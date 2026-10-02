@@ -80,7 +80,7 @@ class CloudNativeRawSnapshotTest {
         assertThat(providers[1].rawEndpointDefinitions.first { it.typeKey == OuraCloudDataProvider.DAILY_ACTIVITY }.pagination)
             .isEqualTo(RawPaginationSupport.NEXT_TOKEN)
         assertThat(providers[2].rawEndpointDefinitions.first { it.typeKey == WhoopCloudDataProvider.RECOVERY }.pagination)
-            .isEqualTo(RawPaginationSupport.FAN_OUT)
+            .isEqualTo(RawPaginationSupport.NEXT_TOKEN)
         assertThat(providers[3].rawEndpointDefinitions.filterNot { it.typeKey.startsWith("unsupported/") }
             .all { it.pagination == RawPaginationSupport.NEXT_TOKEN }).isTrue()
     }
@@ -208,14 +208,14 @@ class CloudNativeRawSnapshotTest {
             collectionCalls++
             CloudHttpResponse(200, body = "{\"records\":[],\"next_token\":\"sleep-$collectionCalls\"}".toByteArray())
         }
-        assertCap(WhoopCloudDataProvider(collectionClient, "http://localhost/developer/v1"), WhoopCloudDataProvider.SLEEP) { collectionCalls }
+        assertCap(WhoopCloudDataProvider(collectionClient, "http://localhost/developer/v2"), WhoopCloudDataProvider.SLEEP) { collectionCalls }
 
         var cycleCalls = 0
         val cycleClient = client {
             cycleCalls++
             CloudHttpResponse(200, body = "{\"records\":[],\"next_token\":\"cycle-$cycleCalls\"}".toByteArray())
         }
-        assertCap(WhoopCloudDataProvider(cycleClient, "http://localhost/developer/v1"), WhoopCloudDataProvider.CYCLE) { cycleCalls }
+        assertCap(WhoopCloudDataProvider(cycleClient, "http://localhost/developer/v2"), WhoopCloudDataProvider.CYCLE) { cycleCalls }
     }
 
     @Test
@@ -227,7 +227,7 @@ class CloudNativeRawSnapshotTest {
                 CloudHttpResponse(200, body = "{\"records\":[],\"next_token\":\"repeat-whoop\"}".toByteArray())
             }
             val results = mutableListOf<CloudNativeEndpointResult>()
-            WhoopCloudDataProvider(client, "http://localhost/developer/v1").streamNativePages(
+            WhoopCloudDataProvider(client, "http://localhost/developer/v2").streamNativePages(
                 request(),
                 setOf(endpoint),
                 observerFor = { CloudRawResponseObserver { } },
@@ -242,6 +242,7 @@ class CloudNativeRawSnapshotTest {
 
         assertCycle(WhoopCloudDataProvider.SLEEP)
         assertCycle(WhoopCloudDataProvider.CYCLE)
+        assertCycle(WhoopCloudDataProvider.RECOVERY)
     }
 
     @Test
@@ -267,7 +268,7 @@ class CloudNativeRawSnapshotTest {
             )
         }
         val results = mutableListOf<CloudNativeEndpointResult>()
-        WhoopCloudDataProvider(client, "http://localhost/developer/v1").streamNativePages(
+        WhoopCloudDataProvider(client, "http://localhost/developer/v2").streamNativePages(
             request(),
             setOf(WhoopCloudDataProvider.SLEEP),
             observerFor = { CloudRawResponseObserver { observed += it } },
@@ -475,46 +476,35 @@ class CloudNativeRawSnapshotTest {
         val ouraClient = client { throw CancellationException("cancel-oura") }
         assertCancelled(OuraCloudDataProvider(ouraClient, "http://localhost/v2/usercollection"), OuraCloudDataProvider.SLEEP)
         val whoopCollectionClient = client { throw CancellationException("cancel-whoop-collection") }
-        assertCancelled(WhoopCloudDataProvider(whoopCollectionClient, "http://localhost/developer/v1"), WhoopCloudDataProvider.SLEEP)
+        assertCancelled(WhoopCloudDataProvider(whoopCollectionClient, "http://localhost/developer/v2"), WhoopCloudDataProvider.SLEEP)
         val whoopCycleClient = client { throw CancellationException("cancel-whoop-cycle") }
-        assertCancelled(WhoopCloudDataProvider(whoopCycleClient, "http://localhost/developer/v1"), WhoopCloudDataProvider.CYCLE)
+        assertCancelled(WhoopCloudDataProvider(whoopCycleClient, "http://localhost/developer/v2"), WhoopCloudDataProvider.CYCLE)
     }
 
     @Test
-    fun whoopRecoveryFanOutCapStopsAtOneHundredAndCancellationPropagates() = runTest {
+    fun whoopRecoveryPageCapStopsAtOneHundredAndCancellationPropagates() = runTest {
         var recoveryCalls = 0
-        val ids = (1..MAX_NATIVE_PAGES_PER_ENDPOINT + 1).joinToString(",") { "{\"id\":\"cycle-$it\"}" }
         val client = client { httpRequest ->
-            when (httpRequest.url.path) {
-                "/developer/v1/cycle" -> CloudHttpResponse(200, body = "{\"records\":[$ids],\"next_token\":null}".toByteArray())
-                "/developer/v1/recovery" -> {
-                    recoveryCalls++
-                    CloudHttpResponse(200, body = "{\"records\":[]}".toByteArray())
-                }
-                else -> error("unexpected path")
-            }
+            assertThat(httpRequest.url.path).isEqualTo("/developer/v2/recovery")
+            recoveryCalls++
+            CloudHttpResponse(200, body = "{\"records\":[],\"next_token\":\"recovery-$recoveryCalls\"}".toByteArray())
         }
         val results = mutableListOf<CloudNativeEndpointResult>()
-        WhoopCloudDataProvider(client, "http://localhost/developer/v1").streamNativePages(
+        WhoopCloudDataProvider(client, "http://localhost/developer/v2").streamNativePages(
             request(),
             setOf(WhoopCloudDataProvider.RECOVERY),
             observerFor = { CloudRawResponseObserver { } },
             onEndpointResult = { results += it },
         )
         assertThat(recoveryCalls).isEqualTo(MAX_NATIVE_PAGES_PER_ENDPOINT)
-        val recovery = results.single { it.endpointKey == WhoopCloudDataProvider.RECOVERY }
+        val recovery = results.single()
+        assertThat(recovery.endpointKey).isEqualTo(WhoopCloudDataProvider.RECOVERY)
         assertThat(recovery.successfulPageCount).isEqualTo(MAX_NATIVE_PAGES_PER_ENDPOINT.toLong())
-        assertThat(recovery.failure?.code).isEqualTo("fan_out_cap")
+        assertThat(recovery.failure?.code).isEqualTo("pagination_cap")
 
-        val cancelClient = client { httpRequest ->
-            if (httpRequest.url.path.endsWith("/cycle")) {
-                CloudHttpResponse(200, body = "{\"records\":[{\"id\":\"one\"}],\"next_token\":null}".toByteArray())
-            } else {
-                throw CancellationException("cancel-recovery")
-            }
-        }
+        val cancelClient = client { throw CancellationException("cancel-recovery") }
         val cancellation = runCatching {
-            WhoopCloudDataProvider(cancelClient, "http://localhost/developer/v1").streamNativePages(
+            WhoopCloudDataProvider(cancelClient, "http://localhost/developer/v2").streamNativePages(
                 request(),
                 setOf(WhoopCloudDataProvider.RECOVERY),
                 observerFor = { CloudRawResponseObserver { } },
@@ -525,36 +515,163 @@ class CloudNativeRawSnapshotTest {
     }
 
     @Test
-    fun whoopRecoveryFanOutUsesIdsFromCapturedCyclePageWithoutExportingIdMetadata() = runTest {
+    fun whoopRecoveryPagesUseFixedRangeWithoutFetchingCyclesOrExportingCursors() = runTest {
         val requests = mutableListOf<CloudHttpRequest>()
+        val bodies = listOf(
+            "{\n \"records\":[{\"cycle_id\":101,\"sleep_id\":\"00000000-0000-4000-8000-000000000201\"}],\"next_token\":\"recovery-secret\"\n}",
+            "{\"records\":[],\"next_token\":null}",
+        )
         val client = client { request ->
             requests += request
-            val body = when (request.url.path) {
-                "/developer/v1/cycle" -> "{\"records\":[{\"id\":\"cycle-secret-id\"}],\"next_token\":null}"
-                "/developer/v1/recovery" -> "{\"records\":[{\"score\":{\"resting_heart_rate\":50}}]}"
-                else -> error("unexpected test URL")
-            }
-            CloudHttpResponse(200, "application/json", body = body.toByteArray())
+            CloudHttpResponse(200, "application/json", body = bodies[requests.lastIndex].toByteArray())
         }
-        val provider = WhoopCloudDataProvider(client, "http://localhost/developer/v1")
-        val observed = mutableMapOf<String, MutableList<CloudHealthRawResponse>>()
+        val provider = WhoopCloudDataProvider(client)
+        val observed = mutableListOf<CloudHealthRawResponse>()
         val results = mutableListOf<CloudNativeEndpointResult>()
 
         provider.streamNativePages(
             request(),
-            setOf(WhoopCloudDataProvider.CYCLE, WhoopCloudDataProvider.RECOVERY),
-            observerFor = { key -> CloudRawResponseObserver { observed.getOrPut(key) { mutableListOf() } += it } },
+            setOf(WhoopCloudDataProvider.RECOVERY),
+            observerFor = { key ->
+                assertThat(key).isEqualTo(WhoopCloudDataProvider.RECOVERY)
+                CloudRawResponseObserver { observed += it }
+            },
             onEndpointResult = { results += it },
         )
 
-        assertThat(requests.map { it.url.path }).containsExactly(
-            "/developer/v1/cycle", "/developer/v1/recovery",
+        assertThat(requests.map { it.url.toString().substringBefore('?') }).containsExactly(
+            "https://api.prod.whoop.com/developer/v2/recovery",
+            "https://api.prod.whoop.com/developer/v2/recovery",
         ).inOrder()
-        assertThat(requests[1].url.query).contains("cycleId=cycle-secret-id")
-        assertThat(observed.getValue(WhoopCloudDataProvider.RECOVERY).single().queryMetadata).isEmpty()
-        assertThat(results.map { it.endpointKey }).containsExactly(
-            WhoopCloudDataProvider.CYCLE, WhoopCloudDataProvider.RECOVERY,
-        ).inOrder()
+        assertThat(requests[0].url.query).isEqualTo("start=2026-01-01T00%3A00%3A00Z&end=2026-01-02T00%3A00%3A00Z&limit=25")
+        assertThat(requests[1].url.query).isEqualTo("${requests[0].url.query}&nextToken=recovery-secret")
+        assertThat(observed.map { it.responseBytes.toString(Charsets.UTF_8) }).containsExactlyElementsIn(bodies).inOrder()
+        assertThat(observed.map { it.pageOrdinal }).containsExactly(1, 2).inOrder()
+        assertThat(observed[1].queryMetadata).doesNotContainKey("nexttoken")
+        assertThat(results.single().endpointKey).isEqualTo(WhoopCloudDataProvider.RECOVERY)
+        assertThat(results.single().successfulPageCount).isEqualTo(2)
+        assertThat(results.single().failure).isNull()
+    }
+
+    @Test
+    fun whoopCycleFailureDoesNotPreventIndependentRecoveryCollection() = runTest {
+        val client = client { request ->
+            if (request.url.path.endsWith("/cycle")) CloudHttpResponse(403) else
+                CloudHttpResponse(200, body = "{\"records\":[]}".toByteArray())
+        }
+        val results = mutableListOf<CloudNativeEndpointResult>()
+        WhoopCloudDataProvider(client).streamNativePages(
+            request(),
+            setOf(WhoopCloudDataProvider.CYCLE, WhoopCloudDataProvider.RECOVERY),
+            observerFor = { CloudRawResponseObserver { } },
+            onEndpointResult = { results += it },
+        )
+        assertThat(results.first().failure?.code).isEqualTo("native_endpoint_failed")
+        assertThat(results.last().endpointKey).isEqualTo(WhoopCloudDataProvider.RECOVERY)
+        assertThat(results.last().successfulPageCount).isEqualTo(1)
+        assertThat(results.last().failure).isNull()
+    }
+
+    @Test
+    fun whoopLaterRecoveryPageFailureRetainsExactFirstPageAndReportsPartial() = runTest {
+        val exact = "{\n \"records\":[{\"cycle_id\":101}],\"next_token\":\"private-cursor\"\n}".toByteArray()
+        var calls = 0
+        val api = client { request ->
+            if (request.url.path.endsWith("/cycle")) {
+                CloudHttpResponse(200, body = "{\"records\":[]}".toByteArray())
+            } else {
+                calls++
+                if (calls == 1) CloudHttpResponse(200, "application/json", body = exact) else
+                    CloudHttpResponse(500, body = "private-provider-error-body".toByteArray())
+            }
+        }
+        val items = CloudRawHealthDataProvider(WhoopCloudDataProvider(api), api)
+            .stream(request(selectedMetrics = setOf("hrv"))).toList()
+
+        val recovery = items.filterIsInstance<RawExportItem.Record>()
+            .single { it.record.providerPayload!!.endpointKey == WhoopCloudDataProvider.RECOVERY }
+        assertThat(calls).isEqualTo(2)
+        assertThat(Base64.getDecoder().decode(recovery.record.providerPayload!!.responseBytesBase64)).isEqualTo(exact)
+        assertThat(items.filterIsInstance<RawExportItem.TypeReport>()
+            .single { it.report.typeKey == WhoopCloudDataProvider.RECOVERY }.report.status).isEqualTo(RawTypeStatus.READ_ERROR)
+        assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.PARTIAL)
+        assertThat(items.filterIsInstance<RawExportItem.Issue>().all {
+            "private-cursor" !in it.issue.message && "private-provider-error-body" !in it.issue.message
+        }).isTrue()
+    }
+
+    @Test
+    fun whoopRecoveryMetricSelectionsNeitherFetchCyclesNorFailOnMissingCyclePermission() = runTest {
+        for (metrics in listOf(setOf("hrv"), setOf("resting_hr"), setOf("hrv", "resting_hr"))) {
+            val requests = mutableListOf<CloudHttpRequest>()
+            val api = client { request ->
+                requests += request
+                if (request.url.path.endsWith("/cycle")) CloudHttpResponse(403) else
+                    CloudHttpResponse(200, body = "{\"records\":[]}".toByteArray())
+            }
+            val items = CloudRawHealthDataProvider(WhoopCloudDataProvider(api), api)
+                .stream(request(selectedMetrics = metrics)).toList()
+
+            assertThat(requests.map { it.url.path }).containsExactly("/developer/v2/recovery")
+            assertThat(items.filterIsInstance<RawExportItem.Record>().map { it.record.providerPayload!!.endpointKey })
+                .containsExactly(WhoopCloudDataProvider.RECOVERY)
+            val reports = items.filterIsInstance<RawExportItem.TypeReport>().associate { it.report.typeKey to it.report }
+            assertThat(reports.getValue(WhoopCloudDataProvider.CYCLE).status).isEqualTo(RawTypeStatus.NOT_SELECTED)
+            assertThat(reports.getValue(WhoopCloudDataProvider.RECOVERY).status).isEqualTo(RawTypeStatus.EXPORTED)
+            assertThat(items.filterIsInstance<RawExportItem.Issue>()).isEmpty()
+            assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.COMPLETE)
+        }
+    }
+
+    @Test
+    fun whoopCyclesAreSelectedForNativeEnergyAndHeartRateMetricsOnly() = runTest {
+        val exact = """
+            {"records":[{"id":101,"score":{"kilojoule":8288.297,"average_heart_rate":68,"max_heart_rate":141}}]}
+        """.trimIndent().toByteArray()
+        val requests = mutableListOf<CloudHttpRequest>()
+        val api = client { request ->
+            requests += request
+            if (request.url.path.endsWith("/cycle")) CloudHttpResponse(200, "application/json", body = exact) else
+                CloudHttpResponse(403)
+        }
+        val source = WhoopCloudDataProvider(api)
+        val cycleDefinition = source.rawEndpointDefinitions.single { it.typeKey == WhoopCloudDataProvider.CYCLE }
+        assertThat(cycleDefinition.metricIds).containsExactly("total_calories", "avg_hr", "max_hr")
+
+        val items = CloudRawHealthDataProvider(source, api)
+            .stream(request(selectedMetrics = setOf("total_calories"))).toList()
+        assertThat(requests.map { it.url.path }).containsExactly("/developer/v2/cycle")
+        val payload = items.filterIsInstance<RawExportItem.Record>().single().record.providerPayload!!
+        assertThat(payload.endpointKey).isEqualTo(WhoopCloudDataProvider.CYCLE)
+        assertThat(Base64.getDecoder().decode(payload.responseBytesBase64)).isEqualTo(exact)
+        assertThat(items.filterIsInstance<RawExportItem.TypeReport>()
+            .single { it.report.typeKey == WhoopCloudDataProvider.RECOVERY }.report.status).isEqualTo(RawTypeStatus.NOT_SELECTED)
+        assertThat(items.filterIsInstance<RawExportItem.Issue>()).isEmpty()
+        assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.COMPLETE)
+    }
+
+    @Test
+    fun whoopRawSnapshotsPreserveRepeatedPagesWithoutNormalizedRecordDedupe() = runTest {
+        val exact = "{\n \"records\":[{\"id\":\"00000000-0000-4000-8000-000000000301\"}],\"next_token\":\"repeat\"\n}".toByteArray()
+        var calls = 0
+        val api = client {
+            calls++
+            CloudHttpResponse(200, "application/json", body = exact)
+        }
+        val items = CloudRawHealthDataProvider(WhoopCloudDataProvider(api), api)
+            .stream(request(selectedMetrics = setOf("workouts"))).toList()
+
+        val payloads = items.filterIsInstance<RawExportItem.Record>().map { it.record.providerPayload!! }
+        assertThat(calls).isEqualTo(2)
+        assertThat(payloads.map { it.pageOrdinal }).containsExactly(1, 2).inOrder()
+        payloads.forEach { payload ->
+            assertThat(Base64.getDecoder().decode(payload.responseBytesBase64)).isEqualTo(exact)
+            assertThat(payload.responseSha256).isEqualTo(RawJson.sha256(exact))
+        }
+        assertThat(items.filterIsInstance<RawExportItem.Issue>().single().issue.code).isEqualTo("pagination_cycle")
+        assertThat(items.filterIsInstance<RawExportItem.TypeReport>()
+            .single { it.report.typeKey == WhoopCloudDataProvider.WORKOUT }.report.status).isEqualTo(RawTypeStatus.READ_ERROR)
+        assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.PARTIAL)
     }
 
     @Test
