@@ -174,7 +174,8 @@ test('CLI launch post uses runnable preview commands and honest privacy boundari
     readFile(path.join(ROOT, 'content/blog/healthmd-cli-direct-iphone-mcp.md')),
     readFile(path.join(REPOSITORY_ROOT, 'apps/cli/README.md')),
   ]).then((buffers) => buffers.map((buffer) => buffer.toString('utf8')));
-  assert.match(post, /0\.1\.0-alpha\.7/);
+  assert.match(post, /published `0\.1\.0-alpha\.6` portable preview/);
+  assert.match(post, /alpha\.7 remains an unpublished draft with zero assets/);
   assert.match(post, /portable preview exposes 19 tools/i);
   assert.match(post, /development source[^.]*total of 21/i);
   assert.match(post, /brew install CodyBontecou\/tap\/healthmd/);
