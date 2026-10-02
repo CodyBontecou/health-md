@@ -62,6 +62,15 @@ Format roles are intentional:
 - **Markdown and Obsidian Bases** keep daily summaries readable and do not dump the archive. Their shared frontmatter exposes capture status, source-record count, failed-query count, warning count, and archive schema. Markdown additionally renders external-record, query-status, and medication-inventory counts in its compact diagnostics section.
 - **Individual Entry Tracking** derives source-event files from canonical HealthKit records whenever an archive is present. WHOOP v1 records do not participate in Individual Entry Tracking.
 
+### Workout table presentation
+
+**Workout Details and Metadata** in Markdown Template settings defaults on. Turn it
+off to omit only those two readable body tables from ordinary Markdown and daily-note
+injection while keeping workout summaries. Structured frontmatter, JSON/CSV, and
+source archives remain unchanged; this optional presentation setting does not change
+schema version 8. See [Workout presentation](./workout-presentation.md) for persistence,
+managed-note replacement, Android staging, and verification scope.
+
 ## Typed WHOOP provider section
 
 When WHOOP capture is enabled and an Apple Health day is retained, v8 may add `providers.whoop`. Provider-only days remain non-exportable. The same WHOOP fetch also continues to supply provider-native `healthmd.external_provider_daily` v1 sidecars; the typed section does not replace or weaken that fidelity layer.

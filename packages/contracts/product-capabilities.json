@@ -262,6 +262,30 @@
       ]
     },
     {
+      "id": "export.workout-table-presentation",
+      "name": "Workout Details and Metadata presentation",
+      "classification": "planned",
+      "summary": "Omit workout Details and Metadata tables from readable Markdown without disabling workout summaries, structured exports, or source capture. Default remains enabled.",
+      "profiles": [
+        "apple-v8"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Add includeWorkoutDetailsAndMetadata with default enabled to Android's first unified-v9 Markdown presentation settings and frozen export profiles. Preserve frozen v4/v5 bytes; their current workout renderer has summary bullets and no Details/Metadata tables."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/workout-presentation.md",
+        "apps/apple/HealthMd/Shared/Export/MarkdownExporter.swift",
+        "apps/apple/HealthMdTests/Export/WorkoutGranularDetailsTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/export/MarkdownExporter.kt"
+      ]
+    },
+    {
       "id": "apple.lossless-healthkit-archive",
       "name": "Lossless HealthKit source archive",
       "classification": "apple_only",

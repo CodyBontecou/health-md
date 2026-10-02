@@ -1208,11 +1208,13 @@ extension HealthData {
                 markdown += "\(bullet) **GPS Route:** \(workout.route.count) points\n"
             }
 
-            markdown += workoutDetailsTableMarkdown(
-                for: workout,
-                converter: snapshot.converter,
-                headerPrefix: detailHeaderPrefix
-            )
+            if template.includeWorkoutDetailsAndMetadata {
+                markdown += workoutDetailsTableMarkdown(
+                    for: workout,
+                    converter: snapshot.converter,
+                    headerPrefix: detailHeaderPrefix
+                )
+            }
 
             let zones = workout.heartRateZones()
             if !zones.isEmpty {
@@ -1276,7 +1278,7 @@ extension HealthData {
                 headerPrefix: detailHeaderPrefix
             )
 
-            if !workout.metadata.isEmpty {
+            if template.includeWorkoutDetailsAndMetadata && !workout.metadata.isEmpty {
                 markdown += "\n\(detailHeaderPrefix) Metadata\n\n"
                 markdown += "| Key | Value |\n"
                 markdown += "|---|---|\n"
