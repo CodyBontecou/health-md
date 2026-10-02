@@ -33,7 +33,7 @@ class HealthConnectRawDataProvider(
     private val catalog: List<HealthConnectRecordDescriptor<out Record>> = HealthConnectRecordCatalog.records,
     private val historyAccessBoundary: HistoryAccessBoundary = HistoryAccessBoundary { null },
     private val routeConsentGateway: ExerciseRouteConsentGateway = NoExerciseRouteConsentGateway,
-) : RawHealthDataProvider {
+) : RawHealthRepository {
     private val client by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
     override suspend fun capabilities(): RawProviderCapabilities {

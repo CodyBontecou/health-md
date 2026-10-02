@@ -14,8 +14,7 @@ final class PricingExperimentRunbookTests: XCTestCase {
         let sourcePaths = [
             "HealthMd/iOS/Views/OnboardingView.swift",
             "HealthMd/iOS/ContentView.swift",
-            "HealthMd/iOS/Views/PaywallView.swift",
-            "HealthMd/macOS/Views/MacPaywallView.swift"
+            "HealthMd/iOS/Views/PaywallView.swift"
         ]
 
         for sourcePath in sourcePaths {

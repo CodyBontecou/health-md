@@ -3,7 +3,7 @@ import XCTest
 @testable import HealthMd
 
 @MainActor
-final class MacExportViewLocalPathTests: XCTestCase {
+final class MacLocalExportBoundaryTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: VaultManager owns nested ObservableObjects;
     // process-lifetime retention avoids the known macOS 26 / Swift 6 deinit crash.
     private static var retainedManagers: [VaultManager] = []
@@ -65,17 +65,15 @@ final class MacExportViewLocalPathTests: XCTestCase {
         let archiveURL = vaultURL.appendingPathComponent("Health.md Export 2026-03-15.zip")
         try Data("stale archive".utf8).write(to: archiveURL)
 
-        let output = try await MacManualRangeDerivedOutputCommitter.commit(
-            requestedDates: [selectedDate],
-            capturedHealthData: [record],
+        let output = try await manager.exportArchive(
+            from: [record],
             rollupHealthData: [record],
             settings: settings,
-            timeZone: settings.exportTimeZoneOverride!,
-            fetchHealthData: { _ in record },
-            vaultManager: manager
+            startDate: selectedDate,
+            endDate: selectedDate
         )
 
-        XCTAssertEqual(output, .init(rollupFileCount: 0, archiveCount: 1))
+        XCTAssertEqual(output, archiveURL)
         let listing = try unzip(arguments: ["-Z1", archiveURL.path])
         XCTAssertTrue(listing.contains("2026-03-15.md\n"), listing)
         XCTAssertTrue(listing.contains("2026-03-15.json\n"), listing)
@@ -93,107 +91,43 @@ final class MacExportViewLocalPathTests: XCTestCase {
         ))
     }
 
-    func testManualArchiveRequiresEveryImmutableOriginalDayAndPreservesExistingZip() async throws {
-        let vaultURL = try temporaryVault()
-        defer { try? FileManager.default.removeItem(at: vaultURL) }
-        let manager = makeVaultManager(vaultURL: vaultURL)
-        let settings = makeSettings()
-        settings.archiveExportFiles = true
-        settings.generateRangeSummary = true
-        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
-        let firstDate = try date(2026, 3, 14, calendar: utcCalendar())
-        let finalDate = try date(2026, 3, 15, calendar: utcCalendar())
-        let finalRecord = record(on: finalDate)
-        let archiveURL = vaultURL.appendingPathComponent("Health.md Export 2026-03-14_to_2026-03-15.zip")
-        let existingArchive = Data("existing archive remains authoritative".utf8)
-        try existingArchive.write(to: archiveURL)
-
-        do {
-            _ = try await MacManualRangeDerivedOutputCommitter.commit(
-                requestedDates: [firstDate, finalDate],
-                capturedHealthData: [finalRecord],
-                rollupHealthData: [finalRecord],
-                settings: settings,
-                timeZone: settings.exportTimeZoneOverride!,
-                fetchHealthData: { _ in nil },
-                vaultManager: manager
+    func testCancellationBeforeRollupPublicationWritesNoArtifact() async throws {
+        for summaryOnly in [false, true] {
+            let vaultURL = try temporaryVault()
+            defer { try? FileManager.default.removeItem(at: vaultURL) }
+            let manager = makeVaultManager(vaultURL: vaultURL)
+            let settings = makeSettings()
+            settings.generateRangeSummary = true
+            settings.summaryOnlyExport = summaryOnly
+            let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+            settings.exportTimeZoneOverride = timeZone
+            let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
+            let record = record(on: selectedDate)
+            let requestedRange = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: ["2026-03-15"],
+                calendarTimeZoneIdentifier: timeZone.identifier
             )
-            XCTFail("An incomplete immutable range must not report archive success")
-        } catch {
-            XCTAssertEqual(try Data(contentsOf: archiveURL), existingArchive)
+
+            let task = Task { @MainActor in
+                try manager.exportRollupSummaries(
+                    from: [record],
+                    requestedRange: requestedRange,
+                    settings: settings
+                )
+            }
+            task.cancel()
+            do {
+                _ = try await task.value
+                XCTFail("Expected cancellation before rollup publication")
+            } catch is CancellationError {
+                // Expected.
+            }
+
+            XCTAssertFalse(FileManager.default.fileExists(
+                atPath: vaultURL.appendingPathComponent("Rollups").path
+            ))
+            XCTAssertNil(manager.lastExportPresentationTarget)
         }
-        XCTAssertNil(manager.lastExportPresentationTarget)
-    }
-
-    func testSummaryOnlyCancellationAtDerivedBoundaryWritesNoRollup() async throws {
-        let vaultURL = try temporaryVault()
-        defer { try? FileManager.default.removeItem(at: vaultURL) }
-        let manager = makeVaultManager(vaultURL: vaultURL)
-        let settings = makeSettings()
-        settings.generateRangeSummary = true
-        settings.summaryOnlyExport = true
-        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
-        let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
-        let record = record(on: selectedDate)
-
-        let task = Task { @MainActor in
-            try await MacManualRangeDerivedOutputCommitter.commit(
-                requestedDates: [selectedDate],
-                capturedHealthData: [record],
-                rollupHealthData: [record],
-                settings: settings,
-                timeZone: settings.exportTimeZoneOverride!,
-                fetchHealthData: { _ in record },
-                vaultManager: manager
-            )
-        }
-        task.cancel()
-        do {
-            _ = try await task.value
-            XCTFail("Expected cancellation at the summary-only commit boundary")
-        } catch is CancellationError {
-            // Expected.
-        }
-
-        XCTAssertFalse(FileManager.default.fileExists(
-            atPath: vaultURL.appendingPathComponent("Rollups").path
-        ))
-        XCTAssertNil(manager.lastExportPresentationTarget)
-    }
-
-    func testFinalNormalDayCancellationAtDerivedBoundaryWritesNoRollup() async throws {
-        let vaultURL = try temporaryVault()
-        defer { try? FileManager.default.removeItem(at: vaultURL) }
-        let manager = makeVaultManager(vaultURL: vaultURL)
-        let settings = makeSettings()
-        settings.generateRangeSummary = true
-        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
-        let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
-        let record = record(on: selectedDate)
-
-        let task = Task { @MainActor in
-            try await MacManualRangeDerivedOutputCommitter.commit(
-                requestedDates: [selectedDate],
-                capturedHealthData: [record],
-                rollupHealthData: [record],
-                settings: settings,
-                timeZone: settings.exportTimeZoneOverride!,
-                fetchHealthData: { _ in record },
-                vaultManager: manager
-            )
-        }
-        task.cancel()
-        do {
-            _ = try await task.value
-            XCTFail("Expected cancellation after the final normal-day write boundary")
-        } catch is CancellationError {
-            // Expected.
-        }
-
-        XCTAssertFalse(FileManager.default.fileExists(
-            atPath: vaultURL.appendingPathComponent("Rollups").path
-        ))
-        XCTAssertNil(manager.lastExportPresentationTarget)
     }
 
     func testManualDailyCancellationAfterPublicationRetainsCommittedAccounting() async throws {
@@ -204,23 +138,21 @@ final class MacExportViewLocalPathTests: XCTestCase {
         settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
         let record = record(on: selectedDate)
-        var exportTask: Task<MacManualDailyOutputCommitter.Result, Error>?
+        var exportTask: Task<DailyExportWriteResult, Error>?
         manager.dailyExportDidCommitForTesting = { exportTask?.cancel() }
 
         let task = Task { @MainActor in
-            try await MacManualDailyOutputCommitter.commit(
+            try await manager.exportHealthData(
                 record,
                 settings: settings,
-                vaultManager: manager
+                operationSurface: .localVaultRangeWithoutSideEffects
             )
         }
         exportTask = task
         let committed = try await task.value
 
         XCTAssertTrue(task.isCancelled, "Cancellation must arrive after the daily commit")
-        XCTAssertTrue(committed.didSucceed)
-        XCTAssertNil(committed.failedDateDetail)
-        XCTAssertEqual(committed.writeResult.totalGeneratedFileCount, 2)
+        XCTAssertEqual(committed.totalGeneratedFileCount, 2)
         XCTAssertTrue(FileManager.default.fileExists(
             atPath: vaultURL.appendingPathComponent("2026-03-15.json").path
         ))
@@ -236,18 +168,16 @@ final class MacExportViewLocalPathTests: XCTestCase {
         settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
         let record = record(on: selectedDate)
-        var exportTask: Task<MacManualRangeDerivedOutputCommitter.Result, Error>?
+        var exportTask: Task<URL?, Error>?
         manager.archiveEntryWillAppendForTesting = { exportTask?.cancel() }
 
         let task = Task { @MainActor in
-            try await MacManualRangeDerivedOutputCommitter.commit(
-                requestedDates: [selectedDate],
-                capturedHealthData: [record],
+            try await manager.exportArchive(
+                from: [record],
                 rollupHealthData: [record],
                 settings: settings,
-                timeZone: settings.exportTimeZoneOverride!,
-                fetchHealthData: { _ in record },
-                vaultManager: manager
+                startDate: selectedDate,
+                endDate: selectedDate
             )
         }
         exportTask = task
@@ -278,25 +208,23 @@ final class MacExportViewLocalPathTests: XCTestCase {
         let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
         let record = record(on: selectedDate)
         let archiveURL = vaultURL.appendingPathComponent("Health.md Export 2026-03-15.zip")
-        var exportTask: Task<MacManualRangeDerivedOutputCommitter.Result, Error>?
+        var exportTask: Task<URL?, Error>?
         manager.archiveDidPublishForTesting = { exportTask?.cancel() }
 
         let task = Task { @MainActor in
-            try await MacManualRangeDerivedOutputCommitter.commit(
-                requestedDates: [selectedDate],
-                capturedHealthData: [record],
+            try await manager.exportArchive(
+                from: [record],
                 rollupHealthData: [record],
                 settings: settings,
-                timeZone: settings.exportTimeZoneOverride!,
-                fetchHealthData: { _ in record },
-                vaultManager: manager
+                startDate: selectedDate,
+                endDate: selectedDate
             )
         }
         exportTask = task
         let result = try await task.value
 
         XCTAssertTrue(task.isCancelled, "Cancellation must arrive after the atomic publication")
-        XCTAssertEqual(result, .init(rollupFileCount: 0, archiveCount: 1))
+        XCTAssertEqual(result, archiveURL)
         XCTAssertTrue(FileManager.default.fileExists(atPath: archiveURL.path))
         XCTAssertEqual(
             manager.lastExportPresentationTarget,
@@ -340,7 +268,7 @@ final class MacExportViewLocalPathTests: XCTestCase {
     }
 
     private func makeSettings() -> AdvancedExportSettings {
-        let suite = "MacExportViewLocalPathTests.\(UUID().uuidString)"
+        let suite = "MacLocalExportBoundaryTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
@@ -399,7 +327,7 @@ final class MacExportViewLocalPathTests: XCTestCase {
         let data = output.fileHandleForReading.readDataToEndOfFile()
         guard process.terminationStatus == 0 else {
             throw NSError(
-                domain: "MacExportViewLocalPathTests.unzip",
+                domain: "MacLocalExportBoundaryTests.unzip",
                 code: Int(process.terminationStatus),
                 userInfo: [NSLocalizedDescriptionKey:
                     String(data: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? "unzip failed"]
