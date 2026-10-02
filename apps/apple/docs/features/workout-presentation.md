@@ -46,8 +46,12 @@ presentation. Apple stages a new optional presentation setting. Android's existi
 Details/Metadata tables. There is no Health Connect API blocker: Android parity is
 **planned** for the first unified-v9 Markdown presentation-settings/profile writer,
 with the same identity and enabled default; frozen Android v4/v5 bytes remain intact.
-See the repository product-capability inventory entry
-`export.workout-table-presentation`.
+The repository product-capability inventory records this distinction under
+`export.completed-workouts`, whose source-capture outcome remains shared. Exact
+setting classifications and the Android target live in the independently versioned
+[workout presentation parity record](./workout-presentation-parity-v1.json)
+(`export.workout-table-presentation`, classification `planned`). This keeps presentation
+staging separate from the metric registry identity and frozen semantic fixtures.
 
 No public schema/version bump: no public keys, types, units, reductions, source
 capture, or machine-readable meaning change. Apple daily v8, Android v4/v5, direct
