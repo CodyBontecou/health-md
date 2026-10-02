@@ -20,6 +20,8 @@ import java.time.ZoneId
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
 class WhoopCloudDataProvider(
@@ -105,8 +107,15 @@ class WhoopCloudDataProvider(
 
     private suspend fun fetchCollection(endpointKey: String, start: String, end: String): List<JsonObject> {
         val records = mutableListOf<JsonObject>()
+        val identityKey = if (endpointKey == RECOVERY) "cycle_id" else "id"
+        val seenIds = mutableSetOf<String>()
         readCollection(endpointKey, start, end, onPage = { page ->
-            records += page.array("records")!!.mapNotNull { it.obj() }
+            page.array("records")!!.mapNotNull { it.obj() }.forEach { record ->
+                val identity = (record[identityKey] as? JsonPrimitive)?.contentOrNull?.takeIf(String::isNotBlank)
+                // Keep the first captured view; absent identities must not collapse unrelated records.
+                // This applies only to compatibility projections, never authoritative raw pages.
+                if (identity == null || seenIds.add(identity)) records += record
+            }
         })
         return records
     }
@@ -123,15 +132,25 @@ class WhoopCloudDataProvider(
         val recoveries = fetchCollection(RECOVERY, start, end)
         return HealthData(
             date = date,
-            sleep = mapSleep(sleep, zone),
-            activity = ActivityData(activeCalories = workouts.mapNotNull {
-                it.obj("score")?.double("kilojoule")?.div(4.184)
-            }.takeIf { it.isNotEmpty() }?.sum()),
-            heart = mapRecovery(recoveries),
+            sleep = mapSectionOrDefault(SleepData()) { mapSleep(sleep, zone) },
+            activity = mapSectionOrDefault(ActivityData()) {
+                ActivityData(activeCalories = workouts.mapNotNull {
+                    it.obj("score")?.double("kilojoule")?.div(4.184)
+                }.takeIf { it.isNotEmpty() }?.sum())
+            },
+            heart = mapSectionOrDefault(HeartData()) { mapRecovery(recoveries) },
             // WHOOP provides a current profile, not a historical body measurement.
             body = if (date == LocalDate.now(captureClock)) fetchBody() else BodyData(),
-            workouts = mapWorkouts(workouts, zone),
+            workouts = mapSectionOrDefault(emptyList()) { mapWorkouts(workouts, zone) },
         )
+    }
+
+    private inline fun <T> mapSectionOrDefault(defaultValue: T, map: () -> T): T = try {
+        map()
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        defaultValue
     }
 
     private fun mapSleep(records: List<JsonObject>, zone: ZoneId): SleepData {
@@ -246,7 +265,7 @@ class WhoopCloudDataProvider(
         const val WORKOUT = "whoop/activity/workout"
         const val BODY = "whoop/body_measurement"
         private val RAW_IMPLEMENTED = listOf(
-            CloudRawMetrics.endpoint("whoop", CYCLE, setOf("resting_hr", "hrv"), RawPaginationSupport.NEXT_TOKEN),
+            CloudRawMetrics.endpoint("whoop", CYCLE, setOf("total_calories", "avg_hr", "max_hr"), RawPaginationSupport.NEXT_TOKEN),
             CloudRawMetrics.endpoint("whoop", RECOVERY, setOf("resting_hr", "hrv"), RawPaginationSupport.NEXT_TOKEN),
             CloudRawMetrics.endpoint("whoop", SLEEP, CloudRawMetrics.sleep, RawPaginationSupport.NEXT_TOKEN),
             CloudRawMetrics.endpoint("whoop", WORKOUT, CloudRawMetrics.workouts + setOf("active_calories", "avg_hr", "max_hr", "distance"), RawPaginationSupport.NEXT_TOKEN),
