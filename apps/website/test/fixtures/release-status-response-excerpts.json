@@ -1,0 +1,50 @@
+{
+  "healthmd.local_readiness": {
+    "schema": "healthmd.local_readiness",
+    "schema_version": 1,
+    "status": "ready",
+    "query_store": {
+      "available": true,
+      "revision": "revision-1",
+      "owner_date_count": 2,
+      "first_owner_date": "2026-07-20",
+      "last_owner_date": "2026-07-21"
+    },
+    "iphone": {
+      "connected": false,
+      "name": null,
+      "supports_request_scoped_context_acquisition": false,
+      "can_trigger_fresh_acquisition": false
+    }
+  },
+  "healthmd.local_capabilities": {
+    "schema": "healthmd.local_capabilities",
+    "schema_version": 1,
+    "readiness": "healthmd.local_readiness/1",
+    "request_scoped": true,
+    "request_scoped_context_acquisition": true,
+    "fresh_acquisition": false
+  },
+  "healthmd.direct_readiness": {
+    "schema": "healthmd.direct_readiness",
+    "schema_version": 1,
+    "status": "ready",
+    "ready": true,
+    "query_ready": false,
+    "raw_export_ready": true,
+    "device_name": "Android fixture",
+    "application_protocol_version": 2,
+    "port": 17647,
+    "app_active": true,
+    "protected_data_available": true,
+    "export_in_progress": false
+  },
+  "healthmd.mcp_capabilities": {
+    "schema": "healthmd.mcp_capabilities",
+    "schema_version": 1,
+    "surface_profile": "local_direct",
+    "source_kind": "paired_mobile",
+    "transport": "authenticated_encrypted_mobile_direct",
+    "requires_foreground_source": true
+  }
+}
