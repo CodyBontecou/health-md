@@ -20,7 +20,7 @@ Health.md's standalone CLI and MCP server support that workflow over a direct, a
 
 ## Pair the phone
 
-Install the published CLI preview, then run:
+Install the published alpha.6 CLI preview, then run:
 
 ```bash
 healthmd direct pair
@@ -41,7 +41,7 @@ healthmd setup codex
 
 For Claude or another local MCP host, configure the absolute `healthmd` executable with the arguments `mcp serve`.
 
-The published `0.1.0-alpha.7` preview exposes 19 portable tools. Current development source has 21, but its two full-corpus tools are not an alpha.7 promise. The cloud-free `serve-read-only` entry exposes only the 13 readiness and typed-query tools.
+The published `0.1.0-alpha.6` preview exposes 19 portable tools. Alpha.7 remains an unpublished draft with no assets (audited 2026-10-02); do not use it as an install target. Current development source has 21, but its two full-corpus tools are not an alpha.7 promise. The cloud-free `serve-read-only` entry exposes only the 13 readiness and typed-query tools.
 
 ## Ask in a safe order
 

@@ -10,6 +10,9 @@ on:
     paths:
       - '.agents/skills/**'
       - 'apps/website/**'
+      - 'apps/cli/README.md'
+      - 'apps/cli/docs/release-availability*'
+      - 'apps/cli/scripts/*release*availability*'
       - 'apps/apple/docs/reference/**'
       - 'apps/apple/scripts/generated-*-docs.sh'
       - 'packages/contracts/**'
@@ -49,11 +52,31 @@ jobs:
           paths: |
             .agents/skills/**
             apps/website/**
+            apps/cli/README.md
+            apps/cli/docs/release-availability*
+            apps/cli/scripts/*release*availability*
             apps/apple/docs/reference/**
             apps/apple/scripts/generated-*-docs.sh
             packages/contracts/**
             packages/healthmd-core-rust/**
             .github/workflows/website-ci.yml
+
+  release-availability:
+    name: CLI documentation release availability
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test publication and asset/checksum audit behavior
+        run: python3 apps/cli/scripts/test_audit_release_availability.py
+      - name: Audit advertised preview against live GitHub release and Homebrew metadata
+        run: python3 apps/cli/scripts/audit-release-availability.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Check versioned consumer skill artifacts
+        run: node apps/website/docs-src/scripts/sync-agent-assets.mjs --check
 
   validate:
     needs: changes
@@ -147,7 +170,7 @@ jobs:
   gate:
     name: Website CI
     if: ${{ always() }}
-    needs: [changes, validate]
+    needs: [changes, validate, release-availability]
     runs-on: ubuntu-latest
     steps:
       - name: Require website checks
@@ -155,6 +178,7 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           CHANGES_RUN: ${{ needs.changes.outputs.run }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
+          AVAILABILITY_RESULT: ${{ needs.release-availability.result }}
         run: |
           set -e
           test "$CHANGES_RESULT" = success
@@ -163,3 +187,4 @@ jobs:
             exit 0
           fi
           test "$VALIDATE_RESULT" = success
+          test "$AVAILABILITY_RESULT" = success
