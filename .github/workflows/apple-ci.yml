@@ -400,6 +400,7 @@ jobs:
             -only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers \
+            -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport \
             -only-testing:HealthMdUITests/OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers \
             -only-testing:HealthMdUITests/PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted \
             -only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState \
