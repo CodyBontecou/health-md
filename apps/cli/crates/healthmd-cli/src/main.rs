@@ -406,15 +406,8 @@ struct ExportArgs {
     #[command(flatten)]
     dates: DateArgs,
 
-    /// Return the source platform's native validated raw artifact instead of generated files.
-    #[arg(long)]
-    raw: bool,
-
-    /// Capture every public record type supported by the selected source and authorized by the
-    /// user. This is lossless Apple Health JSON on iOS and all-authorized provider-native data on
-    /// Android; it never means access to a platform-private database.
-    #[arg(long, requires = "raw")]
-    full_corpus: bool,
+    #[command(flatten)]
+    raw_mode: RawExportModeArgs,
 
     /// Atomic output path for raw JSON/NDJSON. Omit to stream the validated artifact to stdout.
     #[arg(long)]
@@ -454,6 +447,21 @@ struct ExportArgs {
 
     #[command(flatten)]
     selection: SelectionArgs,
+}
+
+/// The raw-output scope is independent of saved settings and partial-result acceptance.
+#[derive(Debug, Args)]
+#[group(multiple = true)]
+struct RawExportModeArgs {
+    /// Return the source platform's native validated raw artifact instead of generated files.
+    #[arg(long)]
+    raw: bool,
+
+    /// Capture every public record type supported by the selected source and authorized by the
+    /// user. This is lossless Apple Health JSON on iOS and all-authorized provider-native data on
+    /// Android; it never means access to a platform-private database.
+    #[arg(long, requires = "raw")]
+    full_corpus: bool,
 }
 
 #[derive(Debug, Args)]
@@ -1101,7 +1109,7 @@ fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
     match &cli.command {
         Command::Export(options) => {
             let missing_dates = !date_selection_is_present(&options.dates);
-            let missing_mode = !options.raw && options.destination.is_none();
+            let missing_mode = !options.raw_mode.raw && options.destination.is_none();
             (missing_dates || missing_mode).then(|| guidance::export(missing_dates, missing_mode))
         }
         Command::Extract(options) => {
@@ -1664,7 +1672,7 @@ async fn direct_export(
         )
         .await;
     }
-    if !options.raw {
+    if !options.raw_mode.raw {
         return direct_file_export(options, device, port).await;
     }
     if options.destination.is_some() {
@@ -1683,7 +1691,7 @@ async fn direct_export(
             "iOS --raw cannot combine with saved settings, profiles, or selectors; use --full-corpus for the complete supported public metric scope",
         ));
     }
-    let (raw_profile, canonical_selection) = if options.full_corpus {
+    let (raw_profile, canonical_selection) = if options.raw_mode.full_corpus {
         (
             RawProfile::HealthDataProjection,
             Some(CanonicalSelection {
@@ -1739,7 +1747,7 @@ async fn direct_android_export(
     let expires_at = created_at + ChronoDuration::seconds(healthmd_protocol::JOB_LIFETIME_SECONDS);
     let timeout = Duration::from_secs(options.timeout);
 
-    if options.raw {
+    if options.raw_mode.raw {
         if options.destination.is_some() {
             return Err(usage_error("--destination cannot be used with --raw"));
         }
@@ -1759,7 +1767,7 @@ async fn direct_android_export(
                 "--all-metrics cannot be combined with --metric",
             ));
         }
-        if options.full_corpus
+        if options.raw_mode.full_corpus
             && (options.selection.all_metrics || !options.selection.metrics.is_empty())
         {
             return Err(usage_error(
@@ -1795,7 +1803,7 @@ async fn direct_android_export(
                     RawArtifactFormat::Ndjson => v2::RawSnapshotFormat::Ndjson,
                 },
                 scope,
-                include_exercise_routes: options.full_corpus,
+                include_exercise_routes: options.raw_mode.full_corpus,
             },
             destination: None,
         };
@@ -2810,7 +2818,7 @@ mod tests {
         let Command::Export(options) = parsed.command else {
             panic!("expected export command");
         };
-        assert!(options.raw);
+        assert!(options.raw_mode.raw);
         assert_eq!(options.provider, "health_connect");
         assert_eq!(options.raw_format, RawArtifactFormat::Ndjson);
 
@@ -2920,9 +2928,38 @@ mod tests {
         let Command::Export(options) = parsed.command else {
             panic!("expected export command");
         };
-        assert!(options.raw);
-        assert!(options.full_corpus);
+        assert!(options.raw_mode.raw);
+        assert!(options.raw_mode.full_corpus);
         assert!(options.dates.all);
+    }
+
+    #[test]
+    fn export_raw_mode_flags_remain_independent_of_settings_and_partial_acceptance() {
+        for (raw, full_corpus) in [(false, false), (true, false), (true, true)] {
+            for saved_settings in [false, true] {
+                for allow_partial in [false, true] {
+                    let mut argv = vec!["healthmd", "export", "--all"];
+                    for (flag, enabled) in [
+                        ("--raw", raw),
+                        ("--full-corpus", full_corpus),
+                        ("--use-device-settings", saved_settings),
+                        ("--allow-partial", allow_partial),
+                    ] {
+                        if enabled {
+                            argv.push(flag);
+                        }
+                    }
+                    let parsed = Cli::try_parse_from(argv).unwrap();
+                    let Command::Export(options) = parsed.command else {
+                        panic!("expected export command");
+                    };
+                    assert_eq!(options.raw_mode.raw, raw);
+                    assert_eq!(options.raw_mode.full_corpus, full_corpus);
+                    assert_eq!(options.use_device_settings, saved_settings);
+                    assert_eq!(options.allow_partial, allow_partial);
+                }
+            }
+        }
     }
 
     #[test]
