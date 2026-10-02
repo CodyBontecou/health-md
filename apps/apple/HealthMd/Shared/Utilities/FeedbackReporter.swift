@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 #if os(iOS)
 import UIKit
@@ -11,7 +12,7 @@ import AppKit
 @MainActor
 final class FeedbackReporter: ObservableObject {
     typealias Completion = @MainActor @Sendable (Bool) -> Void
-    typealias Opener = (URL, @escaping Completion) -> Void
+    typealias Opener = @MainActor (URL, @escaping Completion) -> Void
 
     enum Route {
         case email, github
