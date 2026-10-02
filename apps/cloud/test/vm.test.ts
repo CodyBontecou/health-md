@@ -45,7 +45,8 @@ async function proxiedRequest(port: number, path: string, method = "GET", body?:
   host = "preview.tailnet.test:18788", authorization?: string,
   contentType = "application/json") {
   const payload = body === undefined ? undefined : JSON.stringify(body);
-  return new Promise<{ status: number; headers: Record<string, string | string[] | undefined>; body: string }>(
+  return new Promise<{ status: number; headers: Record<string, string | string[] | undefined>;
+    body: string; bytes: Uint8Array }>(
     (done, fail) => {
       const request = httpRequest({ host: "127.0.0.1", port, path, method, headers: {
         Host: host,
@@ -60,7 +61,8 @@ async function proxiedRequest(port: number, path: string, method = "GET", body?:
         const chunks: Uint8Array[] = [];
         response.on("data", (chunk: Uint8Array) => chunks.push(chunk));
         response.on("end", () => done({ status: response.statusCode ?? 0,
-          headers: response.headers, body: Buffer.concat(chunks).toString("utf8") }));
+          headers: response.headers, body: Buffer.concat(chunks).toString("utf8"),
+          bytes: Buffer.concat(chunks) }));
       });
       request.on("error", fail);
       if (payload) request.write(payload);
@@ -366,6 +368,10 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect((await request("/dashboard")).status).toBe(404);
       expect((await request("/api/account", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/exports", "GET", undefined, cookie, token)).status).toBe(404);
+      for (const path of ["/api/security-events", "/api/account/export/page/1",
+        "/api/account/deletion-status", "/deletion-status", "/deletion-status.js"]) {
+        expect((await request(path, "GET", undefined, cookie, token)).status).toBe(404);
+      }
       expect((await request("/api/dashboard/trends", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/explore/catalog", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/explore/chart", "POST", {}, cookie, token)).status).toBe(404);
@@ -411,14 +417,30 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
     const other = createReadToken(db.connection, otherId, "Other agent");
     const account = await startVmServer(accountEnv, 0, "account");
     const req = (path: string, method = "GET", body?: unknown, cookie?: string,
-      origin = "https://account.example.test", intent = true) =>
-      proxiedRequest(account.port, path, method, body, cookie, origin, intent, "account.example.test");
+      origin = "https://account.example.test", intent = true, authorization?: string) =>
+      proxiedRequest(account.port, path, method, body, cookie, origin, intent, "account.example.test",
+        authorization);
     try {
       expect((await req("/api/v1/exports", "POST", {})).status).toBe(404);
       expect((await req("/api/auth/request-link", "POST", {})).status).toBe(404);
       expect((await req("/dashboard")).status).toBe(303);
       expect((await req("/api/agent-tokens")).status).toBe(401);
       expect((await req("/api/exports/page/0")).status).toBe(401);
+      expect((await req("/api/security-events")).status).toBe(401);
+      expect((await req("/api/account/export/page/1")).status).toBe(401);
+      expect((await req("/api/account/deletion-status")).status).toBe(401);
+      expect((await req("/api/account/deletion-status", "POST", {})).status).toBe(404);
+      expect((await req("/mcp", "POST", {})).status).toBe(404);
+      for (const [path, type, content] of [
+        ["/deletion-status", "text/html", "Deletion status"],
+        ["/deletion-status.js", "text/javascript", "/api/account/deletion-status"],
+      ]) {
+        const asset = await req(path!);
+        expect(asset.status).toBe(200);
+        expect(asset.headers["content-type"]).toContain(type);
+        expect(asset.headers["cache-control"]).toBe("no-store");
+        expect(asset.body).toContain(content);
+      }
       expect((await req("/api/dashboard/trends")).status).toBe(401);
       expect((await req("/api/agent-tokens", "POST", {})).status).toBe(401);
       expect(JSON.parse((await req("/api/runtime")).body)).toMatchObject({
@@ -441,6 +463,33 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
         .toMatchObject({ version: 1, window: { start: null, end: null }, days: [] });
       expect((await req("/api/dashboard/trends", "GET", undefined, undefined,
         "https://account.example.test", true)).status).toBe(401);
+      const security = await req("/api/security-events", "GET", undefined, cookie);
+      expect(security.status).toBe(200);
+      expect(security.headers["cache-control"]).toBe("no-store");
+      expect(JSON.parse(security.body).events.length).toBeGreaterThan(0);
+      const ingest = await req("/api/ingest-tokens", "POST", { name: "Synthetic portability phone" }, cookie);
+      expect(ingest.status).toBe(201);
+      const writeToken = JSON.parse(ingest.body).token as string;
+      const fixture = readFileSync(resolve(sourceDirectory,
+        "../apple/docs/reference/generated/automation/api-export-v1.json"), "utf8");
+      expect((await worker.fetch(new Request(`${fakeOrigin}/api/v1/exports`, {
+        method: "POST", headers: { Authorization: `Bearer ${writeToken}`, "Content-Type": "application/json" },
+        body: fixture,
+      }), env)).status).toBe(201);
+      const archive = await req("/api/account/export/page/1", "GET", undefined, cookie);
+      expect(archive.status).toBe(200);
+      expect(archive.headers["content-type"]).toBe("application/x-tar");
+      expect(archive.headers["cache-control"]).toBe("no-store");
+      expect(archive.body).toContain('"schema": "healthmd.account_portability_manifest"');
+      expect(archive.body).toContain(fixture);
+      expect(archive.bytes.byteLength % 512).toBe(0);
+      expect(Uint8Array.from(archive.bytes.slice(-1024))).toEqual(new Uint8Array(1024));
+      const bearerOnly = (path: string, token: string) => req(path, "GET", undefined, undefined,
+        "https://account.example.test", true, `Bearer ${token}`);
+      expect((await bearerOnly("/api/account/export/page/1", writeToken)).status).toBe(401);
+      expect((await bearerOnly("/api/security-events", writeToken)).status).toBe(401);
+      expect((await req("/api/account/export/page/0", "GET", undefined, cookie)).status).toBe(404);
+      expect((await req("/api/account/export/page/2", "GET", undefined, cookie)).status).toBe(404);
       expect((await req("/api/exports/page/1000001", "GET", undefined, cookie)).status).toBe(400);
       expect((await req("/api/agent-tokens", "POST", {}, cookie,
         "https://other.example.test")).status).toBe(403);
@@ -472,6 +521,32 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       } finally { readOnly.close(); }
       expect((await req(`/api/agent-tokens/${issued.id}`, "DELETE", undefined, cookie)).status).toBe(200);
       expect((await req("/api/v1/exports", "POST", {}, cookie)).status).toBe(404);
+      const statusToken = `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}`;
+      const deletion = await req("/api/account/delete", "POST", {
+        password: fakePassword, confirmation: "DELETE", statusToken,
+      }, cookie);
+      expect(deletion.status).toBe(202);
+      expect(JSON.parse(deletion.body)).toMatchObject({ status: "pending", statusToken });
+      const pending = await bearerOnly("/api/account/deletion-status", statusToken);
+      expect(pending.status).toBe(200);
+      expect(pending.headers["cache-control"]).toBe("no-store");
+      expect(JSON.parse(pending.body)).toEqual({ status: "pending" });
+      await processAccountDeletions(env);
+      const completed = await bearerOnly("/api/account/deletion-status", statusToken);
+      expect(completed.status).toBe(200);
+      expect(JSON.parse(completed.body)).toEqual({ status: "completed" });
+      for (const path of ["/api/account", "/api/security-events", "/api/account/export/page/1"]) {
+        expect((await req(path, "GET", undefined, cookie)).status).toBe(401);
+        expect((await bearerOnly(path, statusToken)).status).toBe(401);
+      }
+      expect((await bearerOnly("/api/account/deletion-status", writeToken)).status).toBe(401);
+      expect((await bearerOnly("/api/account/deletion-status", issued.token)).status).toBe(401);
+      expect((await bearerOnly("/api/account/deletion-status",
+        `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}`)).status).toBe(401);
+      // The receipt checker remains available even after all account sessions
+      // and credentials have been erased; it needs no identity cookie.
+      expect((await req("/deletion-status")).status).toBe(200);
+      expect((await req("/deletion-status.js")).status).toBe(200);
     } finally { await account.close(); accountDb.close(); db.close(); }
   }, 30_000);
 });

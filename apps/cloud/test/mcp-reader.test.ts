@@ -14,7 +14,7 @@ import { startMcpServer } from "../mcp/server";
 const folders: string[] = [];
 afterEach(() => { for (const path of folders.splice(0)) rmSync(path, { recursive: true, force: true }); });
 
-it("reads only scoped, current synthetic Apple summaries with registry units and bounded errors", async () => {
+it("reads scoped current Apple summaries without mixing unsupported profiles, with bounded full-export discovery", async () => {
   const root = mkdtempSync(join(tmpdir(), "healthmd-mcp-synthetic-"));
   folders.push(root);
   const sourceDirectory = resolve(import.meta.dirname, "..");
@@ -33,13 +33,17 @@ it("reads only scoped, current synthetic Apple summaries with registry units and
     .run(userB, randomUUID(), new Date().toISOString());
   const template = JSON.parse(readFileSync(resolve(sourceDirectory,
     "../apple/docs/reference/generated/core/summary-day.json"), "utf8")) as Record<string, unknown>;
-  async function addDay(userId: string, date: string, steps: number): Promise<void> {
-    const day = structuredClone(template);
+  async function addDay(userId: string, date: string, steps: number,
+    source = "ios", dailyVersion = 8, envelopeVersion = 1): Promise<string> {
+    const day = source === "ios" ? structuredClone(template) : {
+      schema: "healthmd.health_data", activity: { steps },
+    };
     day.date = date;
+    day.schema_version = dailyVersion;
     day.activity = { ...(day.activity as Record<string, unknown>), steps };
-    const envelope = { schema: "healthmd.api_export", schema_version: 1,
-      daily_record_schema: "healthmd.health_data", daily_record_schema_version: 8,
-      source: "ios", exported_at: "2026-03-17T12:00:00Z",
+    const envelope = { schema: "healthmd.api_export", schema_version: envelopeVersion,
+      daily_record_schema: "healthmd.health_data", daily_record_schema_version: dailyVersion,
+      source, exported_at: "2026-03-17T12:00:00Z",
       date_range: { start: date, end: date }, record_count: 1, records: [day], failed_date_details: [] };
     const bytes = new TextEncoder().encode(JSON.stringify(envelope));
     const exportId = randomUUID();
@@ -48,18 +52,27 @@ it("reads only scoped, current synthetic Apple summaries with registry units and
     db.connection.prepare(`INSERT INTO exports (id, user_id, object_key, encryption_key_id,
       plaintext_sha256, byte_count, envelope_schema_version, daily_record_schema_version,
       source, exported_at, received_at, date_start, date_end, record_count, failure_count,
-      external_record_count) VALUES (?, ?, ?, 'v1', ?, ?, 1, 8, 'ios', ?, ?, ?, ?, 1, 0, 0)`)
+      external_record_count) VALUES (?, ?, ?, 'v1', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0)`)
       .run(exportId, userId, key, await sha256Hex(bytes), bytes.length,
-        "2026-03-17T12:00:00Z", new Date().toISOString(), date, date);
+        envelopeVersion, dailyVersion, source, "2026-03-17T12:00:00Z", new Date().toISOString(), date, date);
     db.connection.prepare(`INSERT INTO daily_records (user_id, owner_date, export_id, record_index,
-      schema_version, capture_status, exported_at, received_at) VALUES (?, ?, ?, 0, 8,
-      'not_requested', ?, ?)`).run(userId, date, exportId,
-      "2026-03-17T12:00:00Z", new Date().toISOString());
+      schema_version, capture_status, exported_at, received_at) VALUES (?, ?, ?, 0, ?,
+      'not_requested', ?, ?) ON CONFLICT (user_id, owner_date) DO UPDATE SET
+      export_id = excluded.export_id, schema_version = excluded.schema_version`)
+      .run(userId, date, exportId, dailyVersion, "2026-03-17T12:00:00Z", new Date().toISOString());
+    return exportId;
   }
   try {
     await addDay(userA.id, "2026-03-15", 12345);
-    await addDay(userA.id, "2026-03-16", 9999);
+    const appleLatestId = await addDay(userA.id, "2026-03-16", 9999);
     await addDay(userB, "2026-03-15", 777777);
+    const unsupportedIds = [
+      await addDay(userA.id, "2026-03-17", 888888, "android", 4),
+      await addDay(userA.id, "2026-03-18", 888888, "android", 5),
+      await addDay(userA.id, "2026-03-19", 888888, "ios", 7),
+      // Unknown future metadata must not enter today's reviewed projection.
+      await addDay(userA.id, "2026-03-20", 888888, "ios", 8, 3),
+    ];
     // A separate, older retained envelope is not selected in daily_records;
     // full-export discovery must still expose its v2 sidecar and exact bytes.
     const archived = structuredClone(template);
@@ -98,8 +111,12 @@ it("reads only scoped, current synthetic Apple summaries with registry units and
       expect(await reader.getLatest(a, "steps")).toMatchObject({
         value: 9999, timestamp: null, date: "2026-03-16", unit: "steps",
       });
-      expect((await reader.getRange(a, "steps", "2026-03-15", "2026-03-16"))
+      expect((await reader.getRange(a, "steps", "2026-03-15", "2026-03-20"))
         .map((value) => value.value)).toEqual([12345, 9999]);
+      await expect(reader.getDailySummary(a, "2026-03-17"))
+        .rejects.toMatchObject({ code: "unavailable_data" });
+      await expect(reader.getRange(a, "steps", "2026-03-17", "2026-03-20"))
+        .rejects.toMatchObject({ code: "empty_range" });
       expect((await reader.getRange(b, "steps", "2026-03-15", "2026-03-15"))[0]?.value).toBe(777777);
       const daily = await reader.getDailySummary(a, "2026-03-15");
       expect(daily.metrics.find((metric) => metric.metric === "sleep_total")).toMatchObject({
@@ -113,6 +130,13 @@ it("reads only scoped, current synthetic Apple summaries with registry units and
       const second = await reader.listExports(full, first.nextCursor as string, 10);
       expect((second.exports as Array<{ exportId: string }>).some((row) => row.exportId === archivedId)).toBe(true);
       expect(second.nextCursor).toBeNull();
+      const inventory = await reader.listExports(full, "", 20);
+      expect((inventory.exports as Array<{ exportId: string }>).map((row) => row.exportId))
+        .toEqual(expect.arrayContaining(unsupportedIds));
+      expect(await reader.findExportForDate(full, "2026-03-17"))
+        .toMatchObject({ source: "android", dailyRecordSchemaVersion: 4, pointer: "/records/0" });
+      expect((await reader.readExportNode(full, unsupportedIds[0]!, "/records/0/activity/steps", 0, 10)).value)
+        .toBe(888888); // Original Android JSON remains available, never an Apple metric.
       expect((await reader.findExportForDate(full, "2026-03-15")).pointer).toBe("/records/0");
       await expect(reader.listExports(full, "bad!", 10)).rejects.toMatchObject({ code: "invalid_cursor" });
       await expect(reader.readExportNode({ ...b, scope: "full_export" }, archivedId, "", 0, 10))
@@ -153,8 +177,10 @@ it("reads only scoped, current synthetic Apple summaries with registry units and
         .rejects.toMatchObject({ code: "invalid_pointer" });
       const weekly = await reader.getWeeklySummary(a, "2026-03-15");
       expect(weekly.days).toHaveLength(2);
-      expect(weekly.missingDates).toHaveLength(5);
-      const search = await reader.search(a, "sleep", "2026-03-15", "2026-03-16");
+      expect(weekly.missingDates).toEqual([
+        "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21",
+      ]);
+      const search = await reader.search(a, "sleep", "2026-03-15", "2026-03-20");
       expect(search.matches.some((match) => match.metric.metric === "sleep_total")).toBe(true);
       await expect(reader.getLatest(a, "heart_rate")).rejects.toMatchObject({ code: "unknown_metric" });
       await expect(reader.getDailySummary(a, "2026-02-30")).rejects.toMatchObject({ code: "invalid_date" });
@@ -164,6 +190,18 @@ it("reads only scoped, current synthetic Apple summaries with registry units and
         .rejects.toMatchObject({ code: "invalid_query" });
       await expect(reader.getDailySummary({ userId: randomUUID(), tokenId: randomUUID(), scope: "aggregates" }, "2026-03-15"))
         .rejects.toBeInstanceOf(ReaderError);
+      // A newer unsupported current snapshot must not resurrect a historical
+      // Apple day or erase observations on unrelated supported days.
+      await addDay(userA.id, "2026-03-16", 888888, "android", 4);
+      expect(await reader.getLatest(a, "steps")).toMatchObject({ date: "2026-03-15", value: 12345 });
+      expect((await reader.getRange(a, "steps", "2026-03-15", "2026-03-20")).map((v) => v.value))
+        .toEqual([12345]);
+      await expect(reader.getDailySummary(a, "2026-03-16"))
+        .rejects.toMatchObject({ code: "unavailable_data" });
+      expect(await reader.findExportForDate(full, "2026-03-16"))
+        .toMatchObject({ source: "android", dailyRecordSchemaVersion: 4 });
+      db.connection.prepare(`UPDATE daily_records SET export_id = ?, schema_version = 8
+        WHERE user_id = ? AND owner_date = '2026-03-16'`).run(appleLatestId, userA.id);
     } finally { reader.close(); }
     // Integrate the actual SDK transport, token lookup, SQLite reader and AES
     // decryption against one synthetic owned export (not just a fake reader).
