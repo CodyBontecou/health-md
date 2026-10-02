@@ -591,18 +591,18 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
                     }
                 )
 
-    capability_manifest = json.loads(CAPABILITY_MANIFEST.read_text())
+    capabilities = core_capabilities(json.loads(CAPABILITY_MANIFEST.read_text()))
     return {
         "schema": "healthmd.metric_registry",
         "schema_version": 1,
         "registry_version": 1,
         "known_capability_ids": [
-            capability["id"] for capability in capability_manifest["capabilities"]
+            capability["id"] for capability in capabilities
         ],
         "available_capability_ids_by_platform": {
             platform: [
                 capability["id"]
-                for capability in capability_manifest["capabilities"]
+                for capability in capabilities
                 if capability["platforms"][platform]["state"] == "available"
             ]
             for platform in ("apple", "android")
@@ -612,6 +612,16 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
         "profiles": profiles,
         "legacy_unavailable": {"android": android["unavailable_metrics"]},
     }
+
+
+def core_capabilities(capability_manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    # Support UI has no metric/export/protocol semantics. Keep its parity ledger
+    # out of the pinned core registry so UI repairs do not invalidate historical
+    # semantic/render fixtures or change the core's available capabilities.
+    return [
+        capability for capability in capability_manifest["capabilities"]
+        if not capability["id"].startswith("support.")
+    ]
 
 
 def main() -> None:

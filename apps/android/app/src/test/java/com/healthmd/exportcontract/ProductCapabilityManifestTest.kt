@@ -44,6 +44,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
         )
@@ -138,6 +139,7 @@ class ProductCapabilityManifestTest {
             "export.range-summary",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
+            "support.local-reporting-fallback",
         )
     }
 }
