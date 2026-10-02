@@ -21,6 +21,7 @@ struct MacSyncView: View {
     @AppStorage("pricing.analytics.mac.setup.folder.viewed.tracked.v1") private var didTrackMacFolderStep = false
     @AppStorage("pricing.analytics.mac.setup.folder.selected.tracked.v1") private var didTrackMacFolderSelected = false
     @AppStorage("pricing.analytics.mac.setup.ready.tracked.v1") private var didTrackMacSetupReady = false
+    @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var receivingPaused = false
     @State private var showClearConfirmation = false
     @State private var showActivityClearConfirmation = false
@@ -70,6 +71,7 @@ struct MacSyncView: View {
         }
         .foregroundStyle(Color.textPrimary)
         .tint(Color.accent)
+        .feedbackFailureSheet($feedbackReporter.failure)
         .animation(
             reduceMotion ? nil : AnimationTimings.standard,
             value: activeExportProgress
@@ -829,7 +831,7 @@ struct MacSyncView: View {
                 GeistDivider()
 
                 Button {
-                    FeedbackHelper.openGitHubIssue()
+                    feedbackReporter.open(.github)
                 } label: {
                     Label("Open GitHub Issue", systemImage: "arrow.up.forward")
                 }

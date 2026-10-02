@@ -111,6 +111,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.typed-whoop-provider-section",
         "direct.cli_agent_push_wake",
         "export.range-summary",
+        "support.local-reporting-fallback",
     ]
 
     private static let androidCapabilities: Set<String> = [

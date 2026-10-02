@@ -10,6 +10,7 @@ import AppKit
 // MARK: - Feedback Helper
 
 /// Serverless feedback: pre-filled email or GitHub issue with device diagnostics.
+@MainActor
 enum FeedbackHelper {
 
     static let supportEmail = "cody@isolated.tech"
@@ -70,19 +71,10 @@ enum FeedbackHelper {
     }
     #endif
 
-    #if os(macOS)
-    /// Opens the default email client via mailto URL.
-    static func openMailClient() {
-        guard let url = mailtoURL() else { return }
-        NSWorkspace.shared.open(url)
-    }
-    #endif
-
     // MARK: - GitHub Issue
 
-    /// Opens a pre-filled GitHub issue in the browser.
-    static func openGitHubIssue() {
-        let body = """
+    static var issueBody: String {
+        """
         **Describe the issue**
         <!-- A clear description of what happened -->
 
@@ -96,20 +88,16 @@ enum FeedbackHelper {
 
         \(diagnosticsBlock)
         """
+    }
 
+    /// A browser handoff only opens a template; it does not submit an issue.
+    static func githubIssueURL() -> URL? {
         var components = URLComponents(string: "https://github.com/\(githubRepo)/issues/new")!
         components.queryItems = [
             URLQueryItem(name: "title", value: ""),
-            URLQueryItem(name: "body", value: body),
+            URLQueryItem(name: "body", value: issueBody),
         ]
-
-        guard let url = components.url else { return }
-
-        #if os(iOS)
-        UIApplication.shared.open(url)
-        #elseif os(macOS)
-        NSWorkspace.shared.open(url)
-        #endif
+        return components.url
     }
 }
 
@@ -120,6 +108,7 @@ enum FeedbackHelper {
 /// SwiftUI wrapper for `MFMailComposeViewController`.
 struct MailComposeView: UIViewControllerRepresentable {
     @Environment(\.dismiss) private var dismiss
+    var onCompletion: (MFMailComposeResult, Error?) -> Void
 
     func makeUIViewController(context: Context) -> MFMailComposeViewController {
         let mc = FeedbackHelper.makeMailCompose()
@@ -140,6 +129,7 @@ struct MailComposeView: UIViewControllerRepresentable {
             didFinishWith result: MFMailComposeResult,
             error: Error?
         ) {
+            parent.onCompletion(result, error)
             parent.dismiss()
         }
     }
