@@ -144,6 +144,38 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
 
     // MARK: - Legacy migration
 
+    func testLegacyRefreshMigrationPreservesAllSupportedIntervalsAndProgressAcrossReload() throws {
+        for hours in [3, 6, 12] {
+            let suite = "ScheduledExportEntryStoreTests.cadence.\(UUID().uuidString)"
+            let isolated = try XCTUnwrap(UserDefaults(suiteName: suite))
+            addTeardownBlock { isolated.removePersistentDomain(forName: suite) }
+            let store = ScheduledExportEntryStore(userDefaults: isolated)
+            Self.retainedStores.append(store)
+            let profileID = UUID()
+            let completed = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+            let refresh = makeDate(year: 2026, month: 8, day: 9, hour: 20)
+            let legacy = ExportSchedule(
+                isEnabled: true, frequency: .weekly, preferredHour: 8, weekday: 1,
+                lookbackDays: 7, todayRefreshEnabled: true, todayRefreshIntervalHours: hours,
+                lastExportDate: completed, lastTodayRefreshDate: refresh,
+                enabledAt: makeDate(year: 2026, month: 8, day: 1)
+            )
+            XCTAssertTrue(store.migrateLegacyScheduleIfNeeded(legacy: legacy, defaultProfileID: profileID))
+            let reloaded = ScheduledExportEntryStore(userDefaults: isolated)
+            Self.retainedStores.append(reloaded)
+            let entry = try XCTUnwrap(reloaded.entry(profileID: profileID))
+            XCTAssertEqual(entry.todayRefreshIntervalHours, hours)
+            XCTAssertEqual(entry.lastExportDate, completed)
+            XCTAssertEqual(entry.lastTodayRefreshDate, refresh)
+            XCTAssertEqual(entry.enabledAt, legacy.enabledAt)
+            XCTAssertEqual(entry.lookbackDays, 7)
+            XCTAssertEqual(entry.frequency, .weekly)
+            XCTAssertTrue(entry.todayRefreshEnabled)
+            XCTAssertFalse(reloaded.migrateLegacyScheduleIfNeeded(legacy: legacy, defaultProfileID: UUID()))
+            XCTAssertEqual(reloaded.allEntries(), [entry])
+        }
+    }
+
     func testLegacyScheduleMigratesOnceIntoDefaultProfileEntry() {
         let store = makeStore()
         let defaultProfileID = UUID()
