@@ -1,0 +1,31 @@
+export const TWO_X_CONCURRENCY: number;
+export const TWO_X_UPLOADS_PER_SECOND: number;
+export const DEFAULT_DURATION_SECONDS: number;
+export const TWO_X_BURST_UPLOADS_PER_SECOND: number;
+export const BURST_DURATION_SECONDS: number;
+export const MAX_REQUESTS_PER_ACCOUNT: number;
+export const PACED_REQUESTS_PER_ACCOUNT: number;
+export const DEDICATED_SLOW_BODY_ACCOUNTS: number;
+export const ADMISSION_LEASE_SECONDS: number;
+export const SLOW_BODY_TIMEOUT_MS: number;
+export const MAX_EXPORT_BYTES: number;
+export interface StagingLoadConfig {
+  endpoint: URL;
+  expectedRevision: string;
+  concurrency: number;
+  uploadsPerSecond: number;
+  durationSeconds: number;
+  burstUploadsPerSecond: number;
+  burstDurationSeconds: number;
+  largeConcurrency: number;
+}
+export function parseStagingLoadConfig(environment?: Record<string, string | undefined>): StagingLoadConfig;
+export function readDistinctAccountTokens(path: string | undefined, requiredCount: number): string[];
+export function requiredDistinctAccounts(config: StagingLoadConfig): number;
+export function validRetryAfter(value: string | null): boolean;
+export function fragmentedRequestBody(bytes: Uint8Array, chunkBytes?: number): ReadableStream<Uint8Array>;
+export function stalledRequestBody(): ReadableStream<Uint8Array>;
+export function recordAccountRequest(counts: number[], index: number): void;
+export function nextEligibleAccount(active: number[], launched: number[], cursor: number): number;
+export function buildSyntheticEnvelope(targetBytes?: number, marker?: string): Uint8Array;
+export function percentile(values: number[], quantile: number): number | null;

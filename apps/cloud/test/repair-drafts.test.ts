@@ -32,6 +32,64 @@ function setup() {
 const scope = { source: "ios", dates: ["2026-04-03", "2026-04-01"], scope: "metric_ids",
   metricIds: ["steps", "sleep_total"], detail: "summary" };
 
+function ambiguousDraftDatabase(original: D1Database, options: {
+  loseInsertResponse?: boolean; loseCancellationResponse?: boolean;
+  failCreateVerification?: boolean; failCancellationVerification?: boolean;
+}): D1Database {
+  let insertLost = false;
+  let cancellationLost = false;
+  let createVerificationFailed = false;
+  let cancellationVerificationFailed = false;
+  return new Proxy(original, { get(target, property) {
+    if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+      const result = await target.batch(statements);
+      if (options.loseCancellationResponse && !cancellationLost) {
+        cancellationLost = true;
+        throw new Error("synthetic lost repair-draft cancellation response");
+      }
+      return result;
+    };
+    if (property === "prepare") return (query: string) => {
+      const statement = target.prepare(query);
+      return new Proxy(statement, { get(prepared, statementProperty) {
+        if (statementProperty !== "bind") {
+          const value = Reflect.get(prepared, statementProperty);
+          return typeof value === "function" ? value.bind(prepared) : value;
+        }
+        return (...values: unknown[]) => {
+          const bound = prepared.bind(...values);
+          return new Proxy(bound, { get(boundStatement, boundProperty) {
+            if (boundProperty === "run" && options.loseInsertResponse && !insertLost &&
+                query.includes("INSERT INTO repair_drafts")) return async () => {
+              const result = await boundStatement.run();
+              insertLost = true;
+              throw new Error("synthetic lost repair-draft creation response");
+            };
+            if (boundProperty === "first" && options.failCreateVerification &&
+                !createVerificationFailed && query.includes("FROM repair_drafts WHERE id = ? AND user_id = ?")) {
+              return async () => {
+                createVerificationFailed = true;
+                throw new Error("synthetic repair-draft creation verification outage");
+              };
+            }
+            if (boundProperty === "first" && options.failCancellationVerification &&
+                !cancellationVerificationFailed && query.includes("FROM repair_drafts d WHERE d.id = ?")) {
+              return async () => {
+                cancellationVerificationFailed = true;
+                throw new Error("synthetic repair-draft cancellation verification outage");
+              };
+            }
+            const value = Reflect.get(boundStatement, boundProperty);
+            return typeof value === "function" ? value.bind(boundStatement) : value;
+          } });
+        };
+      } });
+    };
+    const value = Reflect.get(target, property);
+    return typeof value === "function" ? value.bind(target) : value;
+  } }) as D1Database;
+}
+
 it("previews without inventing readings, encrypts owner-only drafts, and never exposes a launch route", async () => {
   const { env, db, req } = setup();
   await createSingleUserAccount(env, "pilot", "pilot@example.test", password);
@@ -143,7 +201,7 @@ it("previews without inventing readings, encrypts owner-only drafts, and never e
     expect((await req(`/api/repair/drafts/${saved.id}`, "DELETE", cookie, undefined,
       "https://other.example.test")).status).toBe(403);
     expect((await req(`/api/repair/drafts/${saved.id}`, "DELETE", cookie)).status).toBe(200);
-    expect((await req(`/api/repair/drafts/${saved.id}`, "DELETE", cookie)).status).toBe(404);
+    expect((await req(`/api/repair/drafts/${saved.id}`, "DELETE", cookie)).status).toBe(200);
     expect((await (await req("/api/repair/drafts", "GET", cookie)).json() as { requests: unknown[] }).requests)
       .toEqual([]);
     expect((db.connection.prepare("SELECT spec_ciphertext AS ciphertext FROM repair_drafts WHERE id = ?")
@@ -170,6 +228,46 @@ it("previews without inventing readings, encrypts owner-only drafts, and never e
     expect(await hit(ingest.port, "/repair", "GET")).toBe(404);
   } finally { await account.close(); await ingest.close(); db.close(); }
 }, 30_000);
+
+it("recovers lost repair-draft create and cancel responses through exact durable state", async () => {
+  const { env, db, req } = setup();
+  await createSingleUserAccount(env, "pilot", "pilot@example.test", password);
+  const login = await req("/api/auth/password-login", "POST", undefined, { username: "pilot", password });
+  const cookie = login.headers.get("set-cookie")!.split(";")[0];
+  env.DB = ambiguousDraftDatabase(env.DB, { loseInsertResponse: true, loseCancellationResponse: true });
+  try {
+    const created = await req("/api/repair/drafts", "POST", cookie, scope);
+    expect(created.status).toBe(201);
+    const id = (await created.json() as { id: string }).id;
+    expect((await req(`/api/repair/drafts/${id}`, "DELETE", cookie)).status).toBe(200);
+    expect((await req(`/api/repair/drafts/${id}`, "DELETE", cookie)).status).toBe(200);
+    expect(db.connection.prepare(`SELECT state, spec_ciphertext AS ciphertext, spec_iv AS iv
+      FROM repair_drafts WHERE id = ?`).get(id)).toMatchObject({ state: "cancelled", ciphertext: "", iv: "" });
+  } finally { db.close(); }
+});
+
+it("withholds draft success while durable creation or cancellation verification is unreadable", async () => {
+  const { env, db, req } = setup();
+  await createSingleUserAccount(env, "pilot", "pilot@example.test", password);
+  const login = await req("/api/auth/password-login", "POST", undefined, { username: "pilot", password });
+  const cookie = login.headers.get("set-cookie")!.split(";")[0];
+  const original = env.DB;
+  try {
+    env.DB = ambiguousDraftDatabase(original, { failCreateVerification: true });
+    const uncertainCreate = await req("/api/repair/drafts", "POST", cookie, scope);
+    expect(uncertainCreate.status).toBe(503);
+    expect((await uncertainCreate.json() as { error: string }).error).toBe("draft_verification_pending");
+    const id = (db.connection.prepare("SELECT id FROM repair_drafts ORDER BY created_at DESC LIMIT 1")
+      .get() as { id: string }).id;
+
+    env.DB = ambiguousDraftDatabase(original, { failCancellationVerification: true });
+    const uncertainCancel = await req(`/api/repair/drafts/${id}`, "DELETE", cookie);
+    expect(uncertainCancel.status).toBe(503);
+    expect((await uncertainCancel.json() as { error: string }).error).toBe("draft_cancellation_pending");
+    env.DB = original;
+    expect((await req(`/api/repair/drafts/${id}`, "DELETE", cookie)).status).toBe(200);
+  } finally { env.DB = original; db.close(); }
+});
 
 it("bounds encrypted drafts, fails closed on tampering and erases expired scopes", async () => {
   const { env, db, req } = setup();

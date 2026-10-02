@@ -294,7 +294,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             updatedAt: fixedDate.addingTimeInterval(60),
             isMigrationDefault: true
         )
-        let schedule = ScheduledExportEntry(
+        var schedule = ScheduledExportEntry(
             id: scheduleID,
             profileID: profileID,
             isEnabled: true,
@@ -312,6 +312,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             lastTodayRefreshDate: fixedDate.addingTimeInterval(-3_600),
             enabledAt: fixedDate.addingTimeInterval(-604_800)
         )
+        schedule.recoveryGeneration = 3
+        schedule.recoveryDiscardedAt = fixedDate.addingTimeInterval(-1_800)
         let vaultIdentity = VaultFolderIdentity(
             volumeUUIDString: "synthetic-volume",
             fileIdentifier: 42

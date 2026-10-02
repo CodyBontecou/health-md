@@ -11,7 +11,8 @@ import { errorResponse } from "../src/http";
 import { purgeArchivedRevisions, processAccountDeletions } from "../src/lifecycle";
 import { VmHealthDataReader, type ReadPrincipal } from "../mcp/reader";
 import { sha256Hex } from "../src/crypto";
-import type { RepairDraftSpec } from "../src/repair-drafts";
+import { purgeExpiredRepairDrafts, type RepairDraftSpec } from "../src/repair-drafts";
+import { purgeExpiredRepairDevices } from "../src/repair-devices";
 import worker from "../src/index";
 
 const root = resolve(import.meta.dirname, "..");
@@ -134,7 +135,7 @@ it("keeps a narrow existing-day repair separate from the primary and shows origi
     const original = await request(`/api/exports/${result.id}/download`, "GET", undefined, cookie);
     expect(await original.json()).toEqual(selected);
     expect(await objects.reconcile(db)).toBe(0);
-    const reader = new VmHealthDataReader(directory, env.EXPORT_ENCRYPTION_KEYS_JSON);
+    const reader = new VmHealthDataReader(directory, env.EXPORT_ENCRYPTION_KEYS_JSON ?? "");
     const principal: ReadPrincipal = { userId, tokenId: "synthetic", scope: "full_export" };
     const aggregates: ReadPrincipal = { ...principal, scope: "aggregates" };
     try {
@@ -248,19 +249,15 @@ it("enforces retained-byte quota at transactional commit across simultaneous dif
       VALUES (?, ?, ?, 'v1', ?, ?, 1, 8, 'ios', ?, ?, ?, ?, 0, 1, 0)`)
       .run(fakeId, userId, `v1/${randomUUID()}`, Buffer.from(randomBytes(32)).toString("hex"), baseBytes,
         "2026-04-03T12:00:00.000Z", "2026-04-03T12:00:00.000Z", date, date);
-    // Synchronize both writers after their pre-write usage check, before
-    // either can commit. No actual 1 GiB object is ever created.
+    // Durable reservation rejects the over-quota writer before it creates an
+    // encrypted object. No actual 1 GiB object is ever created.
     const originalStore = env.EXPORTS;
     const originalPut = originalStore.put.bind(originalStore);
-    let started = 0;
-    let release!: () => void;
-    const bothStarted = new Promise<void>((done) => { release = done; });
+    let puts = 0;
     env.EXPORTS = new Proxy(originalStore, { get(target, property) {
       if (property === "put") return async (...args: Parameters<typeof originalPut>) => {
-        const result = await originalPut(...args); started += 1;
-        if (started === 2) release();
-        await bothStarted;
-        return result;
+        puts += 1;
+        return originalPut(...args);
       };
       const value = Reflect.get(target, property);
       return typeof value === "function" ? value.bind(target) : value;
@@ -269,6 +266,7 @@ it("enforces retained-byte quota at transactional commit across simultaneous dif
       supplement(test, bearer, firstPayload), supplement(test, bearer, secondPayload),
     ]);
     expect([first.status, second.status].sort()).toEqual([201, 413]);
+    expect(puts).toBe(1);
     expect((db.connection.prepare("SELECT COALESCE(SUM(byte_count), 0) AS bytes FROM exports")
       .get() as { bytes: number }).bytes).toBeLessThanOrEqual(1_073_741_824);
     db.connection.prepare("DELETE FROM exports WHERE id = ?").run(fakeId);
@@ -335,7 +333,8 @@ it("rolls back failed commits, protects supplements from revision cleanup and er
       .run(exportId);
     expect(await purgeArchivedRevisions(env, 30)).toBe(0);
     expect(statSync(payload).isFile()).toBe(true);
-    const deletion = await request("/api/account/delete", "POST", { password, confirmation: "DELETE" }, cookie);
+    const deletion = await request("/api/account/delete", "POST", { password, confirmation: "DELETE",
+      statusToken: `hmd_del_${Buffer.from(randomBytes(32)).toString("base64url")}` }, cookie);
     expect(deletion.status).toBe(202);
     await processAccountDeletions(env);
     await processAccountDeletions(env);
@@ -346,6 +345,43 @@ it("rolls back failed commits, protects supplements from revision cleanup and er
     expect(await objects.reconcile(db)).toBe(0);
   } finally { db.close(); }
 }, 30_000);
+
+it("purges legacy repair state in bounded oldest-first pages", async () => {
+  const test = setup();
+  try {
+    const { userId } = await owner(test);
+    const expired = ["2020-01-01T00:00:00.000Z", "2020-01-02T00:00:00.000Z",
+      "2020-01-03T00:00:00.000Z"];
+    const current = "2030-01-01T00:00:00.000Z";
+    for (const expiresAt of [...expired, current]) {
+      test.db.connection.prepare(`INSERT INTO repair_drafts
+        (id, user_id, spec_ciphertext, spec_iv, source, day_count, state, created_at, expires_at)
+        VALUES (?, ?, 'synthetic', 'synthetic', 'ios', 1, 'draft', ?, ?)`)
+        .run(randomUUID(), userId, expiresAt, expiresAt);
+      test.db.connection.prepare(`INSERT INTO repair_devices
+        (id, token_hash, source, created_at, pairing_expires_at)
+        VALUES (?, ?, 'ios', ?, ?)`)
+        .run(randomUUID(), randomUUID(), expiresAt, expiresAt);
+    }
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await purgeExpiredRepairDrafts(test.env, 2, now);
+    await purgeExpiredRepairDevices(test.env, 2, now);
+    for (const table of ["repair_drafts", "repair_devices"]) {
+      expect(test.db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get())
+        .toMatchObject({ n: 2 });
+    }
+    await purgeExpiredRepairDrafts(test.env, 2, now);
+    await purgeExpiredRepairDevices(test.env, 2, now);
+    for (const table of ["repair_drafts", "repair_devices"]) {
+      expect(test.db.connection.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get())
+        .toMatchObject({ n: 1 });
+    }
+    await expect(purgeExpiredRepairDrafts(test.env, 0, now))
+      .rejects.toThrow("Invalid repair-draft cleanup limit");
+    await expect(purgeExpiredRepairDevices(test.env, 501, now))
+      .rejects.toThrow("Invalid repair-device cleanup limit");
+  } finally { test.db.close(); }
+});
 
 it("keeps read authority owner-scoped and rejects supplement requests on the write-only listener", async () => {
   const test = setup(); const { env, db, request } = test;

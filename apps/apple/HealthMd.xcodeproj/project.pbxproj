@@ -235,6 +235,7 @@
 				iOS/AppIntents/GetHealthSummaryForDateIntent.swift,
 				iOS/AppIntents/GetLastExportStatusIntent.swift,
 				iOS/AppIntents/HealthMdAppShortcuts.swift,
+				iOS/AppIntents/RefreshMacContextIntent.swift,
 				iOS/AppIntents/SetScheduledExportEnabledIntent.swift,
 				iOS/Components/AnimatedBackground.swift,
 				iOS/Components/AnimatedButton.swift,

@@ -91,12 +91,15 @@ class DirectCliReleaseReadinessTest {
     }
 
     @Test
-    fun qrPairingUsesOptionalOpenSourceCameraPathWithoutExternalDeepLinkAuthority() {
+    fun qrPairingUsesOptionalOpenSourceCameraPathWithoutPairingDeepLinkAuthority() {
         val manifest = read("app/src/main/AndroidManifest.xml")
         assertThat(manifest).contains("android.permission.CAMERA")
         assertThat(manifest).contains("android.hardware.camera.any")
         assertThat(manifest).contains("android:required=\"false\"")
-        assertThat(manifest).doesNotContain("android:scheme=\"healthmd\"")
+        // The sole custom-scheme authority is the static, credential-free Cloud
+        // request handoff. QR pairing itself remains an in-app camera flow.
+        assertThat(Regex("android:scheme=\"healthmd\"").findAll(manifest).count()).isEqualTo(1)
+        assertThat(manifest).contains("android:host=\"cloud\" android:path=\"/requests\"")
 
         val build = read("app/build.gradle.kts")
         assertThat(build).contains("libs.androidx.camera.camera2")

@@ -1,8 +1,11 @@
 import {
-  accountSummary, consumeMagicLink, createIngestToken, getSession, listIngestTokens,
-  logout, requestMagicLink, requireSession, revokeIngestToken,
+  accountSummary, consumeMagicLink, createIngestToken, getSession, listIngestTokens, listSecurityActivity,
+  listSessions, logout, purgeExpiredAuditEvents, purgeExpiredAuthState, requestMagicLink, requireSession, revokeIngestToken,
+  revokeOtherSessions, revokeSession,
 } from "./auth";
 import { downloadExport, ingest, listDayPage, listExportPage, listExports } from "./exports";
+import { downloadAccountExportPage } from "./account-export";
+import { rewrapAccountExportKeys } from "./account-export-keys";
 import { dashboardTrends, exploreCatalog, exploreChart } from "./dashboard";
 import { exploreExports, exploreNode } from "./explore";
 import { createAgentToken, listAgentTokens, revokeAgentToken } from "./agent-tokens";
@@ -14,20 +17,37 @@ import { approveRepairDevice, listRepairDevices, purgeExpiredRepairDevices,
 import { readSupplementEvidence } from "./repair-supplements";
 import { cancelRepairDispatch, claimRepairDispatch, declineRepairDispatch,
   listRepairDispatches, queueRepairDispatch, resumeRepairDispatch } from "./repair-dispatch";
-import { processAccountDeletions, purgeArchivedRevisions, requestAccountDeletion } from "./lifecycle";
+import { getAccountDeletionStatus, processAccountDeletions, purgeArchivedRevisions,
+  purgeExpiredDeletionReceipts, requestAccountDeletion } from "./lifecycle";
+import { reconcileUploadAdmissions, reconcileUploadIntents } from "./upload-intents";
+import { reconcileOrphanExportObjects } from "./object-reconciliation";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
+import { decodeBase64, parseExportKeyring } from "./crypto";
 import type { Env } from "./types";
 
 const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
-  "/repair", "/repair.js", "/repair-panel", "/style.css"]);
+  "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js", "/style.css"]);
 const STATIC_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
-function validateConfiguration(env: Env): void {
+function normalizedKeyMaterial(encoded: string): string {
+  const bytes = decodeBase64(encoded);
+  if (bytes.byteLength !== 32) throw new Error("Key material must contain exactly 32 bytes");
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export function validateConfiguration(env: Env): void {
   if (env.ENVIRONMENT !== "development" && env.ENVIRONMENT !== "production") {
     throw new Error("Invalid deployment environment");
   }
   if (env.AUTH_MODE && env.AUTH_MODE !== "email_link" && env.AUTH_MODE !== "password") {
     throw new Error("Invalid authentication mode");
+  }
+  if (!(["closed", "invite", "open"] as string[]).includes(env.AUTH_SIGNUP_MODE)) {
+    throw new Error("Invalid signup mode");
+  }
+  const profile = env.SERVICE_PROFILE ?? "combined";
+  if (!["combined", "ingest", "account", "maintenance"].includes(profile)) {
+    throw new Error("Invalid service profile");
   }
   const origin = new URL(env.PUBLIC_ORIGIN);
   if (env.ENVIRONMENT === "production" && origin.protocol !== "https:") {
@@ -38,14 +58,137 @@ function validateConfiguration(env: Env): void {
   }
   if (env.ENVIRONMENT === "production") {
     const personalMvp = env.VM_PERSONAL_MVP_NO_BACKUP_ACK === "I_ACCEPT_PERMANENT_DATA_LOSS";
+    const splitNonIdentity = profile === "ingest" || profile === "maintenance";
+    const invalidProductionIdentity = splitNonIdentity ?
+      (env.AUTH_SIGNUP_MODE !== "closed" || env.AUTH_MODE !== undefined || !!env.PASSWORD_PEPPER_B64) :
+      profile === "account" ?
+        (env.AUTH_MODE === "password" || !!env.PASSWORD_PEPPER_B64 || !env.RESEND_API_KEY ||
+          !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")) :
+        (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
+          (!env.RESEND_API_KEY || !env.AUTH_EMAIL_FROM || env.AUTH_EMAIL_FROM.includes("example")));
+    let invalidIdentityKey = false;
+    let identityKeyMaterial: string | null = null;
+    if (profile === "account" || profile === "combined") {
+      try { identityKeyMaterial = normalizedKeyMaterial(env.IDENTITY_KEY_B64 ?? ""); }
+      catch { invalidIdentityKey = true; }
+    }
+    let invalidLegacyKeys = false;
+    let legacyKeyMaterials: string[] = [];
+    if (profile === "account" || profile === "combined") {
+      try {
+        const keyring = parseExportKeyring(env.EXPORT_ENCRYPTION_KEYS_JSON ?? "");
+        invalidLegacyKeys = !env.CURRENT_EXPORT_KEY_ID || !keyring.has(env.CURRENT_EXPORT_KEY_ID);
+        legacyKeyMaterials = [...keyring.values()].map(normalizedKeyMaterial);
+      } catch { invalidLegacyKeys = true; }
+    }
+    const invalidMetrics = profile !== "combined" &&
+      (env.HEALTH_FREE_METRICS_REQUIRED !== "1" || !env.METRICS);
+    const invalidBindings = profile !== "combined" && (!env.DB || !env.EXPORTS ||
+      (profile === "account" && (!env.ASSETS || !env.LIFECYCLE_QUEUE)) ||
+      (profile === "ingest" && (!!env.ASSETS || !!env.LIFECYCLE_QUEUE)) ||
+      (profile === "maintenance" && (!env.LIFECYCLE_QUEUE || !!env.ASSETS)));
+    const invalidExcessSecrets = (splitNonIdentity && (!!env.IDENTITY_KEY_B64 || !!env.RESEND_API_KEY ||
+      !!env.AUTH_EMAIL_FROM || !!env.AUTH_INVITE_EMAILS ||
+      ((profile === "ingest" || profile === "maintenance") &&
+        (!!env.EXPORT_ENCRYPTION_KEYS_JSON || !!env.CURRENT_EXPORT_KEY_ID)))) ||
+      (profile === "account" && !!env.AUTH_INVITE_EMAILS) ||
+      ((profile === "ingest" || profile === "account") && !!env.AUDIT_RETENTION_DAYS);
+    const present = (value: string | undefined): boolean => value !== undefined;
+    const invalidExcessSettings =
+      (profile === "ingest" && [env.EXPORT_ENDPOINT_ORIGIN, env.SESSION_TTL_DAYS,
+        env.MAGIC_LINK_TTL_MINUTES, env.EMAIL_SEND_HOURLY_LIMIT, env.DELETION_STATUS_TTL_DAYS,
+        env.REVISION_RETENTION_DAYS, env.AUDIT_RETENTION_DAYS].some(present)) ||
+      (profile === "account" && [env.INGEST_TOKEN_HOURLY_LIMIT,
+        env.INGEST_ACCOUNT_HOURLY_LIMIT, env.REVISION_RETENTION_DAYS,
+        env.AUDIT_RETENTION_DAYS].some(present)) ||
+      (profile === "maintenance" && [env.EXPORT_ENDPOINT_ORIGIN, env.MAX_EXPORT_BYTES,
+        env.SESSION_TTL_DAYS, env.MAGIC_LINK_TTL_MINUTES, env.EMAIL_SEND_HOURLY_LIMIT,
+        env.INGEST_TOKEN_HOURLY_LIMIT, env.INGEST_ACCOUNT_HOURLY_LIMIT].some(present));
+    const invalidRepairFlags = profile !== "combined" &&
+      (!!env.CLOUD_REPAIR_DEVICE_ENROLLMENT_ENABLED || !!env.CLOUD_REPAIR_DISPATCH_ENABLED);
+    const invalidDeploymentRevision = profile !== "combined" &&
+      !/^[a-f0-9]{40}$/u.test(env.DEPLOYMENT_REVISION ?? "");
+    let invalidExportEndpoint = false;
+    if (profile === "account") {
+      try {
+        if (!env.EXPORT_ENDPOINT_ORIGIN) invalidExportEndpoint = true;
+        else {
+          const exportOrigin = new URL(env.EXPORT_ENDPOINT_ORIGIN);
+          invalidExportEndpoint = exportOrigin.protocol !== "https:" || exportOrigin.origin !== env.EXPORT_ENDPOINT_ORIGIN ||
+            exportOrigin.origin === origin.origin;
+        }
+      } catch { invalidExportEndpoint = true; }
+    }
+    let invalidRuntimeLimits = false;
+    try {
+      if (profile === "ingest" || profile === "account") {
+        parsePositiveInteger(env.MAX_EXPORT_BYTES, "MAX_EXPORT_BYTES", 1024, 25 * 1024 * 1024);
+      }
+      if (profile === "account") {
+        parsePositiveInteger(env.SESSION_TTL_DAYS, "SESSION_TTL_DAYS", 1, 30);
+        parsePositiveInteger(env.MAGIC_LINK_TTL_MINUTES, "MAGIC_LINK_TTL_MINUTES", 5, 30);
+      }
+      if (profile === "maintenance") {
+        if (!env.REVISION_RETENTION_DAYS || env.REVISION_RETENTION_DAYS === "unlimited" ||
+            !env.AUDIT_RETENTION_DAYS || env.AUDIT_RETENTION_DAYS === "unlimited") {
+          invalidRuntimeLimits = true;
+        } else {
+          parsePositiveInteger(env.REVISION_RETENTION_DAYS, "REVISION_RETENTION_DAYS", 1, 3650);
+          parsePositiveInteger(env.AUDIT_RETENTION_DAYS, "AUDIT_RETENTION_DAYS", 1, 3650);
+        }
+      }
+    } catch { invalidRuntimeLimits = true; }
+    let invalidDeletionTtl = false;
+    if (profile === "account" || profile === "maintenance") {
+      try {
+        if (!env.DELETION_STATUS_TTL_DAYS) invalidDeletionTtl = true;
+        else parsePositiveInteger(env.DELETION_STATUS_TTL_DAYS, "DELETION_STATUS_TTL_DAYS", 1, 90);
+      } catch { invalidDeletionTtl = true; }
+    }
+    let invalidAbuseLimits = false;
+    try {
+      if (profile === "ingest") {
+        if (!env.INGEST_TOKEN_HOURLY_LIMIT || !env.INGEST_ACCOUNT_HOURLY_LIMIT) invalidAbuseLimits = true;
+        else {
+          parsePositiveInteger(env.INGEST_TOKEN_HOURLY_LIMIT, "INGEST_TOKEN_HOURLY_LIMIT", 1, 100_000);
+          parsePositiveInteger(env.INGEST_ACCOUNT_HOURLY_LIMIT, "INGEST_ACCOUNT_HOURLY_LIMIT", 1, 100_000);
+        }
+      } else if (profile === "account") {
+        if (!env.EMAIL_SEND_HOURLY_LIMIT) invalidAbuseLimits = true;
+        else parsePositiveInteger(env.EMAIL_SEND_HOURLY_LIMIT, "EMAIL_SEND_HOURLY_LIMIT", 1, 100_000);
+      }
+    } catch { invalidAbuseLimits = true; }
+    let invalidAccountKeys = false;
+    let accountKeyMaterials: string[] = [];
+    if (profile === "ingest" || profile === "account" || profile === "maintenance") {
+      try {
+        const keys = parseExportKeyring(env.ACCOUNT_KEY_WRAPPING_KEYS_JSON ?? "");
+        invalidAccountKeys = env.ACCOUNT_KEY_MODE !== "per_account" ||
+          !env.CURRENT_ACCOUNT_WRAPPING_KEY_ID || !keys.has(env.CURRENT_ACCOUNT_WRAPPING_KEY_ID);
+        accountKeyMaterials = [...keys.values()].map(normalizedKeyMaterial);
+      } catch { invalidAccountKeys = true; }
+    }
+    const configuredKeyMaterials = [...legacyKeyMaterials, ...accountKeyMaterials,
+      ...(identityKeyMaterial ? [identityKeyMaterial] : [])];
+    let invalidKeySeparation = new Set(configuredKeyMaterials).size !== configuredKeyMaterials.length;
+    if (profile === "combined" && env.AUTH_MODE === "password") {
+      try {
+        const pepper = normalizedKeyMaterial(env.PASSWORD_PEPPER_B64 ?? "");
+        invalidKeySeparation ||= configuredKeyMaterials.includes(pepper);
+      } catch { invalidKeySeparation = true; }
+    }
     if (env.SYNTHETIC_PREVIEW_ONLY || env.DEV_SHOW_MAGIC_LINK || env.AUTH_SIGNUP_MODE === "open" ||
-        (personalMvp ? (env.CLOUD_RUNTIME_APPROVED !== undefined || env.AUTH_MODE !== "password" ||
-          env.AUTH_SIGNUP_MODE !== "closed" || env.REVISION_RETENTION_DAYS !== "unlimited" ||
-          !env.PASSWORD_PEPPER_B64) :
-          (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" ||
-            (env.AUTH_MODE === "password" ? (!env.PASSWORD_PEPPER_B64 || env.AUTH_SIGNUP_MODE !== "closed") :
-              (!env.RESEND_API_KEY || env.AUTH_EMAIL_FROM.includes("example"))))) ||
-        env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")) {
+        (personalMvp ? (profile !== "combined" || env.CLOUD_RUNTIME_APPROVED !== undefined ||
+          env.AUTH_MODE !== "password" || env.AUTH_SIGNUP_MODE !== "closed" ||
+          env.REVISION_RETENTION_DAYS !== "unlimited" || !env.PASSWORD_PEPPER_B64 ||
+          invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation) :
+          (env.CLOUD_RUNTIME_APPROVED !== "healthmd-cloud-v1-reviewed" || invalidProductionIdentity ||
+            invalidAccountKeys || invalidIdentityKey || invalidLegacyKeys || invalidKeySeparation || invalidBindings ||
+            invalidExcessSecrets || invalidExcessSettings || invalidRepairFlags || invalidMetrics || invalidRuntimeLimits ||
+            invalidDeletionTtl || invalidAbuseLimits ||
+            invalidDeploymentRevision || invalidExportEndpoint)) ||
+        ((profile === "account" || profile === "combined") &&
+          (!env.CURRENT_EXPORT_KEY_ID || env.CURRENT_EXPORT_KEY_ID.includes("REPLACE")))) {
       throw new Error("Production or personal-MVP configuration is incomplete");
     }
   }
@@ -75,7 +218,8 @@ async function route(request: Request, env: Env): Promise<Response> {
   const path = url.pathname;
   const method = request.method;
   if (method === "GET" && path === "/health") {
-    return json({ status: "ok" });
+    return json({ status: "ok", ...(env.DEPLOYMENT_REVISION ?
+      { revision: env.DEPLOYMENT_REVISION.slice(0, 12) } : {}) });
   }
   if (method === "GET" && path === "/api/runtime") {
     return json({ syntheticPreviewOnly: env.SYNTHETIC_PREVIEW_ONLY === "1",
@@ -84,7 +228,8 @@ async function route(request: Request, env: Env): Promise<Response> {
       exportEndpoint: `${env.EXPORT_ENDPOINT_ORIGIN ?? env.PUBLIC_ORIGIN}/api/v1/exports` });
   }
   if (method === "GET" && path === "/") return redirect("/dashboard");
-  if (method === "GET" && (path === "/login.html" || path === "/dashboard.html")) {
+  if (method === "GET" && (path === "/login.html" || path === "/dashboard.html" ||
+      path === "/deletion-status.html")) {
     return redirect(path.slice(0, -5), 307);
   }
   if (method === "GET" && STATIC_PATHS.has(path)) {
@@ -117,7 +262,23 @@ async function route(request: Request, env: Env): Promise<Response> {
     return accountSummary(env, await requireSession(request, env));
   }
   if (method === "POST" && path === "/api/account/delete") {
-    return requestAccountDeletion(request, env, (await requireSession(request, env)).id);
+    return requestAccountDeletion(request, env, await requireSession(request, env));
+  }
+  if (method === "GET" && path === "/api/account/deletion-status") {
+    return getAccountDeletionStatus(request, env);
+  }
+  if (method === "GET" && path === "/api/sessions") {
+    return listSessions(env, await requireSession(request, env));
+  }
+  if (method === "GET" && path === "/api/security-events") {
+    return listSecurityActivity(env, (await requireSession(request, env)).id);
+  }
+  if (method === "POST" && path === "/api/sessions/revoke-others") {
+    return revokeOtherSessions(request, env, await requireSession(request, env));
+  }
+  const sessionRevoke = /^\/api\/sessions\/([a-f0-9-]{36})$/u.exec(path);
+  if (method === "DELETE" && sessionRevoke?.[1]) {
+    return revokeSession(request, env, await requireSession(request, env), sessionRevoke[1]);
   }
   if (method === "POST" && path === "/api/auth/logout") {
     return logout(request, env, await requireSession(request, env));
@@ -226,6 +387,11 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (method === "GET" && exportDownload?.[1]) {
     return downloadExport(env, (await requireSession(request, env)).id, exportDownload[1]);
   }
+  const accountExportPage = /^\/api\/account\/export\/page\/([0-9]{1,8})$/u.exec(path);
+  if (method === "GET" && accountExportPage?.[1]) {
+    return downloadAccountExportPage(env, (await requireSession(request, env)).id,
+      Number(accountExportPage[1]));
+  }
   throw new HttpError(404, "not_found", "Endpoint not found.");
 }
 
@@ -240,20 +406,37 @@ export default {
   },
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
     validateConfiguration(env);
+    let failures = 0;
+    const phase = async (operation: () => Promise<unknown>): Promise<void> => {
+      try {
+        await operation();
+      } catch {
+        // Keep independent bounded work moving. The maintenance profile emits
+        // one fixed aggregate failure metric after this handler rejects.
+        failures += 1;
+      }
+    };
     if (env.SYNTHETIC_PREVIEW_ONLY !== "1") {
-      await processAccountDeletions(env);
-      if (env.REVISION_RETENTION_DAYS && env.REVISION_RETENTION_DAYS !== "unlimited") {
-        await purgeArchivedRevisions(env, parsePositiveInteger(env.REVISION_RETENTION_DAYS,
-          "REVISION_RETENTION_DAYS", 1, 3650));
+      await phase(() => processAccountDeletions(env));
+      const retentionDays = env.REVISION_RETENTION_DAYS;
+      if (retentionDays && retentionDays !== "unlimited") {
+        await phase(() => purgeArchivedRevisions(env, parsePositiveInteger(retentionDays,
+          "REVISION_RETENTION_DAYS", 1, 3650)));
       }
     }
-    const now = new Date().toISOString();
-    await env.DB.batch([
-      env.DB.prepare("DELETE FROM magic_links WHERE expires_at < ?").bind(now),
-      env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now),
-      env.DB.prepare("DELETE FROM auth_rate_limits WHERE expires_at < ?").bind(now),
-    ]);
-    await purgeExpiredRepairDrafts(env);
-    await purgeExpiredRepairDevices(env);
+    await phase(() => purgeExpiredAuthState(env));
+    await phase(() => purgeExpiredRepairDrafts(env));
+    await phase(() => purgeExpiredRepairDevices(env));
+    await phase(() => purgeExpiredDeletionReceipts(env));
+    const auditRetentionDays = env.AUDIT_RETENTION_DAYS;
+    if (auditRetentionDays) {
+      await phase(() => purgeExpiredAuditEvents(env, parsePositiveInteger(auditRetentionDays,
+        "AUDIT_RETENTION_DAYS", 1, 3650)));
+    }
+    await phase(() => reconcileUploadAdmissions(env));
+    await phase(() => reconcileUploadIntents(env));
+    if (env.SERVICE_PROFILE === "maintenance") await phase(() => reconcileOrphanExportObjects(env));
+    if (env.ACCOUNT_KEY_MODE === "per_account") await phase(() => rewrapAccountExportKeys(env));
+    if (failures > 0) throw new Error("One or more scheduled maintenance phases require retry");
   },
 };

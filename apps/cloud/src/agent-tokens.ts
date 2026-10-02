@@ -1,4 +1,4 @@
-import { audit, rateLimit } from "./auth";
+import { rateLimit } from "./auth";
 import { randomToken, sha256Hex } from "./crypto";
 import { assertSameOrigin, HttpError, json, readJson } from "./http";
 import { verifyAccountPassword } from "./password";
@@ -9,6 +9,8 @@ import type { Env } from "./types";
 // upgrade them or accept ingest/session credentials in the reader.
 const LABEL = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,79}$/u;
 const ID = /^[a-f0-9-]{36}$/u;
+interface AgentTokenCommitRow { id: string; userId: string; label: string; tokenHash: string;
+  lastFour: string; createdAt: string; expiresAt: string; scope: string; audited: number }
 
 function requireOwnerPilot(env: Env): void {
   if (env.VM_PERSONAL_MVP_NO_BACKUP_ACK !== "I_ACCEPT_PERMANENT_DATA_LOSS" ||
@@ -41,25 +43,74 @@ export async function createAgentToken(request: Request, env: Env, userId: strin
   if (!await verifyAccountPassword(env, userId, body.password)) {
     throw new HttpError(401, "invalid_credentials", "Password confirmation failed.");
   }
-  const count = await env.DB.prepare(`SELECT COUNT(*) AS count FROM mcp_read_tokens
-    WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?`)
-    .bind(userId, new Date().toISOString()).first<{ count: number }>();
-  if ((count?.count ?? 0) >= 10) {
-    throw new HttpError(409, "token_limit", "Revoke an agent credential before creating another.");
-  }
   const id = crypto.randomUUID();
+  const auditId = crypto.randomUUID();
   const token = `hmd_read_${randomToken()}`;
+  const tokenHash = await sha256Hex(token);
+  const lastFour = token.slice(-4);
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + Number(body.days) * 86400000).toISOString();
-  await env.DB.batch([
-    env.DB.prepare(`INSERT INTO mcp_read_tokens
-      (id, user_id, label, token_hash, last_four, created_at, expires_at, read_scope)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 'full_export')`)
-      .bind(id, userId, label, await sha256Hex(token), token.slice(-4), now, expiresAt),
-    env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
-      VALUES (?, ?, 'agent_token.created', ?, ?)`)
-      .bind(crypto.randomUUID(), userId, id, now),
-  ]);
+  try {
+    await env.DB.batch([
+      // The cap check is part of the serialized write transaction; a preflight
+      // count would let concurrent owner requests exceed ten active grants.
+      env.DB.prepare(`INSERT INTO mcp_read_tokens
+        (id, user_id, label, token_hash, last_four, created_at, expires_at, read_scope)
+        SELECT ?, ?, ?, ?, ?, ?, ?, 'full_export' WHERE
+          EXISTS (SELECT 1 FROM users WHERE id = ? AND status = 'active') AND
+          (SELECT COUNT(*) FROM mcp_read_tokens
+            WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?) < 10`)
+        .bind(id, userId, label, tokenHash, lastFour, now, expiresAt, userId, userId, now),
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'agent_token.created', ?, ? FROM mcp_read_tokens
+        WHERE id = ? AND user_id = ? AND token_hash = ? AND label = ?
+          AND last_four = ? AND created_at = ? AND expires_at = ?
+          AND read_scope = 'full_export' AND revoked_at IS NULL`)
+        .bind(auditId, userId, id, now, id, userId, tokenHash, label, lastFour, now, expiresAt),
+    ]);
+  } catch {
+    // The transaction can commit before its response is lost. Verify below
+    // before releasing the one-time plaintext read credential.
+  }
+  let committed: AgentTokenCommitRow | null;
+  try {
+    committed = await env.DB.prepare(`SELECT t.id, t.user_id AS userId, t.label,
+      t.token_hash AS tokenHash, t.last_four AS lastFour, t.created_at AS createdAt,
+      t.expires_at AS expiresAt, t.read_scope AS scope,
+      EXISTS(SELECT 1 FROM audit_events a WHERE a.id = ? AND a.user_id = t.user_id
+        AND a.event_type = 'agent_token.created' AND a.target_id = t.id
+        AND a.occurred_at = t.created_at) AS audited
+      FROM mcp_read_tokens t WHERE t.id = ? AND t.user_id = ?`)
+      .bind(auditId, id, userId).first<AgentTokenCommitRow>();
+  } catch {
+    throw new HttpError(503, "agent_token_verification_pending",
+      "Agent credential creation verification is temporarily unavailable. Review credentials before retrying.");
+  }
+  if (committed && (committed.id !== id || committed.userId !== userId || committed.label !== label ||
+      committed.tokenHash !== tokenHash || committed.lastFour !== lastFour || committed.createdAt !== now ||
+      committed.expiresAt !== expiresAt || committed.scope !== "full_export" || committed.audited !== 1)) {
+    throw new HttpError(503, "agent_token_verification_pending",
+      "Agent credential creation verification is temporarily unavailable. Review credentials before retrying.");
+  }
+  if (!committed) {
+    let state: { active: number; count: number } | null;
+    try {
+      state = await env.DB.prepare(`SELECT
+        EXISTS(SELECT 1 FROM users WHERE id = ? AND status = 'active') AS active,
+        (SELECT COUNT(*) FROM mcp_read_tokens
+          WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?) AS count`)
+        .bind(userId, userId, now).first<{ active: number; count: number }>();
+    } catch {
+      throw new HttpError(503, "agent_token_verification_pending",
+        "Agent credential creation verification is temporarily unavailable. Review credentials before retrying.");
+    }
+    if (!state?.active) throw new HttpError(401, "unauthorized", "Sign in to continue.");
+    if (Number(state.count) >= 10) {
+      throw new HttpError(409, "token_limit", "Revoke an agent credential before creating another.");
+    }
+    throw new HttpError(503, "agent_token_creation_failed",
+      "Agent credential creation is temporarily unavailable.");
+  }
   return json({ id, token, expiresAt, scope: "full_export" }, { status: 201 });
 }
 
@@ -67,10 +118,39 @@ export async function revokeAgentToken(request: Request, env: Env, userId: strin
   requireOwnerPilot(env);
   assertSameOrigin(request, env);
   if (!ID.test(id)) throw new HttpError(404, "not_found", "Agent credential not found.");
-  const updated = await env.DB.prepare(`UPDATE mcp_read_tokens SET revoked_at = ?
-    WHERE id = ? AND user_id = ? AND revoked_at IS NULL`)
-    .bind(new Date().toISOString(), id, userId).run();
-  if (!updated.meta.changes) throw new HttpError(404, "not_found", "Agent credential not found.");
-  await audit(env, userId, "agent_token.revoked", id);
-  return json({ revoked: true });
+  const now = new Date().toISOString();
+  const auditId = crypto.randomUUID();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE mcp_read_tokens SET revoked_at = ?
+        WHERE id = ? AND user_id = ? AND revoked_at IS NULL`).bind(now, id, userId),
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'agent_token.revoked', ?, t.revoked_at FROM mcp_read_tokens t
+        WHERE t.id = ? AND t.user_id = ? AND t.revoked_at IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM audit_events a WHERE a.user_id = t.user_id
+            AND a.event_type = 'agent_token.revoked' AND a.target_id = t.id
+            AND a.occurred_at = t.revoked_at)`)
+        .bind(auditId, userId, id, id, userId),
+    ]);
+  } catch {
+    // A lost response may hide a committed revocation. Verify below.
+  }
+  let durable: { revokedAt: string | null; audited: number } | null;
+  try {
+    durable = await env.DB.prepare(`SELECT t.revoked_at AS revokedAt,
+      EXISTS(SELECT 1 FROM audit_events a WHERE a.user_id = t.user_id
+        AND a.event_type = 'agent_token.revoked' AND a.target_id = t.id
+        AND a.occurred_at = t.revoked_at) AS audited
+      FROM mcp_read_tokens t WHERE t.id = ? AND t.user_id = ?`)
+      .bind(id, userId).first<{ revokedAt: string | null; audited: number }>();
+  } catch {
+    throw new HttpError(503, "agent_token_revocation_pending",
+      "Agent credential revocation verification is temporarily unavailable. Review credentials before retrying.");
+  }
+  if (!durable) throw new HttpError(404, "not_found", "Agent credential not found.");
+  // An exact retry may already have revoked this owner-bound token. The batch
+  // repairs a missing reviewed marker and success always requires that marker.
+  if (durable.revokedAt && durable.audited === 1) return json({ revoked: true });
+  throw new HttpError(503, "agent_token_revocation_pending",
+    "Agent credential revocation verification is temporarily unavailable. Review credentials before retrying.");
 }

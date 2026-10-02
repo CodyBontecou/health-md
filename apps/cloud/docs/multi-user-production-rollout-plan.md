@@ -36,24 +36,28 @@ These are qualification targets, not public promises. Replace them with approved
 | Primary deletion completion | 24 hours | 24 hours |
 | Backup deletion expiry | documented | 35 days or an approved alternative |
 
-Load tests must use synthetic envelopes and include worst-case valid 25 MiB requests. If the Worker cannot safely validate and application-encrypt that size within measured memory and CPU limits, either implement a versioned chunked encrypted-storage format or lower the advertised limit with explicit mobile/product documentation. Do not silently accept and truncate large days.
+Load tests must use synthetic envelopes and include worst-case valid 25 MiB requests. **Source milestone:** bounded request reads now use validated `Content-Length` as exact initial capacity or one capped geometrically grown contiguous buffer for chunked traffic, never retain an attacker-controlled chunk array, never allocate a final second full body, and preserve 413 if stream cancellation fails; highly fragmented and malformed UTF-8 tests cover this shape. This reduces avoidable peak memory but is not provider memory evidence. If the Worker cannot safely validate and application-encrypt that size within measured memory and CPU limits, either implement a versioned chunked encrypted-storage format or lower the advertised limit with explicit mobile/product documentation. Do not silently accept and truncate large days.
+
+**Source milestone:** `npm run qualify:staging-load` implements the fail-closed synthetic procedure in `production-load-qualification.md`: it refuses known live/non-staging hosts, binds to the exact deployed revision, requires owner-only tokens from enough attested distinct disposable accounts to preserve per-account budgets, exercises 500 concurrent, 50/second for ten minutes, 200/second for one minute, alternating declared-length/fragmented exact-25-MiB uploads, and a dedicated production-lease slow-body/backpressure/recovery drill, and emits only fixed aggregate evidence. It has not been run against provider infrastructure; a harness pass cannot replace provider metrics, cost review or owner sign-off.
 
 ## Target production topology
+
+**Source milestone:** positive-route entrypoints `src/ingest-worker.ts` and `src/account-worker.ts`, scheduled-only `src/maintenance-worker.ts`, separate placeholder Wrangler profiles, CI dry-runs, full pre-decision configuration validation on every HTTP/scheduled/Queue invocation, and route-boundary tests are implemented. Placeholder IDs keep every profile non-deployable; no production resources, secrets, routes, or approval marker have been provisioned.
 
 Use new, production-only resources and credentials:
 
 1. **Write-only ingest Worker** at `api.healthmd.app`
    - Exposes only `POST /api/v1/exports` and `GET /health`.
    - Authenticates the write token before admission.
-   - Applies token, account, IP-risk, payload, and edge abuse limits.
-   - Writes application-encrypted objects to a private production R2 bucket.
+   - Applies token, account, IP-risk, payload, and edge abuse limits; it rejects account/maintenance runtime settings such as session, magic-link, deletion and retention controls.
+   - Writes application-encrypted objects with per-account DEKs/KEKs to a private production R2 bucket; it rejects the historical global decrypt keyring and legacy key ID.
    - Has no dashboard, download, session, MCP, signup, or read route.
 
 2. **Account Worker** at `account.healthmd.app`
    - Owns signup/sign-in, sessions, token management, inventory, download, export, and deletion requests.
-   - Uses a separate deployment identity and explicit route allowlist.
+   - Uses a separate deployment identity and explicit route allowlist. It receives browser/session/magic-link/email/deletion settings but rejects ingest budgets and maintenance retention controls.
    - Serves first-party assets only, with strict CSP and no analytics or session replay.
-   - Cannot accept exports or MCP requests.
+   - Cannot accept exports or MCP requests. Password login, pilot MCP agent-token administration, and unapproved repair device/dispatch handoff are omitted from its route allowlist rather than left dormant behind runtime checks. It alone receives the legacy-read keyring during controlled migration because it serves owner-authorized historical downloads.
 
 3. **Control and metadata storage**
    - Use a new production D1 database initially, subject to the load gate below.
@@ -62,17 +66,21 @@ Use new, production-only resources and credentials:
    - Use forward-only migrations; never reuse the VM SQLite file or preview D1 state.
 
 4. **Private encrypted object storage**
+   - **Source milestone:** migrations `0011_account_export_keys.sql`/`0013_account_key_rewrap.sql` and the account-key resolver create one random DEK per account, wrap it with versioned AES-256-GCM KEKs, bind wrapping to account/key IDs, use it for new exports, preserve legacy reads, and fail closed on tampering. A newly generated plaintext DEK is released to ingest only after its exact key ID, KEK ID, wrapped bytes, IV and creation timestamp are read back; a concurrent winner is adopted safely, while unreadable verification withholds the candidate instead of risking orphan ciphertext. Maintenance conditionally rewraps at most 25 DEKs per invocation and counts an update only after reading back its exact randomized wrap, IV, current KEK ID and timestamp, so lost/zero-change D1 responses and concurrent winners remain idempotent; this follows the reviewed procedure in `account-key-rotation-runbook.md`; this does not replace the separate design required for compromised-DEK/object rotation. Split production profiles require per-account mode, while the VM stays legacy by default. No production KEK or migration is deployed.
    - Use a new private R2 bucket with public access disabled.
    - Add a versioned ciphertext format and key ID to every object.
    - Use per-account data-encryption keys wrapped by a managed production key-encryption key. Do not use one JSON root-key list as the long-term key-management system for all users.
    - Keep historical key versions until every referenced object is re-encrypted or verifiably deleted.
 
 5. **Maintenance and lifecycle Worker**
+   - Deletes ciphertext and rewraps DEKs with account KEKs without plaintext access; it rejects the historical global decrypt keyring and legacy key ID, plus payload/session/magic-link/email/ingest settings that it does not use.
+   - **Source milestone:** finite revision retention conditionally deletes only metadata still unreferenced by current or supplemental pointers, requires an always-row exact 0/1 absence result after normal/lost D1 responses before deleting ciphertext, and treats null/invalid reads as unavailable, and preserves ciphertext when verification is unreadable. Migration `0014_maintenance_cursors.sql` and `object-reconciliation.ts` then persist only an opaque provider cursor, scan at most 25 exact `v1/<uuid>` objects per invocation, require an exact reference result, delete only unreferenced ciphertext (including a safe orphan left by an unreadable retention outcome), verify exact absence through metadata-only R2 reads after normal or lost delete responses, and conditionally advance its cursor only after exact D1 read-back without regressing a concurrent winner; list/reference/delete/head/cursor/unexpected-key failures preserve retryability. It runs only in the split maintenance profile; the VM keeps its existing local reconciliation. No production bucket was scanned.
    - Use Queues or another durable job mechanism for deletion, expired-session cleanup, revision retention, orphan reconciliation, and key rotation.
    - Do not rely on one daily cron processing only a few global rows.
-   - Make every job idempotent, bounded, retryable, and observable without logging health data.
+   - Make every job idempotent, bounded, retryable, and observable without logging health data. After configuration validates, run independent scheduled deletion, retention, credential expiry, repair expiry, receipt expiry, intent reconciliation, orphan reconciliation and KEK-rewrap phases sequentially through peer failure, then raise one identifier-free aggregate failure so one provider outage cannot starve unrelated cleanup.
 
 6. **Observability boundary**
+   - **Source milestone:** split Workers emit only fixed profile/route/status/outcome/latency/size buckets to isolated Analytics Engine bindings; production validation requires each binding, provider failures cannot affect requests, and regression tests reject identifiers, credentials, URLs and request data. Provisional SLOs, alerts, staging qualification and incident handling are defined in `production-observability-and-slo.md`. No dataset or alert is deployed.
    - Emit aggregate request counts, status classes, latency/size buckets, queue depth, storage totals, deletion age, and reconciliation failures.
    - Never log bodies, health dates, metric values, emails, authorization headers, cookies, object keys, account IDs, export IDs, or stable pseudonyms.
    - Use random operational correlation IDs that are not persisted with account data.
@@ -81,11 +89,14 @@ The production path should use Cloudflare's Worker route directly rather than th
 
 ## Ingest concurrency and consistency design
 
+**Source milestone:** migration `0010_multi_user_ingest.sql`, `src/upload-intents.ts`, and the ingest integration acquire and exactly verify one of two durable account-scoped positions immediately after authentication/rate limiting and before body materialization; active admissions plus write intents are trigger-capped together, successful intent creation atomically consumes its admission, every admitted body read is cancelled at lease expiry, the same slot is exactly renewed after body completion and before parse/hash, every normal pre-intent exit exactly releases it, and an independent bounded maintenance phase expires abandoned admissions without starving intent/object cleanup after peer failure or deleting a concurrently renewed slot from a stale page. They also implement the account reservation ledger, committed/reserved byte triggers, bounded exact-retry wait, exact full-field reservation creation read-back after normal/lost/false-success D1 responses, create-only expected-ciphertext SHA-256 submission plus metadata-only exact encrypted size/hash read-back after normal/lost/collision/false/corrupt R2 puts, preventing an opaque-key collision from replacing retained ciphertext, exact reserved→object-written state/timestamp verification after lost D1 responses, ambiguous final D1 commit-response reconciliation, and expired-intent reconciliation. Expiry and abandonment first claim a durable `aborting` state that blocks object-written/final metadata transitions, metadata-only R2 read-back proves exact ciphertext absence before releasing its row/quota, final export insertion requires the exact active intent, and active/completed cleanup reports success only after durable row absence survives normal, lost, false-success and unreadable D1 outcomes. A lost batch response is accepted only after the export+committed-intent postcondition is read back; an unavailable post-commit read returns retryable backpressure without deleting possibly committed ciphertext. Synthetic VM and local-D1 migration tests cover this source state. It has not been applied to the live pilot or any production resource.
+
 Do not replace the four-slot VM gate with a larger process-global number. The production Worker should horizontally serve different accounts and enforce fairness with durable account-scoped state.
 
 Add these concepts to the production data model:
 
 - `account_storage`: committed bytes, reserved bytes, quota, and version;
+- `upload_admissions`: short-lived pre-body account/token positions acquired before materialization;
 - `upload_intents`: account, token, idempotency key or digest, expected bytes, state, lease expiry, and timestamps;
 - explicit states such as `reserved`, `object_written`, `committed`, `aborted`, and `reconciling`;
 - a unique account-scoped payload digest and, when mobile clients support it, an account-scoped idempotency key;
@@ -93,13 +104,13 @@ Add these concepts to the production data model:
 
 An upload should follow this state machine:
 
-1. Validate host, method, token shape, token activity, content type, and declared size.
-2. Read and validate a bounded body; compute its exact digest. Abort promptly on client disconnect.
-3. In one D1 transaction, claim an idempotent intent, enforce at most two active uploads for that account, and reserve quota.
+1. Validate host, method, token shape/activity, rate budget, content type, and declared size; durably acquire one of two account positions before accepting the body.
+2. Read and validate a bounded body; compute its exact digest. Abort promptly on client disconnect and exactly release the admission on every pre-intent exit.
+3. In one D1 transaction, consume that admission, claim an idempotent intent, keep admissions plus active intents at no more than two for the account, and reserve quota.
 4. Encrypt and write the object under a random staging key.
 5. In one D1 transaction, re-check account/token activity, insert metadata, update daily pointers, convert reserved bytes to committed bytes, and mark the intent committed.
 6. Return 2xx only after step 5. Exact retries return the original receipt.
-7. On failure, release the reservation and delete the staged object. A durable reconciler handles crashes between steps.
+7. On later failure, release the reservation and delete the staged object. A bounded durable reconciler expires abandoned admissions and handles crashes between later steps.
 
 There should be no long in-memory queue. Return `429` with `Retry-After` for an account concurrency or token rate limit, and `503` with `Retry-After` for global dependency/load shedding. Mobile clients must use bounded exponential backoff and retain exact pending bytes for retry.
 
@@ -116,6 +127,8 @@ Do not discover or implement an unreviewed shard migration during a live inciden
 
 ## Identity and account lifecycle
 
+**Source milestone:** forward-only migration `0016_magic_link_session_claims.sql` adds a random server-only claim nonce so one winning email-link claim, its hashed session and its reviewed audit event commit in one transaction; concurrent consumers cannot reuse it, a lost response is reconciled, and an unreadable outcome withholds the cookie. General session issuance and its reviewed audit event also commit atomically, and the one-time cookie is returned only after their exact durable postcondition survives an ordinary or lost D1 response; an unreadable outcome withholds the credential and returns a retryable error. Logout, one-session revocation and revoke-other-sessions also commit operation-specific audit markers atomically, recover lost D1 responses without adapter change counts, and never claim or clear the current cookie while verification is unreadable; the revoke-others response count comes from its durable transaction marker. Account-owned session inventory/revocation, a bounded reviewed security-activity history with no target IDs, fresh-email-session deletion step-up, immediate account disablement with job/receipt creation gated on durable disabled state, maintenance revalidation before erasure, valid zero-remaining evidence and completion conditional on user absence, optional lifecycle Queue dispatch/consumption, bounded ciphertext-first erasure across every intent state (including a committed intent whose export metadata is already absent) that requires metadata-only exact-key absence after normal or lost R2 responses before metadata removal, scheduled recovery fallback, opaque post-session deletion-status receipts, bounded account-data portability archives, and explicit email-provider/token/account hourly budgets are implemented with synthetic tests. Migration `0018_account_invites.sql` replaces raw split-profile invite lists with expiring one-time `account-invite-v1` HMAC rows that are independently domain-separated from durable user lookups: an owner-only offline tool emits only mode-`0600` grant/revocation SQL, and first-account creation rechecks and consumes authority atomically across concurrent, revoked and lost-response paths. Scheduled expiry removes at most 500 oldest expired invites/run; combined development/VM compatibility is unchanged. Migration `0017_rate_limit_attempts.sql` records each opaque accepted/rejected decision; ingest token/account bucket keys are purpose-separated SHA-256 values, not raw internal UUIDs, so this does not add identity-key authority to the ingest profile. It applies accepted shared counters in the same trigger transaction; concurrent attempts honor the exact cap, lost responses reconcile without adapter change metadata, unreadable decisions fail closed, and scheduled maintenance removes oldest-first bounded pages of at most 500 invites, 500 magic links, 500 sessions, 50,000 decision rows and 5,000 aggregate buckets per run before moving to peer phases. The 50,000-decision page exceeds one five-minute interval at the provisional 2x target of 100 decisions/second, but provider-native D1 latency/cost and catch-up must still pass staging qualification. Split profiles fail closed without abuse-budget configuration; exhausted eligible-email budget keeps the generic anti-enumeration response and emits only a fixed health-free event. Portability TAR pages stream no more than five owner-scoped, hash-verified exact envelopes plus a manifest and never stage plaintext in R2. Receipt tokens are generated by the browser before the destructive mutation, stored server-side only as hashes, expire after a bounded period, never enter URLs/storage, reveal only pending/completed, and cannot block deletion retries. Maintenance removes at most 100 oldest expired receipt authorities and then 100 newly unreferenced completed tombstones per run, preserving overdue jobs and every unexpired authority. Forward-only migration `0015_deletion_receipt_authorities.sql` lets independently pre-authorized concurrent requests and exact retries attach their own receipt hashes to the account's one internal deletion job without exposing that job ID or invalidating an earlier caller. The durable job/receipt postcondition is reconciled after ambiguous D1 outcomes without requiring a user row that concurrent maintenance may already have erased, so neither a lost response, concurrent request nor fast completion can leave an accepted caller without its already-known status authority. Maintenance's terminal disabled-user erasure and job-completion marker also share one transaction; the exact marker plus user absence is read back after normal or lost responses, and an unreadable outcome retries idempotently rather than trusting adapter change counts. The bounded scheduled fallback isolates each selected deletion job, continues later tenants after one provider failure, and raises only a health-free aggregate failure after the page so retry/alert signaling is preserved. `production-authorization-matrix.md` maps every current authority-bearing surface to positive and cross-tenant source evidence, including two-account session/token/deletion survival. The in-account activity history is not an out-of-band security notification. Split maintenance requires a finite `AUDIT_RETENTION_DAYS`, deletes at most 100 oldest expired events per run as an isolated phase, and account/ingest profiles reject that unnecessary setting; the checked-in 365-day value is provisional until product/privacy/legal/operations owners approve audit-metadata retention. Public signup, passkeys/recovery codes, an approved notification/email provider and policy, Queue resources, deployed-revision assessment, and production deployment remain blocked.
+
 The VM password implementation explicitly remains single-user. For production:
 
 1. Start with invitation-only email-link accounts on the Worker profile.
@@ -129,6 +142,8 @@ The VM password implementation explicitly remains single-user. For production:
 Open signup must remain fail-closed in configuration until identity, abuse, privacy, recovery, deletion, and operational gates pass.
 
 ## Retention, recovery, and key management
+
+**Source milestone:** `test/restore-drill.test.ts` exercises a closed, encrypted, isolated synthetic snapshot/restore with migration/integrity checks, exact-byte recovery, tenant denial, and wrong-key failure. `production-recovery-runbook.md` defines the provider-backed staging drill and accurate activation/deletion/key evidence. This local drill is explicitly not D1/R2/PITR, RPO/RTO, escrow, region, or production restore proof; all remain launch blockers.
 
 The disposable pilot's no-backup decision does not carry into a general product.
 
@@ -184,6 +199,8 @@ A later production MCP release requires OAuth 2.1 authorization code with PKCE o
 
 ### Phase 0 — product and architecture approval
 
+**Draft milestone:** proposed `docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md` and `apps/cloud/docs/production-data-flow-threat-model.md` now define the target, provisional defaults, trust/data flows, threat-control-residual ledger, subprocessor decisions, cost formulas, owner matrix, and hard blockers. Every owner remains unassigned and every external/provider decision remains blocked; the drafts are not approval. `production-readiness-audit.md` maps every end-to-end criterion to evidence/gaps, while `npm run verify:production-safety` makes CI assert that the checked-in profiles remain closed, placeholder-bound and unapproved—not ready.
+
 Artifacts:
 
 - new production ADR superseding only the general-production portion of ADR-0007;
@@ -193,6 +210,8 @@ Artifacts:
 Exit gate: named owners approve the target and the live pilot is explicitly excluded from production resources.
 
 ### Phase 1 — isolated production foundation
+
+**Source milestone:** every split profile carries an intentionally invalid provenance placeholder; production runtime requires an exact lowercase 40-character Git commit SHA and `/health` publishes only the short revision. Controlled deployment must inject it consistently and rollback checks must confirm the served revision. No deployment workflow or production revision exists.
 
 - Provision separate development, staging, and production Worker/D1/R2/Queue/KMS resources through reviewable infrastructure as code.
 - Add the upload-intent/quota ledger and crash reconciliation.

@@ -1386,6 +1386,14 @@
     },
     {
       "source_type": "ScheduledProfileEntry",
+      "serialized_field": "recoveryGeneration",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "The local stale-worker generation fence is runtime recovery state and must never enter Shared Setup."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
       "serialized_field": "todayRefreshEnabled",
       "coverage_kind": "descriptor",
       "disposition": "local_only",

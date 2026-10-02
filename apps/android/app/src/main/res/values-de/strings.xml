@@ -604,6 +604,11 @@
     <string name="profile_schedule_refresh_interval">Aktualisierungsintervall</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Aktualisiert heute alle %1$d h</string>
+    <string name="profile_schedule_discard_recovery">Ausstehende Wiederherstellung verwerfen</string>
+    <string name="profile_schedule_discard_recovery_named">Ausstehende Wiederherstellung für %1$s verwerfen</string>
+    <string name="profile_schedule_discard_recovery_title">Ausstehende Wiederherstellung für %1$s verwerfen?</string>
+    <string name="profile_schedule_discard_recovery_body">Beendet den geplanten Wiederholungsversuch dieses Profils und verwirft die ausstehenden Daten und eingefrorenen Exporteinstellungen. Beim nächsten geplanten Lauf werden das aktuelle Profil und der aktuelle Zeitplan verwendet. Profil, API-Zugangsdaten, Exportverlauf und bereits exportierte Daten bleiben erhalten. Ein bereits erfolgter Upload oder eine bereits geschriebene Datei kann dadurch nicht rückgängig gemacht werden.</string>
+    <string name="profile_schedule_discard_recovery_failed">Die ausstehende Wiederherstellung konnte nicht vollständig verworfen werden. Prüfe das Profil und versuche es erneut.</string>
     <string name="schedule_date_window_today">Heute</string>
     <string name="schedule_export_past_days">Vergangene Tage exportieren</string>
     <string name="schedule_today_summary">Jeder Lauf exportiert die heutigen Daten, damit Ihre aktuelle Tagesdatei auf dem neuesten Stand bleibt. Verwenden Sie den Schreibmodus Überschreiben oder Aktualisieren, um doppelte Inhalte für denselben Tag zu vermeiden.</string>

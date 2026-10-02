@@ -1,4 +1,3 @@
-import { audit } from "./auth";
 import { HttpError, assertSameOrigin, json, readJson } from "./http";
 import { activeRepairDraft } from "./repair-drafts";
 import { requireRepairDevice } from "./repair-devices";
@@ -12,6 +11,25 @@ interface DispatchRow {
   expiresAt: string; claimedAt: string | null;
 }
 interface DevicePrincipal { deviceId: string; userId: string; source: "ios" | "android" }
+interface DispatchVerificationRow extends DispatchRow { audited: number }
+
+async function readDispatchVerification(
+  env: Env,
+  id: string,
+  userId: string,
+  eventType: string,
+  auditId: string | null = null,
+): Promise<DispatchVerificationRow | null> {
+  return env.DB.prepare(`SELECT x.id, x.user_id AS userId, x.draft_id AS draftId,
+    x.device_id AS deviceId, d.source, x.state, x.created_at AS createdAt,
+    x.expires_at AS expiresAt, x.claimed_at AS claimedAt,
+    EXISTS(SELECT 1 FROM audit_events a WHERE a.user_id = x.user_id
+      AND a.event_type = ? AND a.target_id = x.id
+      AND (? IS NULL OR a.id = ?)) AS audited
+    FROM repair_dispatches x JOIN repair_drafts d ON d.id = x.draft_id AND d.user_id = x.user_id
+    WHERE x.id = ? AND x.user_id = ?`)
+    .bind(eventType, auditId, auditId, id, userId).first<DispatchVerificationRow>();
+}
 
 function ensureDispatchAvailable(env: Env): void {
   // Explicitly off on existing live services and on the upload-disabled preview.
@@ -69,27 +87,44 @@ export async function queueRepairDispatch(request: Request, env: Env, userId: st
     throw new HttpError(409, "request_expiring", "Refresh the draft or device approval before queueing.");
   }
   const id = crypto.randomUUID();
-  let changed: number;
+  const auditId = crypto.randomUUID();
   try {
-    const inserted = await env.DB.prepare(`INSERT INTO repair_dispatches
-      (id, user_id, draft_id, device_id, state, created_at, expires_at)
-      SELECT ?, d.user_id, d.id, v.id, 'queued', ?, ? FROM repair_drafts d
-      JOIN users u ON u.id = d.user_id AND u.status = 'active'
-      JOIN repair_devices v ON v.id = ? AND v.user_id = d.user_id AND v.source = d.source
-      WHERE d.id = ? AND d.user_id = ? AND d.state = 'draft'
-        AND d.expires_at >= ? AND v.approved_at IS NOT NULL
-        AND v.revoked_at IS NULL AND v.grant_expires_at >= ?
-        AND NOT EXISTS (SELECT 1 FROM repair_dispatches x WHERE x.draft_id = d.id)
-        AND NOT EXISTS (SELECT 1 FROM repair_dispatches x WHERE x.device_id = v.id
-          AND x.user_id = d.user_id AND x.state IN ('queued', 'claimed') AND x.expires_at > ?)`)
-      .bind(id, now, expiresAt, deviceId, draftId, userId, expiresAt, expiresAt, now).run();
-    changed = inserted.meta.changes;
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO repair_dispatches
+        (id, user_id, draft_id, device_id, state, created_at, expires_at)
+        SELECT ?, d.user_id, d.id, v.id, 'queued', ?, ? FROM repair_drafts d
+        JOIN users u ON u.id = d.user_id AND u.status = 'active'
+        JOIN repair_devices v ON v.id = ? AND v.user_id = d.user_id AND v.source = d.source
+        WHERE d.id = ? AND d.user_id = ? AND d.state = 'draft'
+          AND d.expires_at >= ? AND v.approved_at IS NOT NULL
+          AND v.revoked_at IS NULL AND v.grant_expires_at >= ?
+          AND NOT EXISTS (SELECT 1 FROM repair_dispatches x WHERE x.draft_id = d.id)
+          AND NOT EXISTS (SELECT 1 FROM repair_dispatches x WHERE x.device_id = v.id
+            AND x.user_id = d.user_id AND x.state IN ('queued', 'claimed') AND x.expires_at > ?)`)
+        .bind(id, now, expiresAt, deviceId, draftId, userId, expiresAt, expiresAt, now),
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'repair_dispatch.queued', ?, ? FROM repair_dispatches
+        WHERE id = ? AND user_id = ? AND draft_id = ? AND device_id = ?
+          AND state = 'queued' AND created_at = ? AND expires_at = ?`)
+        .bind(auditId, userId, id, now, id, userId, draftId, deviceId, now, expiresAt),
+    ]);
   } catch {
-    // Unique draft binding also rejects simultaneous owner submissions.
-    throw new HttpError(409, "dispatch_conflict", "Draft or device already has a request.");
+    // A unique conflict or lost committed response is resolved by exact read-back.
   }
-  if (changed !== 1) throw new HttpError(409, "dispatch_conflict", "Draft or device is no longer available.");
-  await audit(env, userId, "repair_dispatch.queued", id);
+  let durable: DispatchVerificationRow | null;
+  try {
+    durable = await readDispatchVerification(env, id, userId, "repair_dispatch.queued", auditId);
+  } catch {
+    throw new HttpError(503, "dispatch_verification_pending",
+      "Request queue verification is temporarily unavailable. Review requests before retrying.");
+  }
+  if (durable && (durable.draftId !== draftId || durable.deviceId !== deviceId ||
+      durable.state !== "queued" || durable.createdAt !== now || durable.expiresAt !== expiresAt ||
+      durable.claimedAt !== null || durable.audited !== 1)) {
+    throw new HttpError(503, "dispatch_verification_pending",
+      "Request queue verification is temporarily unavailable. Review requests before retrying.");
+  }
+  if (!durable) throw new HttpError(409, "dispatch_conflict", "Draft or device is no longer available.");
   return json({ version: 1, id, deviceId, state: "queued", expiresAt,
     uploadMode: "supplemental_only", launchable: false }, { status: 201 });
 }
@@ -119,12 +154,36 @@ export async function cancelRepairDispatch(request: Request, env: Env, userId: s
   const input = await readJson<{ id?: unknown }>(request, 256);
   exactInput(input, ["id"]);
   const id = idInput(input.id, "request");
-  const result = await env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
-    WHERE id = ? AND user_id = ? AND state IN ('queued', 'claimed')`)
-    .bind(id, userId).run();
-  if (result.meta.changes !== 1) throw new HttpError(404, "not_found", "Active request not found.");
-  await audit(env, userId, "repair_dispatch.cancelled", id);
-  return json({ cancelled: true });
+  const now = new Date().toISOString();
+  const auditId = crypto.randomUUID();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'repair_dispatch.cancelled', x.id, ? FROM repair_dispatches x
+        WHERE x.id = ? AND x.user_id = ? AND x.state IN ('queued', 'claimed')`)
+        .bind(auditId, userId, now, id, userId),
+      env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
+        WHERE id = ? AND user_id = ? AND state IN ('queued', 'claimed')
+          AND EXISTS (SELECT 1 FROM audit_events a WHERE a.id = ? AND a.user_id = ?
+            AND a.event_type = 'repair_dispatch.cancelled' AND a.target_id = ?)`)
+        .bind(id, userId, auditId, userId, id),
+    ]);
+  } catch {
+    // The cancellation/audit transaction may have committed before response loss.
+  }
+  let durable: DispatchVerificationRow | null;
+  try {
+    durable = await readDispatchVerification(env, id, userId, "repair_dispatch.cancelled");
+  } catch {
+    throw new HttpError(503, "dispatch_cancellation_pending",
+      "Request cancellation verification is temporarily unavailable. Review requests before retrying.");
+  }
+  if (durable?.state === "cancelled" && durable.audited === 1) return json({ cancelled: true });
+  if (!durable || durable.state === "confirmed" || durable.state === "cancelled") {
+    throw new HttpError(404, "not_found", "Active request not found.");
+  }
+  throw new HttpError(503, "dispatch_cancellation_pending",
+    "Request cancellation verification is temporarily unavailable. Review requests before retrying.");
 }
 
 async function readActiveClaim(env: Env, principal: DevicePrincipal, id: string): Promise<Response> {
@@ -190,16 +249,41 @@ export async function claimRepairDispatch(request: Request, env: Env): Promise<R
       AND d.source = ? ORDER BY x.created_at ASC, x.id ASC LIMIT 1`)
     .bind(principal.userId, principal.deviceId, now, now, principal.source).first<{ id: string }>();
   if (!next) return json({ version: 1, request: null });
-  const updated = await env.DB.prepare(`UPDATE repair_dispatches SET state = 'claimed', claimed_at = ?
-    WHERE id = ? AND user_id = ? AND device_id = ? AND state = 'queued' AND expires_at > ?
-      AND EXISTS (SELECT 1 FROM repair_drafts d WHERE d.id = draft_id AND d.user_id = ?
-        AND d.state = 'draft' AND d.expires_at > ? AND d.source = ?)
-      AND EXISTS (SELECT 1 FROM repair_devices v WHERE v.id = device_id AND v.user_id = ?
-        AND v.approved_at IS NOT NULL AND v.revoked_at IS NULL AND v.grant_expires_at > ?)`)
-    .bind(now, next.id, principal.userId, principal.deviceId, now,
-      principal.userId, now, principal.source, principal.userId, now).run();
-  if (updated.meta.changes !== 1) throw new HttpError(409, "claim_conflict", "Request was claimed, cancelled or expired.");
-  await audit(env, principal.userId, "repair_dispatch.claimed", next.id);
+  const auditId = crypto.randomUUID();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'repair_dispatch.claimed', x.id, ? FROM repair_dispatches x
+        WHERE x.id = ? AND x.user_id = ? AND x.device_id = ?
+          AND x.state = 'queued' AND x.expires_at > ?
+          AND EXISTS (SELECT 1 FROM repair_drafts d WHERE d.id = x.draft_id AND d.user_id = ?
+            AND d.state = 'draft' AND d.expires_at > ? AND d.source = ?)
+          AND EXISTS (SELECT 1 FROM repair_devices v WHERE v.id = x.device_id AND v.user_id = ?
+            AND v.approved_at IS NOT NULL AND v.revoked_at IS NULL AND v.grant_expires_at > ?)`)
+        .bind(auditId, principal.userId, now, next.id, principal.userId, principal.deviceId, now,
+          principal.userId, now, principal.source, principal.userId, now),
+      env.DB.prepare(`UPDATE repair_dispatches SET state = 'claimed', claimed_at = ?
+        WHERE id = ? AND user_id = ? AND device_id = ? AND state = 'queued' AND expires_at > ?
+          AND EXISTS (SELECT 1 FROM audit_events a WHERE a.id = ? AND a.user_id = ?
+            AND a.event_type = 'repair_dispatch.claimed' AND a.target_id = ?)`)
+        .bind(now, next.id, principal.userId, principal.deviceId, now,
+          auditId, principal.userId, next.id),
+    ]);
+  } catch {
+    // A claimed request can outlive a lost batch response; verify below.
+  }
+  let durable: DispatchVerificationRow | null;
+  try {
+    durable = await readDispatchVerification(env, next.id, principal.userId,
+      "repair_dispatch.claimed", auditId);
+  } catch {
+    throw new HttpError(503, "dispatch_claim_verification_pending",
+      "Request claim verification is temporarily unavailable. Resume shortly.");
+  }
+  if (!durable || durable.deviceId !== principal.deviceId || durable.state !== "claimed" ||
+      durable.claimedAt !== now || durable.audited !== 1) {
+    throw new HttpError(409, "claim_conflict", "Request was claimed, cancelled or expired.");
+  }
   return readActiveClaim(env, principal, next.id);
 }
 export async function resumeRepairDispatch(request: Request, env: Env): Promise<Response> {
@@ -216,10 +300,37 @@ export async function declineRepairDispatch(request: Request, env: Env): Promise
   exactInput(input, ["id"]);
   const id = idInput(input.id, "request");
   const now = new Date().toISOString();
-  const result = await env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
-    WHERE id = ? AND user_id = ? AND device_id = ? AND state = 'claimed' AND expires_at > ?`)
-    .bind(id, principal.userId, principal.deviceId, now).run();
-  if (result.meta.changes !== 1) throw new HttpError(404, "not_found", "Active request not found.");
-  await audit(env, principal.userId, "repair_dispatch.declined", id);
-  return json({ declined: true });
+  const auditId = crypto.randomUUID();
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO audit_events (id, user_id, event_type, target_id, occurred_at)
+        SELECT ?, ?, 'repair_dispatch.declined', x.id, ? FROM repair_dispatches x
+        WHERE x.id = ? AND x.user_id = ? AND x.device_id = ?
+          AND x.state = 'claimed' AND x.expires_at > ?`)
+        .bind(auditId, principal.userId, now, id, principal.userId, principal.deviceId, now),
+      env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
+        WHERE id = ? AND user_id = ? AND device_id = ? AND state = 'claimed' AND expires_at > ?
+          AND EXISTS (SELECT 1 FROM audit_events a WHERE a.id = ? AND a.user_id = ?
+            AND a.event_type = 'repair_dispatch.declined' AND a.target_id = ?)`)
+        .bind(id, principal.userId, principal.deviceId, now,
+          auditId, principal.userId, id),
+    ]);
+  } catch {
+    // The decline transition may have committed before the response was lost.
+  }
+  let durable: DispatchVerificationRow | null;
+  try {
+    durable = await readDispatchVerification(env, id, principal.userId, "repair_dispatch.declined");
+  } catch {
+    throw new HttpError(503, "dispatch_decline_verification_pending",
+      "Request decline verification is temporarily unavailable. Resume shortly.");
+  }
+  if (durable?.deviceId === principal.deviceId && durable.state === "cancelled" &&
+      durable.audited === 1) return json({ declined: true });
+  if (!durable || durable.deviceId !== principal.deviceId ||
+      durable.state === "confirmed" || durable.state === "cancelled") {
+    throw new HttpError(404, "not_found", "Active request not found.");
+  }
+  throw new HttpError(503, "dispatch_decline_verification_pending",
+    "Request decline verification is temporarily unavailable. Resume shortly.");
 }

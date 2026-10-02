@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import worker from "../src/index";
 import type { Env } from "../src/types";
-import { assertSameOrigin, HttpError, readBoundedBody } from "../src/http";
+import { assertSameOrigin, HttpError, readBoundedBody, readJson } from "../src/http";
 
 const production = {
   ENVIRONMENT: "production",
@@ -15,6 +15,7 @@ const production = {
 const development = {
   ENVIRONMENT: "development",
   PUBLIC_ORIGIN: "http://localhost:8787",
+  AUTH_SIGNUP_MODE: "closed",
 } as Env;
 
 describe("Worker deployment and request policy", () => {
@@ -89,6 +90,122 @@ describe("Worker deployment and request policy", () => {
     expect(() => assertSameOrigin(new Request("https://cloud.health.md/api/auth/logout", {
       method: "POST", headers: { Origin: "https://attacker.test" },
     }), production)).toThrow(HttpError);
+  });
+
+  it("coalesces highly fragmented chunked bodies within one bounded buffer", async () => {
+    const length = 20_000;
+    let offset = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (offset === length) { controller.close(); return; }
+        controller.enqueue(Uint8Array.of(offset % 251));
+        offset += 1;
+      },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const bytes = await readBoundedBody(request, 32_768);
+    expect(bytes.byteLength).toBe(length);
+    expect(bytes.buffer.byteLength).toBeLessThanOrEqual(32_768);
+    expect([bytes[0], bytes[251], bytes[length - 1]]).toEqual([0, 0, (length - 1) % 251]);
+  });
+
+  it("uses a validated Content-Length as exact initial body capacity", async () => {
+    const payload = new TextEncoder().encode("synthetic-body");
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(payload.subarray(0, 3)); controller.enqueue(payload.subarray(3));
+        controller.close(); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", headers: { "Content-Length": String(payload.byteLength) }, body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const bytes = await readBoundedBody(request, 1024);
+    expect(new TextDecoder().decode(bytes)).toBe("synthetic-body");
+    expect(bytes.buffer.byteLength).toBe(payload.byteLength);
+  });
+
+  it("preserves the stable size error when stream cancellation fails", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array(5)); },
+      cancel() { throw new Error("synthetic cancellation failure"); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readBoundedBody(request, 4)).rejects.toMatchObject({
+      status: 413, code: "payload_too_large",
+    });
+  });
+
+  it("returns the stable size error when stream cancellation never settles", async () => {
+    let cancelCalled = false;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(new Uint8Array(5)); },
+      cancel() { cancelCalled = true; return new Promise<void>(() => undefined); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const outcome = await Promise.race([
+      readBoundedBody(request, 4).catch((error: unknown) => error),
+      new Promise<string>((resolve) => setTimeout(() => resolve("hung"), 100)),
+    ]);
+    expect(outcome).toMatchObject({ status: 413, code: "payload_too_large" });
+    expect(cancelCalled).toBe(true);
+  });
+
+  it("cancels a stalled body at its upload-admission deadline", async () => {
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      cancel() { cancelled = true; },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readBoundedBody(request, 1024, Date.now() + 10)).rejects.toMatchObject({
+      status: 408, code: "request_timeout",
+    });
+    expect(cancelled).toBe(true);
+  });
+
+  it("preserves the stable lease timeout when stream cancellation fails", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      cancel() { throw new Error("synthetic cancellation failure"); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readBoundedBody(request, 1024, Date.now() + 10)).rejects.toMatchObject({
+      status: 408, code: "request_timeout",
+    });
+  });
+
+  it("returns the stable lease timeout when stream cancellation never settles", async () => {
+    let cancelCalled = false;
+    const body = new ReadableStream<Uint8Array>({
+      cancel() { cancelCalled = true; return new Promise<void>(() => undefined); },
+    });
+    const request = new Request("http://localhost:8787/api/v1/exports", {
+      method: "POST", body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    const outcome = await Promise.race([
+      readBoundedBody(request, 1024, Date.now() + 10).catch((error: unknown) => error),
+      new Promise<string>((resolve) => setTimeout(() => resolve("hung"), 100)),
+    ]);
+    expect(outcome).toMatchObject({ status: 408, code: "request_timeout" });
+    expect(cancelCalled).toBe(true);
+  });
+
+  it("rejects malformed UTF-8 after a bounded fragmented read", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(Uint8Array.of(0x7b, 0xc3));
+        controller.enqueue(Uint8Array.of(0x28, 0x7d)); controller.close(); },
+    });
+    const request = new Request("http://localhost:8787/api/example", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body, duplex: "half",
+    } as RequestInit & { duplex: "half" });
+    await expect(readJson(request)).rejects.toMatchObject({ status: 400, code: "invalid_json" });
   });
 
   it("enforces request limits even without Content-Length", async () => {

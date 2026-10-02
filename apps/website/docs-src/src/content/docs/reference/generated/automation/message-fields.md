@@ -7,7 +7,7 @@ editUrl: false
 This inventory is generated from production API/control serialization and every current `SyncMessage` Codable case. Paths ending in `[]` describe array elements.
 
 - Generated JSON artifacts inventoried: 30
-- Sync messages inventoried: 38
+- Sync messages inventoried: 40
 
 ## SyncMessage wire inventory
 
@@ -324,6 +324,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsDurableConnectedExportRecovery` | boolean |
 | `$.hello._0.supportsGranularPayloads` | boolean |
 | `$.hello._0.supportsIPhoneExportRequests` | boolean |
+| `$.hello._0.supportsIPhoneInitiatedContextRefresh` | boolean |
 | `$.hello._0.supportsJobCancellation` | boolean |
 | `$.hello._0.supportsMacDestinationStatus` | boolean |
 | `$.hello._0.supportsMacExportJobs` | boolean |
@@ -337,6 +338,44 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsSplitExportDetailPolicy` | boolean |
 | `$.hello._0.supportsStrictRawStreaming` | boolean |
 | `$.hello._0.supportsSummaryOnlyExports` | boolean |
+
+### `iphoneContextRefreshRequest`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.iphoneContextRefreshRequest` | object |
+| `$.iphoneContextRefreshRequest._0` | object |
+| `$.iphoneContextRefreshRequest._0.createdAt` | integer |
+| `$.iphoneContextRefreshRequest._0.dateRangeEnd` | integer |
+| `$.iphoneContextRefreshRequest._0.dateRangeStart` | integer |
+| `$.iphoneContextRefreshRequest._0.dateSelection` | string |
+| `$.iphoneContextRefreshRequest._0.jobID` | string |
+| `$.iphoneContextRefreshRequest._0.profileID` | string |
+| `$.iphoneContextRefreshRequest._0.profileName` | string |
+| `$.iphoneContextRefreshRequest._0.selection` | object |
+| `$.iphoneContextRefreshRequest._0.selection.detail_level` | string |
+| `$.iphoneContextRefreshRequest._0.selection.field_pointers` | array |
+| `$.iphoneContextRefreshRequest._0.selection.field_pointers[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.metric_ids` | array |
+| `$.iphoneContextRefreshRequest._0.selection.metric_ids[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.object_paths` | array |
+| `$.iphoneContextRefreshRequest._0.selection.object_paths[]` | string |
+| `$.iphoneContextRefreshRequest._0.selection.source_ids` | array |
+| `$.iphoneContextRefreshRequest._0.selection.source_ids[]` | string |
+
+### `iphoneContextRefreshStatus`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.iphoneContextRefreshStatus` | object |
+| `$.iphoneContextRefreshStatus._0` | object |
+| `$.iphoneContextRefreshStatus._0.failureReason` | string |
+| `$.iphoneContextRefreshStatus._0.jobID` | string |
+| `$.iphoneContextRefreshStatus._0.message` | string |
+| `$.iphoneContextRefreshStatus._0.state` | string |
+| `$.iphoneContextRefreshStatus._0.updatedAt` | integer |
 
 ### `iphoneExportAccepted`
 
@@ -1095,6 +1134,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsDurableConnectedExportRecovery` | boolean |
 | `$.macStatus._0.capabilities.supportsGranularPayloads` | boolean |
 | `$.macStatus._0.capabilities.supportsIPhoneExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsIPhoneInitiatedContextRefresh` | boolean |
 | `$.macStatus._0.capabilities.supportsJobCancellation` | boolean |
 | `$.macStatus._0.capabilities.supportsMacDestinationStatus` | boolean |
 | `$.macStatus._0.capabilities.supportsMacExportJobs` | boolean |
@@ -2141,6 +2181,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsDurableConnectedExportRecovery` | boolean |
 | `$.supportsGranularPayloads` | boolean |
 | `$.supportsIPhoneExportRequests` | boolean |
+| `$.supportsIPhoneInitiatedContextRefresh` | boolean |
 | `$.supportsJobCancellation` | boolean |
 | `$.supportsMacDestinationStatus` | boolean |
 | `$.supportsMacExportJobs` | boolean |

@@ -376,7 +376,7 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         val protected = mutableStateOf(false)
         val actions = mutableListOf<String>()
         setContent { TestSection(state, protected, actions) }
-        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).scrollIfPossible()
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY, useUnmergedTree = true).scrollIfPossible()
             .assertContentDescriptionEquals(text(R.string.profile_schedule_discard_recovery_named, LONG_NAME))
         tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
         compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertExists()
@@ -402,7 +402,7 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         assertEquals(sampleProfile(), state.value.rows.single().profile)
         assertEquals(sampleEntry().copy(pendingExports = emptyList(), recoveryGeneration = 1L),
             state.value.rows.single().entry)
-        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).assertDoesNotExist()
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY, useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test
@@ -476,7 +476,8 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     private fun tapRow(tag: String) {
-        compose.onNodeWithTag(tag).scrollIfPossible().assertFullyVisible().assertMinimumTouchTarget()
+        compose.onNodeWithTag(tag, useUnmergedTree = tag == ProfileScheduleTags.DISCARD_RECOVERY)
+            .scrollIfPossible().assertFullyVisible().assertMinimumTouchTarget()
             .performTouchInput { click() }
     }
 

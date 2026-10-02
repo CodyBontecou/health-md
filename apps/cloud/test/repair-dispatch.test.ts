@@ -70,6 +70,212 @@ const claim = (test: TestEnv, token: string) =>
 const resume = (test: TestEnv, token: string) =>
   test.req("/api/repair/device/resume", "POST", undefined, undefined, token);
 
+function ambiguousDeviceDatabase(original: D1Database, options: {
+  loseEnrollmentResponse?: boolean; loseBatchResponse?: boolean;
+  failEnrollmentVerification?: boolean; failApprovalVerification?: boolean;
+  failRevocationVerification?: boolean;
+  failDispatchVerification?: "repair_dispatch.queued" | "repair_dispatch.cancelled" |
+    "repair_dispatch.claimed" | "repair_dispatch.declined";
+}): D1Database {
+  let responseLost = false;
+  let verificationFailed = false;
+  return new Proxy(original, { get(target, property) {
+    if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+      const result = await target.batch(statements);
+      if (options.loseBatchResponse && !responseLost) {
+        responseLost = true;
+        throw new Error("synthetic lost repair-device batch response");
+      }
+      return result;
+    };
+    if (property === "prepare") return (query: string) => {
+      const statement = target.prepare(query);
+      return new Proxy(statement, { get(prepared, statementProperty) {
+        if (statementProperty !== "bind") {
+          const value = Reflect.get(prepared, statementProperty);
+          return typeof value === "function" ? value.bind(prepared) : value;
+        }
+        return (...values: unknown[]) => {
+          const bound = prepared.bind(...values);
+          return new Proxy(bound, { get(boundStatement, boundProperty) {
+            if (boundProperty === "run" && options.loseEnrollmentResponse && !responseLost &&
+                query.includes("INSERT INTO repair_devices")) return async () => {
+              await boundStatement.run();
+              responseLost = true;
+              throw new Error("synthetic lost repair-device enrollment response");
+            };
+            const failRead = boundProperty === "first" && !verificationFailed && (
+              (options.failEnrollmentVerification && query.includes("token_hash AS tokenHash")) ||
+              (options.failApprovalVerification && query.includes("d.user_id AS userId") &&
+                query.includes("d.grant_expires_at AS grantExpiresAt")) ||
+              (options.failRevocationVerification && query.includes("AS activeDispatch")) ||
+              (options.failDispatchVerification === values[0] &&
+                query.includes("AND (? IS NULL OR a.id = ?)")));
+            if (failRead) return async () => {
+              verificationFailed = true;
+              throw new Error("synthetic repair-device verification outage");
+            };
+            const value = Reflect.get(boundStatement, boundProperty);
+            return typeof value === "function" ? value.bind(boundStatement) : value;
+          } });
+        };
+      } });
+    }
+    const value = Reflect.get(target, property);
+    return typeof value === "function" ? value.bind(target) : value;
+  } }) as D1Database;
+}
+
+it("recovers lost repair-device enrollment, approval and revocation responses", async () => {
+  const test = setup(); const { env, db, req } = test;
+  const original = env.DB;
+  try {
+    const cookie = await owner(test);
+    env.DB = ambiguousDeviceDatabase(original, { loseEnrollmentResponse: true });
+    const enrollment = await req("/api/repair/device/enroll", "POST", { source: "ios" });
+    expect(enrollment.status).toBe(201);
+    const issued = await enrollment.json() as { code: string; token: string };
+
+    env.DB = ambiguousDeviceDatabase(original, { loseBatchResponse: true });
+    const approval = await req("/api/repair/devices/approve", "POST",
+      { code: issued.code, password }, cookie);
+    expect(approval.status).toBe(200);
+    const deviceId = (await approval.json() as { deviceId: string }).deviceId;
+    env.DB = original;
+    const draftId = await draft(test, cookie);
+    expect((await queue(test, cookie, draftId, deviceId)).status).toBe(201);
+
+    env.DB = ambiguousDeviceDatabase(original, { loseBatchResponse: true });
+    expect((await req(`/api/repair/devices/${deviceId}`, "DELETE", undefined, cookie)).status).toBe(200);
+    env.DB = original;
+    db.connection.prepare(`DELETE FROM audit_events
+      WHERE target_id = ? AND event_type = 'repair_device.revoked'`).run(deviceId);
+    expect((await req(`/api/repair/devices/${deviceId}`, "DELETE", undefined, cookie)).status).toBe(200);
+    expect(db.connection.prepare(`SELECT state FROM repair_dispatches WHERE device_id = ?`)
+      .get(deviceId)).toMatchObject({ state: "cancelled" });
+    expect(db.connection.prepare(`SELECT COUNT(*) AS count FROM audit_events
+      WHERE target_id = ? AND event_type = 'repair_device.revoked'`).get(deviceId))
+      .toMatchObject({ count: 1 });
+  } finally { env.DB = original; db.close(); }
+});
+
+it("withholds repair-device success while exact durable verification is unreadable", async () => {
+  const test = setup(); const { env, db, req } = test;
+  const original = env.DB;
+  try {
+    const cookie = await owner(test);
+    env.DB = ambiguousDeviceDatabase(original, { failEnrollmentVerification: true });
+    const uncertainEnrollment = await req("/api/repair/device/enroll", "POST", { source: "ios" });
+    expect(uncertainEnrollment.status).toBe(503);
+    expect((await uncertainEnrollment.json() as { error: string }).error)
+      .toBe("device_enrollment_verification_pending");
+
+    env.DB = original;
+    const enrollment = await req("/api/repair/device/enroll", "POST", { source: "ios" });
+    const issued = await enrollment.json() as { code: string };
+    env.DB = ambiguousDeviceDatabase(original, { failApprovalVerification: true });
+    const uncertainApproval = await req("/api/repair/devices/approve", "POST",
+      { code: issued.code, password }, cookie);
+    expect(uncertainApproval.status).toBe(503);
+    expect((await uncertainApproval.json() as { error: string }).error)
+      .toBe("device_approval_verification_pending");
+    const deviceId = (db.connection.prepare(`SELECT id FROM repair_devices
+      WHERE approved_at IS NOT NULL ORDER BY approved_at DESC LIMIT 1`).get() as { id: string }).id;
+
+    env.DB = ambiguousDeviceDatabase(original, { failRevocationVerification: true });
+    const uncertainRevoke = await req(`/api/repair/devices/${deviceId}`, "DELETE", undefined, cookie);
+    expect(uncertainRevoke.status).toBe(503);
+    expect((await uncertainRevoke.json() as { error: string }).error)
+      .toBe("device_revocation_verification_pending");
+    env.DB = original;
+    expect((await req(`/api/repair/devices/${deviceId}`, "DELETE", undefined, cookie)).status).toBe(200);
+  } finally { env.DB = original; db.close(); }
+});
+
+it("recovers lost queue, claim, decline and owner-cancel responses from exact dispatch state", async () => {
+  const test = setup(); const { env, db, req } = test;
+  const original = env.DB;
+  try {
+    const cookie = await owner(test);
+    const device = await approve(test, cookie, "ios");
+    const firstDraft = await draft(test, cookie);
+
+    env.DB = ambiguousDeviceDatabase(original, { loseBatchResponse: true });
+    const queued = await queue(test, cookie, firstDraft, device.deviceId);
+    expect(queued.status).toBe(201);
+    const firstId = (await queued.json() as { id: string }).id;
+    env.DB = ambiguousDeviceDatabase(original, { loseBatchResponse: true });
+    expect((await claim(test, device.token)).status).toBe(200);
+    env.DB = ambiguousDeviceDatabase(original, { loseBatchResponse: true });
+    expect((await req("/api/repair/device/decline", "POST", { id: firstId },
+      undefined, device.token)).status).toBe(200);
+    env.DB = original;
+    expect((await req("/api/repair/device/decline", "POST", { id: firstId },
+      undefined, device.token)).status).toBe(200);
+
+    const secondDraft = await draft(test, cookie, { ...scope, dates: ["2026-04-03"] });
+    const second = await queue(test, cookie, secondDraft, device.deviceId);
+    const secondId = (await second.json() as { id: string }).id;
+    env.DB = ambiguousDeviceDatabase(original, { loseBatchResponse: true });
+    expect((await req("/api/repair/dispatch/cancel", "POST", { id: secondId }, cookie)).status).toBe(200);
+    env.DB = original;
+    expect((await req("/api/repair/dispatch/cancel", "POST", { id: secondId }, cookie)).status).toBe(200);
+    for (const event of ["repair_dispatch.queued", "repair_dispatch.claimed",
+      "repair_dispatch.declined", "repair_dispatch.cancelled"]) {
+      const count = (db.connection.prepare(`SELECT COUNT(*) AS count FROM audit_events WHERE event_type = ?`)
+        .get(event) as { count: number }).count;
+      expect(count).toBeGreaterThan(0);
+    }
+  } finally { env.DB = original; db.close(); }
+});
+
+it("withholds dispatch success while exact transition verification is unreadable", async () => {
+  const test = setup(); const { env, db, req } = test;
+  const original = env.DB;
+  try {
+    const cookie = await owner(test);
+    const device = await approve(test, cookie, "ios");
+    const firstDraft = await draft(test, cookie);
+
+    env.DB = ambiguousDeviceDatabase(original,
+      { failDispatchVerification: "repair_dispatch.queued" });
+    const uncertainQueue = await queue(test, cookie, firstDraft, device.deviceId);
+    expect(uncertainQueue.status).toBe(503);
+    expect((await uncertainQueue.json() as { error: string }).error).toBe("dispatch_verification_pending");
+    const firstId = (db.connection.prepare("SELECT id FROM repair_dispatches WHERE draft_id = ?")
+      .get(firstDraft) as { id: string }).id;
+
+    env.DB = ambiguousDeviceDatabase(original,
+      { failDispatchVerification: "repair_dispatch.claimed" });
+    const uncertainClaim = await claim(test, device.token);
+    expect(uncertainClaim.status).toBe(503);
+    expect((await uncertainClaim.json() as { error: string }).error)
+      .toBe("dispatch_claim_verification_pending");
+
+    env.DB = ambiguousDeviceDatabase(original,
+      { failDispatchVerification: "repair_dispatch.declined" });
+    const uncertainDecline = await req("/api/repair/device/decline", "POST", { id: firstId },
+      undefined, device.token);
+    expect(uncertainDecline.status).toBe(503);
+    expect((await uncertainDecline.json() as { error: string }).error)
+      .toBe("dispatch_decline_verification_pending");
+    env.DB = original;
+    expect((await req("/api/repair/device/decline", "POST", { id: firstId },
+      undefined, device.token)).status).toBe(200);
+
+    const secondDraft = await draft(test, cookie, { ...scope, dates: ["2026-04-04"] });
+    const secondId = (await (await queue(test, cookie, secondDraft, device.deviceId)).json() as { id: string }).id;
+    env.DB = ambiguousDeviceDatabase(original,
+      { failDispatchVerification: "repair_dispatch.cancelled" });
+    const uncertainCancel = await req("/api/repair/dispatch/cancel", "POST", { id: secondId }, cookie);
+    expect(uncertainCancel.status).toBe(503);
+    expect((await uncertainCancel.json() as { error: string }).error)
+      .toBe("dispatch_cancellation_pending");
+    env.DB = original;
+    expect((await req("/api/repair/dispatch/cancel", "POST", { id: secondId }, cookie)).status).toBe(200);
+  } finally { env.DB = original; db.close(); }
+});
+
 it("binds a short-lived, review-only request to exactly one owner-approved device", async () => {
   const test = setup(); const { env, db, req } = test;
   try {
@@ -149,7 +355,7 @@ it("binds a short-lived, review-only request to exactly one owner-approved devic
     expect(decline.status).toBe(200);
     expect((await resume(test, ios.token).then((response) => response.json()))).toMatchObject({ request: null });
     expect((await req("/api/repair/device/decline", "POST", { id: requestId },
-      undefined, ios.token)).status).toBe(404);
+      undefined, ios.token)).status).toBe(200);
     expect((await req("/api/repair/dispatch/cancel", "POST", { id: requestId,
       forceReplacement: true }, cookie)).status).toBe(400);
     expect(JSON.stringify(await req("/api/repair/dispatches", "GET", undefined, cookie)

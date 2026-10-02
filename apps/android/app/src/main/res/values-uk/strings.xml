@@ -624,6 +624,11 @@
     <string name="profile_schedule_refresh_interval">Інтервал оновлення</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d год</string>
     <string name="profile_schedule_refresh_summary">Оновлює сьогодні кожні %1$d год</string>
+    <string name="profile_schedule_discard_recovery">Відкинути відкладене відновлення</string>
+    <string name="profile_schedule_discard_recovery_named">Відкинути відкладене відновлення для %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Відкинути відкладене відновлення для %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Зупиніть заплановану повторну спробу для цього профілю та видаліть відкладені дати й зафіксовані налаштування експорту. Під час наступного запуску буде використано поточні профіль і розклад. Профіль, облікові дані API, історія експорту та вже експортовані дані збережуться. Ця дія не може скасувати вже виконане надсилання або записаний файл.</string>
+    <string name="profile_schedule_discard_recovery_failed">Не вдалося повністю відкинути відкладене відновлення. Перевірте профіль і повторіть спробу.</string>
     <string name="schedule_date_window_today">Сьогодні</string>
     <string name="schedule_export_past_days">Експортувати минулі дні</string>
     <string name="schedule_today_summary">Кожен запуск експортує сьогоднішні дані, щоб ваш поточний щоденний файл залишався актуальним. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту того ж дня.</string>

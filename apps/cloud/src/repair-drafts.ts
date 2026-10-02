@@ -21,6 +21,8 @@ export interface RepairDraftSpec {
 }
 interface DraftRow { id: string; userId: string; source: Source; dayCount: number;
   specCiphertext: string; specIv: string; state: string; createdAt: string; expiresAt: string }
+interface DraftCancellationRow { state: string; cancelledAt: string | null;
+  specCiphertext: string; specIv: string; activeDispatch: number }
 interface CurrentRow extends EnvelopeRow { date: string; recordIndex: number }
 const fields = `d.owner_date AS date, d.record_index AS recordIndex,
   e.id AS exportId, e.source AS source, e.daily_record_schema_version AS dailyVersion,
@@ -136,13 +138,48 @@ export async function createRepairDraft(request: Request, env: Env, userId: stri
   const createdAt = new Date().toISOString();
   const expiresAt = new Date(Date.now() + TTL_MS).toISOString();
   const encrypted = await encryptSpec(spec, env, userId, id);
-  const result = await env.DB.prepare(`INSERT INTO repair_drafts
-    (id, user_id, spec_ciphertext, spec_iv, source, day_count, state, created_at, expires_at)
-    SELECT ?, ?, ?, ?, ?, ?, 'draft', ?, ? WHERE (
-      SELECT COUNT(*) FROM repair_drafts WHERE user_id = ? AND state = 'draft' AND expires_at > ?
-    ) < 10`).bind(id, userId, encrypted.ciphertext, encrypted.iv, spec.source, spec.dates.length,
-      createdAt, expiresAt, userId, createdAt).run();
-  if (!result.meta.changes) throw new HttpError(409, "draft_limit", "Cancel or wait for a saved draft to expire.");
+  try {
+    await env.DB.prepare(`INSERT INTO repair_drafts
+      (id, user_id, spec_ciphertext, spec_iv, source, day_count, state, created_at, expires_at)
+      SELECT ?, ?, ?, ?, ?, ?, 'draft', ?, ? WHERE (
+        SELECT COUNT(*) FROM repair_drafts WHERE user_id = ? AND state = 'draft' AND expires_at > ?
+      ) < 10`).bind(id, userId, encrypted.ciphertext, encrypted.iv, spec.source, spec.dates.length,
+        createdAt, expiresAt, userId, createdAt).run();
+  } catch {
+    // A transport response can be lost after the insert commits. Verify below.
+  }
+  let durable: DraftRow | null;
+  try {
+    durable = await env.DB.prepare(`SELECT id, user_id AS userId, spec_ciphertext AS specCiphertext,
+      spec_iv AS specIv, source, day_count AS dayCount, state, created_at AS createdAt,
+      expires_at AS expiresAt FROM repair_drafts WHERE id = ? AND user_id = ?`)
+      .bind(id, userId).first<DraftRow>();
+  } catch {
+    throw new HttpError(503, "draft_verification_pending",
+      "Saved request verification is temporarily unavailable. Review saved requests before retrying.");
+  }
+  if (durable && (durable.id !== id || durable.userId !== userId ||
+      durable.specCiphertext !== encrypted.ciphertext || durable.specIv !== encrypted.iv ||
+      durable.source !== spec.source || durable.dayCount !== spec.dates.length || durable.state !== "draft" ||
+      durable.createdAt !== createdAt || durable.expiresAt !== expiresAt)) {
+    throw new HttpError(503, "draft_verification_pending",
+      "Saved request verification is temporarily unavailable. Review saved requests before retrying.");
+  }
+  if (!durable) {
+    let active: { count: number } | null;
+    try {
+      active = await env.DB.prepare(`SELECT COUNT(*) AS count FROM repair_drafts
+        WHERE user_id = ? AND state = 'draft' AND expires_at > ?`)
+        .bind(userId, createdAt).first<{ count: number }>();
+    } catch {
+      throw new HttpError(503, "draft_verification_pending",
+        "Saved request verification is temporarily unavailable. Review saved requests before retrying.");
+    }
+    if (active && Number(active.count) >= 10) {
+      throw new HttpError(409, "draft_limit", "Cancel or wait for a saved draft to expire.");
+    }
+    throw new HttpError(503, "draft_creation_failed", "Saved request creation is temporarily unavailable.");
+  }
   return json({ id, state: "draft", spec, createdAt, expiresAt, launchable: false }, { status: 201 });
 }
 // For owner-authorized dispatch only. Never let a client-supplied draft ID
@@ -172,21 +209,56 @@ export async function cancelRepairDraft(request: Request, env: Env, userId: stri
   assertSameOrigin(request, env);
   if (!UUID.test(id)) throw new HttpError(404, "not_found", "Draft not found.");
   const now = new Date().toISOString();
-  const results = await env.DB.batch([
-    env.DB.prepare(`UPDATE repair_drafts SET state = 'cancelled',
-      cancelled_at = ?, spec_ciphertext = '', spec_iv = ''
-      WHERE id = ? AND user_id = ? AND state = 'draft' AND expires_at > ?`)
-      .bind(now, id, userId, now),
-    env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
-      WHERE draft_id = ? AND user_id = ? AND state IN ('queued', 'claimed')
-      AND EXISTS (SELECT 1 FROM repair_drafts d WHERE d.id = ? AND d.user_id = ?
-        AND d.state = 'cancelled' AND d.cancelled_at = ?)`)
-      .bind(id, userId, id, userId, now),
-  ]);
-  if (results[0]?.meta.changes !== 1) throw new HttpError(404, "not_found", "Draft not found.");
-  return json({ cancelled: true });
+  let batchCompleted = false;
+  try {
+    await env.DB.batch([
+      env.DB.prepare(`UPDATE repair_drafts SET state = 'cancelled',
+        cancelled_at = ?, spec_ciphertext = '', spec_iv = ''
+        WHERE id = ? AND user_id = ? AND state = 'draft' AND expires_at > ?`)
+        .bind(now, id, userId, now),
+      env.DB.prepare(`UPDATE repair_dispatches SET state = 'cancelled'
+        WHERE draft_id = ? AND user_id = ? AND state IN ('queued', 'claimed')
+        AND EXISTS (SELECT 1 FROM repair_drafts d WHERE d.id = ? AND d.user_id = ?
+          AND d.state = 'cancelled' AND d.cancelled_at = ?)`)
+        .bind(id, userId, id, userId, now),
+    ]);
+    batchCompleted = true;
+  } catch {
+    // The batch may have committed before its response was lost. Verify below.
+  }
+  let durable: DraftCancellationRow | null;
+  try {
+    durable = await env.DB.prepare(`SELECT d.state, d.cancelled_at AS cancelledAt,
+      d.spec_ciphertext AS specCiphertext, d.spec_iv AS specIv,
+      EXISTS(SELECT 1 FROM repair_dispatches r WHERE r.draft_id = d.id AND r.user_id = d.user_id
+        AND r.state IN ('queued', 'claimed')) AS activeDispatch
+      FROM repair_drafts d WHERE d.id = ? AND d.user_id = ?`)
+      .bind(id, userId).first<DraftCancellationRow>();
+  } catch {
+    throw new HttpError(503, "draft_cancellation_pending",
+      "Saved request cancellation verification is temporarily unavailable. Retry shortly.");
+  }
+  if (!durable) throw new HttpError(404, "not_found", "Draft not found.");
+  if (durable.state === "cancelled" && durable.cancelledAt && durable.specCiphertext === "" &&
+      durable.specIv === "" && durable.activeDispatch === 0) return json({ cancelled: true });
+  if (durable.state === "draft" && durable.cancelledAt === null) {
+    if (batchCompleted) throw new HttpError(404, "not_found", "Draft not found.");
+    throw new HttpError(503, "draft_cancellation_pending",
+      "Saved request cancellation verification is temporarily unavailable. Retry shortly.");
+  }
+  throw new HttpError(503, "draft_cancellation_pending",
+    "Saved request cancellation verification is temporarily unavailable. Retry shortly.");
 }
-export async function purgeExpiredRepairDrafts(env: Env): Promise<void> {
-  await env.DB.prepare("DELETE FROM repair_drafts WHERE expires_at <= ? OR state = 'cancelled'")
-    .bind(new Date().toISOString()).run();
+export async function purgeExpiredRepairDrafts(
+  env: Env,
+  limit = 100,
+  now = new Date(),
+): Promise<void> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error("Invalid repair-draft cleanup limit");
+  }
+  await env.DB.prepare(`DELETE FROM repair_drafts WHERE id IN (
+    SELECT id FROM repair_drafts WHERE expires_at <= ? OR state = 'cancelled'
+    ORDER BY expires_at, id LIMIT ?
+  )`).bind(now.toISOString(), limit).run();
 }

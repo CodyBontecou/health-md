@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decodeBase64, decryptExport, decryptIdentity, encodeBase64, encryptExport,
   encryptIdentity, keyedLookup, parseExportKeyring, randomToken, sha256Hex,
+  unwrapAccountExportKey, wrapAccountExportKey,
 } from "../src/crypto";
 
 const key = encodeBase64(new Uint8Array(32).fill(7));
@@ -26,6 +27,17 @@ describe("private storage cryptography", () => {
     const tampered = ciphertext.slice();
     tampered[tampered.length - 1]! ^= 1;
     await expect(decryptExport(tampered, key, "account-1", "export-1")).rejects.toThrow();
+  });
+
+  it("wraps account export keys with account and key-version authenticated data", async () => {
+    const wrapped = await wrapAccountExportKey(key, secondKey, "account-1", "data-key-1", "kek-v1");
+    expect(wrapped.wrappedKey).not.toBe(key);
+    expect(await unwrapAccountExportKey(wrapped.wrappedKey, wrapped.iv, secondKey,
+      "account-1", "data-key-1", "kek-v1")).toBe(key);
+    await expect(unwrapAccountExportKey(wrapped.wrappedKey, wrapped.iv, secondKey,
+      "account-2", "data-key-1", "kek-v1")).rejects.toThrow();
+    await expect(unwrapAccountExportKey(wrapped.wrappedKey, wrapped.iv, key,
+      "account-1", "data-key-1", "kek-v1")).rejects.toThrow();
   });
 
   it("encrypts account identities and separates lookup purposes", async () => {
