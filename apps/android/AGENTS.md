@@ -1,5 +1,10 @@
 # Agents
 
+## Task navigation
+
+- Provider/OAuth/raw changes: start with the [cloud-provider source map](docs/features/cloud-providers.md), [support matrix](docs/health-provider-support.md), and [raw-provider ledger](docs/export-contract/cloud-raw-provider-ledger.md).
+- Provider verification: use the [beta-test checklist](docs/provider-beta-test-checklist.md) and the mapped Play tests; validate F-Droid separately when affected.
+
 ## Cross-platform feature and export policy
 
 Apple and Android should expose the same capability, terminology, settings semantics, and public data meaning whenever Health Connect and HealthKit permit it. Before changing a mobile feature, health metric, provider integration, exporter, API/automation behavior, or public terminology, read `../../docs/architecture/cross-platform-unification-policy.md` and inspect the Apple implementation and contract.

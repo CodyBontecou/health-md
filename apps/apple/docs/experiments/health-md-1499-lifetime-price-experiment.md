@@ -1,8 +1,14 @@
 # Health.md $14.99 Lifetime Price Experiment
 
-## Status
+## Historical status
 
-- Results status: pending
+This is the original ISO-294 plan, superseded as an operational runbook by the
+[experiment index](../../../../docs/experiments/index.md) and
+[recorded results/timeline](../../../../docs/experiments/2026-09-17-19.99-lifetime-price.md).
+The proposed gates, windows, three-export assumption, and unfilled results log below are preserved
+as historical evidence; use the operational sources for current price, quota, and decisions.
+
+- Original results log: unfilled (actual outcomes recorded in the linked results note)
 - Linear issue: ISO-294
 - Product ID: `com.codybontecou.obsidianhealth.unlock`
 - Variant ID: `test_lifetime_1499`
