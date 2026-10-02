@@ -26,7 +26,6 @@
       "core.shared-rust-metric-registry"
     ],
     "apple": [
-      "support.local-reporting-fallback",
       "export.daily-files",
       "export.range-summary",
       "export.sleep-summary",
@@ -254,7 +253,6 @@
     }
   ],
   "known_capability_ids": [
-    "support.local-reporting-fallback",
     "export.daily-files",
     "export.range-summary",
     "export.sleep-summary",

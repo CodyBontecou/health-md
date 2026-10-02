@@ -35,7 +35,11 @@ Version impact: internal UI/error handling only. No export schema, platform
 profile, direct protocol, shared-core ABI, settings migration, or stored data
 changes. Existing mailto and GitHub template contents remain compatible. CLI,
 website, Rust, and the external Obsidian plugin consume no changed runtime
-contract. Contract CI still validates the additive parity inventory.
+contract. The native registry importer excludes `support.*` UI-only capabilities
+from core projections: the pinned metric registry and semantic/render fixtures
+remain byte-identical. Core CI exercises that ownership boundary in
+`scripts/tests/test_import_native_registry.py`; contract CI validates the additive
+parity inventory and its updated manifest hash.
 
 ## SDK evidence
 

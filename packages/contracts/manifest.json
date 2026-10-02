@@ -17,7 +17,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "b1959f791fe84e06f2fb8ad3c85088769014c6320719441b2e3085a773c8db67",
+      "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
