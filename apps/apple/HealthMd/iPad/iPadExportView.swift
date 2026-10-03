@@ -126,7 +126,7 @@ struct iPadExportView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(Spacing.s4)
             .iPadLiquidGlass()
-            .accessibilityIdentifier("export.historyWarning")
+            .modifier(HealthHistoryWarningAccessibilityContainer())
         }
     }
 

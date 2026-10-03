@@ -106,8 +106,27 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<12 {
-            if element.exists && element.isHittable { return }
-            app.swipeUp()
+            let exists = element.exists
+            // Follow the actual element's scrolling ancestor, not an app-wide
+            // swipe that can hit the tablet sidebar. If not yet exposed, use
+            // the largest public scrolling viewport, not a substituted control.
+            let ancestor = exists ? app.scrollViews.containing(.any, identifier: element.identifier).firstMatch : nil
+            let largest = app.scrollViews.allElementsBoundByIndex.max {
+                $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height
+            }
+            guard let scroll = ancestor?.exists == true ? ancestor : largest else { break }
+            let viewport = scroll.frame.intersection(app.frame)
+            let tabs = app.tabBars.firstMatch
+            let bottom = tabs.exists ? min(viewport.maxY, tabs.frame.minY) : viewport.maxY
+            let visible = CGRect(x: viewport.minX, y: viewport.minY,
+                                 width: viewport.width, height: max(0, bottom - viewport.minY))
+            let center = exists ? CGPoint(x: element.frame.midX, y: element.frame.midY) : .zero
+            if exists && element.isHittable && visible.contains(center) { return }
+            let above = exists && center.y < visible.minY
+            scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.5 : 0.7)).press(
+                forDuration: 0.05,
+                thenDragTo: scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.7 : 0.5))
+            )
         }
         if !element.exists || !element.isHittable {
             let stage = app.descendants(matching: .any)["export.synthetic.historyPreviewStage"]

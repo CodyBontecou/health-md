@@ -506,7 +506,7 @@ struct ExportTabView: View {
                     isExecution: assessment.id == executionHistoryAssessment?.id,
                     reviewAccess: { showHealthPermissionsGuide = true })
             }
-            .accessibilityIdentifier("export.historyWarning")
+            .modifier(HealthHistoryWarningAccessibilityContainer())
         }
     }
 

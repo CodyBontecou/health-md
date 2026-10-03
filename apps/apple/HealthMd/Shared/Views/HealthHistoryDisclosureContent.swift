@@ -50,6 +50,17 @@ struct HealthHistoryDisclosureContent: View {
     }
 }
 
+/// A real accessibility container owns the card ID. The actual phone root
+/// showed duplicate parent IDs and missing child IDs; identifier propagation
+/// is a hypothesis. This containment repair still needs hosted Root validation.
+struct HealthHistoryWarningAccessibilityContainer: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("export.historyWarning")
+    }
+}
+
 struct HealthHistoryPendingContent: View {
     let continueUnverified: () -> Void
     let cancel: () -> Void
