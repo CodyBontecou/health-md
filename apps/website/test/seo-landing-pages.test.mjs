@@ -115,6 +115,9 @@ test('landing pages are listed in sitemap.xml', () => {
 
 test('/mcp redirects to the AI landing page', () => {
   assert.ok(vercelTemplate.includes('{ "source": "/mcp"'), '/mcp redirect exists');
+  // With trailingSlash:true Vercel normalizes /mcp -> /mcp/ before matching,
+  // so the trailing-slash variant must be registered too (see legal redirects).
+  assert.ok(vercelTemplate.includes('{ "source": "/mcp/"'), '/mcp/ redirect exists');
   assert.ok(vercelTemplate.includes('"destination": "/health-data-for-ai/"'), 'redirect target');
 });
 
