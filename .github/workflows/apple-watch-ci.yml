@@ -29,6 +29,7 @@ jobs:
       - name: Regenerate from canonical inventories and compare
         run: |
           set -euo pipefail
+          python3 packages/healthmd-core-rust/scripts/tests/test_registry_capability_scope.py
           python3 packages/healthmd-core-rust/scripts/import-native-registry.py
           python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py
           git diff --binary > registry-projections.patch
