@@ -66,6 +66,22 @@ jobs:
             Makefile
             .github/workflows/core-rust-ci.yml
 
+  receiver-coverage:
+    name: Receiver coverage proposal behavior
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+      - name: Exercise selection, refresh, and frozen retry plans
+        run: >-
+          python3 -m unittest discover
+          -s packages/contracts/proposals/receiver-coverage-v1
+          -p 'test_*.py' -v
+
   msrv:
     name: Rust 1.85 MSRV
     needs: changes
@@ -162,13 +178,14 @@ jobs:
   gate:
     name: Core Rust CI
     if: ${{ always() }}
-    needs: [changes, msrv, test, bindings]
+    needs: [changes, receiver-coverage, msrv, test, bindings]
     runs-on: ubuntu-24.04
     steps:
       - name: Require shared-core checks
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           CHANGES_RUN: ${{ needs.changes.outputs.run }}
+          RECEIVER_COVERAGE_RESULT: ${{ needs.receiver-coverage.result }}
           MSRV_RESULT: ${{ needs.msrv.result }}
           TEST_RESULT: ${{ needs.test.result }}
           BINDINGS_RESULT: ${{ needs.bindings.result }}
@@ -179,6 +196,7 @@ jobs:
             echo "No shared-core-affecting changes in this pull request; Core Rust CI skipped."
             exit 0
           fi
+          test "$RECEIVER_COVERAGE_RESULT" = success
           test "$MSRV_RESULT" = success
           test "$TEST_RESULT" = success
           test "$BINDINGS_RESULT" = success
