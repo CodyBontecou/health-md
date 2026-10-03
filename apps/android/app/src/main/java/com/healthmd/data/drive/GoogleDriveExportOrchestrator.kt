@@ -1,9 +1,11 @@
 package com.healthmd.data.drive
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.healthmd.data.settings.ConfigurationProtectionPersistence
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
@@ -30,6 +32,21 @@ class GoogleDriveSelectionStore @Inject constructor(
     suspend fun get(): String? = destinationId.first()
     suspend fun select(id: String?) {
         dataStore.edit { prefs -> if (id == null) prefs.remove(key) else prefs[key] = id }
+    }
+
+    /** A delayed OAuth result never changes active selection after protection is enabled. */
+    suspend fun selectIfAllowed(id: String?): Boolean {
+        var selected = false
+        dataStore.edit { prefs ->
+            if (prefs[ConfigurationProtectionPersistence.enabledKey] == true) return@edit
+            if (id == null) prefs.remove(key) else prefs[key] = id
+            selected = true
+        }
+        return selected
+    }
+
+    internal fun clearForDisconnect(prefs: MutablePreferences, destinationId: String) {
+        if (prefs[key] == destinationId) prefs.remove(key)
     }
 }
 

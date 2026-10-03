@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Programările profilurilor</string>
+    <string name="a11y_profiles_empty">Nu există încă profiluri de export.</string>
+    <string name="a11y_profiles_add">Profil nou din setările curente</string>
+    <string name="a11y_profiles_none_enabled">Nicio programare de profil activată.</string>
+    <string name="a11y_profiles_edit">Editează programarea</string>
+    <string name="a11y_profiles_edit_named">Editează programarea pentru %1$s</string>
+    <string name="a11y_profiles_delete">Șterge</string>
+    <string name="a11y_profiles_delete_named">Șterge profilul %1$s</string>
+    <string name="a11y_profiles_schedule_named">Programare pentru %1$s</string>
+    <string name="a11y_profiles_save">Salvează</string>
+    <string name="a11y_profiles_delete_title">Ștergi „%1$s”?</string>
+    <string name="a11y_profiles_delete_body">Setările salvate și programarea vor fi eliminate. Ultimul profil rămas nu poate fi șters.</string>
+    <string name="a11y_profiles_cadence_unit">Unitate de frecvență</string>
+    <string name="a11y_profiles_days">Zile</string>
+    <string name="a11y_profiles_weeks">Săptămâni</string>
+    <string name="a11y_profiles_months">Luni</string>
+    <string name="a11y_profiles_weekday">Zi a săptămânii</string>
+    <string name="a11y_profiles_hour">Oră</string>
+    <string name="a11y_profiles_minute">Minut</string>
+    <string name="a11y_profiles_lookback">Zile anterioare (1–30)</string>
+    <string name="a11y_profiles_every_days">La fiecare N zile</string>
+    <string name="a11y_profiles_every_weeks">La fiecare N săptămâni</string>
+    <string name="a11y_profiles_every_months">La fiecare N luni</string>
+</resources>

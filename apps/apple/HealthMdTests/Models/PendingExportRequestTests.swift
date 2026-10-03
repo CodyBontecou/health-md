@@ -58,6 +58,29 @@ final class PendingExportRequestTests: XCTestCase {
         ])
     }
 
+    func testInitializerPreservesOriginalOwnerDatesInFrozenTimezone() throws {
+        var originalCalendar = Calendar(identifier: .gregorian)
+        originalCalendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        var retryCalendar = Calendar(identifier: .gregorian)
+        retryCalendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Tokyo"))
+        let originalOwnerDay = try XCTUnwrap(originalCalendar.date(from: DateComponents(
+            year: 2026,
+            month: 5,
+            day: 14
+        )))
+
+        let request = PendingExportRequest(
+            dates: [originalOwnerDay.addingTimeInterval(86_400)],
+            originalRequestedDates: [originalOwnerDay],
+            originalCalendarTimeZoneIdentifier: originalCalendar.timeZone.identifier,
+            source: .scheduled,
+            calendar: retryCalendar
+        )
+
+        XCTAssertEqual(request.originalRequestedDates, [originalOwnerDay])
+        XCTAssertEqual(request.originalCalendarTimeZoneIdentifier, "America/Los_Angeles")
+    }
+
     func testDecodingPreservesPersistedDatesWithoutRenormalizing() throws {
         let persistedDate = date(year: 2026, month: 5, day: 14, hour: 16, minute: 45)
         let payload = RawPendingExportRequestPayload(
@@ -73,6 +96,8 @@ final class PendingExportRequestTests: XCTestCase {
         let decoded = try JSONDecoder().decode(PendingExportRequest.self, from: data)
 
         XCTAssertEqual(decoded.dates, [persistedDate])
+        XCTAssertEqual(decoded.originalRequestedDates, [persistedDate])
+        XCTAssertNil(decoded.originalCalendarTimeZoneIdentifier)
         XCTAssertNil(decoded.exportTarget)
         XCTAssertNil(decoded.settingsSnapshot)
         XCTAssertTrue(decoded.usesLegacyMutableSettings)
@@ -101,6 +126,8 @@ final class PendingExportRequestTests: XCTestCase {
 
         XCTAssertEqual(decoded.settingsSnapshot, snapshot)
         XCTAssertEqual(decoded.settingsSnapshot?.appleExportEnginePin, pin)
+        XCTAssertEqual(decoded.originalRequestedDates, request.originalRequestedDates)
+        XCTAssertEqual(decoded.originalCalendarTimeZoneIdentifier, "America/Los_Angeles")
         XCTAssertFalse(decoded.usesLegacyMutableSettings)
     }
 

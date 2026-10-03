@@ -167,6 +167,8 @@ data class PairingResponse(
     val sealedReconnectSecret: CryptoFrame,
 )
 
+class PairingRejectedException(reason: String) : IllegalStateException(reason)
+
 object LegacyCodec {
     private val base64Encoder = Base64.getEncoder()
     private val base64Decoder = Base64.getDecoder()
@@ -191,7 +193,9 @@ object LegacyCodec {
     fun pairingResponse(bytes: ByteArray): PairingResponse {
         val root = parse(bytes)
         root["pairingRejected"]?.jsonObject?.get("_0")?.jsonObject?.let { rejection ->
-            error(rejection["reason"]?.jsonPrimitive?.content ?: "Pairing was rejected.")
+            throw PairingRejectedException(
+                rejection["reason"]?.jsonPrimitive?.content ?: "Pairing was rejected.",
+            )
         }
         val payload = root.getValue("pairingResponse").jsonObject.getValue("_0").jsonObject
         val sealed = payload.getValue("sealedReconnectSecret").jsonObject

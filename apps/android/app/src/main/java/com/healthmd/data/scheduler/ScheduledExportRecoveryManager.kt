@@ -13,6 +13,7 @@ import com.healthmd.data.drive.GoogleDriveExportOrchestrator
 import com.healthmd.data.drive.GoogleDriveRunResult
 import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.data.drive.toFailureReason
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEnginePin
@@ -25,6 +26,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -54,6 +56,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private val googleDriveDestinationRunner: GoogleDriveDestinationRunner,
     private val googleDriveSelectionStore: GoogleDriveSelectionStore,
     private val googleDriveDestinationStore: GoogleDriveDestinationStore,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
 ) {
 
     suspend fun inspectPendingRecovery(): ScheduledExportRecoveryStatus {
@@ -74,7 +78,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
             )
         }
 
-        if (!settingsRepository.isPurchased.first()) {
+        if (!hasFullAccess()) {
             return ScheduledExportRecoveryStatus(
                 pendingDates = pendingDates,
                 blocker = ScheduledExportRecoveryBlocker.PAYWALL_REQUIRED,
@@ -307,7 +311,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         ).also {
                             Timber.w("API export service unavailable during scheduled recovery")
                         }
-                        ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()?.let { destinationId ->
+                        ExportTarget.GOOGLE_DRIVE -> recoveryDriveDestinationId?.let { destinationId ->
                             googleDriveExportOrchestrator.exportDates(
                                 targetDates,
                                 targetSettings,
@@ -360,7 +364,6 @@ class ScheduledExportRecoveryManager @Inject constructor(
 
                 // Merge only this attempt's pending-date result into the latest settings so a
                 // concurrent endpoint/schedule edit is never overwritten by the recovery snapshot.
-                val currentSettings = settingsRepository.getExportSettings()
                 val retryDetails = if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && !targetResult.isFullSuccess) {
                     val failure = targetResult.failedDateDetails.firstOrNull() ?: FailedDateDetail(
                         targetDates.first(),
@@ -370,23 +373,24 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 } else {
                     targetResult.failedDateDetails
                 }
-                latestSettings = ScheduledExportPendingRequests.applyAttemptResult(
-                    settings = currentSettings,
-                    attemptedDates = targetDates,
-                    failedDateDetails = retryDetails,
-                    target = target,
-                    destinationFingerprint = destinationFingerprint,
-                    enginePin = enginePin,
-                    settingsSnapshotJson = settingsSnapshotJson,
-                    apiOperationIds = targetResult.retryOperationIds,
-                    folderOperationIds = targetResult.retryFolderOperationIds,
-                    driveOperationIds = targetResult.retryDriveOperationIds,
-                    freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
-                )
-                settingsRepository.updateExportSettings(latestSettings)
+                latestSettings = settingsRepository.updateExportSettingsAtomically { currentSettings ->
+                    ScheduledExportPendingRequests.applyAttemptResult(
+                        settings = currentSettings,
+                        attemptedDates = targetDates,
+                        failedDateDetails = retryDetails,
+                        target = target,
+                        destinationFingerprint = destinationFingerprint,
+                        enginePin = enginePin,
+                        settingsSnapshotJson = settingsSnapshotJson,
+                        apiOperationIds = targetResult.retryOperationIds,
+                        folderOperationIds = targetResult.retryFolderOperationIds,
+                        driveOperationIds = targetResult.retryDriveOperationIds,
+                        freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
+                    )
+                }
                 if (targetResult.isFullSuccess && target == ExportTarget.GOOGLE_DRIVE) {
-                    targetResult.retryDriveOperationIds.values.toSet().forEach { driveOperationId ->
-                        googleDriveExportOrchestrator.acknowledgeAfterHistory(driveOperationId)
+                    targetResult.retryDriveOperationIds.values.toSet().forEach {
+                        googleDriveExportOrchestrator.acknowledgeAfterHistory(it)
                     }
                 }
                 val allFailuresDetachedForFreshCapture =
@@ -484,6 +488,13 @@ class ScheduledExportRecoveryManager @Inject constructor(
         target = target,
     )
 
+    private suspend fun hasFullAccess(): Boolean {
+        entitlementRepository.refresh()
+        return distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
+    }
+
     private suspend fun inspectPendingRecoveryIgnoringLock(): ScheduledExportRecoveryStatus {
         val settings = settingsRepository.getExportSettings()
         val pendingDates = ScheduledExportPendingRequests.pendingDates(settings)
@@ -494,7 +505,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 blocker = ScheduledExportRecoveryBlocker.NO_PENDING_DATES,
             )
         }
-        if (!settingsRepository.isPurchased.first()) {
+        if (!hasFullAccess()) {
             return ScheduledExportRecoveryStatus(
                 pendingDates = pendingDates,
                 blocker = ScheduledExportRecoveryBlocker.PAYWALL_REQUIRED,

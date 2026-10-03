@@ -10,6 +10,18 @@ Health.md esporta un insieme di dati locale con versione dello schema per Markdo
 <p style="margin-top:6px;">Questa pagina è organizzata in base allo schema di esportazione e al dizionario dati di Health.md: attività, sonno, cuore, parametri vitali, corpo, alimentazione, mindfulness, farmaci, allenamenti, salute riproduttiva, sintomi, udito e metriche relative allo stile di vita e all'ambiente.</p>
 </div>
 
+## Override delle unità per visualizzazione
+
+Inserisci `units` in un singolo blocco `health-viz` quando un grafico deve usare un sistema di visualizzazione diverso dalla preferenza globale del plugin:
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+Usa `auto` per seguire il sistema di unità dichiarato dall'esportazione, `metric` per visualizzare chilometri, chilogrammi, metri e Celsius, oppure `imperial` per visualizzare miglia, libbre, piedi e Fahrenheit. L'override si applica solo a questa visualizzazione e ha la precedenza sull'impostazione globale Units. Modifica solo i valori visualizzati; i file Health.md esportati restano invariati. Le metriche non convertibili, come passi, BPM, percentuali e calorie, non cambiano.
+
 ## Copertura attuale delle visualizzazioni
 
 <div class="reference-stats">

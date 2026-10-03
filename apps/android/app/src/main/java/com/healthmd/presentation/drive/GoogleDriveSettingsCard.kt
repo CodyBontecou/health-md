@@ -32,6 +32,7 @@ import com.healthmd.data.drive.GoogleDriveAuthorizationAction
 import com.healthmd.data.drive.GoogleDriveErrorId
 import com.healthmd.data.drive.GoogleDriveReadiness
 import com.healthmd.presentation.MainActivity
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.PrimaryButton
@@ -44,6 +45,7 @@ fun GoogleDriveSettingsCard(
     viewModel: GoogleDriveViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val protection = LocalConfigurationProtection.current
     val context = LocalContext.current
     val activity = context as? Activity
     val mainActivity = activity as? MainActivity
@@ -99,6 +101,10 @@ fun GoogleDriveSettingsCard(
                 ),
                 enabled = !state.busy && state.readiness is GoogleDriveReadiness.Ready && activity != null,
                 onClick = {
+                    if (protection.enabled && state.destination == null) {
+                        protection.onBlockedChange()
+                        return@PrimaryButton
+                    }
                     viewModel.begin { action ->
                         if (action is GoogleDriveAuthorizationAction.Launch) {
                             launcher.launch(IntentSenderRequest.Builder(action.pendingIntent.intentSender).build())
@@ -110,7 +116,9 @@ fun GoogleDriveSettingsCard(
                 SecondaryButton(
                     text = stringResource(R.string.google_drive_disconnect),
                     enabled = !state.busy,
-                    onClick = viewModel::disconnect,
+                    onClick = {
+                        if (protection.enabled) protection.onBlockedChange() else viewModel.disconnect()
+                    },
                 )
             }
         }

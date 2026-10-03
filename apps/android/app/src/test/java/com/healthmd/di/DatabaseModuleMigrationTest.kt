@@ -8,13 +8,13 @@ import org.junit.Test
 
 class DatabaseModuleMigrationTest {
     @Test
-    fun `history migration 5 to 6 adds nullable Drive recovery identity without rewriting rows`() {
+    fun `history migration 6 to 7 adds nullable Drive recovery identity without rewriting rows`() {
         val database = mockk<SupportSQLiteDatabase>(relaxed = true)
 
-        DatabaseModule.MIGRATION_5_6.migrate(database)
+        DatabaseModule.MIGRATION_6_7.migrate(database)
 
-        assertThat(DatabaseModule.MIGRATION_5_6.startVersion).isEqualTo(5)
-        assertThat(DatabaseModule.MIGRATION_5_6.endVersion).isEqualTo(6)
+        assertThat(DatabaseModule.MIGRATION_6_7.startVersion).isEqualTo(6)
+        assertThat(DatabaseModule.MIGRATION_6_7.endVersion).isEqualTo(7)
         verify(exactly = 1) {
             database.execSQL("ALTER TABLE export_history ADD COLUMN driveOperationId TEXT")
         }

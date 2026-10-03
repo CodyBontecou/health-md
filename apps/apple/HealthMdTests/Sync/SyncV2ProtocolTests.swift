@@ -71,6 +71,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.isCompatibleWithMacExportJobs)
         XCTAssertFalse(decoded.supportsAuthoritativeMacExportFileAccounting)
         XCTAssertFalse(decoded.supportsRollupSummaries)
+        XCTAssertFalse(decoded.supportsRangeV9Summaries)
         XCTAssertFalse(decoded.supportsSummaryOnlyExports)
         XCTAssertFalse(decoded.supportsAllAvailableHistoryExportRequests)
         XCTAssertFalse(decoded.supportsChunkedMacExportJobs)
@@ -102,8 +103,35 @@ final class SyncV2ProtocolTests: XCTestCase {
         ))
     }
 
+    func testPeerCapabilities_mixedPeerWithHistoricalRollupsRejectsRangeV9() {
+        let mixed = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "mixed",
+            buildNumber: "1",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsRollupSummaries: true,
+            supportsRangeV9Summaries: false
+        )
+
+        XCTAssertTrue(mixed.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: true
+        ))
+        XCTAssertFalse(mixed.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            rangeV9SummaryEnabled: true
+        ))
+    }
+
     func testPeerCapabilities_losslessFileJobsRequireBoundedCurrentArchiveSupport() {
-        func peer(bounded: Bool, archiveVersions: [Int]) -> SyncPeerCapabilities {
+        func peer(
+            bounded: Bool,
+            archiveVersions: [Int],
+            supportsSplitDetail: Bool = false
+        ) -> SyncPeerCapabilities {
             SyncPeerCapabilities(
                 protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
                 appVersion: "mixed",
@@ -116,7 +144,8 @@ final class SyncV2ProtocolTests: XCTestCase {
                 supportsRollupSummaries: true,
                 supportsSummaryOnlyExports: true,
                 supportsSizeBoundedConnectedTransfers: bounded,
-                canonicalArchiveSchemaVersions: archiveVersions
+                canonicalArchiveSchemaVersions: archiveVersions,
+                supportsSplitExportDetailPolicy: supportsSplitDetail
             )
         }
 
@@ -153,6 +182,24 @@ final class SyncV2ProtocolTests: XCTestCase {
             rollupSummariesEnabled: false,
             effectiveGranularDataEnabled: false
         ), "A non-granular legacy file job remains compatible")
+
+        XCTAssertFalse(current.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            detailPolicy: .detailedTimeSeries
+        ), "A legacy peer must not silently add an archive or drop requested series")
+        let splitCurrent = peer(
+            bounded: true,
+            archiveVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
+            supportsSplitDetail: true
+        )
+        XCTAssertTrue(splitCurrent.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            detailPolicy: .detailedTimeSeries
+        ))
+        XCTAssertTrue(splitCurrent.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            detailPolicy: .archiveOnly
+        ))
     }
 
     func testPeerCapabilities_currentAdvertisesChunkedMacExportJobs() {
@@ -168,6 +215,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         )
         XCTAssertTrue(currentIOS.supportsChunkedMacExportJobs)
         XCTAssertTrue(currentMac.supportsChunkedMacExportJobs)
+        XCTAssertTrue(currentIOS.supportsSplitExportDetailPolicy)
+        XCTAssertTrue(currentMac.supportsSplitExportDetailPolicy)
         XCTAssertTrue(currentIOS.supportsAllAvailableHistoryExportRequests)
         XCTAssertTrue(currentMac.supportsAllAvailableHistoryExportRequests)
         XCTAssertTrue(currentIOS.supportsSizeBoundedConnectedTransfers)
@@ -175,6 +224,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(currentMac.supportsPerDateExportCompletion)
         XCTAssertTrue(currentMac.supportsDailyNoteOnlyExports)
         XCTAssertTrue(currentMac.supportsDataDictionaryExportPreference)
+        XCTAssertTrue(currentMac.supportsRangeV9Summaries)
         XCTAssertEqual(currentIOS.installationID, iosInstallationID)
         XCTAssertEqual(currentMac.installationID, macInstallationID)
         XCTAssertTrue(currentIOS.supportsDurableConnectedExportRecovery)
@@ -348,7 +398,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))
         XCTAssertEqual(
             service.macExportReadinessMessage(requiring: settings),
-            "Update Health.md on Mac to export roll-up summaries"
+            "Update Health.md on Mac to export range summaries"
         )
 
         service.remoteCapabilities = .current(platform: .macOS)
@@ -528,6 +578,62 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(service.canExportToConnectedMac(requiring: settings))
     }
 
+    func testLegacyMacJobAndStreamDecodeWithoutOriginalRangeAuthority() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let snapshot = makeSnapshot()
+        let job = MacExportJob(
+            jobID: UUID(),
+            createdAt: date,
+            sourceDeviceName: "Legacy iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
+            records: [makeMedicationHealthData(date: date)],
+            settingsSnapshot: snapshot,
+            requestedTarget: nil
+        )
+        var jobObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(job)) as? [String: Any]
+        )
+        jobObject.removeValue(forKey: "originalRequestedDates")
+        jobObject.removeValue(forKey: "originalCalendarTimeZoneIdentifier")
+        let legacyJob = try JSONDecoder().decode(
+            MacExportJob.self,
+            from: JSONSerialization.data(withJSONObject: jobObject)
+        )
+        XCTAssertNil(legacyJob.originalRequestedDates)
+        XCTAssertNil(legacyJob.originalCalendarTimeZoneIdentifier)
+
+        let stream = MacExportStreamStart(
+            jobID: UUID(),
+            createdAt: date,
+            sourceDeviceName: "Legacy iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
+            totalRequestedDays: 1,
+            totalTransferDays: 1,
+            settingsSnapshot: snapshot,
+            requestedTarget: nil,
+            chunkStrategyVersion: 1
+        )
+        var streamObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(stream)) as? [String: Any]
+        )
+        streamObject.removeValue(forKey: "originalRequestedDates")
+        streamObject.removeValue(forKey: "originalCalendarTimeZoneIdentifier")
+        let legacyStream = try JSONDecoder().decode(
+            MacExportStreamStart.self,
+            from: JSONSerialization.data(withJSONObject: streamObject)
+        )
+        XCTAssertNil(legacyStream.originalRequestedDates)
+        XCTAssertNil(legacyStream.originalCalendarTimeZoneIdentifier)
+    }
+
     func testSyncMessageV2Cases_codable() throws {
         let jobID = UUID()
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -551,6 +657,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             dateRangeStart: date,
             dateRangeEnd: date,
             requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
             records: [healthData],
             externalDailyRecords: [externalRecord],
             settingsSnapshot: snapshot,
@@ -589,6 +697,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJob.sourceDeviceName, "Cody's iPhone")
             XCTAssertEqual(decodedJob.records.count, 1)
             XCTAssertEqual(decodedJob.requestedDates, [date])
+            XCTAssertEqual(decodedJob.originalRequestedDates, [date])
+            XCTAssertEqual(decodedJob.originalCalendarTimeZoneIdentifier, snapshot.calendarTimeZoneIdentifier)
             XCTAssertEqual(decodedJob.records.first?.medications?.medications.first?.exportName, "D3")
             XCTAssertEqual(decodedJob.records.first?.medications?.doseEvents.first?.logStatus, .taken)
             XCTAssertEqual(decodedJob.externalDailyRecords.count, 1)
@@ -605,6 +715,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             dateRangeStart: date,
             dateRangeEnd: date,
             requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
             totalRequestedDays: 193,
             totalTransferDays: 193,
             settingsSnapshot: snapshot,
@@ -615,6 +727,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(start.jobID, jobID)
             XCTAssertEqual(start.sourceDeviceName, "Cody's iPhone")
             XCTAssertEqual(start.requestedDates, [date])
+            XCTAssertEqual(start.originalRequestedDates, [date])
+            XCTAssertEqual(start.originalCalendarTimeZoneIdentifier, snapshot.calendarTimeZoneIdentifier)
             XCTAssertEqual(start.totalRequestedDays, 193)
             XCTAssertEqual(start.totalTransferDays, 193)
             XCTAssertEqual(start.settingsSnapshot, snapshot)
@@ -1063,6 +1177,620 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(decoded.hadTerminalRangeFailure)
     }
 
+    func testLegacyPayloadWithoutBreakdownRejectsImpliedFilesAboveWireTotal() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 2,
+            totalCount: 2,
+            formatsPerDate: 2,
+            totalFilesWritten: 4,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            completedDates: [
+                Date(timeIntervalSince1970: 1_700_000_000),
+                Date(timeIntervalSince1970: 1_700_086_400)
+            ],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertNil(payload.outputBreakdown)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+    }
+
+    func testLegacyPayloadWithoutBreakdownSeparatesSidecarsAndRemainder() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 2,
+            totalFilesWritten: 5,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertEqual(result.looseAggregateFileCount, 2)
+        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.unclassifiedFileCount, 2)
+        XCTAssertEqual(result.categorizedFileCount, 3)
+        XCTAssertEqual(result.knownFileCount, 5)
+        XCTAssertEqual(result.totalFilesWritten, 5)
+        XCTAssertEqual(result.outputBreakdown.generatedFileCount, 5)
+    }
+
+    func testCancelledPayloadWithoutBreakdownDoesNotDoubleCountSidecars() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .cancelled,
+            successCount: 1,
+            totalCount: 3,
+            formatsPerDate: 2,
+            totalFilesWritten: 4,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(result.looseAggregateFileCount, 2)
+        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.unclassifiedFileCount, 1)
+        XCTAssertEqual(result.knownFileCount, 4)
+        XCTAssertEqual(result.totalFilesWritten, 4)
+        XCTAssertFalse(result.hasAuthoritativeFileCount)
+    }
+
+    func testAuthoritativeTotalAboveCapReconstructsPayloadWithConservativeAuthority() throws {
+        let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget,
+            providerSidecarFileCount: 1,
+            isFileCategoryBreakdownComplete: true
+        )
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: budget + 1,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 1,
+            outputBreakdown: breakdown,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(breakdown.isFileCategoryBreakdownComplete)
+        XCTAssertTrue(breakdown.wasTruncated)
+        XCTAssertEqual(breakdown.providerSidecarFileCount, 0)
+        XCTAssertLessThan(breakdown.providerSidecarFileCount, payload.externalRecordFileCount)
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.isTotalFilesWrittenAuthoritative)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+        XCTAssertEqual(payload.generatedFileCountDescription, "at least \(budget + 1) file(s)")
+
+        struct LegacyAccountingReader: Decodable {
+            let totalFilesWritten: Int
+            let isTotalFilesWrittenAuthoritative: Bool
+        }
+        let legacyDecoded = try JSONDecoder().decode(
+            LegacyAccountingReader.self,
+            from: JSONEncoder().encode(payload)
+        )
+        XCTAssertEqual(legacyDecoded.totalFilesWritten, budget + 1)
+        XCTAssertFalse(legacyDecoded.isTotalFilesWrittenAuthoritative)
+
+        let roundTrippedPayload = try JSONDecoder().decode(
+            MacExportResultPayload.self,
+            from: JSONEncoder().encode(payload)
+        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: roundTrippedPayload)
+        XCTAssertEqual(result.totalFilesWritten, budget + 1)
+        XCTAssertFalse(result.hasAuthoritativeFileCount)
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.hasPrefix("≥ "))
+        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertTrue(result.outputBreakdown.wasTruncated)
+        XCTAssertEqual(result.outputBreakdown.unclassifiedFileCount, 0)
+
+        let reconstructedHistory = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: result.totalFilesWritten,
+            outputBreakdown: result.outputBreakdown
+        )
+        XCTAssertNil(reconstructedHistory.fileCount)
+        XCTAssertTrue(reconstructedHistory.outputBreakdown?.wasTruncated == true)
+    }
+
+    func testDecodeNormalizesTruncatedBreakdownAuthorityFromMixedVersionPeer() throws {
+        let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: budget + 1,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: budget,
+                providerSidecarFileCount: 1,
+                isFileCategoryBreakdownComplete: true
+            ),
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(payload)) as? [String: Any]
+        )
+        object["isTotalFilesWrittenAuthoritative"] = true
+
+        let decoded = try JSONDecoder().decode(
+            MacExportResultPayload.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.totalFilesWritten, budget + 1)
+        XCTAssertTrue(decoded.outputBreakdown?.wasTruncated == true)
+        XCTAssertFalse(decoded.isTotalFilesWrittenAuthoritative)
+        XCTAssertFalse(decoded.hasAuthoritativeFileCount)
+    }
+
+    func testPayloadRejectsDailyNoteUpdateMismatchBetweenBreakdownAndTopLevel() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 1,
+                dailyNoteUpdateCount: 1
+            ),
+            dailyNoteUpdateCount: 2,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
+    func testPayloadRejectsDailyNoteSkipMismatchBetweenBreakdownAndTopLevel() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 0,
+                dailyNoteSkipCount: 1
+            ),
+            dailyNoteSkipCount: 2,
+            failedDateDetails: [
+                FailedDateDetail(
+                    date: Date(timeIntervalSince1970: 1_700_000_000),
+                    reason: .noHealthData
+                )
+            ],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
+    func testPayloadWithoutBreakdownRejectsDailyNoteActionsAboveTotalCount() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertNil(payload.outputBreakdown)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
+    func testPayloadWithBreakdownRejectsDailyNoteActionsAboveTotalCount() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 0,
+                dailyNoteUpdateCount: 1,
+                dailyNoteSkipCount: 1
+            ),
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertEqual(payload.outputBreakdown?.dailyNoteUpdateCount, payload.dailyNoteUpdateCount)
+        XCTAssertEqual(payload.outputBreakdown?.dailyNoteSkipCount, payload.dailyNoteSkipCount)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
+    func testPayloadStatusAcceptsFullSuccessAndRejectsContradictorySuccess() {
+        let fullSuccess = makeStatusPayload(
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            dailyNoteUpdateCount: 1
+        )
+        let zeroOfRequested = makeStatusPayload(
+            status: .success,
+            successCount: 0,
+            totalCount: 2
+        )
+        let failedFullCount = makeStatusPayload(
+            status: .success,
+            successCount: 2,
+            totalCount: 2,
+            failedDateDetails: [FailedDateDetail(date: Date(), reason: .fileWriteError)]
+        )
+        let emptyRequest = makeStatusPayload(
+            status: .success,
+            successCount: 0,
+            totalCount: 0
+        )
+
+        XCTAssertTrue(fullSuccess.hasCoherentStatus, "Daily-note success can be fileless")
+        XCTAssertFalse(zeroOfRequested.hasCoherentStatus)
+        XCTAssertFalse(failedFullCount.hasCoherentStatus)
+        XCTAssertFalse(emptyRequest.hasCoherentStatus)
+    }
+
+    func testPayloadStatusRequiresEvidenceForPartialSuccess() {
+        let successfulDay = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 1,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 1
+        )
+        let skippedDailyNote = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 2,
+            dailyNoteSkipCount: 1
+        )
+        let terminalFile = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 2,
+            totalFilesWritten: 1,
+            hadTerminalRangeFailure: true
+        )
+        let noEvidence = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 2
+        )
+        let mislabeledFullSuccess = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 2,
+            totalCount: 2
+        )
+
+        XCTAssertTrue(successfulDay.hasCoherentStatus)
+        XCTAssertTrue(skippedDailyNote.hasCoherentStatus)
+        XCTAssertTrue(terminalFile.hasCoherentStatus)
+        XCTAssertFalse(noEvidence.hasCoherentStatus)
+        XCTAssertFalse(mislabeledFullSuccess.hasCoherentStatus)
+    }
+
+    func testPayloadStatusFailureCannotClaimSuccessfulEffects() {
+        let terminalNoData = makeStatusPayload(
+            status: .failure,
+            successCount: 0,
+            totalCount: 2,
+            hadTerminalRangeFailure: true,
+            failedDateDetails: [FailedDateDetail(date: Date(), reason: .noHealthData)]
+        )
+        let successfulDay = makeStatusPayload(
+            status: .failure,
+            successCount: 1,
+            totalCount: 2
+        )
+        let generatedFile = makeStatusPayload(
+            status: .failure,
+            successCount: 0,
+            totalCount: 2,
+            totalFilesWritten: 1
+        )
+        let dailyNoteEffect = makeStatusPayload(
+            status: .failure,
+            successCount: 0,
+            totalCount: 2,
+            dailyNoteUpdateCount: 1
+        )
+
+        XCTAssertTrue(terminalNoData.hasCoherentStatus)
+        XCTAssertFalse(successfulDay.hasCoherentStatus)
+        XCTAssertFalse(generatedFile.hasCoherentStatus)
+        XCTAssertFalse(dailyNoteEffect.hasCoherentStatus)
+    }
+
+    func testPayloadStatusAllowsCancellationBeforeOrAfterOutput() {
+        let beforeOutput = makeStatusPayload(
+            status: .cancelled,
+            successCount: 0,
+            totalCount: 2
+        )
+        let afterOutput = makeStatusPayload(
+            status: .cancelled,
+            successCount: 1,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 1
+        )
+        let emptyRequest = makeStatusPayload(
+            status: .cancelled,
+            successCount: 0,
+            totalCount: 0
+        )
+
+        XCTAssertTrue(beforeOutput.hasCoherentStatus)
+        XCTAssertTrue(afterOutput.hasCoherentStatus)
+        XCTAssertFalse(emptyRequest.hasCoherentStatus)
+    }
+
+    func testPayloadRejectsOverflowingTopLevelAccounting() {
+        let multiplicationOverflow = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: Int.max,
+            totalCount: Int.max,
+            formatsPerDate: 2,
+            totalFilesWritten: Int.max,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        XCTAssertFalse(multiplicationOverflow.hasConsistentFileAccounting)
+
+        let knownFileSumOverflow = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: Int.max,
+            totalCount: Int.max,
+            formatsPerDate: 1,
+            totalFilesWritten: Int.max,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        XCTAssertFalse(knownFileSumOverflow.hasConsistentFileAccounting)
+
+        let noteSumOverflow = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 0,
+            totalCount: Int.max,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            dailyNoteUpdateCount: Int.max,
+            dailyNoteSkipCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        XCTAssertFalse(noteSumOverflow.hasConsistentFileAccounting)
+    }
+
+    func testMaximumNonoverflowingAccountingRemainsSafeAcrossResultOperations() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: Int.max,
+            totalCount: Int.max,
+            formatsPerDate: 1,
+            totalFilesWritten: Int.max,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertEqual(result.knownFileCount, Int.max)
+        XCTAssertEqual(result.totalFilesWritten, Int.max)
+        XCTAssertFalse(result.hasAuthoritativeFileCount)
+        XCTAssertTrue(result.outputBreakdown.wasTruncated)
+
+        let saturated = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            looseAggregateFileCount: Int.max,
+            individualEntryFileCount: Int.max,
+            unclassifiedFileCount: Int.max
+        )
+        XCTAssertEqual(saturated.categorizedFileCount, Int.max)
+        XCTAssertEqual(saturated.knownFileCount, Int.max)
+        XCTAssertEqual(saturated.totalFilesWritten, Int.max)
+    }
+
+    func testTruncatedPayloadRejectsProviderSidecarCountAboveWireTotal() {
+        let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget - 2,
+            providerSidecarFileCount: 2,
+            unclassifiedFileCount: 1,
+            isFileCategoryBreakdownComplete: true
+        )
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: budget + 1,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 1,
+            outputBreakdown: breakdown,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(breakdown.wasTruncated)
+        XCTAssertGreaterThan(breakdown.providerSidecarFileCount, payload.externalRecordFileCount)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
+    func testPayloadRejectsWireSidecarCountAboveTotalFilesWritten() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 2,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+        XCTAssertEqual(payload.generatedFileCountDescription, "at least 1 file(s)")
+    }
+
+    func testNontruncatedPayloadRejectsCategorySumAboveWireTotal() {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: 2,
+            isFileCategoryBreakdownComplete: true
+        )
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: breakdown,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(breakdown.wasTruncated)
+        XCTAssertGreaterThan(breakdown.generatedFileCount, payload.totalFilesWritten)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+    }
+
+    func testNontruncatedPayloadRetainsExactAuthorityAndDisplay() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 2,
+            totalFilesWritten: 2,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 2,
+                isFileCategoryBreakdownComplete: true
+            ),
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        XCTAssertTrue(payload.hasAuthoritativeFileCount)
+        XCTAssertEqual(payload.generatedFileCountDescription, "2 file(s)")
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertTrue(result.hasAuthoritativeFileCount)
+        XCTAssertFalse(result.localizedGeneratedFileAndDataDayDescription.hasPrefix("≥ "))
+        XCTAssertFalse(result.outputBreakdown.wasTruncated)
+    }
+
     func testPartialFailuresRoundTripAndLegacyOmissionDecodesNil() throws {
         let warning = ExportPartialFailure(
             date: Date(timeIntervalSince1970: 1_700_000_000),
@@ -1152,6 +1880,35 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertNil(
             ExportOrchestrator.ExportResult(macExportPayload: rangeFailure)
                 .remainingDates(from: [first, second])
+        )
+    }
+
+    private func makeStatusPayload(
+        status: MacExportResultStatus,
+        successCount: Int,
+        totalCount: Int,
+        formatsPerDate: Int = 0,
+        totalFilesWritten: Int = 0,
+        hadTerminalRangeFailure: Bool = false,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0,
+        failedDateDetails: [FailedDateDetail] = []
+    ) -> MacExportResultPayload {
+        MacExportResultPayload(
+            jobID: UUID(),
+            status: status,
+            successCount: successCount,
+            totalCount: totalCount,
+            formatsPerDate: formatsPerDate,
+            totalFilesWritten: totalFilesWritten,
+            hadTerminalRangeFailure: hadTerminalRangeFailure,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
+            failedDateDetails: failedDateDetails,
+            completedDates: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
         )
     }
 

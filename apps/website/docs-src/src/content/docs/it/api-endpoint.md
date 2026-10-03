@@ -25,10 +25,10 @@ description: "Invia direttamente dall'iPhone al tuo endpoint HTTP(S) i dati JSON
 
 ## Struttura del payload
 
-<p>Health.md invia una richiesta POST per ogni azione di esportazione. Il corpo è un involucro <code>healthmd.api_export</code> con versione indipendente, contenente record giornalieri pubblici <code>healthmd.health_data</code> dello schema v7. L'involucro API v1 contiene i record giornalieri; la versione v2 può includere anche sidecar dei provider senza modificare lo schema dei record giornalieri.</p>
+<p>Health.md invia una richiesta POST per ogni azione di esportazione. Il corpo è un involucro <code>healthmd.api_export</code> con versione indipendente, contenente record giornalieri pubblici <code>healthmd.health_data</code> dello schema v8. L'involucro API v1 contiene i record giornalieri; la versione v2 può includere anche sidecar dei provider senza modificare lo schema dei record giornalieri.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Oggetti giornalieri completi dello schema v7 conservati per l'intervallo richiesto, inclusi i record completamente vuoti il cui manifesto delle query costituisce un'evidenza.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Oggetti giornalieri completi dello schema v8 conservati per l'intervallo richiesto, inclusi i record completamente vuoti il cui manifesto delle query costituisce un'evidenza.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>Date per le quali si è verificato un errore prima che fosse possibile conservare un documento giornaliero.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p>Versione dello schema giornaliero usata in <code>records</code>. Avanza indipendentemente dalla versione dell'involucro API.</p></div>
 <div class="option"><strong>Sidecar dei provider</strong><p>Record esterni facoltativi della versione v2, con schema e regole di identità propri, presenti quando è abilitato un provider connesso.</p></div>

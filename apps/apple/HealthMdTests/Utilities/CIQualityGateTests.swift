@@ -207,8 +207,18 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    runs-on: macos-26\n    timeout-minutes: 60"),
+            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: macos-26\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
+        )
+        XCTAssertEqual(
+            content.components(separatedBy: "- name: Prepare and validate shared Rust core for Apple").count - 1,
+            1,
+            "Apple CI must build the exact shared-core XCFramework only once"
+        )
+        XCTAssertEqual(
+            content.components(separatedBy: "needs: [changes, prepare-shared-core]").count - 1,
+            3,
+            "All Xcode test jobs must consume the single prepared shared-core artifact"
         )
         XCTAssertTrue(
             content.contains("-test-timeouts-enabled YES"),
@@ -222,9 +232,15 @@ final class CIQualityGateTests: XCTestCase {
             smokeStep.contains("continue-on-error: true"),
             "Selected PR UI smoke failures must remain blocking"
         )
+        let smokeInvocations = smokeStep.components(separatedBy: "xcodebuild test").dropFirst()
+        XCTAssertEqual(smokeInvocations.count, 2, "PR smoke must use two deterministic test invocations")
+        for invocation in smokeInvocations {
+            let selectionCount = invocation.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
+            XCTAssertGreaterThan(selectionCount, 0, "Each PR smoke invocation must select tests explicitly")
+            XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
+        }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertGreaterThan(smokeSelectionCount, 0, "PR smoke must select tests explicitly")
-        XCTAssertLessThanOrEqual(smokeSelectionCount, 10, "PR smoke must not expand into the full UI suite")
+        XCTAssertEqual(smokeSelectionCount, 16, "PR smoke must preserve all selected UI regressions")
         XCTAssertTrue(
             smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
             "PR smoke must cover deterministic returning-user release notes"
@@ -468,7 +484,6 @@ final class CIQualityGateTests: XCTestCase {
             "HealthMd/iOS/Components/StatusIndicator.swift": 3,
             "HealthMd/iOS/Components/SectionCard.swift": 6,
             "HealthMd/iOS/Components/ExportModal.swift": 12,
-            "HealthMd/iOS/Views/OnboardingView.swift": 12,
             "HealthMd/iPad/iPadSidebar.swift": 3,
         ]
 
@@ -481,6 +496,20 @@ final class CIQualityGateTests: XCTestCase {
                 "\(relativePath) must hide decorative icons, status dots, and glow layers from VoiceOver"
             )
         }
+
+        // Onboarding's production surface is split between the page and its
+        // extracted accessibility components; preserve the original combined guard.
+        let onboardingHiddenCount = try [
+            "HealthMd/iOS/Views/OnboardingView.swift",
+            "HealthMd/iOS/Components/OnboardingA11yComponents.swift",
+        ].reduce(into: 0) { count, relativePath in
+            count += try source(relativePath).components(separatedBy: ".accessibilityHidden(true)").count - 1
+        }
+        XCTAssertGreaterThanOrEqual(
+            onboardingHiddenCount,
+            12,
+            "Onboarding must hide decorative icons and progress layers from VoiceOver"
+        )
     }
 
     private func source(_ relativePath: String) throws -> String {

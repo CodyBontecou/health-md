@@ -7,9 +7,10 @@
 
 The portable CLI now lives in the separate
 standalone Rust workspace at [`apps/cli`](https://github.com/CodyBontecou/health-md/tree/main/apps/cli). It is
-the cross-platform Manual IP/Tailscale client and uses `direct` by default. The bundled Swift helper
-remains the macOS compatibility client for the Mac-app HTTP backend and Apple-only Nearby
-transport. The portable Rust binary also owns a 19-tool direct iPhone MCP server. Direct exports use
+the cross-platform Manual IP/Tailscale client and is direct-only: it has no backend option and never
+requires the Mac app. The bundled Swift helper is a separate macOS compatibility client for the
+Mac-app HTTP backend and Apple-only Nearby transport. The portable Rust binary also owns a 19-tool
+direct iPhone MCP server. Direct exports use
 iPhone v1 or Android v2; capability-gated iPhone queries use additive v3. Every participating client
 must pass the applicable shared fixture before release.
 
@@ -21,14 +22,14 @@ The compatible default remains a thin localhost client owned by the macOS app:
 healthmd CLI / healthmd-mcp stdio → 127.0.0.1:17645 → Health.md Mac app → connected/open iPhone app
 ```
 
-The bundled helper's explicit `healthmd --backend direct` path, and the portable Rust CLI by
-default, own an authenticated direct listener and connect to an opt-in foreground mobile service.
+The bundled helper's explicit `healthmd --backend direct` path, and every portable Rust CLI
+invocation, own an authenticated direct listener and connect to an opt-in foreground mobile service.
 Portable Rust supports Manual IP/Tailscale on macOS, Linux, and Windows; Nearby remains bundled
 Swift-only. Direct can receive strict raw data or commit production-generated files to an existing
 absolute `--destination` without opening the SwiftUI Mac app. It never reads HealthKit itself or
 silently falls back. Mac encrypted context stays Mac-only, while portable `healthmd mcp serve` runs
 fresh bounded iPhone v3 queries without emulating the loopback API. See [Direct iPhone CLI
-backend](./cli-direct-iphone.md).
+access](./cli-direct-iphone.md).
 
 ## Where the code lives
 
@@ -102,7 +103,9 @@ Users can also copy an agent prompt from the CLI tab that asks any automation-ca
 
 ## Portable standalone install
 
-After the first stable Rust release (prereleases use direct GitHub installers):
+The tap carries the explicitly unqualified `0.1.0-alpha.7` preview and will carry qualified stable
+releases when available. Basic iPhone and Android connectivity is physically confirmed, but the
+full exact-build release matrix remains pending:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
@@ -165,7 +168,7 @@ healthmd --backend direct export --yesterday --destination "$HOME/Documents/Heal
 - Keep default-backend file writes in the Mac app. Direct file mode may write only to the explicit validated `--destination` and must preserve restart-safe commit semantics.
 - Keep backend and direct transport selection explicit; never silently fall back.
 - Keep Direct CLI Access opt-in, authenticated, encrypted, and isolated from Mac-app sync trust. Pairing and new commands remain foreground-scoped; only an already-connected export may use finite iOS background execution time.
-- `--raw` uses `canonical_source_records_v1`, temporarily forces lossless capture without changing saved `includeGranularData`, and returns schema-v8 daily documents in `healthmd.raw_result` v1.
+- `--raw` uses `canonical_source_records_v1`, temporarily forces the request-scoped Lossless detail policy without changing saved `compatibilityDetail` or `healthKitSourceArchivePolicy`, and returns schema-v8 daily documents in `healthmd.raw_result` v1.
 - Strict raw exits non-zero on `partial_success` unless `--allow-partial` is explicit. Complete-empty remains success; unsupported/skipped/cancelled/missing branches remain partial.
 - Strict raw and current file jobs require bounded, checksum-validated connected transfer and never downgrade to an unbounded whole raw payload.
 - Raw responses can contain source/device details, clinical content, ECGs, routes, and base64 attachments. Do not log them. Current peers spool and validate corpus-scale responses on disk, but one dense day and available storage remain practical limits.

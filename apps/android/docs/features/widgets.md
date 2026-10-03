@@ -91,10 +91,10 @@ Jetpack Glance renders through `RemoteViews` and cannot reliably load bundled ap
 Run from `apps/android`:
 
 ```bash
-./gradlew :app:testDebugUnitTest
-./gradlew :app:lintDebug
-./gradlew :app:assembleDebug
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:testPlayDebugUnitTest :app:testFdroidDebugUnitTest
+./gradlew :app:lintPlayDebug :app:lintFdroidDebug
+./gradlew :app:assemblePlayDebug :app:assembleFdroidDebug
+./gradlew :app:connectedPlayDebugAndroidTest :app:connectedFdroidDebugAndroidTest
 ```
 
 Physical QA targets Pixel 7 serial `2C061FDH200CJN`. API 37 verification confirmed picker previews/setup, all four simultaneous providers, compact/wide/tall resizing, light/dark rendering, 1.3× font scaling, Arabic RTL mirroring, whole-card TalkBack focus, root taps, stale/expired/no-data/pre-unlock states, `widgetCategory=9` (`home_screen|not_keyguard`), and an exact 1,800,000 ms unique periodic work row. Removing the final physical instance deletes the private snapshot directory and leaves the widget WorkManager rows cancelled. Automated coverage verifies partial permissions, before-first-unlock behavior, refresh/removal races, stale AppWidget IDs during deletion callbacks, and cleanup retries.

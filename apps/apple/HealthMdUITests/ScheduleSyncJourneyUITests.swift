@@ -164,6 +164,30 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
         XCTAssertTrue(syncToggle.waitForExistence(timeout: 5), "Sync toggle should be visible in connecting state")
     }
 
+    func testSyncView_switchesToCLIConfigurationWithoutScrolling() throws {
+        let app = UITestLaunchHelper.syncApp(state: "disconnected")
+        app.launch()
+
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
+        XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
+        syncTab.tap()
+
+        let targetPicker = app.segmentedControls[UITestLaunchHelper.Sync.configurationTargetPicker]
+        XCTAssertTrue(targetPicker.waitForExistence(timeout: 5), "Sync target picker should be visible at the top")
+
+        let cliSegment = targetPicker.buttons["CLI"]
+        XCTAssertTrue(cliSegment.isHittable, "CLI configuration should be selectable without scrolling")
+        cliSegment.tap()
+
+        let directCLIToggle = app.switches[UITestLaunchHelper.Sync.directCLIToggle]
+        XCTAssertTrue(directCLIToggle.waitForExistence(timeout: 3), "Direct CLI configuration should replace Mac configuration")
+        XCTAssertTrue(directCLIToggle.isHittable, "Direct CLI access toggle should be reachable without scrolling")
+        XCTAssertFalse(app.switches[UITestLaunchHelper.Sync.syncToggle].exists)
+
+        targetPicker.buttons["Mac Destination"].tap()
+        XCTAssertTrue(app.switches[UITestLaunchHelper.Sync.syncToggle].waitForExistence(timeout: 3))
+    }
+
     func testSyncToggle_enablesSync() throws {
         let app = UITestLaunchHelper.syncApp(state: "disconnected")
         app.launch()

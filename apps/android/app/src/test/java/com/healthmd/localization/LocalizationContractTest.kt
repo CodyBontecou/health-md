@@ -195,6 +195,60 @@ class LocalizationContractTest {
         }
     }
 
+    @Test
+    fun sharedSetupValuesByteEqualToEnglishAreOnlyDocumentedIntentionalIdenticals() {
+        // Allowlist transcribed 1:1 from the table "Documented intentional
+        // identical-to-English values" in docs/qa/shared-setup-v2.md (5 cycle-4
+        // v2 stragglers + 4 v1 byte-equal terms = 9 pairs). That section's rule:
+        // any future byte-equal-to-English value must be re-reviewed deliberately
+        // and the QA-doc table updated BEFORE it may be whitelisted here.
+        val documentedIntentionalIdenticals = setOf(
+            "de" to "shared_setup_v2_destination_cloud", // Standard German term
+            "nl" to "shared_setup_v2_destination_cloud", // Standard Dutch term
+            "ro" to "shared_setup_v2_destination_cloud", // Standard Romanian term
+            "fr" to "shared_setup_v2_destination", // Identical French word
+            "fr" to "shared_setup_v2_destination_cloud", // Standard French term
+            "es" to "shared_setup_endpoint", // Established es-file term
+            "nl" to "shared_setup_endpoint", // Established nl-file term
+            "pt-rBR" to "shared_setup_endpoint", // Established pt-file term
+            "fr" to "shared_setup_formats", // Identical French word
+        )
+
+        val canonical = parseResources(resourceFile("values"))
+        val sharedSetupNames = canonical.keys
+            .filter { it.startsWith("shared_setup_") }
+            .toSet()
+        check(sharedSetupNames.isNotEmpty()) { "No shared_setup_* keys found in values/strings.xml" }
+
+        val undocumentedIdenticals = buildList {
+            supportedLocales.forEach { locale ->
+                val localized = parseResources(resourceFile("values-$locale"))
+                sharedSetupNames.forEach { name ->
+                    if (locale to name in documentedIntentionalIdenticals) {
+                        return@forEach
+                    }
+                    val englishValues = canonical.getValue(name).values
+                    localized.getValue(name).values.forEach { (quantity, value) ->
+                        if (quantity in englishValues && value == englishValues.getValue(quantity)) {
+                            val resourceLabel = "$name${quantity?.let { "[$it]" }.orEmpty()}"
+                            add(
+                                "values-$locale/strings.xml: $resourceLabel = \"$value\" " +
+                                    "is byte-identical to English"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        assertWithMessage(
+            "Shared-setup values byte-identical to English beyond the documented " +
+                "intentional identicals in docs/qa/shared-setup-v2.md. Each offender " +
+                "is probably an untranslated key: re-review it deliberately and update " +
+                "the QA-doc table BEFORE whitelisting the (locale, key) pair here."
+        ).that(undocumentedIdenticals).isEmpty()
+    }
+
     private fun parseResources(file: File): Map<String, ResourceValue> {
         val document = DocumentBuilderFactory.newInstance().apply {
             isNamespaceAware = true

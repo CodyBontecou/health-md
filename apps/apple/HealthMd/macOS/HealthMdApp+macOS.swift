@@ -1396,7 +1396,7 @@ struct HealthMdApp: App {
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
             targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
-            fileCount: result.isTotalFilesWrittenAuthoritative
+            fileCount: result.hasAuthoritativeFileCount
                 ? result.totalFilesWritten : nil
         )
     }
@@ -1407,7 +1407,14 @@ struct HealthMdApp: App {
             reason: exportFailureReason(for: failure.reason),
             errorDetails: failure.underlyingError ?? failure.message
         )
-        let totalCount = max(ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd).count, 1)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = job.settingsSnapshot.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:)) ?? .gmt
+        let totalCount = max(ExportOrchestrator.dateRange(
+            from: job.dateRangeStart,
+            to: job.dateRangeEnd,
+            calendar: calendar
+        ).count, 1)
         let exportResult = ExportOrchestrator.ExportResult(
             successCount: 0,
             totalCount: totalCount,
@@ -1430,7 +1437,7 @@ struct HealthMdApp: App {
             peerName: job.sourceDeviceName,
             kind: syncEventKind(for: result.status),
             recordCount: max(result.totalFilesWritten, result.dailyNoteUpdateCount),
-            recordCountIsLowerBound: result.isTotalFilesWrittenAuthoritative ? nil : true,
+            recordCountIsLowerBound: result.hasAuthoritativeFileCount ? nil : true,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
             failureMessage: activityFailureMessage(for: result)
@@ -1467,12 +1474,12 @@ struct HealthMdApp: App {
             return nil
         case .partialSuccess:
             if result.dailyNoteSkipCount > 0,
-               result.isTotalFilesWrittenAuthoritative,
+               result.hasAuthoritativeFileCount,
                result.totalFilesWritten == 0,
                result.completedDates?.count == result.totalCount {
                 return String(localized: "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created.")
             }
-            guard result.isTotalFilesWrittenAuthoritative else {
+            guard result.hasAuthoritativeFileCount else {
                 return String(localized: "Mac export partially completed")
             }
             return String(localized: "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention.")
@@ -1482,7 +1489,7 @@ struct HealthMdApp: App {
             }
             return String(localized: "Mac export failed. Details: \(detail)")
         case .cancelled:
-            return result.successCount > 0 && result.isTotalFilesWrittenAuthoritative
+            return result.successCount > 0 && result.hasAuthoritativeFileCount
                 ? String(localized: "Mac export stopped after writing \(result.totalFilesWritten) file(s).")
                 : String(localized: "Mac export cancelled")
         }

@@ -37,9 +37,17 @@ description: "“导出”标签页是主要操作界面。它会显示 HealthKi
 <div class="option"><strong>导出</strong><p>执行导出，在主界面显示进度，并将结果记录到历史中。</p></div>
 </div>
 
+## 选择数据详细程度
+
+<div class="options">
+<div class="option"><strong>摘要</strong><p>精简的每日总计与汇总，适合阅读、笔记和仪表盘。</p></div>
+<div class="option"><strong>详细时间序列</strong><p>所选带时间戳的样本和区间。只要指标能提供相应细节，Apple 和 Android 均支持此级别。</p></div>
+<div class="option"><strong>无损健康记录</strong><p>规范的 HealthKit 来源记录归档。此级别仅限 Apple；Android 不会把 Health Connect 记录转换为 HealthKit 归档。</p></div>
+</div>
+
 ## “导出”实际执行的操作
 <ol>
-<li>针对范围内的每一天，采集所选摘要投影；启用“无损健康记录”时，还会采集其规范来源记录和查询诊断信息。</li>
+<li>针对范围内的每一天采集所选摘要；“详细时间序列”会增加兼容样本，“无损健康记录”还会增加规范来源记录和查询诊断信息。</li>
 <li>应用所选格式（Markdown、Obsidian Bases、JSON 或 CSV）和模板。</li>
 <li>每天向 <code>{vault}/{subfolder}/</code> 写入一个文件、通过已连接的 Mac 工作流传输文件，或向 API 端点 POST 带版本的 JSON 封装。</li>
 <li>如果启用了<em>单条记录追踪</em>，则为文件型目标从规范归档中派生所选的单条 Markdown 文件。</li>
@@ -48,18 +56,27 @@ description: "“导出”标签页是主要操作界面。它会显示 HealthKi
 
 <p>JSON 和 CSV 可以保留规范记录。Markdown 和 Obsidian Bases 保持易读，并提供精简的采集诊断信息，而不会嵌入归档。有关确切的数据结构和省略规则，请参阅<a href="/zh-hans/docs/reference/">完整导出参考</a>。</p>
 
+## 停止、取消和重试
+
+停止或取消只会结束当前尝试。已完成的文件和日期会保留，未解决的日期仍可重试。取消某次计划运行不会禁用其重复计划。
+
+## 配置文件与可信历史
+
+已保存的配置文件会冻结本次运行的设置和目标。配置文件感知的计划运行和自动化会在历史记录中保留运行时配置文件；历史还会保存实际目标的隐私安全标签。手动导出记录可能省略配置文件名称。之后更改名称或目标不会改写现有历史。缺失的配置文件引用会以安全方式失败。请参阅[导出配置文件](/zh-hans/docs/export-profiles/)。
+
 ## 标签栏
 
 <p>屏幕底部的四个标签页——导出、计划、同步和设置——涵盖了应用的全部功能。其他所有功能均位于“设置”内一到两层的位置。</p>
 
 <div class="callout">
 <strong>解锁规则。</strong>
-<p style="margin-top:6px;">Full Access 可解锁无限次导出、计划导出、Mac 目标位置和“快捷指令”。详情请参阅<a href="/zh-hans/docs/paywall/">付费墙页面</a>。</p>
+<p style="margin-top:6px;">在 Apple 平台上，免费额度由 10 次手动或计划导出操作共用。Full Access 会移除此上限，并解锁 Mac 目标工作流和“快捷指令”。Android 则提供 10 次免费手动操作，计划功能需要一次性终身购买。有关 Apple 购买详情，请参阅<a href="/zh-hans/docs/paywall/">付费墙页面</a>。</p>
 </div>
 
 ## 相关内容
 
 <div class="related">
+  <a href="/zh-hans/docs/export-profiles/"><span>配置文件</span>保存独立的目标、设置、计划和自动化 ID。</a>
   <a href="/zh-hans/docs/scheduling/"><span>日常使用</span>计划——自动执行导出，无需再手动轻点“导出”。</a>
   <a href="/zh-hans/docs/api-endpoint/"><span>集成</span>API 端点——将所选 JSON 直接发送到您自己的服务。</a>
   <a href="/zh-hans/docs/format/"><span>自定义</span>格式自定义——更改每个文件的呈现方式。</a>

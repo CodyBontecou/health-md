@@ -7,7 +7,7 @@ description: "Steuern Sie die Ausgabeformatierung, ohne die Datenerfassung zu ä
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>Standard. Eine Datei pro Tag. Optionales YAML-frontmatter und Abschnitte mit Überschriften je Kategorie.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown mit strukturiertem frontmatter, optimiert für das Obsidian-Plugin <a href="https://help.obsidian.md/Plugins/Bases">Bases</a>. Numerische Eigenschaften bleiben Zahlen, Datumswerte bleiben Datumswerte.</p></div>
-<div class="option"><strong>JSON</strong><p>Eine JSON-Datei pro Tag. Tageszusammenfassungen nach Schema v7 können das maßgebliche Archiv <code>healthmd.healthkit_records</code> v1 einbetten, wenn Lossless Health Records aktiviert ist.</p></div>
+<div class="option"><strong>JSON</strong><p>Eine JSON-Datei pro Tag. Apple-Tageszusammenfassungen nach Schema v8 können das maßgebliche Archiv <code>healthmd.healthkit_records</code> v1 einbetten, wenn Lossless Health Records aktiviert ist.</p></div>
 <div class="option"><strong>CSV</strong><p>Eine CSV-Datei pro Tag mit der Kopfzeile <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Kompatible Zusammenfassungszeilen enthalten fünf Felder und lassen die Zeitstempelspalte aus; Zeilen mit Zeitstempel und kanonische Datensatzzeilen enthalten alle sechs.</p></div>
 </div>
 
@@ -37,9 +37,16 @@ description: "Steuern Sie die Ausgabeformatierung, ohne die Datenerfassung zu ä
 ## Vorschau
 <p>Am unteren Rand der Formatansicht rendert eine Livevorschau die heutigen Daten mit Ihren aktuellen Einstellungen. So können Sie am schnellsten Anpassungen vornehmen: Schalter ändern, Vorschau prüfen, wiederholen.</p>
 
+## Datendetail und Profile
+
+Zusammenfassung erzeugt kompakte Tagesprojektionen. Detaillierte Zeitreihen ergänzen auf Apple und Android ausgewählte Messpunkte und Intervalle, sofern die Metrik sie unterstützt. Verlustfreie Gesundheitsdatensätze fügen das kanonische HealthKit-Archiv hinzu, sind nur bei Apple verfügbar und keine Android-Kompatibilitätsschicht.
+
+Das Datendetail wird mit dem [Exportprofil](/de/docs/export-profiles/) fixiert. Eine Änderung bei aktivem Profil ändert nur dieses Profil.
+
 ## Verwandte Themen
 
 <div class="related">
+  <a href="/de/docs/export-profiles/"><span>Profile</span>Detailstufe und Format je Workflow speichern.</a>
   <a href="/de/docs/metrics/"><span>Inhalt</span>Gesundheitsmetriken – wählen Sie zuerst die Daten aus.</a>
   <a href="/de/docs/individual-tracking/"><span>Detailliert</span>Einzelverfolgung – eine andere Ausgabe mit einer Datei je Eintrag.</a>
   <a href="/de/docs/daily-notes/"><span>Obsidian</span>Einfügen in tägliche Notizen – verwendet dieselben frontmatter-Felder.</a>

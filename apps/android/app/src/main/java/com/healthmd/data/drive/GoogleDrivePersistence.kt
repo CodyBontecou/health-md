@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.AtomicFile
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -11,6 +12,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.healthmd.domain.exportengine.sha256Hex
+import com.healthmd.data.settings.ConfigurationProtectionPersistence
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
@@ -102,16 +104,46 @@ class GoogleDriveDestinationStore @Inject constructor(
         }
     }
 
-    suspend fun remove(id: String) {
-        val destination = find(id)
+    /** Consent completion is serialized with protection changes before any authority write. */
+    suspend fun saveBindingIfAllowed(destination: GoogleDriveDestination, accountName: String): Boolean {
+        var saved = false
         dataStore.edit { prefs ->
-            val kept = decodeEnvelope(prefs[key]).filterNot { recordId(it) == id }
-            prefs[key] = json.encodeToString(
-                DriveDestinationEnvelope.serializer(),
-                DriveDestinationEnvelope(records = kept),
+            if (prefs[ConfigurationProtectionPersistence.enabledKey] == true) return@edit
+            val records = decodeEnvelope(prefs[key]).toMutableList()
+            val index = records.indexOfFirst { recordId(it) == destination.id }
+            val encoded = json.encodeToJsonElement(GoogleDriveDestination.serializer(), destination)
+            if (index >= 0) records[index] = encoded else records += encoded
+            val envelope = json.encodeToString(
+                DriveDestinationEnvelope.serializer(), DriveDestinationEnvelope(records = records),
             )
+            // This edit holds the same serialization boundary as the protection setting.
+            accountStore.save(destination.accountReferenceId, accountName)
+            prefs[key] = envelope
+            saved = true
         }
+        return saved
+    }
+
+    suspend fun remove(id: String): Boolean {
+        var removed = false
+        dataStore.edit { prefs ->
+            if (prefs[ConfigurationProtectionPersistence.enabledKey] == true) return@edit
+            removeForDisconnect(prefs, id)
+            removed = true
+        }
+        return removed
+    }
+
+    /** Holds the caller's admitted edit while removing encrypted authority (no nested edit). */
+    internal suspend fun removeForDisconnect(prefs: MutablePreferences, id: String) {
+        val records = decodeEnvelope(prefs[key])
+        val destination = records.mapNotNull(::decodeKnown).firstOrNull { it.id == id }
+        val kept = records.filterNot { recordId(it) == id }
+        val envelope = json.encodeToString(
+            DriveDestinationEnvelope.serializer(), DriveDestinationEnvelope(records = kept),
+        )
         destination?.let { accountStore.remove(it.accountReferenceId) }
+        if (kept.size != records.size) prefs[key] = envelope
     }
 
     suspend fun accountName(destination: GoogleDriveDestination): String? =
@@ -194,10 +226,16 @@ class GoogleDriveManagedObjectStore @Inject constructor(
 
     suspend fun removeDestination(destinationId: String) {
         dataStore.edit { prefs ->
-            val loaded = load(prefs[key])
-            check(loaded is ManagedObjectRecords.Valid) { "managed object store is corrupt" }
-            prefs[key] = encode(loaded.bindings.filterNot { it.destinationId == destinationId })
+            if (prefs[ConfigurationProtectionPersistence.enabledKey] == true) return@edit
+            removeForDisconnect(prefs, destinationId)
         }
+    }
+
+    internal fun removeForDisconnect(prefs: MutablePreferences, destinationId: String) {
+        val loaded = load(prefs[key])
+        check(loaded is ManagedObjectRecords.Valid) { "managed object store is corrupt" }
+        val kept = loaded.bindings.filterNot { it.destinationId == destinationId }
+        if (kept.size != loaded.bindings.size) prefs[key] = encode(kept)
     }
 
     private fun encode(bindings: List<GoogleDriveManagedObject>): String = json.encodeToString(

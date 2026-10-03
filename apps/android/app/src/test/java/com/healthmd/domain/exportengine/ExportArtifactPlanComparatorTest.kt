@@ -1,6 +1,7 @@
 package com.healthmd.domain.exportengine
 
 import com.google.common.truth.Truth.assertThat
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class ExportArtifactPlanComparatorTest {
@@ -90,6 +91,9 @@ class ExportArtifactPlanComparatorTest {
         assertThat(production.toString()).doesNotContain("private/2026-07-25")
         assertThat(production.toString()).doesNotContain("abc")
         assertThat(production.toString()).doesNotContain("abz")
+        assertThrows(IllegalArgumentException::class.java) {
+            ExportArtifactComparisonOptions(includeFirstByteOffset = true)
+        }
 
         val internal = comparator.compare(
             expected,

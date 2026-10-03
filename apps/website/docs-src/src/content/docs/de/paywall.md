@@ -1,33 +1,29 @@
 ---
 title: "Freischaltung & Paywall"
-description: "Einmaliger Kauf von Full Access ohne Abonnement. Schalten Sie unbegrenzte Exporte, Zeitplanung, Workflows mit Mac-Ziel und Kurzbefehle frei."
+description: "Erfahre mehr über 10 kostenlose Aktionen, unverbindliche Hinweise, Lifetime-Käufe und StoreKit-Wiederherstellung."
 ---
 
-## Preis
-<ul>
-<li>Full Access ist ein einmaliger StoreKit-Kauf, der im Kauffenster des App Store angezeigt wird.</li>
-<li>Kein Abonnement und keine wiederkehrenden Kosten.</li>
-<li>Apple zeigt vor dem Kauf den aktuellen lokalen Preis an.</li>
-<li>Es gibt kein serverseitiges Konto. Die Freischaltung ist an die StoreKit-Transaktion Ihrer Apple ID gebunden.</li>
-</ul>
+Health.md erlaubt 10 abgeschlossene Exportaktionen, bevor Full Access erforderlich ist. Eine Aktion kann mehrere Tage und Formate schreiben. Manuelle, geplante, Shortcut- und direkte Exporte teilen sich den Zähler, wenn sie abrechnungspflichtig sind.
 
-## Was Full Access freischaltet
-<ul>
-<li>Unbegrenzte Exporte.</li>
-<li>Geplante Hintergrundexporte.</li>
-<li>Workflows mit Mac-Ziel.</li>
-<li>Intents für Kurzbefehle.</li>
-</ul>
+## Wann erscheint ein Angebot?
 
-## Früheren Kauf wiederherstellen
-<p>Tippen Sie auf der Paywall auf <em>Kauf wiederherstellen</em>. Die App fragt StoreKit nach früheren Käufen ab, die mit der angemeldeten Apple ID verknüpft sind. Verwenden Sie diese Funktion nach einer Neuinstallation der App oder beim Wechsel auf ein neues Gerät.</p>
+- Die Ersteinrichtung enthält keine Paywall.
+- Nach der ersten echten Vorschau kann einmalig ein wegklickbares Angebot erscheinen.
+- Nach dem 3. und 7. kostenlosen Export kann ein Hinweis erscheinen.
+- Nach 10 Aktionen wird der nächste abrechnungspflichtige Export blockiert.
 
-## Erstattungen &amp; Support
-<p>Erstattungen werden über Apple abgewickelt. Stellen Sie unter <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a> einen Antrag. Für Unterstützung zur App schreiben Sie an <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>.</p>
+Das Schließen früher Hinweise verbraucht keinen Export.
 
-## Verwandte Themen
+## Lifetime-Optionen
 
-<div class="related">
-  <a href="/de/docs/onboarding/"><span>Einrichtung</span>Einrichtung – dort erscheint der Schritt zur Freischaltung erstmals.</a>
-  <a href="/de/docs/export/"><span>Nutzung</span>Export – erfahren Sie, was unbegrenzte Exporte ermöglichen.</a>
-</div>
+StoreKit 2 bietet einmalige Käufe ohne Abo: **Individual Lifetime**, **Family Lifetime** und ein Familien-Upgrade für berechtigte Besitzer. Der lokalisierte Preis im Apple-Kaufdialog ist maßgeblich. Family Lifetime hängt von Apples Kauffreigabe ab.
+
+**Kauf wiederherstellen** aktualisiert die Transaktionen der Apple-ID. Prüfe für Familie Apple-ID, Kauffreigabe und die Sichtbarkeit von Health.md im Kaufverlauf.
+
+| Problem | Maßnahme |
+|---|---|
+| Preis fehlt | Netzwerk und App Store prüfen und Angebot neu öffnen. |
+| Angebot vor Aktion 10 | Unverbindlicher Hinweis, nicht die feste Sperre. |
+| Zeitplan pausiert | Freischalten oder wiederherstellen und normal fortsetzen. |
+
+<div class="related"><a href="/de/docs/onboarding/"><span>Start</span>Fünfstufige Einrichtung.</a><a href="/de/docs/scheduling/"><span>Automatisierung</span>Gemeinsames Kontingent.</a></div>

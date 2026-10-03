@@ -47,7 +47,7 @@ Drive cannot atomically commit a multi-file export. Health.md preflights the bun
 
 Disconnect removes local Google authority, credentials, account/folder binding, and the ability to schedule future Drive writes. It does **not** delete files already in Google Drive. Users delete or retain those files with Google Drive controls, subject to Shared Drive policy.
 
-Shared Setup carries portable output settings only. It excludes account identity, folder IDs and names, OAuth credentials, resource keys, remote object mappings, schedules' destination authority, journals, and upload sessions. An imported schedule remains disabled until the recipient selects a local destination.
+Shared Setup v2 carries portable output settings and inert `cloud` destination intent only. It excludes local Drive destination references, account identity, folder IDs and names, OAuth credentials, resource keys, remote object mappings, schedules' destination authority, journals, and upload sessions. Imported profiles remain blocked and schedules disabled. Folder or endpoint selection cannot grant cloud authority; imported cloud execution awaits separately qualified local cloud rebinding. Apply and Undo use the authoritative local profile store without mutating destination bindings, credentials, or Drive files.
 
 CLI, direct-device, and MCP flows never receive Google credentials or folder authority and never upload to Drive as a side effect. They may use a profile's output settings only when the caller explicitly chooses and validates a desktop destination.
 

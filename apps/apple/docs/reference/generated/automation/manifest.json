@@ -97,9 +97,9 @@
       "sha256" : "db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b"
     },
     {
-      "bytes" : 27662,
+      "bytes" : 27691,
       "path" : "mac-export-job.json",
-      "sha256" : "3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a"
+      "sha256" : "eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1"
     },
     {
       "bytes" : 1034,
@@ -112,14 +112,14 @@
       "sha256" : "b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b"
     },
     {
-      "bytes" : 127872,
+      "bytes" : 128225,
       "path" : "message-fields.md",
-      "sha256" : "74aa2afeb7be8387258aa28712fa5e9315d1144c2e394b03610a017097ec67db"
+      "sha256" : "ebd628b630e5965867deb3ed3037c0041ebcf1b735c05e8e5b43d31af03d773d"
     },
     {
-      "bytes" : 1553,
+      "bytes" : 1635,
       "path" : "peer-capabilities.json",
-      "sha256" : "5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023"
+      "sha256" : "05dc5c44551072f0b90af5b076271afb81de30f153ee6767430a8a54b2127f37"
     },
     {
       "bytes" : 3240,

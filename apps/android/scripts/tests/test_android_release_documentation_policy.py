@@ -7,7 +7,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 ANDROID = ROOT / "apps/android"
-DOCS = sorted(ANDROID.rglob("*.md")) + [
+# Vendored third-party gems (vendor/bundle) are dependencies, not release
+# documentation; their READMEs legitimately describe fastlane mutation commands.
+DOCS = sorted(
+    path
+    for path in ANDROID.rglob("*.md")
+    if ANDROID / "vendor" not in path.parents
+) + [
     ROOT / ".github/workflows/README.md",
     ROOT / "docs/migration/cutover-audit.md",
 ]
@@ -67,7 +73,7 @@ class AndroidReleaseDocumentationPolicyTest(unittest.TestCase):
         self.assertEqual(
             [],
             failures,
-            "direct Play mutation guidance bypasses the paired protected release path:\n"
+            "direct Play mutation guidance bypasses the protected release path:\n"
             + "\n".join(failures),
         )
 
@@ -85,7 +91,7 @@ class AndroidReleaseDocumentationPolicyTest(unittest.TestCase):
         self.assertEqual([], documentation_mutations("Run `gplay validate listing` only."))
         self.assertEqual([], documentation_mutations(ALLOWED_FASTLANE_COMMAND))
 
-    def test_operator_documents_name_the_paired_protected_tracks_and_workflows(self) -> None:
+    def test_operator_documents_name_the_phone_only_protected_workflows(self) -> None:
         for relative in (
             "apps/android/README.md",
             "apps/android/PLAY_STORE_COMMANDS.md",
@@ -96,13 +102,16 @@ class AndroidReleaseDocumentationPolicyTest(unittest.TestCase):
         ):
             text = (ROOT / relative).read_text()
             with self.subTest(document=relative):
-                self.assertIn("qa", text)
-                self.assertIn("wear:qa", text)
+                self.assertIn("phone", text.lower())
+                self.assertIn("defer", text.lower())
                 self.assertIn("production", text)
-                self.assertIn("wear:production", text)
                 self.assertIn("android-release.yml", text)
-                self.assertIn("android-wear-screenshots.yml", text)
                 self.assertIn("android-promote-production.yml", text)
+
+        commands = (ANDROID / "PLAY_STORE_COMMANDS.md").read_text()
+        self.assertIn("`internal`", commands)
+        self.assertNotIn("`wear:internal`", commands)
+        self.assertNotIn("`wear:production`", commands)
 
     def test_docs_do_not_advertise_local_screenshot_mutation(self) -> None:
         failures = [

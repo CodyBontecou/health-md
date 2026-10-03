@@ -3,6 +3,193 @@ import XCTest
 @testable import HealthMd
 
 final class GoogleDriveFoundationTests: XCTestCase {
+    @MainActor
+    func testConnectRejectsProtectedConsentBeforeStartingOAuth() async throws {
+        let authorizer = BindingTestAuthorizer()
+        let manager = GoogleDriveConnectionManager(authorizer: authorizer)
+        do {
+            _ = try await manager.connect(commitAllowed: { false })
+            XCTFail("Protected consent must be rejected")
+        } catch is CancellationError {} catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertEqual(authorizer.calls, 0)
+    }
+
+    @MainActor
+    func testProtectionAndCancellationAtEveryAcquisitionBoundaryStopSubsequentCallsAndWrites() async throws {
+        for cancel in [false, true] {
+            for stage in ["oauth", "/token", "/drive/v3/about", "/drive/v3/files/folder"] {
+                for exactReauthorization in [false, true] {
+                    let suite = "DriveProtectedBinding.\(UUID().uuidString)"
+                    let defaults = BindingTestDefaults(suiteName: suite)!
+                    defer { defaults.removePersistentDomain(forName: suite) }
+                    let protection = ConfigurationProtectionManager(userDefaults: defaults)
+                    let started = expectation(description: "Async binding suspended at \(stage)")
+                    let gate = BindingTestGate(started: started)
+                    let authorizer = BindingTestAuthorizer(gate: stage == "oauth" ? gate : nil)
+                    let transport = BindingTestTransport(gate: gate, delayedPath: stage)
+                    let keychain = BindingTestKeychain()
+                    let credentials = GoogleDriveCredentialStore(keychain: keychain)
+                    let store = GoogleDriveDestinationStore(userDefaults: defaults)
+                    let existing = GoogleDriveDestination(
+                        credentialReferenceID: UUID(), accountPermissionID: "synthetic-permission",
+                        folderID: "folder", canAddChildren: true
+                    )
+                    if exactReauthorization {
+                        store.upsert(existing)
+                        try credentials.save(GoogleDriveTokenCredential(
+                            accessToken: "old-access", refreshToken: "old-refresh",
+                            expiresAt: .distantFuture, grantedScopes: [GoogleDriveConfiguration.driveFileScope]
+                        ), referenceID: existing.credentialReferenceID)
+                    }
+                    defaults.destinationWrites = 0
+                    keychain.writeCount = 0
+                    let credentialBefore = keychain.values
+                    let configuration = try XCTUnwrap(GoogleDriveConfiguration(
+                        clientID: "public.apps.googleusercontent.com",
+                        redirectURI: "com.googleusercontent.apps.public:/oauthredirect"
+                    ))
+                    let manager = GoogleDriveConnectionManager(
+                        configuration: configuration, destinationStore: store, credentialStore: credentials,
+                        tokenEndpoint: GoogleDriveTokenEndpoint(transport: transport),
+                        api: GoogleDriveAPIClient(transport: transport), authorizer: authorizer
+                    )
+                    var selectionWrites = 0
+                    let task = Task { @MainActor in
+                        do {
+                            _ = try await manager.connect(
+                                replacing: exactReauthorization ? existing.id : nil,
+                                commitAllowed: { protection.performConfigurationChange({}) }
+                            )
+                            selectionWrites += 1
+                            return false
+                        } catch is CancellationError { return true }
+                        catch { XCTFail("Unexpected error: \(error)"); return false }
+                    }
+                    await fulfillment(of: [started], timeout: 2)
+                    if cancel { task.cancel() } else { protection.setEnabled(true) }
+                    let before = defaults.dictionaryRepresentation() as NSDictionary
+                    await gate.resume()
+                    let rejected = await task.value
+                    let calls = await transport.calls
+                    XCTAssertTrue(rejected)
+                    XCTAssertEqual(calls["/token", default: 0], stage == "oauth" ? 0 : 1)
+                    XCTAssertEqual(calls["/drive/v3/about", default: 0], ["oauth", "/token"].contains(stage) ? 0 : 1)
+                    XCTAssertEqual(calls["/drive/v3/files/folder", default: 0], stage == "/drive/v3/files/folder" ? 1 : 0)
+                    XCTAssertEqual(keychain.writeCount, 0)
+                    XCTAssertEqual(keychain.values, credentialBefore)
+                    XCTAssertEqual(defaults.destinationWrites, 0)
+                    XCTAssertEqual(store.destinations.count, exactReauthorization ? 1 : 0)
+                    XCTAssertEqual(selectionWrites, 0)
+                    XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testDisconnectDenialBeforeTaskOrDuringCleanupAndRevocationPreservesLocalConfiguration() async throws {
+        for stage in ["entry", "cleanup", "/revoke"] {
+            for cancel in [false, true] {
+                let suite = "DriveProtectedDisconnect.\(UUID())"
+                let defaults = BindingTestDefaults(suiteName: suite)!
+                defer { defaults.removePersistentDomain(forName: suite) }
+                let protection = ConfigurationProtectionManager(userDefaults: defaults)
+                let store = GoogleDriveDestinationStore(userDefaults: defaults)
+                let destination = makeDestination()
+                store.upsert(destination)
+                let keychain = BindingTestKeychain()
+                let credentials = GoogleDriveCredentialStore(keychain: keychain)
+                try credentials.save(GoogleDriveTokenCredential(
+                    accessToken: "old-access", refreshToken: "old-refresh", expiresAt: .distantFuture,
+                    grantedScopes: [GoogleDriveConfiguration.driveFileScope]
+                ), referenceID: destination.credentialReferenceID)
+                let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+                let vault = LifecycleHarness.retain(VaultManager(
+                    defaults: SystemUserDefaults(defaults: defaults),
+                    bookmarkResolver: PathMappingBookmarkResolver(), identityProbe: FakeVaultFolderIdentityProbe()
+                ))
+                let coordinator = LifecycleHarness.retain(ExportProfileCoordinator(
+                    profileStore: ExportProfileStore(userDefaults: defaults),
+                    destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
+                    googleDriveDestinationStore: store,
+                    scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
+                    settings: settings, vaultManager: vault,
+                    apiExportSettings: APIExportSettings(userDefaults: defaults, keychain: keychain),
+                    initialTarget: .googleDrive
+                ))
+                let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+                _ = coordinator.profileStore.setGoogleDriveBinding(profileID: activeID, destinationID: destination.id)
+                let other = coordinator.profileStore.add(
+                    name: "Another Drive profile", settings: ExportSettingsSnapshot.from(settings),
+                    target: .googleDrive, googleDriveDestinationID: destination.id
+                )
+                for id in [activeID, other.id] {
+                    _ = coordinator.scheduledEntryStore.upsert(ScheduledExportEntry(profileID: id, isEnabled: true))
+                }
+                // Bootstrap applies published settings whose persistence runs on the next
+                // main-queue turn. Finish that admitted initialization before the no-write
+                // snapshot; otherwise its daily-note save can race an entry-denied task.
+                await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                    DispatchQueue.main.async { continuation.resume() }
+                }
+                // Entry denial intentionally never waits; only delayed stages register a wait.
+                let started = XCTestExpectation(description: "Disconnect suspended at \(stage)")
+                let gate = BindingTestGate(started: started)
+                let transport = BindingTestTransport(gate: gate, delayedPath: stage)
+                let manager = GoogleDriveConnectionManager(
+                    destinationStore: store, credentialStore: credentials,
+                    tokenEndpoint: GoogleDriveTokenEndpoint(transport: transport),
+                    cleanupForDisconnect: { _ in if stage == "cleanup" { await gate.pause() } }
+                )
+                var selection: UUID? = destination.id
+                // Models protection changing between button admission and Task execution.
+                if stage == "entry", !cancel { protection.setEnabled(true) }
+                keychain.writeCount = 0
+                defaults.destinationWrites = 0
+                let credentialsBefore = keychain.values
+                var before = (defaults.persistentDomain(forName: suite) ?? [:]) as NSDictionary
+                let task = Task { @MainActor in
+                    do {
+                        try await coordinator.disconnectGoogleDrive(
+                            destinationID: destination.id, manager: manager,
+                            commitAllowed: { protection.performConfigurationChange({}) }
+                        )
+                        try Task.checkCancellation()
+                        protection.performConfigurationChange { selection = nil }
+                        return false
+                    } catch is CancellationError { return true }
+                    catch { XCTFail("Unexpected disconnect error: \(error)"); return false }
+                }
+                if stage == "entry" {
+                    if cancel { task.cancel() }
+                } else {
+                    await fulfillment(of: [started], timeout: 2)
+                    if cancel { task.cancel() } else { protection.setEnabled(true) }
+                    before = (defaults.persistentDomain(forName: suite) ?? [:]) as NSDictionary
+                    await gate.resume()
+                }
+                let rejected = await task.value
+                let calls = await transport.calls
+                XCTAssertTrue(rejected)
+                XCTAssertEqual(calls["/revoke", default: 0], stage == "/revoke" ? 1 : 0)
+                XCTAssertEqual(keychain.removeCount, 0)
+                XCTAssertEqual(keychain.writeCount, 0)
+                XCTAssertEqual(keychain.values, credentialsBefore)
+                XCTAssertEqual(defaults.destinationWrites, 0)
+                XCTAssertEqual(store.destination(id: destination.id), destination)
+                XCTAssertEqual(selection, destination.id)
+                XCTAssertEqual(coordinator.profileStore.activeProfileID, activeID)
+                for id in [activeID, other.id] {
+                    XCTAssertEqual(coordinator.profileStore.profile(id: id)?.googleDriveDestinationID, destination.id)
+                    XCTAssertEqual(coordinator.scheduledEntryStore.entry(profileID: id)?.isEnabled, true)
+                }
+                // Compare this isolated suite's complete persisted bytes, not volatile global
+                // Apple/keyboard preferences inherited by dictionaryRepresentation().
+                XCTAssertEqual((defaults.persistentDomain(forName: suite) ?? [:]) as NSDictionary, before)
+            }
+        }
+    }
+
     func testConfigurationRequiresExplicitPublicClientValues() {
         XCTAssertNil(GoogleDriveConfiguration(clientID: nil, redirectURI: nil))
         XCTAssertNil(GoogleDriveConfiguration(clientID: "$(GOOGLE_DRIVE_IOS_CLIENT_ID)", redirectURI: "$(GOOGLE_DRIVE_REDIRECT_URI)"))
@@ -664,6 +851,80 @@ private actor ExactPostflightDriveAPI: GoogleDriveAPIClientProtocol {
             ]
         )
     }
+}
+
+private actor BindingTestGate {
+    let started: XCTestExpectation
+    var continuation: CheckedContinuation<Void, Never>?
+    init(started: XCTestExpectation) { self.started = started }
+    func pause() async {
+        await withCheckedContinuation { continuation in
+            self.continuation = continuation
+            started.fulfill()
+        }
+    }
+    func resume() { continuation?.resume(); continuation = nil }
+}
+
+@MainActor
+private final class BindingTestAuthorizer: GoogleDriveWebAuthorizing {
+    let gate: BindingTestGate?
+    var calls = 0
+    init(gate: BindingTestGate? = nil) { self.gate = gate }
+    func authorize(_ request: GoogleDriveAuthorizationRequest) async throws -> URL {
+        calls += 1
+        if let gate { await gate.pause() }
+        return URL(string: "com.googleusercontent.apps.public:/oauthredirect?state=\(request.state)&code=synthetic&picked_file_ids=folder")!
+    }
+}
+
+private actor BindingTestTransport: GoogleDriveHTTPTransport {
+    let gate: BindingTestGate?
+    let delayedPath: String
+    private(set) var calls: [String: Int] = [:]
+    init(gate: BindingTestGate?, delayedPath: String) {
+        self.gate = gate
+        self.delayedPath = delayedPath
+    }
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        calls[request.url!.path, default: 0] += 1
+        if request.url!.path == delayedPath, let gate { await gate.pause() }
+        let body: String
+        switch request.url!.path {
+        case "/token":
+            body = #"{"access_token":"synthetic","refresh_token":"synthetic-refresh","expires_in":3600,"scope":"https://www.googleapis.com/auth/drive.file"}"#
+        case "/drive/v3/about":
+            body = #"{"user":{"permissionId":"synthetic-permission"}}"#
+        case "/drive/v3/files/folder":
+            body = #"{"id":"folder","name":"Synthetic","mimeType":"application/vnd.google-apps.folder","capabilities":{"canAddChildren":true}}"#
+        case "/revoke":
+            body = ""
+        default: throw GoogleDriveError(.folderUnavailable)
+        }
+        return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+    }
+}
+
+private final class BindingTestDefaults: UserDefaults, @unchecked Sendable {
+    var destinationWrites = 0
+    override func set(_ value: Any?, forKey key: String) {
+        if key == "googleDrive.destinations.envelope" { destinationWrites += 1 }
+        super.set(value, forKey: key)
+    }
+}
+
+private final class BindingTestKeychain: KeychainStoring, @unchecked Sendable {
+    var values: [String: String] = [:]
+    var writeCount = 0
+    var removeCount = 0
+    func readInt(key: String) -> Int { 0 }
+    func writeInt(key: String, value: Int) { writeCount += 1 }
+    func readString(key: String) -> String? { values[key] }
+    func readStringOrThrow(key: String) throws -> String? { values[key] }
+    func writeString(key: String, value: String) { writeCount += 1; values[key] = value }
+    func writeStringOrThrow(key: String, value: String) throws { writeString(key: key, value: value) }
+    func remove(key: String) { removeCount += 1; values.removeValue(forKey: key) }
+    func removeOrThrow(key: String) throws { remove(key: key) }
 }
 
 private actor RecordingDriveTransport: GoogleDriveHTTPTransport {

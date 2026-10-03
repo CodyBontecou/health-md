@@ -165,6 +165,7 @@ final class GoogleDriveConnectionManager: ObservableObject {
     private let api: any GoogleDriveAPIClientProtocol
     private let authorizer: any GoogleDriveWebAuthorizing
     private let now: @Sendable () -> Date
+    private let cleanupForDisconnect: @Sendable (UUID) async throws -> Void
 
     init(
         configuration: GoogleDriveConfiguration? = .from(),
@@ -173,7 +174,11 @@ final class GoogleDriveConnectionManager: ObservableObject {
         tokenEndpoint: GoogleDriveTokenEndpoint = GoogleDriveTokenEndpoint(),
         api: any GoogleDriveAPIClientProtocol = GoogleDriveAPIClient(),
         authorizer: (any GoogleDriveWebAuthorizing)? = nil,
-        now: @escaping @Sendable () -> Date = Date.init
+        now: @escaping @Sendable () -> Date = Date.init,
+        cleanupForDisconnect: @escaping @Sendable (UUID) async throws -> Void = { destinationID in
+            let journalStore = try GoogleDriveJournalStore()
+            try await journalStore.cleanupForDisconnect(destinationID: destinationID)
+        }
     ) {
         self.configuration = configuration
         self.destinationStore = destinationStore ?? GoogleDriveDestinationStore()
@@ -182,6 +187,7 @@ final class GoogleDriveConnectionManager: ObservableObject {
         self.api = api
         self.authorizer = authorizer ?? ASWebGoogleDriveAuthorizer()
         self.now = now
+        self.cleanupForDisconnect = cleanupForDisconnect
         refreshReadiness()
     }
 
@@ -215,13 +221,23 @@ final class GoogleDriveConnectionManager: ObservableObject {
     /// Foreground connect/reconnect. ASWebAuthenticationSession performs authorization-code PKCE
     /// and the mobile Picker. The destination is saved only after about.get and exact folder
     /// capability validation succeed.
-    func connect(replacing destinationID: UUID? = nil) async throws -> GoogleDriveDestination {
+    func connect(
+        replacing destinationID: UUID? = nil,
+        commitAllowed: @MainActor () -> Bool = {
+            !UserDefaults.standard.bool(forKey: ConfigurationProtectionManager.storageKey)
+        }
+    ) async throws -> GoogleDriveDestination {
+        // Current admission, not the state at presentation of the disclosure.
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         guard let configuration else {
             readiness = .configurationMissing
             throw GoogleDriveError(.configurationMissing)
         }
         let authRequest = try GoogleDriveAuthorizationRequest.make(configuration: configuration)
         let callbackURL = try await authorizer.authorize(authRequest)
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         let callback = try GoogleDriveAuthorizationCallback.parse(
             url: callbackURL,
             expectedState: authRequest.state
@@ -231,12 +247,18 @@ final class GoogleDriveConnectionManager: ObservableObject {
             pkceVerifier: authRequest.pkce.verifier,
             configuration: configuration
         )
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         let permissionID = try await api.about(accessToken: credential.accessToken)
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         let folder = try await api.metadata(
             id: callback.selection.folderID,
             resourceKey: callback.selection.resourceKey,
             accessToken: credential.accessToken
         )
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         guard folder.mimeType == GoogleDriveFileMetadata.folderMIMEType,
               !folder.trashed,
               folder.canAddChildren == true,
@@ -267,6 +289,10 @@ final class GoogleDriveConnectionManager: ObservableObject {
             canAddChildren: true,
             lastValidatedAt: now()
         )
+        // No suspension between current protection admission and durable writes.
+        // This also gates exact reauthorization: policy grants no lock exception.
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         try credentialStore.save(credential, referenceID: credentialReferenceID)
         destinationStore.upsert(destination)
         readiness = .ready
@@ -334,17 +360,31 @@ final class GoogleDriveConnectionManager: ObservableObject {
         }
     }
 
-    /// Removes local authority regardless of revocation network outcome. Remote files are untouched.
-    func disconnect(destinationID: UUID) async throws {
+    /// Foreground configuration change. Remote files are untouched. Revocation is best effort,
+    /// but a revocation already issued cannot be rolled back if later local admission is denied.
+    func disconnect(
+        destinationID: UUID,
+        commitAllowed: @MainActor () -> Bool = {
+            !UserDefaults.standard.bool(forKey: ConfigurationProtectionManager.storageKey)
+        }
+    ) async throws {
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         destinationStore.reload()
         guard let destination = destinationStore.destination(id: destinationID) else { return }
         // Refuse to destroy the only credential capable of reconciling an ambiguous/partial
         // operation. Completed acknowledged journals and their protected spools are removed.
-        let journalStore = try GoogleDriveJournalStore()
-        try await journalStore.cleanupForDisconnect(destinationID: destinationID)
+        try await cleanupForDisconnect(destinationID)
+        // Journal/runtime cleanup is separate from configuration admission. Never start remote
+        // revocation, or remove durable local authority, based on admission before that await.
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         if let credential = try? credentialStore.credential(referenceID: destination.credentialReferenceID) {
             try? await tokenEndpoint.revoke(token: credential.refreshToken)
         }
+        // No suspension between current admission and the local authority/managed-object writes.
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         try credentialStore.remove(referenceID: destination.credentialReferenceID)
         destinationStore.remove(id: destinationID)
         try GoogleDriveManagedObjectStore().removeAll(destinationID: destinationID)

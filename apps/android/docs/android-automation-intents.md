@@ -16,10 +16,10 @@ com.healthmd.android/com.healthmd.automation.AutomationReceiver
 
 | Action | Extras | Behavior |
 |---|---|---|
-| `com.healthmd.android.action.EXPORT_YESTERDAY` | — | Exports yesterday. |
-| `com.healthmd.android.action.EXPORT_LAST_DAYS` | `com.healthmd.android.extra.DAYS` int | Exports the last N complete days ending yesterday. |
-| `com.healthmd.android.action.EXPORT_DATE` | `com.healthmd.android.extra.DATE` ISO date | Exports one date. Defaults to yesterday if omitted. |
-| `com.healthmd.android.action.EXPORT_RANGE` | `START_DATE`, `END_DATE` ISO dates | Exports an inclusive date range. |
+| `com.healthmd.android.action.EXPORT_YESTERDAY` | Optional `com.healthmd.android.extra.PROFILE` ID or name | Exports yesterday. |
+| `com.healthmd.android.action.EXPORT_LAST_DAYS` | `com.healthmd.android.extra.DAYS` int; optional `PROFILE` | Exports the last N complete days ending yesterday. |
+| `com.healthmd.android.action.EXPORT_DATE` | `com.healthmd.android.extra.DATE` ISO date; optional `PROFILE` | Exports one date. Defaults to yesterday if omitted. |
+| `com.healthmd.android.action.EXPORT_RANGE` | `START_DATE`, `END_DATE` ISO dates; optional `PROFILE` | Exports an inclusive date range. |
 | `com.healthmd.android.action.GET_LAST_STATUS` | — | Returns latest export-history status when called as an ordered broadcast. |
 
 ## Examples
@@ -32,7 +32,8 @@ adb shell am broadcast \
 adb shell am broadcast \
   -n com.healthmd.android/com.healthmd.automation.AutomationReceiver \
   -a com.healthmd.android.action.EXPORT_LAST_DAYS \
-  --ei com.healthmd.android.extra.DAYS 7
+  --ei com.healthmd.android.extra.DAYS 7 \
+  --es com.healthmd.android.extra.PROFILE "Weekly Archive"
 
 adb shell am broadcast \
   -n com.healthmd.android/com.healthmd.automation.AutomationReceiver \
@@ -43,6 +44,6 @@ adb shell am broadcast \
 
 ## Behavior parity
 
-Automation exports use `ExportOrchestrator`, current export settings, current folder, metric selection, side effects, paywall/free-export accounting, and export history. History entries use source `SHORTCUT`.
+Automation exports use current settings when no profiles exist. Once profiles exist, omitting `PROFILE` uses the active profile; an explicit value resolves first by stable profile ID and then by trimmed, case-insensitive name. An unknown explicit profile or an invalid frozen profile snapshot fails closed without exporting. Folder profiles adopt their saved folder for the run, while API profiles use their saved endpoint. History entries use source `SHORTCUT` and retain the resolved profile name plus a privacy-safe destination label.
 
 The launcher also includes static shortcuts for opening Export, Schedule, and History. Direct export shortcuts can be layered on top of the explicit broadcast API by Android automation tools.

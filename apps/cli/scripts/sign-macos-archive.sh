@@ -148,7 +148,7 @@ grep -F "identifier \"${healthmd_mcp_identifier}\"" "$work/mcp.requirement" >/de
 # fixed identity proves that the exact deployed service/account was read.
 credential_state="$work/credential-state"
 mkdir -m 700 "$credential_state"
-HEALTHMD_CLI_DATA_DIR="$credential_state" "$upgrade_old" --backend direct direct devices \
+HEALTHMD_CLI_DATA_DIR="$credential_state" "$upgrade_old" direct devices \
   > "$work/previous-devices.json"
 owner_id="$(python3 - "$credential_state/identity.json" <<'PY'
 import json, sys
@@ -176,7 +176,7 @@ security add-generic-password -U \
   -w "$(cat "$work/trust.json")" \
   -T "$upgrade_old" \
   "$keychain" >/dev/null
-HEALTHMD_CLI_DATA_DIR="$credential_state" "$healthmd" --backend direct direct devices \
+HEALTHMD_CLI_DATA_DIR="$credential_state" "$healthmd" direct devices \
   > "$work/upgraded-devices.json"
 python3 - "$work/upgraded-devices.json" <<'PY'
 import json, sys
@@ -194,9 +194,11 @@ security delete-generic-password \
   -s com.codybontecou.obsidianhealth.direct-cli-trust \
   "$keychain" >/dev/null
 
-# Repack the signed binaries. The notarized DMG below contains byte-identical copies, so Apple also
-# publishes tickets for the standalone binaries in this tarball. Apple does not support stapling a
-# ticket directly to a standalone executable or tar/ZIP archive.
+# Notarize the DMG built from the signed executables. Apple publishes Gatekeeper coverage for
+# the wrapped executables through this acceptance, but it does not support stapling a ticket to
+# a standalone executable, so spctl's execute assessment is not run on the bare binaries: their
+# notarization evidence is the accepted DMG record plus the stapled DMG carrying byte-identical
+# copies of the same executables this tar archive ships.
 root_name="$(basename "$root")"
 rm -f "$archive"
 COPYFILE_DISABLE=1 tar -cJf "$archive" -C "$unpacked" "$root_name"
@@ -225,7 +227,5 @@ PY
 xcrun stapler staple "$dmg"
 xcrun stapler validate "$dmg"
 spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
-spctl --assess --type execute --verbose=2 "$healthmd"
-spctl --assess --type execute --verbose=2 "$mcp"
 
 printf 'signed_archive=%s\nstapled_dmg=%s\n' "$archive" "$dmg"

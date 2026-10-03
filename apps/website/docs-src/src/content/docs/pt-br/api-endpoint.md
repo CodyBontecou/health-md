@@ -25,10 +25,10 @@ description: "Envie JSON selecionado do Apple Health diretamente do iPhone para 
 
 ## Estrutura do payload
 
-<p>O Health.md envia uma solicitação POST por ação de exportação. O corpo é um envelope <code>healthmd.api_export</code> com versionamento independente, que contém registros diários públicos <code>healthmd.health_data</code> do schema v7. O envelope de API v1 transporta os registros diários; a v2 também pode transportar sidecars de provedores sem alterar o schema dos registros diários.</p>
+<p>O Health.md envia uma solicitação POST por ação de exportação. O corpo é um envelope <code>healthmd.api_export</code> com versionamento independente, que contém registros diários públicos <code>healthmd.health_data</code> do schema v8. O envelope de API v1 transporta os registros diários; a v2 também pode transportar sidecars de provedores sem alterar o schema dos registros diários.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Objetos diários completos do schema v7 mantidos para o intervalo solicitado, incluindo registros completos e vazios cujo manifesto de consulta serve como evidência.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Objetos diários completos do schema v8 mantidos para o intervalo solicitado, incluindo registros completos e vazios cujo manifesto de consulta serve como evidência.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>Datas que apresentaram falha antes que um documento diário pudesse ser mantido.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p>A versão do schema diário em <code>records</code>. Ela avança independentemente da versão do envelope da API.</p></div>
 <div class="option"><strong>Sidecars de provedores</strong><p>Registros externos condicionais da v2, com regras próprias de schema e identidade, quando um provedor conectado está ativado.</p></div>

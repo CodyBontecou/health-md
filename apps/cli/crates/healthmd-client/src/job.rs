@@ -51,6 +51,15 @@ impl JobState {
     pub const fn is_terminal(self) -> bool {
         matches!(self, Self::Completed | Self::Failed | Self::Cancelled)
     }
+
+    /// Whether resuming this state can require a new authenticated source connection.
+    #[must_use]
+    pub const fn resume_requires_source(self) -> bool {
+        !matches!(
+            self,
+            Self::Completed | Self::Failed | Self::Cancelled | Self::CancellationPending
+        )
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -522,6 +531,16 @@ mod tests {
         assert!(store.cancellation_requested(id));
         store.clear_cancellation_request(id);
         assert!(!store.cancellation_requested(id));
+    }
+
+    #[test]
+    fn resume_preflight_is_needed_only_for_source_reachable_states() {
+        assert!(JobState::Paused.resume_requires_source());
+        assert!(JobState::AwaitingPeerAcknowledgement.resume_requires_source());
+        assert!(!JobState::Completed.resume_requires_source());
+        assert!(!JobState::Failed.resume_requires_source());
+        assert!(!JobState::Cancelled.resume_requires_source());
+        assert!(!JobState::CancellationPending.resume_requires_source());
     }
 
     #[test]

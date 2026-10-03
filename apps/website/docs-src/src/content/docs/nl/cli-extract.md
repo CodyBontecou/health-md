@@ -1,9 +1,11 @@
 ---
 title: "Canonieke gezondheidsgegevens extraheren"
-description: "Gebruik healthmd extract om geselecteerde Apple Health-meetwaarden op te halen en canonieke documenten volgens schema v7, bronrecords, JSON Pointer-projecties of JSONL met expliciete ontvangstbewijzen uit te voeren."
+description: "Gebruik healthmd extract om geselecteerde Apple Health-meetwaarden op te halen en canonieke documenten volgens schema v8, bronrecords, JSON Pointer-projecties of JSONL met expliciete ontvangstbewijzen uit te voeren."
 ---
 
-`healthmd extract` is de opdracht voor brongegevens in scripts en agents. De opdracht laat de iPhone alleen de geselecteerde meetwaarden en het gekozen detailniveau ophalen, valideert de persistente overdracht, verwijdert de transport-envelop en voert canonieke documenten volgens `healthmd.health_data` v7 of duidelijk gelabelde projecties uit.
+`healthmd extract` is de opdracht voor brongegevens in scripts en agents. De opdracht laat de iPhone alleen de geselecteerde meetwaarden en het gekozen detailniveau ophalen, valideert de persistente overdracht, verwijdert de transport-envelop en voert canonieke documenten volgens `healthmd.health_data` v8 of duidelijk gelabelde projecties uit.
+
+Canonieke extractie is een iPhone-mogelijkheid, ondersteund door het directe iOS v1-protocol. Directe Android-bronnen leveren in plaats daarvan providerspecifieke Health Connect-snapshots via de [raw-export](/nl/docs/cli-direct/).
 
 Gebruik extractie als je de oorspronkelijke Health.md-gegevens nodig hebt. Gebruik [getypeerde queries](/nl/docs/agent-queries/) voor sessies, vergelijkingen, afstemming van work-outs, dekking of bewijsbundels.
 
@@ -216,18 +218,18 @@ De flag wijzigt de uitvoer en afsluitcode. Diagnostiek blijft behouden en gedeel
 
 ## Backends van de Mac-app en rechtstreekse verbinding
 
-De opdracht werkt via beide backends:
+De zelfstandige CLI voert de extractie rechtstreeks uit op de gekoppelde iPhone. Het Swift-hulpprogramma in Health.md voor Mac bereikt dezelfde extractie standaard via de loopback van de Mac-app, of rechtstreeks met zijn `--backend direct`-voorvoegsel:
 
 ```bash
-# Bundled helper default: Mac app loopback and connected iPhone
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Direct-capable helper: bypass the Mac app
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-Beide routes gebruiken hetzelfde openbare dagschema en dezelfde strikte validatie. Transport, koppeling, opslag en taakrecords verschillen.
+Beide routes gebruiken hetzelfde openbare dagschema en dezelfde strikte validatie. Transport, koppeling, opslag en taakrecords verschillen. Beide routes vereisen een iPhone-bron; directe Android-bronnen implementeren geen canonieke extractie.
 
 ## Omvangrijke geschiedenis
 
@@ -253,9 +255,9 @@ Gebruik JSONL of een beperktere selectie voor een groot corpus. De beschikbare s
 ## Gerelateerde documentatie
 
 <div class="related">
-  <a href="/nl/docs/cli/"><span>CLI</span>Health.md-CLI: configuratie, backendselectie, opdrachtoverzicht en uitvoerregels.</a>
+  <a href="/nl/docs/cli/"><span>CLI</span>Health.md-CLI: installeer de zelfstandige client en bekijk het opdrachtoverzicht.</a>
   <a href="/nl/docs/agent-queries/"><span>Afgeleide weergaven</span>Recepten voor getypeerde queries: meetwaardereeksen, slaap, training, work-outs, vergelijkingen en bewijs.</a>
-  <a href="/nl/docs/reference/daily-records/"><span>Schema</span>Dagrecords: het volledige contract voor dagdocumenten volgens schema v7.</a>
+  <a href="/nl/docs/reference/daily-records/"><span>Schema</span>Dagrecords: het volledige contract voor dagdocumenten volgens schema v8.</a>
   <a href="/nl/docs/reference/canonical-healthkit-records/"><span>Bronarchief</span>Canonieke Apple Health-records: identiteit, herkomst, relaties en payloads.</a>
   <a href="/nl/docs/reference/api-and-cli/"><span>Protocol</span>API- en CLI-referentie: extractieverzoeken, ontvangstbewijzen, strikte validatie en afsluitgedrag.</a>
 </div>

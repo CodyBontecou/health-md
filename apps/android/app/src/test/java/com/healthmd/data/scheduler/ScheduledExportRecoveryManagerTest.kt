@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEngineMode
@@ -18,6 +19,7 @@ import com.healthmd.rawexport.ExportMode
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.PendingScheduledExportRequest
+import com.healthmd.export.FakeBillingRepository
 import com.healthmd.export.FakeExportHistoryRepository
 import com.healthmd.export.FakeExportRepository
 import com.healthmd.export.FakeHealthRepository
@@ -453,6 +455,7 @@ class ScheduledExportRecoveryManagerTest {
                 googleDriveDestinationId: String?,
                 googleDriveProfileId: String?,
                 googleDriveOperationId: String?,
+                allowInteractiveRouteConsent: Boolean,
             ) = ExportResult(
                 successCount = 1,
                 totalCount = 2,
@@ -466,6 +469,7 @@ class ScheduledExportRecoveryManagerTest {
                 startDate: LocalDate,
                 endDate: LocalDate,
                 settings: ExportSettings,
+                allowInteractiveRouteConsent: Boolean,
             ): ExportPreview = error("Preview is not used by scheduled recovery")
         }
         val manager = manager(
@@ -506,5 +510,7 @@ class ScheduledExportRecoveryManagerTest {
         googleDriveDestinationRunner = mockk(relaxed = true),
         googleDriveSelectionStore = mockk(relaxed = true),
         googleDriveDestinationStore = mockk(relaxed = true),
+        entitlementRepository = FakeBillingRepository(),
+        distributionPolicy = DistributionPolicy.play(),
     )
 }

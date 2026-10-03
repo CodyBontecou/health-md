@@ -1,6 +1,6 @@
 ---
 title: "Programación"
-description: "Ejecuta exportaciones automáticamente, a diario o semanalmente, a la hora que elijas. Usa tareas en segundo plano de iOS y una notificación local programada como respaldo cuando el dispositivo está bloqueado."
+description: "Ejecuta exportaciones automáticamente con cadencias diarias, semanales o de calendario personalizadas. iOS usa tareas en segundo plano y una notificación local de recuperación cuando los datos protegidos no están disponibles."
 ---
 
 ## La pestaña Programar
@@ -15,12 +15,12 @@ description: "Ejecuta exportaciones automáticamente, a diario o semanalmente, a
 ## Ajustes de programación
 <div class="options">
 <div class="option"><strong>Activar exportaciones programadas</strong><p>Interruptor principal en la parte superior. Cuando está desactivado, no hay ejecuciones en segundo plano ni notificaciones.</p></div>
-<div class="option"><strong>Frecuencia</strong><p>Diaria, semanal o mensual. Las exportaciones diarias cubren ayer; las semanales cubren los 7 días anteriores; las mensuales cubren los 30 anteriores.</p></div>
+<div class="option"><strong>Frecuencia</strong><p>Diaria, semanal o personalizada. Las programaciones personalizadas se repiten cada N días, semanas o meses desde una fecha inicial. El intervalo retrospectivo determina cuántos días completos incluye cada ejecución.</p></div>
 <div class="option"><strong>Hora</strong><p>Hora y minuto. iOS lo trata como una indicación, no como una garantía; consulta el aviso de limitaciones más abajo.</p></div>
 </div>
 
 ## Historial de exportaciones
-<p>La lista en la parte inferior de la pantalla Programar registra cada ejecución programada con su resultado. Toca una fila para ver los detalles. Las ejecuciones fallidas incluyen un botón <em>Reintentar</em> que vuelve a ejecutar ese intervalo de fechas específico.</p>
+<p>La lista en la parte inferior de la pantalla Programar registra cada ejecución programada con su resultado. Toca una fila para ver los detalles. Las ejecuciones fallidas incluyen un botón <em>Reintentar</em> que vuelve a ejecutar ese intervalo con los ajustes y el destino configurados actualmente, y luego registra una nueva fila del historial.</p>
 
 ## Cómo funciona realmente la programación en iOS
 <div class="doc-diagram">
@@ -45,9 +45,19 @@ description: "Ejecuta exportaciones automáticamente, a diario o semanalmente, a
 ## Control programático
 <p>Puedes activar o desactivar la programación desde Shortcuts con el intent <em>Turn Scheduled Export On or Off</em>. <a href="/es/docs/shortcuts/">Consulta Shortcuts</a> para ver ejemplos.</p>
 
+## Programaciones por perfil y cancelación
+
+- Cada perfil conserva su propia programación, incluida una cadencia personalizada; cambiar el perfil activo no redirige la programación de otro.
+- Aparece un aviso de colisión cuando varios perfiles podrían escribir las mismas rutas generadas en el mismo destino. Revísalo antes de activar programaciones que compitan; Health.md no cambia ningún perfil en silencio.
+- Detener o Cancelar solo finaliza el intento actual. Las fechas terminadas se conservan, las pendientes pueden reintentarse y la programación sigue activada.
+- Cada fila del historial permanece vinculada al perfil de la ejecución y a la etiqueta respetuosa con la privacidad del destino real.
+
+Administra los ajustes congelados y el destino de cada perfil en [Perfiles de exportación](/es/docs/export-profiles/).
+
 ## Contenido relacionado
 
 <div class="related">
+  <a href="/es/docs/export-profiles/"><span>Perfiles</span>Administra programaciones y destinos independientes.</a>
   <a href="/es/docs/export/"><span>Manual</span>Exportar: para intervalos de fechas puntuales.</a>
   <a href="/es/docs/shortcuts/"><span>Automatizar</span>Shortcuts: alterna la programación desde automatizaciones.</a>
   <a href="/es/docs/sync/"><span>Entre dispositivos</span>Sincronización con Mac: programa también en el Mac.</a>

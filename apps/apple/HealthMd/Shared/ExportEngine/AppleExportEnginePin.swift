@@ -22,6 +22,9 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
     private static let supportedSemanticProfileRevision: UInt32 = 1
+    /// Range grammar capability was introduced by core API 4 and semantic profile revision 2.
+    private static let rangeCoreAPIVersion: UInt32 = 4
+    static let rangeSemanticProfileRevision: UInt32 = 2
     private static let supportedRenderProfileRevision: UInt32 = 2
 
     let engine: ExportEngineMode
@@ -146,6 +149,19 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
               buildInfo.coreSourceRevision.utf8.count <= 256 else {
             throw CompatibilityError.incompatibleCoreSource
         }
+    }
+
+    func validateRangeCompatibility(buildInfo: CoreBuildInfo) throws {
+        guard coreAPIVersion >= Self.rangeCoreAPIVersion,
+              buildInfo.coreApiVersion >= Self.rangeCoreAPIVersion,
+              semanticInputVersion == HealthMdSemanticInputAdapter.semanticInputVersion,
+              buildInfo.semanticInputVersion == semanticInputVersion else {
+            throw CompatibilityError.incompatibleSemanticProfile
+        }
+    }
+
+    func isRangeCompatible(buildInfo: CoreBuildInfo) -> Bool {
+        (try? validateRangeCompatibility(buildInfo: buildInfo)) != nil
     }
 
     func isCompatible(

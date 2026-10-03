@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import unquote
@@ -11,6 +12,24 @@ from urllib.parse import unquote
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+
+
+def monorepo_root() -> Path | None:
+    """Git work-tree root, or None when not running inside a repository."""
+    try:
+        output = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return Path(output).resolve() if output else None
+
+
+REPOSITORY = monorepo_root()
 
 
 def destination(raw: str) -> str:
@@ -39,14 +58,30 @@ def main() -> int:
 
             resolved = (document.parent / relative).resolve()
             checked += 1
+            line = text.count("\n", 0, match.start()) + 1
             try:
                 resolved.relative_to(ROOT)
             except ValueError:
+                # Component docs may intentionally cross-reference monorepo
+                # files outside apps/apple (for example the repository-root
+                # Apple/Android feature-parity inventory). Accept the link only
+                # when it stays inside the git work tree and the target exists.
+                if REPOSITORY is not None:
+                    try:
+                        resolved.relative_to(REPOSITORY)
+                    except ValueError:
+                        pass
+                    else:
+                        if resolved.exists():
+                            continue
+                        errors.append(
+                            f"{document.relative_to(ROOT)}:{line}: missing local target {target}"
+                        )
+                        continue
                 errors.append(f"{document.relative_to(ROOT)}: link escapes repository: {target}")
                 continue
 
             if not resolved.exists():
-                line = text.count("\n", 0, match.start()) + 1
                 errors.append(
                     f"{document.relative_to(ROOT)}:{line}: missing local target {target}"
                 )

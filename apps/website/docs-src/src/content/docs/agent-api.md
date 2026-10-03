@@ -28,7 +28,7 @@ The API binds to loopback on port `17645`. It accepts only validated IPv4 or IPv
 
 Former `/v1/agent/profiles` and `/v1/agent/activity/query` routes return `410 removed_endpoint`.
 
-The direct iPhone backend does not host these HTTP routes. The standalone `healthmd` command uses it for canonical extraction and export, while `healthmd mcp serve` implements fresh typed query, evidence, metric catalog, readiness, visualization, and durable export tools directly over iPhone query protocol v3. Pairing and MCP use the same executable identity; refresh and the encrypted Mac context remain specific to this HTTP API.
+Direct iPhone access does not host these HTTP routes. The standalone `healthmd` command uses direct access for canonical extraction and export. `healthmd mcp serve` uses iPhone query protocol v3 directly. It provides fresh typed queries, evidence, the metric catalog, readiness, visualizations, and durable export tools. Pairing and MCP use the same executable identity. Refresh and the encrypted Mac context remain specific to this HTTP API.
 
 ## Prefer the CLI adapter
 
@@ -202,10 +202,10 @@ The Mac validates the scope against current catalogs and turns it into an immuta
 
 Refresh uses a dedicated `encrypted_context` transfer mode:
 
-- it writes no export files;
-- it does not consume file-export quota;
-- it transfers bounded resumable partitions;
-- the Mac commits each deterministic compact owner day before acknowledgement;
+- it writes no export files.
+- it does not consume file-export quota.
+- it transfers bounded resumable partitions.
+- the Mac commits each deterministic compact owner day before acknowledgement.
 - the exact request persists with the durable job.
 
 Provider-only scope does not require an Apple Health read. Provider-native history remains provider-native evidence and is not converted into synthetic Apple Health metrics.
@@ -272,16 +272,16 @@ Coverage includes requested and available ranges, days considered, days with val
 
 Errors use `healthmd.query_error` v1 with a stable code, message, retryability, and typed details. Distinct errors cover:
 
-- invalid page controls;
-- malformed or tampered cursors;
-- cursor and query mismatch;
-- stale corpus revision;
-- invalid date range;
-- metric or source validation;
-- unit or aggregation mismatch;
-- unsupported operation;
-- evidence scope violation;
-- iPhone or encrypted-store readiness;
+- invalid page controls.
+- malformed or tampered cursors.
+- cursor and query mismatch.
+- stale corpus revision.
+- invalid date range.
+- metric or source validation.
+- unit or aggregation mismatch.
+- unsupported operation.
+- evidence scope violation.
+- iPhone or encrypted-store readiness.
 - durable job state.
 
 Do not retry a refresh blindly after an unknown outcome. Inspect its job state first.
@@ -292,6 +292,6 @@ Do not retry a refresh blindly after an unknown outcome. Inspect its job state f
   <a href="/docs/agents/"><span>Overview</span>Local agents and health context: setup, encrypted storage, scope, and reporting rules.</a>
   <a href="/docs/agent-queries/"><span>High level</span>Typed query cookbook: validated commands for common metric, sleep, workout, and evidence questions.</a>
   <a href="/docs/mcp/"><span>Tools</span>Local MCP server: stdio configuration, typed tools, paging, and sandbox limits.</a>
-  <a href="/docs/reference/api-and-cli/"><span>Reference</span>API and CLI contract: export, extraction, query, direct backend, and operational limits.</a>
+  <a href="/docs/reference/api-and-cli/"><span>Reference</span>API and CLI contract: export, extraction, query, direct access, and operational limits.</a>
   <a href="/docs/reference/evidence-packets/"><span>Data contracts</span>Compact queries and evidence packets: types, cursors, operations, and deterministic packet IDs.</a>
 </div>

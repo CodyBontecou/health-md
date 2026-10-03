@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import os
 
 /// Connects export profiles to the live export surface.
 ///
@@ -54,7 +55,14 @@ final class ExportProfileCoordinator: ObservableObject {
     private let vaultManager: VaultManager
     private let apiExportSettings: APIExportSettings
     private let now: () -> Date
+    private let sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate
+    private let sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction
     private var flushCancellable: AnyCancellable?
+
+    private static let logger = Logger(
+        subsystem: "com.codybontecou.healthmd",
+        category: "ExportProfileCoordinator"
+    )
 
     /// Debounce window for flushing edits back into the active profile.
     /// Profile switches and teardown call `flushEdits()` immediately.
@@ -69,7 +77,9 @@ final class ExportProfileCoordinator: ObservableObject {
         vaultManager: VaultManager,
         apiExportSettings: APIExportSettings,
         initialTarget: ExportTargetSelection,
-        now: @escaping () -> Date = { Date() }
+        now: @escaping () -> Date = { Date() },
+        sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate? = nil,
+        sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction? = nil
     ) {
         self.profileStore = profileStore
         self.destinationStore = destinationStore
@@ -79,10 +89,15 @@ final class ExportProfileCoordinator: ObservableObject {
         self.vaultManager = vaultManager
         self.apiExportSettings = apiExportSettings
         self.now = now
+        self.sharedSetupV2ExecutionGate = sharedSetupV2ExecutionGate
+            ?? SharedSetupV2ExecutionGate()
+        self.sharedSetupV2ProfileTransaction = sharedSetupV2ProfileTransaction
+            ?? SharedSetupV2ProfileTransaction()
 
         bootstrapIfNeeded(initialTarget: initialTarget)
 
-        guard let activeID = profileStore.activeProfileID ?? profileStore.profiles.first?.id else {
+        guard profileStore.unknownProfileRecordCount == 0 || profileStore.activeProfileID != nil,
+              let activeID = profileStore.activeProfileID ?? profileStore.profiles.first?.id else {
             return
         }
         activate(profileID: activeID, adoptVault: true)
@@ -94,8 +109,7 @@ final class ExportProfileCoordinator: ObservableObject {
     /// binding the user's current vault folder and API endpoint so behavior
     /// is identical to the pre-profile single-destination state.
     private func bootstrapIfNeeded(initialTarget: ExportTargetSelection) {
-        guard profileStore.profiles.isEmpty else { return }
-        guard profileStore.unknownProfileRecordCount == 0 else {
+        if profileStore.unknownProfileRecordCount > 0, profileStore.activeProfileID == nil {
             // Unknown/corrupt profile authority must never be replaced by a synthesized Default or
             // permit a legacy schedule to run live settings under another destination.
             var legacy = ExportSchedule.load()
@@ -105,13 +119,15 @@ final class ExportProfileCoordinator: ObservableObject {
             }
             return
         }
+        guard profileStore.profiles.isEmpty, profileStore.unknownProfileRecordCount == 0 else { return }
 
         var folderVaultID: UUID?
         if let persisted = vaultManager.persistedVaultSnapshot() {
             let destination = destinationStore.upsertVault(
                 name: persisted.displayName,
                 standardizedPath: persisted.standardizedPath,
-                bookmarkData: persisted.bookmarkData
+                bookmarkData: persisted.bookmarkData,
+                identity: persisted.identity
             )
             folderVaultID = destination.id
         }
@@ -158,15 +174,21 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Switches the active profile: flushes outgoing edits, applies the new
     /// snapshot to the shared settings object, adopts its destination
     /// bindings, and publishes its target.
-    func activate(profileID: UUID) {
+    @discardableResult
+    func activate(profileID: UUID) -> Bool {
         activate(profileID: profileID, adoptVault: true)
     }
 
-    private func activate(profileID: UUID, adoptVault: Bool) {
-        flushEdits()
-
-        guard profileStore.activate(id: profileID),
-              let profile = profileStore.profile(id: profileID) else { return }
+    @discardableResult
+    private func activate(
+        profileID: UUID,
+        adoptVault: Bool,
+        flushOutgoing: Bool = true
+    ) -> Bool {
+        if flushOutgoing { flushEdits() }
+        guard !sharedSetupV2ExecutionGate.isExecutionBlocked(profileID: profileID),
+              profileStore.activate(id: profileID),
+              let profile = profileStore.profile(id: profileID) else { return false }
 
         settings.apply(snapshot: profile.settings)
         activeProfileName = profile.name
@@ -177,15 +199,24 @@ final class ExportProfileCoordinator: ObservableObject {
             adoptVaultDestination(for: profile)
         }
         adoptAPIEndpoint(for: profile)
+        return true
+    }
+
+    func isProfileExecutionBlocked(_ profileID: UUID) -> Bool {
+        sharedSetupV2ExecutionGate.isExecutionBlocked(profileID: profileID)
+    }
+
+    var isActiveProfileExecutionBlocked: Bool {
+        guard let activeID = profileStore.activeProfileID else {
+            return profileStore.hasProfiles
+        }
+        return isProfileExecutionBlocked(activeID)
     }
 
     private func adoptVaultDestination(for profile: ExportProfile) {
-        guard let bindingID = profile.folderVaultID,
-              let destination = destinationStore.vault(id: bindingID) else { return }
         vaultManager.adoptPersistedVault(
-            bookmarkData: destination.bookmarkData,
-            standardizedPath: destination.standardizedPath,
-            displayName: destination.name
+            destinationID: profile.folderVaultID,
+            from: destinationStore
         )
     }
 
@@ -212,7 +243,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// authority and timezone provenance.
     func flushEdits() {
         flushCancellable = nil
-        guard let activeID = profileStore.activeProfileID else { return }
+        guard let activeID = profileStore.activeProfileID,
+              !isProfileExecutionBlocked(activeID) else { return }
         profileStore.updateSettings(
             id: activeID,
             settings: ExportSettingsSnapshot.from(settings)
@@ -224,17 +256,27 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Called by containers when the user changes the export target control
     /// while a profile is active.
     func userSelectedTarget(_ target: ExportTargetSelection) {
-        guard let activeID = profileStore.activeProfileID else { return }
+        guard let activeID = profileStore.activeProfileID,
+              !isProfileExecutionBlocked(activeID) else { return }
         profileStore.updateTarget(id: activeID, target: target)
         activeTarget = target
     }
 
     // MARK: - Destination changes
 
-    /// Called after the user selects a new folder through the standard folder
-    /// picker (`VaultManager.setVaultFolder`). Persists the newly saved vault
-    /// as a profile-bound destination. Re-selecting a folder already stored
-    /// reuses its destination row.
+    /// Commits a standard folder-picker result into both the live vault state
+    /// and the active profile destination. Binding occurs only after bookmark
+    /// and trusted-selection persistence succeeds, so a denied replacement
+    /// cannot displace the profile's prior valid folder.
+    @discardableResult
+    func selectVaultFolder(_ url: URL) -> Bool {
+        guard vaultManager.setVaultFolder(url) else { return false }
+        vaultFolderWasSelected()
+        return true
+    }
+
+    /// Persists the live vault as the active profile's bound destination.
+    /// Re-selecting a folder already stored reuses its destination row.
     func vaultFolderWasSelected() {
         guard let activeID = profileStore.activeProfileID,
               let persisted = vaultManager.persistedVaultSnapshot() else { return }
@@ -242,9 +284,101 @@ final class ExportProfileCoordinator: ObservableObject {
         let destination = destinationStore.upsertVault(
             name: persisted.displayName,
             standardizedPath: persisted.standardizedPath,
-            bookmarkData: persisted.bookmarkData
+            bookmarkData: persisted.bookmarkData,
+            identity: persisted.identity
         )
-        profileStore.setFolderBinding(profileID: activeID, destinationID: destination.id)
+        if isProfileExecutionBlocked(activeID) {
+            try? confirmFolderRebind(profileID: activeID, destinationID: destination.id)
+        } else {
+            profileStore.setFolderBinding(profileID: activeID, destinationID: destination.id)
+        }
+    }
+
+    /// Explicit local folder confirmation. Merely editing, opening, or
+    /// renaming a profile never reaches this API.
+    func confirmFolderRebind(profileID: UUID, destinationID: UUID) throws {
+        guard destinationStore.vault(id: destinationID) != nil,
+              let prior = profileStore.profile(id: profileID),
+              prior.target == .localIPhoneFolder,
+              profileStore.setFolderBinding(
+                profileID: profileID,
+                destinationID: destinationID
+              ),
+              profileStore.profile(id: profileID)?.folderVaultID == destinationID else {
+            throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
+        }
+        do {
+            try sharedSetupV2ExecutionGate.confirmRebind(
+                profileID: profileID,
+                confirmation: .deviceFolder(destinationID: destinationID)
+            )
+        } catch {
+            guard profileStore.setFolderBinding(
+                profileID: profileID,
+                destinationID: prior.folderVaultID
+            ), profileStore.profile(id: profileID)?.folderVaultID == prior.folderVaultID else {
+                throw SharedSetupV2ExecutionGateError.persistenceVerificationFailed
+            }
+            throw error
+        }
+        if profileStore.activeProfileID == profileID {
+            _ = activate(profileID: profileID, adoptVault: true, flushOutgoing: false)
+        }
+    }
+
+    /// API URLs alone are insufficient. The caller must finish a local
+    /// credential-confirmation flow and pass that explicit result here.
+    func confirmAPIEndpointRebind(
+        profileID: UUID,
+        endpointID: UUID,
+        credentialsConfirmed: Bool
+    ) throws {
+        guard credentialsConfirmed,
+              destinationStore.apiEndpoint(id: endpointID) != nil,
+              let prior = profileStore.profile(id: profileID),
+              prior.target == .apiEndpoint,
+              profileStore.setAPIEndpointBinding(profileID: profileID, endpointID: endpointID),
+              profileStore.profile(id: profileID)?.apiEndpointID == endpointID else {
+            throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
+        }
+        do {
+            try sharedSetupV2ExecutionGate.confirmRebind(
+                profileID: profileID,
+                confirmation: .apiEndpoint(
+                    endpointID: endpointID,
+                    credentialsConfirmed: true
+                )
+            )
+        } catch {
+            guard profileStore.setAPIEndpointBinding(
+                profileID: profileID,
+                endpointID: prior.apiEndpointID
+            ), profileStore.profile(id: profileID)?.apiEndpointID == prior.apiEndpointID else {
+                throw SharedSetupV2ExecutionGateError.persistenceVerificationFailed
+            }
+            throw error
+        }
+        if profileStore.activeProfileID == profileID {
+            _ = activate(profileID: profileID, adoptVault: false, flushOutgoing: false)
+        }
+    }
+
+    /// Connected Mac intent requires an explicit local pairing/rebind hook.
+    func confirmConnectedMacRebind(
+        profileID: UUID,
+        pairingConfirmed: Bool
+    ) throws {
+        guard pairingConfirmed,
+              profileStore.profile(id: profileID)?.target == .connectedMac else {
+            throw SharedSetupV2ExecutionGateError.rebindNotConfirmed
+        }
+        try sharedSetupV2ExecutionGate.confirmRebind(
+            profileID: profileID,
+            confirmation: .connectedMac(pairingConfirmed: true)
+        )
+        if profileStore.activeProfileID == profileID {
+            _ = activate(profileID: profileID, adoptVault: false, flushOutgoing: false)
+        }
     }
 
     /// Imports a freshly picked folder into the shared destination store for
@@ -258,7 +392,8 @@ final class ExportProfileCoordinator: ObservableObject {
         let destination = destinationStore.upsertVault(
             name: selection.displayName,
             standardizedPath: selection.standardizedPath,
-            bookmarkData: selection.bookmarkData
+            bookmarkData: selection.bookmarkData,
+            identity: selection.identity
         )
         return destination.id
     }
@@ -299,7 +434,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Called when API endpoint settings change while a profile is active.
     /// Upserts the endpoint and binds it to the active profile.
     func apiEndpointDidChange() {
-        guard let activeID = profileStore.activeProfileID else { return }
+        guard let activeID = profileStore.activeProfileID,
+              !isProfileExecutionBlocked(activeID) else { return }
 
         let trimmedURL = apiExportSettings.endpointURLString
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -317,9 +453,21 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Revokes/removes one local Drive authority without deleting remote files. Every profile
     /// referencing it becomes explicitly unbound and its schedule is paused; no fallback target
     /// is selected.
-    func disconnectGoogleDrive(destinationID: UUID) async throws {
-        let manager = GoogleDriveConnectionManager(destinationStore: googleDriveDestinationStore)
-        try await manager.disconnect(destinationID: destinationID)
+    func disconnectGoogleDrive(
+        destinationID: UUID,
+        manager: GoogleDriveConnectionManager? = nil,
+        commitAllowed: @MainActor () -> Bool = {
+            !UserDefaults.standard.bool(forKey: ConfigurationProtectionManager.storageKey)
+        }
+    ) async throws {
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
+        let manager = manager ?? GoogleDriveConnectionManager(destinationStore: googleDriveDestinationStore)
+        try await manager.disconnect(destinationID: destinationID, commitAllowed: commitAllowed)
+        // Detach only after revocation and current admission. No suspension between this check
+        // and any profile/schedule writes; a denied delayed revocation leaves them untouched.
+        try Task.checkCancellation()
+        guard commitAllowed() else { throw CancellationError() }
         for profile in profileStore.profiles where profile.googleDriveDestinationID == destinationID {
             _ = profileStore.setGoogleDriveBinding(profileID: profile.id, destinationID: nil)
             _ = scheduledEntryStore.update(profileID: profile.id) { $0.isEnabled = false }
@@ -341,7 +489,8 @@ final class ExportProfileCoordinator: ObservableObject {
         settings newSettings: ExportSettingsSnapshot? = nil
     ) -> ExportProfile? {
         flushEdits()
-        guard let source = profileStore.activeProfile else { return nil }
+        guard let source = profileStore.activeProfile,
+              !isProfileExecutionBlocked(source.id) else { return nil }
         let created = profileStore.add(
             name: name,
             settings: newSettings ?? ExportSettingsSnapshot.from(settings),
@@ -417,7 +566,8 @@ final class ExportProfileCoordinator: ObservableObject {
     /// state and destinations, then activates it.
     @discardableResult
     func addProfileDuplicatingActive() -> ExportProfile? {
-        guard let source = profileStore.activeProfile else { return nil }
+        guard let source = profileStore.activeProfile,
+              !isProfileExecutionBlocked(source.id) else { return nil }
         let copy = profileStore.add(
             name: source.name,
             settings: ExportSettingsSnapshot.from(settings),
@@ -435,20 +585,51 @@ final class ExportProfileCoordinator: ObservableObject {
     /// it later adopts its destinations like any other switch.
     @discardableResult
     func duplicateProfile(id: UUID) -> ExportProfile? {
-        profileStore.duplicate(id: id)
+        guard !isProfileExecutionBlocked(id) else { return nil }
+        return profileStore.duplicate(id: id)
     }
 
     /// Deletes a profile (forbidden for the last remaining profile by the
     /// store) and activates the first remaining profile. The profile's
     /// scheduled entry is removed so no orphaned automation survives the
-    /// profile. Returns false when deletion was refused.
+    /// profile, and the Shared Setup v2 sidecar is compacted so no stale
+    /// retained-intent row or blocked-set entry outlives the profile.
+    /// Returns false when deletion was refused.
     @discardableResult
     func deleteProfile(id: UUID) -> Bool {
         guard profileStore.delete(id: id) else { return false }
         _ = scheduledEntryStore.delete(profileID: id)
+        compactSharedSetupV2Sidecar(afterDeleting: id)
         guard let next = profileStore.profiles.first else { return true }
         activate(profileID: next.id)
         return true
+    }
+
+    /// Chosen failure semantics for sidecar compaction on deletion: the
+    /// deletion stands and a compaction failure leaves stale-but-inert
+    /// sidecar state, logged for observability. Apple's native profile store,
+    /// scheduled-entry store, and Shared Setup v2 keys are separate stores,
+    /// so the cross-store atomicity Android gets from its single DataStore
+    /// edit (`ExportProfileRepository.delete`) is not achievable here, and
+    /// the native deletion has already succeeded by the time compaction
+    /// runs — reporting the whole delete as failed would lie about state.
+    /// The stale state is inert by construction:
+    /// - `SharedSetupV2ProfileTransaction` read paths already treat rows and
+    ///   blocked ids whose profile no longer exists as deleted state.
+    /// - Native profile ids are freshly generated UUIDs, so a stale blocked
+    ///   id can never be inherited by a future profile.
+    /// - The next successful deletion retries compaction against the same
+    ///   keys, so the bounded store still converges on hygiene.
+    private func compactSharedSetupV2Sidecar(afterDeleting profileID: UUID) {
+        do {
+            _ = try sharedSetupV2ProfileTransaction.compactAfterProfileDeletion(
+                profileID: profileID
+            )
+        } catch {
+            Self.logger.error(
+                "Shared Setup v2 sidecar compaction failed after profile deletion: \(String(describing: error), privacy: .public)"
+            )
+        }
     }
 
     @discardableResult
@@ -494,7 +675,8 @@ final class ExportProfileCoordinator: ObservableObject {
         _ = profileStore.updateSettings(id: id, settings: newSettings)
 
         guard let updated = profileStore.profile(id: id) else { return nil }
-        guard id == profileStore.activeProfileID else { return updated }
+        guard id == profileStore.activeProfileID,
+              !isProfileExecutionBlocked(id) else { return updated }
 
         // Active-profile sync: live settings, published identity, and the
         // bound destinations must match what the editor just saved. No

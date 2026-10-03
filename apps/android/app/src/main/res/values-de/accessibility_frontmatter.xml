@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">Benutzerdefiniertes Feld hinzufügen</string>
+    <string name="a11y_frontmatter_add_placeholder_field">Platzhalterfeld hinzufügen</string>
+    <string name="a11y_frontmatter_delete_custom_field">Benutzerdefiniertes Feld %1$s löschen</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">Platzhalterfeld %1$s löschen</string>
+</resources>

@@ -83,6 +83,9 @@ Platform owners attach passing evidence for both Apple and Android before the in
 - [ ] Multi-file partial completion is visible and retry resumes the exact remaining staged frontier.
 - [ ] Move, rename, trash, duplicate names, concurrent edit, cross-device write, ambiguous commit, checksum mismatch, expired session, offline, quota, cancellation, 401/403/404/429/5xx, and folder capability loss fail safely.
 - [ ] Disconnect removes local authority and future schedule access without deleting remote files.
+- [ ] Configuration protection is rechecked at consent, delayed OAuth/Picker results, each asynchronous acquisition boundary, and durable connect/disconnect/selection/profile/schedule commits. Delayed protection changes leave local authority and configuration unchanged; already-issued Google revocation cannot be rolled back.
+- [ ] Existing legacy and envelope profiles retain one authoritative store. Add preserves existing raw profile/schedule records; Replace, failed-write rollback, and one-shot Undo restore both profile/active-ID pairs exactly, including absent keys and historical local Undo. Corrupt, future, wrong-typed, and opaque state never redirects to legacy authority.
+- [ ] Native Drive shares settings plus inert cloud intent only. Production import/re-export preserves blocked cloud and foreign extensions; malformed preservation state fails closed, and duplication or folder/API rebinding never authorizes an imported cloud profile.
 - [ ] Logs, analytics, profile JSON, Shared Setup, direct protocols, CLI, and MCP contain no token, session URI, account name, Drive ID, path, or health bytes outside their documented local output boundary.
 - [ ] Physical iPhone and Pixel tests use production-shaped OAuth clients and synthetic health data.
 
@@ -92,6 +95,7 @@ Platform owners attach passing evidence for both Apple and Android before the in
 - [ ] `destination.google-drive` remains `planned` until both platform owners attach passing integration receipts and release review approves promotion.
 - [ ] Apple v8 and Android v4/v5 schema signatures and byte fixtures are unchanged. A destination implementation alone does not bump `healthmd.health_data`.
 - [ ] Apple, Android, shared core, CLI/MCP, website, localization, privacy, link, and external-consumer checks pass at the revisions being released.
+- [ ] Play and F-Droid gates preserve their distribution boundary. F-Droid contains no Google authorization SDK, reports direct Drive unavailable without fallback, and retains separate SAF behavior.
 - [ ] Google OAuth verification, Apple App Review, Play review/Data safety, privacy/legal review, support readiness, and production quota monitoring are approved.
 - [ ] Staged rollout has a stop condition for authorization, conflict, checksum, partial-completion, or quota regressions. Rollback disables new operations without deleting user files or corrupting retained journals.
 - [ ] Release notes describe availability truthfully and do not call schedules guaranteed or Drive writes atomic.

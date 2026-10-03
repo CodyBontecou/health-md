@@ -12,9 +12,11 @@ import {
   localeFromPathname,
   translatedLocalesForDoc,
 } from '../../../i18n/routes.mjs';
+import { isCliDocsPath } from '../../lib/docs-surface.mjs';
 
 const route = Astro.locals.starlightRoute;
 const { entry, head, lang, siteTitle, isFallback, lastUpdated } = route;
+const isCliManual = isCliDocsPath(Astro.url.pathname);
 const routeLocaleCode = localeFromPathname(Astro.url.pathname);
 const routeLocale = localeFor(routeLocaleCode);
 const contentLocale = isFallback ? localeFor(defaultLocale) : routeLocale;
@@ -139,6 +141,72 @@ const jsonLD = JSON.stringify({
 ---
 
 <DefaultHead />
+{isCliManual && (
+  <style is:inline>{`
+    :root {
+      --sl-content-width: 68rem;
+      --sl-text-h1: clamp(2.25rem, 4vw, 3.5rem);
+      --sl-text-h2: clamp(1.35rem, 2vw, 1.75rem);
+    }
+
+    .main-pane,
+    .main-pane > main,
+    .content-panel,
+    .sl-container,
+    .sl-markdown-content {
+      min-width: 0;
+    }
+
+    h1#_top {
+      margin-top: clamp(2.5rem, 5vw, 4rem) !important;
+      max-width: none;
+    }
+
+    .sl-markdown-content h2 {
+      margin-top: 3rem !important;
+      padding-top: 1.5rem;
+    }
+
+    .sl-markdown-content .hmd-table-scroll {
+      max-width: 100%;
+      overflow-x: visible;
+    }
+
+    .expressive-code,
+    .expressive-code .frame,
+    .expressive-code pre {
+      max-width: 100%;
+      min-width: 0;
+    }
+
+    @media (min-width: 48.001rem) {
+      .sl-markdown-content table.hmd-vertical-table {
+        table-layout: fixed;
+        max-width: 100%;
+        min-width: 0;
+        width: 100%;
+      }
+
+      .sl-markdown-content table.hmd-vertical-table th,
+      .sl-markdown-content table.hmd-vertical-table td,
+      .sl-markdown-content table.hmd-vertical-table th:first-child,
+      .sl-markdown-content table.hmd-vertical-table td:first-child {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .sl-markdown-content table.hmd-vertical-table th:first-child,
+      .sl-markdown-content table.hmd-vertical-table td:first-child {
+        width: 28%;
+      }
+
+      .sl-markdown-content table.hmd-vertical-table th:last-child:nth-child(3),
+      .sl-markdown-content table.hmd-vertical-table td:last-child:nth-child(3) {
+        width: 20%;
+      }
+    }
+  `}</style>
+)}
 {markdownURL && (
   <link rel="alternate" type="text/markdown" href={markdownURL} title={`${entry.data.title} — Markdown`} />
 )}

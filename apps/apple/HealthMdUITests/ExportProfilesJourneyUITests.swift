@@ -4,7 +4,7 @@ import XCTest
 /// Covers: first-launch migration to the Default profile, the Settings→
 /// Export Profiles management surface (duplicate/rename/delete + last-profile
 /// guard), and per-profile schedules (enable toggle, cadence editor,
-/// projected-usage footer). Screenshots are written to /tmp/qa-shots for
+/// empty-schedule footer). Screenshots are written to /tmp/qa-shots for
 /// manual review.
 final class ExportProfilesJourneyUITests: XCTestCase {
     override func setUpWithError() throws {
@@ -38,20 +38,43 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         )
     }
 
+    /// Duplicates the migrated profile through the current detail action. The management toolbar
+    /// now creates a blank profile, so it is not the duplication surface these journeys exercise.
+    private func duplicateDefaultProfile(_ app: XCUIApplication) {
+        let defaultRow = app.buttons["export.profiles.row.Default"]
+        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5))
+        defaultRow.tap()
+
+        let duplicate = app.buttons["Duplicate"]
+        for _ in 0..<6 where !(duplicate.exists && duplicate.isHittable) {
+            app.swipeUp()
+        }
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 5), "profile detail should offer duplication")
+        XCTAssertTrue(duplicate.isHittable, "Duplicate should be tappable")
+        duplicate.tap()
+
+        let keepDuplicate = app.buttons["Keep It"]
+        if keepDuplicate.waitForExistence(timeout: 2) {
+            keepDuplicate.tap()
+        }
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Export Profiles"].waitForExistence(timeout: 5))
+    }
+
     // MARK: - Journey A: migration + Settings entry
 
     func testQA_MigrationShowsDefaultProfileInSettings() {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        // Migration synthesizes the Default profile before the row renders,
-        // so the Settings row carries its name as the status value.
+        // The active profile is managed inside the destination screen rather
+        // than rendered as a status pill on the Settings entry row.
         openSettingsTab(app)
         let row = app.buttons["export.profiles.entry"]
         XCTAssertTrue(row.waitForExistence(timeout: 10), "Export Profiles row should exist in Settings")
         snap("01-settings-profiles-row")
-        let defaultValue = expectation(for: NSPredicate(format: "value == 'Default'"), evaluatedWith: row)
-        wait(for: [defaultValue], timeout: 10)
+        let configuredValue = expectation(for: NSPredicate(format: "value == 'Configured'"), evaluatedWith: row)
+        wait(for: [configuredValue], timeout: 10)
 
         openProfilesManagementSheet(app)
         XCTAssertTrue(
@@ -69,15 +92,11 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         openProfilesManagementSheet(app)
         XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
 
-        // Duplicate the active profile from the management toolbar. The copy
-        // becomes active (duplicate-activates), matching the picker behavior
-        // this journey previously covered.
-        let addButton = app.buttons["New profile from current"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: 5), "management toolbar should offer duplication")
-        addButton.tap()
+        // Duplicate from the profile detail action; the existing active profile remains active.
+        duplicateDefaultProfile(app)
         XCTAssertTrue(
             app.staticTexts["Default 2"].waitForExistence(timeout: 5),
-            "duplicate should be created with a unique name and activated"
+            "duplicate should be created with a unique name"
         )
         snap("03-duplicated-profile-active")
 
@@ -106,21 +125,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         )
         snap("04-renamed-profile")
 
-        // Switch back to Default via detail activation.
-        let defaultRow = app.buttons["export.profiles.row.Default"]
-        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5))
-        defaultRow.tap()
-        XCTAssertTrue(
-            app.buttons["export.profiles.makeActive"].waitForExistence(timeout: 5),
-            "inactive profile detail should offer activation"
-        )
-        app.buttons["export.profiles.makeActive"].tap()
-        XCTAssertTrue(
-            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
-            "activating from detail should return to the management list"
-        )
-
-        // Delete "Weekly Sleep": open its detail, then delete.
+        // Duplication preserves the current active profile. Delete "Weekly Sleep" from its detail.
         let weeklyRow = app.buttons["export.profiles.row.Weekly Sleep"]
         XCTAssertTrue(weeklyRow.waitForExistence(timeout: 5))
         weeklyRow.tap()
@@ -139,6 +144,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         snap("05-after-delete")
 
         // Last-profile guard: with one profile left, Delete must be disabled.
+        let defaultRow = app.buttons["export.profiles.row.Default"]
         XCTAssertTrue(defaultRow.waitForExistence(timeout: 5))
         defaultRow.tap()
         let guardedDelete = app.buttons["Delete Profile…"]
@@ -149,7 +155,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
 
     // MARK: - Journey C: per-profile schedules
 
-    func testQA_ProfileSchedulesToggleCadenceAndUsageFooter() {
+    func testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter() {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
@@ -166,40 +172,43 @@ final class ExportProfilesJourneyUITests: XCTestCase {
 
         XCTAssertTrue(
             app.staticTexts["No profile schedules enabled."].waitForExistence(timeout: 5),
-            "usage footer should start empty"
+            "empty-state footer should appear when no profile schedules are enabled"
         )
         XCTAssertTrue(
             app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5),
             "each profile should have a schedule row"
         )
 
-        // Enable the Default profile's schedule.
+        // Enable the Default profile's schedule. The row should immediately
+        // reflect its seeded daily cadence and replace the empty-state footer.
         let toggle = app.switches["Schedule Default"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         toggle.tap()
         XCTAssertTrue(
             app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS 'about 30 export actions per month across 1 scheduled profile'")
+                NSPredicate(format: "label BEGINSWITH 'Daily at'")
             ).firstMatch.waitForExistence(timeout: 5),
-            "daily cadence should project 30 actions/month"
+            "enabled schedule should show its seeded daily cadence"
         )
-        snap("08-schedule-enabled-usage")
+        XCTAssertTrue(
+            app.staticTexts["No profile schedules enabled."].waitForNonExistence(timeout: 5),
+            "empty-state footer should disappear when a schedule is enabled"
+        )
+        snap("08-schedule-enabled-daily")
 
-        // Open the cadence editor by tapping the row.
-        app.staticTexts["Default"].firstMatch.tap()
+        // Open the cadence editor through the row's dedicated action. The
+        // profile name is intentionally read-only after the accessibility split.
+        let editSchedule = app.buttons["Edit schedule for Default"]
+        XCTAssertTrue(editSchedule.waitForExistence(timeout: 5))
+        editSchedule.tap()
         let enabledToggle = app.switches["Enabled"]
         XCTAssertTrue(enabledToggle.waitForExistence(timeout: 5), "cadence editor sheet should open")
         snap("09-cadence-editor")
 
-        // Frequency is a menu-style picker: open it on the current value
-        // ("Daily"), then pick Weekly from the menu it presents.
-        let frequencyButton = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH 'Frequency'")
-        ).firstMatch
-        XCTAssertTrue(frequencyButton.waitForExistence(timeout: 5))
-        frequencyButton.tap()
+        // The standard-width editor keeps its three native cadence buttons;
+        // constrained widths use the separately covered adaptive menu fallback.
         let weekly = app.buttons["Weekly"].firstMatch
-        XCTAssertTrue(weekly.waitForExistence(timeout: 5), "weekly option should appear in the frequency menu")
+        XCTAssertTrue(weekly.waitForExistence(timeout: 5), "weekly cadence should be available")
         weekly.tap()
         app.buttons["Save"].firstMatch.tap()
         XCTAssertTrue(
@@ -207,13 +216,6 @@ final class ExportProfilesJourneyUITests: XCTestCase {
                 NSPredicate(format: "label CONTAINS 'Weekly on'")
             ).firstMatch.waitForExistence(timeout: 5),
             "row summary should reflect the weekly cadence"
-        )
-        // Weekly projects ceil(30/7) = 5 actions/month.
-        XCTAssertTrue(
-            app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS 'about 5 export actions per month'")
-            ).firstMatch.waitForExistence(timeout: 5),
-            "weekly cadence should project 5 actions/month"
         )
         snap("10-weekly-cadence-saved")
     }
@@ -227,19 +229,17 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
 
         // Create a second profile so activation switching is observable.
-        let addButton = app.buttons["New profile from current"]
-        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
-        addButton.tap()
+        duplicateDefaultProfile(app)
         XCTAssertTrue(app.staticTexts["Default 2"].waitForExistence(timeout: 5))
 
         // Both profiles are visible with their names.
         XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Default 2"].firstMatch.waitForExistence(timeout: 5))
 
-        // Open the inactive profile's detail via its stable row identifier.
-        let defaultRow = app.buttons["export.profiles.row.Default"]
-        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5), "profile rows should expose stable identifiers")
-        defaultRow.tap()
+        // Open the inactive duplicate's detail via its stable row identifier.
+        let duplicateRow = app.buttons["export.profiles.row.Default 2"]
+        XCTAssertTrue(duplicateRow.waitForExistence(timeout: 5), "profile rows should expose stable identifiers")
+        duplicateRow.tap()
         XCTAssertTrue(
             app.buttons["export.profiles.makeActive"].waitForExistence(timeout: 5),
             "inactive profile detail should offer activation"
@@ -252,8 +252,12 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         // Copy the profile ID for CLI/automation references.
         let copy = app.buttons["export.profiles.copyID"]
         XCTAssertTrue(copy.waitForExistence(timeout: 5))
+        let copied = expectation(
+            for: NSPredicate(format: "value == 'Copied'"),
+            evaluatedWith: copy
+        )
         copy.tap()
-        XCTAssertTrue(app.staticTexts["Copied"].waitForExistence(timeout: 5), "copy should confirm")
+        wait(for: [copied], timeout: 5)
 
         // Activate the profile: detail pops and the active banner reflects it.
         app.buttons["export.profiles.makeActive"].tap()
@@ -261,7 +265,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
             "activating from detail should return to the management list"
         )
-        app.buttons["export.profiles.row.Default"].tap()
+        app.buttons["export.profiles.row.Default 2"].tap()
         XCTAssertTrue(
             app.staticTexts
                 .matching(NSPredicate(format: "label CONTAINS 'Active profile'"))

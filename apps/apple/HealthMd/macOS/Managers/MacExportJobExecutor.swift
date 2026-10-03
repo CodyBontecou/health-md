@@ -2,6 +2,23 @@ import Foundation
 
 #if os(macOS)
 
+nonisolated private final class MacExportJobCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        lock.unlock()
+    }
+
+    var isCancelled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelled
+    }
+}
+
 /// One immutable authority decision for all daily files in a received connected-Mac operation.
 /// Missing pins remain legacy even if the Mac's current rollout default changed after capture.
 struct ConnectedMacDailyExportOperation {
@@ -105,6 +122,7 @@ final class MacExportJobExecutor {
 
     private var activeJobID: UUID?
     private var cancelledJobIDs: Set<UUID> = []
+    private var jobCancellations: [UUID: MacExportJobCancellation] = [:]
     private var streamSession: StreamSession?
     private var nextStreamGeneration: UInt64 = 0
     private var streamChunkInFlightGeneration: UInt64?
@@ -126,6 +144,7 @@ final class MacExportJobExecutor {
         let generation: UInt64
         let start: MacExportStreamStart
         let requestedDates: [Date]
+        let originalRequestedDates: [Date]
         let formatsPerDate: Int
         let dailyExportOperation: ConnectedMacDailyExportOperation
         var expectedSequence: Int = 1
@@ -164,6 +183,7 @@ final class MacExportJobExecutor {
         progress: ProgressHandler? = nil
     ) -> MacExportFailure? {
         cancelledJobIDs.insert(jobID)
+        jobCancellations[jobID]?.cancel()
 
         // A non-streamed job observes the marker at its next checkpoint. A streamed
         // job can be cleared synchronously only while no chunk is suspended in a
@@ -211,15 +231,20 @@ final class MacExportJobExecutor {
         }
 
         activeJobID = job.jobID
+        let jobCancellation = MacExportJobCancellation()
+        if cancelledJobIDs.contains(job.jobID) { jobCancellation.cancel() }
+        jobCancellations[job.jobID] = jobCancellation
         defer {
             activeJobID = nil
             cancelledJobIDs.remove(job.jobID)
+            jobCancellations.removeValue(forKey: job.jobID)
         }
 
         guard let requestedDates = Self.validatedRequestedDates(
             explicitDates: job.requestedDates,
             dateRangeStart: job.dateRangeStart,
-            dateRangeEnd: job.dateRangeEnd
+            dateRangeEnd: job.dateRangeEnd,
+            calendarTimeZoneIdentifier: job.settingsSnapshot.calendarTimeZoneIdentifier
         ) else {
             return .failure(MacExportFailure(
                 jobID: job.jobID,
@@ -260,7 +285,7 @@ final class MacExportJobExecutor {
             return .failure(validationFailure)
         }
 
-        let dailyExportOperation: ConnectedMacDailyExportOperation
+        var dailyExportOperation: ConnectedMacDailyExportOperation
         do {
             dailyExportOperation = try ConnectedMacDailyExportOperation.resolve(
                 settingsSnapshot: job.settingsSnapshot,
@@ -272,6 +297,28 @@ final class MacExportJobExecutor {
             return .failure(Self.engineResolutionFailure(jobID: job.jobID, error: error))
         }
 
+        guard let originalRequestedDates = Self.validatedOriginalRangeDates(
+            job.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: job.originalCalendarTimeZoneIdentifier,
+            settingsSnapshot: dailyExportOperation.settingsSnapshot
+        ) ?? (job.originalRequestedDates == nil ? requestedDates : nil) else {
+            return .failure(MacExportFailure(
+                jobID: job.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export original range authority is missing or inconsistent. No files were written."
+            ))
+        }
+        let originalSettings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        let originalCalendar = Self.sourceCalendar(for: originalSettings)
+        let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+            dailyExportOperation.settingsSnapshot,
+            requestedDates: originalRequestedDates,
+            calendarTimeZone: originalCalendar.timeZone
+        )
+        dailyExportOperation = ConnectedMacDailyExportOperation(
+            settingsSnapshot: rangeAvailability.snapshot,
+            surface: dailyExportOperation.surface
+        )
         let settings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
         do {
             try vaultManager.preflightExportDestinations(
@@ -286,7 +333,8 @@ final class MacExportJobExecutor {
                 message: error.localizedDescription
             ))
         }
-        let recordsByDate = Self.recordsByStartOfDay(job.records)
+        let operationCalendar = Self.sourceCalendar(for: settings)
+        let recordsByDate = Self.recordsByStartOfDay(job.records, settings: settings)
         let externalRecordsByDate = Self.externalRecordsByDate(job.externalDailyRecords)
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
@@ -294,7 +342,7 @@ final class MacExportJobExecutor {
         var totalFilesWritten = 0
         var looseAggregateFileCount = 0
         var individualEntryFileCount = 0
-        var individualEntryCoverageGaps: [ExportPartialFailure] = []
+        var individualEntryCoverageGaps: [ExportPartialFailure] = rangeAvailability.warning.map { [$0] } ?? []
         var dataDictionaryFileCount = 0
         var rollupFileCount = 0
         var dataDictionaryWritten = false
@@ -343,7 +391,7 @@ final class MacExportJobExecutor {
             }
 
             processedDays += 1
-            guard let record = recordsByDate[Calendar.current.startOfDay(for: date)] else {
+            guard let record = recordsByDate[operationCalendar.startOfDay(for: date)] else {
                 failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                 sendProgress(
                     jobID: job.jobID,
@@ -489,14 +537,53 @@ final class MacExportJobExecutor {
             }
         }
 
+        // Non-streamed execution has no next iteration after the final daily
+        // destination await. Honor a task/job cancellation at that boundary
+        // before any range roll-up or archive transaction can begin.
+        if cancelledJobIDs.contains(job.jobID) || Task.isCancelled {
+            let result = MacExportResultPayload(
+                jobID: job.jobID,
+                status: .cancelled,
+                successCount: successCount,
+                totalCount: totalDays,
+                formatsPerDate: formatsPerDate,
+                totalFilesWritten: totalFilesWritten,
+                externalRecordFileCount: externalRecordFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                failedDateDetails: failedDateDetails,
+                completedDates: Self.completedDates(
+                    successfulRecords: successfulRecords,
+                    failedDateDetails: failedDateDetails,
+                    requestedDates: requestedDates,
+                    includeSuccessfulRecords: !settings.archiveModeEnabled
+                        && !settings.summaryOnlyModeEnabled
+                ),
+                destinationDisplayName: vaultManager.vaultName,
+                destinationPathForDisplay: vaultManager.vaultURL?.path,
+                completedAt: Date()
+            )
+            sendProgress(
+                jobID: job.jobID,
+                phase: .cancelled,
+                processedDays: processedDays,
+                totalDays: totalDays,
+                currentDate: nil,
+                filesWritten: totalFilesWritten,
+                message: "Mac export cancelled.",
+                progress: progress
+            )
+            return .success(result)
+        }
+
         let rollupRecords = Self.rollupRecords(
-            for: requestedDates,
+            for: originalRequestedDates,
             recordsByDate: recordsByDate,
             settings: settings
         )
         if !settings.archiveModeEnabled,
-           !rollupRecords.isEmpty,
-           HealthRollupExporter.isEnabled(settings: settings) {
+           HealthRollupExporter.isEnabled(settings: settings),
+           (!rollupRecords.isEmpty || settings.generateRangeSummary) {
             sendProgress(
                 jobID: job.jobID,
                 phase: .writing,
@@ -509,13 +596,22 @@ final class MacExportJobExecutor {
             )
 
             do {
+                let requestedRange = try Self.requestedRange(for: originalRequestedDates, settings: settings)
                 let rollupResults = try vaultManager.exportRollupSummaries(
                     from: rollupRecords,
+                    requestedRange: requestedRange,
                     settings: settings,
                     healthSubfolder: job.settingsSnapshot.healthSubfolder
                 )
                 rollupFileCount += rollupResults.count
                 totalFilesWritten += rollupResults.count
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                individualEntryCoverageGaps.append(
+                    ExportOrchestrator.rangeSummaryUnavailableFailure(
+                        requestedDates: originalRequestedDates,
+                        calendarTimeZone: operationCalendar.timeZone
+                    )
+                )
             } catch {
                 isFileAccountingComplete = false
                 hadTerminalRangeFailure = true
@@ -529,7 +625,10 @@ final class MacExportJobExecutor {
         }
 
         var archiveFileCount = 0
-        if settings.archiveModeEnabled && !successfulRecords.isEmpty {
+        let archiveSourceRecords = originalRequestedDates.compactMap {
+            recordsByDate[operationCalendar.startOfDay(for: $0)]
+        }
+        if settings.archiveModeEnabled && !archiveSourceRecords.isEmpty {
             sendProgress(
                 jobID: job.jobID,
                 phase: .writing,
@@ -540,15 +639,74 @@ final class MacExportJobExecutor {
                 message: "Writing ZIP archive…",
                 progress: progress
             )
+            guard archiveSourceRecords.count == originalRequestedDates.count else {
+                failedDateDetails.append(FailedDateDetail(
+                    date: originalRequestedDates.first ?? Date(),
+                    reason: .fileWriteError,
+                    errorDetails: "ZIP archive retry did not recapture every original source day; the existing archive was preserved."
+                ))
+                hadTerminalRangeFailure = true
+                isFileAccountingComplete = false
+                return .success(MacExportResultPayload(
+                    jobID: job.jobID,
+                    status: successCount > 0 ? .partialSuccess : .failure,
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    formatsPerDate: formatsPerDate,
+                    totalFilesWritten: totalFilesWritten,
+                    externalRecordFileCount: externalRecordFileCount,
+                    hadTerminalRangeFailure: true,
+                    failedDateDetails: failedDateDetails,
+                    completedDates: [],
+                    destinationDisplayName: vaultManager.vaultName,
+                    destinationPathForDisplay: vaultManager.vaultURL?.path,
+                    completedAt: Date()
+                ))
+            }
             let archiveOutcome = await Self.writeArchive(
-                from: successfulRecords,
+                from: archiveSourceRecords,
                 rollupHealthData: rollupRecords,
-                selectedDates: requestedDates,
+                selectedDates: originalRequestedDates,
                 vaultManager: vaultManager,
                 settings: settings,
                 healthSubfolder: job.settingsSnapshot.healthSubfolder,
+                cancellationCheck: { jobCancellation.isCancelled },
                 failedDateDetails: &failedDateDetails
             )
+            if archiveOutcome.wasCancelled {
+                let result = MacExportResultPayload(
+                    jobID: job.jobID,
+                    status: .cancelled,
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    formatsPerDate: formatsPerDate,
+                    totalFilesWritten: totalFilesWritten,
+                    externalRecordFileCount: externalRecordFileCount,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
+                    failedDateDetails: failedDateDetails,
+                    completedDates: Self.completedDates(
+                        successfulRecords: successfulRecords,
+                        failedDateDetails: failedDateDetails,
+                        requestedDates: requestedDates,
+                        includeSuccessfulRecords: false
+                    ),
+                    destinationDisplayName: vaultManager.vaultName,
+                    destinationPathForDisplay: vaultManager.vaultURL?.path,
+                    completedAt: Date()
+                )
+                sendProgress(
+                    jobID: job.jobID,
+                    phase: .cancelled,
+                    processedDays: processedDays,
+                    totalDays: totalDays,
+                    currentDate: nil,
+                    filesWritten: totalFilesWritten,
+                    message: "Mac export cancelled.",
+                    progress: progress
+                )
+                return .success(result)
+            }
             archiveFileCount = archiveOutcome.fileCount
             hadTerminalRangeFailure = hadTerminalRangeFailure || archiveOutcome.hadTerminalFailure
             if archiveOutcome.hadTerminalFailure { isFileAccountingComplete = false }
@@ -557,10 +715,9 @@ final class MacExportJobExecutor {
 
         if settings.summaryOnlyModeEnabled && totalFilesWritten == 0 && failedDateDetails.isEmpty {
             successCount = 0
-            failedDateDetails.append(FailedDateDetail(
-                date: requestedDates.first ?? Date(),
-                reason: .noHealthData,
-                errorDetails: "No roll-up summary data was available for the selected period."
+            failedDateDetails.append(contentsOf: ExportOrchestrator.terminalNoDataFailures(
+                for: requestedDates,
+                calendar: operationCalendar
             ))
         }
 
@@ -669,7 +826,8 @@ final class MacExportJobExecutor {
                 explicitDates: start.requestedDates,
                 dateRangeStart: start.dateRangeStart,
                 dateRangeEnd: start.dateRangeEnd,
-                expectedCount: start.totalRequestedDays
+                expectedCount: start.totalRequestedDays,
+                calendarTimeZoneIdentifier: start.settingsSnapshot.calendarTimeZoneIdentifier
               ) else {
             activeJobID = nil
             return .failure(MacExportFailure(
@@ -678,7 +836,7 @@ final class MacExportJobExecutor {
                 message: "Mac export stream dates or counters were malformed or inconsistent."
             ))
         }
-        let dailyExportOperation: ConnectedMacDailyExportOperation
+        var dailyExportOperation: ConnectedMacDailyExportOperation
         do {
             dailyExportOperation = try ConnectedMacDailyExportOperation.resolve(
                 settingsSnapshot: start.settingsSnapshot,
@@ -688,6 +846,29 @@ final class MacExportJobExecutor {
             activeJobID = nil
             return .failure(Self.engineResolutionFailure(jobID: start.jobID, error: error))
         }
+        guard let originalRequestedDates = Self.validatedOriginalRangeDates(
+            start.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: start.originalCalendarTimeZoneIdentifier,
+            settingsSnapshot: dailyExportOperation.settingsSnapshot
+        ) ?? (start.originalRequestedDates == nil ? requestedDates : nil) else {
+            activeJobID = nil
+            return .failure(MacExportFailure(
+                jobID: start.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export stream original range authority is missing or inconsistent. No files were written."
+            ))
+        }
+        let originalSettings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        let originalCalendar = Self.sourceCalendar(for: originalSettings)
+        let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+            dailyExportOperation.settingsSnapshot,
+            requestedDates: originalRequestedDates,
+            calendarTimeZone: originalCalendar.timeZone
+        )
+        dailyExportOperation = ConnectedMacDailyExportOperation(
+            settingsSnapshot: rangeAvailability.snapshot,
+            surface: dailyExportOperation.surface
+        )
         do {
             try vaultManager.preflightExportDestinations(
                 settings: dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings(),
@@ -707,10 +888,12 @@ final class MacExportJobExecutor {
             generation: nextStreamGeneration,
             start: start,
             requestedDates: requestedDates,
+            originalRequestedDates: originalRequestedDates,
             formatsPerDate: Self.looseFormatsPerDate(
                 for: dailyExportOperation.settingsSnapshot
             ),
-            dailyExportOperation: dailyExportOperation
+            dailyExportOperation: dailyExportOperation,
+            individualEntryCoverageGaps: rangeAvailability.warning.map { [$0] } ?? []
         )
 
         sendProgress(
@@ -825,7 +1008,10 @@ final class MacExportJobExecutor {
             session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
         }
 
-        let requestedDays = Set(session.requestedDates.map { Calendar.current.startOfDay(for: $0) })
+        let operationCalendar = Self.sourceCalendar(
+            for: session.dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        )
+        let requestedDays = Set(session.requestedDates.map { operationCalendar.startOfDay(for: $0) })
         for record in chunk.records {
             if streamWasInterrupted(jobID: chunk.jobID, generation: generation) {
                 return finishInterruptedStream(
@@ -835,7 +1021,7 @@ final class MacExportJobExecutor {
                     progress: progress
                 )
             }
-            let dateKey = Calendar.current.startOfDay(for: record.date)
+            let dateKey = operationCalendar.startOfDay(for: record.date)
             let isRequestedDay = requestedDays.contains(dateKey)
             session.receivedRecordsByDate[dateKey] = record
             session.processedDays += 1
@@ -1053,10 +1239,11 @@ final class MacExportJobExecutor {
             return .failure(Self.engineResolutionFailure(jobID: complete.jobID, error: error))
         }
         session.failedDateDetails.append(contentsOf: complete.iphoneFailedDateDetails)
+        let operationCalendar = Self.sourceCalendar(for: settings)
 
         for date in session.requestedDates {
-            if session.receivedRecordsByDate[Calendar.current.startOfDay(for: date)] == nil,
-               !complete.iphoneFailedDateDetails.contains(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) {
+            if session.receivedRecordsByDate[operationCalendar.startOfDay(for: date)] == nil,
+               !complete.iphoneFailedDateDetails.contains(where: { operationCalendar.isDate($0.date, inSameDayAs: date) }) {
                 session.failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
             }
         }
@@ -1076,7 +1263,7 @@ final class MacExportJobExecutor {
                         progress: progress
                     )
                 }
-                guard let record = recordsByDate[Calendar.current.startOfDay(for: date)] else { continue }
+                guard let record = recordsByDate[operationCalendar.startOfDay(for: date)] else { continue }
                 if settings.summaryOnlyModeEnabled {
                     session.successCount += 1
                     session.successfulRecords.append(record)
@@ -1151,21 +1338,33 @@ final class MacExportJobExecutor {
         }
 
         let rollupRecords = Self.rollupRecords(
-            for: session.requestedDates,
+            for: session.originalRequestedDates,
             recordsByDate: session.receivedRecordsByDate,
             settings: settings
         )
         if !settings.archiveModeEnabled,
-           !rollupRecords.isEmpty,
-           HealthRollupExporter.isEnabled(settings: settings) {
+           HealthRollupExporter.isEnabled(settings: settings),
+           (!rollupRecords.isEmpty || settings.generateRangeSummary) {
             do {
+                let requestedRange = try Self.requestedRange(
+                    for: session.originalRequestedDates,
+                    settings: settings
+                )
                 let rollupResults = try vaultManager.exportRollupSummaries(
                     from: rollupRecords,
+                    requestedRange: requestedRange,
                     settings: settings,
                     healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                 )
                 session.rollupFileCount += rollupResults.count
                 session.totalFilesWritten += rollupResults.count
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                session.individualEntryCoverageGaps.append(
+                    ExportOrchestrator.rangeSummaryUnavailableFailure(
+                        requestedDates: session.originalRequestedDates,
+                        calendarTimeZone: operationCalendar.timeZone
+                    )
+                )
             } catch {
                 session.isFileAccountingComplete = false
                 session.hadTerminalRangeFailure = true
@@ -1179,7 +1378,10 @@ final class MacExportJobExecutor {
         }
 
         var archiveFileCount = 0
-        if settings.archiveModeEnabled && !session.successfulRecords.isEmpty {
+        let archiveSourceRecords = session.originalRequestedDates.compactMap {
+            session.receivedRecordsByDate[operationCalendar.startOfDay(for: $0)]
+        }
+        if settings.archiveModeEnabled && !archiveSourceRecords.isEmpty {
             if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
                 return finishInterruptedCompletion(
                     session,
@@ -1188,10 +1390,17 @@ final class MacExportJobExecutor {
                     progress: progress
                 )
             }
+            guard archiveSourceRecords.count == session.originalRequestedDates.count else {
+                return .failure(MacExportFailure(
+                    jobID: complete.jobID,
+                    reason: .exportWriteFailure,
+                    message: "ZIP archive retry did not recapture every original source day; the existing archive was preserved."
+                ))
+            }
             let archiveOutcome = await Self.writeArchive(
-                from: session.successfulRecords,
+                from: archiveSourceRecords,
                 rollupHealthData: rollupRecords,
-                selectedDates: session.requestedDates,
+                selectedDates: session.originalRequestedDates,
                 vaultManager: vaultManager,
                 settings: settings,
                 healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
@@ -1212,16 +1421,15 @@ final class MacExportJobExecutor {
                 )
             }
             session.successCount = session.requestedDates.filter {
-                session.receivedRecordsByDate[Calendar.current.startOfDay(for: $0)] != nil
+                session.receivedRecordsByDate[operationCalendar.startOfDay(for: $0)] != nil
             }.count
         }
 
         if settings.summaryOnlyModeEnabled && session.totalFilesWritten == 0 && session.failedDateDetails.isEmpty {
             session.successCount = 0
-            session.failedDateDetails.append(FailedDateDetail(
-                date: session.requestedDates.first ?? session.start.dateRangeStart,
-                reason: .noHealthData,
-                errorDetails: "No roll-up summary data was available for the selected period."
+            session.failedDateDetails.append(contentsOf: ExportOrchestrator.terminalNoDataFailures(
+                for: session.requestedDates,
+                calendar: operationCalendar
             ))
         }
 
@@ -1505,22 +1713,36 @@ final class MacExportJobExecutor {
         explicitDates: [Date]?,
         dateRangeStart: Date,
         dateRangeEnd: Date,
-        expectedCount: Int? = nil
+        expectedCount: Int? = nil,
+        calendarTimeZoneIdentifier: String?
     ) -> [Date]? {
         guard dateRangeStart <= dateRangeEnd else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        if let identifier = calendarTimeZoneIdentifier {
+            guard let timeZone = TimeZone(identifier: identifier) else { return nil }
+            calendar.timeZone = timeZone
+        } else {
+            // Historical jobs predate frozen calendar identifiers and retain the
+            // process-calendar behavior under which they were created.
+            calendar = .current
+        }
 
         let dates: [Date]
         if let explicitDates {
             guard !explicitDates.isEmpty,
                   explicitDates == explicitDates.sorted(),
                   Set(explicitDates).count == explicitDates.count,
-                  explicitDates.first.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeStart) }) == true,
-                  explicitDates.last.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeEnd) }) == true else {
+                  explicitDates.first.map({ calendar.isDate($0, inSameDayAs: dateRangeStart) }) == true,
+                  explicitDates.last.map({ calendar.isDate($0, inSameDayAs: dateRangeEnd) }) == true else {
                 return nil
             }
             dates = explicitDates
         } else {
-            dates = ExportOrchestrator.dateRange(from: dateRangeStart, to: dateRangeEnd)
+            dates = ExportOrchestrator.dateRange(
+                from: dateRangeStart,
+                to: dateRangeEnd,
+                calendar: calendar
+            )
         }
 
         guard !dates.isEmpty else { return nil }
@@ -1528,14 +1750,41 @@ final class MacExportJobExecutor {
         return dates
     }
 
+    private static func validatedOriginalRangeDates(
+        _ dates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?,
+        settingsSnapshot: ExportSettingsSnapshot
+    ) -> [Date]? {
+        guard let dates else { return nil }
+        guard !dates.isEmpty,
+              dates == dates.sorted(),
+              Set(dates).count == dates.count,
+              let identifier = originalCalendarTimeZoneIdentifier,
+              TimeZone(identifier: identifier) != nil,
+              settingsSnapshot.calendarTimeZoneIdentifier == identifier else {
+            return nil
+        }
+        return dates
+    }
+
     private static func looseFormatsPerDate(for snapshot: ExportSettingsSnapshot) -> Int {
         snapshot.makeAdvancedExportSettings().looseFormatsPerDate
     }
 
-    private static func recordsByStartOfDay(_ records: [HealthData]) -> [Date: HealthData] {
+    private static func sourceCalendar(for settings: AdvancedExportSettings) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+        return calendar
+    }
+
+    private static func recordsByStartOfDay(
+        _ records: [HealthData],
+        settings: AdvancedExportSettings
+    ) -> [Date: HealthData] {
+        let calendar = sourceCalendar(for: settings)
         var result: [Date: HealthData] = [:]
         for record in records {
-            result[Calendar.current.startOfDay(for: record.date)] = record
+            result[calendar.startOfDay(for: record.date)] = record
         }
         return result
     }
@@ -1550,15 +1799,41 @@ final class MacExportJobExecutor {
         settings: AdvancedExportSettings
     ) -> [HealthData] {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return [] }
-        let sourceDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let sourceDates = ExportOrchestrator.rollupSourceDates(
+            for: requestedDates,
+            settings: settings,
+            calendar: calendar
+        )
         return sourceDates.compactMap { date in
-            recordsByDate[Calendar.current.startOfDay(for: date)]
+            recordsByDate[calendar.startOfDay(for: date)]
         }
+    }
+
+    private static func requestedRange(
+        for dates: [Date],
+        settings: AdvancedExportSettings
+    ) throws -> HealthRollupRangeRequest {
+        guard let timeZone = settings.exportTimeZoneOverride else {
+            throw ExportError.invalidExportPath(path: "missing calendar timezone")
+        }
+        let identifiers = Set(dates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: timeZone.identifier
+            )
+        })
+        return try HealthRollupRangeRequest(
+            ownerDateIdentifiers: identifiers,
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
     }
 
     private struct ArchiveWriteOutcome {
         let fileCount: Int
         let hadTerminalFailure: Bool
+        let wasCancelled: Bool
     }
 
     private static func writeArchive(
@@ -1568,13 +1843,14 @@ final class MacExportJobExecutor {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         healthSubfolder: String?,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false },
         failedDateDetails: inout [FailedDateDetail]
     ) async -> ArchiveWriteOutcome {
         guard settings.archiveModeEnabled else {
-            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false)
+            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false, wasCancelled: false)
         }
         guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else {
-            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false)
+            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false, wasCancelled: false)
         }
 
         let sortedDates = selectedDates.sorted()
@@ -1588,11 +1864,19 @@ final class MacExportJobExecutor {
                 settings: settings,
                 startDate: startDate,
                 endDate: endDate,
-                healthSubfolder: healthSubfolder
+                healthSubfolder: healthSubfolder,
+                cancellationCheck: cancellationCheck
             ) == nil ? 0 : 1
             return ArchiveWriteOutcome(
                 fileCount: fileCount,
-                hadTerminalFailure: fileCount == 0
+                hadTerminalFailure: fileCount == 0,
+                wasCancelled: false
+            )
+        } catch is CancellationError {
+            return ArchiveWriteOutcome(
+                fileCount: 0,
+                hadTerminalFailure: false,
+                wasCancelled: true
             )
         } catch {
             failedDateDetails.append(FailedDateDetail(
@@ -1600,7 +1884,11 @@ final class MacExportJobExecutor {
                 reason: .fileWriteError,
                 errorDetails: "ZIP archive export failed: \(error.localizedDescription)"
             ))
-            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: true)
+            return ArchiveWriteOutcome(
+                fileCount: 0,
+                hadTerminalFailure: true,
+                wasCancelled: false
+            )
         }
     }
 

@@ -64,15 +64,16 @@ Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do 
 
 ## Invariants
 
-- Direct is standalone default. `mac-app` is reserved/unimplemented and never an implicit fallback.
+- Direct is the only execution path; the CLI has no backend option and never depends on the Mac app or localhost.
 - Manual IP/Tailscale is portable. Nearby must return `transport_unsupported` in Rust.
-- Outcomes and argument failures are JSON on stdout. Help/version are text. Pairing instructions and health-free progress may use stderr.
+- Structured outcomes and argument failures share one canonical JSON model. Interactive terminals render it as readable text; pipes and `--json` emit JSON, while `--human` forces text. Help/version are text, exact artifacts bypass rendering, and pairing instructions or health-free progress may use stderr.
 - Never place health payloads in logs, diagnostics, fixtures, panic text, telemetry, or test reports.
 - Direct CLI Access is opt-in. Pairing, idle reconnect, and new work need foreground iPhone. Only an already-connected export gets finite iOS background time; expiration pauses durable work.
 - Direct trust is separate from Mac sync trust. Credentials use Keychain, Secret Service, or Windows Credential Manager. Never fall back to plaintext.
-- Preserve explicit device and port. Never switch peer, port, backend, or transport silently.
+- Preserve explicit device and port. Never switch peer, port, or transport silently.
 - Peer/install binding, dates, destination, settings, request fingerprint, manifests, partition chain, and committed frontier are immutable across resume.
-- Timeout, Ctrl-C, process death, disconnect, or background expiry never means cancellation. Only iPhone acknowledgement is terminal.
+- Timeout, Ctrl-C, process death, disconnect, background expiry, or local wake-wait cancellation never means phone-side cancellation. Only mobile acknowledgement is terminal.
+- RFC-0005 keeps unavailable query/export/resume/cancel requests in one shared 120-second wake window (`--wake-timeout`; MCP `HEALTHMD_WAKE_TIMEOUT`) with 250 ms to 2 s retries. It emits only health-free progress. Wake enrollment is reported truthfully per selected device from the stored wake credential: `unavailable`/`wait_only` when absent, `available`/`enrolled` when the paired phone enrolled.
 - Strict raw/extract validate the complete disk spool before exposure. Incomplete extract emits no values without `--allow-partial`.
 - File mode requires an existing absolute destination, production iPhone exporters, bounded transfer, and restart-safe overwrite/append/Markdown merge receipts.
 - Protocol v1 destination text is opaque on iPhone. The receiving host validates and binds an existing native absolute non-symlink directory before sending; file mode works on macOS, Linux, and Windows.
@@ -128,16 +129,35 @@ Never update one side of a wire change and call it complete.
 2. Keep domain/security logic outside the parser.
 3. Add explicit Rust/Swift protocol fields when semantics cross the wire.
 4. Pin exact request before network work.
-5. Return deterministic JSON for invalid combinations and runtime errors.
+5. Treat omitted execution requirements as local discovery where safe: return
+   `healthmd.cli_guidance/1` with `request_sent: false`, requirements, examples, and next actions.
+   Keep malformed/contradictory input and runtime failures nonzero, deterministic,
+   privacy-safe `healthmd.cli_error/1`; never embed rejected values or escaped Clap output.
 6. Update parser/client/protocol/iPhone tests, help, README, operator guidance, and QA.
 
-Do not add `--iphone` or require `--backend direct`; standalone already means direct iPhone.
+Do not add `--iphone`; standalone already means direct iPhone.
 
 ### Pairing/reconnect
 
-Preserve six-digit out-of-band code, ephemeral Curve25519, HMAC transcript proofs, fresh nonces/session keys, installation binding, native credentials, replay rejection, and separate trust domain. Codes never cross wire or persist. Write trust durably before success acknowledgement.
+Preserve selector 1's six-digit Apple transcript and selector 2's 20-digit Android transcript byte-for-byte. Current onboarding uses selector 3 with one shared 20-digit iOS/Android QR/code and independently domain-separated client/server HMAC transcripts. Preserve ephemeral Curve25519, fresh nonces/session keys, installation binding, native credentials, replay rejection, and separate trust domains. Codes never cross wire or persist. Write trust durably before success acknowledgement.
 
 Test wrong code/peer, replaced identity, corrupt credentials, multiple devices, unpair on both sides, explicit reset, and unavailable Linux Secret Service.
+
+### Agent wake window
+
+Keep the wait/retry policy in `healthmd-client`; CLI and MCP adapters must call the same function.
+Retry only unreachable transport and authenticated inactive-source outcomes. Keep the listener,
+selected peer, port, operation request, and durable-job semantics fixed. `0` disables preflight.
+Expiry retains the public `direct_source_unavailable` outcome with additive
+`wake_window_seconds`. MCP cancellation must interrupt every accept/sleep and remain distinct from
+terminal source cancellation. Emit `notifications/progress` only for a valid caller progress token,
+at wait start and about every 10 seconds, with no operation, metric, date, or payload detail.
+
+P2 shipped: the dedicated `apps/wake` Worker is deployed and the CLI stores wake credentials and
+sends the best-effort nudge from every build, defaulting to the production Worker URL. Preserve
+`--no-wake`/`HEALTHMD_NO_WAKE=1` as the explicit opt-out and silent P1 fallback; the legacy
+`wake-worker` Cargo feature is a no-op compatibility alias only. P3 Android/FCM remains pending: do
+not promise an Android push, and never alter any direct protocol bytes for wake.
 
 ### Raw/export extraction
 
@@ -190,6 +210,12 @@ rustup run 1.85.0 cargo check --workspace --all-features --locked
 python3 scripts/update-mcp-shared-assets.py --check
 dist plan --allow-dirty
 cargo run --bin healthmd -- --help
+cargo run --bin healthmd -- export
+cargo run --bin healthmd -- extract
+cargo run --bin healthmd -- query
+cargo run --bin healthmd -- query healthmd_sleep_sessions
+cargo run --bin healthmd -- resume
+cargo run --bin healthmd -- direct reset-trust
 cargo run --bin healthmd -- setup codex --help
 cargo run --bin healthmd -- mcp serve --help
 cargo run --bin healthmd -- mcp schema healthmd_sleep_sessions

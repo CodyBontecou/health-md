@@ -18,6 +18,7 @@ enum ExportIntentRunner {
         case success(daysExported: Int, formatsPerDate: Int, dailyNoteUpdateCount: Int = 0)
         case partial(exported: Int, total: Int, formatsPerDate: Int, dailyNoteUpdateCount: Int = 0, dailyNoteSkipCount: Int = 0, reason: String)
         case pending(reason: String)
+        case cancelled(remainingDates: [Date]?)
         case noVault
         case destinationChanged
         /// Drive authorization and journal recovery are foreground-only. This typed outcome is
@@ -27,6 +28,9 @@ enum ExportIntentRunner {
         case failure(reason: String)
         /// A profile parameter referenced a name that no longer exists.
         case profileNotFound(name: String)
+        /// A v2-imported profile has no locally confirmed destination yet, or
+        /// profile mode has no valid active row. Never falls back to live state.
+        case profileRequiresRebind
     }
 
     /// Resolution of an intent's optional profile parameter (phase 4,
@@ -38,6 +42,7 @@ enum ExportIntentRunner {
         case profile(ExportProfile)
         case legacySettings
         case notFound(String)
+        case unavailable
     }
 
     static func resolveProfile(
@@ -51,7 +56,7 @@ enum ExportIntentRunner {
             if let active = profileStore.activeProfile {
                 return .profile(active)
             }
-            return .notFound("Active profile is unavailable")
+            return .unavailable
         }
 
         if let named = profileStore.profile(named: rawName) {
@@ -84,6 +89,9 @@ enum ExportIntentRunner {
         /// profile's destinations when restoring.
         var adoptProfileDestinations: (ExportProfile?) -> Void = { _ in }
         var restoreActiveProfileDestinations: () -> Void = { }
+        var isProfileExecutionBlocked: (UUID) -> Bool = { profileID in
+            SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profileID)
+        }
         var exportDatesBackground: ([Date], AdvancedExportSettings) async -> ExportOrchestrator.ExportResult
         var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?, String?) -> Void
         var recordExportUse: () -> Void
@@ -188,13 +196,10 @@ enum ExportIntentRunner {
     /// destinations for this run. Mirrors `ExportProfileCoordinator` adoption.
     static func adoptDestinationsForIntentRun(_ profile: ExportProfile?) {
         let destinationStore = ProfileDestinationStore()
-        if let profile,
-           let bindingID = profile.folderVaultID,
-           let destination = destinationStore.vault(id: bindingID) {
+        if let bindingID = profile?.folderVaultID {
             VaultManager().adoptPersistedVault(
-                bookmarkData: destination.bookmarkData,
-                standardizedPath: destination.standardizedPath,
-                displayName: destination.name
+                destinationID: bindingID,
+                from: destinationStore
             )
         }
         if let profile,
@@ -239,9 +244,14 @@ enum ExportIntentRunner {
         case .legacySettings:
             runProfile = nil
         case .profile(let profile):
+            guard !dependencies.isProfileExecutionBlocked(profile.id) else {
+                return .profileRequiresRebind
+            }
             runProfile = profile
         case .notFound(let name):
             return .profileNotFound(name: name)
+        case .unavailable:
+            return .profileRequiresRebind
         }
         if let runProfile {
             dependencies.adoptProfileDestinations(runProfile)
@@ -285,6 +295,36 @@ enum ExportIntentRunner {
         }
 
         let sortedDates = dates.sorted()
+
+        if result.wasCancelled {
+            if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
+                dependencies.recordResult(
+                    result,
+                    source,
+                    sortedDates.first!,
+                    sortedDates.last!,
+                    dependencies.targetLabel(),
+                    profileNameForHistory
+                )
+            }
+            if result.successCount > 0 {
+                dependencies.recordExportUse()
+                dependencies.trackExportSucceeded(PricingAnalyticsExportMetadata(
+                    targetType: .localFile,
+                    formatCount: settings.exportFormats.count,
+                    metricCount: settings.metricSelection.totalEnabledCount,
+                    dateRangePreset: PricingAnalyticsDateRangePreset.custom,
+                    startDate: sortedDates.first!,
+                    endDate: sortedDates.last!
+                ))
+            }
+            return .cancelled(
+                remainingDates: result.remainingDates(
+                    from: dates,
+                    calendar: dependencies.calendar
+                )
+            )
+        }
 
         if result.successCount == 0,
            result.dailyNoteSkipCount > 0,
@@ -370,7 +410,7 @@ enum ExportIntentRunner {
             )
         }
 
-        let reason = result.hasPartialFailures
+        let reason = result.hasDegradingPartialFailures
             ? result.partialFailureSummary
             : (result.primaryFailureReason?.shortDescription ?? "Some days had no data")
         return .partial(
@@ -452,8 +492,12 @@ enum ExportIntentRunner {
             return "Exported \(exported) of \(total) days. \(reason)."
         case .pending:
             return "Pending. Unlock your phone and tap the Health.md notification to export."
+        case .cancelled:
+            return "Export cancelled."
         case .profileNotFound(let name):
             return "No export profile named \(name) was found. Open Health.md to review your profiles."
+        case .profileRequiresRebind:
+            return SharedSetupV2ExecutionGate.blockedExecutionMessage
         case .noVault:
             return "No vault selected. Open Health.md and choose a vault first."
         case .destinationChanged:

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Agendamentos de perfis</string>
+    <string name="a11y_profiles_empty">Ainda não há perfis de exportação.</string>
+    <string name="a11y_profiles_add">Novo perfil com as configurações atuais</string>
+    <string name="a11y_profiles_none_enabled">Nenhum agendamento de perfil ativado.</string>
+    <string name="a11y_profiles_edit">Editar agendamento</string>
+    <string name="a11y_profiles_edit_named">Editar agendamento de %1$s</string>
+    <string name="a11y_profiles_delete">Excluir</string>
+    <string name="a11y_profiles_delete_named">Excluir perfil %1$s</string>
+    <string name="a11y_profiles_schedule_named">Agendamento de %1$s</string>
+    <string name="a11y_profiles_save">Salvar</string>
+    <string name="a11y_profiles_delete_title">Excluir “%1$s”?</string>
+    <string name="a11y_profiles_delete_body">As configurações salvas e o agendamento serão removidos. O último perfil restante não pode ser excluído.</string>
+    <string name="a11y_profiles_cadence_unit">Unidade de frequência</string>
+    <string name="a11y_profiles_days">Dias</string>
+    <string name="a11y_profiles_weeks">Semanas</string>
+    <string name="a11y_profiles_months">Meses</string>
+    <string name="a11y_profiles_weekday">Dia da semana</string>
+    <string name="a11y_profiles_hour">Hora</string>
+    <string name="a11y_profiles_minute">Minuto</string>
+    <string name="a11y_profiles_lookback">Dias anteriores (1–30)</string>
+    <string name="a11y_profiles_every_days">A cada N dias</string>
+    <string name="a11y_profiles_every_weeks">A cada N semanas</string>
+    <string name="a11y_profiles_every_months">A cada N meses</string>
+</resources>

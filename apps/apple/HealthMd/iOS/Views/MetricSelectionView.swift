@@ -114,6 +114,8 @@ struct MetricSelectionView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                         .accessibilityHidden(true)
                 }
                 .accessibilityLabel("Metric actions")
@@ -150,7 +152,7 @@ struct MetricSelectionView: View {
 
     private var summaryHeader: some View {
         VStack(alignment: .leading, spacing: Spacing.s4) {
-            HStack(alignment: .top, spacing: Spacing.s4) {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("\(selectionState.totalEnabledCount)")
                         .font(Typography.displayMedium())
@@ -162,11 +164,9 @@ struct MetricSelectionView: View {
                         .foregroundStyle(Color.textSecondary)
                 }
 
-                Spacer(minLength: Spacing.s4)
-
                 Text("\(selectionPercent)%")
                     .font(Typography.monoCaptionEmphasis())
-                    .foregroundStyle(selectionPercent == 100 ? Color.success : Color.accent)
+                    .foregroundStyle(selectionPercent == 100 ? Color.successText : Color.textSecondary)
                     .geistPill(tint: selectionPercent == 100 ? Color.success : Color.accent)
                     .accessibilityLabel("\(selectionPercent) percent enabled")
             }
@@ -192,7 +192,8 @@ struct MetricSelectionView: View {
                         .foregroundStyle(Color.textPrimary)
                     Text("Medications use a separate Apple permission step.")
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .tint(Color.success)
@@ -231,7 +232,9 @@ struct MetricSelectionView: View {
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                         .accessibilityHidden(true)
                 }
                 .buttonStyle(.plain)
@@ -250,19 +253,19 @@ struct MetricSelectionView: View {
     }
 
     private var categoryListHeader: some View {
-        HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: Spacing.s1) {
             Text(LocalizedStringKey(searchText.isEmpty ? "Metric Categories" : "Search Results"))
                 .font(Typography.labelUppercase())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.textSecondary)
                 .tracking(1.2)
-
-            Spacer()
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(searchText.isEmpty
                  ? String(localized: "\(enabledCategoryCount)/\(availableCategoryCount) categories")
                  : String(localized: "\(filteredCategories.count) groups"))
                 .font(Typography.caption())
-                .foregroundStyle(Color.textMuted)
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, Spacing.s1)
         .accessibilityElement(children: .combine)
@@ -374,41 +377,16 @@ struct MetricSelectionView: View {
         let totalCount = selectionState.totalMetricCount(for: category)
 
         VStack(spacing: 0) {
-            Button {
-                toggleExpanded(category)
-            } label: {
-                HStack(spacing: Spacing.s3) {
-                    categoryIconBlock(for: category, tint: categoryTint(for: category))
-
-                    VStack(alignment: .leading, spacing: Spacing.s1) {
-                        Text(category.displayName)
-                            .font(Typography.headline())
-                            .foregroundStyle(Color.textPrimary)
-                            .lineLimit(1)
-                        Text(categorySubtitle(for: category, enabledCount: enabledCount, totalCount: totalCount))
-                            .font(Typography.caption())
-                            .foregroundStyle(Color.textSecondary)
-                            .lineLimit(1)
-                    }
-
-                    Spacer(minLength: Spacing.s2)
-
-                    categoryStatusPill(for: category)
-
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-                        .accessibilityHidden(true)
-                }
-                .padding(Spacing.s4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+            ReadingMetricCategoryHeader(
+                title: category.displayName,
+                subtitle: categorySubtitle(for: category, enabledCount: enabledCount, totalCount: totalCount),
+                icon: category.icon,
+                isExpanded: isExpanded,
+                accessibilityLabel: "\(category.rawValue), \(enabledCount) of \(totalCount) metrics enabled",
+                onExpand: { toggleExpanded(category) }
+            ) {
+                categoryStatusPill(for: category)
             }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(category.rawValue), \(enabledCount) of \(totalCount) metrics enabled")
-            .accessibilityHint("Double tap anywhere on the category to \(isExpanded ? "collapse" : "expand")")
-            .accessibilityAddTraits(.isButton)
 
             if category == .medications {
                 rowDivider
@@ -423,7 +401,7 @@ struct MetricSelectionView: View {
                         ForEach(metrics, id: \.id) { metric in
                             metricRow(for: metric)
                             if metric.id != metrics.last?.id {
-                                rowDivider.padding(.leading, 64)
+                                rowDivider.padding(.horizontal, Spacing.s4)
                             }
                         }
                     }
@@ -432,7 +410,8 @@ struct MetricSelectionView: View {
                     rowDivider
                     Text("No metrics in this category match your search.")
                         .font(Typography.caption())
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(Spacing.s4)
                 }
@@ -493,19 +472,12 @@ struct MetricSelectionView: View {
         let label = categoryStatusLabel(for: category)
         let icon = categoryStatusIcon(for: category)
 
-        return HStack(spacing: Spacing.s1) {
-            Image(systemName: icon)
-                .font(.caption2.weight(.bold))
-                .accessibilityHidden(true)
-            Text(LocalizedStringKey(label))
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-        }
-        .foregroundStyle(tint)
-        .padding(.horizontal, Spacing.s3)
-        .padding(.vertical, 7)
-        .background(tint.opacity(0.10), in: Capsule())
-        .overlay(Capsule().strokeBorder(tint.opacity(0.22), lineWidth: 1))
+        return ReadingMetricCategoryStatus(
+            label: label,
+            icon: icon,
+            tint: tint,
+            textColor: selectionState.isCategoryFullyEnabled(category) ? Color.successText : Color.textSecondary
+        )
     }
 
     private func categoryStatusLabel(for category: HealthMetricCategory) -> String {
@@ -587,25 +559,17 @@ struct MetricSelectionView: View {
 
     private var medicationAuthorizationRow: some View {
         VStack(alignment: .leading, spacing: Spacing.s3) {
-            HStack(alignment: .top, spacing: Spacing.s3) {
-                Image(systemName: healthKitManager.isMedicationAuthorizationRequested ? "checkmark.shield.fill" : "shield.lefthalf.filled")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(healthKitManager.isMedicationAuthorizationRequested ? Color.success : Color.warning)
-                    .frame(width: 24)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text(medicationAuthorizationTitle)
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
-                    Text(medicationAuthorizationMessage)
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: Spacing.s2)
+            VStack(alignment: .leading, spacing: Spacing.s1) {
+                Text(medicationAuthorizationTitle)
+                    .font(Typography.bodyEmphasis())
+                    .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(medicationAuthorizationMessage)
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if healthKitManager.isMedicationAuthorizationSupported {
                 Button {
@@ -618,10 +582,14 @@ struct MetricSelectionView: View {
                         }
                         Text(healthKitManager.isMedicationAuthorizationRequested ? "Change access" : "Choose medications")
                             .font(Typography.label())
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .foregroundStyle(Color.accent)
+                    .multilineTextAlignment(.leading)
+                    .foregroundStyle(Color.textSecondary)
                     .padding(.horizontal, Spacing.s3)
                     .padding(.vertical, Spacing.s2)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                     .background(Color.accentSubtle, in: Capsule())
                     .overlay(Capsule().strokeBorder(Color.accent.opacity(0.22), lineWidth: 1))
                 }
@@ -685,38 +653,16 @@ struct MetricSelectionView: View {
         let isVisionUnavailable = metric.category == .vision && !healthKitManager.isVisionAuthorizationSupported
         let isUnavailable = isOSUnavailable || isMedicationUnavailable || isVisionUnavailable
 
-        HStack(spacing: Spacing.s3) {
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(metric.name)
-                    .font(Typography.bodyEmphasis())
-                    .foregroundStyle(isUnavailable ? Color.textMuted : Color.textPrimary)
-                    .lineLimit(2)
-
-                if !metric.selectionDetail.isEmpty {
-                    Text(metric.selectionDetail)
-                        .font(Typography.monoCaption())
-                        .foregroundStyle(Color.textMuted)
-                }
-            }
-
-            Spacer(minLength: Spacing.s4)
-
-            Toggle("", isOn: Binding(
+        ReadingMetricToggle(
+            name: metric.name,
+            detail: metric.selectionDetail,
+            isOn: Binding(
                 get: { selectionState.isMetricEnabled(metric.id) },
                 set: { _ in toggleMetric(metric) }
-            ))
-            .labelsHidden()
-            .tint(Color.success)
-            .controlSize(.small)
-            .disabled(isUnavailable)
-            .accessibilityLabel(metric.selectionDetail.isEmpty ? metric.name : "\(metric.name), \(metric.selectionDetail)")
-            .accessibilityValue(isEnabled ? "Enabled" : "Disabled")
-            .accessibilityHint(isOSUnavailable ? "Requires a newer operating system" : (metric.category == .medications && !healthKitManager.isMedicationAuthorizationRequested ? "Double tap to choose medications before enabling" : "Double tap to \(isEnabled ? "disable" : "enable")"))
-        }
-        .padding(.horizontal, Spacing.s4)
-        .padding(.vertical, Spacing.s3)
-        .padding(.leading, 48)
-        .contentShape(Rectangle())
+            ),
+            isUnavailable: isUnavailable,
+            accessibilityHint: isOSUnavailable ? "Requires a newer operating system" : (metric.category == .medications && !healthKitManager.isMedicationAuthorizationRequested ? "Double tap to choose medications before enabling" : "Double tap to \(isEnabled ? "disable" : "enable")")
+        )
     }
 
     private func toggleCategory(_ category: HealthMetricCategory) {

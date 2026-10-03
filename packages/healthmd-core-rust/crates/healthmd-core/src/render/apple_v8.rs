@@ -39,7 +39,8 @@ pub(crate) fn add_rollups(
     config: &RenderSessionConfig,
     semantic: &SemanticResult,
 ) -> Result<(), RenderError> {
-    super::apple_rollup_v8::add_rollups(builder, config, semantic)
+    super::apple_rollup_v8::add_rollups(builder, config, semantic)?;
+    super::apple_range_rollup_v9::add_rollups(builder, config, semantic)
 }
 
 pub(crate) fn render_api_record(

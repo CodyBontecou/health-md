@@ -9,6 +9,7 @@ import com.healthmd.domain.model.ExportProfileResolution
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.direct.protocol.ANDROID_APPLICATION_PROTOCOL_VERSION
+import com.healthmd.direct.protocol.ANDROID_PAIRING_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.ArtifactFormat
 import com.healthmd.direct.protocol.ArtifactKind
 import com.healthmd.direct.protocol.ArtifactManifest
@@ -25,12 +26,14 @@ import com.healthmd.direct.protocol.ExportPhase
 import com.healthmd.direct.protocol.ExportProgress
 import com.healthmd.direct.protocol.ExportRequest
 import com.healthmd.direct.protocol.JOB_LIFETIME_SECONDS
+import com.healthmd.direct.protocol.PairingRejectedException
 import com.healthmd.direct.protocol.PeerBinding
 import com.healthmd.direct.protocol.ProductCapability
 import com.healthmd.direct.protocol.ProductId
 import com.healthmd.direct.protocol.ProtocolLimits
 import com.healthmd.direct.protocol.ResolvedRange
 import com.healthmd.direct.protocol.SettingsPolicy
+import com.healthmd.direct.protocol.SHARED_PAIRING_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.SourceHello
 import com.healthmd.direct.protocol.SourceIdentity
 import com.healthmd.direct.protocol.SourceStatus
@@ -39,9 +42,11 @@ import com.healthmd.direct.protocol.TransferNegotiation
 import com.healthmd.direct.protocol.TransferPlanBuilder
 import com.healthmd.direct.protocol.V2Codec
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.ExportTarget
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.distribution.DistributionPolicy
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.export.ExportHistoryAccess
@@ -67,6 +72,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -82,6 +88,24 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+internal fun resolveDirectGeneratedFilesEnginePin(
+    settings: ExportSettings,
+    planFreshPin: () -> ExportEnginePin?,
+): ExportEnginePin? = when {
+    settings.executionEngineAuthorityIsFrozen -> settings.executionEnginePin
+    settings.executionEnginePin != null -> settings.executionEnginePin
+    else -> planFreshPin()
+}
+
+/** Initial pause before the direct session reconnects to a listening CLI. */
+private const val RECONNECT_INITIAL_BACKOFF_MILLIS = 250L
+
+/** Maximum pause between reconnect attempts, matching the CLI's documented policy. */
+private const val RECONNECT_MAXIMUM_BACKOFF_MILLIS = 2_000L
+
+/** Consecutive failed reconnects before the session reports its outcome and stops. */
+private const val MAXIMUM_CONSECUTIVE_RECONNECT_FAILURES = 6
+
 sealed interface DirectCliCompletion {
     data class Paired(val listenerName: String) : DirectCliCompletion
     data object SessionFinished : DirectCliCompletion
@@ -94,7 +118,7 @@ enum class DirectCliFailure {
     CONNECTION_FAILED,
     SESSION_TIMEOUT,
     QUOTA_EXHAUSTED,
-    FITBIT_RANGE_REQUIRED,
+    PROVIDER_RANGE_REQUIRED,
     PROFILE_NOT_FOUND,
     SOURCE_UNAVAILABLE,
     HEALTH_ACCESS_REQUIRED,
@@ -124,7 +148,9 @@ class DirectCliCoordinator @Inject constructor(
     private val rawRepositories: RawHealthRepositoryRegistry,
     private val healthRepository: HealthRepository,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
+    private val directRawRequestPolicy: DistributionDirectRawRequestPolicy,
     private val enginePinPlanner: ExportEnginePinPlanner,
     private val protocolAuthority: AndroidDirectProtocolAuthority,
     private val exportProfileRepository: ExportProfileRepository,
@@ -138,22 +164,39 @@ class DirectCliCoordinator @Inject constructor(
 
     suspend fun pair(host: String, port: Int, pairingCode: String) = sessionMutex.withLock {
         require(pairingCode.count { it in '0'..'9' } == 20) {
-            "Android pairing code must be twenty digits."
+            "The shared pairing code must be twenty digits."
         }
         _state.value = DirectCliConnectionState.Pairing
         protocolAuthority.assertCompatible()
-        val connected = DirectClient.connect(
+        fun connect(pairingProtocolVersion: Int) = DirectClient.connect(
             host = host,
             port = port,
             installationId = trustStore.installationId(),
             displayName = Build.MODEL.ifBlank { "Android" },
             pairingCode = pairingCode,
+            pairingProtocolVersion = pairingProtocolVersion,
             deterministicCore = protocolAuthority,
         )
+        val connected = try {
+            connect(SHARED_PAIRING_PROTOCOL_VERSION)
+        } catch (sharedPairingError: PairingRejectedException) {
+            // Selector 2 retains the same 20-digit entropy and supports CLI releases that
+            // predate the universal selector-3 QR profile. Transport failures and coroutine
+            // cancellation are never caught as downgrade signals.
+            currentCoroutineContext().ensureActive()
+            try {
+                connect(ANDROID_PAIRING_PROTOCOL_VERSION)
+            } catch (legacyPairingError: PairingRejectedException) {
+                legacyPairingError.addSuppressed(sharedPairingError)
+                throw legacyPairingError
+            }
+        }
         connected.channel.use { channel ->
             activeChannel = channel
             try {
+                currentCoroutineContext().ensureActive()
                 negotiate(channel)
+                currentCoroutineContext().ensureActive()
                 trustStore.save(connected.listener, host, port)
                 _state.value = DirectCliConnectionState.Completed(
                     DirectCliCompletion.Paired(connected.listener.displayName),
@@ -164,33 +207,81 @@ class DirectCliCoordinator @Inject constructor(
         }
     }
 
+    /**
+     * Serve Direct CLI requests, reconnecting with bounded backoff whenever the CLI closes a
+     * connection without a terminal outcome.
+     *
+     * The RFC-0005 P1 wake preflight consumes one authenticated connection for its status probe
+     * and then rebinds its listener for the real operation request; a transient network drop ends
+     * a transfer the same way. Both must self-heal: after each non-terminal close the session
+     * returns to [DirectCliConnectionState.WaitingForCli] and reconnects with 250 ms to 2 s
+     * backoff. When the CLI stays away after a cleanly served request the session finishes
+     * normally; repeated failures to reach it report [DirectCliFailure.CONNECTION_FAILED]. User
+     * disconnect, forgetting the pairing, and the system foreground-service timeout still cancel
+     * the session immediately.
+     */
     suspend fun connectAndServe() = sessionMutex.withLock {
         val trust = requireNotNull(trustStore.load()) { "Pair with a CLI before connecting." }
-        _state.value = DirectCliConnectionState.WaitingForCli
         protocolAuthority.assertCompatible()
-        val connected = DirectClient.connect(
-            host = trust.host,
-            port = trust.port,
-            installationId = trustStore.installationId(),
-            displayName = Build.MODEL.ifBlank { "Android" },
-            trustedListener = trust,
-            deterministicCore = protocolAuthority,
-        )
-        connected.channel.use { channel ->
-            activeChannel = channel
+        var backoffMillis = RECONNECT_INITIAL_BACKOFF_MILLIS
+        var consecutiveFailures = 0
+        var servedSinceInterruption = false
+        var firstAttempt = true
+        while (true) {
+            _state.value = DirectCliConnectionState.WaitingForCli
+            if (!firstAttempt) {
+                delay(backoffMillis)
+                backoffMillis =
+                    (backoffMillis * 2).coerceAtMost(RECONNECT_MAXIMUM_BACKOFF_MILLIS)
+            }
+            firstAttempt = false
             try {
-                val transferNegotiation = negotiate(channel)
-                protocolAuthority.beginBootstrap()
-                _state.value = DirectCliConnectionState.Connected(connected.listener.displayName)
-                serve(channel, transferNegotiation)
-                if (_state.value is DirectCliConnectionState.Connected) {
-                    _state.value = DirectCliConnectionState.Completed(
-                        DirectCliCompletion.SessionFinished,
-                    )
+                val connected = DirectClient.connect(
+                    host = trust.host,
+                    port = trust.port,
+                    installationId = trustStore.installationId(),
+                    displayName = Build.MODEL.ifBlank { "Android" },
+                    trustedListener = trust,
+                    deterministicCore = protocolAuthority,
+                )
+                connected.channel.use { channel ->
+                    activeChannel = channel
+                    try {
+                        val transferNegotiation = negotiate(channel)
+                        protocolAuthority.beginBootstrap()
+                        _state.value = DirectCliConnectionState.Connected(
+                            connected.listener.displayName,
+                        )
+                        serve(channel, transferNegotiation)
+                    } finally {
+                        protocolAuthority.endOperation()
+                        activeChannel = null
+                    }
                 }
-            } finally {
-                protocolAuthority.endOperation()
-                activeChannel = null
+                consecutiveFailures = 0
+                backoffMillis = RECONNECT_INITIAL_BACKOFF_MILLIS
+                val state = _state.value
+                if (state is DirectCliConnectionState.Completed ||
+                    state is DirectCliConnectionState.Failed
+                ) {
+                    return
+                }
+                servedSinceInterruption = true
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                currentCoroutineContext().ensureActive()
+                consecutiveFailures++
+                if (consecutiveFailures > MAXIMUM_CONSECUTIVE_RECONNECT_FAILURES) {
+                    if (servedSinceInterruption) {
+                        _state.value = DirectCliConnectionState.Completed(
+                            DirectCliCompletion.SessionFinished,
+                        )
+                    } else {
+                        throw error
+                    }
+                    return
+                }
             }
         }
     }
@@ -321,18 +412,30 @@ class DirectCliCoordinator @Inject constructor(
                 val product = productId(request.product)
                 val rawCapabilities = if (product == ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1) {
                     val providerId = request.product.getValue("provider_id").jsonPrimitive.content
-                    if (providerId == "fitbit" && !isBoundedFitbitRange(request.dateSelection)) {
+                    val rawRepository = rawRepositories.repositoryFor(providerId)
+                    if (rawRepository == null) {
+                        reject(
+                            channel,
+                            request.jobId,
+                            ErrorCode.SOURCE_UNAVAILABLE,
+                            phase,
+                            "The requested raw provider is unavailable in this distribution.",
+                            DirectCliFailure.SOURCE_UNAVAILABLE,
+                        )
+                        return
+                    }
+                    directRawRequestPolicy.validationError(providerId, request.dateSelection)?.let { error ->
                         reject(
                             channel,
                             request.jobId,
                             ErrorCode.INVALID_REQUEST,
                             phase,
-                            "Fitbit raw export requires an explicit range of at most 366 days.",
-                            DirectCliFailure.FITBIT_RANGE_REQUIRED,
+                            error,
+                            DirectCliFailure.PROVIDER_RANGE_REQUIRED,
                         )
                         return
                     }
-                    requireNotNull(rawRepositories.repositoryFor(providerId)).capabilities()
+                    rawRepository.capabilities()
                 } else {
                     null
                 }
@@ -466,6 +569,17 @@ class DirectCliCoordinator @Inject constructor(
                 "The export profile's saved settings are invalid; re-save the profile on the device.",
                 DirectCliFailure.PROFILE_NOT_FOUND,
             )
+        } catch (_: DirectProfileRebindRequiredException) {
+            reject(
+                channel,
+                request.jobId,
+                ErrorCode.INVALID_REQUEST,
+                phase,
+                "profile_rebind_required",
+                // Keep the shipped UI failure enum stable; the direct protocol still receives
+                // the distinct bounded rebind-required rejection above.
+                DirectCliFailure.PROFILE_NOT_FOUND,
+            )
         } catch (_: DirectExportCancelledException) {
             jobStore.cancel(request.jobId)
             _state.value = DirectCliConnectionState.Completed(
@@ -527,8 +641,9 @@ class DirectCliCoordinator @Inject constructor(
             ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1 -> null
             // A profile basis carries its frozen engine authority (restored with the
             // snapshot); only the saved-device basis plans a fresh direct pin.
-            ProductId.GENERATED_FILES_V1 ->
-                settings.executionEnginePin ?: enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
+            ProductId.GENERATED_FILES_V1 -> resolveDirectGeneratedFilesEnginePin(settings) {
+                enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
+            }
             ProductId.ANDROID_DAILY_RECORDS_V1 -> enginePinPlanner.forApiV1(zoneId)
         }
         // Persist renderer authority before either producer can read non-transactional provider data.
@@ -751,17 +866,10 @@ class DirectCliCoordinator @Inject constructor(
     )
 
     private suspend fun isUnlocked(): Boolean {
-        billingRepository.startConnection()
-        return settingsRepository.isPurchased.first() || billingRepository.isUnlocked.first()
-    }
-
-    private fun isBoundedFitbitRange(selection: JsonObject): Boolean {
-        if (selection["type"]?.jsonPrimitive?.content != "exact") return false
-        val start = selection["start_date"]?.jsonPrimitive?.contentOrNull
-            ?.let(LocalDate::parse) ?: return false
-        val end = selection["end_date"]?.jsonPrimitive?.contentOrNull
-            ?.let(LocalDate::parse) ?: return false
-        return !end.isBefore(start) && ChronoUnit.DAYS.between(start, end) < MAXIMUM_FITBIT_RAW_DAYS
+        entitlementRepository.refresh()
+        return distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
     }
 
     private suspend fun resolveDates(
@@ -929,6 +1037,14 @@ class DirectCliCoordinator @Inject constructor(
             is ExportProfileResolution.NotFound -> throw DirectProfileNotFoundException(resolution.reference)
             ExportProfileResolution.LegacySettings -> throw DirectProfileNotFoundException(profileId)
         }
+        val blocked = try {
+            exportProfileRepository.isSharedSetupV2Blocked(profile.id)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            true
+        }
+        if (blocked) throw DirectProfileRebindRequiredException()
         return snapshotFactory.applyForActivation(profile, current)
             ?: throw DirectProfileSnapshotException(profile.name)
     }
@@ -987,6 +1103,9 @@ class DirectCliCoordinator @Inject constructor(
     /** The referenced profile exists but its frozen snapshot failed validation (fail-closed). */
     private class DirectProfileSnapshotException(val profileName: String) : Exception(profileName)
 
+    /** The referenced imported profile still has inert destination intent. */
+    private class DirectProfileRebindRequiredException : Exception()
+
     private object UUIDs {
         fun random(): String = java.util.UUID.randomUUID().toString()
     }
@@ -994,7 +1113,6 @@ class DirectCliCoordinator @Inject constructor(
     companion object {
         private const val MAXIMUM_CLOCK_SKEW_SECONDS = 5L * 60L
         private const val PREPARATION_CANCEL_POLL_MILLIS = 250
-        private const val MAXIMUM_FITBIT_RAW_DAYS = 366L
         private val UNSUPPORTED_NATIVE_PROVIDERS = setOf(
             "polar",
             "samsung_health",

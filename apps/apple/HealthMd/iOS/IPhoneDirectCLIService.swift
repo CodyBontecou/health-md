@@ -88,14 +88,56 @@ struct IPhoneDirectCLIReconnectPolicy: Equatable, Sendable {
     }
 }
 
+nonisolated struct IPhoneDirectCLIIdleHeartbeatPolicy: Equatable, Sendable {
+    /// Idle inbound time on a live channel before an application-level ping probes it.
+    let pingIdleThreshold: Duration
+    /// Time a ping may remain unanswered before the channel is declared unreachable.
+    let pongTimeout: Duration
+
+    nonisolated static let production = IPhoneDirectCLIIdleHeartbeatPolicy(
+        // Legacy status clients wait ten seconds for StatusResponse and expect it to be the
+        // next control message. Probe only after that compatibility window has elapsed.
+        pingIdleThreshold: .seconds(11),
+        pongTimeout: .seconds(5)
+    )
+
+    enum Action: Equatable, Sendable {
+        case none
+        case sendPing
+        case declareUnreachable
+    }
+
+    nonisolated func action(
+        lastInboundAt: ContinuousClock.Instant,
+        pingSentAt: ContinuousClock.Instant?,
+        now: ContinuousClock.Instant
+    ) -> Action {
+        guard lastInboundAt <= now else { return .none }
+        if let pingSentAt {
+            guard pingSentAt <= now else { return .none }
+            return pingSentAt.duration(to: now) >= pongTimeout
+                ? .declareUnreachable
+                : .none
+        }
+        return lastInboundAt.duration(to: now) >= pingIdleThreshold
+            ? .sendPing
+            : .none
+    }
+}
+
 nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
     let host: String
     let port: UInt16
     let pairingCode: String
 
     init?(url: URL) {
-        guard url.scheme?.lowercased() == "healthmd",
-              url.host?.lowercased() == "direct-cli",
+        let rawURL = url.absoluteString
+        guard rawURL.utf8.count <= 512,
+              rawURL.utf8.allSatisfy({ (0x21...0x7e).contains($0) }),
+              !rawURL.contains("%"),
+              rawURL.hasPrefix("healthmd://direct-cli/pair?"),
+              url.scheme == "healthmd",
+              url.host == "direct-cli",
               url.path == "/pair",
               url.user == nil,
               url.password == nil,
@@ -115,10 +157,11 @@ nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
               host.utf8.count <= 15,
               Self.isAllowedLocalPairingHost(host),
               let portText = values["port"],
+              portText.utf8.allSatisfy({ (48...57).contains($0) }),
               let port = UInt16(portText),
               port > 0,
               let pairingCode = values["code"],
-              pairingCode.utf8.count == 6,
+              pairingCode.utf8.count == DirectPairingSecurity.sharedPairingCodeDigits,
               pairingCode.utf8.allSatisfy({ (48...57).contains($0) }) else { return nil }
         self.host = host
         self.port = port
@@ -264,7 +307,10 @@ final class IPhoneDirectCLIService: ObservableObject {
     private let trustStore: ManualIPTrustStore
     private let installationID: UUID
     private let reconnectPolicy: IPhoneDirectCLIReconnectPolicy
+    private let heartbeatPolicy: IPhoneDirectCLIIdleHeartbeatPolicy
+    private let heartbeatClock = ContinuousClock()
     private let protocolAuthority: AppleDirectProtocolAuthority
+    private let wakeManager: (any IPhoneDirectWakeManaging)?
     private lazy var client = DirectManualIPClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
@@ -291,6 +337,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var channel: DirectSecureChannel?
     private var remoteCapabilities: DirectPeerCapabilities?
     private var appIsActive = false
+    private var lastInboundActivityAt: ContinuousClock.Instant?
+    private var heartbeatPingSentAt: ContinuousClock.Instant?
     private var backgroundExportTaskID: UIBackgroundTaskIdentifier = .invalid
     private var backgroundExportContinuationID: UUID?
     private var reconnectGeneration = 0
@@ -305,11 +353,15 @@ final class IPhoneDirectCLIService: ObservableObject {
     init(
         defaults: UserDefaults = .standard,
         reconnectPolicy: IPhoneDirectCLIReconnectPolicy = .production,
-        protocolAuthority: AppleDirectProtocolAuthority = .shared
+        heartbeatPolicy: IPhoneDirectCLIIdleHeartbeatPolicy = .production,
+        protocolAuthority: AppleDirectProtocolAuthority = .shared,
+        wakeManager: (any IPhoneDirectWakeManaging)? = nil
     ) {
         self.defaults = defaults
         self.reconnectPolicy = reconnectPolicy
+        self.heartbeatPolicy = heartbeatPolicy
         self.protocolAuthority = protocolAuthority
+        self.wakeManager = wakeManager
         self.installationID = Self.loadOrCreateInstallationID(defaults: defaults)
         let trustStore = ManualIPTrustStore(
             service: "com.codybontecou.obsidianhealth.direct-cli-ios-trust",
@@ -592,6 +644,9 @@ final class IPhoneDirectCLIService: ObservableObject {
     func forgetPairedCLI() {
         disconnect(clearError: true)
         clearPendingPairingLinkState()
+        if let wakeManager {
+            Task { await wakeManager.forgetAll() }
+        }
         do {
             try client.forgetServer()
             needsPairingCode = true
@@ -670,6 +725,23 @@ final class IPhoneDirectCLIService: ObservableObject {
             var retryDelay = self.reconnectPolicy.initialRetryDelayNanoseconds
             while !Task.isCancelled, self.isEnabled, self.appIsActive {
                 if self.channel != nil {
+                    let heartbeatNow = self.heartbeatClock.now
+                    switch self.evaluateIdleHeartbeat(now: heartbeatNow) {
+                    case .none:
+                        break
+                    case .sendPing:
+                        if let channel = self.channel {
+                            self.heartbeatPingSentAt = heartbeatNow
+                            try? await channel.send(.ping)
+                        }
+                    case .declareUnreachable:
+                        // A silent peer (sleep, network roam, process death without a clean
+                        // close) leaves the channel half-open. Kernel keepalives cover most
+                        // cases; this watchdog bounds the rest, including Nearby. Cancelling
+                        // the channel fails the pending session receive, teardown clears the
+                        // stale state, and this loop dials again without user action.
+                        self.channel?.cancel()
+                    }
                     retryDelay = self.reconnectPolicy.initialRetryDelayNanoseconds
                     try? await Task.sleep(
                         nanoseconds: self.reconnectPolicy.connectedPollDelayNanoseconds
@@ -691,6 +763,17 @@ final class IPhoneDirectCLIService: ObservableObject {
             guard self.reconnectGeneration == generation else { return }
             self.reconnectTask = nil
         }
+    }
+
+    private func evaluateIdleHeartbeat(
+        now: ContinuousClock.Instant
+    ) -> IPhoneDirectCLIIdleHeartbeatPolicy.Action {
+        guard let lastInboundActivityAt else { return .none }
+        return heartbeatPolicy.action(
+            lastInboundAt: lastInboundActivityAt,
+            pingSentAt: heartbeatPingSentAt,
+            now: now
+        )
     }
 
     private func connectOnce(
@@ -745,7 +828,10 @@ final class IPhoneDirectCLIService: ObservableObject {
                 ],
                 platform: .iOS,
                 installationID: installationID,
-                query: .current
+                query: .current,
+                wake: wakeManager?.advertisesWake == true
+                    ? DirectWakeCapabilities(supported: true)
+                    : nil
             )))
             guard !Task.isCancelled,
                   isEnabled,
@@ -872,6 +958,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     ) {
         let sessionID = UUID()
         activeSessionID = sessionID
+        lastInboundActivityAt = heartbeatClock.now
+        heartbeatPingSentAt = nil
         sessionTask?.cancel()
         if pairingTrustWasWritten {
             provisionalPairingTrust = ProvisionalPairingTrust(
@@ -886,6 +974,8 @@ final class IPhoneDirectCLIService: ObservableObject {
             do {
                 while !Task.isCancelled {
                     let payload = try await connected.receive()
+                    lastInboundActivityAt = heartbeatClock.now
+                    heartbeatPingSentAt = nil
                     guard case .message(let message) = payload else {
                         continue
                     }
@@ -970,6 +1060,14 @@ final class IPhoneDirectCLIService: ObservableObject {
             remoteCapabilities = capabilities
             protocolAuthority.beginBootstrap()
             try commitProvisionalPairingTrustIfNeeded(for: sessionID)
+            // RFC-0005 P2: only a CLI that advertised wake support reads the enrollment, and
+            // only a phone with valid material sends it — the deterministic handshake keeps
+            // older CLIs (no wake advertisement) byte-compatible and fail-closed.
+            if capabilities.wake?.supported == true,
+               let wakeManager,
+               let enrollment = wakeManager.currentEnrollment() {
+                try await channel.send(.wakeEnrollment(enrollment))
+            }
         case .statusRequest:
             if !appIsActive {
                 try await channel.send(.statusResponse(DirectIPhoneStatus(
@@ -1114,7 +1212,8 @@ final class IPhoneDirectCLIService: ObservableObject {
              .exportAccepted, .exportProgress, .exportRejected,
              .transferSession, .rawDayManifest, .fileManifest, .transferOpen,
              .transferChunk, .transferPartitionComplete, .transferFinalize,
-             .completionConfirmed, .cancelAcknowledged, .pong:
+             .completionConfirmed, .cancelAcknowledged, .pong, .wakeEnrollment:
+            // Only the phone sends wake enrollments; receiving one here is a protocol violation.
             break
         }
     }
@@ -1188,6 +1287,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         let pairingTrustWasRestored = rollbackProvisionalPairingTrustIfNeeded()
         restorePairingConfigurationIfNeeded()
         stopReconnectLoop()
+        lastInboundActivityAt = nil
+        heartbeatPingSentAt = nil
         activeSessionID = nil
         sessionTask?.cancel()
         sessionTask = nil

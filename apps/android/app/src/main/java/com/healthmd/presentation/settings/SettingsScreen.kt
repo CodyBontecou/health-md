@@ -10,7 +10,6 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -32,13 +31,14 @@ import com.healthmd.R
 import com.healthmd.data.health.providers.HealthProviderDirectExportStatus
 import com.healthmd.data.health.providers.HealthProviderId
 import com.healthmd.data.health.providers.HealthProviderState
+import com.healthmd.distribution.DistributionWearSettingsCard
+import com.healthmd.domain.distribution.DistributionChannel
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.export.ExportProfilesEntryCard
 import com.healthmd.presentation.drive.GoogleDriveSettingsCard
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.widget.setup.WidgetSettingsCard
-import com.healthmd.wear.WearSettingsCard
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -53,6 +53,7 @@ fun SettingsScreen(
     onNavigateToSharedSetup: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
+    val distributionPolicy = viewModel.distributionPolicy
     val protectionEnabled by viewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -99,175 +100,59 @@ fun SettingsScreen(
             }
         }
 
-        GeistCard(
+        ConfigurationProtectionSettingsCard(
+            enabled = protectionEnabled,
+            onEnabledChange = viewModel::setPreventAccidentalChanges,
             modifier = Modifier
                 .bringIntoViewRequester(protectionRequester)
                 .testTag(ConfigurationProtectionTestTags.SECTION),
-        ) {
-            SectionLabel(stringResource(R.string.configuration_protection_title))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.configuration_protection_toggle),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        stringResource(R.string.configuration_protection_description),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textMuted,
-                    )
-                }
-                Switch(
-                    checked = protectionEnabled == true,
-                    onCheckedChange = viewModel::setPreventAccidentalChanges,
-                    enabled = protectionEnabled != null,
-                    modifier = Modifier.testTag(ConfigurationProtectionTestTags.TOGGLE),
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = AppColors.onAccent,
-                        checkedTrackColor = AppColors.accent,
-                        uncheckedThumbColor = AppColors.textMuted,
-                        uncheckedTrackColor = AppColors.bgSecondary,
-                        uncheckedBorderColor = AppColors.borderDefault,
-                    ),
-                )
-            }
-        }
+        )
 
         // Premium upgrade (show at top for free users)
-        if (!isPurchased) {
-            GeistCardClickable(onClick = onNavigateToPaywall) {
-                Icon(
-                    Icons.Outlined.WorkspacePremium,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.settings_upgrade_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        stringResource(R.string.settings_upgrade_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textMuted,
-                    )
-                }
-                Icon(
-                    Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
-                )
-            }
+        if (!isPurchased && distributionPolicy.purchasesAvailable) {
+            SettingsNavigationCard(
+                title = stringResource(R.string.settings_upgrade_title),
+                subtitle = stringResource(R.string.settings_upgrade_subtitle),
+                icon = Icons.Outlined.WorkspacePremium,
+                onClick = onNavigateToPaywall,
+            )
         }
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         GoogleDriveSettingsCard()
         WidgetSettingsCard()
-        WearSettingsCard()
+        if (distributionPolicy.wearSyncAvailable) {
+            DistributionWearSettingsCard()
+        }
 
         // Profiles & Reports: occasional-use export configuration surfaces that
         // moved off the Export screen so daily export controls come first.
         ExportProfilesEntryCard(onOpen = onNavigateToExportProfiles)
 
-        GeistCardClickable(
+        SettingsNavigationCard(
+            title = stringResource(R.string.clinician_report_title),
+            subtitle = stringResource(R.string.clinician_report_entry_subtitle),
+            icon = Icons.Outlined.Description,
             onClick = onNavigateToClinicianReport,
             modifier = Modifier.testTag("clinician_report_entry"),
-        ) {
-            Icon(
-                Icons.Outlined.Description,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.clinician_report_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    stringResource(R.string.clinician_report_entry_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = null,
-                tint = AppColors.textMuted,
-            )
-        }
+        )
 
-        GeistCardClickable(onClick = onNavigateToSharedSetup) {
-            Icon(
-                Icons.Outlined.Share,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.shared_setup_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    stringResource(R.string.shared_setup_settings_detail),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = null,
-                tint = AppColors.textMuted,
-            )
-        }
+        SettingsNavigationCard(
+            title = stringResource(R.string.shared_setup_title),
+            subtitle = stringResource(R.string.shared_setup_settings_detail),
+            icon = Icons.Outlined.Share,
+            onClick = onNavigateToSharedSetup,
+        )
 
         // Health source configuration is intentionally hidden until the integrations are ready.
 
-        GeistCardClickable(onClick = onNavigateToDirectCli) {
-            Icon(
-                Icons.Outlined.Computer,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.direct_cli_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    stringResource(R.string.settings_direct_cli_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = null,
-                tint = AppColors.textMuted,
-            )
-        }
+        SettingsNavigationCard(
+            title = stringResource(R.string.direct_cli_title),
+            subtitle = stringResource(R.string.settings_direct_cli_subtitle),
+            icon = Icons.Outlined.Computer,
+            onClick = onNavigateToDirectCli,
+        )
 
         HealthDiagnosticsSection(
             onShareDiagnostics = {
@@ -280,100 +165,90 @@ fun SettingsScreen(
             },
         )
 
+        GeistCard {
+            SectionLabel(stringResource(R.string.section_about))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Icon(
+                    Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = AppColors.accent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(
+                            when (distributionPolicy.channel) {
+                                DistributionChannel.GOOGLE_PLAY -> R.string.distribution_channel_play
+                                DistributionChannel.FDROID -> R.string.distribution_channel_fdroid
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = stringResource(R.string.about_license_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
+            SettingsNavigationCard(
+                title = stringResource(R.string.about_source_code),
+                icon = Icons.Outlined.Code,
+                onClick = { openExternalUrl(context, SOURCE_CODE_URL) },
+                external = true,
+            )
+
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
+            SettingsNavigationCard(
+                title = stringResource(R.string.about_license),
+                icon = Icons.Outlined.Gavel,
+                onClick = { openExternalUrl(context, LICENSE_URL) },
+                external = true,
+            )
+        }
+
         // Feedback
         GeistCard {
             SectionLabel(stringResource(R.string.section_feedback))
 
-            GeistCardClickable(onClick = { FeedbackHelper.sendFeedbackEmail(context) }) {
-                Icon(
-                    Icons.Outlined.Email,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.feedback_send_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        stringResource(R.string.feedback_send_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textMuted,
-                    )
-                }
-                Icon(
-                    Icons.Outlined.ArrowOutward,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
-                    modifier = Modifier.size(16.dp),
-                )
-            }
+            SettingsNavigationCard(
+                title = stringResource(R.string.feedback_send_title),
+                subtitle = stringResource(R.string.feedback_send_subtitle),
+                icon = Icons.Outlined.Email,
+                onClick = { FeedbackHelper.sendFeedbackEmail(context) },
+                external = true,
+            )
 
             Spacer(modifier = Modifier.height(Spacing.xs))
 
-            GeistCardClickable(onClick = { FeedbackHelper.openDiscordCommunity(context) }) {
-                Icon(
-                    Icons.Outlined.Groups,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.feedback_discord_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        stringResource(R.string.feedback_discord_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textMuted,
-                    )
-                }
-                Icon(
-                    Icons.Outlined.ArrowOutward,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
-                    modifier = Modifier.size(16.dp),
-                )
-            }
+            SettingsNavigationCard(
+                title = stringResource(R.string.feedback_discord_title),
+                subtitle = stringResource(R.string.feedback_discord_subtitle),
+                icon = Icons.Outlined.Groups,
+                onClick = { FeedbackHelper.openDiscordCommunity(context) },
+                external = true,
+            )
 
             Spacer(modifier = Modifier.height(Spacing.xs))
 
-            GeistCardClickable(onClick = { FeedbackHelper.openGitHubIssue(context) }) {
-                Icon(
-                    Icons.Outlined.BugReport,
-                    contentDescription = null,
-                    tint = AppColors.accent,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.feedback_github_title),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = AppColors.textPrimary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        stringResource(R.string.feedback_github_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = AppColors.textMuted,
-                    )
-                }
-                Icon(
-                    Icons.Outlined.ArrowOutward,
-                    contentDescription = null,
-                    tint = AppColors.textMuted,
-                    modifier = Modifier.size(16.dp),
-                )
-            }
+            SettingsNavigationCard(
+                title = stringResource(R.string.feedback_github_title),
+                subtitle = stringResource(R.string.feedback_github_subtitle),
+                icon = Icons.Outlined.BugReport,
+                onClick = { FeedbackHelper.openGitHubIssue(context) },
+                external = true,
+            )
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
@@ -422,34 +297,13 @@ private fun HealthDiagnosticsSection(
 
         Spacer(modifier = Modifier.height(Spacing.sm))
 
-        GeistCardClickable(onClick = onShareDiagnostics) {
-            Icon(
-                Icons.Outlined.Share,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.health_diagnostics_share_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppColors.textPrimary,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    stringResource(R.string.health_diagnostics_share_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textMuted,
-                )
-            }
-            Icon(
-                Icons.Outlined.ArrowOutward,
-                contentDescription = null,
-                tint = AppColors.textMuted,
-                modifier = Modifier.size(16.dp),
-            )
-        }
+        SettingsNavigationCard(
+            title = stringResource(R.string.health_diagnostics_share_title),
+            subtitle = stringResource(R.string.health_diagnostics_share_subtitle),
+            icon = Icons.Outlined.Share,
+            onClick = onShareDiagnostics,
+            external = true,
+        )
     }
 }
 
@@ -496,7 +350,7 @@ private fun HealthProviderRow(
                         providerState.isSelected -> stringResource(R.string.health_provider_status_selected)
                         providerState.isConnected -> stringResource(R.string.status_connected)
                         provider.isInstalled -> stringResource(R.string.health_provider_status_installed)
-                        providerState.isOAuthConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
+                        providerState.isDirectConnectionConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
                         else -> stringResource(definition.directExportStatus.labelRes)
                     },
                     style = MaterialTheme.typography.labelSmall,
@@ -530,6 +384,19 @@ private fun HealthProviderRow(
             contentDescription = stringResource(provider.actionLabelRes),
             tint = AppColors.textMuted,
             modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+private const val SOURCE_CODE_URL = "https://github.com/CodyBontecou/health-md"
+private const val LICENSE_URL = "https://github.com/CodyBontecou/health-md/blob/main/apps/android/LICENSE"
+
+private fun openExternalUrl(context: Context, url: String) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
         )
     }
 }

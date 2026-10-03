@@ -29,6 +29,9 @@ pub struct ServeOptions {
     /// Default timeout for readiness and query operations.
     #[arg(long, default_value_t = 1_200)]
     pub timeout_seconds: u64,
+    /// Programmatic wake-window override. MCP users configure this with `HEALTHMD_WAKE_TIMEOUT`.
+    #[arg(skip)]
+    pub wake_timeout_seconds: Option<u64>,
 }
 
 #[cfg(feature = "oauth-resource-server")]
@@ -166,6 +169,7 @@ async fn execute_query_invocation(
                 caller: healthmd_operations::CallerIdentity::local(),
                 cancellation,
                 session_id: None,
+                progress: None,
             },
             invocation,
         )
@@ -284,6 +288,7 @@ async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(),
     });
 
     let mut output = BufWriter::new(tokio::io::stdout());
+    let (notification_sender, mut notification_receiver) = mpsc::channel::<String>(64);
     let mut tasks: JoinSet<(Option<String>, Option<String>)> = JoinSet::new();
     let mut in_flight: HashMap<String, CancellationToken> = HashMap::new();
     let mut input_open = true;
@@ -319,7 +324,14 @@ async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(),
                 let id = parsed.as_ref().and_then(|value| value.get("id")).cloned();
                 let key = id.as_ref().map(request_key);
                 if key.is_none() {
-                    if let Some(response) = dispatcher.handle(&line, CancellationToken::new()).await {
+                    if let Some(response) = dispatcher
+                        .handle_with_notifications(
+                            &line,
+                            CancellationToken::new(),
+                            notification_sender.clone(),
+                        )
+                        .await
+                    {
                         write_line(&mut output, &response).await;
                     }
                     continue;
@@ -346,17 +358,39 @@ async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(),
                     in_flight.insert(key.clone(), cancellation.clone());
                 }
                 if is_initialize {
-                    let response = dispatcher.handle(&line, cancellation).await;
+                    let response = dispatcher
+                        .handle_with_notifications(
+                            &line,
+                            cancellation,
+                            notification_sender.clone(),
+                        )
+                        .await;
                     if let Some(key) = key.as_ref() { in_flight.remove(key); }
                     if let Some(response) = response { write_line(&mut output, &response).await; }
                 } else {
                     let dispatcher = Arc::clone(&dispatcher);
-                    tasks.spawn(async move { (key, dispatcher.handle(&line, cancellation).await) });
+                    let notifications = notification_sender.clone();
+                    tasks.spawn(async move {
+                        (
+                            key,
+                            dispatcher
+                                .handle_with_notifications(&line, cancellation, notifications)
+                                .await,
+                        )
+                    });
+                }
+            }
+            notification = notification_receiver.recv() => {
+                if let Some(notification) = notification {
+                    write_line(&mut output, &notification).await;
                 }
             }
             completion = tasks.join_next(), if !tasks.is_empty() => {
                 if let Some(Ok((key, response))) = completion {
                     if let Some(key) = key { in_flight.remove(&key); }
+                    while let Ok(notification) = notification_receiver.try_recv() {
+                        write_line(&mut output, &notification).await;
+                    }
                     if let Some(response) = response { write_line(&mut output, &response).await; }
                 }
             }

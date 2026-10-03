@@ -1,7 +1,5 @@
-v1.7.1 — Health.md on Wear OS
+v1.9.1 — Safer setup sharing and dependable exports
 
-• View minimized daily Health Connect aggregates on your watch.
-• Adds Daily Activity and Recovery Tiles plus ten complications.
-• Sync manually or in the background while keeping last-good data available offline.
-• Health Connect stays on your phone; the watch performs no health sensing.
-• Includes localized stale-data, permission, setup, and unavailable states.
+• Move export profiles between devices with Share My Setup. Review changes before applying them; shared files contain no health data or credentials.
+• Scheduled profiles now refresh the full lookback chosen on every run, with optional Today Refresh every 3, 6, or 12 hours.
+• Improved TalkBack, keyboard focus, touch targets, scrolling, and large-text layouts across setup, export, metrics, schedules, and connection screens.

@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "a42ddc13762557adcfc5622e115e2f1078210f6626836d80a7512b0369ac2b08",
+      "sha256": "0bd57dde79d3e6c903e0e2aa8f63cf43a76273c210b36c982803ccd58d1d28fe",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -17,7 +17,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "9ed4fc3a75c3a03d569cd733e24617c9bf028c9cd3f718e5d85a67c47d7aca65",
+      "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
@@ -104,6 +104,50 @@
       ]
     },
     {
+      "id": "healthmd.direct.shared-pairing",
+      "version": 3,
+      "status": "canonical",
+      "summary": "Shared 20-digit iOS/Android Direct CLI pairing transcript and in-app QR handoff.",
+      "specification": "packages/contracts/direct-protocol/pairing-v3/protocol.md",
+      "authorities": [
+        "packages/contracts/direct-protocol/pairing-v3/protocol.md"
+      ],
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/crypto.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+        "apps/cli/crates/healthmd-client/src/handshake.rs",
+        "apps/cli/crates/healthmd-client/src/direct.rs",
+        "apps/cli/crates/healthmd-cli/src/pairing.rs",
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectPairingSecurity.swift",
+        "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectManualIPClient.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectCLIService.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCrypto.kt",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectConnection.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingLink.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingScanner.kt"
+      ],
+      "consumers": [
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/shared_pairing_v3_vectors.rs",
+        "apps/cli/crates/healthmd-client/src/direct_fake_peer_tests.rs",
+        "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/HealthMdConnectionCoreTests.swift",
+        "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/SharedPairingV3InteropTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/presentation/directcli/DirectCliPairingLinkTest.kt",
+        "apps/website/docs-src/src/content/docs/cli-direct.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "provenance": "Reviewed synthetic selector-3 transcript and universal private-network QR payload; contains no live credential or health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json"
+          ]
+        }
+      ]
+    },
+    {
       "id": "healthmd.direct.android",
       "version": 2,
       "status": "canonical",
@@ -122,7 +166,9 @@
       ],
       "consumers": [
         "packages/healthmd-core-rust/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/v2_profile_vectors.rs",
         "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/ProfilePolicyInteropTest.kt",
         "apps/android/app/src/test/java/com/healthmd/direct/AndroidDirectProtocolAuthorityTest.kt",
         "apps/android/healthmd-core/src/androidTest/kotlin/com/healthmd/core/HealthMdCoreInstrumentationTest.kt"
       ],
@@ -134,8 +180,43 @@
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json"
           ]
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "provenance": "Reviewed synthetic Android v2 profile-policy request with byte-exact canonical request, envelope, fingerprint, and unnamed-reference omission vectors; contains no credentials, grants, or health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json"
+          ]
         }
       ]
+    },
+    {
+      "id": "healthmd.health_corpus",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Cross-platform scope, completeness, durable-job, and bounded local-MCP contract for every public, supported, user-authorized health record while preserving native Apple and Android semantics.",
+      "specification": "packages/contracts/health-corpus/v1/contract.md",
+      "authorities": [
+        "packages/contracts/health-corpus/v1/contract.md",
+        "apps/apple/docs/features/export-schema.md",
+        "apps/android/docs/export-contract/raw-snapshot-v1.md"
+      ],
+      "implementations": [
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-cli/src/main.rs",
+        "apps/cli/crates/healthmd-cli/src/mcp/direct_backend.rs",
+        "apps/cli/crates/healthmd-client/src/direct.rs",
+        "apps/apple/HealthMd/iOS/IPhoneDirectExportCoordinator.swift",
+        "apps/android/app/src/main/java/com/healthmd/direct/DirectCliCoordinator.kt"
+      ],
+      "consumers": [
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+        ".agents/skills/healthmd-cli/SKILL.md"
+      ],
+      "fixtures": []
     },
     {
       "id": "healthmd.semantic_input",
@@ -163,11 +244,63 @@
       "fixtures": [
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
-          "sha256": "e6d3d9550442b2e5c73bcf0d2c9ef9a4ef2a8d715ab4c5eecd32f8c64987928b",
+          "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
           "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
           ]
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json",
+          "sha256": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+          "provenance": "Reviewed internal capability fixture proving calendar revision 1 remains stable while range requires revision 2.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.rollup_summary",
+      "version": 9,
+      "status": "canonical",
+      "summary": "Public Apple range-summary grammar independently versioned from daily health data v8.",
+      "specification": "packages/contracts/rollup-summary/v9/contract.md",
+      "authorities": [
+        "packages/contracts/rollup-summary/v9/contract.md",
+        "packages/contracts/rollup-summary/v9/rollup-summary.schema.json"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/Shared/Export/HealthRollupModels.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthRollupGenerator.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/HealthRollupExporterTests.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.json",
+          "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+          "provenance": "Generated directly by the production Swift range generator and JSON renderer from the canonical synthetic partial-range corpus; Rust reconstructs and verifies the same public contract semantics.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv",
+          "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+          "provenance": "Generated directly by the production Swift range generator and CSV renderer from the canonical synthetic partial-range corpus.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.md",
+          "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+          "provenance": "Generated directly by the production Swift range generator and Markdown renderer from the canonical synthetic partial-range corpus.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md",
+          "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+          "provenance": "Generated directly by the production Swift range generator and Obsidian Bases renderer from the canonical synthetic partial-range corpus.",
+          "mirrors": []
         }
       ]
     },
@@ -198,7 +331,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "7c394c1aeda97c597afc1d1a6a3890671b1fc2f4b49b036bc060456b73e074d6",
+          "sha256": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
@@ -228,7 +361,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "ca2ae035f280801c60e4bb6e3fff9f03a2c88022ce567ceed579b2ec49c3eb75",
+          "sha256": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -236,7 +369,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "4bdea95a034887e0869049537fbed77210fd2a619033bbdad37de2e4b7a72e67",
+          "sha256": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
@@ -246,44 +379,78 @@
     },
     {
       "id": "healthmd.shared_setup",
-      "version": 1,
+      "version": 2,
       "status": "deferred",
-      "summary": "Implemented bounded Apple/Android portable setup profile pending required physical-device interoperability and accessibility QA before canonicalization.",
-      "specification": "packages/contracts/shared-setup/v1/contract.md",
+      "summary": "Bounded named-profile Apple/Android portable setup bundle with exact v2 platform extensions and language-neutral Add/Replace/Undo semantics; version 2 is the one and only profile version and default writers emit it, with canonicalization still deferred pending native integration, physical-device interoperability, and accessibility QA.",
+      "specification": "packages/contracts/shared-setup/v2/contract.md",
       "authorities": [
-        "packages/contracts/shared-setup/v1/contract.md",
-        "packages/contracts/shared-setup/v1/shared-setup.schema.json"
+        "packages/contracts/shared-setup/v2/contract.md",
+        "packages/contracts/shared-setup/v2/shared-setup.schema.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage-v2.json"
       ],
       "implementations": [
         "packages/contracts/validate.py",
-        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV1.swift",
-        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupTransaction.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2Mapper.swift",
         "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
-        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupCodec.kt",
-        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupMapper.kt",
-        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupService.kt"
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ProfileTransaction.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ExecutionGate.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2TransactionAdapter.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupCompatibility.swift",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Models.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Codec.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Mapper.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupService.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransaction.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupVersionedModels.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupTemplateSyntax.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupTemplateSyntax.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransaction.kt"
       ],
       "consumers": [
         "packages/contracts/validate.py",
         "packages/contracts/test_validate_shared_setup.py",
-        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
-        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt",
-        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupServiceTest.kt"
+        "packages/contracts/test_drive_profile_field_audits.py",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CodecMapperTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupAppleProfileFieldCoverageTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ProfileTransactionTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CanonicalIOTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2CoordinatorIOTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionAdapterTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionScenariosTests.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2ConfirmationFlowTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2CodecMapperTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupAndroidProfileFieldCoverageTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupServiceTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransactionTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupVersionedIoTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransactionTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2TransactionScenariosTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupShareFixtureDocumentTest.kt"
       ],
       "documentation": [
         "packages/contracts/README.md"
       ],
       "fixtures": [
         {
-          "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
-          "sha256": "ad1b4570facba92d6a64cab859e660d2b9b2f4641b0f894a52fc71e83e0cc380",
-          "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "path": "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json",
+          "sha256": "51c4151a040f487cc1f1b1fff1fa9cd0dc7891babf1395d5e1c5ade58e7807c0",
+          "provenance": "Reviewed one-line synthetic Apple-origin named-profile bundle covering Summary, Detailed Time-Series, archive-only, and Lossless policy pairs plus inert destination/schedule intent; contains no health records, user/account/device identity, native IDs, credentials, grants, pairings, or runtime state.",
           "mirrors": []
         },
         {
-          "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
-          "sha256": "bb24e26aa0fe62675564cfbd518db293a6feca70f73b57499bb4b5a8b1382206",
-          "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "path": "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
+          "sha256": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
+          "provenance": "Reviewed one-line synthetic Android-origin named-profile bundle covering compatibility and platform-distinct raw-snapshot modes, complete legacy data-type filters, and inert destination/schedule intent; contains no health records, user/account/device identity, native IDs, credentials, grants, pairings, or runtime state.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json",
+          "sha256": "2f72266daa4ac8d0a61e724b7eb9cada5528593d50f5b8f0de28dff4bb5d9deb",
+          "provenance": "Reviewed deterministic synthetic local-only transaction scenario for explicit selection normalization, Add/Replace materialization, disabled unbound imports, per-profile sidecar preservation, verified rollback, and one-shot Undo. Native IDs and runtime sentinels are confined to the scenario envelope; its embedded public v2 DTO and both canonical v2 artifact fixtures are recursively checked for identity, credential, grant, native path/URI, runtime, health-data, and operation-state leakage.",
           "mirrors": []
         }
       ]
@@ -474,11 +641,11 @@
       "status": "deferred",
       "summary": "First-party Android campaign-install payload accepted by the website Worker; schema extraction is deferred.",
       "authorities": [
-        "apps/android/app/src/main/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
+        "apps/android/app/src/play/java/com/healthmd/data/attribution/CampaignAttributionModels.kt",
         "apps/website/cloudflare/attribution-worker/src/worker.js"
       ],
       "consumers": [
-        "apps/android/app/src/test/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
+        "apps/android/app/src/playTest/java/com/healthmd/data/attribution/OkHttpCampaignAttributionReporterTest.kt",
         "apps/website/test/attribution-worker.test.mjs"
       ],
       "documentation": [

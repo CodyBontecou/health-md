@@ -1,51 +1,22 @@
 ---
 title: "iPhone onboarding"
-description: "Complete Health.md's seven-step iPhone setup: review a sample export, authorize Apple Health, choose a Files destination, decide whether to unlock, and prepare the first export."
+description: "Set up Health.md in five steps: privacy, Apple Health, preview, folder, and first export."
 ---
 
-Onboarding appears the first time you open Health.md on iPhone. It explains the local export model, discloses automatically collected first-party product analytics, and gets the two required connections—Apple Health and a folder you control—ready before the first run. Product analytics never includes health values, metric names, health dates, exported files, paths, peer names, credentials, or user text.
+Onboarding appears the first time you open Health.md on iPhone. It explains the local-first model and prepares Apple Health and a folder you control. Product analytics never includes health values, metric names, health dates, files, paths, credentials, or user text.
 
-<div class="availability available">
-<strong>Available now · Health.md for iPhone</strong>
-<p>You can try 10 free exports and change Health access, folder, metrics, formats, and scheduling later.</p>
-</div>
+<div class="availability available"><strong>Available now · iPhone</strong><p>The five steps do not block progress. Health access and the folder can be skipped and repaired later. A purchase no longer blocks setup.</p></div>
 
-## The seven steps
+## Five steps
 
-<div class="options">
-<div class="option"><strong>1. Welcome</strong><p>Introduces local exports and starts setup.</p></div>
-<div class="option"><strong>2. Health Access</strong><p>Makes Apple Health connection the primary action while preserving an explicit Skip for Now option. iOS remains the source of truth for every authorization.</p></div>
-<div class="option"><strong>3. Sample Export</strong><p>Shows the shape of generated files before Health.md writes your own data.</p></div>
-<div class="option"><strong>4. Obsidian Plugin</strong><p>Previews the optional visualization workflow. An Obsidian vault is not required.</p></div>
-<div class="option"><strong>5. Folder</strong><p>Makes the Files picker the primary action, with an explicit Skip for Now option. Choose iCloud Drive, On My iPhone, an Obsidian vault, or another document-provider folder.</p></div>
-<div class="option"><strong>6. Unlock</strong><p>Shows the current Individual and Family options alongside a visible Try 10 Free Exports choice.</p></div>
-<div class="option"><strong>7. Ready</strong><p>Summarizes setup, offers Connect and Choose Folder repair actions, and opens a preconfigured first-export preview.</p></div>
-</div>
+1. **Welcome:** start setup or import a current Share My Setup file.
+2. **Health Access:** connect Apple Health or choose to do it later.
+3. **Sample:** review Markdown, JSON, CSV, or Bases and the optional Obsidian plugin link.
+4. **Folder:** choose iCloud Drive, On My iPhone, an Obsidian vault, or another Files provider.
+5. **Ready:** repair missing connections and open the first export preview.
 
-<div class="callout">
-<strong>Health permission is recoverable.</strong>
-<p style="margin-top:6px;">If you skip or limit authorization, Health.md keeps setup usable. Open the Health app later to review which categories Health.md can read.</p>
-</div>
+After that preview closes, an eligible locked user may see one dismissible offer. Non-blocking reminders may also appear after the 3rd and 7th free exports. The hard limit remains 10 completed actions.
 
-## What onboarding does not lock in
+Permissions, metrics, folder, formats, names, profiles, scheduling, and Mac connectivity can all be changed later.
 
-Onboarding establishes a safe starting point; it does not permanently fix your export behavior. From the Export and Settings tabs you can later change:
-
-- the local folder and export target;
-- date range and lookback;
-- selected metrics and special authorizations;
-- Markdown, CSV, JSON, and Obsidian Bases output;
-- filenames, units, frontmatter, and write behavior;
-- scheduling and Mac connectivity.
-
-## Run the first export
-
-Continue with [First iPhone export](/docs/iphone-first-export/) for a short, screenshot-led walkthrough from readiness through file verification.
-
-## Related
-
-<div class="related">
-  <a href="/docs/iphone-first-export/"><span>Start here</span>Run and verify the first iPhone export.</a>
-  <a href="/docs/folder-vault/"><span>Destination</span>Understand Files providers, bookmarks, and folder recovery.</a>
-  <a href="/docs/paywall/"><span>Account</span>Review unlock options and restore behavior.</a>
-</div>
+<div class="related"><a href="/docs/iphone-first-export/"><span>Next</span>Run and verify the first export.</a><a href="/docs/paywall/"><span>Plans</span>Review free exports and restore.</a><a href="/docs/share-my-setup/"><span>Move settings</span>Review the QA status.</a></div>

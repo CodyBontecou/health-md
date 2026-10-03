@@ -15,9 +15,6 @@ import com.healthmd.data.drive.GoogleDriveErrorId
 import com.healthmd.data.drive.GoogleDriveReadiness
 import com.healthmd.data.drive.GoogleDriveRecoveryWorker
 import com.healthmd.data.drive.GoogleDriveSelectionStore
-import com.healthmd.data.scheduler.ScheduledProfileEntryStore
-import com.healthmd.data.settings.ExportProfileRepository
-import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -26,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class GoogleDriveUiState(
@@ -40,8 +38,6 @@ class GoogleDriveViewModel @Inject constructor(
     private val authorization: GoogleDriveAuthorizationManager,
     private val destinationStore: GoogleDriveDestinationStore,
     private val selectionStore: GoogleDriveSelectionStore,
-    private val profileRepository: ExportProfileRepository,
-    private val scheduledProfileEntryStore: ScheduledProfileEntryStore,
     private val settingsRepository: SettingsRepository,
     private val savedStateHandle: SavedStateHandle,
     @ApplicationContext private val context: Context,
@@ -65,8 +61,10 @@ class GoogleDriveViewModel @Inject constructor(
         if (mutableState.value.busy) return
         mutableState.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
+            if (configurationProtected()) return@launch
             expectedDestinationId = mutableState.value.destination?.id
             val action = authorization.beginPicker(expectedDestinationId)
+            if (configurationProtected()) return@launch
             if (action is GoogleDriveAuthorizationAction.Authorized) {
                 bind(action.grant)
             } else {
@@ -92,18 +90,13 @@ class GoogleDriveViewModel @Inject constructor(
         val id = mutableState.value.destination?.id ?: return
         mutableState.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
-            // Disable every future write before removing account authority. Existing remote files
-            // remain untouched and profiles stay visibly Drive-targeted but unbound.
-            val affectedProfiles = profileRepository.clearGoogleDriveDestination(id)
-            affectedProfiles.forEach { profileId ->
-                scheduledProfileEntryStore.update(profileId) { it.copy(isEnabled = false) }
+            if (configurationProtected()) return@launch
+            // Revocation may suspend. The service admits every local removal in one protected
+            // edit afterwards; denial leaves local bindings/schedules/selection/authority intact.
+            if (!authorization.disconnect(id)) {
+                mutableState.update { it.copy(busy = false, error = GoogleDriveErrorId.PERMISSION_DENIED) }
+                return@launch
             }
-            val settings = settingsRepository.getExportSettings()
-            if (settings.scheduleEnabled && settings.scheduledExportTarget == ExportTarget.GOOGLE_DRIVE) {
-                settingsRepository.updateExportSettings(settings.copy(scheduleEnabled = false))
-            }
-            authorization.disconnect(id)
-            selectionStore.select(null)
             expectedDestinationId = null
             mutableState.value = GoogleDriveUiState(readiness = authorization.readiness())
         }
@@ -111,10 +104,21 @@ class GoogleDriveViewModel @Inject constructor(
 
     fun clearError() = mutableState.update { it.copy(error = null) }
 
+    private suspend fun configurationProtected(): Boolean {
+        if (!settingsRepository.preventAccidentalChanges.first()) return false
+        mutableState.update { it.copy(busy = false, error = GoogleDriveErrorId.PERMISSION_DENIED) }
+        return true
+    }
+
     private suspend fun bind(grant: GoogleDriveAuthorizationGrant) {
+        // Includes results delivered after Activity recreation or after protection changed.
+        if (configurationProtected()) return
         when (val result = authorization.bind(grant, expectedDestinationId)) {
             is DriveApiResult.Success -> {
-                selectionStore.select(result.value.id)
+                if (configurationProtected() || !selectionStore.selectIfAllowed(result.value.id)) {
+                    mutableState.update { it.copy(busy = false, error = GoogleDriveErrorId.PERMISSION_DENIED) }
+                    return
+                }
                 mutableState.update { it.copy(destination = result.value, busy = false, error = null) }
                 pendingOperationId?.let { operationId ->
                     GoogleDriveRecoveryWorker.enqueue(context, operationId)

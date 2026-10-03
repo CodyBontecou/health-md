@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">Добавить пользовательское поле</string>
+    <string name="a11y_frontmatter_add_placeholder_field">Добавить поле-заполнитель</string>
+    <string name="a11y_frontmatter_delete_custom_field">Удалить пользовательское поле %1$s</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">Удалить поле-заполнитель %1$s</string>
+</resources>

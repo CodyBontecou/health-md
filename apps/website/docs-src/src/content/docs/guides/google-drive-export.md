@@ -14,6 +14,8 @@ Google receives the exported health files. Those files can contain highly sensit
 
 Health.md does not send the files or Google credentials through a Health.md health-data or token server. The installed app communicates with Google, and protected credentials stay on the device.
 
+On Android, direct Drive requires the Play-channel build and Google Play services. F-Droid builds do not include Google's authorization SDK and report direct Drive as unavailable; SAF remains a separate destination.
+
 ## Direct Drive is not Files or SAF
 
 You may already see Google Drive inside Apple Files or Android's Storage Access Framework (SAF). That is a file-provider destination managed by the operating system. **Upload to Google Drive** is separate: it uses Google OAuth, Google's Picker, and the Drive API.
@@ -75,7 +77,7 @@ Revoking Health.md in your Google Account also stops future access but does not 
 
 ## Shared Setup, CLI, and MCP
 
-Shared Setup copies portable output settings only. It never includes Google account identity, folder IDs or names, credentials, resource keys, remote file mappings, upload sessions, or operation journals. Imported schedules remain off until the recipient chooses a local destination.
+Shared Setup v2 copies portable output settings and a pending cloud destination—not Google access. It never includes local Drive destination references, Google account identity, folder IDs or names, credentials, resource keys, remote file mappings, upload sessions, or operation journals. Imported profiles stay blocked and schedules stay off. Selecting a device folder or API endpoint cannot authorize a cloud profile; imported cloud execution remains unavailable until local cloud rebinding is separately qualified. Import and Undo do not modify Google bindings or files.
 
 CLI, direct-device, and MCP workflows never receive your Google credentials or Drive folder authority and never upload to Drive as a side effect. They can reuse output settings only when you explicitly choose a validated desktop destination.
 

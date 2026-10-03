@@ -39,6 +39,16 @@ class RawExportCoreTest {
         assertThat(RawJson.canonical(record.fields)).isEqualTo("{\"a\":1,\"z\":2}")
     }
 
+    @Test fun canonicalJsonRetainsJvmScientificNumberLexemesForDirectHashes() {
+        val value = kotlinx.serialization.json.JsonObject(
+            mapOf(
+                "tiny" to kotlinx.serialization.json.JsonPrimitive(1.0E-6),
+                "large" to kotlinx.serialization.json.JsonPrimitive(1.0E7),
+            ),
+        )
+        assertThat(RawJson.canonical(value)).isEqualTo("{\"large\":1.0E7,\"tiny\":1.0E-6}")
+    }
+
     @Test fun canonicalObjectKeysUseUnicodeCodePointOrderForSupplementaryCharacters() {
         val supplementary = "\uD800\uDC00" // U+10000; UTF-16 order differs from scalar-value order.
         val bmp = "\uE000"

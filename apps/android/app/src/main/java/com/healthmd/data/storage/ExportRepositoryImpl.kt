@@ -605,6 +605,7 @@ class ExportRepositoryImpl(
         }.orEmpty(),
         freshCaptureRetryDates = freshCaptureRetryDates,
         usesDurableFolderJournal = true,
+        remainingDates = dates.toSet().takeIf { wasCancelled }.orEmpty(),
     )
 
     override suspend fun previewHealthData(data: HealthData, settings: ExportSettings): ExportPreviewDay {

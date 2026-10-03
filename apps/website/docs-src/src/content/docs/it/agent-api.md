@@ -28,7 +28,7 @@ L'API resta in ascolto sul loopback alla porta `17645`. Accetta soltanto peer lo
 
 I precedenti endpoint `/v1/agent/profiles` e `/v1/agent/activity/query` restituiscono `410 removed_endpoint`.
 
-Il backend diretto per iPhone non ospita questi endpoint HTTP. Il comando autonomo `healthmd` usa tale backend per l'estrazione canonica e l'esportazione, mentre `healthmd mcp serve` implementa direttamente, tramite il protocollo di query v3 dell'iPhone, strumenti per nuove query tipizzate, evidenze, catalogo delle metriche, verifica, visualizzazioni ed esportazioni persistenti. L'abbinamento e il server MCP usano la stessa identità dell'eseguibile; l'aggiornamento e il contesto crittografato del Mac restano specifici di questa API HTTP.
+L'accesso diretto all'iPhone non ospita questi endpoint HTTP. Il comando autonomo `healthmd` usa tale accesso per l'estrazione canonica e l'esportazione, mentre `healthmd mcp serve` implementa direttamente, tramite il protocollo di query v3 dell'iPhone, strumenti per nuove query tipizzate, evidenze, catalogo delle metriche, verifica, visualizzazioni ed esportazioni persistenti. L'abbinamento e il server MCP usano la stessa identità dell'eseguibile; l'aggiornamento e il contesto crittografato del Mac restano specifici di questa API HTTP.
 
 ## Preferire l'adattatore CLI
 
@@ -292,6 +292,6 @@ Dopo un esito sconosciuto, non riprovare automaticamente un aggiornamento. Contr
   <a href="/it/docs/agents/"><span>Panoramica</span>Agenti locali e contesto sanitario: configurazione, archiviazione crittografata, ambito e regole di presentazione.</a>
   <a href="/it/docs/agent-queries/"><span>Alto livello</span>Guida pratica alle query tipizzate: comandi convalidati per le domande comuni su metriche, sonno, allenamenti ed evidenze.</a>
   <a href="/it/docs/mcp/"><span>Strumenti</span>Server MCP locale: configurazione stdio, strumenti tipizzati, paginazione e limiti della sandbox.</a>
-  <a href="/it/docs/reference/api-and-cli/"><span>Riferimento</span>Contratto API e CLI: esportazione, estrazione, query, backend diretto e limiti operativi.</a>
+  <a href="/it/docs/reference/api-and-cli/"><span>Riferimento</span>Contratto API e CLI: esportazione, estrazione, query, accesso diretto e limiti operativi.</a>
   <a href="/it/docs/reference/evidence-packets/"><span>Contratti dei dati</span>Query compatte e pacchetti di evidenze: tipi, cursori, operazioni e ID deterministici dei pacchetti.</a>
 </div>

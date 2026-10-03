@@ -3,7 +3,7 @@ title: Agenten konfigurieren
 description: Wählen Sie die MCP- oder CLI-Schnittstelle von Health.md, konfigurieren Sie Codex, Claude oder einen anderen lokalen Client und verbinden Sie ein gekoppeltes iPhone, ohne HealthKit über einen Cloud-Dienst zu leiten.
 ---
 
-Die veröffentlichte Mac-App enthält zwei signierte lokale Helfer: `healthmd-mcp` für typisierte Agententools und `healthmd` für explizite CLI-Workflows. Eine separate plattformübergreifende CLI mit direktem iPhone-MCP ist als Vorschau dokumentiert, bis ihr erstes öffentliches Paket die Release-QA auf einem physischen Gerät abgeschlossen hat.
+Die veröffentlichte Mac-App enthält zwei signierte lokale Helfer: `healthmd-mcp` für typisierte Agententools und `healthmd` für explizite CLI-Workflows. Die separate plattformübergreifende CLI mit direktem iPhone-MCP ist als ausdrücklich unqualifizierte öffentliche Vorschau paketiert; für die erste stabile Version bleibt die Release-QA auf physischen Geräten erforderlich.
 
 <div class="callout">
 <strong>HealthKit bleibt auf dem iPhone.</strong>
@@ -74,11 +74,11 @@ Der Host verwaltet stdin und den Prozesslebenszyklus. Starten Sie den Helfer nic
 ## Portable direkte Einrichtung
 
 <div class="availability preview">
-<strong>Vorschau · noch nicht öffentlich paketiert</strong>
-<p>Die plattformübergreifende Rust-CLI, <code>healthmd setup codex</code>, <code>healthmd mcp serve</code> aus derselben Binärdatei sowie die direkte Kopplung unter Linux/Windows sind implementiert, warten aber noch auf ihre erste qualifizierte öffentliche Veröffentlichung.</p>
+<strong>Öffentliche Vorschau · noch nicht als stabil qualifiziert</strong>
+<p>Die plattformübergreifende Rust-CLI, <code>healthmd setup codex</code>, <code>healthmd mcp serve</code> aus derselben Binärdatei sowie die direkte Kopplung unter Linux/Windows sind als ausdrücklich unqualifizierte Vorschau öffentlich paketiert.</p>
 </div>
 
-Nach der Veröffentlichung wird `healthmd setup codex` Codex idempotent konfigurieren und die direkte iPhone-Kopplung starten. Verlassen Sie sich bis dahin nicht auf unveröffentlichte Homebrew-, crates.io-, Installationsprogramm- oder GitHub-Release-URLs. Die Seite [Direkte iPhone-CLI](/de/docs/cli-direct/) beschreibt das geplante Übertragungs- und Protokollverhalten.
+Installieren Sie unter macOS oder Linux mit <code>brew install CodyBontecou/tap/healthmd</code>. Danach konfiguriert `healthmd setup codex` Codex idempotent und startet die direkte iPhone-Kopplung. Verwenden Sie den exakten mobilen Build aus den Release-Nachweisen; die Paketveröffentlichung beweist keine mobile Kompatibilität. Die Seite [Direkte iPhone-CLI](/de/docs/cli-direct/) beschreibt das Übertragungs- und Protokollverhalten.
 
 ## Explizite CLI-Workflows
 
@@ -96,7 +96,7 @@ Verfügbarkeit und Befehlssyntax unterscheiden sich zwischen dem mitgelieferten 
 
 <div class="availability preview">
 <strong>Vorschau · portable direkte Workflows</strong>
-<p>Diese Schritte beschreiben das kommende plattformübergreifende Paket. Der veröffentlichte mitgelieferte Mac-MCP-Pfad verwendet stattdessen die bestehende iPhone-Verbindung der Mac-App.</p>
+<p>Dies sind die aktuell öffentlich paketierten portablen Abläufe. Der mitgelieferte Mac-MCP-Pfad verwendet weiterhin die bestehende iPhone-Verbindung der Mac-App.</p>
 </div>
 
 Direkte MCP- und CLI-Workflows erfordern eine einmalige vertrauenswürdige Kopplung mit Health.md auf dem iPhone. Die Kopplung verwendet einen authentifizierten, verschlüsselten Kanal und die native Anmeldedatenspeicherung unter macOS, Linux oder Windows.
@@ -126,6 +126,6 @@ Prüfen Sie für ein vollständiges Ergebnis den angeforderten Umfang, die Abdec
 <div class="related">
   <a href="/de/docs/mcp/"><span>Toolschnittstelle</span>Prüfen Sie die 21 veröffentlichten Mac-Tools, die portable Vorschau mit 19 Tools, MCP Apps, Schemas, Paging, Exporte und Sandbox-Grenzen.</a>
   <a href="/de/docs/agent-queries/"><span>Erste Fragen</span>Führen Sie typisierte Workflows für Metriken, Schlaf, Trainingseinheiten, Vergleiche, Abdeckung und Nachweise aus.</a>
-  <a href="/de/docs/cli-extract/"><span>Kanonische Daten</span>Extrahieren Sie ausgewählte Schema-v7-Dokumente und Quelldatensätze, ohne große Inhalte in einen Chat zu stellen.</a>
+  <a href="/de/docs/cli-extract/"><span>Kanonische Daten</span>Extrahieren Sie ausgewählte Schema-v8-Dokumente und Quelldatensätze, ohne große Inhalte in einen Chat zu stellen.</a>
   <a href="/de/docs/reference/"><span>Verträge</span>Durchsuchen Sie versionierte Datenstrukturen, Feldinventare, generierte Fixtures und Integrationsrezepte.</a>
 </div>

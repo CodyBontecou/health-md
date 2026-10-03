@@ -1,0 +1,181 @@
+# Submit a specific app version for App Store review.
+#
+# Operational tool for release synchronization edge cases (for example, when
+# a concurrent platform submission keeps a second app info record alive and
+# `asc validate` cannot disambiguate). Reports validate findings without
+# blocking so the human operator decides with full information.
+#
+# Requires confirm=SUBMIT.
+
+name: Apple Submit Version for Review
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version string to submit (e.g. 3.1)'
+        required: true
+        type: string
+      platform:
+        description: 'Platform'
+        required: true
+        type: choice
+        options: [IOS, MAC_OS]
+      strict_validate:
+        description: 'Fail before submitting if asc validate reports issues'
+        required: false
+        type: boolean
+        default: false
+      confirm:
+        description: 'Type SUBMIT to confirm'
+        required: true
+        type: string
+
+permissions: {}
+
+env:
+  ASC_APP_ID: ${{ secrets.HEALTHMD_ASC_APP_ID }}
+
+jobs:
+  submit:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - name: Verify confirmation
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.confirm }}" != "SUBMIT" ]]; then
+            echo "::error::confirm must be exactly SUBMIT"; exit 1
+          fi
+
+      - name: Install asc
+        run: |
+          set -euo pipefail
+          if ! command -v asc >/dev/null 2>&1; then
+            brew install asc
+          fi
+          asc --version
+
+      - name: Setup App Store Connect key
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
+
+      - name: Resolve version id
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          PLATFORM: ${{ github.event.inputs.platform }}
+        run: |
+          set -euo pipefail
+          VERSION_JSON=$(asc versions list --app "$ASC_APP_ID" --platform "$PLATFORM" --limit 20 --output json)
+          VERSION_INFO=$(printf '%s' "$VERSION_JSON" | python3 -c '
+          import sys, json
+          target = __import__("os").environ["VERSION"].strip()
+          data = json.load(sys.stdin)["data"]
+          matches = [v["id"] for v in data if v["attributes"]["versionString"] == target]
+          if len(matches) != 1:
+              raise SystemExit("expected exactly one {} version, found {}".format(target, len(matches)))
+          print(matches[0])
+          ')
+          {
+            echo "VERSION_ID=$VERSION_INFO"
+            echo "PLATFORM=${{ github.event.inputs.platform }}"
+          } >> "$GITHUB_ENV"
+
+      - name: Run validate (informational unless strict)
+        env:
+          STRICT: ${{ github.event.inputs.strict_validate == true }}
+        run: |
+          set -uo pipefail
+          if asc validate \
+            --app "$ASC_APP_ID" \
+            --version-id "$VERSION_ID" \
+            --platform "$PLATFORM" \
+            --output table; then
+            echo "VALIDATE_RESULT=pass" >> "$GITHUB_ENV"
+          else
+            echo "VALIDATE_RESULT=fail" >> "$GITHUB_ENV"
+            if [[ "$STRICT" == "true" ]]; then
+              echo "::error::asc validate reported issues and strict_validate=true"
+              exit 1
+            fi
+            echo "::warning::asc validate reported issues; continuing because strict_validate=false"
+          fi
+
+      - name: Ensure submission contains the version
+        run: |
+          set -euo pipefail
+          ACTIVE_SUB=$(asc review submissions-list --app "$ASC_APP_ID" --output json | python3 -c '
+          import sys, json
+          records = json.load(sys.stdin)["data"]
+          active = [r for r in records if r["attributes"]["state"] in ("WAITING_FOR_REVIEW", "READY_FOR_REVIEW")
+                    and r["attributes"]["platform"] == __import__("os").environ["PLATFORM"]]
+          if len(active) > 1:
+              raise SystemExit("multiple active {} submissions: {}".format(__import__("os").environ["PLATFORM"], [r["id"] for r in active]))
+          print(active[0]["id"] if active else "")
+          ')
+          ADDED=0
+          if [[ -n "$ACTIVE_SUB" ]]; then
+            HAS_ITEM=$(asc review items list --submission "$ACTIVE_SUB" --output json | python3 -c '
+          import sys, json
+          data = json.load(sys.stdin).get("data") or []
+          print("yes" if any(True for _ in data) else "no")
+          ' || echo "unknown")
+            # Try to attach to the active submission unless it already carries items.
+            if [[ "$HAS_ITEM" == "no" ]]; then
+              if asc review items add --submission "$ACTIVE_SUB" --item-type appStoreVersions --item-id "$VERSION_ID" 2>asc-items-add.err; then
+                echo "Attached $VERSION_ID to existing submission $ACTIVE_SUB"
+                ADDED=1
+              else
+                echo "::notice::could not attach to existing submission $ACTIVE_SUB; will replace it"
+                cat asc-items-add.err || true
+                asc review submissions-update --id "$ACTIVE_SUB" --canceled=true --confirm
+              fi
+            elif [[ "$HAS_ITEM" == "yes" ]]; then
+              echo "::warning::submission $ACTIVE_SUB already carries items; assuming it targets this release"
+              SUBMISSION_ID="$ACTIVE_SUB"
+              echo "SUBMISSION_ID=$SUBMISSION_ID" >> "$GITHUB_ENV"
+            fi
+          fi
+          if [[ "$ADDED" != "1" && -z "${SUBMISSION_ID:-}" ]]; then
+            SUBMISSION_JSON=$(asc review submissions-create --app "$ASC_APP_ID" --platform "$PLATFORM")
+            SUBMISSION_ID=$(printf '%s' "$SUBMISSION_JSON" | python3 -c 'import sys, json; print(json.load(sys.stdin)["data"]["id"])')
+            echo "Created submission $SUBMISSION_ID"
+            asc review items add --submission "$SUBMISSION_ID" --item-type appStoreVersions --item-id "$VERSION_ID"
+            echo "SUBMISSION_ID=$SUBMISSION_ID" >> "$GITHUB_ENV"
+          elif [[ -z "${SUBMISSION_ID:-}" ]]; then
+            echo "SUBMISSION_ID=$ACTIVE_SUB" >> "$GITHUB_ENV"
+          fi
+
+      - name: Submit for review
+        run: |
+          set -euo pipefail
+          echo "Submitting submission $SUBMISSION_ID (validate: $VALIDATE_RESULT)"
+          asc review submissions-submit --id "$SUBMISSION_ID" --confirm
+
+      - name: Resulting state
+        run: |
+          set -euo pipefail
+          asc versions view --version-id "$VERSION_ID" --output json | python3 -c '
+          import sys, json
+          v = json.load(sys.stdin)
+          v = v.get("data", v)
+          attrs = v.get("attributes", v)
+          print("version:", attrs.get("versionString"), attrs.get("appStoreState"))
+          '
+          asc apps info list --app "$ASC_APP_ID" --output table

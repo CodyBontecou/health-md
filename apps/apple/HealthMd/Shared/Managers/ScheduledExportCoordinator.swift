@@ -60,27 +60,16 @@ final class ScheduledExportCoordinator {
         result: ExportOrchestrator.ExportResult
     ) async throws -> ScheduledExportCompletion {
         let retryRequest: PendingExportRequest
-        if let remainingDates = result.remainingDates(from: request.dates, calendar: calendar) {
+        let requestCalendar = frozenCalendar(for: request.originalCalendarTimeZoneIdentifier)
+        if let remainingDates = result.remainingDates(from: request.dates, calendar: requestCalendar) {
             guard !remainingDates.isEmpty else {
                 try pendingExportStore.clearCompletedRequests(ids: [request.id])
                 exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
                 return .clearedAfterSuccess
             }
-            retryRequest = PendingExportRequest(
-                id: request.id,
-                dates: remainingDates,
-                source: request.source,
-                scheduledFireDate: request.scheduledFireDate,
-                scheduledKind: request.scheduledKind,
-                createdAt: request.createdAt,
-                notificationMetadata: request.notificationMetadata,
-                exportTarget: request.exportTarget,
-                settingsSnapshot: request.settingsSnapshot,
-                profileID: request.profileID,
-                profileName: request.profileName,
-                googleDriveDestinationSnapshot: request.googleDriveDestinationSnapshot,
-                attemptedAt: now(),
-                calendar: calendar
+            retryRequest = request.replacingResidualDates(
+                remainingDates,
+                attemptedAt: now()
             )
         } else if result.didCompleteAllRequestedDates {
             try pendingExportStore.clearCompletedRequests(ids: [request.id])
@@ -160,13 +149,16 @@ final class ScheduledExportCoordinator {
             frozenSettings = await makeSettingsSnapshot()
         }
 
+        let requestCalendar = frozenCalendar(
+            for: frozenSettings?.calendarTimeZoneIdentifier
+        )
         return PendingExportRequest(
             id: makeID(),
             dates: ScheduleDateMath.exportDates(
                 for: kind,
                 schedule: schedule,
                 fireDate: fireDate,
-                calendar: calendar
+                calendar: requestCalendar
             ),
             source: .scheduled,
             scheduledFireDate: fireDate,
@@ -178,7 +170,17 @@ final class ScheduledExportCoordinator {
             profileID: profile?.profileID,
             profileName: profile?.profileName,
             googleDriveDestinationSnapshot: profile?.googleDriveDestinationSnapshot,
-            calendar: calendar
+            calendar: requestCalendar
         )
+    }
+
+    private func frozenCalendar(for timeZoneIdentifier: String?) -> Calendar {
+        guard let timeZoneIdentifier,
+              let timeZone = TimeZone(identifier: timeZoneIdentifier) else {
+            return calendar
+        }
+        var frozen = Calendar(identifier: .gregorian)
+        frozen.timeZone = timeZone
+        return frozen
     }
 }

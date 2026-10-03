@@ -36,6 +36,7 @@ import com.healthmd.rawexport.RawSnapshotRequest
 import com.healthmd.rawexport.RawSnapshotStatus
 import com.healthmd.rawexport.RawSnapshotScope
 import com.healthmd.rawexport.SafRawExportStorage
+import com.healthmd.rawexport.withInteractiveRouteConsent
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -68,6 +69,7 @@ interface RawSnapshotService {
         googleDriveDestinationId: String? = null,
         googleDriveProfileId: String? = null,
         googleDriveOperationId: String? = null,
+        allowInteractiveRouteConsent: Boolean = false,
     ): ExportResult
 
     /** Performs the same native source read as an export without writing or uploading a user artifact. */
@@ -75,6 +77,7 @@ interface RawSnapshotService {
         startDate: LocalDate,
         endDate: LocalDate,
         settings: ExportSettings,
+        allowInteractiveRouteConsent: Boolean = false,
     ): ExportPreview
 }
 
@@ -100,6 +103,7 @@ class RawSnapshotExportRunner @Inject constructor(
         googleDriveDestinationId: String?,
         googleDriveProfileId: String?,
         googleDriveOperationId: String?,
+        allowInteractiveRouteConsent: Boolean,
     ): ExportResult {
         if (endDate.isBefore(startDate)) {
             return failure(startDate, target, ExportFailureReason.UNKNOWN)
@@ -116,8 +120,9 @@ class RawSnapshotExportRunner @Inject constructor(
         // Freeze local Drive authority before any potentially long-running provider capture.
         // Never re-read the mutable active destination after health bytes have been produced.
         val frozenGoogleDriveDestinationId = if (target == ExportTarget.GOOGLE_DRIVE) {
-            googleDriveDestinationId ?: driveSelectionStore.get()
-                ?: return failure(startDate, target, ExportFailureReason.NO_FOLDER_SELECTED)
+            googleDriveDestinationId ?: if (googleDriveProfileId == null) {
+                driveSelectionStore.get() ?: return failure(startDate, target, ExportFailureReason.NO_FOLDER_SELECTED)
+            } else return failure(startDate, target, ExportFailureReason.NO_FOLDER_SELECTED)
         } else null
 
         val apiConfiguration = if (target == ExportTarget.API_ENDPOINT) {
@@ -137,42 +142,47 @@ class RawSnapshotExportRunner @Inject constructor(
 
         val zone = ZoneId.systemDefault()
         val request = buildRequest(startDate, endDate, zone, settings)
-        if (target == ExportTarget.GOOGLE_DRIVE) {
-            return exportProvidersToDrive(
-                providerIds = providerIds,
-                startDate = startDate,
-                endDate = endDate,
-                request = request,
-                settings = settings,
-                destinationId = requireNotNull(frozenGoogleDriveDestinationId),
-                profileId = googleDriveProfileId,
-                operationId = googleDriveOperationId ?: UUID.randomUUID().toString(),
-            )
-        }
-        val results = mutableListOf<ExportResult>()
-        for (providerId in providerIds) {
-            val repository = rawRepositoryRegistry.repositoryFor(providerId)
-            val result = if (repository == null) {
-                failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
-            } else {
-                exportProvider(
-                    providerId, repository, startDate, endDate, request, settings, target,
-                    apiConfiguration,
-                    frozenGoogleDriveDestinationId,
-                    googleDriveProfileId,
+        val runProviders: suspend () -> ExportResult = run@{
+            if (target == ExportTarget.GOOGLE_DRIVE) {
+                return@run exportProvidersToDrive(
+                    providerIds, startDate, endDate, request, settings,
+                    requireNotNull(frozenGoogleDriveDestinationId), googleDriveProfileId,
+                    googleDriveOperationId ?: UUID.randomUUID().toString(),
                 )
             }
-            results += result
-            if (result.wasCancelled) break
+            val results = mutableListOf<ExportResult>()
+            for (providerId in providerIds) {
+                val repository = rawRepositoryRegistry.repositoryFor(providerId)
+                val result = if (repository == null) {
+                    failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
+                } else {
+                    exportProvider(
+                        providerId, repository, startDate, endDate, request, settings, target,
+                        apiConfiguration,
+                        frozenGoogleDriveDestinationId,
+                        googleDriveProfileId,
+                    )
+                }
+                results += result
+                if (result.wasCancelled) break
+            }
+            if (providerIds.size == 1) results.single()
+            else aggregateProviderResults(results, target, providerIds.size)
         }
-        if (providerIds.size == 1) return results.single()
-        return aggregateProviderResults(results, target, providerIds.size)
+        // One context spans every provider so the ten-prompt budget is run-scoped, not reset per
+        // artifact. Scheduled/direct/background callers leave this disabled.
+        return if (allowInteractiveRouteConsent) {
+            withInteractiveRouteConsent { runProviders() }
+        } else {
+            runProviders()
+        }
     }
 
     override suspend fun previewRange(
         startDate: LocalDate,
         endDate: LocalDate,
         settings: ExportSettings,
+        allowInteractiveRouteConsent: Boolean,
     ): ExportPreview {
         val requestedDateCount = selectedDateCount(startDate, endDate)
         if (endDate.isBefore(startDate)) {
@@ -219,11 +229,9 @@ class RawSnapshotExportRunner @Inject constructor(
 
             var artifact: File? = null
             try {
-                val raw = RawSnapshotExportOrchestrator(
-                    context,
-                    repository,
-                    NoBackupRawExportStorage(context),
-                ).export(request)
+                // Preview is read-only UX and does not disclose or authorize Health Connect's
+                // persistent precise-route grant. It therefore never launches consent UI.
+                val raw = producePreviewArtifact(repository, request, context)
                 artifact = File(raw.finalLocation)
                 check(artifact.isFile) { "Completed raw snapshot preview artifact is missing." }
                 val bounded = readRawArtifactPreview(artifact)
@@ -280,6 +288,16 @@ class RawSnapshotExportRunner @Inject constructor(
             isRangeArtifact = true,
         )
     }
+
+    private suspend fun producePreviewArtifact(
+        repository: RawHealthRepository,
+        request: RawSnapshotRequest,
+        context: Context,
+    ): RawExportResult = RawSnapshotExportOrchestrator(
+        context,
+        repository,
+        NoBackupRawExportStorage(context),
+    ).export(request)
 
     private suspend fun selectedProviderIds(): List<String> {
         val selectedProviderId = settingsRepository.getSelectedHealthProviderId()

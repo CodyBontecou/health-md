@@ -7,6 +7,17 @@ import WidgetKit
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        // RFC-0005 P2: the worker's wake notification carries this category. Tapping it is the
+        // user-presence surface — the app foregrounds, the direct service reconnects, and the
+        // CLI's in-flight wait completes — so no further payload handling is required here.
+        UNUserNotificationCenter.current().setNotificationCategories([
+            UNNotificationCategory(
+                identifier: IPhoneDirectWakeManager.notificationCategory,
+                actions: [],
+                intentIdentifiers: [],
+                options: []
+            ),
+        ])
         return true
     }
 
@@ -124,12 +135,13 @@ struct HealthMdApp: App {
     @StateObject private var advancedSettings: AdvancedExportSettings
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var healthKitManager = HealthKitManager.shared
-    @StateObject private var syncService = SyncService()
-    @StateObject private var directCLIService = IPhoneDirectCLIService()
+    @StateObject private var syncService: SyncService
+    @StateObject private var directCLIService: IPhoneDirectCLIService
+    @StateObject private var directWakeManager = IPhoneDirectWakeManager()
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
     @StateObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
-    @StateObject private var configurationProtection = ConfigurationProtectionManager()
+    @StateObject private var configurationProtection: ConfigurationProtectionManager
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
     @StateObject private var sharedSetupCoordinator: SharedSetupCoordinator
@@ -140,13 +152,68 @@ struct HealthMdApp: App {
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
+        // UI-test methods reuse the installed app. Seed this UserDefaults-backed value before
+        // constructing its StateObject so a prior protected journey cannot leak into the next one.
+        if TestMode.isUITesting {
+            UserDefaults.standard.set(
+                TestMode.configurationProtectionEnabled,
+                forKey: ConfigurationProtectionManager.storageKey
+            )
+        }
+
         let advancedSettings = AdvancedExportSettings()
         let apiExportSettings = APIExportSettings()
+        let directWakeManager = IPhoneDirectWakeManager()
+        let syncService = SyncService()
         _advancedSettings = StateObject(wrappedValue: advancedSettings)
         _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
+        _directWakeManager = StateObject(wrappedValue: directWakeManager)
+        _syncService = StateObject(wrappedValue: syncService)
+        _directCLIService = StateObject(wrappedValue: IPhoneDirectCLIService(wakeManager: directWakeManager))
+        _configurationProtection = StateObject(wrappedValue: ConfigurationProtectionManager())
+        // Production Shared Setup v2 wiring: the durable Add/Replace/Undo
+        // transaction and the verified destination-rebind execution gate run
+        // against the standard defaults with no verification overrides. The
+        // review flow's in-flow API-credential confirmation and its
+        // endpoint-row creation from a user-confirmed imported URL resolve
+        // the lazily built production export profile coordinator through the
+        // weak bridge (ContentView registers it), and its connected-Mac rows
+        // read read-only pairing facts from the shared sync service,
+        // re-rendering whenever those published facts change. The default
+        // Share/Save writer resolves its v2 export context through the same
+        // weak bridge — flushing any debounced profile edits first — plus
+        // the v2 sidecar's preserved Android extensions, so production
+        // writes schema_version 2 exclusively. Unit tests construct their own
+        // coordinators over isolated suites, so the app-hosted test process
+        // keeps the adapter and context resolver absent and the fail-closed
+        // no-adapter behavior stays observable.
+        let sharedSetupV2Service = TestMode.isUnitTesting
+            ? nil
+            : SharedSetupV2TransactionAdapter()
         _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
-            settings: advancedSettings,
-            apiExportSettings: apiExportSettings
+            v2Adapter: sharedSetupV2Service.map { service in
+                SharedSetupV2CoordinatorAdapter.production(
+                    service,
+                    exportProfiles: { SharedSetupV2ExportProfileBridge.current },
+                    connectedMacState: {
+                        SharedSetupV2ConnectedMacState(syncService: syncService)
+                    },
+                    connectedMacStateChanges: {
+                        SharedSetupV2CoordinatorAdapter
+                            .connectedMacFactChanges(syncService: syncService)
+                    }
+                )
+            },
+            v2ExportContext: {
+                guard let exportProfiles = SharedSetupV2ExportProfileBridge.current,
+                      let service = sharedSetupV2Service else {
+                    return nil
+                }
+                return try SharedSetupV2ExportContext.production(
+                    exportProfiles: exportProfiles,
+                    service: service
+                )
+            }
         ))
 
         configureTransparentTabBarAppearance()
@@ -272,12 +339,24 @@ struct HealthMdApp: App {
         // Export profiles, their scheduled entries, and their destination
         // bindings are UserDefaults-backed stores created after this reset
         // was written; clear them so a UI-test journey never inherits profile
-        // state from an earlier journey on the same install.
-        UserDefaults.standard.removeObject(forKey: "exportProfiles.list")
-        UserDefaults.standard.removeObject(forKey: "exportProfiles.activeProfileID")
+        // state from an earlier journey on the same install. Shared Setup v2
+        // sidecar/blocked/Undo state is the same kind of profile state.
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.legacyListKey)
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.legacyActiveIDKey)
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.envelopeKey)
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.activeIDKey)
         UserDefaults.standard.removeObject(forKey: "scheduledExportEntries.list")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.vaults")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.apiEndpoints")
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        UserDefaults.standard.removeObject(
+            forKey: SharedSetupV2ProfileTransaction.undoKey
+        )
 
         // All managers are @MainActor — set state in Task.
         Task { @MainActor in
@@ -316,6 +395,7 @@ struct HealthMdApp: App {
             .environmentObject(healthKitManager)
             .environmentObject(syncService)
             .environmentObject(directCLIService)
+            .environmentObject(directWakeManager)
             .environmentObject(externalIntegrationManager)
             .environmentObject(corpusRecoveryManager)
             .environmentObject(advancedSettings)
@@ -333,10 +413,18 @@ struct HealthMdApp: App {
                 Text(sharedSetupCoordinator.errorMessage ?? "")
             }
                         .environmentObject(configurationProtection)
+            // Keep native bordered controls aligned with the 6px Geist control radius
+            // instead of SwiftUI's default capsule shape.
+            .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
             .safeAreaInset(edge: .top, spacing: 0) {
                 Group {
                     if let snapshot = notificationExportActivity.snapshot {
-                        NotificationExportActivityBanner(snapshot: snapshot)
+                        NotificationExportActivityBanner(
+                            snapshot: snapshot,
+                            onCancel: snapshot.phase.allowsCancellation
+                                ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
+                                : nil
+                        )
                     } else if let snapshot = cliExportActivity.snapshot {
                         CLIExportActivityBanner(snapshot: snapshot)
                     }
@@ -553,6 +641,15 @@ struct HealthMdApp: App {
 
     private func setupSyncMessageHandler() {
         syncService.onMessageReceived = { message in
+            // Validate Mac accounting synchronously at the app ingress. The
+            // asynchronous router receives a typed validated/rejected input, so
+            // no raw result can cancel waiters or reach event subscribers first.
+            let macExportResultIngress: MacExportResultIngress.Input?
+            if case .macExportResult(let payload) = message {
+                macExportResultIngress = MacExportResultIngress.validate(payload)
+            } else {
+                macExportResultIngress = nil
+            }
             Task { @MainActor in
                 switch message {
                 case .requestData(let dates):
@@ -587,28 +684,79 @@ struct HealthMdApp: App {
                     SchedulingManager.shared.handleScheduledMacExportProgress(progress)
                     CLIExportActivityTracker.shared.updateMac(progress)
                     self.syncService.publishMacExportMessage(message)
-                case .macExportResult(let payload):
-                    self.syncService.cancelMacExportStreamAckWaiters(jobID: payload.jobID)
-                    let scheduledHandled = SchedulingManager.shared.completeScheduledMacExport(
-                        with: payload
+                case .macExportResult:
+                    guard let macExportResultIngress else { return }
+                    _ = await MacExportResultIngress.handle(
+                        macExportResultIngress,
+                        cancelWaiters: { jobID in
+                            self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
+                        },
+                        completeScheduledResult: { result in
+                            let handled = SchedulingManager.shared.completeScheduledMacExport(
+                                with: result
+                            )
+                            if handled {
+                                self.syncService.isSyncing = false
+                                self.corpusRecoveryManager.markCompletionRecorded(jobID: result.jobID)
+                            }
+                            return handled
+                        },
+                        completeRequestResult: { result in
+                            let handled = self.iPhoneExportRequestHandler.complete(with: result)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRecoveredScheduledResult: { result in
+                            let handled = await SchedulingManager.shared
+                                .completeRecoveredScheduledMacExport(with: result)
+                            if handled {
+                                self.syncService.isSyncing = false
+                                self.corpusRecoveryManager.markCompletionRecorded(jobID: result.jobID)
+                            }
+                            return handled
+                        },
+                        completeRecoveredRequestResult: { result in
+                            let handled = self.corpusRecoveryManager
+                                .recordRecoveredMacRequestCompletion(result)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        publishResult: { result in
+                            self.corpusRecoveryManager.recordRecoveredCompletion(result)
+                            self.syncService.publishMacExportMessage(.macExportResult(result))
+                        },
+                        completeScheduledFailure: { failure in
+                            let handled = SchedulingManager.shared.completeScheduledMacExport(
+                                with: failure
+                            )
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRequestFailure: { failure in
+                            let handled = self.iPhoneExportRequestHandler.complete(with: failure)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRecoveredScheduledFailure: { failure in
+                            let handled = await SchedulingManager.shared
+                                .completeRecoveredScheduledMacExport(with: failure)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRecoveredRequestFailure: { failure in
+                            guard let jobID = failure.jobID else { return false }
+                            let handled = self.corpusRecoveryManager
+                                .rejectRecoveredMacRequestCompletion(
+                                    jobID: jobID,
+                                    message: failure.message
+                                )
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        publishFailure: { failure in
+                            self.syncService.publishMacExportMessage(.macExportFailed(failure))
+                        }
                     )
-                    let requestHandled = self.iPhoneExportRequestHandler.complete(with: payload)
-                    let recoveredScheduledHandled = if !scheduledHandled && !requestHandled {
-                        await SchedulingManager.shared.completeRecoveredScheduledMacExport(
-                            with: payload
-                        )
-                    } else {
-                        false
-                    }
-                    if scheduledHandled || requestHandled || recoveredScheduledHandled {
-                        self.syncService.isSyncing = false
-                    }
-                    if scheduledHandled || recoveredScheduledHandled {
-                        self.corpusRecoveryManager.markCompletionRecorded(jobID: payload.jobID)
-                    } else if !requestHandled {
-                        self.corpusRecoveryManager.recordRecoveredCompletion(payload)
-                    }
-                    self.syncService.publishMacExportMessage(message)
                 case .macExportFailed(let failure):
                     if let jobID = failure.jobID {
                         self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)

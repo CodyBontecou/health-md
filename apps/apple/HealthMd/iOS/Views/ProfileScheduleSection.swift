@@ -7,9 +7,8 @@ import SwiftUI
 /// export profile with a schedule toggle and cadence editor. Mutations go
 /// through `ScheduledExportEntryStore` and finish with
 /// `schedulingManager.refreshScheduledAutomation()` so background tasks and
-/// worker sync follow immediately. The footer surfaces the projected monthly
-/// exporting-request count (decision 4: the free plan's 10 actions are shared
-/// across every profile, schedule, and manual export).
+/// worker sync follow immediately. The footer notes when no schedules are
+/// enabled.
 ///
 /// Observes the shared `ExportProfileCoordinator`'s stores so profiles created
 /// or removed on other screens (for example Settings → Export Profiles) appear
@@ -90,44 +89,20 @@ struct ProfileScheduleSection: View {
 
     private func profileRow(_ profile: ExportProfile) -> some View {
         let entry = entryStore.entry(profileID: profile.id)
-        return HStack(alignment: .center, spacing: Spacing.s3) {
-            Image(systemName: "square.and.arrow.down.on.square")
-                .font(.body.weight(.medium))
-                .foregroundStyle((entry?.isEnabled ?? false) ? Color.accent : Color.textMuted)
-                .frame(width: 32, height: 32)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(profile.name)
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textPrimary)
-
-                Text(cadenceSummary(for: entry))
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: Spacing.s2)
-
-            Toggle(
-                "Schedule \(profile.name)",
-                isOn: Binding(
-                    get: { entry?.isEnabled ?? false },
-                    set: { isEnabled in
-                        setEntryEnabled(isEnabled, for: profile, existing: entry)
-                    }
-                )
-            )
-            .labelsHidden()
-            .tint(Color.accent)
-            .accessibilityLabel(String(localized: "Schedule \(profile.name)", comment: "Toggle label for a profile's schedule"))
-        }
+        return SchedulingProfileRow(
+            name: profile.name,
+            summary: cadenceSummary(for: entry),
+            isEnabled: Binding(
+                get: { entry?.isEnabled ?? false },
+                set: { isEnabled in
+                    setEntryEnabled(isEnabled, for: profile, existing: entry)
+                }
+            ),
+            identifier: "schedule.profile.\(profile.id.uuidString)",
+            onEdit: { editingProfile = profile }
+        )
         .padding(.horizontal, Spacing.s4)
         .padding(.vertical, Spacing.s2)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            editingProfile = profile
-        }
     }
 
     private func setEntryEnabled(
@@ -193,26 +168,16 @@ struct ProfileScheduleSection: View {
 
     private var usageFooter: some View {
         let enabledCount = entryStore.entries.filter(\.isEnabled).count
-        let monthlyTotal = ScheduledUsageProjection.projectedMonthlyTotal(entries: entryStore.entries)
         return VStack(alignment: .leading, spacing: 3) {
-            if enabledCount > 0 {
-                Text(String(
-                    localized: "Projected use: about \(monthlyTotal) export actions per month across \(enabledCount) scheduled profile\(enabledCount == 1 ? "" : "s").",
-                    comment: "Projected monthly scheduled export usage across profiles"
-                ))
-            } else {
+            if enabledCount == 0 {
                 Text(String(
                     localized: "No profile schedules enabled.",
                     comment: "Profile schedule footer when nothing is enabled"
                 ))
             }
-            Text(String(
-                localized: "The free plan includes 10 export actions total — shared by every profile, schedule, and manual export. Full Access removes the limit.",
-                comment: "Free-plan quota explanation under profile schedules"
-            ))
         }
         .font(Typography.caption())
-        .foregroundStyle(Color.textMuted)
+        .foregroundStyle(Color.textSecondary)
         .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -249,62 +214,77 @@ struct ProfileScheduleEditorSheet: View {
         NavigationStack {
             Form {
                 Section {
+                    // The native navigation title may elide a long profile
+                    // name. Keep its complete reading surface in the Form.
+                    Text(profile.name)
+                        .font(Typography.headline())
+                        .fixedSize(horizontal: false, vertical: true)
                     Toggle("Enabled", isOn: $draft.isEnabled)
                 } header: {
                     Text("Schedule")
                 }
 
                 Section {
-                    Picker("Frequency", selection: $draft.frequency) {
-                        Text("Daily").tag(ScheduleFrequency.daily)
-                        Text("Weekly").tag(ScheduleFrequency.weekly)
-                        Text("Custom").tag(ScheduleFrequency.custom)
-                    }
+                    SchedulingChoicePicker(
+                        title: "Frequency",
+                        choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description) },
+                        selection: $draft.frequency
+                    )
+                    .accessibilityIdentifier("schedule.profile.editor.frequency")
 
                     if draft.frequency == .weekly {
-                        Picker("Day", selection: $draft.weekday) {
-                            ForEach(1...7, id: \.self) { weekday in
-                                Text(weekdayLabel(weekday)).tag(weekday)
-                            }
-                        }
+                        SchedulingValueMenu(
+                            title: "Day",
+                            choices: (1...7).map { SchedulingChoice(value: $0, title: weekdayLabel($0)) },
+                            selection: $draft.weekday
+                        )
                     }
 
                     if draft.frequency == .custom {
-                        Stepper(
-                            "Every \(draft.customInterval) \(draft.customUnit.label(for: draft.customInterval))",
-                            value: $draft.customInterval,
-                            in: 1...365
+                        SchedulingNumberControl(
+                            title: "Custom frequency interval", value: $draft.customInterval,
+                            bounds: 1...365, identifier: "schedule.profile.editor.interval",
+                            valueDescription: "Every \(draft.customInterval) \(draft.customUnit.label(for: draft.customInterval))"
                         )
-                        Picker("Unit", selection: $draft.customUnit) {
-                            Text("Days").tag(ScheduleIntervalUnit.day)
-                            Text("Weeks").tag(ScheduleIntervalUnit.week)
-                            Text("Months").tag(ScheduleIntervalUnit.month)
-                        }
+                        SchedulingValueMenu(
+                            title: "Unit",
+                            choices: [
+                                SchedulingChoice(value: ScheduleIntervalUnit.day, title: "Days"),
+                                SchedulingChoice(value: ScheduleIntervalUnit.week, title: "Weeks"),
+                                SchedulingChoice(value: ScheduleIntervalUnit.month, title: "Months")
+                            ],
+                            selection: $draft.customUnit
+                        )
                     }
 
-                    DatePicker(
-                        "Time",
-                        selection: timeBinding,
-                        displayedComponents: .hourAndMinute
-                    )
+                    SchedulingLabeledControl(title: "Time", value: Text(timeBinding.wrappedValue, style: .time)) {
+                        DatePicker(
+                            "Time",
+                            selection: timeBinding,
+                            displayedComponents: .hourAndMinute
+                        )
+                    }
                 } header: {
                     Text("Cadence")
                 }
 
                 Section {
-                    Stepper(
-                        "Lookback: \(draft.lookbackDays) day\(draft.lookbackDays == 1 ? "" : "s")",
-                        value: $draft.lookbackDays,
-                        in: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays
+                    SchedulingNumberControl(
+                        title: "Lookback window", value: $draft.lookbackDays,
+                        bounds: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays,
+                        identifier: "schedule.profile.editor.lookback",
+                        valueDescription: "Lookback: \(draft.lookbackDays) day\(draft.lookbackDays == 1 ? "" : "s")"
                     )
 
                     Toggle("Today Refresh", isOn: $draft.todayRefreshEnabled)
                     if draft.todayRefreshEnabled {
-                        Picker("Refresh Interval", selection: $draft.todayRefreshIntervalHours) {
-                            ForEach(ExportSchedule.todayRefreshIntervalOptions, id: \.self) { hours in
-                                Text("Every \(hours) hours").tag(hours)
-                            }
-                        }
+                        SchedulingValueMenu(
+                            title: "Refresh Interval",
+                            choices: ExportSchedule.todayRefreshIntervalOptions.map {
+                                SchedulingChoice(value: $0, title: String(localized: "Every \($0) hours"))
+                            },
+                            selection: $draft.todayRefreshIntervalHours
+                        )
                     }
                 } header: {
                     Text("Scope")

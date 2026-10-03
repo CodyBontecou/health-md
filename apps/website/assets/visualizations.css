@@ -207,6 +207,9 @@ pre { overflow-x: auto; padding: var(--space-4); background: var(--color-gray-al
 .docs-meta span { color: var(--color-secondary); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; line-height: 14px; text-transform: uppercase; }
 .docs-meta strong { color: var(--color-primary); font-size: 13px; font-weight: 600; line-height: 18px; }
 .docs-section { display: grid; gap: var(--space-3); }
+.export-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.export-badge { display: inline-flex; align-items: center; border: 1px solid var(--color-gray-alpha-200); border-radius: 999px; padding: 4px 12px; background: var(--color-gray-alpha-100); color: var(--color-primary); font-size: 12px; font-weight: 600; line-height: 16px; cursor: help; }
+.export-note { max-width: 820px; color: var(--color-secondary); font-size: 13px; line-height: 20px; }
 .docs-section h4, .docs-details summary { color: var(--color-primary); font-size: 15px; font-weight: 650; line-height: 20px; }
 .docs-details summary { cursor: pointer; }
 .docs-details[open] summary { margin-bottom: var(--space-3); }

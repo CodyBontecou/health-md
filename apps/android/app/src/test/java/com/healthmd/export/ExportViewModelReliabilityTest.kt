@@ -1,11 +1,17 @@
 package com.healthmd.export
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.HealthData
 import com.healthmd.presentation.export.ExportViewModel
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
+import io.mockk.every
+import kotlinx.coroutines.flow.flowOf
+import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -171,6 +177,11 @@ class ExportViewModelReliabilityTest {
         val billingRepository = FakeBillingRepository()
         val historyRepository = FakeExportHistoryRepository()
         val fileExportManager: FileExportManager = mockk(relaxed = true)
+        val exportProfileRepository = mockk<ExportProfileRepository> {
+            every { hasOpaqueProfileState } returns flowOf(false)
+            coEvery { activeSharedSetupV2ExecutionAccess() } returns
+                SharedSetupV2ProfileExecutionAccess.Allowed
+        }
 
         fun withDataFor(dates: List<LocalDate>): Dependencies = apply {
             dates.forEach { healthRepository.putData(healthData(it)) }
@@ -180,11 +191,16 @@ class ExportViewModelReliabilityTest {
             healthRepository = healthRepository,
             exportRepository = exportRepository,
             settingsRepository = settingsRepository,
-            billingRepository = billingRepository,
+            exportProfileRepository = exportProfileRepository,
+            entitlementRepository = billingRepository,
+            distributionPolicy = DistributionPolicy.play(),
+            reviewPrompter = FakeReviewPrompter(),
             exportHistoryRepository = historyRepository,
             fileExportManager = fileExportManager,
             googleDriveExportOrchestrator = mockk(relaxed = true),
-            googleDriveSelectionStore = mockk(relaxed = true),
+            googleDriveSelectionStore = mockk(relaxed = true) {
+                every { destinationId } returns flowOf(null)
+            },
             googleDriveDestinationStore = mockk(relaxed = true),
         )
     }

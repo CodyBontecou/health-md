@@ -15,12 +15,12 @@ import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -28,13 +28,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import java.time.LocalDate
-
-@Serializable
-private data class SharedSetupRollbackState(
-    val settings: ExportSettings,
-    val pendingEndpoint: String? = null,
-    val preservedAppleExtension: String? = null,
-)
 
 class SettingsRepositoryImpl(
     private val dataStore: DataStore<Preferences>,
@@ -45,11 +38,8 @@ class SettingsRepositoryImpl(
 
     private object Keys {
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
-        val SHARED_SETUP_UNDO = stringPreferencesKey("shared_setup_undo_v1")
-        val SHARED_SETUP_PENDING_ENDPOINT = stringPreferencesKey("shared_setup_pending_endpoint_v1")
-        val SHARED_SETUP_PRESERVED_APPLE_EXTENSION = stringPreferencesKey("shared_setup_preserved_apple_extension_v1")
 
-        val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
+        val PREVENT_ACCIDENTAL_CHANGES = ConfigurationProtectionPersistence.enabledKey
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
@@ -84,132 +74,22 @@ class SettingsRepositoryImpl(
     override suspend fun getExportSettings(): ExportSettings =
         exportSettings.first()
 
-    override suspend fun applySharedSetupTransaction(
-        expectedCurrent: ExportSettings,
-        candidate: ExportSettings,
-        pendingEndpoint: String?,
-        preservedAppleExtension: String?,
-    ): Boolean {
-        val expected = expectedCurrent.normalized()
-        val next = candidate.normalized()
-        val nextJson = encodeBoundedSharedSetupState(next)
-        preservedAppleExtension?.let(::requireBoundedSharedSetupText)
-        var applied = false
+    override suspend fun updateExportSettingsAtomically(
+        transform: (ExportSettings) -> ExportSettings,
+    ): ExportSettings {
+        var updated: ExportSettings? = null
         dataStore.edit { prefs ->
-            val stored = storedExportSettings(prefs)
-            if (stored != expected) return@edit
-            val rollback = SharedSetupRollbackState(
-                settings = stored,
-                pendingEndpoint = prefs[Keys.SHARED_SETUP_PENDING_ENDPOINT],
-                preservedAppleExtension = prefs[Keys.SHARED_SETUP_PRESERVED_APPLE_EXTENSION],
-            )
-            prefs[Keys.SHARED_SETUP_UNDO] = encodeBoundedSharedSetupRollback(rollback)
-            prefs[Keys.EXPORT_SETTINGS] = nextJson
-            setOrRemove(prefs, Keys.SHARED_SETUP_PENDING_ENDPOINT, pendingEndpoint)
-            setOrRemove(prefs, Keys.SHARED_SETUP_PRESERVED_APPLE_EXTENSION, preservedAppleExtension)
-            applied = true
+            val next = transform(storedExportSettings(prefs)).normalized()
+            prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), next)
+            updated = next
         }
-        return applied
+        return checkNotNull(updated) { "Export settings atomic update did not commit." }
     }
-
-    override suspend fun getSharedSetupUndo(): ExportSettings? = dataStore.data.first()[Keys.SHARED_SETUP_UNDO]
-        ?.let(::decodeSharedSetupRollback)
-        ?.settings
-
-    override suspend fun undoSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings? =
-        restoreSharedSetupTransaction(expectedCurrent)
-
-    override suspend fun rollbackSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings? =
-        restoreSharedSetupTransaction(expectedCurrent)
-
-    private suspend fun restoreSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings? {
-        val expected = expectedCurrent.normalized()
-        var restored: ExportSettings? = null
-        dataStore.edit { prefs ->
-            if (storedExportSettings(prefs) != expected) return@edit
-            val rollback = prefs[Keys.SHARED_SETUP_UNDO]
-                ?.let(::decodeSharedSetupRollback)
-                ?: return@edit
-            prefs[Keys.EXPORT_SETTINGS] = encodeBoundedSharedSetupState(rollback.settings)
-            setOrRemove(prefs, Keys.SHARED_SETUP_PENDING_ENDPOINT, rollback.pendingEndpoint)
-            setOrRemove(prefs, Keys.SHARED_SETUP_PRESERVED_APPLE_EXTENSION, rollback.preservedAppleExtension)
-            prefs.remove(Keys.SHARED_SETUP_UNDO)
-            restored = rollback.settings
-        }
-        return restored
-    }
-
-    override suspend fun getPendingSharedSetupEndpoint(): String? =
-        dataStore.data.first()[Keys.SHARED_SETUP_PENDING_ENDPOINT]
-
-    override suspend fun confirmSharedSetupEndpoint(
-        expectedCurrent: ExportSettings,
-        expectedPendingEndpoint: String,
-        candidate: ExportSettings,
-    ): Boolean {
-        val expected = expectedCurrent.normalized()
-        val next = candidate.normalized()
-        val nextJson = encodeBoundedSharedSetupState(next)
-        var confirmed = false
-        dataStore.edit { prefs ->
-            if (storedExportSettings(prefs) != expected ||
-                prefs[Keys.SHARED_SETUP_PENDING_ENDPOINT] != expectedPendingEndpoint
-            ) return@edit
-            prefs[Keys.EXPORT_SETTINGS] = nextJson
-            prefs.remove(Keys.SHARED_SETUP_PENDING_ENDPOINT)
-            confirmed = true
-        }
-        return confirmed
-    }
-
-    override suspend fun rollbackSharedSetupEndpointConfirmation(
-        expectedCurrent: ExportSettings,
-        restored: ExportSettings,
-        pendingEndpoint: String,
-    ): Boolean {
-        val expected = expectedCurrent.normalized()
-        val restoredJson = encodeBoundedSharedSetupState(restored.normalized())
-        var rolledBack = false
-        dataStore.edit { prefs ->
-            if (storedExportSettings(prefs) != expected || prefs[Keys.SHARED_SETUP_PENDING_ENDPOINT] != null) {
-                return@edit
-            }
-            prefs[Keys.EXPORT_SETTINGS] = restoredJson
-            prefs[Keys.SHARED_SETUP_PENDING_ENDPOINT] = pendingEndpoint
-            rolledBack = true
-        }
-        return rolledBack
-    }
-
-    override suspend fun getPreservedSharedSetupAppleExtension(): String? =
-        dataStore.data.first()[Keys.SHARED_SETUP_PRESERVED_APPLE_EXTENSION]
 
     private fun storedExportSettings(prefs: Preferences): ExportSettings =
         prefs[Keys.EXPORT_SETTINGS]
             ?.let { runCatching { decodePersistedExportSettings(it).normalized() }.getOrNull() }
             ?: ExportSettings.newInstallDefaults().normalized()
-
-    private fun encodeBoundedSharedSetupState(settings: ExportSettings): String =
-        json.encodeToString(ExportSettings.serializer(), settings.normalized()).also(::requireBoundedSharedSetupText)
-
-    private fun encodeBoundedSharedSetupRollback(state: SharedSetupRollbackState): String =
-        json.encodeToString(SharedSetupRollbackState.serializer(), state).also(::requireBoundedSharedSetupText)
-
-    private fun decodeSharedSetupRollback(value: String): SharedSetupRollbackState? =
-        runCatching { json.decodeFromString(SharedSetupRollbackState.serializer(), value) }.getOrNull()
-            ?: runCatching {
-                SharedSetupRollbackState(settings = decodePersistedExportSettings(value).normalized())
-            }.getOrNull()
-
-    private fun requireBoundedSharedSetupText(value: String) {
-        require(value.toByteArray(Charsets.UTF_8).size <= SHARED_SETUP_STATE_MAX_BYTES) {
-            "Shared setup state exceeds 256 KB."
-        }
-    }
-
-    private fun setOrRemove(prefs: MutablePreferences, key: Preferences.Key<String>, value: String?) {
-        if (value == null) prefs.remove(key) else prefs[key] = value
-    }
 
     override val preventAccidentalChanges: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false
@@ -430,9 +310,17 @@ class SettingsRepositoryImpl(
     }
 
     companion object {
+        /** Uses the admitted disconnect edit, preserving pending runtime metadata verbatim. */
+        internal fun disableGoogleDriveSchedule(prefs: MutablePreferences) {
+            val raw = prefs[Keys.EXPORT_SETTINGS] ?: return
+            val settings = decodePersistedExportSettings(raw)
+            if (!settings.scheduleEnabled || settings.scheduledExportTarget != ExportTarget.GOOGLE_DRIVE) return
+            val root = Json.parseToJsonElement(raw).jsonObject
+            prefs[Keys.EXPORT_SETTINGS] = JsonObject(root + ("scheduleEnabled" to JsonPrimitive(false))).toString()
+        }
+
         const val FREE_EXPORT_LIMIT = FreemiumPolicy.FREE_EXPORT_LIMIT
         const val DEFAULT_HEALTH_PROVIDER_ID = "health_connect"
-        private const val SHARED_SETUP_STATE_MAX_BYTES = 262_144
     }
 }
 

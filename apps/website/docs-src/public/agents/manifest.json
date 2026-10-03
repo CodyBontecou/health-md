@@ -3,6 +3,15 @@
   "schema_version": 1,
   "artifacts": [
     {
+      "id": "cli_docs_index",
+      "availability": "public_preview",
+      "index_version": 1,
+      "path": "/docs/cli/llms.txt",
+      "media_type": "text/markdown",
+      "bytes": 3111,
+      "sha256": "2a30675b8084f1dd4ff33e86e1914ffdc8e83c0c866922ffbe593a5bbc73a9de"
+    },
+    {
       "id": "mac_mcp_tools",
       "availability": "released",
       "catalog_version": 1,
@@ -38,10 +47,10 @@
     },
     {
       "id": "portable_mcp_tools",
-      "availability": "preview_until_public_healthmd_cli_release",
+      "availability": "public_preview",
       "catalog_version": 1,
       "profile": "local_direct",
-      "tool_count": 19,
+      "tool_count": 21,
       "tool_names": [
         "healthmd_status",
         "healthmd_doctor",
@@ -59,23 +68,25 @@
         "healthmd_pairing_start",
         "healthmd_pairing_status",
         "healthmd_export_files",
+        "healthmd_export_raw",
+        "healthmd_raw_artifact_read",
         "healthmd_export_job_status",
         "healthmd_export_job_resume",
         "healthmd_export_job_cancel"
       ],
       "path": "/agents/mcp/portable-tools-v1.json",
       "media_type": "application/json",
-      "bytes": 112422,
-      "sha256": "a5db5c6bdc306dd5b5dd181c9df4e8f58ceb9542300120ca2c32a2247cdb4ad4"
+      "bytes": 116261,
+      "sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d"
     },
     {
       "id": "healthmd_cli_skill_manifest",
-      "availability": "preview_until_public_healthmd_cli_release",
+      "availability": "public_preview",
       "manifest_version": 1,
       "path": "/agents/skills/healthmd-cli/manifest.json",
       "media_type": "application/json",
-      "bytes": 814,
-      "sha256": "53f0884f237e0018185640d1e2b2c11a467dd0a6e3fcd5fa43222750f13c5fae"
+      "bytes": 2179,
+      "sha256": "58e092e7c66a328f1a6b4de6abd22ed1dae2936ae1e98452a932dea8ae69c98f"
     },
     {
       "id": "reference_provenance",
@@ -83,8 +94,8 @@
       "manifest_version": 1,
       "path": "/docs/reference/source-manifest.json",
       "media_type": "application/json",
-      "bytes": 77823,
-      "sha256": "11da810b3b58814e94e4a45ef327a42f8a022e9195996f6ccd15218de71a35df"
+      "bytes": 80288,
+      "sha256": "1ddeba3bbd989ec729d8d065b315fbb0ff70f7169d4601b9d87867397d468dcc"
     }
   ]
 }

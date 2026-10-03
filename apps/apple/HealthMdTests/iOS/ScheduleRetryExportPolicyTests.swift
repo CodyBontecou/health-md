@@ -9,6 +9,61 @@ final class ScheduleRetryExportPolicyTests: XCTestCase {
         XCTAssertFalse(ScheduleRetryExportPolicy.shouldWriteDataDictionary(currentFileCount: 2))
     }
 
+    func testHistoryRetryIsLimitedToLocalFolderEntries() {
+        func failedEntry(
+            target: ExportTargetSelection?,
+            source: ExportSource = .scheduled,
+            targetLabel: String? = nil
+        ) -> ExportHistoryEntry {
+            ExportHistoryEntry(
+                source: source,
+                success: false,
+                dateRangeStart: Date(),
+                dateRangeEnd: Date(),
+                successCount: 0,
+                totalCount: 1,
+                failureReason: .fileWriteError,
+                targetLabel: targetLabel,
+                exportTarget: target
+            )
+        }
+
+        XCTAssertTrue(ScheduleRetryExportPolicy.canRetry(failedEntry(target: .localIPhoneFolder)))
+        XCTAssertTrue(ScheduleRetryExportPolicy.canRetry(failedEntry(target: nil)))
+        XCTAssertTrue(
+            ScheduleRetryExportPolicy.canRetry(
+                failedEntry(target: nil, targetLabel: "iPhone: Research Exports")
+            )
+        )
+        XCTAssertFalse(ScheduleRetryExportPolicy.canRetry(failedEntry(target: .apiEndpoint)))
+        XCTAssertFalse(ScheduleRetryExportPolicy.canRetry(failedEntry(target: .connectedMac)))
+        XCTAssertFalse(
+            ScheduleRetryExportPolicy.canRetry(
+                failedEntry(target: .localIPhoneFolder, source: .macAgent)
+            )
+        )
+    }
+
+    func testDriveRecoveryIsJournalOnlyAndNeverGenericFolderRecapture() {
+        func entry(target: ExportTargetSelection, success: Bool = false) -> ExportHistoryEntry {
+            ExportHistoryEntry(
+                source: .scheduled,
+                success: success,
+                dateRangeStart: Date(),
+                dateRangeEnd: Date(),
+                successCount: success ? 1 : 0,
+                totalCount: 1,
+                exportTarget: target
+            )
+        }
+        XCTAssertFalse(ScheduleRetryExportPolicy.canRetry(entry(target: .googleDrive)))
+        XCTAssertTrue(ScheduleRetryExportPolicy.canResumeGoogleDrive(entry(target: .googleDrive)))
+        XCTAssertFalse(ScheduleRetryExportPolicy.canResumeGoogleDrive(entry(target: .googleDrive, success: true)))
+        XCTAssertFalse(ScheduleRetryExportPolicy.canResumeGoogleDrive(entry(target: .localIPhoneFolder)))
+        XCTAssertFalse(ScheduleRetryExportPolicy.canResumeGoogleDrive(entry(target: .apiEndpoint)))
+        XCTAssertFalse(ScheduleRetryExportPolicy.canResumeGoogleDrive(entry(target: .connectedMac)))
+    }
+
     func testDailyNoteWriteFailureIsClassifiedAsFileWriteFailure() {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let error = NSError(domain: NSCocoaErrorDomain, code: NSFileWriteOutOfSpaceError)

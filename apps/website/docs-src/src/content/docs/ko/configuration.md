@@ -3,7 +3,7 @@ title: 에이전트 구성
 description: Health.md MCP 또는 CLI 인터페이스를 선택하고, Codex나 Claude 또는 다른 로컬 클라이언트를 구성한 다음, HealthKit을 클라우드 서비스로 라우팅하지 않고 페어링된 iPhone에 연결하세요.
 ---
 
-출시된 Mac 앱에는 서명된 로컬 도우미 두 개가 포함되어 있습니다. 하나는 타입 지정 에이전트 도구용 `healthmd-mcp`이고, 다른 하나는 명시적인 CLI 워크플로용 `healthmd`입니다. iPhone 직접 연결 MCP를 지원하는 별도의 크로스 플랫폼 CLI는 첫 공개 패키지가 실물 기기 출시 QA를 마칠 때까지 미리보기로 문서화됩니다.
+출시된 Mac 앱에는 서명된 로컬 도우미 두 개가 포함되어 있습니다. 하나는 타입 지정 에이전트 도구용 `healthmd-mcp`이고, 다른 하나는 명시적인 CLI 워크플로용 `healthmd`입니다. iPhone 직접 연결 MCP를 지원하는 별도의 크로스 플랫폼 CLI는 명시적으로 검증되지 않은 공개 미리보기로 패키징되어 있습니다. 첫 안정판에는 실물 기기 출시 QA가 계속 필요합니다.
 
 <div class="callout">
 <strong>HealthKit은 iPhone에 그대로 유지됩니다.</strong>
@@ -74,11 +74,11 @@ transport: stdio
 ## 이식 가능한 직접 연결 설정
 
 <div class="availability preview">
-<strong>미리보기 · 아직 공개 패키지로 제공되지 않음</strong>
-<p>크로스 플랫폼 Rust CLI, <code>healthmd setup codex</code>, 동일 바이너리의 <code>healthmd mcp serve</code>, Linux/Windows 직접 페어링은 구현되었지만 첫 번째 품질 검증 공개 출시를 기다리고 있습니다.</p>
+<strong>공개 미리보기 · 아직 안정판으로 검증되지 않음</strong>
+<p>크로스 플랫폼 Rust CLI, <code>healthmd setup codex</code>, 동일 바이너리의 <code>healthmd mcp serve</code>, Linux/Windows 직접 페어링은 명시적으로 검증되지 않은 공개 미리보기로 패키징되어 있습니다.</p>
 </div>
 
-공개 후에는 `healthmd setup codex`가 Codex를 멱등적으로 구성하고 iPhone 직접 페어링을 시작합니다. 그전까지는 공개되지 않은 Homebrew, crates.io, 설치 프로그램 또는 GitHub 릴리스 URL에 의존하지 마세요. [iPhone 직접 연결 CLI](/ko/docs/cli-direct/) 페이지에서 준비 중인 전송 및 프로토콜 동작을 설명합니다.
+macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 설치합니다. 이후 `healthmd setup codex`가 Codex를 멱등적으로 구성하고 iPhone 직접 페어링을 시작합니다. 릴리스 증거에 지정된 정확한 모바일 빌드를 사용하세요. 패키지 공개는 모바일 호환성의 증거가 아닙니다. [iPhone 직접 연결 CLI](/ko/docs/cli-direct/) 페이지에서 전송 및 프로토콜 동작을 설명합니다.
 
 ## 명시적인 CLI 워크플로
 
@@ -96,7 +96,7 @@ healthmd export --last 7 --destination "$HOME/Documents/HealthVault"
 
 <div class="availability preview">
 <strong>미리보기 · 이식 가능한 직접 연결 워크플로</strong>
-<p>이 단계에서는 향후 제공될 크로스 플랫폼 패키지를 설명합니다. 출시된 번들 Mac MCP 경로는 대신 Mac 앱의 기존 iPhone 연결을 사용합니다.</p>
+<p>다음은 현재 공개 패키지에 포함된 이식 가능한 워크플로입니다. 번들 Mac MCP 경로는 계속 Mac 앱의 기존 iPhone 연결을 사용합니다.</p>
 </div>
 
 직접 MCP 및 CLI 워크플로를 사용하려면 iPhone의 Health.md와 신뢰할 수 있는 일회성 페어링을 완료해야 합니다. 페어링은 인증된 암호화 채널과 macOS, Linux 또는 Windows의 네이티브 자격 증명 저장소를 사용합니다.
@@ -126,6 +126,6 @@ healthmd export --last 7 --destination "$HOME/Documents/HealthVault"
 <div class="related">
   <a href="/ko/docs/mcp/"><span>도구 인터페이스</span>출시된 Mac 도구 21개, 이식 가능한 미리보기 도구 19개, MCP Apps, 스키마, 페이징, 내보내기 및 샌드박스 경계를 검토하세요.</a>
   <a href="/ko/docs/agent-queries/"><span>첫 번째 질문</span>타입 지정 측정 항목, 수면, 운동, 비교, 데이터 범위 및 증거 워크플로를 실행하세요.</a>
-  <a href="/ko/docs/cli-extract/"><span>정규 데이터</span>큰 본문을 채팅에 넣지 않고 선택한 스키마 v7 문서와 소스 레코드를 추출하세요.</a>
+  <a href="/ko/docs/cli-extract/"><span>정규 데이터</span>큰 본문을 채팅에 넣지 않고 선택한 스키마 v8 문서와 소스 레코드를 추출하세요.</a>
   <a href="/ko/docs/reference/"><span>계약</span>버전이 지정된 데이터 구조, 필드 목록, 생성된 픽스처 및 통합 방법을 살펴보세요.</a>
 </div>

@@ -194,6 +194,7 @@ object GeistSizes {
     val control = 40.dp
     val controlLarge = 48.dp
     val minimumTouchTarget = 48.dp
+    val scannerFrame = 260.dp
     const val dialogMaxHeightFraction = 0.9f
 }
 
@@ -243,6 +244,9 @@ object Radii {
  * current DESIGN.md / DESIGN.dark.md token set.
  */
 object AppColors {
+    private val scannerScrimColor = Color(0xB3000000)
+    private val scannerContentColor = Color(0xFFFFFFFF)
+
     val bgPrimary: Color @Composable get() = LocalGeistColors.current.background100
     val bgSecondary: Color @Composable get() = LocalGeistColors.current.background200
     val bgTertiary: Color @Composable get() = LocalGeistColors.current.background100
@@ -254,6 +258,8 @@ object AppColors {
     val textPrimary: Color @Composable get() = LocalGeistColors.current.primary
     val textSecondary: Color @Composable get() = LocalGeistColors.current.secondary
     val textMuted: Color @Composable get() = LocalGeistColors.current.disabled
+    val scannerScrim: Color @Composable get() = scannerScrimColor
+    val scannerContent: Color @Composable get() = scannerContentColor
 
     val accent: Color @Composable get() = LocalGeistColors.current.accent
     val accentHover: Color @Composable get() = LocalGeistColors.current.accentHover

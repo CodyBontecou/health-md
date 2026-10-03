@@ -54,9 +54,9 @@ android {
     defaultConfig {
         applicationId = "com.healthmd.android"
         minSdk = 28
-        targetSdk = 35
-        versionCode = 29
-        versionName = "1.7.1"
+        targetSdk = 36
+        versionCode = 39
+        versionName = "1.9.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -64,31 +64,6 @@ android {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
         }
 
-        buildConfigField("String", "FITBIT_CLIENT_ID", "\"${project.findProperty("FITBIT_CLIENT_ID") as? String ?: ""}\"")
-        buildConfigField("String", "FITBIT_TOKEN_BROKER_URL", "\"${project.findProperty("FITBIT_TOKEN_BROKER_URL") as? String ?: ""}\"")
-        buildConfigField("String", "WITHINGS_CLIENT_ID", "\"${project.findProperty("WITHINGS_CLIENT_ID") as? String ?: ""}\"")
-        buildConfigField("String", "WITHINGS_TOKEN_BROKER_URL", "\"${project.findProperty("WITHINGS_TOKEN_BROKER_URL") as? String ?: ""}\"")
-        buildConfigField("String", "OURA_CLIENT_ID", "\"${project.findProperty("OURA_CLIENT_ID") as? String ?: ""}\"")
-        buildConfigField("String", "OURA_TOKEN_BROKER_URL", "\"${project.findProperty("OURA_TOKEN_BROKER_URL") as? String ?: ""}\"")
-        buildConfigField("String", "POLAR_CLIENT_ID", "\"${project.findProperty("POLAR_CLIENT_ID") as? String ?: ""}\"")
-        buildConfigField("String", "POLAR_TOKEN_BROKER_URL", "\"${project.findProperty("POLAR_TOKEN_BROKER_URL") as? String ?: ""}\"")
-        buildConfigField("String", "WHOOP_CLIENT_ID", "\"${project.findProperty("WHOOP_CLIENT_ID") as? String ?: ""}\"")
-        buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", "\"${project.findProperty("WHOOP_TOKEN_BROKER_URL") as? String ?: ""}\"")
-        buildConfigField(
-            "String",
-            "CAMPAIGN_ATTRIBUTION_ENDPOINT_URL",
-            campaignAttributionEndpointUrl.asBuildConfigString(),
-        )
-        buildConfigField(
-            "String",
-            "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN",
-            campaignAttributionIngestToken.asBuildConfigString(),
-        )
-        buildConfigField(
-            "String",
-            "ONBOARDING_ANALYTICS_ENDPOINT_URL",
-            onboardingAnalyticsEndpointUrl.asBuildConfigString(),
-        )
         buildConfigField(
             "String",
             "EXPORT_ENGINE_ANDROID_FROZEN_V4",
@@ -131,6 +106,33 @@ android {
         }
     }
 
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"play\"")
+            buildConfigField("String", "FITBIT_CLIENT_ID", configuredValue("FITBIT_CLIENT_ID").asBuildConfigString())
+            buildConfigField("String", "FITBIT_TOKEN_BROKER_URL", configuredValue("FITBIT_TOKEN_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "WITHINGS_CLIENT_ID", configuredValue("WITHINGS_CLIENT_ID").asBuildConfigString())
+            buildConfigField("String", "WITHINGS_TOKEN_BROKER_URL", configuredValue("WITHINGS_TOKEN_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "OURA_CLIENT_ID", configuredValue("OURA_CLIENT_ID").asBuildConfigString())
+            buildConfigField("String", "OURA_TOKEN_BROKER_URL", configuredValue("OURA_TOKEN_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "POLAR_CLIENT_ID", configuredValue("POLAR_CLIENT_ID").asBuildConfigString())
+            buildConfigField("String", "POLAR_TOKEN_BROKER_URL", configuredValue("POLAR_TOKEN_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "WHOOP_CLIENT_ID", configuredValue("WHOOP_CLIENT_ID").asBuildConfigString())
+            buildConfigField("String", "WHOOP_TOKEN_BROKER_URL", configuredValue("WHOOP_TOKEN_BROKER_URL").asBuildConfigString())
+            buildConfigField("String", "CAMPAIGN_ATTRIBUTION_ENDPOINT_URL", campaignAttributionEndpointUrl.asBuildConfigString())
+            buildConfigField("String", "CAMPAIGN_ATTRIBUTION_INGEST_TOKEN", campaignAttributionIngestToken.asBuildConfigString())
+            buildConfigField("String", "ONBOARDING_ANALYTICS_ENDPOINT_URL", onboardingAnalyticsEndpointUrl.asBuildConfigString())
+            signingConfig = signingConfigs.getByName("release")
+        }
+        create("fdroid") {
+            dimension = "distribution"
+            buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"fdroid\"")
+            buildConfigField("String", "GOOGLE_DRIVE_ANDROID_CLIENT_ID", "\"\"")
+        }
+    }
+
     buildTypes {
         debug {
             isPseudoLocalesEnabled = true
@@ -138,7 +140,6 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -179,6 +180,11 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
+    sourceSets {
+        getByName("testPlay").java.srcDir("src/playTest/java")
+        getByName("testFdroid").java.srcDir("src/fdroidTest/java")
+    }
+
     packaging {
         resources.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
     }
@@ -187,7 +193,7 @@ android {
 dependencies {
     implementation(project(":direct-protocol"))
     implementation(project(":healthmd-core"))
-    implementation(project(":wearable-contract"))
+    add("playImplementation", project(":wearable-contract"))
 
     // Compose
     implementation(platform(libs.compose.bom))
@@ -206,10 +212,15 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation.compose)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.guava)
+    implementation(libs.zxing.core)
     implementation(libs.glance)
     implementation(libs.glance.appwidget)
-    implementation(libs.play.services.wearable)
-    implementation(libs.play.services.auth)
+    add("playImplementation", libs.play.services.wearable)
+    add("playImplementation", libs.play.services.auth)
 
     // Health Connect
     implementation(libs.health.connect)
@@ -238,15 +249,11 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
-    // Billing
-    implementation(libs.billing.ktx)
-
-    // Google Play campaign install attribution (no analytics SDK)
-    implementation(libs.install.referrer)
-
-    // Play In-App Review
-    implementation(libs.play.review)
-    implementation(libs.play.review.ktx)
+    // Google Play-only integrations. The F-Droid runtime graph must not resolve these artifacts.
+    add("playImplementation", libs.billing.ktx)
+    add("playImplementation", libs.install.referrer)
+    add("playImplementation", libs.play.review)
+    add("playImplementation", libs.play.review.ktx)
 
     // Tagged, on-device PDF authoring. The port is Apache-2.0. Its obsolete
     // Bouncy Castle transitives are excluded because direct-protocol already supplies bcprov-jdk18on.
@@ -280,6 +287,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.espresso.core)
+    androidTestImplementation(libs.uiautomator)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
 }
