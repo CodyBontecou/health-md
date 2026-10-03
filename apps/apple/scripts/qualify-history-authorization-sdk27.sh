@@ -5,6 +5,13 @@ cd "$(dirname "$0")/.."
 expected=/Applications/Xcode_27.app/Contents/Developer
 selected=${DEVELOPER_DIR:-$(xcode-select -p)}
 [[ "$selected" == "$expected" ]] || { echo "::error::Expected selected Xcode27 at $expected, got $selected"; exit 1; }
+# Fail closed before any cache restore: this tranche's namespace identifies the
+# actually qualified compiler/SDK, not merely a floating Xcode_27.app path.
+[[ "$(uname -m)" == arm64 ]] || { echo "::error::Qualified arm64 toolchain required"; exit 1; }
+xcode_version=$(xcodebuild -version)
+[[ "$xcode_version" == $'Xcode 27.0\nBuild version 27A266a' ]] || { echo "::error::Qualified Xcode 27A266a required; got $xcode_version"; exit 1; }
+swift_version=$(xcrun swiftc --version)
+[[ "${swift_version%%$'\n'*}" == 'Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)' ]] || { echo "::error::Qualified Swift/Clang compiler build required; got $swift_version"; exit 1; }
 mkdir -p build/logs
 receipt=build/logs/history-sdk27-receipt.txt
 {
@@ -20,7 +27,7 @@ receipt=build/logs/history-sdk27-receipt.txt
 for sdk in iphonesimulator iphoneos macosx; do
     sdk_path=$(xcrun --sdk "$sdk" --show-sdk-path)
     sdk_version=$(xcrun --sdk "$sdk" --show-sdk-version)
-    [[ "$sdk_version" == 27.* ]] || { echo "::error::SDK27 required for $sdk, got $sdk_version"; exit 1; }
+    [[ "$sdk_version" == 27.0 ]] || { echo "::error::Qualified SDK27.0 required for $sdk, got $sdk_version"; exit 1; }
     case "$sdk" in
         iphonesimulator) target=arm64-apple-ios17.0-simulator ;;
         iphoneos) target=arm64-apple-ios17.0 ;;

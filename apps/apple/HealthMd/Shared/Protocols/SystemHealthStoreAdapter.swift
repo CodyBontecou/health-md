@@ -126,6 +126,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome {
         #if DEBUG
         if TestMode.isUITesting, let fixture = ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] {
+            if fixture == "pending" {
+                // Synthetic latency path only. Production cancellation is not
+                // assumed to bound HealthKit's metadata operation.
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                return .boundaries([:])
+            }
             switch fixture {
             case "limited":
                 return .boundaries(Dictionary(uniqueKeysWithValues: types.map {

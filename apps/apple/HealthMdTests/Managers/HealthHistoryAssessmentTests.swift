@@ -246,7 +246,10 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         let coordinator = HealthHistoryAssessmentCoordinator()
         let initial = HealthHistoryExecutionSelection(scope: scope(), settings: ExportSettingsSnapshot.from(settings),
                                                      target: .localIPhoneFolder, preset: .custom)
+        var changedSettings = initial.settings
+        changedSettings.includeMetadata.toggle()
         for changed in [
+            HealthHistoryExecutionSelection(scope: initial.scope, settings: changedSettings, target: initial.target, preset: .custom),
             HealthHistoryExecutionSelection(scope: scope(["heart_rate_avg"]), settings: initial.settings, target: initial.target, preset: .custom),
             HealthHistoryExecutionSelection(scope: scope(profile: UUID()), settings: initial.settings, target: initial.target, preset: .custom),
             HealthHistoryExecutionSelection(scope: initial.scope, settings: initial.settings, target: .connectedMac, preset: .custom),
@@ -269,8 +272,6 @@ final class HealthHistoryAssessmentTests: XCTestCase {
             await task.value
             XCTAssertEqual(captures, 0)
         }
-        var changedSettings = initial.settings
-        changedSettings.includeMetadata.toggle()
         let changed = HealthHistoryExecutionSelection(scope: initial.scope, settings: changedSettings,
                                                      target: initial.target, preset: initial.preset)
         XCTAssertNotEqual(changed, initial)
@@ -283,6 +284,69 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         }
         XCTAssertNil(result)
         XCTAssertEqual(assessmentCalls, 0)
+    }
+
+    func testProductionCoordinatorUnchangedSelectionAllowsCapture() async {
+        let sut = manager(FakeHealthStore())
+        let defaults = UserDefaults(suiteName: "HistoryUnchangedSettings")!
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        let selection = HealthHistoryExecutionSelection(scope: scope(), settings: ExportSettingsSnapshot.from(settings),
+                                                       target: .localIPhoneFolder, preset: .custom)
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        let requestID = coordinator.beginRequest()
+        var captures = 0
+        let result = await coordinator.assess(requestID: requestID, scope: selection.scope,
+            isCurrent: { selection.settings == ExportSettingsSnapshot.from(settings) }) {
+            await sut.assessHistoryAccess(scope: selection.scope)
+        }
+        if result != nil { captures += 1 }
+        XCTAssertEqual(captures, 1)
+        XCTAssertEqual(result?.scope, selection.scope)
+    }
+
+    func testContinueUnverifiedIsNotAnEmptySuccessfulAssessmentOrFullHistory() {
+        let store = FakeHealthStore()
+        let sut = manager(store)
+        let request = scope(["steps", "stand_time"])
+        let result = sut.historyAssessmentNotCompleted(scope: request)
+        XCTAssertEqual(result.scope, request)
+        XCTAssertEqual(result.evidenceSource, "assessment_not_completed")
+        XCTAssertEqual(result.access(for: steps), .unassessed(reason: "assessment_not_completed"))
+        XCTAssertEqual(result.types.first { $0.id == HealthKitRecordCatalog.appleStandHourIdentifier }?.dependencyMetricIDs, ["stand_time"])
+        XCTAssertTrue(result.warningMessage.contains("did not finish"))
+        XCTAssertTrue(result.needsWarning)
+        XCTAssertTrue(store.historyRequestedIdentifiers.isEmpty)
+    }
+
+    func testProductionCoordinatorCancelledAssessmentCannotStartCapture() async {
+        let request = scope()
+        let sut = manager(FakeHealthStore())
+        let coordinator = HealthHistoryAssessmentCoordinator()
+        var pending: CheckedContinuation<HealthHistoryAssessment, Never>?
+        let task = Task {
+            await coordinator.assess(scope: request, isCurrent: { true }) {
+                await withCheckedContinuation { pending = $0 }
+            }
+        }
+        while pending == nil { await Task.yield() }
+        task.cancel()
+        pending?.resume(returning: await sut.assessHistoryAccess(scope: request))
+        let result = await task.value
+        XCTAssertNil(result)
+    }
+
+    func testOwnerDateDisclosureUsesFrozenCalendarWithoutChangingRequestedDates() async {
+        let store = FakeHealthStore()
+        let day = ISO8601DateFormatter().date(from: "2027-01-01T20:00:00Z")!
+        let endBoundary = ISO8601DateFormatter().date(from: "2027-01-01T18:00:00Z")!
+        store.historyOutcome = .boundaries([steps: endBoundary])
+        let request = HealthHistoryScope(metricIDs: ["steps"], startDate: day, endDate: day,
+            timeZoneIdentifier: "America/Los_Angeles", allAvailable: false, profileID: nil, rangeSemantics: .ownerDates)
+        let result = await manager(store).assessHistoryAccess(scope: request)
+        XCTAssertTrue(result.hasIntersectingLimit, "Capture includes the earlier hours of the requested owner day")
+        XCTAssertEqual(result.scope.startDate, day)
+        XCTAssertEqual(result.scope.endDate, day)
+        XCTAssertEqual(result.scope.sampleQueryStart, ISO8601DateFormatter().date(from: "2027-01-01T08:00:00Z"))
     }
 
     func testStaleRevisionScopeProfileAndTimeZoneCannotPublishPreview() async {

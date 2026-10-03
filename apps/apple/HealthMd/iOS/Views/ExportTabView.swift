@@ -49,6 +49,9 @@ struct ExportTabView: View {
     let onExportTapped: () -> Void
     let historyProfileStore: ExportProfileStore?
     let executionHistoryAssessment: HealthHistoryAssessment?
+    let isAssessingHistory: Bool
+    let onContinueWithoutHistoryVerification: () -> Void
+    let onCancelHistoryVerification: () -> Void
 
     @State private var historyAssessment: HealthHistoryAssessment?
     @State private var historyRefreshID = UUID()
@@ -146,6 +149,7 @@ struct ExportTabView: View {
         .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
         .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
         .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onReceive(healthKitManager.objectWillChange) { _ in invalidateHistoryPreview() }
         .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
             guard historyProfileID != id else { return }
             historyProfileID = id
@@ -453,7 +457,7 @@ struct ExportTabView: View {
             metricIDs: advancedSettings.metricSelection.enabledMetrics,
             startDate: startDate, endDate: endDate,
             timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
-            allAvailable: dateRangePreset == .allTime, profileID: historyProfileID
+            allAvailable: dateRangePreset == .allTime, profileID: historyProfileID, rangeSemantics: .ownerDates
         )
     }
 
@@ -480,6 +484,18 @@ struct ExportTabView: View {
     }
 
     @ViewBuilder private var historyWarningSection: some View {
+        if isAssessingHistory {
+            sectionCard(title: "Checking history access") {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("This check is advisory. If it takes too long, continue with unverified history or cancel the check. Cancelling does not prove the framework stopped its work.")
+                    Button("Continue without history verification", action: onContinueWithoutHistoryVerification)
+                        .accessibilityIdentifier("export.historyWarning.continueUnverified")
+                    Button("Cancel history check", action: onCancelHistoryVerification)
+                        .accessibilityIdentifier("export.historyWarning.cancelCheck")
+                }
+                .font(.footnote)
+            }
+        }
         if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
             execution: executionHistoryAssessment, scope: historyScope), assessment.needsWarning {
             sectionCard(title: assessment.warningTitle) {
@@ -487,7 +503,9 @@ struct ExportTabView: View {
                     Text(assessment.warningMessage)
                         .accessibilityIdentifier("export.historyWarning.message")
                     if assessment.id == executionHistoryAssessment?.id {
-                        Text("Rechecked for this export. Query completion is not proof of full history.")
+                        Text(assessment.evidenceSource == "assessment_not_completed"
+                            ? "Continued without a completed history assessment. History remains unverified."
+                            : "Rechecked for this export. Query completion is not proof of full history.")
                             .accessibilityIdentifier("export.historyWarning.execution")
                     }
                     Button("Review Health Access") { showHealthPermissionsGuide = true }

@@ -42,7 +42,9 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         reveal(message, in: app)
         XCTAssertTrue(message.label.contains("Empty data and completed queries do not prove full history"))
         XCTAssertFalse(app.staticTexts["export.historyWarning.execution"].exists)
-        app.buttons[UITestLaunchHelper.Export.exportButton].tap()
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        reveal(exportButton, in: app)
+        exportButton.tap()
         XCTAssertTrue(app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge].waitForExistence(timeout: 10))
         let execution = app.staticTexts["export.historyWarning.execution"]
         reveal(execution, in: app)
@@ -64,6 +66,27 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         action.tap()
         XCTAssertTrue(app.staticTexts["Adjust Health Permissions"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["Open Health App"].exists)
+    }
+
+    func testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "pending"
+        app.launch()
+        defer { app.terminate() }
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+        let continueButton = app.buttons["export.historyWarning.continueUnverified"]
+        reveal(continueButton, in: app)
+        continueButton.tap()
+        let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        let execution = app.staticTexts["export.historyWarning.execution"]
+        reveal(execution, in: app)
+        XCTAssertTrue(execution.label.contains("without a completed history assessment"))
+        XCTAssertFalse(execution.label.contains("Rechecked"))
+        XCTAssertFalse(app.buttons["export.historyWarning.cancelCheck"].exists)
+        XCTAssertTrue(app.buttons["View Exported File"].exists)
     }
 
     private func reveal(_ element: XCUIElement, in app: XCUIApplication) {

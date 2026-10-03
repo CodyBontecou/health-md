@@ -2294,11 +2294,33 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Historical authorization evidence (never acquisition bounds)
 
+    /// Explicit advisory escape path, not a successful empty API assessment.
+    /// Keeps exact selected/dependency attribution when the user proceeds without
+    /// waiting. Cancelling the task does not promise that HealthKit stops its work.
+    func historyAssessmentNotCompleted(scope: HealthHistoryScope) -> HealthHistoryAssessment {
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(enabledMetricIDs: scope.metricIDs)
+        var types = plan.map { entry in
+            HealthHistoryTypeAssessment(id: entry.objectTypeIdentifier,
+                directMetricIDs: entry.directMetricIDs, dependencyMetricIDs: entry.dependencyMetricIDs,
+                dependencyReasons: Set(plan.flatMap { parent in
+                    parent.descriptor.dependencies.filter { $0.objectTypeIdentifier == entry.objectTypeIdentifier }
+                        .map { $0.reason.rawValue }
+                }).sorted(), access: .unassessed(reason: "assessment_not_completed"))
+        }
+        for metric in scope.metricIDs.subtracting(Set(plan.flatMap(\.directMetricIDs))).sorted() {
+            types.append(HealthHistoryTypeAssessment(id: "metric:\(metric)", directMetricIDs: [metric],
+                dependencyMetricIDs: [], dependencyReasons: [], access: .unassessed(reason: "assessment_not_completed")))
+        }
+        return HealthHistoryAssessment(id: UUID(), assessedAt: Date(), scope: scope,
+            types: types.sorted { $0.id < $1.id }, evidenceSource: "assessment_not_completed")
+    }
+
     func assessHistoryAccess(scope: HealthHistoryScope) async -> HealthHistoryAssessment {
         let plan = HealthKitRecordCatalog.attributedSelectionPlan(enabledMetricIDs: scope.metricIDs)
         var results: [HealthHistoryTypeAssessment] = []
         let plannedIDs = Set(plan.map(\.objectTypeIdentifier))
         for entry in plan {
+            guard !Task.isCancelled else { return historyAssessmentNotCompleted(scope: scope) }
             let access: HealthHistoryAccess
             if !HealthKitRecordCatalog.isRuntimeAvailable(entry.descriptor) {
                 access = .unassessed(reason: "type_runtime_unavailable")

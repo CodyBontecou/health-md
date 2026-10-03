@@ -40,6 +40,8 @@ struct ContentView: View {
     @State private var executionHistoryAssessment: HealthHistoryAssessment?
     @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
     @State private var historyExecutionTask: Task<Void, Never>?
+    @State private var pendingHistorySelection: HealthHistoryExecutionSelection?
+    @State private var pendingHistoryRequestID: UUID?
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
@@ -168,7 +170,10 @@ struct ContentView: View {
                         canExport: canExport,
                         onExportTapped: exportData,
                         historyProfileStore: profileCoordinator?.profileStore,
-                        executionHistoryAssessment: executionHistoryAssessment
+                        executionHistoryAssessment: executionHistoryAssessment,
+                        isAssessingHistory: isAssessingHistory,
+                        onContinueWithoutHistoryVerification: continueWithoutHistoryVerification,
+                        onCancelHistoryVerification: invalidateExecutionHistory
                     )
                     .tabItem {
                         Label("Export", systemImage: "arrow.up.doc.fill")
@@ -214,6 +219,7 @@ struct ContentView: View {
                 .tint(Color.accent)
                 .task { ensureProfileCoordinator() }
                 .onChange(of: exportTargetSelection) { _, newValue in
+                    invalidateExecutionHistory()
                     profileCoordinator?.userSelectedTarget(newValue)
                 }
                 .onChange(of: profileCoordinator?.activeTarget) { _, newValue in
@@ -550,6 +556,9 @@ struct ContentView: View {
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
                 }
+                if ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+                    advancedSettings.metricSelection.enabledMetrics = ["steps"]
+                }
                 advancedSettings.archiveExportFiles = TestMode.archiveExports
             }
 
@@ -557,6 +566,9 @@ struct ContentView: View {
             await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
         }
         .onReceive(advancedSettings.objectWillChange) { _ in invalidateExecutionHistory() }
+        .onReceive(healthKitManager.objectWillChange) { _ in invalidateExecutionHistory() }
+        .onReceive(apiExportSettings.objectWillChange) { _ in invalidateExecutionHistory() }
+        .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory() }
         .onReceive(profileCoordinator?.profileStore.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in invalidateExecutionHistory() }
         .onChange(of: scenePhase) { _, newPhase in
             invalidateExecutionHistory()
@@ -579,8 +591,7 @@ struct ContentView: View {
         }
         .healthMdReleaseNotesSheet()
         .onDisappear {
-            historyExecutionCoordinator.invalidate()
-            historyExecutionTask?.cancel()
+            invalidateExecutionHistory()
             statusDismissTimer?.invalidate()
             releaseQuickLookAccess()
             releaseMarkdownPreviewAccess()
@@ -1176,34 +1187,79 @@ struct ContentView: View {
         // completion. This is UI evidence only: consumer receipts need review.
         let selection = interactiveHistorySelection
         let requestID = historyExecutionCoordinator.beginRequest()
+        pendingHistorySelection = selection
+        pendingHistoryRequestID = requestID
         isAssessingHistory = true
+        exportStatusMessage = "Checking history access…"
         historyExecutionTask = Task {
-            defer { isAssessingHistory = false; historyExecutionTask = nil }
+            defer {
+                // A cancelled/stalled old request must not clear a newer owner.
+                if pendingHistoryRequestID == requestID { clearPendingHistoryCheck() }
+            }
             let result = await historyExecutionCoordinator.assess(requestID: requestID, scope: selection.scope, isCurrent: {
                 selection == interactiveHistorySelection
             }, operation: {
                 await healthKitManager.assessHistoryAccess(scope: selection.scope)
             })
+            guard pendingHistoryRequestID == requestID else { return }
             guard let assessment = result else {
                 exportStatusMessage = "Export selection changed. Review the range and export again."
                 return
             }
+            clearPendingHistoryCheck()
             executionHistoryAssessment = assessment
-            if TestMode.isUITesting {
-                simulateTestExport()
-                return
-            }
-            switch selection.target {
-            case .localIPhoneFolder: exportLocalData()
-            case .connectedMac: exportDataToConnectedMac()
-            case .apiEndpoint: exportDataToAPIEndpoint()
-            }
+            beginInteractiveCapture(selection)
         }
+    }
+
+    private func clearPendingHistoryCheck() {
+        pendingHistorySelection = nil
+        pendingHistoryRequestID = nil
+        isAssessingHistory = false
+        historyExecutionTask = nil
     }
 
     private func invalidateExecutionHistory() {
         historyExecutionCoordinator.invalidate()
         executionHistoryAssessment = nil
+        historyExecutionTask?.cancel()
+        if isAssessingHistory { exportStatusMessage = "History check cancelled. Review the selection and export again." }
+        clearPendingHistoryCheck()
+    }
+
+    private func continueWithoutHistoryVerification() {
+        guard let selection = pendingHistorySelection, selection == interactiveHistorySelection else {
+            invalidateExecutionHistory()
+            return
+        }
+        historyExecutionCoordinator.invalidate()
+        historyExecutionTask?.cancel()
+        clearPendingHistoryCheck()
+        executionHistoryAssessment = healthKitManager.historyAssessmentNotCompleted(scope: selection.scope)
+        beginInteractiveCapture(selection)
+    }
+
+    private func beginInteractiveCapture(_ selection: HealthHistoryExecutionSelection) {
+        guard selection == interactiveHistorySelection else { return }
+        guard purchaseManager.canExport else { presentExportPaywall(); return }
+        guard !ensureProfileCoordinator().isActiveProfileExecutionBlocked,
+              canExport, advancedSettings.hasFileDestinationOutput else {
+            presentExportConfigurationError("Export setup changed. Review the destination and settings before exporting.")
+            return
+        }
+        if selection.target == .localIPhoneFolder {
+            vaultManager.refreshVaultAccess()
+            guard vaultManager.vaultURL != nil, !vaultManager.requiresVaultReselection else {
+                configurationProtection.performConfigurationChange { showDestinationChangedAlert = true }
+                return
+            }
+        }
+        if TestMode.isUITesting { simulateTestExport(); return }
+        switch selection.target {
+        case .localIPhoneFolder: exportLocalData()
+        case .connectedMac: exportDataToConnectedMac()
+        case .apiEndpoint: exportDataToAPIEndpoint()
+        }
     }
 
     private var interactiveHistorySelection: HealthHistoryExecutionSelection {
@@ -1218,7 +1274,7 @@ struct ContentView: View {
             startDate: startDate, endDate: endDate,
             timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
             allAvailable: dateRangePreset == .allTime,
-            profileID: profileCoordinator?.profileStore.activeProfileID
+            profileID: profileCoordinator?.profileStore.activeProfileID, rangeSemantics: .ownerDates
         )
     }
 

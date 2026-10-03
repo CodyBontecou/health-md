@@ -2,6 +2,11 @@ import Foundation
 
 /// Independent, in-memory evidence model. Not Codable: no export/wire adoption is
 /// implied. Query completion and readable samples are intentionally not inputs.
+nonisolated enum HealthHistoryRangeSemantics: String, Sendable {
+    case exactInterval
+    case ownerDates
+}
+
 nonisolated struct HealthHistoryScope: Equatable, Hashable, Sendable {
     let metricIDs: Set<String>
     let startDate: Date
@@ -9,8 +14,30 @@ nonisolated struct HealthHistoryScope: Equatable, Hashable, Sendable {
     let timeZoneIdentifier: String
     let allAvailable: Bool
     let profileID: UUID?
+    let rangeSemantics: HealthHistoryRangeSemantics
     let sourceID: String = "apple.healthkit"
+
+    init(metricIDs: Set<String>, startDate: Date, endDate: Date, timeZoneIdentifier: String,
+         allAvailable: Bool, profileID: UUID?, rangeSemantics: HealthHistoryRangeSemantics = .exactInterval) {
+        self.metricIDs = metricIDs
+        self.startDate = startDate
+        self.endDate = endDate
+        self.timeZoneIdentifier = timeZoneIdentifier
+        self.allAvailable = allAvailable
+        self.profileID = profileID
+        self.rangeSemantics = rangeSemantics
+    }
+
+    /// Keep original requested dates, while disclosing against the same owner-day
+    /// interval the exporter captures in the frozen timezone. No acquisition edit.
+    var sampleQueryStart: Date {
+        guard rangeSemantics == .ownerDates else { return startDate }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: timeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!
+        return calendar.startOfDay(for: startDate)
+    }
 }
+
 
 nonisolated enum HealthHistoryQueryOutcome: Equatable, Sendable {
     case boundaries([String: Date])
@@ -38,7 +65,7 @@ nonisolated struct HealthHistoryTypeAssessment: Equatable, Sendable, Identifiabl
     /// equality behavior of HealthKit's end boundary still needs device QA.
     func limitationIntersects(_ scope: HealthHistoryScope) -> Bool {
         guard case .limited(let boundary) = access else { return false }
-        return scope.allAvailable || scope.startDate < boundary
+        return scope.allAvailable || scope.sampleQueryStart < boundary
     }
 }
 
@@ -48,7 +75,16 @@ nonisolated struct HealthHistoryAssessment: Equatable, Sendable {
     let assessedAt: Date
     let scope: HealthHistoryScope
     let types: [HealthHistoryTypeAssessment]
-    let evidenceSource = "HKHealthStore.earliestAuthorizedSampleDate(for:)"
+    let evidenceSource: String
+
+    init(id: UUID, assessedAt: Date, scope: HealthHistoryScope, types: [HealthHistoryTypeAssessment],
+         evidenceSource: String = "HKHealthStore.earliestAuthorizedSampleDate(for:)") {
+        self.id = id
+        self.assessedAt = assessedAt
+        self.scope = scope
+        self.types = types
+        self.evidenceSource = evidenceSource
+    }
 
     var hasIntersectingLimit: Bool { types.contains { $0.limitationIntersects(scope) } }
     var hasUnverifiedHistory: Bool {
@@ -62,6 +98,9 @@ nonisolated struct HealthHistoryAssessment: Equatable, Sendable {
         hasIntersectingLimit ? "Some history may be unavailable" : "History access could not be verified"
     }
     var warningMessage: String {
+        if evidenceSource == "assessment_not_completed" {
+            return "History assessment did not finish. This export continues without verified history coverage. Readable records can still be exported with their original dates."
+        }
         if hasIntersectingLimit {
             return "Apple Health limits the history Health.md can read for some selected data. Earlier data is unknown, not missing. Readable records are still exported with their original dates."
         }

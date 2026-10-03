@@ -240,7 +240,7 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
         }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertEqual(smokeSelectionCount, 18, "PR smoke must preserve all 16 regressions plus the two history warnings")
+        XCTAssertEqual(smokeSelectionCount, 19, "PR smoke must preserve all 16 regressions plus three history journeys")
         XCTAssertEqual(content.components(separatedBy: "runs-on: xcode-27").count - 1, 4,
                        "All native consumers and the single producer must use the verified free SDK27 runner")
         XCTAssertEqual(content.components(separatedBy: "name: apple-sdk27-shared-core").count - 1, 4,
@@ -251,6 +251,12 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide"))
         XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess"))
         XCTAssertTrue(content.contains("HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction"))
+        XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport"))
+        let qualifier = try String(contentsOf: projectDir.appendingPathComponent("scripts/qualify-history-authorization-sdk27.sh"), encoding: .utf8)
+        XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
+        XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
+        XCTAssertTrue(qualifier.contains("[[ \"$sdk_version\" == 27.0 ]]"))
+        XCTAssertFalse(qualifier.contains("== 27.*"), "Floating SDK versions cannot relabel the pinned shared-core cache")
         XCTAssertTrue(
             smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
             "PR smoke must cover deterministic returning-user release notes"
