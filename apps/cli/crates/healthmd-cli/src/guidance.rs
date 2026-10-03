@@ -1286,7 +1286,7 @@ mod tests {
 
     #[test]
     fn serve_data_guidance_documents_every_backing_choice() {
-        let value = serve_data("direct");
+        let value = serve_data();
         assert_eq!(value["status"], "guidance");
         assert_eq!(value["request_sent"], false);
         let alternatives: Vec<&str> = value
@@ -1307,7 +1307,7 @@ mod tests {
     #[test]
     fn serve_data_guidance_advertises_only_arguments_the_build_accepts() {
         let accepted = serde_json::to_string(&accepted_arguments("mcp serve-data")).unwrap();
-        let reference = serde_json::to_string(&serve_data("direct")).unwrap();
+        let reference = serde_json::to_string(&serve_data()).unwrap();
         if cfg!(feature = "streamable-http") {
             assert!(accepted.contains("[--serve-transport <stdio|streamable-http>]"));
             assert!(accepted.contains("[--bind 127.0.0.1:8787]"));
