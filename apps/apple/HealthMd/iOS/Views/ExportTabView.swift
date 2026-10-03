@@ -128,7 +128,7 @@ struct ExportTabView: View {
         .task(id: historyAssessmentScopeID) {
             guard healthKitManager.isAuthorized else { return }
             _ = await healthKitManager.assessHistoryAuthorization(
-                forMetricIDs: advancedSettings.metricSelection.enabledMetricIDs,
+                forMetricIDs: advancedSettings.metricSelection.enabledMetrics,
                 publish: true
             )
         }
@@ -556,7 +556,7 @@ struct ExportTabView: View {
     // MARK: - Health Data
 
     private var historyAssessmentScopeID: String {
-        advancedSettings.metricSelection.enabledMetricIDs.sorted().joined(separator: ",")
+        advancedSettings.metricSelection.enabledMetrics.sorted().joined(separator: ",")
     }
 
     @ViewBuilder

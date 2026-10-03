@@ -477,6 +477,11 @@
     <string name="profile_schedule_refresh_interval">Жаңарту аралығы</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d сағ</string>
     <string name="profile_schedule_refresh_summary">Бүгін әр %1$d сағ сайын жаңартады</string>
+    <string name="profile_schedule_discard_recovery">Күтудегі қалпына келтіруден бас тарту</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s үшін күтудегі қалпына келтіруден бас тарту</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s үшін күтудегі қалпына келтіруден бас тарту керек пе?</string>
+    <string name="profile_schedule_discard_recovery_body">Осы профильдің жоспарланған қайталау әрекетін тоқтатып, күтудегі күндері мен бекітілген экспорт параметрлерін ұмытыңыз. Келесі жоспарланған іске қосу ағымдағы профиль мен кестені пайдаланады. Профиль, API тіркелгі деректері, экспорт тарихы және бұрын экспортталған деректер сақталады. Бұл бұрын орындалған жүктеп салуды немесе жазылған файлды кері қайтара алмайды.</string>
+    <string name="profile_schedule_discard_recovery_failed">Күтудегі қалпына келтіруден толық бас тарту мүмкін болмады. Профильді тексеріп, әрекетті қайталаңыз.</string>
     <string name="schedule_date_window_today">Бүгін</string>
     <string name="schedule_export_past_days">Өткен күндерді экспорттау</string>
     <string name="schedule_today_summary">Әрбір іске қосу бүгінгі деректерді экспорттайды, осылайша ағымдағы күнделікті файлыңыз жаңартылып отырады. Бір күндік мазмұнның қайталануын болдырмау үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>

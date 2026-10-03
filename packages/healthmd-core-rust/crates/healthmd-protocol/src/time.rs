@@ -34,6 +34,11 @@ where
 pub mod option {
     use super::*;
 
+    /// Serialize an optional timestamp with the same whole-second strategy.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error if the optional timestamp cannot be emitted.
     pub fn serialize<S>(value: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -44,6 +49,11 @@ pub mod option {
         }
     }
 
+    /// Decode an optional RFC 3339/ISO-8601 timestamp and normalize it to UTC.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error when a present value is not a valid RFC 3339 timestamp.
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
     where
         D: Deserializer<'de>,

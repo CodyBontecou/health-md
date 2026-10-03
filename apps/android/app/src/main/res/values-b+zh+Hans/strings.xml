@@ -467,6 +467,11 @@
     <string name="profile_schedule_refresh_interval">刷新间隔</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d 小时</string>
     <string name="profile_schedule_refresh_summary">今天每 %1$d 小时刷新一次</string>
+    <string name="profile_schedule_discard_recovery">放弃待处理的恢复</string>
+    <string name="profile_schedule_discard_recovery_named">放弃 %1$s 的待处理恢复</string>
+    <string name="profile_schedule_discard_recovery_title">要放弃 %1$s 的待处理恢复吗？</string>
+    <string name="profile_schedule_discard_recovery_body">停止此个人资料的计划重试，并清除其待处理日期和已冻结的导出设置。下一次计划运行将使用当前的个人资料和计划。你的个人资料、API 凭据、导出历史记录和已导出的数据都会保留。此操作无法撤销已经完成的上传或写入的文件。</string>
+    <string name="profile_schedule_discard_recovery_failed">无法完全放弃待处理的恢复。请检查个人资料后重试。</string>
     <string name="schedule_date_window_today">今天</string>
     <string name="schedule_export_past_days">导出过去几天</string>
     <string name="schedule_today_summary">每次运行都会导出今天的数据，以便您当前的每日文件可以保持最新。使用覆盖或更新写入模式以避免重复的当天内容。</string>

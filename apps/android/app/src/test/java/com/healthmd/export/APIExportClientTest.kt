@@ -125,7 +125,101 @@ class APIExportClientTest {
     }
 
     @Test
-    fun followsRedirectAndPreservesPostFor307() = runTest {
+    fun rejectsCrossOriginRedirectBeforeReplayingBodyOrHeaders() = runTest {
+        val redirectedServer = MockWebServer()
+        redirectedServer.start()
+        try {
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(307)
+                    .addHeader("Location", redirectedServer.url("/collect"))
+                    .setBody("Bearer secret echoed by an untrusted response")
+            )
+
+            val error = runCatching {
+                client.upload(
+                    endpointUrl = server.url("/redirect").toString(),
+                    payload = "{\"schema\":\"healthmd.api_export\"}",
+                    authorizationHeader = "Bearer secret",
+                    requestHeaders = listOf(APIExportRequestHeader("X-API-Key", "api-secret")),
+                )
+            }.exceptionOrNull() as APIExportClientException
+
+            assertThat(error.failureReason).isEqualTo(ExportFailureReason.API_REJECTED)
+            assertThat(error.statusCode).isEqualTo(307)
+            assertThat(error.retryable).isFalse()
+            assertThat(error.message).isEqualTo("API endpoint returned HTTP 307.")
+            assertThat(error.message).doesNotContain("secret")
+            assertThat(server.requestCount).isEqualTo(1)
+            assertThat(redirectedServer.requestCount).isEqualTo(0)
+        } finally {
+            redirectedServer.shutdown()
+        }
+    }
+
+    @Test
+    fun rejectsCredentialBearingRedirectWithoutReplayingSecrets() = runTest {
+        val target = server.url("/collect").newBuilder()
+            .username("unexpected-user")
+            .password("unexpected-password")
+            .build()
+        server.enqueue(MockResponse().setResponseCode(308).addHeader("Location", target))
+
+        val error = runCatching {
+            client.upload(
+                endpointUrl = server.url("/redirect").toString(),
+                payload = "{\"health\":\"private\"}",
+                authorizationHeader = "Bearer secret",
+                requestHeaders = listOf(APIExportRequestHeader("X-API-Key", "api-secret")),
+            )
+        }.exceptionOrNull() as APIExportClientException
+
+        assertThat(error.statusCode).isEqualTo(308)
+        assertThat(error.message).isEqualTo("API endpoint returned HTTP 308.")
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun rejectsMethodChangingRedirectWithoutFollowingIt() = runTest {
+        server.enqueue(MockResponse().setResponseCode(302).addHeader("Location", server.url("/collect")))
+
+        val error = runCatching {
+            client.upload(
+                endpointUrl = server.url("/redirect").toString(),
+                payload = "{}",
+                authorizationHeader = "Bearer secret",
+                requestHeaders = emptyList(),
+            )
+        }.exceptionOrNull() as APIExportClientException
+
+        assertThat(error.statusCode).isEqualTo(302)
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun capsSameOriginRedirectsBeforeTheSixthReplay() = runTest {
+        repeat(6) { index ->
+            server.enqueue(
+                MockResponse().setResponseCode(307)
+                    .addHeader("Location", server.url("/hop-${index + 1}"))
+            )
+        }
+
+        val error = runCatching {
+            client.upload(
+                endpointUrl = server.url("/start").toString(),
+                payload = "{}",
+                authorizationHeader = "Bearer secret",
+                requestHeaders = emptyList(),
+            )
+        }.exceptionOrNull() as APIExportClientException
+
+        assertThat(error.statusCode).isEqualTo(307)
+        assertThat(server.requestCount).isEqualTo(6)
+    }
+
+    @Test
+    fun followsSameOriginRedirectAndPreservesPostFor307() = runTest {
         server.enqueue(
             MockResponse()
                 .setResponseCode(307)

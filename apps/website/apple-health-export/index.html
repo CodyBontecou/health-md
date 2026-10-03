@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian | Health.md</title>
+  <meta name="description" content="Export Apple Health data to CSV, JSON, Markdown, or your Obsidian vault. Pick your metrics and date range first — no Xcode, no scripts, no giant XML to wrangle.">
+  <link rel="canonical" href="https://healthmd.app/apple-health-export/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian">
+  <meta property="og:description" content="Pick your metrics and date range, then export Apple Health data straight to CSV, JSON, Markdown, or your Obsidian vault. No Xcode, no scripts.">
+  <meta property="og:url" content="https://healthmd.app/apple-health-export/">
+  <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Export Apple Health Data — CSV, JSON, Markdown &amp; Obsidian">
+  <meta name="twitter:description" content="Your Apple Health data, exported your way: CSV, JSON, Markdown, or Obsidian. No Xcode, no scripts.">
+  <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icon/icon_32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/app-icon/icon_192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/app-icon/icon_180x180.png">
+  <link rel="stylesheet" href="/assets/landing.css">
+  <link rel="stylesheet" href="/assets/about.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://healthmd.app/apple-health-export/#page",
+        "url": "https://healthmd.app/apple-health-export/",
+        "name": "Export Apple Health Data — CSV, JSON, Markdown & Obsidian",
+        "description": "Export Apple Health data to CSV, JSON, Markdown, or your Obsidian vault. Pick your metrics and date range first — no Xcode, no scripts, no giant XML to wrangle.",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://healthmd.app/about/#organization" }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://healthmd.app/apple-health-export/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Do I need Xcode or coding skills to export my Apple Health data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Health.md is a shipping App Store app: you pick metrics, a date range, and a format inside the app. There is nothing to build and no scripts to run."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does my health data leave my phone when I export it?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Only to destinations you choose. Health.md does not store your health data and keeps no server-side copy; exports go to your folder, Obsidian vault, connected Mac, or your own API endpoint."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is there a free trial?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The app includes 10 free export actions. After that, a one-time lifetime unlock removes the limit — Health.md does not sell a recurring consumer subscription."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Health.md work with Android and Health Connect?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Health.md ships a dedicated Android app for Health Connect alongside the Apple apps, with the same local-first export model."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which formats can I export Apple Health data to?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "CSV, JSON, Markdown, and Obsidian Bases, plus folder exports and API delivery. You choose the format for each export."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Health.md a medical app?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Health.md is a data portability tool, not a medical device or healthcare provider, and it does not provide medical advice."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body class="about-page">
+  <a class="skip-link" href="#export-content">Skip to export guide</a>
+
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="/" aria-label="Health.md home">
+        <span class="brand-name">health.md</span>
+      </a>
+      <div class="header-nav">
+        <nav aria-label="Primary navigation">
+          <a class="header-docs-link" href="/docs/">Docs</a>
+          <a class="header-docs-link" href="/about/">About</a>
+          <a class="header-docs-link" href="/">Home</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="about-main" id="export-content">
+    <section class="about-hero" aria-labelledby="export-title">
+      <div class="about-hero-inner">
+        <p class="about-eyebrow">Apple Health export</p>
+        <h1 id="export-title">Export your Apple Health data — your way.</h1>
+        <p class="about-value-prop"><strong>Health.md turns the Apple Health records you authorize into CSV, JSON, Markdown, or Obsidian files you control — with the metrics and date range you choose.</strong></p>
+        <p class="about-intro">No Xcode project. No scripts. No giant XML to wrangle first.</p>
+        <div class="hero-actions" aria-label="Download Health.md">
+          <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+          </a>
+          <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
+            <img src="/assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <div class="about-layout">
+      <article class="about-content">
+        <section class="about-section" id="native-limits">
+          <p class="section-kicker">Why people look for this</p>
+          <h2>The built-in export has limits</h2>
+          <p class="section-lede">On iPhone, the Health app offers <em>Export All Health Data</em> from your profile. It produces a comprehensive archive — a large download containing XML with everything — but you can't select specific metrics or a date range, and the result needs converting before a spreadsheet, notebook, or AI tool can use it.</p>
+          <p>That's the gap Health.md fills: instead of one all-data archive, you choose what to export, which dates to cover, and which format to receive.</p>
+        </section>
+
+        <section class="about-section" id="how-it-works">
+          <p class="section-kicker">How it works</p>
+          <h2>Three decisions, then export</h2>
+          <div class="process-list">
+            <div>
+              <span>1</span>
+              <h3>Install and authorize</h3>
+              <p>Download Health.md and authorize the Apple Health categories you want to share. Health permissions stay under your control, and no Health.md account is required.</p>
+            </div>
+            <div>
+              <span>2</span>
+              <h3>Choose format, destination, and dates</h3>
+              <p>Pick CSV, JSON, Markdown, or Obsidian Bases; choose a folder, your Obsidian vault, your connected Mac, or your own API endpoint; then pick a date range — today, yesterday, all time, or custom.</p>
+            </div>
+            <div>
+              <span>3</span>
+              <h3>Preview and export</h3>
+              <p>Review exactly what will be written before anything is created, then export. The files land where you chose — ready for spreadsheets, notes, scripts, or AI tools.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section" id="formats">
+          <p class="section-kicker">Formats</p>
+          <h2>One export, six destinations for your data</h2>
+          <div class="about-card-grid">
+            <div class="about-card">
+              <h3>CSV</h3>
+              <p>One file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Opens in Excel, Google Sheets, or any analysis tool. <a href="/docs/format/">CSV format details</a></p>
+            </div>
+            <div class="about-card">
+              <h3>JSON</h3>
+              <p>Structured JSON for scripts, Shortcuts, and developers who want to build on their own data. <a href="/docs/format/">JSON format details</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Markdown</h3>
+              <p>Readable daily summaries for journals, notes, and archives — no parsing required. <a href="/docs/format/">Markdown format details</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Obsidian vault</h3>
+              <p>Write straight into your vault — daily notes and Obsidian Bases included. <a href="/blog/export-apple-health-data-to-obsidian/">How the Obsidian export works</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Folders</h3>
+              <p>Save exports to any local folder you choose and keep them alongside the rest of your files. <a href="/docs/export/">Export destinations</a></p>
+            </div>
+            <div class="about-card">
+              <h3>API endpoints</h3>
+              <p>POST a JSON envelope straight from your iPhone to an HTTP(S) endpoint you configure. <a href="/docs/api-endpoint/">API endpoint setup</a></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section" id="privacy">
+          <p class="section-kicker">Privacy</p>
+          <h2>Private by design</h2>
+          <p class="section-lede"><strong>Health.md does not store your health data.</strong> There is no Health.md health-data cloud: processing happens on your devices, and your records go only to the destinations you choose.</p>
+          <p>No account is required for core export workflows. Health permissions, files, and settings stay under the controls of your device and the destinations you pick.</p>
+        </section>
+
+        <section class="about-section" id="keep-going">
+          <p class="section-kicker">Keep going</p>
+          <h2>What to do with your export</h2>
+          <div class="about-card-grid">
+            <div class="about-card">
+              <h3>Analyze it with AI</h3>
+              <p>Drop a CSV or JSON export into Claude or ChatGPT, or connect an agent directly with scoped MCP queries. <a href="/health-data-for-ai/">Use Apple Health with AI</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Just need CSV?</h3>
+              <p>The spreadsheet path, start to finish: metrics, dates, and columns explained. <a href="/apple-health-to-csv/">Apple Health to CSV</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Read the docs</h3>
+              <p>Export contracts, format references, and setup guides for every workflow. <a href="/docs/">Health.md documentation</a></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section faq-section" id="frequently-asked-questions">
+          <p class="section-kicker">Common questions</p>
+          <h2>Frequently asked questions</h2>
+
+          <div class="faq-list">
+            <div>
+              <h3>Do I need Xcode or coding skills to export my Apple Health data?</h3>
+              <p>No. Health.md is a shipping App Store app: you pick metrics, a date range, and a format inside the app. There is nothing to build and no scripts to run.</p>
+            </div>
+            <div>
+              <h3>Does my health data leave my phone when I export it?</h3>
+              <p>Only to destinations you choose. Health.md does not store your health data and keeps no server-side copy; exports go to your folder, Obsidian vault, connected Mac, or your own API endpoint.</p>
+            </div>
+            <div>
+              <h3>Is there a free trial?</h3>
+              <p>The app includes 10 free export actions. After that, a one-time lifetime unlock removes the limit — Health.md does not sell a recurring consumer subscription.</p>
+            </div>
+            <div>
+              <h3>Does Health.md work with Android and Health Connect?</h3>
+              <p>Yes. Health.md ships a dedicated Android app for Health Connect alongside the Apple apps, with the same local-first export model.</p>
+            </div>
+            <div>
+              <h3>Which formats can I export Apple Health data to?</h3>
+              <p>CSV, JSON, Markdown, and Obsidian Bases, plus folder exports and API delivery. You choose the format for each export.</p>
+            </div>
+            <div>
+              <h3>Is Health.md a medical app?</h3>
+              <p>No. Health.md is a data portability tool, not a medical device or healthcare provider, and it does not provide medical advice.</p>
+            </div>
+          </div>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-shell about-footer-shell">
+      <a class="footer-brand" href="/" aria-label="Health.md home">health.md</a>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="/about/">About</a>
+        <a href="/docs/">Docs</a>
+        <a href="/privacy-policy.html">Privacy</a>
+        <a href="/terms-of-service.html">Terms</a>
+        <a href="mailto:cody@isolated.tech">Support</a>
+      </nav>
+      <a class="about-source-link" href="https://github.com/CodyBontecou/health-md" target="_blank" rel="noopener">Source on GitHub</a>
+    </div>
+  </footer>
+
+  <script src="/assets/analytics.js" defer></script>
+</body>
+</html>

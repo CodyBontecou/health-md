@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Export Apple Health to CSV — No Xcode, No Scripts | Health.md</title>
+  <meta name="description" content="Export Apple Health to CSV for Excel, Google Sheets, or AI analysis. Pick your metrics and dates in the app — no Xcode project, no scripts, no XML wrangling.">
+  <link rel="canonical" href="https://healthmd.app/apple-health-to-csv/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Export Apple Health to CSV — No Xcode, No Scripts">
+  <meta property="og:description" content="Apple Health to CSV for Excel, Google Sheets, and AI tools. Choose metrics and dates in the app — no building, no scripts.">
+  <meta property="og:url" content="https://healthmd.app/apple-health-to-csv/">
+  <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Export Apple Health to CSV — No Xcode, No Scripts">
+  <meta name="twitter:description" content="Your Apple Health data as CSV: pick metrics and dates, open anywhere.">
+  <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icon/icon_32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/app-icon/icon_192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/app-icon/icon_180x180.png">
+  <link rel="stylesheet" href="/assets/landing.css">
+  <link rel="stylesheet" href="/assets/about.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://healthmd.app/apple-health-to-csv/#page",
+        "url": "https://healthmd.app/apple-health-to-csv/",
+        "name": "Export Apple Health to CSV — No Xcode, No Scripts",
+        "description": "Export Apple Health to CSV for Excel, Google Sheets, or AI analysis. Pick your metrics and dates in the app — no Xcode project, no scripts, no XML wrangling.",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://healthmd.app/about/#organization" }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://healthmd.app/apple-health-to-csv/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Do I need a Mac or Xcode to export Apple Health to CSV?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Health.md is a shipping iOS app — you choose metrics and a date range on your iPhone and get CSV files back. Nothing to build, no scripts to run, no Mac required."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which health metrics can I export to CSV?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Any Apple Health categories you authorize — steps, heart rate, HRV, sleep, workouts, and more. You select exactly which metrics each export includes."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What date ranges can I export?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Today, yesterday, all available history, or a custom start and end date — per export."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I open the CSV in Excel or Google Sheets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Health.md writes one CSV file per day with a plain header row, so the files open directly in Excel, Google Sheets, Numbers, or any analysis tool."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is it free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The app includes 10 free export actions. After that, a one-time lifetime unlock removes the limit — no subscription."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body class="about-page">
+  <a class="skip-link" href="#csv-content">Skip to CSV guide</a>
+
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="/" aria-label="Health.md home">
+        <span class="brand-name">health.md</span>
+      </a>
+      <div class="header-nav">
+        <nav aria-label="Primary navigation">
+          <a class="header-docs-link" href="/docs/">Docs</a>
+          <a class="header-docs-link" href="/about/">About</a>
+          <a class="header-docs-link" href="/">Home</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="about-main" id="csv-content">
+    <section class="about-hero" aria-labelledby="csv-title">
+      <div class="about-hero-inner">
+        <p class="about-eyebrow">Apple Health → CSV</p>
+        <h1 id="csv-title">Apple Health to CSV, without the Xcode project.</h1>
+        <p class="about-value-prop"><strong>Pick your metrics and date range in the app, get clean CSV files back — ready for Excel, Google Sheets, or AI analysis.</strong></p>
+        <p class="about-intro">A shipping App Store app. Nothing to build, no scripts to run.</p>
+        <div class="hero-actions" aria-label="Download Health.md">
+          <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <div class="about-layout">
+      <article class="about-content">
+        <section class="about-section" id="why-csv">
+          <p class="section-kicker">Why CSV</p>
+          <h2>The most useful boring format</h2>
+          <p class="section-lede">CSV opens everywhere: Excel, Google Sheets, Numbers, pandas, and every AI assistant that accepts file uploads. For health data, it's the fastest route from your iPhone to a pivot table or a trend analysis.</p>
+        </section>
+
+        <section class="about-section" id="status-quo">
+          <p class="section-kicker">The usual route</p>
+          <h2>Most CSV tools ask you to build them first</h2>
+          <p class="section-lede">The well-known Apple Health CSV exporters are open-source projects: you clone a repository, open it in Xcode, configure signing, and build it onto your phone — or you run conversion scripts against a manual XML export. That works, but it's a developer workflow for what should be a tap-and-export task.</p>
+          <p>Health.md takes the other approach: the exporter is a finished app. You choose what to export; the app does the rest.</p>
+        </section>
+
+        <section class="about-section" id="how-it-works">
+          <p class="section-kicker">How it works</p>
+          <h2>Metrics, dates, export</h2>
+          <div class="process-list">
+            <div>
+              <span>1</span>
+              <h3>Authorize and pick metrics</h3>
+              <p>Install Health.md, authorize the Apple Health categories you want, and select exactly which metrics go into the export.</p>
+            </div>
+            <div>
+              <span>2</span>
+              <h3>Choose a date range</h3>
+              <p>Today, yesterday, your full available history, or a custom start and end date — set per export, with a preview before anything is written.</p>
+            </div>
+            <div>
+              <span>3</span>
+              <h3>Open it anywhere</h3>
+              <p>Save the CSV to a folder you choose, then open it in Excel, Google Sheets, or attach it to an AI assistant for analysis.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section" id="whats-inside">
+          <p class="section-kicker">The file itself</p>
+          <h2>What's in the CSV</h2>
+          <p class="section-lede">Health.md writes <strong>one CSV file per day</strong> with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code> — plain columns, ISO timestamps, no surprises. Compatibility summary rows omit the timestamp column; timestamped and canonical-record rows include all six fields.</p>
+          <p>Exact row contracts, fixtures, and omission rules are published in the <a href="/docs/format/">export format reference</a>, so what you see in the file is documented — not a black box.</p>
+        </section>
+
+        <section class="about-section" id="privacy">
+          <p class="section-kicker">Privacy</p>
+          <h2>Your data stays yours</h2>
+          <p class="section-lede"><strong>Health.md does not store your health data.</strong> Exports are written to the folder you choose, on your device — there is no Health.md health-data cloud, and no account is required.</p>
+        </section>
+
+        <section class="about-section" id="keep-going">
+          <p class="section-kicker">Keep going</p>
+          <h2>More ways to use your data</h2>
+          <div class="about-card-grid">
+            <div class="about-card">
+              <h3>Every format, not just CSV</h3>
+              <p>JSON, Markdown, and Obsidian exports from the same picker. <a href="/apple-health-export/">Export Apple Health data</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Analyze it with AI</h3>
+              <p>Drop the CSV into Claude or ChatGPT, or connect Codex and Claude directly via MCP. <a href="/health-data-for-ai/">Use Apple Health with AI</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Read the docs</h3>
+              <p>CSV row contracts, fixtures, and the full export reference. <a href="/docs/format/">Export format reference</a></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section faq-section" id="frequently-asked-questions">
+          <p class="section-kicker">Common questions</p>
+          <h2>Frequently asked questions</h2>
+
+          <div class="faq-list">
+            <div>
+              <h3>Do I need a Mac or Xcode to export Apple Health to CSV?</h3>
+              <p>No. Health.md is a shipping iOS app — you choose metrics and a date range on your iPhone and get CSV files back. Nothing to build, no scripts to run, no Mac required.</p>
+            </div>
+            <div>
+              <h3>Which health metrics can I export to CSV?</h3>
+              <p>Any Apple Health categories you authorize — steps, heart rate, HRV, sleep, workouts, and more. You select exactly which metrics each export includes.</p>
+            </div>
+            <div>
+              <h3>What date ranges can I export?</h3>
+              <p>Today, yesterday, all available history, or a custom start and end date — per export.</p>
+            </div>
+            <div>
+              <h3>Can I open the CSV in Excel or Google Sheets?</h3>
+              <p>Yes. Health.md writes one CSV file per day with a plain header row, so the files open directly in Excel, Google Sheets, Numbers, or any analysis tool.</p>
+            </div>
+            <div>
+              <h3>Is it free?</h3>
+              <p>The app includes 10 free export actions. After that, a one-time lifetime unlock removes the limit — no subscription.</p>
+            </div>
+          </div>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-shell about-footer-shell">
+      <a class="footer-brand" href="/" aria-label="Health.md home">health.md</a>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="/about/">About</a>
+        <a href="/docs/">Docs</a>
+        <a href="/privacy-policy.html">Privacy</a>
+        <a href="/terms-of-service.html">Terms</a>
+        <a href="mailto:cody@isolated.tech">Support</a>
+      </nav>
+      <a class="about-source-link" href="https://github.com/CodyBontecou/health-md" target="_blank" rel="noopener">Source on GitHub</a>
+    </div>
+  </footer>
+
+  <script src="/assets/analytics.js" defer></script>
+</body>
+</html>
