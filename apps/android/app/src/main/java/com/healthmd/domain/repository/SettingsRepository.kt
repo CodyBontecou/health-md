@@ -11,28 +11,18 @@ interface SettingsRepository {
     suspend fun updateExportSettings(settings: ExportSettings)
     suspend fun getExportSettings(): ExportSettings
 
-    // One bounded, non-secret shared-setup rollback snapshot and pending endpoint hint.
-    suspend fun applySharedSetupTransaction(
-        expectedCurrent: ExportSettings,
-        candidate: ExportSettings,
-        pendingEndpoint: String?,
-        preservedAppleExtension: String?,
-    ): Boolean
-    suspend fun getSharedSetupUndo(): ExportSettings?
-    suspend fun undoSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings?
-    suspend fun rollbackSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings?
-    suspend fun getPendingSharedSetupEndpoint(): String?
-    suspend fun confirmSharedSetupEndpoint(
-        expectedCurrent: ExportSettings,
-        expectedPendingEndpoint: String,
-        candidate: ExportSettings,
-    ): Boolean
-    suspend fun rollbackSharedSetupEndpointConfirmation(
-        expectedCurrent: ExportSettings,
-        restored: ExportSettings,
-        pendingEndpoint: String,
-    ): Boolean
-    suspend fun getPreservedSharedSetupAppleExtension(): String?
+    /**
+     * Atomically transforms the latest persisted settings. Production storage overrides this so a
+     * cancellation checkpoint cannot restore stale schedule/configuration fields after a race.
+     */
+    suspend fun updateExportSettingsAtomically(
+        transform: (ExportSettings) -> ExportSettings,
+    ): ExportSettings {
+        val updated = transform(getExportSettings()).normalized()
+        updateExportSettings(updated)
+        return updated
+    }
+
     // Device-local, non-security guard for user-initiated in-app configuration changes.
     // Default implementations keep existing test fakes source-compatible.
     val preventAccidentalChanges: Flow<Boolean>

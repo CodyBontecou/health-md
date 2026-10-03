@@ -9,6 +9,41 @@ final class ScheduleRetryExportPolicyTests: XCTestCase {
         XCTAssertFalse(ScheduleRetryExportPolicy.shouldWriteDataDictionary(currentFileCount: 2))
     }
 
+    func testHistoryRetryIsLimitedToLocalFolderEntries() {
+        func failedEntry(
+            target: ExportTargetSelection?,
+            source: ExportSource = .scheduled,
+            targetLabel: String? = nil
+        ) -> ExportHistoryEntry {
+            ExportHistoryEntry(
+                source: source,
+                success: false,
+                dateRangeStart: Date(),
+                dateRangeEnd: Date(),
+                successCount: 0,
+                totalCount: 1,
+                failureReason: .fileWriteError,
+                targetLabel: targetLabel,
+                exportTarget: target
+            )
+        }
+
+        XCTAssertTrue(ScheduleRetryExportPolicy.canRetry(failedEntry(target: .localIPhoneFolder)))
+        XCTAssertTrue(ScheduleRetryExportPolicy.canRetry(failedEntry(target: nil)))
+        XCTAssertTrue(
+            ScheduleRetryExportPolicy.canRetry(
+                failedEntry(target: nil, targetLabel: "iPhone: Research Exports")
+            )
+        )
+        XCTAssertFalse(ScheduleRetryExportPolicy.canRetry(failedEntry(target: .apiEndpoint)))
+        XCTAssertFalse(ScheduleRetryExportPolicy.canRetry(failedEntry(target: .connectedMac)))
+        XCTAssertFalse(
+            ScheduleRetryExportPolicy.canRetry(
+                failedEntry(target: .localIPhoneFolder, source: .macAgent)
+            )
+        )
+    }
+
     func testDailyNoteWriteFailureIsClassifiedAsFileWriteFailure() {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let error = NSError(domain: NSCocoaErrorDomain, code: NSFileWriteOutOfSpaceError)

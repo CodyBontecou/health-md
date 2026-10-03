@@ -17,6 +17,8 @@ enum IPhoneConnectedCorpusProducer {
         startDate: Date,
         endDate: Date,
         requestedDates: [Date]? = nil,
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String,
         destinationDisplayName: String?,
@@ -46,6 +48,7 @@ enum IPhoneConnectedCorpusProducer {
                 startDate: startDate,
                 endDate: endDate,
                 requestedDates: requestedDates,
+                rollupRequestedDates: originalRequestedDates,
                 settings: settings,
                 healthSubfolder: healthSubfolder,
                 destinationDisplayName: destinationDisplayName,
@@ -56,6 +59,7 @@ enum IPhoneConnectedCorpusProducer {
                 startDate: startDate,
                 endDate: endDate,
                 requestedDates: requestedDates,
+                rollupRequestedDates: originalRequestedDates,
                 settings: settings,
                 healthSubfolder: healthSubfolder,
                 destinationDisplayName: destinationDisplayName,
@@ -87,6 +91,9 @@ enum IPhoneConnectedCorpusProducer {
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
             requestedDates: metadata.requestedDates,
+            originalRequestedDates: originalRequestedDates ?? metadata.requestedDates,
+            originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier
+                ?? sourceTimeZone.identifier,
             requestedDateIdentifiers: metadata.requestedDates.map { dateFormatter.string(from: $0) },
             transferDates: metadata.transferDates,
             settingsSnapshot: metadata.settingsSnapshot,
@@ -104,15 +111,16 @@ enum IPhoneConnectedCorpusProducer {
         )
         let reportPreparedItem: (Int, Date) -> Void = { index, date in
             preparedDays = max(preparedDays, index + 1)
+            let detailPolicy = MacExportStreamingJobBuilder.detailPolicy(
+                for: date,
+                metadata: metadata,
+                settings: settings
+            )
             progress?(.prepared(
                 itemIndex: index,
                 totalDays: metadata.totalTransferDays,
                 date: date,
-                includesGranularData: MacExportStreamingJobBuilder.shouldIncludeGranularData(
-                    for: date,
-                    metadata: metadata,
-                    settings: settings
-                ),
+                includesGranularData: detailPolicy.includesCanonicalArchive,
                 transferredDays: transferredDays
             ))
         }
@@ -120,7 +128,7 @@ enum IPhoneConnectedCorpusProducer {
             try Task.checkCancellation()
             let day = sourceCalendar.startOfDay(for: date)
             let isRequested = metadata.requestedDays.contains(day)
-            let includesGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
+            let detailPolicy = MacExportStreamingJobBuilder.detailPolicy(
                 for: date,
                 metadata: metadata,
                 settings: settings
@@ -129,21 +137,21 @@ enum IPhoneConnectedCorpusProducer {
                 itemIndex: index,
                 totalDays: metadata.totalTransferDays,
                 date: date,
-                includesGranularData: includesGranularData,
+                includesGranularData: detailPolicy.includesCanonicalArchive,
                 transferredDays: transferredDays
             ))
             let outcome = try await HealthKitDailyCapture.capture(
                 date: date,
-                includeGranularData: includesGranularData,
+                detailPolicy: detailPolicy,
                 metricSelection: settings.metricSelection,
                 transform: .sanitizeGranular,
                 emptyRecordPolicy: .retain,
                 fetchExternalRecords: isRequested && !settings.summaryOnlyModeEnabled,
                 failurePolicy: .connectedMac,
-                fetchHealthData: { date, includeGranularData, metricSelection in
+                fetchHealthData: { date, detailPolicy, metricSelection in
                     try await healthKitManager.fetchHealthData(
                         for: date,
-                        includeGranularData: includeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
                         timeZone: sourceTimeZone
                     )

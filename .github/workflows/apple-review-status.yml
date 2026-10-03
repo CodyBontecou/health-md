@@ -1,0 +1,97 @@
+# Read-only App Store review status for release synchronization decisions.
+# Shows active review submissions with their items, per-platform version
+# states for the requested version string, and current app info records.
+
+name: Apple Review Status
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version string to inspect (e.g. 3.1)'
+        required: false
+        default: ''
+
+permissions: {}
+
+env:
+  ASC_APP_ID: ${{ secrets.HEALTHMD_ASC_APP_ID }}
+
+jobs:
+  status:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Install asc
+        run: |
+          set -euo pipefail
+          if ! command -v asc >/dev/null 2>&1; then
+            brew install asc
+          fi
+          asc --version
+
+      - name: Setup App Store Connect key
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
+
+      - name: Active review submissions and items
+        run: |
+          set -euo pipefail
+          echo "── Active review submissions ──"
+          asc review submissions-list --app "$ASC_APP_ID" --output json | python3 -c '
+          import sys, json
+          records = json.load(sys.stdin)["data"]
+          active = [r for r in records if r["attributes"]["state"] in ("WAITING_FOR_REVIEW", "READY_FOR_REVIEW", "IN_REVIEW")]
+          print(json.dumps(active, indent=2))
+          '
+          for SID in $(asc review submissions-list --app "$ASC_APP_ID" --output json | python3 -c '
+          import sys, json
+          records = json.load(sys.stdin)["data"]
+          for r in records:
+              if r["attributes"]["state"] in ("WAITING_FOR_REVIEW", "READY_FOR_REVIEW", "IN_REVIEW"):
+                  print(r["id"])
+          '); do
+            echo "── Items of submission $SID ──"
+            asc review items list --submission "$SID" --output json || true
+          done
+
+      - name: Version states
+        if: github.event.inputs.version != ''
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          echo "── Version $VERSION states by platform ──"
+          for PLATFORM in IOS MAC_OS; do
+            printf '%s: ' "$PLATFORM"
+            asc versions list --app "$ASC_APP_ID" --platform "$PLATFORM" --limit 20 --output json \
+              | python3 -c '
+          import sys, json
+          target = __import__("os").environ["VERSION"].strip()
+          data = json.load(sys.stdin)["data"]
+          matches = [(v["id"], v["attributes"]["appStoreState"]) for v in data if v["attributes"]["versionString"] == target]
+          print(matches if matches else "no version found")
+          '
+          done
+
+      - name: App info records
+        run: |
+          set -euo pipefail
+          echo "── App info records ──"
+          asc apps info list --app "$ASC_APP_ID" --output table

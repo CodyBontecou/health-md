@@ -85,19 +85,33 @@ object ExportProfileOverlapDetector {
         currentFolderUri: String?,
         currentSettings: ExportSettings,
     ): List<ProfilePathIdentity> = profiles.map { profile ->
+        // Destination validation protects an actual run, but overlap inspection must not restore
+        // every saved profile against the one active profile's endpoint. Scope the restore base to
+        // this profile and contain malformed/mismatched snapshots to this row. An unknown snapshot
+        // gets no root, so the warning never fabricates a collision from unrelated live settings.
+        val profileBase = currentSettings.copy(
+            exportTarget = profile.target,
+            scheduledExportTarget = profile.target,
+            apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
+        )
         val settings = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
-            ?.restoreOnto(currentSettings)
-            ?: currentSettings
+            ?.takeIf { snapshot ->
+                snapshot.exportTarget == profile.target &&
+                    snapshot.scheduledExportTarget == profile.target
+            }
+            ?.let { snapshot -> runCatching { snapshot.restoreOnto(profileBase) }.getOrNull() }
         ProfilePathIdentity(
             profileId = profile.id,
             name = profile.name,
             target = profile.target,
-            settings = settings,
-            destinationRootKey = destinationRootKey(
-                target = profile.target,
-                folderUri = profile.folderUri,
-                currentFolderUri = currentFolderUri,
-            ),
+            settings = settings ?: profileBase,
+            destinationRootKey = settings?.let {
+                destinationRootKey(
+                    target = profile.target,
+                    folderUri = profile.folderUri,
+                    currentFolderUri = currentFolderUri,
+                )
+            },
         )
     }
 

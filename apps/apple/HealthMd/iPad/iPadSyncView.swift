@@ -342,8 +342,8 @@ struct iPadSyncView: View {
 // MARK: - iPad Brand Label (matching macOS BrandLabel)
 
 struct iPadBrandLabel: View {
-    let text: String
-    init(_ text: String) { self.text = text }
+    let text: LocalizedStringKey
+    init(_ text: LocalizedStringKey) { self.text = text }
 
     var body: some View {
         Text(text)

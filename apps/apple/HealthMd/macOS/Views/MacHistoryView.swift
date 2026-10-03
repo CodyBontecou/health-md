@@ -237,11 +237,19 @@ struct MacHistoryView: View {
 
                     if !entry.partialFailures.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            BrandLabel("Partial Export Warnings")
+                            // Informational omissions (for example an optional
+                            // WorkoutKit plan this device cannot decode) do not
+                            // reduce the export below full success, so the
+                            // section reads as notes rather than warnings.
+                            BrandLabel(entry.isFullSuccess ? "Export Notes" : "Partial Export Warnings")
                             ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
                                 HStack(alignment: .top, spacing: 6) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Color.warning)
+                                    Image(systemName: failure.isInformational == true
+                                        ? "info.circle"
+                                        : "exclamationmark.triangle.fill")
+                                        .foregroundStyle(failure.isInformational == true
+                                            ? Color.textSecondary
+                                            : Color.warning)
                                         .font(.caption)
                                     Text(failure.localizedSummary)
                                         .font(BrandTypography.caption())

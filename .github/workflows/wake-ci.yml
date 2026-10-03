@@ -1,0 +1,55 @@
+name: Wake CI
+
+on:
+  # Run on every PR so Wake CI can become a stable required context. Main pushes remain scoped.
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/wake/**'
+      - 'apps/cli/crates/healthmd-client/src/wake.rs'
+      - 'apps/cli/crates/healthmd-client/Cargo.toml'
+      - 'docs/architecture/rfc-0005-*.md'
+      - 'packages/contracts/direct-protocol/v1/protocol.md'
+      - 'packages/contracts/product-capabilities.json'
+      - 'packages/contracts/manifest.json'
+      - '.github/workflows/wake-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wake-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Wake CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/wake
+    steps:
+      - name: Check out exact event source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/wake/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Test notification and authentication policy
+        run: npm test
+
+      - name: Type-check Worker source
+        run: npm run check
+
+      - name: Build a deployment bundle without publishing
+        run: npm exec -- wrangler deploy --dry-run --outdir "$RUNNER_TEMP/healthmd-wake-dry-run"

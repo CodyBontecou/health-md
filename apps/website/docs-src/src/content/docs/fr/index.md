@@ -27,7 +27,7 @@ description: Exportez des données d’Apple Health ou de Health Connect, connec
 <div class="reference-stats">
 <div><strong>21</strong><span>outils MCP Mac intégrés</span></div>
 <div><strong>4</strong><span>formats d’export</span></div>
-<div><strong>v7</strong><span>schéma public d’export</span></div>
+<div><strong>v8</strong><span>schéma public d’export Apple</span></div>
 <div><strong>0</strong><span>passage obligatoire par un cloud Health.md</span></div>
 </div>
 
@@ -63,8 +63,8 @@ Lorsque tout est prêt, le résultat de `doctor` utilise le schéma `healthmd.cl
 
 <div class="related">
   <a href="/fr/docs/agent-queries/"><span>Requêtes typées</span>Interrogez les métriques, les sessions de sommeil, les entraînements, les comparaisons, la couverture et les preuves factuelles.</a>
-  <a href="/fr/docs/cli-direct/"><span>Aperçu · CLI portable</span>Accès direct à l’iPhone — découvrez le jumelage par Manual IP ou Tailscale avant la publication du paquet autonome.</a>
-  <a href="/fr/docs/cli-extract/"><span>Données sources</span>Extraction canonique — récupérez les jours sélectionnés au schéma v7, les enregistrements sources, les projections ou le JSONL.</a>
+  <a href="/fr/docs/cli-direct/"><span>Aperçu · CLI portable</span>Accès direct au téléphone — consultez le jumelage par IP manuelle ou Tailscale et la matrice actuelle de compatibilité iPhone/Android non qualifiée.</a>
+  <a href="/fr/docs/cli-extract/"><span>Données sources</span>Extraction canonique — récupérez les jours sélectionnés au schéma v8, les enregistrements sources, les projections ou le JSONL.</a>
   <a href="/fr/docs/cli-jobs/"><span>Exécutions fiables</span>Tâches persistantes — gérez en toute sécurité les délais d’attente, les résultats incertains, la reprise, l’annulation et les résultats partiels.</a>
   <a href="/fr/docs/agent-api/"><span>Bas niveau</span>API en boucle locale — utilisez les routes exactes de requête, de preuve, de curseur, d’actualisation et de tâches persistantes.</a>
   <a href="/fr/docs/reference/integration-recipes/"><span>Modèles</span>Recettes d’intégration — analysez et validez les résultats Health.md sans affaiblir leurs contrats.</a>
@@ -78,7 +78,7 @@ Lorsque tout est prêt, le résultat de `doctor` utilise le schéma `healthmd.cl
   <a href="/fr/docs/reference/"><span>Carte des contrats</span>Référence des exports — parcourez les schémas, métriques, formats, enregistrements et fixtures d’interopérabilité.</a>
   <a href="/fr/docs/reference/api-and-cli/"><span>Automatisation</span>Contrats API et CLI — examinez les enveloppes, les routes, le comportement de sortie et les exemples générés.</a>
   <a href="/fr/docs/reference/evidence-packets/"><span>Résultats de l’agent</span>Requêtes et preuves — valeurs typées, couverture, données manquantes, opérations et identités déterministes.</a>
-  <a href="/fr/docs/reference/daily-records/"><span>Schéma v7</span>Enregistrements quotidiens — comprenez le document source public et ses règles de propriété.</a>
+  <a href="/fr/docs/reference/daily-records/"><span>Schéma v8</span>Enregistrements quotidiens — comprenez le document source public et ses règles de propriété.</a>
   <a href="/fr/docs/shared-metric-registry/"><span>Vocabulaire</span>Registre des métriques — utilisez des ID de métriques, catégories, unités et métadonnées de profil stables sur toutes les plateformes.</a>
   <a href="/fr/docs/reference/generated/"><span>Lisible par machine</span>Artefacts générés — consultez les champs canoniques, fixtures, inventaires de messages et contrats CLI.</a>
 </div>
@@ -87,13 +87,22 @@ Lorsque tout est prêt, le résultat de `doctor` utilise le schéma `healthmd.cl
 
 ## Applications et exports
 
+### Exports fiables basés sur des profils
+
+- Choisissez Résumé ou Série chronologique détaillée commune ; l’archive canonique sans perte est réservée à Apple.
+- Enregistrez réglages, destinations et planifications indépendants dans des profils locaux sur iPhone ou Android.
+- Arrêter ou annuler ne touche que la tentative active : dates terminées conservées, autres réessayables et planifications toujours actives.
+
+Commencez par [Profils d’exportation](/fr/docs/export-profiles/) pour les identifiants stables, l’automatisation, l’historique des destinations et l’échec sûr.
+
 <div class="related">
+  <a href="/fr/docs/export-profiles/"><span>Flux réutilisables</span>Profils d’exportation — figez la destination, les formats, les métriques, la planification et l’identifiant d’automatisation.</a>
   <a href="/fr/docs/iphone-first-export/"><span>Commencez ici · iPhone</span>Premier export — autorisez Apple Health, choisissez un dossier, prévisualisez le résultat et vérifiez les fichiers écrits.</a>
   <a href="/fr/docs/android/"><span>Android</span>Health Connect — choisissez un dossier de fournisseur de documents et configurez l’automatisation de la plateforme.</a>
   <a href="/fr/docs/export/"><span>Fichiers</span>Export — exécutez des plages de dates explicites au format Markdown, CSV, JSON ou Obsidian Bases.</a>
   <a href="/fr/docs/format/"><span>Structure</span>Personnalisation du format — contrôlez les unités, les dates, le frontmatter, les noms de fichiers et le comportement d’écriture.</a>
-  <a href="/fr/docs/scheduling/"><span>Arrière-plan</span>Planification — comprenez le comportement des exports quotidiens et hebdomadaires ainsi que les limites de chaque plateforme.</a>
+  <a href="/fr/docs/scheduling/"><span>Arrière-plan</span>Planification — comprenez les cadences récurrentes, la récupération et les limites temporelles de chaque plateforme.</a>
   <a href="/fr/docs/shortcuts/"><span>Automatisation</span>Shortcuts et App Intents — déclenchez des exports, des résumés et des vérifications d’état depuis les flux de travail Apple.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Structure de la documentation mise à jour le 2026-08-02</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Structure de la documentation mise à jour le 2026-08-31</p>

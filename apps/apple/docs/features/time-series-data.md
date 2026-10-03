@@ -1,4 +1,4 @@
-# Lossless Health Records
+# Data Detail and Lossless Health Records
 
 For exact object fields, payload variants, metadata tags, relationships, query results, and complete synthetic files, see the [Canonical Apple Health records reference](../reference/canonical-healthkit-records.md).
 
@@ -6,46 +6,49 @@ For exact object fields, payload variants, metadata tags, relationships, query r
 
 - **Docs status:** draft
 - **Video priority:** high
-- **Primary screen:** Export → Lossless Health Records
-- **Compatibility key:** `includeGranularData`
+- **Primary screen:** Export → Data Detail
+- **Current settings:** `compatibilityDetail` and `healthKitSourceArchivePolicy`
+- **Legacy migration key:** `includeGranularData`
 - **Source files:** `HealthMd/iOS/Views/ExportTabView.swift`, `HealthMd/Shared/Managers/HealthKitManager.swift`, `HealthMd/Shared/Managers/HealthKitRecordCatalog.swift`, `HealthMd/Shared/Models/HealthKitRecord.swift`, `HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift`
 
 ## What it does
 
-**Lossless Health Records** keeps every selected public HealthKit source record alongside the existing daily summaries. It preserves exact identity, timestamps, provenance, metadata, values, relationships, diagnostics, and dense series rather than limiting export to a handful of compatibility arrays.
+**Data Detail** separates readable compatibility time-series from the canonical HealthKit source archive:
 
-The setting is off by default for new installs so the first export uses the faster summary-only path with `raw_capture_status: not_requested`. Health.md preserves every existing explicit on or off choice.
+- **Summary** exports daily aggregates such as averages, minimums, and maximums.
+- **Detailed Time-Series** additionally exports selected timestamped samples such as heart rate, HRV, blood oxygen, respiratory rate, blood pressure, blood glucose, and sleep stages. It does not capture the canonical archive.
+- **Lossless Health Records** includes those readable series plus every selected public HealthKit source record, preserving exact identity, timestamps, provenance, metadata, values, relationships, diagnostics, and dense series.
 
-The old internal setting name remains `includeGranularData` (persisted as `advancedExportSettings.includeGranularData`) for settings, sync, and API compatibility. User-facing docs and UI call the feature Lossless Health Records.
+The orthogonal durable policy also supports an archive-only state for automation and future advanced UI. The primary UI intentionally keeps the common choices progressive and simple.
+
+New installs default to Summary. During migration, the historical combined `includeGranularData` value maps `true` to Lossless (time-series plus archive) and `false` or missing to Summary, preserving existing profiles and queued work. Exact new fields take precedence after migration.
 
 > **Current App Store availability:** The Lossless Health Records export mode remains available for ordinary Apple Health samples. Clinical Health Records and Clinical Documents are temporarily excluded from current App Store builds, including authorization, metric selection, direct-query catalogs, and capture. Their schema representation remains reserved for compatibility and a future reviewed release.
 
 ## Who it is for
 
-- Users building a durable personal HealthKit archive.
-- Developers who need exact samples and query diagnostics.
-- People reconstructing intraday charts, workouts, correlations, or record graphs.
-- Users who want individual-entry files tied to real source identity.
+- **Detailed Time-Series:** people building intraday charts or preserving selected timestamped readings without a full source archive.
+- **Lossless Health Records:** users building a durable personal HealthKit archive, developers who need exact source identity and query diagnostics, and users who want individual-entry files tied to canonical records.
 
-Turn it off when concise summaries are sufficient. Lossless exports can be much larger and final serialization can use substantial memory.
+Choose Summary when concise aggregates are sufficient. Lossless exports can be much larger and final serialization can use substantial memory; Detailed Time-Series is the lighter-weight option for charts and per-sample analysis.
 
 ## Setup
 
 1. Open **Export**.
-2. Leave **Lossless Health Records** enabled.
-3. Choose the metrics you want under **Health Metrics**.
-4. Select JSON for the complete embedded archive, CSV for canonical JSON rows, and/or Markdown/Bases for summaries plus diagnostics.
-5. Export one day first and inspect `raw_capture_status`.
+2. Under **Data Detail**, choose Summary, Detailed Time-Series, or Lossless Health Records.
+3. Choose the metrics you want under **Health Metrics**; only selected metrics contribute compatible series or source records.
+4. For Lossless, select JSON for the complete embedded archive, CSV for canonical JSON rows, and/or Markdown/Bases for summaries plus diagnostics.
+5. Export one day first. `raw_capture_status` describes only canonical archive capture; Detailed Time-Series correctly reports `not_requested` while still including sample arrays.
 
 ## Format behavior
 
-| Format | Lossless behavior |
-|---|---|
-| JSON | Embeds authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1). |
-| CSV | Emits the archive manifest and one canonical JSON row per UUID-backed/external record, plus failures and warnings. |
-| Markdown | Keeps daily summaries and adds capture counts/diagnostics; does not dump records. |
-| Obsidian Bases | Keeps summary properties and lossless counts/status; does not dump records. |
-| Individual entries | Derives source-event notes from canonical records whenever an archive exists. |
+| Format | Detailed Time-Series | Lossless Health Records |
+|---|---|---|
+| JSON | Emits existing optional sample arrays in their summary sections. | Also embeds authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1). |
+| CSV | Emits timestamped compatibility sample rows. | Also emits the archive manifest and canonical JSON rows for source records, failures, and warnings. |
+| Markdown | Renders readable selected sample tables where supported. | Also adds compact archive counts/diagnostics; it does not dump canonical record JSON. |
+| Obsidian Bases | Keeps compatible summary properties. | Also keeps archive counts/status; it does not dump records. |
+| Individual entries | May use compatibility samples or aggregate fallbacks. | Derives source-event notes from canonical records whenever an archive exists. |
 
 ## What a canonical record preserves
 
@@ -85,7 +88,7 @@ Availability depends on the selected metrics, device/OS, source apps, public API
 
 - `complete`: all planned supported branches completed, including valid empty results;
 - `partial`: at least one branch failed, was cancelled, skipped, unsupported, or incomplete;
-- `not_requested`: the setting was off;
+- `not_requested`: canonical archive capture was off; Detailed Time-Series may still be present;
 - `legacy_unavailable`: an older stored record or connected peer lacked the archive.
 
 The query manifest distinguishes `success` with zero records from `unsupported`, `skipped`, `cancelled`, and `failure`. Health.md never reports partial capture as complete. Successful sibling records remain available when one child query fails.
@@ -114,11 +117,11 @@ Current connected iPhone/Mac exports use checksum-chained corpus sessions: 48 Mi
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| Only summaries appear | Lossless Health Records is off or source is legacy | Check `raw_capture_status`, enable the setting, and re-export. |
+| Only summaries appear | Data Detail is set to Summary, the metric is unselected, or the source has no compatible readings | Choose Detailed Time-Series or Lossless, verify the metric selection, and re-export. |
 | Archive is complete but empty | The public queries succeeded with no readable records | This can be valid; also review HealthKit permissions. |
 | Archive is partial | A requested branch failed/cancelled/skipped/was unsupported | Inspect the query manifest, warnings, and partial failures. |
 | Markdown has no raw objects | Markdown intentionally shows summaries and diagnostics only | Export JSON or CSV. |
-| Files are very large | Dense series/routes/binary data were retained | Export fewer days or disable lossless capture when summaries suffice. |
+| Files are very large | The canonical archive retained dense routes, waveforms, metadata, or binary data | Choose Detailed Time-Series instead of Lossless, or export fewer days. |
 | Connected transfer is rejected | Declared size/frame limits or version capability failed | Update both apps and retry a smaller range. |
 | Individual entry is missing | Canonical source query did not return that event | Do not rely on a daily average as a replacement; inspect manifest status. |
 
@@ -130,9 +133,10 @@ Current connected iPhone/Mac exports use checksum-chained corpus sessions: 48 Mi
 
 ## Implementation notes
 
-- `ExportTabView` labels `AdvancedExportSettings.includeGranularData` as **Lossless Health Records**.
+- `ExportTabView` presents three presets backed by the orthogonal `AppleExportDetailPolicy`.
+- `ExportCompatibilityDetail.selected_time_series` controls compatibility sample queries; `HealthKitSourceArchivePolicy.canonical_v1` independently controls canonical archive capture.
 - `HealthKitRecordCatalog` is the reviewed selection/authorization/dependency graph.
-- `HealthKitManager.fetchHealthData(for:includeGranularData:metricSelection:)` keeps summaries unchanged and attaches a `HealthKitRecordArchive` when enabled.
+- `HealthKitManager.fetchHealthData(for:detailPolicy:metricSelection:)` splits these choices at the HealthKit query boundary, so Detailed Time-Series never invokes archive capture.
 - `SystemHealthStoreAdapter` and its canonical/specialized extensions map public HealthKit/WorkoutKit values.
 - `HealthKitRecordArchiveSerializer` owns deterministic public JSON/CSV serialization.
 - `ConnectedTransfer` provides bounded, checksum-validated iPhone/Mac transport.

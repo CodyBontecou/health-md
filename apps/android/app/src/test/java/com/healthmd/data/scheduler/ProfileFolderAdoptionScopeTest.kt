@@ -1,15 +1,21 @@
 package com.healthmd.data.scheduler
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.export.MainDispatcherRule
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.Rule
@@ -24,6 +30,13 @@ import org.junit.Test
 class ProfileFolderAdoptionScopeTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    private val profileRepository = mockk<ExportProfileRepository> {
+        coEvery { isSharedSetupV2Blocked(any()) } returns false
+    }
+
+    private fun adoptionScope(settingsRepository: SettingsRepository) =
+        ProfileFolderAdoptionScope(settingsRepository, profileRepository)
 
     private fun profile(
         target: ExportTarget = ExportTarget.DEVICE_FOLDER,
@@ -45,7 +58,7 @@ class ProfileFolderAdoptionScopeTest {
             coEvery { getExportFolderUri() } answers { live }
             coEvery { saveExportFolderUri(any()) } answers { live = firstArg() }
         }
-        val scope = ProfileFolderAdoptionScope(repository)
+        val scope = adoptionScope(repository)
         val observed = mutableListOf<String>()
 
         scope.withProfileFolder(profile()) { observed += live }
@@ -61,7 +74,7 @@ class ProfileFolderAdoptionScopeTest {
             coEvery { getExportFolderUri() } answers { live }
             coEvery { saveExportFolderUri(any()) } answers { live = firstArg() }
         }
-        val scope = ProfileFolderAdoptionScope(repository)
+        val scope = adoptionScope(repository)
 
         val error = runCatching {
             scope.withProfileFolder(profile()) { error("run failed") }
@@ -72,13 +85,35 @@ class ProfileFolderAdoptionScopeTest {
     }
 
     @Test
+    fun `restores the previous value when the run is cancelled`() = runTest {
+        var live = "content://vault-a"
+        val repository = mockk<SettingsRepository> {
+            coEvery { getExportFolderUri() } answers { live }
+            coEvery { saveExportFolderUri(any()) } answers { live = firstArg() }
+        }
+        val scope = adoptionScope(repository)
+        val adopted = CompletableDeferred<Unit>()
+        val run = launch {
+            scope.withProfileFolder(profile()) {
+                adopted.complete(Unit)
+                awaitCancellation()
+            }
+        }
+        adopted.await()
+
+        run.cancelAndJoin()
+
+        assertThat(live).isEqualTo("content://vault-a")
+    }
+
+    @Test
     fun `runs unchanged for API targets and unbound folder profiles`() = runTest {
         var writes = 0
         val repository = mockk<SettingsRepository> {
             coEvery { getExportFolderUri() } returns "content://vault-a"
             coEvery { saveExportFolderUri(any()) } answers { writes++ }
         }
-        val scope = ProfileFolderAdoptionScope(repository)
+        val scope = adoptionScope(repository)
 
         scope.withProfileFolder(profile(target = ExportTarget.API_ENDPOINT)) { Unit }
         scope.withProfileFolder(profile(folderUri = null)) { Unit }
@@ -94,7 +129,7 @@ class ProfileFolderAdoptionScopeTest {
             coEvery { getExportFolderUri() } returns null
             coEvery { saveExportFolderUri(any()) } answers { writes++ }
         }
-        val scope = ProfileFolderAdoptionScope(repository)
+        val scope = adoptionScope(repository)
 
         scope.withProfileFolder(profile()) { Unit }
 
@@ -108,7 +143,7 @@ class ProfileFolderAdoptionScopeTest {
             coEvery { getExportFolderUri() } returns "content://vault-b"
             coEvery { saveExportFolderUri(any()) } answers { writes++ }
         }
-        val scope = ProfileFolderAdoptionScope(repository)
+        val scope = adoptionScope(repository)
 
         scope.withProfileFolder(profile()) { Unit }
 
@@ -118,13 +153,30 @@ class ProfileFolderAdoptionScopeTest {
     }
 
     @Test
+    fun `blocked imported profile never inherits or adopts the global folder`() = runTest {
+        val repository = mockk<SettingsRepository>(relaxed = true)
+        coEvery { profileRepository.isSharedSetupV2Blocked("p1") } returns true
+        val scope = adoptionScope(repository)
+        var ran = false
+
+        val error = runCatching {
+            scope.withProfileFolder(profile(folderUri = null)) { ran = true }
+        }.exceptionOrNull()
+
+        assertThat(error).isInstanceOf(com.healthmd.sharedsetup.SharedSetupV2ProfileBlockedException::class.java)
+        assertThat(ran).isFalse()
+        coVerify(exactly = 0) { repository.getExportFolderUri() }
+        coVerify(exactly = 0) { repository.saveExportFolderUri(any()) }
+    }
+
+    @Test
     fun `concurrent folder runs never observe each other's adopted folder`() = runTest {
         var live = "content://vault-a"
         val repository = mockk<SettingsRepository> {
             coEvery { getExportFolderUri() } answers { live }
             coEvery { saveExportFolderUri(any()) } answers { live = firstArg() }
         }
-        val scope = ProfileFolderAdoptionScope(repository)
+        val scope = adoptionScope(repository)
 
         data class FolderRun(val binding: String, val seen: ConcurrentLinkedQueue<String>, val deferred: kotlinx.coroutines.Deferred<Unit>)
 

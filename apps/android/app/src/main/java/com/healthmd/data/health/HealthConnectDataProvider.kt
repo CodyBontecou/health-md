@@ -31,6 +31,17 @@ class HealthConnectDataProvider(
             sleepDayAttribution,
         )
 
+    override suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        dataTypes: DataTypeSelection,
+        includeGranularData: Boolean,
+        zoneId: ZoneId,
+    ) {
+        if (dataTypes.workouts) {
+            healthConnectManager.authorizeExerciseRouteConsent(dates, includeGranularData, zoneId)
+        }
+    }
+
     suspend fun fetchWidgetHealthDataRange(
         dates: List<LocalDate>,
         selection: HealthConnectWidgetReadSelection,

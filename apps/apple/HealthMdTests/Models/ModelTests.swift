@@ -781,7 +781,16 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
+        XCTAssertEqual(settings.detailPolicy, .summary)
         XCTAssertFalse(settings.includeGranularData)
+        XCTAssertEqual(
+            defaults.string(forKey: "advancedExportSettings.compatibilityDetail"),
+            "summary"
+        )
+        XCTAssertEqual(
+            defaults.string(forKey: "advancedExportSettings.healthKitSourceArchivePolicy"),
+            "none"
+        )
     }
 
     func testLosslessHealthRecords_explicitFalseIsPreserved() {
@@ -791,6 +800,7 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
+        XCTAssertEqual(settings.detailPolicy, .summary)
         XCTAssertFalse(settings.includeGranularData)
         XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
@@ -802,8 +812,22 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
+        XCTAssertEqual(settings.detailPolicy, .lossless)
         XCTAssertTrue(settings.includeGranularData)
         XCTAssertTrue(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
+    }
+
+    func testDetailedTimeSeriesPersistsWithoutEnablingLegacyLosslessBridge() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        settings.detailPolicy = .detailedTimeSeries
+        let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertEqual(reloaded.detailPolicy, .detailedTimeSeries)
+        XCTAssertFalse(reloaded.includeGranularData)
+        XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
 
     func testLosslessHealthRecords_resetRestoresDefaultOff() {
@@ -815,8 +839,38 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         settings.reset()
 
+        XCTAssertEqual(settings.detailPolicy, .summary)
         XCTAssertFalse(settings.includeGranularData)
         XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
+    }
+
+    func testRangeSummaryMigrationUsesLegacyORAndRemovesOldKeysOnce() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        defaults.set(false, forKey: "advancedExportSettings.generateWeeklyRollups")
+        defaults.set(true, forKey: "advancedExportSettings.generateMonthlyRollups")
+        defaults.set(false, forKey: "advancedExportSettings.generateYearlyRollups")
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertTrue(settings.generateRangeSummary)
+        XCTAssertTrue(defaults.bool(forKey: "advancedExportSettings.generateRangeSummary"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateWeeklyRollups"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateMonthlyRollups"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateYearlyRollups"))
+    }
+
+    func testExplicitFalseRangeSummaryOverridesLegacyTrue() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        defaults.set(false, forKey: "advancedExportSettings.generateRangeSummary")
+        defaults.set(true, forKey: "advancedExportSettings.generateWeeklyRollups")
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertFalse(settings.generateRangeSummary)
+        XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.generateRangeSummary"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateWeeklyRollups"))
     }
 
     func testMigration_legacyDataTypes_populatesAndPersistsMetricSelection() throws {
@@ -1038,18 +1092,14 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
 
         let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
-        XCTAssertTrue(reloaded.generateWeeklyRollups)
-        XCTAssertFalse(reloaded.generateMonthlyRollups)
-        XCTAssertTrue(reloaded.generateYearlyRollups)
+        XCTAssertTrue(reloaded.generateRangeSummary)
         XCTAssertTrue(reloaded.summaryOnlyExport)
         XCTAssertTrue(reloaded.summaryOnlyModeEnabled)
-        XCTAssertEqual(reloaded.enabledRollupPeriods, [.weekly, .yearly])
+        XCTAssertEqual(reloaded.enabledRollupPeriods, [.range])
     }
 
     func testSchemaAffectingExportOptionsDefaultOffForFreshInstall() throws {
@@ -1084,7 +1134,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         settings.exportFormats = [.markdown, .json]
         settings.archiveExportFiles = true
         settings.summaryOnlyExport = true
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.individualTracking.globalEnabled = true
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.dailyNotesOnly = true
@@ -1096,7 +1146,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertFalse(settings.writesDailyAggregateFiles)
         XCTAssertFalse(settings.writesIndividualEntryFiles)
         XCTAssertFalse(settings.writesExternalProviderSidecars)
-        XCTAssertFalse(settings.effectiveGranularDataEnabled)
+        XCTAssertEqual(settings.effectiveDetailPolicy, .summary)
         XCTAssertTrue(settings.enabledRollupPeriods.isEmpty)
         XCTAssertEqual(settings.looseFormatsPerDate, 0)
         XCTAssertEqual(settings.exportFormats, [.markdown, .json])
@@ -1107,7 +1157,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertFalse(settings.dailyNotesOnlyModeEnabled)
         XCTAssertEqual(settings.effectiveFileExportMode, .summaryOnly)
         XCTAssertTrue(settings.archiveModeEnabled)
-        XCTAssertEqual(settings.enabledRollupPeriods, [.weekly])
+        XCTAssertEqual(settings.enabledRollupPeriods, [.range])
     }
 
     func testDailyNotesOnlyAllowsFileDestinationWithoutAggregateFormats() throws {

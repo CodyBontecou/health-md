@@ -6,6 +6,7 @@ import android.os.LocaleList
 import android.view.View
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.BuildConfig
 import com.healthmd.R
 import java.util.Locale
 import org.junit.Test
@@ -20,13 +21,20 @@ class LocaleResolutionTest {
         get() = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun generatedPseudoLocalesExerciseExpansionAndRtlResolution() {
+    fun pseudoLocaleResourcesFollowBuildVariantContract() {
         val english = localizedContext("en-US").getString(R.string.nav_settings)
         val expanded = localizedContext("en-XA").getString(R.string.nav_settings)
         val mirroredContext = localizedContext("ar-XB")
+        val mirrored = mirroredContext.getString(R.string.nav_settings)
 
-        assertThat(expanded).isNotEqualTo(english)
-        assertThat(mirroredContext.getString(R.string.nav_settings)).isNotEqualTo(english)
+        if (BuildConfig.DEBUG) {
+            assertThat(expanded).isNotEqualTo(english)
+            assertThat(mirrored).isNotEqualTo(english)
+        } else {
+            // Pseudo-localized resources are a test aid and must not ship in production.
+            assertThat(expanded).isEqualTo(english)
+            assertThat(mirrored).isEqualTo(english)
+        }
         assertThat(mirroredContext.resources.configuration.layoutDirection)
             .isEqualTo(View.LAYOUT_DIRECTION_RTL)
     }

@@ -917,7 +917,7 @@ final class HealthMdCLITests: XCTestCase {
                     [
                         "date": "2026-07-20", "status": "complete",
                         "health_data": [
-                            "schema": "healthmd.health_data", "schema_version": 7,
+                            "schema": "healthmd.health_data", "schema_version": 8,
                             "date": "2026-07-20", "type": "health-data",
                             "raw_capture_status": "not_requested", "sleep": ["total": 480],
                             "objects": [["value": 3]]
@@ -926,7 +926,7 @@ final class HealthMdCLITests: XCTestCase {
                     [
                         "date": "2026-07-21", "status": "complete_empty",
                         "health_data": [
-                            "schema": "healthmd.health_data", "schema_version": 7,
+                            "schema": "healthmd.health_data", "schema_version": 8,
                             "date": "2026-07-21", "type": "health-data",
                             "raw_capture_status": "not_requested"
                         ]
@@ -992,7 +992,7 @@ final class HealthMdCLITests: XCTestCase {
         XCTAssertEqual(selectionsByPointer["/sleep"]?["status"] as? String, "available")
         XCTAssertEqual((selectionsByPointer["/sleep"]?["value"] as? [String: Any])?["total"] as? Int, 480)
         XCTAssertEqual(selectionsByPointer["/objects/0/value"]?["value"] as? Int, 3)
-        XCTAssertNil(projected[0]["schema"], "A subtree projection must not claim to be a complete v7 document")
+        XCTAssertNil(projected[0]["schema"], "A subtree projection must not claim to be a complete v8 document")
         let secondSelections = try XCTUnwrap(projected[1]["selections"] as? [[String: Any]])
         XCTAssertEqual(secondSelections.first?["status"] as? String, "complete_empty")
         let receipt = try XCTUnwrap(envelope["receipt"] as? [String: Any])
@@ -1012,7 +1012,7 @@ final class HealthMdCLITests: XCTestCase {
         let healthData = try XCTUnwrap(fullEnvelope["health_data"] as? [[String: Any]])
         XCTAssertEqual(healthData.count, 2)
         XCTAssertEqual(healthData[0]["schema"] as? String, "healthmd.health_data")
-        XCTAssertEqual(healthData[0]["schema_version"] as? Int, 7)
+        XCTAssertEqual(healthData[0]["schema_version"] as? Int, 8)
     }
 
     func testAllAvailableHistoryUsesDynamicDateSelectionWithoutFakeRange() throws {
@@ -1148,7 +1148,7 @@ final class HealthMdCLITests: XCTestCase {
                     "status": "complete_empty",
                     "health_data": [
                         "schema": "healthmd.health_data",
-                        "schema_version": 7,
+                        "schema_version": 8,
                         "healthkit_record_archive": [
                             "schema": "healthmd.healthkit_records",
                             "schema_version": 1

@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import copy
+import csv
 import hashlib
 import json
 import math
@@ -26,8 +28,12 @@ PRODUCT_CAPABILITIES_SCHEMA_VERSION = 1
 METRIC_REGISTRY_SCHEMA = "healthmd.metric_registry"
 METRIC_REGISTRY_SCHEMA_VERSION = 1
 SHARED_SETUP_SCHEMA = "healthmd.shared_setup"
-SHARED_SETUP_SCHEMA_VERSION = 1
-SHARED_SETUP_MAX_BYTES = 262_144
+SHARED_SETUP_V2_SCHEMA_VERSION = 2
+SHARED_SETUP_V2_MAX_BYTES = 4_194_304
+SHARED_SETUP_V2_SIDECAR_MAX_BYTES = 4_194_304
+SHARED_SETUP_V2_UNDO_MAX_BYTES = 8_388_608
+SHARED_SETUP_TRANSACTION_SCENARIO_SCHEMA = "healthmd.shared_setup_transaction_scenarios"
+SHARED_SETUP_TRANSACTION_SCENARIO_VERSION = 1
 REGISTRY_PROFILE_TO_PUBLIC = {
     "apple_health_data_v8": "apple-v8",
     "android_frozen_v4": "android-frozen-v4",
@@ -691,7 +697,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
         or payload["registry_sha256"]
-        != "9ed4fc3a75c3a03d569cd733e24617c9bf028c9cd3f718e5d85a67c47d7aca65"
+        != "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
@@ -1011,6 +1017,74 @@ def validate_native_renderer_golden(path: Path) -> None:
             fail(f"{context}: format coverage is incomplete")
 
 
+def validate_shared_pairing_v3_fixture(path: Path) -> None:
+    context = "healthmd.direct.shared-pairing v3 fixture"
+    payload = require_exact_keys(
+        load_json(path, context),
+        {
+            "schema",
+            "schema_version",
+            "pairing_protocol_version",
+            "pairing_code",
+            "client_installation_id",
+            "client_public_key_hex",
+            "client_nonce_hex",
+            "server_installation_id",
+            "server_public_key_hex",
+            "server_nonce_hex",
+            "sealed_nonce_hex",
+            "sealed_ciphertext_hex",
+            "sealed_tag_hex",
+            "pairing_code_key_hex",
+            "pairing_client_verifier_hex",
+            "pairing_server_verifier_hex",
+            "qr_payload",
+        },
+        context,
+    )
+    if payload["schema"] != "healthmd.direct_pairing_interop" or payload["schema_version"] != 1:
+        fail(f"{context}: schema discriminator must identify fixture version 1")
+    if payload["pairing_protocol_version"] != 3:
+        fail(f"{context}: pairing_protocol_version must be 3")
+    if not re.fullmatch(r"[0-9]{20}", payload["pairing_code"]):
+        fail(f"{context}: pairing_code must be twenty ASCII digits")
+    if not all(
+        isinstance(payload[field], str)
+        and re.fullmatch(
+            r"[0-9a-f]{64}",
+            payload[field],
+        )
+        for field in (
+            "client_public_key_hex",
+            "client_nonce_hex",
+            "server_public_key_hex",
+            "server_nonce_hex",
+            "sealed_ciphertext_hex",
+            "pairing_code_key_hex",
+            "pairing_client_verifier_hex",
+            "pairing_server_verifier_hex",
+        )
+    ):
+        fail(f"{context}: keys, nonces, ciphertext, and verifiers must be 32-byte lowercase hex")
+    if not re.fullmatch(r"[0-9a-f]{24}", payload["sealed_nonce_hex"]):
+        fail(f"{context}: sealed_nonce_hex must be 12-byte lowercase hex")
+    if not re.fullmatch(r"[0-9a-f]{32}", payload["sealed_tag_hex"]):
+        fail(f"{context}: sealed_tag_hex must be 16-byte lowercase hex")
+    uuid_pattern = re.compile(
+        r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+    )
+    if not uuid_pattern.fullmatch(payload["client_installation_id"]) or not uuid_pattern.fullmatch(
+        payload["server_installation_id"]
+    ):
+        fail(f"{context}: installation IDs must be lowercase canonical UUIDs")
+    expected_qr = (
+        "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code="
+        + payload["pairing_code"]
+    )
+    if payload["qr_payload"] != expected_qr:
+        fail(f"{context}: qr_payload does not match the canonical private-LAN handoff")
+
+
 def validate_v2_fixture(path: Path) -> None:
     context = "healthmd.direct.android v2 fixture"
     expected = {
@@ -1065,6 +1139,81 @@ def validate_v2_fixture(path: Path) -> None:
         fail(f"{context}: status envelope is not canonical sorted compact JSON")
     if envelope.get("protocol_version") != 2 or envelope.get("type") != "status_request":
         fail(f"{context}: status envelope does not identify protocol v2 status_request")
+
+
+def validate_v2_profile_policy_fixture(path: Path) -> None:
+    context = "healthmd.direct.android v2 profile-policy fixture"
+    payload = require_exact_keys(
+        load_json(path, context),
+        {
+            "envelope_json_base64",
+            "request_fingerprint",
+            "request_json_base64",
+            "request_unnamed_reference_json_base64",
+            "schema",
+            "schema_version",
+        },
+        context,
+    )
+    if payload["schema"] != "healthmd.direct_v2_profile_policy_reference":
+        fail(f"{context}: schema discriminator mismatch")
+    if payload["schema_version"] != 1:
+        fail(f"{context}: schema version must be 1")
+    if not isinstance(payload["request_fingerprint"], str) or not SHA256_RE.fullmatch(
+        payload["request_fingerprint"]
+    ):
+        fail(f"{context}: request_fingerprint must be lowercase SHA-256 hex")
+
+    request_bytes, request = decode_json_base64(
+        payload["request_json_base64"], f"{context}.request"
+    )
+    if canonical_json(request) != request_bytes:
+        fail(f"{context}: request JSON is not canonical sorted compact JSON")
+    if hashlib.sha256(request_bytes).hexdigest() != payload["request_fingerprint"]:
+        fail(f"{context}: request fingerprint does not match request bytes")
+
+    product = request.get("product")
+    if not isinstance(product, dict):
+        fail(f"{context}.request.product: must be an object")
+    if product.get("product_id") != "generated_files_v1" or product.get("settings_policy") != "profile":
+        fail(f"{context}.request.product: profile policy discriminator mismatch")
+    reference = require_exact_keys(
+        product.get("profile_reference"), {"name", "profile_id"},
+        f"{context}.request.product.profile_reference",
+    )
+    if not isinstance(reference["profile_id"], str) or not reference["profile_id"].strip():
+        fail(f"{context}: profile_id must be non-empty")
+    if not isinstance(reference["name"], str) or not reference["name"].strip():
+        fail(f"{context}: profile name must be non-empty when present")
+
+    unnamed_bytes, unnamed = decode_json_base64(
+        payload["request_unnamed_reference_json_base64"], f"{context}.unnamed_request"
+    )
+    if canonical_json(unnamed) != unnamed_bytes:
+        fail(f"{context}: unnamed request JSON is not canonical sorted compact JSON")
+    unnamed_product = unnamed.get("product")
+    if not isinstance(unnamed_product, dict):
+        fail(f"{context}.unnamed_request.product: must be an object")
+    unnamed_reference = require_exact_keys(
+        unnamed_product.get("profile_reference"), {"profile_id"},
+        f"{context}.unnamed_request.product.profile_reference",
+    )
+    if unnamed_reference["profile_id"] != reference["profile_id"]:
+        fail(f"{context}: unnamed reference changed profile_id")
+    expected_unnamed = json.loads(json.dumps(request))
+    del expected_unnamed["product"]["profile_reference"]["name"]
+    if unnamed != expected_unnamed:
+        fail(f"{context}: unnamed request differs by more than omitted profile name")
+
+    envelope_bytes, envelope = decode_json_base64(
+        payload["envelope_json_base64"], f"{context}.envelope"
+    )
+    if canonical_json(envelope) != envelope_bytes:
+        fail(f"{context}: envelope JSON is not canonical sorted compact JSON")
+    if envelope.get("protocol_version") != 2 or envelope.get("type") != "export_request":
+        fail(f"{context}: envelope discriminator mismatch")
+    if envelope.get("payload") != request:
+        fail(f"{context}: envelope payload differs from request")
 
 
 def validate_v3_fixture(path: Path) -> None:
@@ -1398,146 +1547,310 @@ def validate_unified_health_data_fixture(root: Path, path: Path) -> None:
         fail(f"{context}: Android primary data must not be relabeled as SDNN")
 
 
-def validate_shared_setup_fixture(root: Path, path: Path) -> None:
-    context = "healthmd.shared_setup v1 fixture"
-    fixture_bytes = path.read_bytes()
-    if len(fixture_bytes) > SHARED_SETUP_MAX_BYTES:
-        fail(f"{context}: fixture exceeds {SHARED_SETUP_MAX_BYTES} encoded bytes")
-    payload = load_json(path, context)
-    if fixture_bytes != canonical_json(payload) + b"\n":
-        fail(f"{context}: fixture must be canonical sorted compact JSON with one newline")
+def _decode_shared_setup_json(fixture_bytes: bytes, context: str) -> Any:
+    try:
+        text = fixture_bytes.decode("utf-8")
+        return json.loads(
+            text,
+            parse_constant=lambda value: fail(
+                f"{context}: non-finite JSON number {value!r} is forbidden"
+            ),
+        )
+    except (UnicodeDecodeError, ValueError, RecursionError) as error:
+        fail(f"{context}: invalid bounded UTF-8 JSON: {error}")
 
+
+def _validate_shared_setup_generic_bounds(
+    payload: Any,
+    context: str,
+    *,
+    max_depth: int,
+    max_container_items: int,
+    max_key_scalars: int,
+    max_string_scalars: int,
+    max_nodes: int,
+) -> None:
     node_count = 0
 
-    def validate_generic_bounds(value: Any, value_context: str, depth: int = 0) -> None:
+    def scalar_count(value: str, value_context: str) -> int:
+        if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+            fail(f"{value_context}: invalid Unicode surrogate is forbidden")
+        return len(value)
+
+    def visit(value: Any, value_context: str, depth: int) -> None:
         nonlocal node_count
         node_count += 1
-        if node_count > 16_384:
-            fail(f"{context}: JSON node count exceeds 16384")
-        if depth > 16:
-            fail(f"{value_context}: JSON nesting exceeds 16 levels")
+        if node_count > max_nodes:
+            fail(f"{context}: JSON node count exceeds {max_nodes}")
+        if depth > max_depth:
+            fail(f"{value_context}: JSON nesting exceeds {max_depth} levels")
         if isinstance(value, dict):
-            if len(value) > 256:
-                fail(f"{value_context}: object exceeds 256 members")
+            if len(value) > max_container_items:
+                fail(f"{value_context}: object exceeds {max_container_items} members")
             for key, child in value.items():
-                if len(key) > 256:
-                    fail(f"{value_context}: object key exceeds 256 characters")
-                validate_generic_bounds(child, f"{value_context}.{key}", depth + 1)
+                if scalar_count(key, value_context) > max_key_scalars:
+                    fail(
+                        f"{value_context}: object key exceeds {max_key_scalars} Unicode scalars"
+                    )
+                visit(child, f"{value_context}.{key}", depth + 1)
         elif isinstance(value, list):
-            if len(value) > 256:
-                fail(f"{value_context}: array exceeds 256 items")
+            if len(value) > max_container_items:
+                fail(f"{value_context}: array exceeds {max_container_items} items")
             for index, child in enumerate(value):
-                validate_generic_bounds(child, f"{value_context}[{index}]", depth + 1)
-        elif isinstance(value, str) and len(value) > 65_536:
-            fail(f"{value_context}: string exceeds 65536 characters")
+                visit(child, f"{value_context}[{index}]", depth + 1)
+        elif isinstance(value, str):
+            if scalar_count(value, value_context) > max_string_scalars:
+                fail(
+                    f"{value_context}: string exceeds {max_string_scalars} Unicode scalars"
+                )
+        elif isinstance(value, float) and not math.isfinite(value):
+            fail(f"{value_context}: non-finite JSON number is forbidden")
 
-    validate_generic_bounds(payload, context)
+    visit(payload, context, 0)
 
+
+def _shared_setup_schema(root: Path, version: int, context: str) -> dict[str, Any]:
     schema_path = repository_path(
         root,
-        "packages/contracts/shared-setup/v1/shared-setup.schema.json",
+        f"packages/contracts/shared-setup/v{version}/shared-setup.schema.json",
         f"{context}.schema",
     )
     schema = load_json(schema_path, f"{context}.schema")
     if (
         not isinstance(schema, dict)
         or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
-        or schema.get("properties", {}).get("schema_version", {}).get("const")
-        != SHARED_SETUP_SCHEMA_VERSION
+        or schema.get("properties", {}).get("schema_version", {}).get("const") != version
     ):
         fail(f"{context}: schema metadata is invalid")
-    validate_json_schema_subset(payload, schema, context)
+    return schema
 
-    # V1 readers tolerate unknown optional fields only after the same recursive
-    # security scan. The schema still requires every core profile section.
-    if payload.get("schema") != SHARED_SETUP_SCHEMA or payload.get("schema_version") != 1:
-        fail(f"{context}: exact schema/version discriminator is required")
 
-    profile = payload["profile"]
+def _validate_shared_setup_writer_allowlist(
+    payload: Any,
+    schema: dict[str, Any],
+    context: str,
+) -> None:
+    def resolve(reference: str, value_context: str) -> dict[str, Any]:
+        if not reference.startswith("#/"):
+            fail(f"{value_context}: writer schema reference must be local")
+        value: Any = schema
+        for raw_part in reference[2:].split("/"):
+            part = raw_part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(value, dict) or part not in value:
+                fail(f"{value_context}: unresolved writer schema reference {reference}")
+            value = value[part]
+        if not isinstance(value, dict):
+            fail(f"{value_context}: writer schema reference is not an object")
+        return value
+
+    def choose_one_of(value: Any, branches: Any, value_context: str) -> dict[str, Any]:
+        if not isinstance(branches, list):
+            fail(f"{value_context}: writer oneOf must be an array")
+        if value is None:
+            matches = [branch for branch in branches if branch.get("type") == "null"]
+        else:
+            matches = [branch for branch in branches if branch.get("type") != "null"]
+        if len(matches) != 1 or not isinstance(matches[0], dict):
+            fail(f"{value_context}: writer schema has ambiguous oneOf allowlist")
+        return matches[0]
+
+    def visit(value: Any, candidate: dict[str, Any], value_context: str) -> None:
+        if "$ref" in candidate:
+            reference = candidate["$ref"]
+            if not isinstance(reference, str):
+                fail(f"{value_context}: writer schema reference must be a string")
+            visit(value, resolve(reference, value_context), value_context)
+            return
+        if "oneOf" in candidate:
+            visit(value, choose_one_of(value, candidate["oneOf"], value_context), value_context)
+            return
+        if isinstance(value, dict):
+            properties = candidate.get("properties", {})
+            if not isinstance(properties, dict):
+                fail(f"{value_context}: writer schema properties must be an object")
+            additional = candidate.get("additionalProperties", True)
+            for key, child in value.items():
+                if key in properties:
+                    visit(child, properties[key], f"{value_context}.{key}")
+                elif isinstance(additional, dict):
+                    visit(child, additional, f"{value_context}.{key}")
+                else:
+                    fail(f"{value_context}: writer field {key!r} is not allowlisted")
+        elif isinstance(value, list):
+            items = candidate.get("items")
+            if isinstance(items, dict):
+                for index, child in enumerate(value):
+                    visit(child, items, f"{value_context}[{index}]")
+
+    visit(payload, schema, context)
+
+
+def _reject_sensitive_shared_setup_v2(payload: Any, context: str) -> None:
     forbidden_exact = {
+        "id", "uuid", "native_id", "native_profile_id", "profile_id",
+        "destination_id", "endpoint_id", "schedule_entry_id", "pairing_id",
         "authorization", "authorization_header", "authorization_header_value",
         "credential", "credentials", "token", "access_token", "refresh_token",
-        "password", "secret", "cookie", "headers", "request_headers",
+        "password", "secret", "cookie", "headers", "request_headers", "oauth",
         "bookmark", "security_scoped_bookmark", "saf_uri", "content_uri",
-        "folder_uri", "folder_grant", "device_id", "installation_id", "user_id",
-        "account_id", "permissions", "health_permissions", "purchase", "purchases",
-        "entitlement", "onboarding", "history", "export_history", "enabled_at",
-        "last_run", "last_export_date", "last_success", "last_today_refresh_date",
-        "retry", "retries", "pending_work", "pending_requests", "operation_id",
-        "destination_fingerprint", "fingerprint", "engine_pin", "worker_id",
-        "alarm_id", "schedule_enabled", "is_enabled", "health_records",
-        "health_data", "source_data", "analytics", "email", "api_key",
-        "raw_persistence_snapshot", "raw_snapshot", "session_id", "first_name",
-        "last_name", "full_name",
+        "folder_uri", "folder_grant", "native_path", "root_path", "folder_path",
+        "destination_path", "device_id", "installation_id", "user_id", "account_id",
+        "permissions", "health_permissions", "purchase", "purchases", "entitlement",
+        "onboarding", "history", "export_history", "created_at", "updated_at",
+        "modified_at", "enabled_at", "last_run", "last_export_date", "last_success",
+        "last_today_refresh_date", "retry", "retries", "pending_work",
+        "pending_requests", "operation_id", "destination_fingerprint", "fingerprint",
+        "engine_pin", "engine_authority", "worker_id", "alarm_id", "schedule_enabled",
+        "is_enabled", "timezone", "time_zone", "zone_id", "health_records",
+        "health_data", "source_data", "records", "samples", "measurements",
+        "analytics", "email", "api_key", "raw_persistence_snapshot", "session_id",
+        "first_name", "last_name", "full_name", "include_granular_data",
+        "desired_target", "rollups", "weekly_rollup", "monthly_rollup", "yearly_rollup",
+        "calendar_timezone", "calendar_time_zone", "migration_marker", "folder_display_name",
+        "timestamp",
     }
     forbidden_fragments = (
-        "credential", "password", "token", "secret", "authorization", "header",
-        "bookmark", "saf_uri", "content_uri", "folder_grant", "permission",
-        "purchase", "entitlement", "history", "device_id", "installation_id",
-        "account_id", "health_record", "health_data", "source_data", "analytics",
-        "email", "api_key", "raw_persistence", "raw_snapshot", "session_id",
-        "pending_retry", "operation_id", "destination_fingerprint", "engine_pin",
+        "credential", "password", "token", "secret", "authorization", "header", "bookmark",
+        "saf_uri", "content_uri", "folder_grant", "permission", "purchase",
+        "entitlement", "history", "device_id", "device_identifier", "installation_id",
+        "installation_identifier", "account_id", "account_identifier", "user_id",
+        "user_identifier", "native_profile", "native_id", "profile_id", "profile_uuid",
+        "destination_id", "destination_uuid", "endpoint_id", "endpoint_uuid", "folder_id",
+        "folder_uuid", "schedule_entry", "health_record", "health_data", "source_data",
+        "analytics", "api_key",
+        "raw_persistence", "session_id", "pending_", "operation_id",
+        "destination_fingerprint", "engine_pin", "engine_authority", "pairing",
+        "runtime_", "time_zone", "timezone", "migration", "folder_display",
+        "endpoint_url", "api_url", "worker_", "alarm_", "progress", "last_",
+        "weekly_rollup", "monthly_rollup", "yearly_rollup",
     )
 
-    def reject_sensitive(value: Any, value_context: str) -> None:
+    def visit(value: Any, value_context: str, path: tuple[str, ...]) -> None:
         if isinstance(value, dict):
             for key, child in value.items():
-                normalized = re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
+                snake_key = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+                normalized = re.sub(r"[^a-z0-9]+", "_", snake_key.lower()).strip("_")
+                raw_snapshot_option = (
+                    normalized == "raw_snapshot"
+                    and len(path) >= 3
+                    and path[-3:] == ("platform_extensions", "android", "export")
+                )
+                schedule_enabled = normalized == "enabled" and "schedule" in path
+                runtime_suffix = normalized.endswith(("_timestamp", "_millis", "_at"))
                 safe_disclosure_fields = {"credentials_required", "header_level"}
-                if normalized not in safe_disclosure_fields and (
-                    normalized in forbidden_exact
-                    or any(fragment in normalized for fragment in forbidden_fragments)
+                if normalized == "raw_snapshot" and not raw_snapshot_option:
+                    fail(f"{value_context}: raw snapshot payload/snapshot field is forbidden")
+                if schedule_enabled or runtime_suffix or (
+                    normalized not in safe_disclosure_fields
+                    and (
+                        normalized in forbidden_exact
+                        or any(fragment in normalized for fragment in forbidden_fragments)
+                    )
                 ):
                     fail(f"{value_context}: forbidden sensitive/runtime field {key!r}")
-                reject_sensitive(child, f"{value_context}.{key}")
+                visit(child, f"{value_context}.{key}", path + (normalized,))
         elif isinstance(value, list):
             for index, child in enumerate(value):
-                reject_sensitive(child, f"{value_context}[{index}]")
+                visit(child, f"{value_context}[{index}]", path + ("[]",))
         elif isinstance(value, str):
             lowered = value.lower()
             if lowered.startswith(("content://", "file://")):
                 fail(f"{value_context}: device-bound URI is forbidden")
-            if "authorization:" in lowered or re.search(r"\b(?:bearer|basic)\s+[a-z0-9]", lowered):
+            if (
+                "authorization:" in lowered
+                or re.search(r"\b(?:bearer|basic)\s+[a-z0-9]", lowered)
+                or "-----begin private key-----" in lowered
+            ):
                 fail(f"{value_context}: authorization material is forbidden")
 
-    reject_sensitive(payload, context)
+    visit(payload, context, ())
 
-    if "categories" in profile["metrics"] or "enabled_categories" in profile["metrics"]:
-        fail(f"{context}: metric categories must not be selection authority")
 
+def _validate_shared_setup_v2_relative(
+    value: str,
+    field: str,
+    context: str,
+    *,
+    allow_segments: bool,
+) -> None:
+    decoded = value
+    for _ in range(3):
+        next_value = unquote(decoded)
+        if next_value == decoded:
+            break
+        decoded = next_value
+    if any(ord(character) < 32 for character in decoded):
+        fail(f"{context}.{field}: control characters are forbidden")
+    if (
+        decoded.startswith(("/", "\\"))
+        or "\\" in decoded
+        or "%" in value
+        or "//" in decoded
+        or "://" in decoded
+        or re.match(r"^[A-Za-z]:", decoded)
+    ):
+        fail(f"{context}.{field}: path/template must be relative")
+    parts = decoded.split("/")
+    if any(part in {".", ".."} for part in parts) or (
+        decoded and any(not part for part in parts)
+    ):
+        fail(f"{context}.{field}: empty or traversal components are forbidden")
+    if not allow_segments and len(parts) != 1:
+        fail(f"{context}.{field}: filename template must be one segment")
+
+
+def _validate_shared_setup_v2_endpoint(
+    endpoint: dict[str, Any],
+    endpoint_context: str,
+    context: str,
+) -> None:
+    if endpoint["scheme"] != "https" or endpoint["credentials_required"] is not True:
+        fail(f"{endpoint_context}: endpoint must be inert HTTPS requiring local credentials")
+    combined = f"{endpoint['host']}{endpoint['path']}"
+    for _ in range(3):
+        next_value = unquote(combined)
+        if next_value == combined:
+            break
+        combined = next_value
+    if any(character in combined for character in ("@", "%", "?", "#")):
+        fail(f"{endpoint_context}: endpoint userinfo/escape/query/fragment is forbidden")
+    if endpoint["path"].startswith("//"):
+        fail(f"{endpoint_context}: endpoint network-path form is forbidden")
+    if endpoint["host"].lower() != "setup.invalid":
+        fail(f"{context}: canonical synthetic fixtures must use the reserved setup.invalid host")
+
+
+def _validate_shared_setup_v2_registry(
+    root: Path,
+    payload: dict[str, Any],
+    referenced_ids: set[str],
+    context: str,
+) -> None:
     registry_path = repository_path(
         root,
         "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
         f"{context}.registry",
     )
     registry = load_json(registry_path, f"{context}.registry")
-    registry_identity = payload["metric_registry"]
-    if registry_identity["schema"] != METRIC_REGISTRY_SCHEMA:
-        fail(f"{context}: metric registry schema discriminator is invalid")
-    local_registry_sha256 = hashlib.sha256(registry_path.read_bytes()).hexdigest()
-    source_registry_matches = (
-        registry_identity["registry_version"] == registry["registry_version"]
-        and registry_identity["registry_sha256"] == local_registry_sha256
-    )
+    identity = payload["metric_registry"]
+    if identity["schema"] != METRIC_REGISTRY_SCHEMA or identity["registry_version"] != 1:
+        fail(f"{context}: metric registry identity must be healthmd.metric_registry v1")
+    source_registry_matches = identity["registry_sha256"] == hashlib.sha256(
+        registry_path.read_bytes()
+    ).hexdigest()
     registry_metrics = {metric["semantic_id"]: metric for metric in registry["metrics"]}
-    enabled_ids = profile["metrics"]["enabled_ids"]
-    if enabled_ids != sorted(enabled_ids):
-        fail(f"{context}: enabled semantic metric IDs must be sorted")
-    unknown_ids = sorted(set(enabled_ids) - set(registry_metrics))
+    unknown_ids = sorted(referenced_ids - set(registry_metrics))
     if unknown_ids and source_registry_matches:
         fail(f"{context}: unknown canonical semantic metric IDs {unknown_ids}")
-
-    individual_ids = set(profile["individual_entries"]["metrics"])
-    unknown_individual_ids = sorted(individual_ids - set(registry_metrics))
-    if unknown_individual_ids and source_registry_matches:
-        fail(f"{context}: unknown individual-entry semantic IDs {unknown_individual_ids}")
 
     aliases = payload["metric_aliases"]
     alias_ids = [alias["semantic_id"] for alias in aliases]
     if alias_ids != sorted(alias_ids) or len(alias_ids) != len(set(alias_ids)):
-        fail(f"{context}: metric alias ledger must be unique and semantic-ID sorted")
-    if set(alias_ids) != set(enabled_ids):
-        fail(f"{context}: metric alias ledger must cover enabled IDs exactly")
+        fail(f"{context}: root metric alias ledger must be unique and semantic-ID sorted")
+    if set(alias_ids) != referenced_ids:
+        fail(
+            f"{context}: root metric alias ledger must exactly cover enabled and individual-entry IDs"
+        )
     for index, alias in enumerate(aliases):
         alias_context = f"{context}.metric_aliases[{index}]"
         registry_metric = registry_metrics.get(alias["semantic_id"])
@@ -1552,94 +1865,879 @@ def validate_shared_setup_fixture(root: Path, path: Path) -> None:
                 binding = registry_metric[platform]
                 expected = binding["selection_id"] if binding["status"] == "backed" else None
                 if alias[f"{platform}_selection_id"] != expected:
-                    fail(f"{alias_context}: {platform} selection ID differs from registry evidence")
+                    fail(
+                        f"{alias_context}: {platform} selection ID differs from registry evidence"
+                    )
 
-    path_fields = [
-        (profile["export"]["folder_template"], "profile.export.folder_template", True),
-        (profile["export"]["filename_template"], "profile.export.filename_template", False),
-        (profile["individual_entries"]["entries_folder"], "profile.individual_entries.entries_folder", True),
-        (profile["individual_entries"]["filename_template"], "profile.individual_entries.filename_template", False),
-        (profile["daily_notes"]["folder"], "profile.daily_notes.folder", True),
-        (profile["daily_notes"]["filename_template"], "profile.daily_notes.filename_template", False),
-    ]
-    android_extension = payload["platform_extensions"]["android"]
-    if android_extension is not None:
-        path_fields.append((android_extension["export"]["subfolder"], "platform_extensions.android.export.subfolder", True))
-    for metric_id, metric_config in profile["individual_entries"]["metrics"].items():
-        custom_folder = metric_config["custom_folder"]
-        if custom_folder is not None:
-            path_fields.append((custom_folder, f"profile.individual_entries.metrics.{metric_id}.custom_folder", True))
 
-    def validate_relative(value: str, field: str, allow_segments: bool) -> None:
-        decoded = value
-        for _ in range(3):
-            next_value = unquote(decoded)
-            if next_value == decoded:
-                break
-            decoded = next_value
-        if any(ord(character) < 32 for character in decoded):
-            fail(f"{context}.{field}: control characters are forbidden")
-        if (
-            decoded.startswith(("/", "\\"))
-            or "\\" in decoded
-            or "%" in value
-            or "//" in decoded
-            or "://" in decoded
-            or re.match(r"^[A-Za-z]:", decoded)
-        ):
-            fail(f"{context}.{field}: path/template must be relative")
-        parts = decoded.split("/")
-        if any(part in {".", ".."} for part in parts) or (
-            decoded and any(not part for part in parts)
-        ):
-            fail(f"{context}.{field}: empty or traversal components are forbidden")
-        if not allow_segments and len(parts) != 1:
-            fail(f"{context}.{field}: filename template must be one segment")
+def _validate_shared_setup_v2_payload(root: Path, payload: dict[str, Any], context: str) -> None:
+    schema = _shared_setup_schema(root, SHARED_SETUP_V2_SCHEMA_VERSION, context)
+    validate_json_schema_subset(payload, schema, context)
+    _reject_sensitive_shared_setup_v2(payload, context)
 
-    for value, field, allow_segments in path_fields:
-        validate_relative(value, field, allow_segments)
+    profiles = payload["profiles"]
+    expected_ids = [f"profile-{index:03d}" for index in range(1, len(profiles) + 1)]
+    actual_ids = [profile["bundle_id"] for profile in profiles]
+    if actual_ids != expected_ids:
+        fail(f"{context}: profile bundle IDs must be exact sequential store-order references")
+    if payload["active_profile"] not in set(actual_ids):
+        fail(f"{context}: active_profile must reference one bundle-local profile ID")
 
-    schedule = profile["schedule"]
-    if "enabled" in schedule:
-        fail(f"{context}: imported schedule must never contain an operative enabled state")
-
-    endpoint = profile["api_endpoint"]
-    if endpoint is not None:
-        if endpoint["scheme"] != "https" or endpoint["credentials_required"] is not True:
-            fail(f"{context}: endpoint must be non-operative HTTPS requiring credentials")
-        combined = f"{endpoint['host']}{endpoint['path']}"
-        for _ in range(3):
-            next_value = unquote(combined)
-            if next_value == combined:
-                break
-            combined = next_value
-        if any(character in combined for character in ("@", "%", "?", "#")):
-            fail(f"{context}: endpoint userinfo/escape/query/fragment is forbidden")
-        if endpoint["path"].startswith("//"):
-            fail(f"{context}: endpoint network-path form is forbidden")
-        if endpoint["host"].lower() != "setup.invalid":
-            fail(f"{context}: canonical fixture endpoint must use synthetic reserved .invalid host")
-
-    extensions = payload["platform_extensions"]
+    folded_names: set[str] = set()
+    referenced_ids: set[str] = set()
     origin = payload["created_by"]["platform"]
-    if extensions[origin] is None:
-        fail(f"{context}: writer must include its own platform extension")
-    for platform in ("apple", "android"):
-        extension = extensions[platform]
-        if extension is not None and extension["extension_version"] != 1:
-            fail(f"{context}: present platform extensions must be explicitly versioned")
-    if origin == "apple":
-        apple_schedule = extensions["apple"]["schedule"]
-        cadence = schedule["cadence"]
-        frequency = apple_schedule["frequency"]
-        cadence_matches = (
-            (frequency == "daily" and cadence == {"value": 1, "unit": "days"})
-            or (frequency == "weekly" and cadence == {"value": 1, "unit": "weeks"})
-            or (frequency == "custom" and cadence["unit"] == apple_schedule["custom_unit"])
+
+    for index, profile in enumerate(profiles):
+        profile_context = f"{context}.profiles[{index}]"
+        name = profile["name"]
+        if name != name.strip():
+            fail(f"{profile_context}.name: profile name must already be trimmed")
+        folded_name = name.casefold()
+        if folded_name in folded_names:
+            fail(f"{context}: profile names must be case-insensitively unique")
+        folded_names.add(folded_name)
+
+        formats = profile["export"]["formats"]
+        if formats != sorted(formats):
+            fail(f"{profile_context}.export.formats: formats must be lexicographically sorted")
+        metrics = profile["metrics"]
+        if "categories" in metrics or "enabled_categories" in metrics:
+            fail(f"{profile_context}.metrics: categories must not be selection authority")
+        enabled_ids = metrics["enabled_ids"]
+        if enabled_ids != sorted(enabled_ids):
+            fail(f"{profile_context}.metrics.enabled_ids: semantic IDs must be sorted")
+        referenced_ids.update(enabled_ids)
+        individual_metrics = profile["individual_entries"]["metrics"]
+        referenced_ids.update(individual_metrics)
+
+        extensions = profile["platform_extensions"]
+        if extensions[origin] is None:
+            fail(f"{profile_context}: writer must include its own typed v2 extension")
+        for platform in ("apple", "android"):
+            extension = extensions[platform]
+            if extension is not None and extension["extension_version"] != 2:
+                fail(f"{profile_context}: present extensions must have extension_version 2")
+
+        path_fields = [
+            (profile["export"]["folder_template"], "export.folder_template", True),
+            (profile["export"]["filename_template"], "export.filename_template", False),
+            (profile["individual_entries"]["entries_folder"], "individual_entries.entries_folder", True),
+            (profile["individual_entries"]["filename_template"], "individual_entries.filename_template", False),
+            (profile["daily_notes"]["folder"], "daily_notes.folder", True),
+            (profile["daily_notes"]["filename_template"], "daily_notes.filename_template", False),
+        ]
+        android_extension = extensions["android"]
+        if android_extension is not None:
+            path_fields.append(
+                (android_extension["export"]["subfolder"], "platform_extensions.android.export.subfolder", True)
+            )
+        for metric_id, metric_config in individual_metrics.items():
+            custom_folder = metric_config["custom_folder"]
+            if custom_folder is not None:
+                path_fields.append(
+                    (custom_folder, f"individual_entries.metrics.{metric_id}.custom_folder", True)
+                )
+        for value, field, allow_segments in path_fields:
+            _validate_shared_setup_v2_relative(
+                value,
+                field,
+                profile_context,
+                allow_segments=allow_segments,
+            )
+
+        destination = profile["destination"]
+        endpoint = destination["api_endpoint"]
+        if destination["kind"] != "api_endpoint" and endpoint is not None:
+            fail(f"{profile_context}.destination: endpoint is valid only for api_endpoint kind")
+        if endpoint is not None:
+            _validate_shared_setup_v2_endpoint(
+                endpoint,
+                f"{profile_context}.destination.api_endpoint",
+                context,
+            )
+
+        schedule = profile["schedule"]
+        apple_extension = extensions["apple"]
+        if apple_extension is not None:
+            apple_schedule = apple_extension["schedule"]
+            if (schedule is None) != (apple_schedule is None):
+                fail(f"{profile_context}: common and Apple schedule presence contradict")
+            if schedule is not None and apple_schedule is not None:
+                cadence = schedule["cadence"]
+                frequency = apple_schedule["frequency"]
+                cadence_matches = (
+                    (frequency == "daily" and cadence["value"] == 1 and cadence["unit"] == "days")
+                    or (
+                        frequency == "weekly"
+                        and cadence["value"] == 1
+                        and cadence["unit"] == "weeks"
+                    )
+                    or (
+                        frequency == "custom"
+                        and cadence["unit"] == apple_schedule["custom_unit"]
+                    )
+                )
+                if not cadence_matches:
+                    fail(f"{profile_context}: common and Apple cadence representations contradict")
+
+    _validate_shared_setup_v2_registry(root, payload, referenced_ids, context)
+
+
+def validate_shared_setup_fixture(
+    root: Path,
+    path: Path,
+    *,
+    enforce_writer_allowlist: bool = False,
+) -> None:
+    try:
+        with path.open("rb") as stream:
+            fixture_bytes = stream.read(SHARED_SETUP_V2_MAX_BYTES + 1)
+    except OSError as error:
+        fail(f"healthmd.shared_setup fixture: cannot read input: {error}")
+    if len(fixture_bytes) > SHARED_SETUP_V2_MAX_BYTES:
+        fail(
+            f"healthmd.shared_setup fixture: input exceeds "
+            f"{SHARED_SETUP_V2_MAX_BYTES} encoded bytes"
         )
-        portable_target = "api_endpoint" if apple_schedule["desired_target"] == "api_endpoint" else "device_folder"
-        if not cadence_matches or schedule["desired_target"] != portable_target:
-            fail(f"{context}: portable and Apple schedule representations contradict each other")
+    payload = _decode_shared_setup_json(fixture_bytes, "healthmd.shared_setup fixture")
+    if not isinstance(payload, dict):
+        fail("healthmd.shared_setup fixture: root must be a JSON object")
+    if payload.get("schema") != SHARED_SETUP_SCHEMA:
+        fail("healthmd.shared_setup fixture: exact schema discriminator is required")
+    version = payload.get("schema_version")
+    if type(version) is not int or version != SHARED_SETUP_V2_SCHEMA_VERSION:
+        fail(
+            "healthmd.shared_setup fixture: unsupported schema_version; only "
+            "integer 2 is accepted and removed version 1 fails closed"
+        )
+
+    context = "healthmd.shared_setup v2 fixture"
+    _validate_shared_setup_generic_bounds(
+        payload,
+        context,
+        max_depth=20,
+        max_container_items=512,
+        max_key_scalars=65_536,
+        max_string_scalars=65_536,
+        max_nodes=262_144,
+    )
+    if fixture_bytes != canonical_json(payload) + b"\n":
+        fail(f"{context}: fixture must be canonical sorted compact JSON with one newline")
+    _validate_shared_setup_v2_payload(root, payload, context)
+
+    if enforce_writer_allowlist:
+        schema = _shared_setup_schema(root, version, f"healthmd.shared_setup v{version} fixture")
+        _validate_shared_setup_writer_allowlist(
+            payload,
+            schema,
+            f"healthmd.shared_setup v{version} writer",
+        )
+
+
+def validate_shared_setup_writer_fixture(root: Path, path: Path) -> None:
+    validate_shared_setup_fixture(root, path, enforce_writer_allowlist=True)
+
+
+_TRANSACTION_STATE_SNAPSHOT_KEYS = (
+    "profiles",
+    "active_profile_id",
+    "schedules",
+    "sidecar",
+    "blocked_profile_ids",
+)
+_TRANSACTION_STATE_KEYS = set(_TRANSACTION_STATE_SNAPSHOT_KEYS) | {"undo_snapshot"}
+_TRANSACTION_PROFILE_KEYS = {
+    "profile_id",
+    "name",
+    "settings_source_bundle_id",
+    "source_profile_sha256",
+    "destination_intent",
+    "folder_binding_id",
+    "api_endpoint_binding_id",
+}
+_TRANSACTION_SCHEDULE_KEYS = {
+    "schedule_id",
+    "profile_id",
+    "is_enabled",
+    "enabled_at",
+    "progress",
+    "history",
+    "pending_work",
+    "worker_id",
+}
+_TRANSACTION_SIDECAR_ROW_KEYS = {
+    "profile_id",
+    "source_bundle_id",
+    "source_profile",
+    "unsupported_semantic_ids",
+}
+_TRANSACTION_DESTINATION_KINDS = {
+    "device_folder",
+    "connected_mac",
+    "api_endpoint",
+    "cloud",
+}
+_TRANSACTION_LOCAL_ID_RE = re.compile(r"^native-[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def _require_transaction_local_id(value: Any, context: str) -> str:
+    if not isinstance(value, str) or not _TRANSACTION_LOCAL_ID_RE.fullmatch(value):
+        fail(f"{context}: expected an explicitly local synthetic native identifier")
+    return value
+
+
+def _shared_setup_transaction_name_key(value: str) -> str:
+    """Locale-independent comparison key used by the language-neutral scenario oracle."""
+    return value.strip().casefold()
+
+
+def _shared_setup_transaction_unique_name(
+    source_name: str,
+    taken_keys: set[str],
+    context: str,
+) -> str:
+    base = source_name.strip()
+    if not base:
+        fail(f"{context}: imported profile name must not be empty")
+    if _shared_setup_transaction_name_key(base) not in taken_keys:
+        result = base
+    else:
+        suffix = 2
+        while _shared_setup_transaction_name_key(f"{base} {suffix}") in taken_keys:
+            suffix += 1
+        result = f"{base} {suffix}"
+    if len(result) > 256:
+        fail(f"{context}: collision suffix makes the native profile name unrepresentable")
+    taken_keys.add(_shared_setup_transaction_name_key(result))
+    return result
+
+
+def normalize_shared_setup_transaction_selection(
+    source_document: dict[str, Any],
+    caller_selection: Any,
+) -> list[str]:
+    """Validate explicit bundle IDs and return them in source document order."""
+    context = "healthmd.shared_setup v2 transaction selection"
+    if not isinstance(caller_selection, list) or not caller_selection:
+        fail(f"{context}: selection must be an explicit non-empty array")
+    if not all(isinstance(item, str) and item for item in caller_selection):
+        fail(f"{context}: every selection value must be a non-empty bundle ID")
+    if len(caller_selection) != len(set(caller_selection)):
+        fail(f"{context}: duplicate bundle IDs are forbidden")
+    source_order = [profile["bundle_id"] for profile in source_document["profiles"]]
+    unknown = sorted(set(caller_selection) - set(source_order))
+    if unknown:
+        fail(f"{context}: unknown bundle IDs {unknown}")
+    selected = set(caller_selection)
+    return [bundle_id for bundle_id in source_order if bundle_id in selected]
+
+
+def _shared_setup_transaction_snapshot(state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: copy.deepcopy(state[key])
+        for key in _TRANSACTION_STATE_SNAPSHOT_KEYS
+    }
+
+
+def _validate_shared_setup_transaction_state(
+    state: Any,
+    source_profiles: dict[str, dict[str, Any]],
+    context: str,
+    *,
+    allow_undo: bool = True,
+) -> dict[str, Any]:
+    state = require_exact_keys(state, _TRANSACTION_STATE_KEYS, context)
+    profiles = state["profiles"]
+    if not isinstance(profiles, list):
+        fail(f"{context}.profiles: must be an array")
+    profile_ids: list[str] = []
+    for index, raw_profile in enumerate(profiles):
+        profile_context = f"{context}.profiles[{index}]"
+        profile = require_exact_keys(raw_profile, _TRANSACTION_PROFILE_KEYS, profile_context)
+        profile_id = _require_transaction_local_id(
+            profile["profile_id"], f"{profile_context}.profile_id"
+        )
+        profile_ids.append(profile_id)
+        name = profile["name"]
+        if not isinstance(name, str) or not name or name != name.strip():
+            fail(f"{profile_context}.name: must be a non-empty trimmed string")
+        source_bundle_id = profile["settings_source_bundle_id"]
+        source_hash = profile["source_profile_sha256"]
+        if source_bundle_id is None:
+            if source_hash is not None:
+                fail(f"{profile_context}: an existing local snapshot has no source hash")
+        else:
+            if not isinstance(source_bundle_id, str) or source_bundle_id not in source_profiles:
+                fail(f"{profile_context}: unknown settings source bundle ID")
+            expected_hash = hashlib.sha256(
+                canonical_json(source_profiles[source_bundle_id])
+            ).hexdigest()
+            if source_hash != expected_hash:
+                fail(f"{profile_context}: source profile hash differs from the v2 DTO")
+        if (
+            not isinstance(profile["destination_intent"], str)
+            or profile["destination_intent"] not in _TRANSACTION_DESTINATION_KINDS
+        ):
+            fail(f"{profile_context}.destination_intent: unsupported destination intent")
+        for binding_key in ("folder_binding_id", "api_endpoint_binding_id"):
+            binding = profile[binding_key]
+            if binding is not None:
+                _require_transaction_local_id(binding, f"{profile_context}.{binding_key}")
+    if len(profile_ids) != len(set(profile_ids)):
+        fail(f"{context}.profiles: native profile IDs must be unique")
+
+    active_profile_id = state["active_profile_id"]
+    if active_profile_id is not None:
+        _require_transaction_local_id(active_profile_id, f"{context}.active_profile_id")
+
+    schedules = state["schedules"]
+    if not isinstance(schedules, list):
+        fail(f"{context}.schedules: must be an array")
+    schedule_ids: list[str] = []
+    for index, raw_schedule in enumerate(schedules):
+        schedule_context = f"{context}.schedules[{index}]"
+        schedule = require_exact_keys(
+            raw_schedule, _TRANSACTION_SCHEDULE_KEYS, schedule_context
+        )
+        schedule_ids.append(
+            _require_transaction_local_id(
+                schedule["schedule_id"], f"{schedule_context}.schedule_id"
+            )
+        )
+        if schedule["profile_id"] not in set(profile_ids):
+            fail(f"{schedule_context}.profile_id: must reference a local profile row")
+        if not isinstance(schedule["is_enabled"], bool):
+            fail(f"{schedule_context}.is_enabled: must be Boolean")
+        for key in ("enabled_at", "progress", "pending_work", "worker_id"):
+            value = schedule[key]
+            if value is not None and not isinstance(value, str):
+                fail(f"{schedule_context}.{key}: must be a string or null")
+        if not isinstance(schedule["history"], list) or not all(
+            isinstance(item, str) for item in schedule["history"]
+        ):
+            fail(f"{schedule_context}.history: must be an array of strings")
+    if len(schedule_ids) != len(set(schedule_ids)):
+        fail(f"{context}.schedules: native schedule IDs must be unique")
+
+    sidecar = require_exact_keys(state["sidecar"], {"version", "profiles"}, f"{context}.sidecar")
+    if type(sidecar["version"]) is not int or sidecar["version"] != 1:
+        fail(f"{context}.sidecar.version: must be integer 1")
+    if not isinstance(sidecar["profiles"], list):
+        fail(f"{context}.sidecar.profiles: must be an array")
+    profile_positions = {profile_id: index for index, profile_id in enumerate(profile_ids)}
+    previous_position = -1
+    sidecar_profile_ids: list[str] = []
+    for index, raw_row in enumerate(sidecar["profiles"]):
+        row_context = f"{context}.sidecar.profiles[{index}]"
+        row = require_exact_keys(raw_row, _TRANSACTION_SIDECAR_ROW_KEYS, row_context)
+        profile_id = row["profile_id"]
+        if profile_id not in profile_positions:
+            fail(f"{row_context}.profile_id: must reference a resulting native profile")
+        position = profile_positions[profile_id]
+        if position <= previous_position:
+            fail(f"{context}.sidecar.profiles: rows must follow native profile-store order")
+        previous_position = position
+        sidecar_profile_ids.append(profile_id)
+        source_bundle_id = row["source_bundle_id"]
+        if not isinstance(source_bundle_id, str) or source_bundle_id not in source_profiles:
+            fail(f"{row_context}.source_bundle_id: unknown source profile")
+        if row["source_profile"] != source_profiles[source_bundle_id]:
+            fail(f"{row_context}.source_profile: complete source v2 DTO was not preserved")
+        unsupported = require_unique_string_array(
+            row["unsupported_semantic_ids"],
+            f"{row_context}.unsupported_semantic_ids",
+        )
+        if unsupported != sorted(unsupported):
+            fail(f"{row_context}.unsupported_semantic_ids: must be sorted")
+    if len(sidecar_profile_ids) != len(set(sidecar_profile_ids)):
+        fail(f"{context}.sidecar.profiles: profile IDs must be unique")
+    blocked = require_unique_string_array(
+        state["blocked_profile_ids"], f"{context}.blocked_profile_ids"
+    )
+    if any(profile_id not in profile_positions for profile_id in blocked):
+        fail(f"{context}.blocked_profile_ids: every ID must reference a profile row")
+
+    undo_snapshot = state["undo_snapshot"]
+    if undo_snapshot is not None:
+        if not allow_undo:
+            fail(f"{context}.undo_snapshot: nested Undo snapshots are forbidden")
+        undo_snapshot = require_exact_keys(
+            undo_snapshot, {"version", "previous_state"}, f"{context}.undo_snapshot"
+        )
+        if type(undo_snapshot["version"]) is not int or undo_snapshot["version"] != 1:
+            fail(f"{context}.undo_snapshot.version: must be integer 1")
+        previous_snapshot = require_exact_keys(
+            undo_snapshot["previous_state"],
+            set(_TRANSACTION_STATE_SNAPSHOT_KEYS),
+            f"{context}.undo_snapshot.previous_state",
+        )
+        previous_state = copy.deepcopy(previous_snapshot)
+        previous_state["undo_snapshot"] = None
+        _validate_shared_setup_transaction_state(
+            previous_state,
+            source_profiles,
+            f"{context}.undo_snapshot.previous_state",
+            allow_undo=False,
+        )
+    return state
+
+
+def build_shared_setup_transaction_candidate(
+    source_document: dict[str, Any],
+    existing_state: dict[str, Any],
+    caller_selection: Any,
+    mode: str,
+    generated_profile_ids: dict[str, str],
+    generated_schedule_ids: dict[str, str],
+    unsupported_semantic_ids: dict[str, list[str]],
+) -> dict[str, Any]:
+    """Materialize the frozen language-neutral Add/Replace scenario semantics."""
+    if mode not in {"add", "replace"}:
+        fail("healthmd.shared_setup v2 transaction: mode must be add or replace")
+    source_profiles = {
+        profile["bundle_id"]: profile for profile in source_document["profiles"]
+    }
+    _validate_shared_setup_transaction_state(
+        existing_state,
+        source_profiles,
+        "healthmd.shared_setup v2 transaction existing_state",
+    )
+    selected = normalize_shared_setup_transaction_selection(
+        source_document, caller_selection
+    )
+    selected_set = set(selected)
+    if not isinstance(generated_profile_ids, dict) or set(generated_profile_ids) != selected_set:
+        fail("healthmd.shared_setup v2 transaction: generated profile IDs must cover selection exactly")
+    selected_with_schedules = {
+        bundle_id for bundle_id in selected if source_profiles[bundle_id]["schedule"] is not None
+    }
+    if not isinstance(generated_schedule_ids, dict) or set(generated_schedule_ids) != selected_with_schedules:
+        fail("healthmd.shared_setup v2 transaction: generated schedule IDs must cover representable schedules exactly")
+    if not isinstance(unsupported_semantic_ids, dict) or set(unsupported_semantic_ids) != selected_set:
+        fail("healthmd.shared_setup v2 transaction: unsupported-ID rows must cover selection exactly")
+
+    existing_profile_ids = {profile["profile_id"] for profile in existing_state["profiles"]}
+    fresh_profile_ids: list[str] = []
+    for bundle_id in selected:
+        native_id = _require_transaction_local_id(
+            generated_profile_ids[bundle_id],
+            f"healthmd.shared_setup v2 transaction generated_profile_ids.{bundle_id}",
+        )
+        if native_id == bundle_id or native_id in existing_profile_ids:
+            fail("healthmd.shared_setup v2 transaction: every imported profile needs fresh native identity")
+        fresh_profile_ids.append(native_id)
+    if len(fresh_profile_ids) != len(set(fresh_profile_ids)):
+        fail("healthmd.shared_setup v2 transaction: generated native profile IDs must be unique")
+
+    existing_schedule_ids = {row["schedule_id"] for row in existing_state["schedules"]}
+    fresh_schedule_ids: list[str] = []
+    for bundle_id in selected:
+        if bundle_id not in selected_with_schedules:
+            continue
+        schedule_id = _require_transaction_local_id(
+            generated_schedule_ids[bundle_id],
+            f"healthmd.shared_setup v2 transaction generated_schedule_ids.{bundle_id}",
+        )
+        if schedule_id in existing_schedule_ids:
+            fail("healthmd.shared_setup v2 transaction: generated schedule IDs must be fresh")
+        fresh_schedule_ids.append(schedule_id)
+    if len(fresh_schedule_ids) != len(set(fresh_schedule_ids)):
+        fail("healthmd.shared_setup v2 transaction: generated native schedule IDs must be unique")
+
+    for bundle_id in selected:
+        unsupported = require_unique_string_array(
+            unsupported_semantic_ids[bundle_id],
+            f"healthmd.shared_setup v2 transaction unsupported_semantic_ids.{bundle_id}",
+        )
+        if unsupported != sorted(unsupported):
+            fail("healthmd.shared_setup v2 transaction: unsupported semantic IDs must be sorted")
+        source_ids = set(source_profiles[bundle_id]["metrics"]["enabled_ids"]) | set(
+            source_profiles[bundle_id]["individual_entries"]["metrics"]
+        )
+        if not set(unsupported).issubset(source_ids):
+            fail("healthmd.shared_setup v2 transaction: unsupported IDs must come from their source profile")
+
+    profiles = copy.deepcopy(existing_state["profiles"] if mode == "add" else [])
+    taken_name_keys = {
+        _shared_setup_transaction_name_key(profile["name"])
+        for profile in profiles
+    }
+    imported_rows: list[dict[str, Any]] = []
+    for bundle_id in selected:
+        source_profile = source_profiles[bundle_id]
+        name = source_profile["name"]
+        if mode == "add":
+            name = _shared_setup_transaction_unique_name(
+                name,
+                taken_name_keys,
+                f"healthmd.shared_setup v2 transaction {bundle_id}.name",
+            )
+        imported_row = {
+            "profile_id": generated_profile_ids[bundle_id],
+            "name": name,
+            "settings_source_bundle_id": bundle_id,
+            "source_profile_sha256": hashlib.sha256(
+                canonical_json(source_profile)
+            ).hexdigest(),
+            "destination_intent": source_profile["destination"]["kind"],
+            "folder_binding_id": None,
+            "api_endpoint_binding_id": None,
+        }
+        profiles.append(imported_row)
+        imported_rows.append(imported_row)
+    if len(profiles) > 100:
+        fail("healthmd.shared_setup v2 transaction: resulting profile count exceeds 100")
+
+    schedules = copy.deepcopy(existing_state["schedules"] if mode == "add" else [])
+    for bundle_id in selected:
+        if source_profiles[bundle_id]["schedule"] is None:
+            continue
+        schedules.append(
+            {
+                "schedule_id": generated_schedule_ids[bundle_id],
+                "profile_id": generated_profile_ids[bundle_id],
+                "is_enabled": False,
+                "enabled_at": None,
+                "progress": None,
+                "history": [],
+                "pending_work": None,
+                "worker_id": None,
+            }
+        )
+
+    sidecar_rows = copy.deepcopy(
+        existing_state["sidecar"]["profiles"] if mode == "add" else []
+    )
+    for bundle_id in selected:
+        sidecar_rows.append(
+            {
+                "profile_id": generated_profile_ids[bundle_id],
+                "source_bundle_id": bundle_id,
+                "source_profile": copy.deepcopy(source_profiles[bundle_id]),
+                "unsupported_semantic_ids": copy.deepcopy(
+                    unsupported_semantic_ids[bundle_id]
+                ),
+            }
+        )
+    sidecar = {"version": 1, "profiles": sidecar_rows}
+
+    blocked = copy.deepcopy(
+        existing_state["blocked_profile_ids"] if mode == "add" else []
+    )
+    blocked.extend(generated_profile_ids[bundle_id] for bundle_id in selected)
+
+    imported_by_bundle = {
+        bundle_id: generated_profile_ids[bundle_id] for bundle_id in selected
+    }
+    existing_active = existing_state["active_profile_id"]
+    resulting_ids = {profile["profile_id"] for profile in profiles}
+    if mode == "add" and existing_active in existing_profile_ids:
+        active_profile_id = existing_active
+    elif source_document["active_profile"] in imported_by_bundle:
+        active_profile_id = imported_by_bundle[source_document["active_profile"]]
+    else:
+        active_profile_id = generated_profile_ids[selected[0]]
+
+    candidate = {
+        "profiles": profiles,
+        "active_profile_id": active_profile_id,
+        "schedules": schedules,
+        "sidecar": sidecar,
+        "blocked_profile_ids": blocked,
+        "undo_snapshot": {
+            "version": 1,
+            "previous_state": _shared_setup_transaction_snapshot(existing_state),
+        },
+    }
+    if len(canonical_json(sidecar)) > SHARED_SETUP_V2_SIDECAR_MAX_BYTES:
+        fail("healthmd.shared_setup v2 transaction: sidecar exceeds 4 MiB")
+    if len(canonical_json(candidate["undo_snapshot"])) > SHARED_SETUP_V2_UNDO_MAX_BYTES:
+        fail("healthmd.shared_setup v2 transaction: Undo snapshot exceeds 8 MiB")
+    _validate_shared_setup_transaction_state(
+        candidate,
+        source_profiles,
+        f"healthmd.shared_setup v2 transaction expected_{mode}",
+    )
+    if candidate["active_profile_id"] not in resulting_ids:
+        fail("healthmd.shared_setup v2 transaction: resulting active profile must be valid")
+    if any(
+        row["folder_binding_id"] is not None or row["api_endpoint_binding_id"] is not None
+        for row in imported_rows
+    ):
+        fail("healthmd.shared_setup v2 transaction: imported destination bindings must be nil")
+    return candidate
+
+
+def undo_shared_setup_transaction_candidate(
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    """Restore one bounded snapshot and consume it; a second call fails closed."""
+    snapshot = state.get("undo_snapshot")
+    if not isinstance(snapshot, dict):
+        fail("healthmd.shared_setup v2 transaction: no Undo snapshot")
+    snapshot = require_exact_keys(
+        snapshot,
+        {"version", "previous_state"},
+        "healthmd.shared_setup v2 transaction Undo snapshot",
+    )
+    if type(snapshot["version"]) is not int or snapshot["version"] != 1:
+        fail("healthmd.shared_setup v2 transaction: invalid Undo snapshot version")
+    if len(canonical_json(snapshot)) > SHARED_SETUP_V2_UNDO_MAX_BYTES:
+        fail("healthmd.shared_setup v2 transaction: Undo snapshot exceeds 8 MiB")
+    previous_state = require_exact_keys(
+        snapshot["previous_state"],
+        set(_TRANSACTION_STATE_SNAPSHOT_KEYS),
+        "healthmd.shared_setup v2 transaction Undo previous_state",
+    )
+    restored = copy.deepcopy(previous_state)
+    restored["undo_snapshot"] = None
+    return restored
+
+
+def validate_shared_setup_public_artifact_isolation(
+    payload: Any,
+    local_native_values: set[str],
+    context: str,
+) -> None:
+    """Recursively keep local transaction identity/state out of public v2 DTOs."""
+    if not isinstance(payload, dict):
+        fail(f"{context}: public Shared Setup artifact must be an object")
+    _reject_sensitive_shared_setup_v2(payload, context)
+
+    def visit(value: Any, value_context: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if any(native_value in key for native_value in local_native_values):
+                    fail(f"{value_context}: local native identity leaked into a public key")
+                visit(child, f"{value_context}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                visit(child, f"{value_context}[{index}]")
+        elif isinstance(value, str):
+            if any(native_value in value for native_value in local_native_values):
+                fail(f"{value_context}: local transaction identity/state leaked into public data")
+            lowered = value.lower()
+            if re.search(r"(?<![a-z0-9])native-[a-z0-9]+(?:-[a-z0-9]+)+(?![a-z0-9])", lowered):
+                fail(f"{value_context}: synthetic native identity leaked into public data")
+            if lowered.startswith(("content://", "file://", "saf://")) or re.match(
+                r"^(?:/users/|/private/|/storage/|/data/|[a-z]:[\\/])",
+                lowered,
+            ):
+                fail(f"{value_context}: native path or URI leaked into public data")
+
+    visit(payload, context)
+
+
+def validate_shared_setup_transaction_scenario_fixture(root: Path, path: Path) -> None:
+    context = "healthmd.shared_setup v2 transaction scenario"
+    fixture_bytes = path.read_bytes()
+    if len(fixture_bytes) > SHARED_SETUP_V2_MAX_BYTES:
+        fail(f"{context}: fixture exceeds 4 MiB")
+    payload = _decode_shared_setup_json(fixture_bytes, context)
+    if fixture_bytes != canonical_json(payload) + b"\n":
+        fail(f"{context}: fixture must be canonical sorted compact JSON with one newline")
+    _validate_shared_setup_generic_bounds(
+        payload,
+        context,
+        max_depth=20,
+        max_container_items=512,
+        max_key_scalars=65_536,
+        max_string_scalars=65_536,
+        max_nodes=262_144,
+    )
+    payload = require_exact_keys(payload, {"schema", "schema_version", "scenario"}, context)
+    if payload["schema"] != SHARED_SETUP_TRANSACTION_SCENARIO_SCHEMA:
+        fail(f"{context}: invalid test-infrastructure schema")
+    if (
+        type(payload["schema_version"]) is not int
+        or payload["schema_version"] != SHARED_SETUP_TRANSACTION_SCENARIO_VERSION
+    ):
+        fail(f"{context}: schema_version must be integer 1")
+    scenario = require_exact_keys(
+        payload["scenario"],
+        {
+            "name",
+            "scope",
+            "source_document",
+            "caller_selection",
+            "normalized_selection",
+            "generated_profile_ids",
+            "generated_schedule_ids",
+            "unsupported_semantic_ids",
+            "existing_state",
+            "local_environment",
+            "expected_add_state",
+            "expected_replace_state",
+            "expected_failed_apply_rollback",
+            "expected_undo",
+            "expected_unmodified_local_environment",
+        },
+        f"{context}.scenario",
+    )
+    if scenario["name"] != "selection-normalized-add-replace-undo":
+        fail(f"{context}.scenario.name: unknown scenario")
+    if scenario["scope"] != "synthetic_local_transaction_test_only":
+        fail(f"{context}.scenario.scope: native IDs require explicit local-only scope")
+
+    source_document = scenario["source_document"]
+    if (
+        not isinstance(source_document, dict)
+        or source_document.get("schema") != SHARED_SETUP_SCHEMA
+        or type(source_document.get("schema_version")) is not int
+        or source_document["schema_version"] != SHARED_SETUP_V2_SCHEMA_VERSION
+    ):
+        fail(f"{context}.source_document: must be a Shared Setup v2 public DTO")
+    _validate_shared_setup_generic_bounds(
+        source_document,
+        f"{context}.source_document",
+        max_depth=20,
+        max_container_items=512,
+        max_key_scalars=65_536,
+        max_string_scalars=65_536,
+        max_nodes=262_144,
+    )
+    _validate_shared_setup_v2_payload(root, source_document, f"{context}.source_document")
+    _validate_shared_setup_writer_allowlist(
+        source_document,
+        _shared_setup_schema(root, 2, f"{context}.source_document"),
+        f"{context}.source_document.writer",
+    )
+    source_profiles = {
+        profile["bundle_id"]: profile for profile in source_document["profiles"]
+    }
+    _validate_shared_setup_transaction_state(
+        scenario["existing_state"], source_profiles, f"{context}.existing_state"
+    )
+
+    normalized = normalize_shared_setup_transaction_selection(
+        source_document, scenario["caller_selection"]
+    )
+    if scenario["normalized_selection"] != normalized:
+        fail(f"{context}: caller selection was not normalized into document order")
+    if scenario["caller_selection"] == normalized:
+        fail(f"{context}: fixture must prove normalization from non-document caller order")
+
+    registry_path = repository_path(
+        root,
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        f"{context}.registry",
+    )
+    registry = load_json(registry_path, f"{context}.registry")
+    known_ids = {metric["semantic_id"] for metric in registry["metrics"]}
+    unsupported_map = scenario["unsupported_semantic_ids"]
+    if not isinstance(unsupported_map, dict):
+        fail(f"{context}.unsupported_semantic_ids: must be an object")
+    for bundle_id in normalized:
+        source_profile = source_profiles[bundle_id]
+        referenced = set(source_profile["metrics"]["enabled_ids"]) | set(
+            source_profile["individual_entries"]["metrics"]
+        )
+        if unsupported_map.get(bundle_id) != sorted(referenced - known_ids):
+            fail(f"{context}: unsupported semantic meaning must be preserved per profile")
+
+    add_state = build_shared_setup_transaction_candidate(
+        source_document,
+        scenario["existing_state"],
+        scenario["caller_selection"],
+        "add",
+        scenario["generated_profile_ids"],
+        scenario["generated_schedule_ids"],
+        unsupported_map,
+    )
+    replace_state = build_shared_setup_transaction_candidate(
+        source_document,
+        scenario["existing_state"],
+        scenario["caller_selection"],
+        "replace",
+        scenario["generated_profile_ids"],
+        scenario["generated_schedule_ids"],
+        unsupported_map,
+    )
+    if scenario["expected_add_state"] != add_state:
+        fail(f"{context}: expected Add logical result differs from frozen semantics")
+    if scenario["expected_replace_state"] != replace_state:
+        fail(f"{context}: expected Replace logical result differs from frozen semantics")
+
+    rollback = require_exact_keys(
+        scenario["expected_failed_apply_rollback"],
+        {"state", "verification_required", "previous_undo_restored"},
+        f"{context}.expected_failed_apply_rollback",
+    )
+    if (
+        rollback["state"] != scenario["existing_state"]
+        or rollback["verification_required"] is not True
+        or rollback["previous_undo_restored"] is not True
+    ):
+        fail(f"{context}: failed apply must restore and verify the exact previous state")
+
+    expected_undo = require_exact_keys(
+        scenario["expected_undo"],
+        {"restored_state", "snapshot_consumed", "second_attempt"},
+        f"{context}.expected_undo",
+    )
+    restored_add = undo_shared_setup_transaction_candidate(add_state)
+    restored_replace = undo_shared_setup_transaction_candidate(replace_state)
+    if (
+        restored_add != expected_undo["restored_state"]
+        or restored_replace != expected_undo["restored_state"]
+        or expected_undo["restored_state"] != scenario["existing_state"]
+        or expected_undo["snapshot_consumed"] is not True
+        or expected_undo["second_attempt"] != "no_undo_snapshot"
+    ):
+        fail(f"{context}: Undo must restore exactly once and consume its snapshot")
+    try:
+        undo_shared_setup_transaction_candidate(restored_add)
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: replayed Undo must fail after snapshot consumption")
+
+    local_environment = require_exact_keys(
+        scenario["local_environment"],
+        {"destination_store_marker", "secure_store_marker"},
+        f"{context}.local_environment",
+    )
+    if not all(
+        isinstance(value, str) and value.startswith("native-")
+        for value in local_environment.values()
+    ):
+        fail(f"{context}.local_environment: markers must be explicitly synthetic and local")
+    if scenario["expected_unmodified_local_environment"] != local_environment:
+        fail(f"{context}: destination and secure stores must remain unchanged")
+
+    local_native_values: set[str] = set()
+
+    def collect_local_values(value: Any) -> None:
+        if isinstance(value, dict):
+            for child in value.values():
+                collect_local_values(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect_local_values(child)
+        elif isinstance(value, str) and value.startswith(("native-", "local-")):
+            local_native_values.add(value)
+
+    collect_local_values(scenario)
+    validate_shared_setup_public_artifact_isolation(
+        source_document,
+        local_native_values,
+        f"{context}.source_document.public_isolation",
+    )
+    for fixture_name in (
+        "apple-shared-setup-v2.json",
+        "android-shared-setup-v2.json",
+    ):
+        canonical_path = repository_path(
+            root,
+            f"packages/contracts/shared-setup/v2/fixtures/{fixture_name}",
+            f"{context}.canonical_artifact",
+        )
+        validate_shared_setup_writer_fixture(root, canonical_path)
+        validate_shared_setup_public_artifact_isolation(
+            load_json(canonical_path, f"{context}.{fixture_name}"),
+            local_native_values,
+            f"{context}.{fixture_name}.public_isolation",
+        )
 
 
 def validate_provider_sections_fixture(root: Path, path: Path) -> None:
@@ -2282,6 +3380,204 @@ def validate_metric_registry(
         fail(f"{context}: missing required registry profiles")
 
 
+def validate_semantic_range_capability_fixture(path: Path) -> None:
+    context = f"semantic range capability fixture {path}"
+    payload = load_json(path, context)
+    payload = require_exact_keys(
+        payload,
+        {
+            "schema", "schema_version", "calendar_v1", "range_v2",
+            "revision_one_range_rejected", "range_limit_cases",
+        },
+        context,
+    )
+    if payload["schema"] != "healthmd.semantic_profile_capability_fixture" or payload["schema_version"] != 1:
+        fail(f"{context}: invalid fixture identity")
+    calendar = payload["calendar_v1"]
+    range_v2 = payload["range_v2"]
+    if calendar.get("profile_revision") != 1 or calendar.get("rollup_periods") != ["iso_week"] or calendar.get("rollup_range") is not None:
+        fail(f"{context}.calendar_v1: calendar grammar must remain revision 1")
+    if range_v2.get("profile_revision") != 2 or range_v2.get("rollup_periods") != ["range"] or not isinstance(range_v2.get("rollup_range"), dict):
+        fail(f"{context}.range_v2: range grammar must require revision 2 and explicit bounds")
+    if payload["revision_one_range_rejected"] is not True:
+        fail(f"{context}: revision-one range rejection must be explicit")
+    limit_cases = payload["range_limit_cases"]
+    expected_cases = {
+        "exact-10000-accepted": (10_000, True),
+        "10001-rejected": (10_001, False),
+        "reversed-rejected": (-9_998, False),
+    }
+    if not isinstance(limit_cases, list) or len(limit_cases) != len(expected_cases):
+        fail(f"{context}.range_limit_cases: exact boundary cases are required")
+    for index, case in enumerate(limit_cases):
+        case_context = f"{context}.range_limit_cases[{index}]"
+        case = require_exact_keys(
+            case,
+            {"id", "start_date", "end_date", "expected_days", "accepted"},
+            case_context,
+        )
+        try:
+            start = datetime.strptime(case["start_date"], "%Y-%m-%d").date()
+            end = datetime.strptime(case["end_date"], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            fail(f"{case_context}: bounds must be canonical civil dates")
+        actual_days = (end - start).days + 1
+        expected = expected_cases.get(case["id"])
+        if expected is None or case["expected_days"] != actual_days or (actual_days, case["accepted"]) != expected:
+            fail(f"{case_context}: range boundary acceptance does not match the 10,000-day limit")
+
+    result_schema = load_json(path.parent.parent / "semantic-result.schema.json", f"{context} result schema")
+    synthetic_result = {
+        "schema": "healthmd.semantic_result",
+        "semantic_input_version": 1,
+        "canonical_model_version": 1,
+        "core_api_version": 3,
+        "registry_sha256": "0" * 64,
+        "profile_revision": 2,
+        "session_id": "range-schema-proof",
+        "profile": "apple_health_data_v8",
+        "state": "completed",
+        "next_batch_index": 1,
+        "records_accepted": 0,
+        "records_filtered": 0,
+        "days": [],
+        "rollups": [{
+            "period": "range",
+            "start_date": range_v2["rollup_range"]["start_date"],
+            "end_date": range_v2["rollup_range"]["end_date"],
+            "calendar_time_zone": "UTC",
+            "source_dates": [range_v2["rollup_range"]["start_date"]],
+            "values": [{
+                "output_key": "steps",
+                "rule": "sum",
+                "primary_value": {
+                    "value_type": "number",
+                    "number": {"representation": "unsigned_integer", "decimal": "1"},
+                    "unit": {"id": "steps"},
+                },
+                "days_counted": 1,
+                "statistics": {},
+            }],
+        }],
+        "retained_extensions": [],
+    }
+    validate_json_schema_subset(synthetic_result, result_schema, f"{context}.range_result_v2")
+    synthetic_result["profile_revision"] = 1
+    try:
+        validate_json_schema_subset(synthetic_result, result_schema, f"{context}.range_result_v1")
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: semantic-result schema must reject range at profile revision 1")
+
+    synthetic_result["profile_revision"] = 2
+    synthetic_result["rollups"][0]["period"] = "iso_week"
+    try:
+        validate_json_schema_subset(synthetic_result, result_schema, f"{context}.calendar_result_v2")
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: semantic-result schema must reject calendar roll-ups at profile revision 2")
+
+
+def validate_rollup_summary_fixture(root: Path, path: Path) -> None:
+    context = f"rollup fixture {path}"
+    payload = load_json(path, context)
+    if not isinstance(payload, dict):
+        fail(f"{context}: root must be an object")
+    schema_path = path.parent.parent / "rollup-summary.schema.json"
+    schema = load_json(schema_path, f"{context} schema")
+    if not isinstance(schema, dict) or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+        fail(f"{context}: invalid rollup summary schema")
+    validate_json_schema_subset(payload, schema, context)
+    start_text = payload.get("start_date")
+    end_text = payload.get("end_date")
+    source_dates = payload.get("source_dates")
+    try:
+        ZoneInfo(payload.get("calendar_timezone"))
+    except (TypeError, ZoneInfoNotFoundError):
+        fail(f"{context}.calendar_timezone: must be a valid IANA timezone identifier")
+    try:
+        start = datetime.strptime(start_text, "%Y-%m-%d").date()
+        end = datetime.strptime(end_text, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        fail(f"{context}: start_date and end_date must be canonical civil dates")
+    days_expected = (end - start).days + 1
+    if start > end or days_expected > 10_000:
+        fail(f"{context}: invalid or unbounded requested range")
+    if payload.get("period_id") != f"{start_text}_to_{end_text}":
+        fail(f"{context}.period_id: must equal the immutable requested bounds")
+    if payload.get("days_expected") != days_expected:
+        fail(f"{context}.days_expected: must equal the inclusive requested bounds")
+    if not isinstance(source_dates, list) or source_dates != sorted(set(source_dates)):
+        fail(f"{context}.source_dates: must be unique and sorted")
+    if any(not isinstance(value, str) or value < start_text or value > end_text for value in source_dates):
+        fail(f"{context}.source_dates: every date must be within requested bounds")
+    days_counted = payload.get("days_counted")
+    if days_counted != len(source_dates) or days_counted > days_expected:
+        fail(f"{context}.days_counted: must equal unique source_dates and not exceed days_expected")
+    coverage = payload.get("coverage_percent")
+    expected_coverage = days_counted * 100.0 / days_expected
+    if not isinstance(coverage, (int, float)) or not math.isclose(coverage, expected_coverage, abs_tol=1e-9):
+        fail(f"{context}.coverage_percent: must equal days_counted / days_expected * 100")
+    metrics = payload.get("metrics")
+    if not isinstance(metrics, list) or not metrics:
+        fail(f"{context}.metrics: must be a non-empty array")
+    for index, metric in enumerate(metrics):
+        counted = metric.get("days_counted") if isinstance(metric, dict) else None
+        if type(counted) is not int or counted < 1 or counted > days_counted:
+            fail(f"{context}.metrics[{index}].days_counted: must be within artifact coverage")
+    units = payload.get("units")
+    expected_units = {
+        metric["key"]: metric["unit"]
+        for metric in metrics
+        if isinstance(metric, dict) and metric.get("unit")
+    }
+    if units != expected_units:
+        fail(f"{context}.units: must match the production non-empty metric unit projection")
+    categories = payload.get("categories")
+    expected_categories: dict[str, list[Any]] = {}
+    for metric in metrics:
+        if isinstance(metric, dict):
+            expected_categories.setdefault(metric.get("category"), []).append(metric)
+    if categories != expected_categories:
+        fail(f"{context}.categories: must match the production metric category projection")
+
+
+def validate_rollup_production_fixture(root: Path, path: Path) -> None:
+    context = f"rollup production fixture {path}"
+    production_names = {
+        "range-v9.json": "range.json",
+        "range-v9.csv": "range.csv",
+        "range-v9.md": "range.md",
+        "range-v9-bases.md": "range-bases.md",
+    }
+    production_name = production_names.get(path.name)
+    if production_name is None:
+        fail(f"{context}: unknown canonical range-v9 fixture")
+    generated = root / "apps/apple/docs/reference/generated/rollups" / production_name
+    if generated.read_bytes() != path.read_bytes():
+        fail(f"{context}: fixture must be copied byte-for-byte from the production Swift renderer")
+
+    content = path.read_text()
+    if path.suffix == ".csv":
+        rows = list(csv.reader(content.splitlines()))
+        if not rows or rows[0][:6] != [
+            "Schema", "Schema Version", "Source Schema", "Source Schema Version",
+            "Rollup Rules Version", "Calendar Timezone",
+        ]:
+            fail(f"{context}: range-v9 CSV leading contract columns are incomplete")
+        if len(rows) < 2 or any(len(row) != len(rows[0]) or row[5] != "UTC" for row in rows[1:]):
+            fail(f"{context}: every production CSV row must carry the frozen calendar timezone")
+    elif path.suffix == ".md":
+        if "\ncalendar_timezone: UTC\n" not in content:
+            fail(f"{context}: Markdown/Bases frontmatter must carry calendar_timezone")
+        if path.name == "range-v9.md" and "## Roll-up notes" not in content:
+            fail(f"{context}: canonical Markdown fixture must include the production body")
+        if path.name == "range-v9-bases.md" and "rollup_metrics:" not in content:
+            fail(f"{context}: canonical Bases fixture must include all metric projections")
+
+
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
     manifest_path = root / "packages/contracts/manifest.json"
     manifest = require_exact_keys(
@@ -2367,7 +3663,13 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     f"{fixture_context}: SHA-256 mismatch for {raw_path}; "
                     f"declared {declared_hash}, actual {actual_hash}"
                 )
-            load_json(fixture_path, fixture_context)
+            if fixture_path.suffix == ".json":
+                load_json(fixture_path, fixture_context)
+            else:
+                try:
+                    fixture_bytes.decode("utf-8")
+                except UnicodeDecodeError as error:
+                    fail(f"{fixture_context}: fixture is not UTF-8: {error}")
             provenance = fixture.get("provenance")
             if not isinstance(provenance, str) or not provenance:
                 fail(f"{fixture_context}: provenance must be a non-empty string")
@@ -2392,18 +3694,35 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     fail(f"{fixture_context}: unknown healthmd.direct.ios fixture file")
             elif identifier == "healthmd.direct.ios-query":
                 validate_v3_fixture(fixture_path)
+            elif identifier == "healthmd.direct.shared-pairing":
+                validate_shared_pairing_v3_fixture(fixture_path)
             elif identifier == "healthmd.direct.android":
-                validate_v2_fixture(fixture_path)
+                if fixture_path.name == "interop.json":
+                    validate_v2_fixture(fixture_path)
+                elif fixture_path.name == "profile-policy-reference.json":
+                    validate_v2_profile_policy_fixture(fixture_path)
+                else:
+                    fail(f"{fixture_context}: unknown healthmd.direct.android fixture file")
             elif identifier == "healthmd.semantic_input":
-                validate_semantic_fixture(root, fixture_path)
+                if fixture_path.name == "range-profile-revision-v2.json":
+                    validate_semantic_range_capability_fixture(fixture_path)
+                else:
+                    validate_semantic_fixture(root, fixture_path)
             elif identifier == "healthmd.render_input":
                 validate_render_fixture(root, fixture_path)
             elif identifier == "healthmd.provider_sections":
                 validate_provider_sections_fixture(root, fixture_path)
             elif identifier == SHARED_SETUP_SCHEMA:
-                validate_shared_setup_fixture(root, fixture_path)
+                if fixture_path.name == "transaction-scenarios-v1.json":
+                    validate_shared_setup_transaction_scenario_fixture(root, fixture_path)
+                else:
+                    validate_shared_setup_writer_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
+            elif identifier == "healthmd.rollup_summary":
+                validate_rollup_production_fixture(root, fixture_path)
+                if fixture_path.suffix == ".json":
+                    validate_rollup_summary_fixture(root, fixture_path)
 
     inventories = manifest.get("inventories")
     if not isinstance(inventories, list) or not inventories:

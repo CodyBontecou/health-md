@@ -7,7 +7,7 @@ description: "Controla el formato de salida sin cambiar lo que se recopila. Elig
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>Valor predeterminado. Un archivo por día. YAML frontmatter opcional y secciones con encabezados por categoría.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown con frontmatter estructurado optimizado para el plugin <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> de Obsidian. Las propiedades numéricas permanecen numéricas; las fechas permanecen como fechas.</p></div>
-<div class="option"><strong>JSON</strong><p>Un archivo JSON por día. Los resúmenes diarios del esquema v7 pueden incrustar el archivo autorizado <code>healthmd.healthkit_records</code> v1 cuando Lossless Health Records está activado.</p></div>
+<div class="option"><strong>JSON</strong><p>Un archivo JSON por día. Los resúmenes diarios de Apple del esquema v8 pueden incrustar el archivo autorizado <code>healthmd.healthkit_records</code> v1 cuando Lossless Health Records está activado.</p></div>
 <div class="option"><strong>CSV</strong><p>Un archivo CSV por día con la cabecera <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Las filas de resumen de compatibilidad contienen cinco campos y omiten la columna de marca de tiempo; las filas con marca de tiempo y de registro canónico contienen los seis.</p></div>
 </div>
 
@@ -37,9 +37,16 @@ description: "Controla el formato de salida sin cambiar lo que se recopila. Elig
 ## Vista previa
 <p>En la parte inferior de la pantalla Formato, un bloque de vista previa en vivo renderiza los datos de hoy con tus ajustes actuales. Es la forma más rápida de iterar: cambia una opción, mira la vista previa y repite.</p>
 
+## Detalle de datos y perfiles
+
+Resumen crea proyecciones diarias compactas. Serie temporal detallada añade muestras e intervalos seleccionados en Apple y Android cuando la métrica los admite. Registros de salud sin pérdidas añade el archivo canónico de HealthKit y es exclusivo de Apple; no es una capa de compatibilidad para Android.
+
+El detalle se congela con el resto del [perfil de exportación](/es/docs/export-profiles/). Editarlo con un perfil activo cambia ese perfil, no todos los del dispositivo.
+
 ## Contenido relacionado
 
 <div class="related">
+  <a href="/es/docs/export-profiles/"><span>Perfiles</span>Guarda el nivel de detalle y el formato para cada flujo.</a>
   <a href="/es/docs/metrics/"><span>Qué</span>Métricas de salud: elige primero los datos.</a>
   <a href="/es/docs/individual-tracking/"><span>Granular</span>Seguimiento de entradas individuales: una salida completamente distinta, con archivos por entrada.</a>
   <a href="/es/docs/daily-notes/"><span>Obsidian</span>Inserción en notas diarias: usa los mismos campos de frontmatter.</a>

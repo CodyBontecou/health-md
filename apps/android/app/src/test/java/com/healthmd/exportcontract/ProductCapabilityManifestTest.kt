@@ -38,8 +38,30 @@ class ProductCapabilityManifestTest {
 
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
         assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
-        assertEquals(setOf("core.shared-rust-profile-engine", "setup.share-portable-configuration"), idsWithState(states, "planned"))
+        assertEquals(
+            setOf(
+                "core.shared-rust-profile-engine",
+                "direct.cli_agent_push_wake",
+                "export.range-summary",
+                "setup.share-portable-configuration",
+            ),
+            idsWithState(states, "planned"),
+        )
         assertEquals(allCapabilities, states.keys)
+        val cancellationCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "automation.cancel-active-export"
+        }
+        assertEquals(
+            "shared",
+            cancellationCapability.getValue("classification").jsonPrimitive.content,
+        )
+        val pushWakeCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "direct.cli_agent_push_wake"
+        }
+        assertEquals(
+            "planned",
+            pushWakeCapability.getValue("classification").jsonPrimitive.content,
+        )
 
         capabilities.forEach { capability ->
             val id = capability.getValue("id").jsonPrimitive.content
@@ -80,11 +102,16 @@ class ProductCapabilityManifestTest {
             "export.vitals-and-body",
             "export.nutrient-totals",
             "export.mindfulness-sessions",
+            "export.selected-time-series-detail",
             "export.completed-workouts",
             "export.mobility-and-performance",
             "export.profiles",
             "settings.sleep-attribution",
+            "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
+            "automation.cancel-active-export",
+            "direct-cli.shared-qr-pairing",
+            "direct.cli_agent_wake",
         )
 
         val appleCapabilities = setOf(
@@ -108,6 +135,8 @@ class ProductCapabilityManifestTest {
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "source.private-platform-database",
+            "direct.cli_agent_push_wake",
+            "export.range-summary",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
         )

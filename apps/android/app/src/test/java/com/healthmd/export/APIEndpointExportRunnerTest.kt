@@ -26,6 +26,7 @@ import com.healthmd.domain.model.IndividualTrackingSettings
 import com.healthmd.domain.model.TimestampedSample
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.rawexport.withInteractiveRouteConsent
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -103,7 +104,7 @@ class APIEndpointExportRunnerTest {
     }
 
     @Test
-    fun apiEntryPointPinsSettingAndDefaultZoneAcrossPerDayReads() = runTest {
+    fun apiEntryPointPinsSettingAndDefaultZoneBeforeConsentAndAcrossPerDayReads() = runTest {
         val previousZone = TimeZone.getDefault()
         val capturedZone = ZoneId.of("America/Los_Angeles")
         val changedZone = ZoneId.of("Europe/Berlin")
@@ -112,6 +113,7 @@ class APIEndpointExportRunnerTest {
             val dates = listOf(LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 11))
             var storedAttribution = SleepDayAttribution.MORNING_ENDS
             val observedContexts = mutableListOf<Pair<ZoneId, SleepDayAttribution>>()
+            val consentZones = mutableListOf<ZoneId>()
             val manager = mockk<HealthConnectManager>()
             val provider = HealthConnectDataProvider(manager)
             val registry = mockk<HealthProviderRegistry>()
@@ -121,6 +123,11 @@ class APIEndpointExportRunnerTest {
             every { registry.providerFor("health_connect") } returns provider
             every { registry.primaryExportProvider() } returns provider
             every { manager.isBeforeFirstUnlock() } returns false
+            coEvery { manager.authorizeExerciseRouteConsent(any(), any(), any()) } answers {
+                consentZones += arg<ZoneId>(2)
+                storedAttribution = SleepDayAttribution.NIGHT_BEGINS
+                TimeZone.setDefault(TimeZone.getTimeZone(changedZone))
+            }
             coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
                 val date = firstArg<List<LocalDate>>().single()
                 val zone = arg<ZoneId>(3)
@@ -146,15 +153,18 @@ class APIEndpointExportRunnerTest {
                 credentialStore = credentials(),
             )
 
-            val result = runner.exportDates(
-                dates = dates,
-                settings = ExportSettings(
-                    exportTarget = ExportTarget.API_ENDPOINT,
-                    apiEndpointUrl = "https://api.example.com/healthmd",
-                ),
-            )
+            val result = withInteractiveRouteConsent {
+                runner.exportDates(
+                    dates = dates,
+                    settings = ExportSettings(
+                        exportTarget = ExportTarget.API_ENDPOINT,
+                        apiEndpointUrl = "https://api.example.com/healthmd",
+                    ),
+                )
+            }
 
             assertThat(result.successCount).isEqualTo(2)
+            assertThat(consentZones).containsExactly(capturedZone)
             assertThat(observedContexts).containsExactly(
                 capturedZone to SleepDayAttribution.MORNING_ENDS,
                 capturedZone to SleepDayAttribution.MORNING_ENDS,

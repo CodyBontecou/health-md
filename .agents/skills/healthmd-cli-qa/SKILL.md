@@ -1,12 +1,12 @@
 ---
 name: healthmd-cli-qa
-description: Test the standalone Health.md CLI, portable healthmd-mcp server, and direct iPhone path. Use for CLI/MCP QA, Rust↔Swift protocol compatibility, Manual IP/Tailscale pairing, typed query/UI/image checks, status/raw/extract/file/resume/cancel, cross-platform release gates, failure diagnosis, or physical-device plans without the Health.md macOS app.
-compatibility: Automated CLI checks require the independently locked shared-core and CLI Rust workspaces; iPhone-side checks require the Health.md app repository and Apple build tools. Live E2E requires a current iPhone build with Direct CLI Access, HealthKit/local-network permission, and a disposable destination for file tests.
+description: Test the standalone Health.md CLI, portable healthmd-mcp server, and direct mobile paths. Use for CLI/MCP QA, Rust↔Swift/Kotlin protocol compatibility, Manual IP/Tailscale pairing, typed query/UI/image checks, status/raw/extract/file/resume/cancel, wake notifications, cross-platform release gates, failure diagnosis, or physical-device plans without the Health.md macOS app.
+compatibility: Automated CLI checks require the independently locked shared-core and CLI Rust workspaces; mobile-side checks require the relevant Apple or Android build tools. Live E2E requires an exact compatible mobile build with Direct CLI Access, platform health/local-network permissions, and a disposable destination for file tests.
 ---
 
 # Standalone Health.md CLI QA
 
-Validate the Rust CLI, portable Rust MCP server, and iPhone direct service. The macOS app, loopback API, Mac destination bookmark, and legacy Swift CLI are out of scope unless explicitly requested.
+Validate the Rust CLI, portable Rust MCP server, and iPhone/Android direct services. The macOS app, loopback API, Mac destination bookmark, and legacy Swift CLI are out of scope unless explicitly requested.
 
 ## Rules
 
@@ -53,6 +53,12 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 dist plan --allow-dirty
 cargo run --bin healthmd -- --help
+cargo run --bin healthmd -- export
+cargo run --bin healthmd -- extract
+cargo run --bin healthmd -- query
+cargo run --bin healthmd -- query healthmd_sleep_sessions
+cargo run --bin healthmd -- resume
+cargo run --bin healthmd -- direct reset-trust
 cargo run --bin healthmd -- setup codex --help
 cargo run --bin healthmd -- mcp serve --help
 cargo run --bin healthmd-mcp -- --help
@@ -94,21 +100,40 @@ The portable client does not require a macOS app build. If public exporter/metri
 ```bash
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --version </dev/null
 NO_COLOR=1 TERM=dumb timeout 15 healthmd --help </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd export </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd extract </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd query </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd query healthmd_sleep_sessions </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd resume </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd cancel </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd direct </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd direct unpair </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd direct reset-trust </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd mcp </dev/null
+NO_COLOR=1 TERM=dumb timeout 15 healthmd setup </dev/null
 NO_COLOR=1 TERM=dumb timeout 30 healthmd direct devices </dev/null
 ```
 
 Pass:
 
 - direct is default and Manual IP is portable;
-- commands are status/export/extract/resume/cancel/direct trust management;
+- commands are status/export/extract/query/resume/cancel/direct/MCP/setup;
+- every incomplete command above exits zero with one `healthmd.cli_guidance/1` document,
+  `status: guidance`, and `request_sent: false`, without credentials, listeners, mutations, or
+  device contact;
+- selected query guidance is concise with `--human`, while captured output and `--json` contain the complete nested schema and executable argv example;
 - `direct devices` needs no network or Mac app;
-- failures are deterministic JSON on stdout;
+- captured output and `--json` produce deterministic `healthmd.cli_error/1` JSON with exact help and
+  bounded next actions, while `--human` produces readable recovery text; parser failures never echo
+  rejected values or escaped multiline Clap output in either mode;
+- every structured command is human-readable on a TTY, remains JSON through a pipe, and supports
+  explicit `--json`/`--human` overrides; exact artifacts and MCP JSON-RPC bypass rendering;
 - pairing/progress may use stderr but never health payloads.
 
 Negative smoke:
 
 - `--transport nearby` → `transport_unsupported`;
-- `--backend mac-app status` → deterministic `not_implemented` without opening/looking for the app;
+- `--backend direct status` → deterministic `unknown_argument` exit-2 parser error with no backend vocabulary; `--backend` no longer exists;
 - invalid date/selector/output combinations → `invalid_request`;
 - missing/unsafe file destination fails before network work;
 - Windows file mode → validated native absolute destination with traversal/symlink/identity protections.
@@ -130,7 +155,7 @@ Verify:
 
 - Exact CLI and iOS builds under test.
 - Health.md open on unlocked-enough iPhone.
-- **Settings → Mac Sync → Direct CLI Access** enabled with **Manual IP**.
+- **Sync → CLI → Direct CLI Access** enabled with **Manual IP**.
 - Local-network and selected HealthKit permissions.
 - Reachable LAN/Tailscale computer address and matching port.
 - Native credential storage available.
@@ -138,6 +163,26 @@ Verify:
 - A plan that excludes health payloads from logs.
 
 Pairing/new commands need foreground iPhone. An already-connected export may receive finite iOS background time; expiration must pause rather than corrupt or falsely complete.
+
+## RFC-0005 wake matrix
+
+Test unreachable, authenticated `app_active: false`, late availability, expiry, local cancellation,
+and disabled (`--wake-timeout 0`) paths on both source platforms. The default is 120 seconds with
+250 ms to 2 s retries. The same in-flight operation must continue after the user opens Health.md;
+do not accept a test that requires re-running it. Expiry stays `direct_source_unavailable` with
+additive `wake_window_seconds`. MCP calls with a progress token emit health-free
+`notifications/progress` at wait start and about every 10 seconds; cancellation interrupts the
+wait immediately without becoming terminal phone-side cancellation.
+
+Wake enrollment is reported truthfully per selected device. Without enrolled wake material,
+`healthmd status`/`healthmd.direct_readiness` must report enrollment `unavailable` (mode
+`wait_only`) and no test should expect APNs or FCM. Published alpha.6 binaries remain wait-only even
+if old enrollment material exists. For current source and subsequent official builds, a stored wake
+credential for the selected iPhone reports `available`/`enrolled` and a locked-phone wait attempts
+one APNs push through `apps/wake`; verify delivery and P1 fallback without asserting delivery as a
+transport guarantee. Android remains wait-only until RFC-0005 P3/FCM ships. Keep outer process
+timeouts longer than wake plus operation bounds. Run the Worker policy/HMAC/type-check/dry-run gate
+as well as Rust default/no-default/all-feature tests so packaging cannot compile wake back out.
 
 ## Live LAN E2E
 
@@ -161,10 +206,10 @@ NO_COLOR=1 TERM=dumb timeout 300 \
 Pass:
 
 - pair code/instructions only on stderr and one success object on stdout;
-- scanning the QR from **Sync → Direct CLI Access → Scan Pairing QR** starts pairing automatically without a second Pair tap; camera denial recovers after Settings, malformed/noncanonical private hosts and external custom-URL opens cannot pair, and manual code entry remains available;
+- scanning the QR from **Sync → CLI → Direct CLI Access → Scan Pairing QR** starts pairing automatically without a second Pair tap; camera denial recovers after Settings, malformed/noncanonical private hosts and external custom-URL opens cannot pair, and manual code entry remains available;
 - negotiated local MCP Apps render the native pairing image in the inline pairing card; fallback hosts retain `image/png`, while no text or `structuredContent` contains the code, host, or pairing URI;
 - local trust records intended iPhone and reconnect needs no new code;
-- status says `backend: direct`, `mac_app: bypassed`, reports protected/readiness state, and no health values;
+- status reports protected/readiness state and no health values, with no `backend`, `mac_app`, or `destination` fields;
 - raw validates exact dates, profile/result/archive/schema, manifests, byte counts, partition chain, and final digest before atomic output;
 - extract and receipt match requested scope and empty/incomplete distinctions;
 - production file output stays under explicit destination and has valid receipt;
@@ -211,7 +256,7 @@ Pass:
 | Partial extract | No values without `--allow-partial`. |
 | Windows file destination | Generated files commit under the exact validated bound destination; raw/extract remain unaffected. |
 | Nearby | `transport_unsupported`; no hidden Manual IP fallback. |
-| Mac backend | `not_implemented`; no app/localhost dependency. |
+| Mac backend | No backend option exists; `--backend` is rejected as an unknown argument and nothing contacts the app/localhost. |
 
 ## Platform matrix
 

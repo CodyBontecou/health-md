@@ -1,5 +1,6 @@
 package com.healthmd.presentation.export
 
+import android.app.Activity
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,21 +11,27 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.scheduler.ExportScheduler
-import com.healthmd.data.settings.ExportProfileCoordinator
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.export.ReviewPromptPolicy
 import com.healthmd.domain.model.*
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.review.ReviewPromptResult
+import com.healthmd.domain.review.ReviewPrompter
+import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.rawexport.RawSnapshotScope
-import com.healthmd.presentation.common.HealthConnectActionError
+import com.healthmd.rawexport.withInteractiveRouteConsent
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
 import com.healthmd.util.runCatchingCancellable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -40,6 +47,10 @@ enum class APIConfigurationIssue {
     INVALID_ENDPOINT,
     INVALID_HEADERS,
     SECURE_SAVE_FAILED,
+}
+
+enum class ExportProfileExecutionIssue {
+    DESTINATION_REBIND_REQUIRED,
 }
 
 private enum class ReviewRequestState {
@@ -85,6 +96,7 @@ data class ExportUiState(
     val apiRequestHeadersConfigured: Boolean = false,
     val apiConfigurationError: APIConfigurationIssue? = null,
     val selectedHealthProviderId: String = "health_connect",
+    val profileExecutionIssue: ExportProfileExecutionIssue? = null,
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -141,16 +153,23 @@ class ExportViewModel @Inject constructor(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository,
+    private val exportProfileRepository: ExportProfileRepository,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
+    private val reviewPrompter: ReviewPrompter,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val fileExportManager: FileExportManager,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
     private val rawSnapshotExportRunner: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val exportScheduler: ExportScheduler? = null,
+    /** Attached by the export screen so manual runs can prompt Health Connect route consent. */
+    val routeConsentCoordinator: ExerciseRouteConsentCoordinator = ExerciseRouteConsentCoordinator(),
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ExportUiState())
+    private val _uiState = MutableStateFlow(
+        ExportUiState(isPurchased = distributionPolicy.fullAccessIncluded),
+    )
     val uiState: StateFlow<ExportUiState> = _uiState.asStateFlow()
 
     private val _requestReview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -162,16 +181,15 @@ class ExportViewModel @Inject constructor(
     private var reviewRequestState = ReviewRequestState.IDLE
 
     init {
-        // Ensure billing client is connected so isUnlocked reflects real purchase state
-        billingRepository.startConnection()
+        entitlementRepository.refresh()
 
         viewModelScope.launch {
             // Combine persisted purchase state with live billing state — user is considered
             // purchased if either source confirms it (handles offline / just-purchased cases)
             val isPurchasedFlow = combine(
                 settingsRepository.isPurchased,
-                billingRepository.isUnlocked,
-            ) { persisted, live -> persisted || live }
+                entitlementRepository.isUnlocked,
+            ) { persisted, live -> distributionPolicy.fullAccessIncluded || persisted || live }
 
             combine(
                 settingsRepository.exportSettings,
@@ -203,13 +221,29 @@ class ExportViewModel @Inject constructor(
         refreshAPIAuthorizationStatus()
 
         // Persist confirmed purchases to DataStore so the state survives offline / app restarts
-        viewModelScope.launch {
-            billingRepository.isUnlocked
-                .filter { it }
-                .collect { settingsRepository.setPurchased(true) }
+        if (!distributionPolicy.fullAccessIncluded) {
+            viewModelScope.launch {
+                entitlementRepository.isUnlocked
+                    .filter { it }
+                    .collect { settingsRepository.setPurchased(true) }
+            }
         }
 
         refreshPermissions()
+    }
+
+    fun performReviewPrompt(activity: Activity) {
+        if (!reviewPrompter.isAvailable || reviewRequestState != ReviewRequestState.PENDING) {
+            onReviewRequestFailed()
+            return
+        }
+        viewModelScope.launch {
+            when (reviewPrompter.prompt(activity)) {
+                ReviewPromptResult.Completed -> onReviewFlowCompleted()
+                ReviewPromptResult.Failed,
+                ReviewPromptResult.Unavailable -> onReviewRequestFailed()
+            }
+        }
     }
 
     fun onReviewRequestFailed() {
@@ -257,8 +291,9 @@ class ExportViewModel @Inject constructor(
 
     fun setExportFormat(format: ExportFormat) {
         viewModelScope.launch {
-            val settings = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(settings.copy(exportFormat = format, exportFormats = setOf(format)))
+            settingsRepository.updateExportSettingsAtomically { settings ->
+                settings.copy(exportFormat = format, exportFormats = setOf(format))
+            }
         }
     }
 
@@ -323,10 +358,9 @@ class ExportViewModel @Inject constructor(
             try {
                 authorization?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveAuthorization(it) }
                 requestHeaders?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveRequestHeaders(it) }
-                val current = settingsRepository.getExportSettings()
-                settingsRepository.updateExportSettings(
+                settingsRepository.updateExportSettingsAtomically { current ->
                     current.copy(apiEndpointUrl = normalized, exportTarget = ExportTarget.API_ENDPOINT)
-                )
+                }
                 _uiState.update { it.copy(apiConfigurationError = null) }
                 refreshAPIAuthorizationStatus()
                 rescheduleAPIExportIfNeeded()
@@ -360,21 +394,21 @@ class ExportViewModel @Inject constructor(
 
     fun resetSettings() {
         viewModelScope.launch {
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(
+            settingsRepository.updateExportSettingsAtomically { current ->
                 ExportSettings.newInstallDefaults().copy(
                     exportTarget = current.exportTarget,
                     scheduledExportTarget = current.scheduledExportTarget,
                     apiEndpointUrl = current.apiEndpointUrl,
+                    pendingScheduledRetryDates = current.pendingScheduledRetryDates,
+                    pendingScheduledExportRequests = current.pendingScheduledExportRequests,
                 )
-            )
+            }
         }
     }
 
     private fun updateSettings(transform: (ExportSettings) -> ExportSettings) {
         viewModelScope.launch {
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(transform(current))
+            settingsRepository.updateExportSettingsAtomically(transform)
         }
     }
 
@@ -418,10 +452,42 @@ class ExportViewModel @Inject constructor(
         dismissJob?.cancel()
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         exportJob = viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, lastResult = null, preview = null, exportedFolderUri = null) }
+            _uiState.update {
+                it.copy(
+                    isExporting = true,
+                    lastResult = null,
+                    preview = null,
+                    exportedFolderUri = null,
+                    profileExecutionIssue = null,
+                )
+            }
 
             val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
+            if (activeProfileRequiresRebind()) {
+                val failedDates = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    listOf(_uiState.value.startDate)
+                } else {
+                    dates
+                }
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        lastResult = ExportResult(
+                            successCount = 0,
+                            totalCount = failedDates.size,
+                            failedDateDetails = failedDates.map { date ->
+                                FailedDateDetail(date, ExportFailureReason.UNKNOWN)
+                            },
+                            target = settings.exportTarget,
+                            exportMode = settings.exportMode,
+                        ),
+                        profileExecutionIssue =
+                            ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED,
+                    )
+                }
+                return@launch
+            }
 
             val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                 _uiState.update {
@@ -434,10 +500,13 @@ class ExportViewModel @Inject constructor(
             }
             val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                 _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = _uiState.value.startDate) }
+                // Manual export runs are interactive: Health Connect may show per-session exercise
+                // route consent prompts for third-party sessions during the read.
                 (rawSnapshotExportRunner?.exportRange(
                     startDate = _uiState.value.startDate,
                     endDate = _uiState.value.endDate,
                     settings = settings,
+                    allowInteractiveRouteConsent = true,
                 ) ?: ExportResult(
                     successCount = 0,
                     totalCount = 1,
@@ -446,18 +515,22 @@ class ExportViewModel @Inject constructor(
                     exportMode = ExportMode.RAW_SNAPSHOT,
                 )).also { _uiState.update { state -> state.copy(exportProgress = 1) } }
             } else when (settings.exportTarget) {
-                ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
-                    .exportDates(dates, settings, progress)
-                    .copy(target = ExportTarget.DEVICE_FOLDER)
-                ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.exportDates(dates, settings, progress)
-                    ?: ExportResult(
-                        successCount = 0,
-                        totalCount = dates.size,
-                        failedDateDetails = dates.map {
-                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
-                        },
-                        target = ExportTarget.API_ENDPOINT,
-                    )
+                ExportTarget.DEVICE_FOLDER -> withInteractiveRouteConsent {
+                    ExportOrchestrator(healthRepository, exportRepository)
+                        .exportDates(dates, settings, progress)
+                        .copy(target = ExportTarget.DEVICE_FOLDER)
+                }
+                ExportTarget.API_ENDPOINT -> withInteractiveRouteConsent {
+                    apiEndpointExportRunner?.exportDates(dates, settings, progress)
+                        ?: ExportResult(
+                            successCount = 0,
+                            totalCount = dates.size,
+                            failedDateDetails = dates.map {
+                                FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                            },
+                            target = ExportTarget.API_ENDPOINT,
+                        )
+                }
             }
 
             // UI and local history consume typed failure reasons, never arbitrary producer text.
@@ -495,7 +568,7 @@ class ExportViewModel @Inject constructor(
 
             // Review prompts use their own counter, separate from free-tier quota. A Play
             // request failure must not consume the attempt; completion is reported by the UI.
-            if (ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
+            if (reviewPrompter.isAvailable && ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
                 settingsRepository.incrementSuccessfulExportCount()
                 val count = settingsRepository.getSuccessfulExportCount()
                 if (
@@ -529,6 +602,7 @@ class ExportViewModel @Inject constructor(
                     isExporting = false,
                     lastResult = presentationResult,
                     exportedFolderUri = if (presentationResult.artifactCount > 0) folderUri else null,
+                    profileExecutionIssue = null,
                 )
             }
 
@@ -566,11 +640,21 @@ class ExportViewModel @Inject constructor(
                     preview = null,
                     lastResult = null,
                     exportedFolderUri = null,
+                    profileExecutionIssue = null,
                 )
             }
 
             try {
                 val settings = settingsRepository.getExportSettings()
+                if (activeProfileRequiresRebind()) {
+                    _uiState.update {
+                        it.copy(
+                            profileExecutionIssue =
+                                ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED,
+                        )
+                    }
+                    return@launch
+                }
                 val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
                 val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                     _uiState.update {
@@ -593,6 +677,9 @@ class ExportViewModel @Inject constructor(
                         startDate = _uiState.value.startDate,
                         endDate = _uiState.value.endDate,
                         settings = settings,
+                        // Preview must not persist a precise-route grant without an explicit
+                        // disclosure/authorization step. Consent remains export-only.
+                        allowInteractiveRouteConsent = false,
                     ) ?: ExportPreview(
                         requestedDateCount = dates.size,
                         previewedDateCount = 0,
@@ -637,8 +724,20 @@ class ExportViewModel @Inject constructor(
 
     fun dismissResult() {
         dismissJob?.cancel()
-        _uiState.update { it.copy(lastResult = null, exportedFolderUri = null) }
+        _uiState.update {
+            it.copy(
+                lastResult = null,
+                exportedFolderUri = null,
+                profileExecutionIssue = null,
+            )
+        }
     }
+
+    private suspend fun activeProfileRequiresRebind(): Boolean =
+        runCatchingCancellable {
+            exportProfileRepository.activeSharedSetupV2ExecutionAccess() ==
+                SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        }.getOrDefault(true)
 
     fun cancelExport() {
         val state = _uiState.value

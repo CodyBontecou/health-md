@@ -1,6 +1,6 @@
 # First-party onboarding and pricing analytics
 
-Health.md uses a small first-party Android client to understand whether onboarding steps and the onboarding paywall are usable. It does not use Firebase Analytics, Google Analytics, AppsFlyer, or another third-party analytics SDK. This client is independent from the Google Play campaign-attribution subsystem and does not read or alter campaign attribution state.
+The Google Play build uses a small first-party Android client to understand whether onboarding steps and the onboarding paywall are usable. It does not use Firebase Analytics, Google Analytics, AppsFlyer, or another third-party analytics SDK. This client is independent from the Google Play campaign-attribution subsystem and does not read or alter campaign attribution state. The F-Droid build binds a no-op onboarding event sink: analytics implementation code, endpoints, workers, identifiers, queues, and DataStore state are not compiled into that APK.
 
 ## Event and property allowlist
 
@@ -21,7 +21,7 @@ The welcome screen discloses this limited first-party collection before setup be
 
 ## Delivery and local state
 
-The dedicated `onboarding_analytics` DataStore contains a random app-install UUID, stable random event UUIDs, a milestone-deduplication set, and a maximum of 50 pending allowlisted events. The oldest pending event is discarded if the cap is reached. This DataStore is excluded from Android cloud backup and device transfer.
+In the Play build, the dedicated `onboarding_analytics` DataStore contains a random app-install UUID, stable random event UUIDs, a milestone-deduplication set, and a maximum of 50 pending allowlisted events. The oldest pending event is discarded if the cap is reached. This DataStore is excluded from Android cloud backup and device transfer. F-Droid creates none of this state.
 
 A network-constrained unique WorkManager job posts batches to:
 

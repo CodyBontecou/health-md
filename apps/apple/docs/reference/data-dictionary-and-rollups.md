@@ -63,7 +63,7 @@ Missing is not zero. Every roll-up rule also states how missing days are handled
 |---|---|
 | `primary` | Headline period calculation. |
 | `statistics` | Additional statistics emitted. |
-| `periods` | Supported `weekly`, `monthly`, and `yearly` periods. |
+| `periods` | Legacy calendar applicability used by unchanged rules; range v9 applies every non-`none` rule. |
 | `preferredSource` | Preferred daily/detail source for recomputation. |
 | `nullHandling` | Explicit missing-day behavior. |
 | `weightedBy` | Optional weighting field. |
@@ -73,7 +73,7 @@ The generated behavior matrix is at [`generated/rollups/aggregation-behavior.md`
 
 ## Roll-up schema
 
-Roll-up files identify themselves as `healthmd.rollup_summary`. They are derived from daily summary snapshots and do not embed source archives.
+New range files identify themselves as `healthmd.rollup_summary` v9, source daily schema v8, and roll-up rules version 8. They are derived from daily summary snapshots and do not embed source archives. Historical calendar roll-up v8 files remain valid.
 
 Common metadata includes:
 
@@ -122,11 +122,10 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 
 ## Coverage
 
-- Weekly `period_id` uses ISO `YYYY-Www`; its `start_date` and `end_date` are Monday and Sunday rendered in the calendar timezone used to build the period. Monthly/yearly bounds use that same timezone.
-- `days_expected` is the size of the full period.
+- Range `period_id` is `<start>_to_<end>` in the frozen requested IANA calendar timezone.
+- `days_expected` is the inclusive requested span and does not shrink when an edge query fails.
 - `days_counted` is the number of daily snapshots retained for the roll-up.
 - Per-metric days counted can be smaller when a snapshot has no value for that metric.
-- Future dates in a current period remain expected but are not queried.
 - A failed daily fetch reduces coverage; an absent metric value does not become zero.
 
 ## Format-specific roll-ups
@@ -138,12 +137,12 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 | Markdown | Frontmatter, category tables, and detailed statistics. |
 | Obsidian Bases | Frontmatter-focused `rollup_metrics` properties. |
 
-Complete synthetic weekly examples:
+Complete synthetic range-v9 examples:
 
-- [`generated/rollups/weekly.json`](./generated/rollups/weekly.json)
-- [`generated/rollups/weekly.csv`](./generated/rollups/weekly.csv)
-- [`generated/rollups/weekly.md`](./generated/rollups/weekly.md)
-- [`generated/rollups/weekly-bases.md`](./generated/rollups/weekly-bases.md)
+- [`generated/rollups/range.json`](./generated/rollups/range.json)
+- [`generated/rollups/range.csv`](./generated/rollups/range.csv)
+- [`generated/rollups/range.md`](./generated/rollups/range.md)
+- [`generated/rollups/range-bases.md`](./generated/rollups/range-bases.md)
 
 ## Consumer guidance
 

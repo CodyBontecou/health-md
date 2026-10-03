@@ -4,12 +4,12 @@
 
 - **Docs status:** draft
 - **Video priority:** high
-- **Primary screen:** Export → Export Formats; Export → Lossless Health Records
+- **Primary screen:** Export → Export Formats; Export → Data Detail
 - **Source files:** `HealthMd/Shared/Export/JSONExporter.swift`, `HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift`, `HealthMd/Shared/Models/HealthKitRecord.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
 
 ## What it does
 
-JSON export writes one structured `.json` document per exported date. In schema v8 it keeps the familiar daily summary objects, optionally embeds typed `providers.whoop` v1 data, and, when **Lossless Health Records** is on, embeds the authoritative public source archive at `healthkit_record_archive`.
+JSON export writes one structured `.json` document per exported date. In schema v8 it keeps the familiar daily summary objects and optional typed `providers.whoop` v1 data. **Detailed Time-Series** adds selected sample arrays while `raw_capture_status` remains `not_requested`; **Lossless Health Records** additionally embeds the authoritative public source archive at `healthkit_record_archive`.
 
 Use JSON for scripts, notebooks, dashboards, backups, API ingestion, or any workflow that needs exact source records. Markdown and Obsidian Bases intentionally remain summary-oriented; JSON is the complete machine-readable format. The [daily-record reference](../reference/daily-records.md) and [canonical-record reference](../reference/canonical-healthkit-records.md) include exhaustive generated field inventories and complete synthetic files.
 
@@ -17,11 +17,11 @@ Use JSON for scripts, notebooks, dashboards, backups, API ingestion, or any work
 
 1. Open **Export → Export Formats** and enable **JSON**.
 2. Choose metrics under **Health Metrics**.
-3. Leave **Lossless Health Records** on for canonical records, or turn it off for summary-only JSON.
+3. Under **Data Detail**, choose Summary, Detailed Time-Series without the canonical archive, or Lossless Health Records for canonical records.
 4. Choose the date range, filename/folder templates, and target.
 5. Preview one day, then export.
 
-Lossless Health Records is off by default for new installs. Health.md preserves existing explicit on or off choices.
+Data Detail defaults to Summary. Historical combined on/off choices migrate to Lossless/Summary without changing behavior.
 
 ## Minimal example output
 
@@ -114,11 +114,11 @@ Raw records belong to a day by source start time in the captured timezone. Their
 | Problem | Likely cause | Fix |
 |---|---|---|
 | No JSON file was written | JSON format is disabled | Enable **JSON** in Export Formats. |
-| `healthkit_record_archive` is missing | Lossless Health Records was off or the record came from a legacy peer | Check `raw_capture_status`; re-enable lossless capture and re-export if needed. |
+| `healthkit_record_archive` is missing | Data Detail is Summary/Detailed Time-Series, or the record came from a legacy peer | Check `raw_capture_status`; choose Lossless Health Records and re-export if canonical records are required. |
 | Archive says `partial` | A query failed, was cancelled, skipped, or unsupported | Inspect `query_manifest`, `integrity_warnings`, and top-level `diagnostics.partial_failures`. |
 | Archive is complete but empty | Queries succeeded and returned no readable records | This is valid; HealthKit can also make denied read access look empty. |
 | Script loses integer/type detail | Typed metadata was flattened | Parse each metadata `{type, value}` envelope instead of coercing values. |
-| File is very large | Dense samples or binary data were retained | Export fewer dates or turn Lossless Health Records off when summaries are sufficient. |
+| File is very large | The canonical archive retained dense samples or binary data | Export fewer dates, or choose Detailed Time-Series or Summary instead of Lossless. |
 | Re-export replaced the file | JSON has no section merge behavior | This is expected; Update falls back to overwrite for JSON. |
 
 ## Video outline

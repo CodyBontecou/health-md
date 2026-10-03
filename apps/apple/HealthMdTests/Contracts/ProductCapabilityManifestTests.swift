@@ -33,6 +33,14 @@ final class ProductCapabilityManifestTests: XCTestCase {
             ["core.shared-rust-profile-engine", "setup.share-portable-configuration"]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
+        XCTAssertEqual(
+            inventory.capabilities.first { $0.id == "automation.cancel-active-export" }?.classification,
+            "shared"
+        )
+        XCTAssertEqual(
+            inventory.capabilities.first { $0.id == "direct.cli_agent_push_wake" }?.classification,
+            "planned"
+        )
 
         for capability in inventory.capabilities {
             let availability = capability.platforms.apple
@@ -83,11 +91,16 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.vitals-and-body",
         "export.nutrient-totals",
         "export.mindfulness-sessions",
+        "export.selected-time-series-detail",
         "export.completed-workouts",
         "export.mobility-and-performance",
         "export.profiles",
         "settings.sleep-attribution",
+        "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
+        "automation.cancel-active-export",
+        "direct-cli.shared-qr-pairing",
+        "direct.cli_agent_wake",
     ]
 
     private static let appleCapabilities: Set<String> = [
@@ -97,6 +110,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "direct.cli_agent_push_wake",
+        "export.range-summary",
     ]
 
     private static let androidCapabilities: Set<String> = [
@@ -140,6 +155,7 @@ private struct CapabilityInventory: Decodable {
 
     struct Capability: Decodable {
         let id: String
+        let classification: String
         let platforms: Platforms
     }
 

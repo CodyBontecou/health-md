@@ -1,6 +1,5 @@
 package com.healthmd.domain.exportengine
 
-import com.healthmd.BuildConfig
 import java.util.Collections
 
 enum class ExportArtifactMismatchDimension {
@@ -148,8 +147,7 @@ class ExportArtifactPlanComparator {
                     expectedSha256 = left.sha256,
                     actualSha256 = right.sha256,
                     firstByteOffset = if (
-                        BuildConfig.DEBUG &&
-                            options.isInternalOrDebug && options.includeFirstByteOffset
+                        options.isInternalOrDebug && options.includeFirstByteOffset
                     ) {
                         left.firstDifferingByteOffset(right)
                     } else {

@@ -27,7 +27,7 @@ description: Exporta datos de Apple Health o Health Connect, conecta la herramie
 <div class="reference-stats">
 <div><strong>21</strong><span>herramientas MCP incluidas para Mac</span></div>
 <div><strong>4</strong><span>formatos de exportación</span></div>
-<div><strong>v7</strong><span>esquema público de exportación</span></div>
+<div><strong>v8</strong><span>esquema público de exportación de Apple</span></div>
 <div><strong>0</strong><span>transferencias obligatorias a través de la nube de Health.md</span></div>
 </div>
 
@@ -63,8 +63,8 @@ Cuando todo está listo, el resultado de `doctor` usa el esquema `healthmd.cli_d
 
 <div class="related">
   <a href="/es/docs/agent-queries/"><span>Consultas tipadas</span>Consulta métricas, sesiones de sueño, entrenamientos, comparaciones, cobertura y evidencia factual.</a>
-  <a href="/es/docs/cli-direct/"><span>Vista previa · CLI portátil</span>Acceso directo al iPhone: conoce el emparejamiento mediante Manual IP o Tailscale antes del lanzamiento del paquete independiente.</a>
-  <a href="/es/docs/cli-extract/"><span>Datos de origen</span>Extracción canónica: obtén días seleccionados con el esquema v7, registros de origen, proyecciones o JSONL.</a>
+  <a href="/es/docs/cli-direct/"><span>Vista previa · CLI portátil</span>Acceso directo al teléfono: revisa el emparejamiento mediante IP manual o Tailscale y la matriz actual de compatibilidad no cualificada de iPhone y Android.</a>
+  <a href="/es/docs/cli-extract/"><span>Datos de origen</span>Extracción canónica: obtén días seleccionados con el esquema v8, registros de origen, proyecciones o JSONL.</a>
   <a href="/es/docs/cli-jobs/"><span>Ejecuciones fiables</span>Tareas persistentes: gestiona de forma segura los tiempos de espera, los resultados inciertos, la reanudación, la cancelación y los resultados parciales.</a>
   <a href="/es/docs/agent-api/"><span>Bajo nivel</span>API de loopback: usa las rutas exactas de consulta, evidencia, cursor, actualización y tareas persistentes.</a>
   <a href="/es/docs/reference/integration-recipes/"><span>Patrones</span>Recetas de integración: analiza y valida los resultados de Health.md sin debilitar sus contratos (en inglés).</a>
@@ -78,7 +78,7 @@ Cuando todo está listo, el resultado de `doctor` usa el esquema `healthmd.cli_d
   <a href="/es/docs/reference/"><span>Mapa de contratos</span>Referencia de exportación: consulta esquemas, métricas, formatos, registros y fixtures de interoperabilidad (en inglés).</a>
   <a href="/es/docs/reference/api-and-cli/"><span>Automatización</span>Contratos de API y CLI: consulta estructuras de solicitud y respuesta, rutas, comportamiento de salida y ejemplos generados (en inglés).</a>
   <a href="/es/docs/reference/evidence-packets/"><span>Resultados del agente</span>Consultas y evidencia: valores tipados, cobertura, datos ausentes, operaciones e identidades deterministas (en inglés).</a>
-  <a href="/es/docs/reference/daily-records/"><span>Esquema v7</span>Registros diarios: conoce el documento público de origen y sus reglas de propiedad (en inglés).</a>
+  <a href="/es/docs/reference/daily-records/"><span>Esquema v8</span>Registros diarios: conoce el documento público de origen y sus reglas de propiedad (en inglés).</a>
   <a href="/es/docs/shared-metric-registry/"><span>Vocabulario</span>Registro de métricas: usa identificadores, categorías, unidades y metadatos de perfil estables entre plataformas.</a>
   <a href="/es/docs/reference/generated/"><span>Legible por máquina</span>Artefactos generados: consulta campos canónicos, fixtures, inventarios de mensajes y contratos de la CLI (en inglés).</a>
 </div>
@@ -87,13 +87,22 @@ Cuando todo está listo, el resultado de `doctor` usa el esquema `healthmd.cli_d
 
 ## Aplicaciones y exportaciones
 
+### Exportaciones fiables basadas en perfiles
+
+- Elige Resumen o Serie temporal detallada compartida; el archivo canónico Registros de salud sin pérdidas es exclusivo de Apple.
+- Guarda ajustes, destinos y programaciones independientes como perfiles locales en iPhone o Android.
+- Detener o cancelar solo afecta al intento activo: las fechas terminadas se conservan, las pendientes pueden reintentarse y la programación sigue activa.
+
+Empieza con [Perfiles de exportación](/es/docs/export-profiles/) para conocer identificadores estables, automatización, historial de destinos y fallos seguros.
+
 <div class="related">
+  <a href="/es/docs/export-profiles/"><span>Flujos reutilizables</span>Perfiles de exportación: fija el destino, los formatos, las métricas, la programación y el identificador de automatización.</a>
   <a href="/es/docs/iphone-first-export/"><span>Empieza aquí · iPhone</span>Primera exportación: autoriza Apple Health, elige una carpeta, obtén una vista previa y verifica los archivos escritos.</a>
   <a href="/es/docs/android/"><span>Android</span>Health Connect: elige una carpeta de un proveedor de documentos y configura la automatización de la plataforma.</a>
   <a href="/es/docs/export/"><span>Archivos</span>Exportación: ejecuta intervalos de fechas explícitos en Markdown, CSV, JSON u Obsidian Bases.</a>
   <a href="/es/docs/format/"><span>Estructura</span>Personalización del formato: controla las unidades, las fechas, el frontmatter, los nombres de archivo y el comportamiento de escritura.</a>
-  <a href="/es/docs/scheduling/"><span>Segundo plano</span>Programación: conoce el comportamiento de las exportaciones diarias y semanales y los límites de cada plataforma.</a>
+  <a href="/es/docs/scheduling/"><span>Segundo plano</span>Programación: conoce las cadencias recurrentes, la recuperación y los límites de tiempo de cada plataforma.</a>
   <a href="/es/docs/shortcuts/"><span>Automatización</span>Shortcuts y App Intents: inicia exportaciones, resúmenes y comprobaciones de estado desde flujos de trabajo de Apple.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Estructura de la documentación actualizada el 2026-08-02</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Estructura de la documentación actualizada el 2026-08-31</p>

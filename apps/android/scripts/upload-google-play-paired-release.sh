@@ -7,11 +7,11 @@ source ./scripts/google-play-paired-policy.sh
 key=${PLAY_CONSOLE_KEY_PATH:-}
 package=${PLAY_PACKAGE_NAME:-com.healthmd.android}
 phone_track=${PHONE_PLAY_TRACK:-qa}
-wear_track=${WEAR_PLAY_TRACK:-wear:qa}
+wear_track=${WEAR_PLAY_TRACK:-wear:internal}
 release_status=${PLAY_RELEASE_STATUS:-completed}
 phone_code=${PHONE_VERSION_CODE:-}
 wear_code=${WEAR_VERSION_CODE:-}
-phone_aab=${PHONE_AAB:-app/build/outputs/bundle/release/app-release.aab}
+phone_aab=${PHONE_AAB:-app/build/outputs/bundle/playRelease/app-play-release.aab}
 wear_aab=${WEAR_AAB:-wear/build/outputs/bundle/release/wear-release.aab}
 confirmation=${CONFIRM_PLAY_PAIRED_UPLOAD:-}
 expected_confirmation="$package:$phone_track:$wear_track:$phone_code:$wear_code"
@@ -74,6 +74,31 @@ upload_bundle() {
 upload_bundle "$phone_aab" "$phone_code"
 upload_bundle "$wear_aab" "$wear_code"
 
+# A Wear form-factor track only persists on Play when its creating commit also carries a
+# real release: an empty track created ahead of the release is silently discarded. Create
+# the track inside this edit (same commit as the release) when it does not exist yet.
+ensure_form_factor_track() {
+  local track=$1 encoded form_factor
+  encoded=${track//:/%3A}
+  if curl -fsS --max-time 30 -sS "${auth[@]}" \
+      "$api/edits/$edit_id/tracks/$encoded" >/dev/null 2>&1; then
+    return 0
+  fi
+  case "$track" in
+    wear:*) form_factor=WEAR ;;
+    *) form_factor=DEFAULT ;;
+  esac
+  create_response=$(curl -sS --max-time 30 -w '\n%{http_code}' \
+    -X POST "${auth[@]}" -H 'Content-Type: application/json' \
+    -d "{\"track\":\"$track\",\"formFactor\":\"$form_factor\",\"type\":\"CLOSED_TESTING\"}" \
+    "$api/edits/$edit_id/tracks")
+  create_http=$(printf '%s' "$create_response" | tail -n 1)
+  if [[ "$create_http" != "200" && "$create_http" != "409" ]]; then
+    fail "could not create form-factor track $track: $create_response"
+  fi
+}
+ensure_form_factor_track "$wear_track"
+
 release_payload() { play_release_payload "$1" "$release_status"; }
 update_track() {
   local track=$1 code=$2 encoded response
@@ -90,6 +115,20 @@ update_track() {
 update_track "$phone_track" "$phone_code"
 update_track "$wear_track" "$wear_code"
 
+# Fail closed on Play validation errors before the non-idempotent commit. edits.validate
+# is side-effect free: it reports exactly what a commit would reject (track/artifact kind
+# mismatches, target-API policy floors, listing problems) without consuming the edit.
+validation_response=$(curl -sS --max-time 30 -w '\n%{http_code}' "${auth[@]}" \
+  -X POST -H 'Content-Type: application/json' -d '' \
+  "$api/edits/$edit_id:validate")
+validation_http=$(printf '%s' "$validation_response" | tail -n 1)
+validation_body=$(printf '%s' "$validation_response" | sed '$d')
+validation_errors=$(printf '%s' "$validation_body" \
+  | jq -r '(.error.message // .errorMessage // empty)' 2>/dev/null || true)
+if [[ "$validation_http" != "200" || -n "$validation_errors" ]]; then
+  fail "Play rejected the paired edit at validation: $validation_errors${validation_body:+ ($validation_body)}"
+fi
+
 # Exact-release Wear screenshots cannot exist until Play has generated and signed an installable
 # APK from this upload. Do not create a circular gate or replace listing assets here. After closed-
 # track installation and physical capture, the separately confirmed screenshot-sync transaction
@@ -102,11 +141,13 @@ commit_response_received=true
 set +e
 curl --fail-with-body --max-time 30 -sS \
   -X POST "${auth[@]}" -H 'Content-Type: application/json' \
-  "$api/edits/$edit_id:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
+  "$api/edits/$edit_id:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
   --data '' -o "$work/commit-response.json"
 commit_exit_code=$?
 set -e
 if [[ $commit_exit_code -eq 22 ]]; then
+  # Surface the definite HTTP rejection body; the commit is non-idempotent, so no retry.
+  jq -r '.error.message // .errorMessage // "(no body)"' "$work/commit-response.json" >&2 2>/dev/null || true
   fail 'paired Play commit received a definite HTTP rejection; reconciliation is forbidden'
 elif [[ $commit_exit_code -ne 0 ]]; then
   commit_response_received=false

@@ -8,7 +8,7 @@ Health.md ofrece a los agentes locales de codificación y automatización dos fo
 - la CLI `healthmd` para comandos de terminal explícitos y extracción canónica;
 - `healthmd mcp serve` y su aplicación para MCP para herramientas tipadas, visualizaciones nativas y exportaciones aprobadas de archivos generados.
 
-El servidor MCP portátil se comunica directamente con el iPhone en primer plano y no requiere Health.md para Mac. La CLI puede usar el mismo canal directo para exportaciones sin procesar o canónicas, o la API de loopback de la aplicación Mac para flujos de trabajo de índice Mac. Las lecturas de HealthKit siempre se realizan en iPhone y `healthmd.health_data` v7 sigue siendo el contrato de fuente pública.
+El servidor MCP portátil se comunica directamente con el iPhone en primer plano y no requiere Health.md para Mac. La CLI puede usar el mismo canal directo para exportaciones sin procesar o canónicas, o la API de loopback de la aplicación Mac para flujos de trabajo de índice Mac. Las lecturas de HealthKit siempre se realizan en iPhone y `healthmd.health_data` v8 sigue siendo el contrato de fuente pública.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,19 +37,40 @@ Health.md no diagnostica, recomienda tratamientos, infiere la causalidad ni etiq
 ## Configurar los asistentes locales
 
 <div class="availability preview">
-<strong>Vista previa · configuración directa y portátil</strong>
-<p>Los pasos siguientes utilizan el paquete multiplataforma aún no publicado. Si necesitas un flujo de trabajo disponible actualmente, configura el asistente firmado <code>healthmd-mcp</code> para Mac siguiendo <a href="/es/docs/configuration/">Configurar el agente</a>.</p>
+<strong>Vista previa pública · aún no es una versión estable cualificada</strong>
+<p>El paquete multiplataforma se publica como una vista previa explícitamente no cualificada. Usa la compilación móvil exacta indicada por la evidencia de la versión; el asistente firmado para Mac sigue disponible en <a href="/es/docs/configuration/">Configurar el agente</a>.</p>
 </div>
 
-1. Instala el paquete CLI multiplataforma Health.md.
+1. En macOS o Linux, ejecuta `brew install CodyBontecou/tap/healthmd` y después verifica `healthmd --version`.
 2. Ejecuta `healthmd setup codex`; el comando configura Codex y abre el emparejamiento cuando aún no se confía en un iPhone.
 3. Completa el emparejamiento en Acceso directo de la CLI, dentro de Health.md en el iPhone, y mantén la aplicación en primer plano.
 4. Para Claude o la configuración manual del host, configura la ruta absoluta `healthmd` con los argumentos `mcp serve` usando [Servidor y aplicación MCP de Health.md](/es/docs/mcp/).
 5. Reinicia el host cuando la instalación informe un cambio en la configuración, luego llame a `healthmd_doctor`.
 
+## Instalar una habilidad para agentes
+
 La aplicación Health.md para Mac sigue siendo una ruta de instalación y distribución de habilidades opcional para los usuarios de Mac, no una dependencia de MCP portátil.
 
-El instalador de habilidades de la aplicación para Mac crea `healthmd-cli/SKILL.md` en el directorio que apruebes. Reemplaza únicamente la carpeta de habilidades propia de Health.md. La habilidad enseña comandos limitados, manejo estructurado de resultados, reglas de privacidad y recuperación segura después de resultados desconocidos.
+La mayoría de los usuarios debe instalar únicamente la [habilidad Health.md CLI para consumidores en skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+El repositorio público ofrece cuatro habilidades específicas para cada tarea:
+
+| Habilidad | Uso previsto |
+|---|---|
+| `healthmd-cli` | Consultas y exportaciones limitadas y autorizadas por el usuario mediante la CLI y MCP |
+| `healthmd-cli-operator` | Operaciones directas con el iPhone y recuperación de tareas persistentes |
+| `healthmd-cli-development` | Desarrollo de la CLI, MCP, el protocolo y el servicio del iPhone |
+| `healthmd-cli-qa` | Validación automatizada y con dispositivos físicos |
+
+Para instalar una habilidad de colaborador, sustituye el nombre después de `@`; no instales instrucciones de desarrollo o QA para solicitudes normales de datos de salud. Usa `npx skills add CodyBontecou/health-md --list` para inspeccionar el repositorio sin instalar una habilidad y `npx skills update healthmd-cli --project --yes` para actualizar la habilidad de consumidor del proyecto. La [guía de instalación del repositorio](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md) documenta todos los comandos y el contrato de publicación.
+
+Una habilidad es un conjunto de instrucciones. No instala `healthmd` ni `healthmd-mcp`, no configura MCP, no empareja un teléfono, no concede acceso a datos de salud ni se mantiene actualizada automáticamente. Revisa su código fuente antes de instalarla.
+
+El instalador de habilidades de la aplicación para Mac crea `healthmd-cli/SKILL.md` en el directorio que apruebes. Reemplaza únicamente la carpeta de habilidades propia de Health.md. La habilidad enseña comandos limitados, manejo estructurado de resultados, reglas de privacidad, límites de divulgación del proveedor del modelo y recuperación segura después de resultados desconocidos.
 
 Usa el mensaje de configuración en la aplicación Mac si quieres que un agente cree los enlaces simbólicos. Health.md en sí no modifica los archivos de inicio del shell o `/usr/local/bin` de forma silenciosa.
 
@@ -109,7 +130,7 @@ La distinción es deliberada:
 
 | Superficie | Rol del contrato |
 |---|---|
-| `healthmd.health_data` v7 | Documento fuente diario público |
+| `healthmd.health_data` v8 | Documento fuente diario público |
 | `healthmd.healthkit_records` v1 | Archivo canónico de registros fuente dentro de documentos diarios sin pérdidas |
 | `healthmd.extract_receipt` | Alcance de extracción y metadatos de finalización |
 | `healthmd.query_context_day` v1 | Registro de índice cifrado desechable |
@@ -225,6 +246,6 @@ No incluya registros sin procesar, rutas, textos clínicos, detalles de medicame
 <a href="/es/docs/agent-queries/"><span>Recetario de la CLI</span>Consultas tipadas para agentes: métricas, sesiones de sueño, alineación del entrenamiento, entrenamientos, cobertura, comparación y evidencia.</a>
 <a href="/es/docs/mcp/"><span>Protocolo de herramientas</span>Configuración de Codex y Claude, 21 herramientas Mac publicadas, 19 herramientas portátiles en vista previa, gráficos de aplicaciones MCP, exportaciones, paginación y límites de sandbox.</a>
 <a href="/es/docs/agent-api/"><span>Nivel bajo</span>La API de consulta de loopback: rutas, JSON de solicitud directa, cursores y tareas persistentes de adquisición.</a>
-<a href="/es/docs/cli-extract/"><span>Objetos de origen</span>Extracción canónica: documentos, registros, proyecciones y recibos seleccionados del esquema v7.</a>
+<a href="/es/docs/cli-extract/"><span>Objetos de origen</span>Extracción canónica: documentos, registros, proyecciones y recibos seleccionados del esquema v8.</a>
 <a href="/es/docs/reference/evidence-packets/"><span>Contratos</span>Consultas compactas y paquetes de evidencia: valores tipados, cobertura, operaciones e ID deterministas.</a>
 </div>

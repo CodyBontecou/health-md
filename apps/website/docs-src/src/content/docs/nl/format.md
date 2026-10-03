@@ -7,7 +7,7 @@ description: "Bepaal de opmaak van de uitvoer zonder te wijzigen welke gegevens 
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>Het standaardformaat. Eén bestand per dag, met optionele YAML-frontmatter en secties met een kop voor elke categorie.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown met gestructureerde frontmatter die is geoptimaliseerd voor de plugin <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> van Obsidian. Getallen blijven getallen en datums blijven datums.</p></div>
-<div class="option"><strong>JSON</strong><p>Eén JSON-bestand per dag. Dagelijkse samenvattingen volgens schema v7 kunnen het gezaghebbende archief <code>healthmd.healthkit_records</code> v1 bevatten als Gezondheidsgegevens zonder verlies is ingeschakeld.</p></div>
+<div class="option"><strong>JSON</strong><p>Eén JSON-bestand per dag. Dagelijkse Apple-samenvattingen volgens schema v8 kunnen het gezaghebbende archief <code>healthmd.healthkit_records</code> v1 bevatten als Gezondheidsgegevens zonder verlies is ingeschakeld.</p></div>
 <div class="option"><strong>CSV</strong><p>Eén CSV-bestand per dag met de kopregel <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Compatibiliteitsrijen met samenvattingen bevatten vijf velden en laten de tijdstempelkolom weg. Rijen met een tijdstempel en canonieke recordrijen bevatten alle zes velden.</p></div>
 </div>
 
@@ -37,9 +37,16 @@ description: "Bepaal de opmaak van de uitvoer zonder te wijzigen welke gegevens 
 ## Voorbeeld
 <p>Onderaan het scherm Formaat staat een livevoorbeeld van de gegevens van vandaag met je huidige instellingen. Zo kun je snel bijstellen: wijzig een optie, bekijk het voorbeeld en herhaal dit waar nodig.</p>
 
+## Gegevensdetail en profielen
+
+Samenvatting maakt compacte dagprojecties. Gedetailleerde tijdreeks voegt geselecteerde metingen en intervallen toe op Apple en Android als de meetwaarde die ondersteunt. Verliesvrije gezondheidsrecords voegt het canonieke HealthKit-archief toe, alleen op Apple en niet als Android-compatibiliteit.
+
+Het detail wordt met het [exportprofiel](/nl/docs/export-profiles/) bevroren. Wijzigen bij een actief profiel verandert alleen dat profiel.
+
 ## Gerelateerde documentatie
 
 <div class="related">
+  <a href="/nl/docs/export-profiles/"><span>Profielen</span>Bewaar detailniveau en formaat voor elke workflow.</a>
   <a href="/nl/docs/metrics/"><span>Gegevens</span>Gezondheidsmeetwaarden: kies eerst welke gegevens je wilt opnemen.</a>
   <a href="/nl/docs/individual-tracking/"><span>Details</span>Individueel bijhouden: een geheel andere uitvoer met één bestand per vermelding.</a>
   <a href="/nl/docs/daily-notes/"><span>Obsidian</span>Invoegen in dagelijkse notities: gebruikt dezelfde frontmattervelden.</a>

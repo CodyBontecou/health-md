@@ -482,6 +482,20 @@ final class JSONExporterContractTests: XCTestCase {
         XCTAssertTrue(first["value"] is Double || first["value"] is Int, "value should be numeric")
     }
 
+    func testJSON_detailedTimeSeriesCanExistWithoutCanonicalArchive() {
+        var data = ExportFixtures.fullDayGranular
+        data.healthKitRecordArchive = nil
+        data.healthKitRecordCaptureStatus = .notRequested
+
+        let json = parseJSON(data)
+        let heart = json["heart"] as? [String: Any]
+
+        XCTAssertEqual(json["raw_capture_status"] as? String, "not_requested")
+        XCTAssertNil(json["healthkit_record_archive"])
+        XCTAssertEqual((heart?["heartRateSamples"] as? [[String: Any]])?.count, 5)
+        XCTAssertEqual((heart?["hrvSamples"] as? [[String: Any]])?.count, 2)
+    }
+
     func testJSON_fullDayGranular_hasHrvSamples() {
         let json = parseJSON(ExportFixtures.fullDayGranular)
         guard let heart = json["heart"] as? [String: Any] else {

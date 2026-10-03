@@ -388,7 +388,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             return .unavailable("Another iPhone export request is already active.", reason: "export_in_progress")
         }
         if exportRequest.dateSelection == .explicitRange {
-            let dates = ExportOrchestrator.dateRange(from: exportRequest.startDate, to: exportRequest.endDate)
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let dates = ExportOrchestrator.dateRange(
+                from: exportRequest.startDate,
+                to: exportRequest.endDate,
+                calendar: calendar
+            )
             guard !dates.isEmpty else {
                 return .unavailable("Choose a valid date range.", reason: "invalid_date_range")
             }
@@ -950,7 +956,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: payload.successCount,
             totalCount: payload.totalCount,
             filesWritten: payload.totalFilesWritten,
-            filesWrittenIsLowerBound: payload.isTotalFilesWrittenAuthoritative ? nil : true,
+            filesWrittenIsLowerBound: payload.hasAuthoritativeFileCount ? nil : true,
             externalRecordCount: payload.externalRecordFileCount,
             dailyNotesUpdated: payload.dailyNoteUpdateCount > 0 ? payload.dailyNoteUpdateCount : nil,
             dailyNotesSkipped: payload.dailyNoteSkipCount > 0 ? payload.dailyNoteSkipCount : nil,
@@ -2123,10 +2129,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         if let identifiers = record.request.requestedDateIdentifiers {
             return identifiers
         }
-        return ExportOrchestrator.dateRange(
-            from: record.request.dateRangeStart,
-            to: record.request.dateRangeEnd
-        ).map(Self.dateFormatter.string(from:))
+        // Durable legacy requests without frozen owner-date identifiers are not
+        // reinterpreted in the receiver's process timezone.
+        return []
     }
 
     private func completionMessage(for payload: MacExportResultPayload) -> String {
@@ -2137,19 +2142,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         switch payload.status {
         case .success:
             if payload.dailyNoteUpdateCount > 0,
-               payload.isTotalFilesWrittenAuthoritative,
+               payload.hasAuthoritativeFileCount,
                payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
             }
             return "Exported \(payload.successCount) day(s); \(generatedFiles)\(suffix)."
         case .partialSuccess:
             if payload.dailyNoteSkipCount > 0,
-               payload.isTotalFilesWrittenAuthoritative,
+               payload.hasAuthoritativeFileCount,
                payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
             }
             if payload.dailyNoteUpdateCount > 0,
-               payload.isTotalFilesWrittenAuthoritative,
+               payload.hasAuthoritativeFileCount,
                payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
             }

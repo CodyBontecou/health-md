@@ -4,9 +4,26 @@ import Foundation
 
 enum HealthRollupExporter {
     static func isEnabled(settings: AdvancedExportSettings) -> Bool {
-        settings.rollupSummariesEnabled && !settings.enabledRollupPeriods.isEmpty && !settings.exportFormats.isEmpty
+        settings.rollupSummariesEnabled && !settings.exportFormats.isEmpty
     }
 
+    static func makeSummaries(
+        from healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest,
+        settings: AdvancedExportSettings,
+        generatedAt: Date = Date()
+    ) -> [HealthRollupSummary] {
+        guard isEnabled(settings: settings) else { return [] }
+        return HealthRollupGenerator.generate(
+            from: healthData,
+            requestedRange: requestedRange,
+            settings: settings,
+            generatedAt: generatedAt
+        )
+    }
+
+    /// Historical calendar-v8 compatibility path. It rejects `range`; new
+    /// operations use the explicit requested-range overload.
     static func makeSummaries(
         from healthData: [HealthData],
         settings: AdvancedExportSettings,
@@ -14,16 +31,12 @@ enum HealthRollupExporter {
         generatedAt: Date = Date(),
         calendar: Calendar = .current
     ) -> [HealthRollupSummary] {
-        guard !settings.exportFormats.isEmpty else { return [] }
-
-        let selectedPeriods = periods ?? settings.enabledRollupPeriods
-        guard !selectedPeriods.isEmpty else { return [] }
-        if periods == nil, !settings.rollupSummariesEnabled { return [] }
-
+        let selected = periods ?? settings.enabledRollupPeriods
+        guard !selected.isEmpty, selected.allSatisfy({ $0 != .range }) else { return [] }
         return HealthRollupGenerator.generate(
             from: healthData,
             settings: settings,
-            periods: selectedPeriods,
+            periods: selected,
             generatedAt: generatedAt,
             calendar: calendar
         )
@@ -82,36 +95,25 @@ enum HealthRollupExporter {
     }
 
     static func outputRelativePaths(
-        for dates: [Date],
+        for requestedRange: HealthRollupRangeRequest,
         healthSubfolder: String,
-        settings: AdvancedExportSettings,
-        calendar: Calendar
+        settings: AdvancedExportSettings
     ) -> [String] {
-        guard isEnabled(settings: settings), !dates.isEmpty else { return [] }
-        return settings.enabledRollupPeriods.flatMap { period in
-            Set(dates.map {
-                HealthRollupPeriodWindow.window(
-                    containing: $0,
-                    period: period,
-                    calendar: calendar
+        guard isEnabled(settings: settings) else { return [] }
+        return settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+            relativePath([
+                relativeFolderPath(
+                    healthSubfolder: healthSubfolder,
+                    period: .range,
+                    format: format,
+                    settings: settings
+                ),
+                rollupFilename(
+                    periodID: requestedRange.periodID,
+                    format: format,
+                    settings: settings
                 )
-            }).sorted { $0.startDate < $1.startDate }.flatMap { window in
-                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
-                    relativePath([
-                        relativeFolderPath(
-                            healthSubfolder: healthSubfolder,
-                            period: period,
-                            format: format,
-                            settings: settings
-                        ),
-                        rollupFilename(
-                            periodID: window.id,
-                            format: format,
-                            settings: settings
-                        )
-                    ])
-                }
-            }
+            ])
         }
     }
 

@@ -16,6 +16,17 @@ import javax.inject.Singleton
 class DirectRawSnapshotProducer @Inject constructor(
     private val repositories: RawHealthRepositoryRegistry,
 ) {
+    /**
+     * Produces a raw snapshot for the direct CLI protocol.
+     *
+     * Contract decision (#132): this path runs inside a foreground service with no Activity to
+     * host Health Connect's `ExerciseRouteRequestContract`, so it never requests per-session
+     * exercise route consent. Exercise sessions written by other apps keep their inline
+     * `exerciseRouteResult` and export as `route.state=consent_required` with empty locations —
+     * the machine-readable truth for non-interactive consumers. A user who grants consent in an
+     * interactive in-app export makes the grant persist inside Health Connect, after which this
+     * path exports those routes as regular `data` without any protocol change.
+     */
     suspend fun produce(
         jobDirectory: File,
         providerId: String,

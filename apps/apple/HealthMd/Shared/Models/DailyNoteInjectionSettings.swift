@@ -97,9 +97,12 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         dailyNotesOnly = false
     }
 
-    /// Format a filename from the pattern for a given date
-    func formatFilename(for date: Date) -> String {
+    /// Format a filename from the pattern for a given date in the operation's
+    /// immutable calendar timezone. Callers without a frozen operation retain
+    /// the historical device-calendar behavior.
+    func formatFilename(for date: Date, timeZone: TimeZone = .current) -> String {
         let fmt = DateFormatter()
+        fmt.timeZone = timeZone
         var result = filenamePattern
 
         fmt.dateFormat = "yyyy-MM-dd"
@@ -123,7 +126,9 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
         fmt.dateFormat = "MMMM"
         result = result.replacingOccurrences(of: "{monthName}", with: fmt.string(from: date))
 
-        let month = Calendar.current.component(.month, from: date)
+        var calendar = Calendar.current
+        calendar.timeZone = timeZone
+        let month = calendar.component(.month, from: date)
         result = result.replacingOccurrences(of: "{quarter}", with: "Q\((month - 1) / 3 + 1)")
 
         return result
@@ -133,7 +138,15 @@ class DailyNoteInjectionSettings: ObservableObject, Codable {
     /// e.g. healthSubfolder="Health", folderPath="Daily" → "Daily/2026-03-25.md".
     /// The `healthSubfolder` parameter is retained for source compatibility but ignored;
     /// Daily Note Injection paths resolve from the selected vault/root destination.
-    func previewPath(for date: Date, healthSubfolder _: String = "") -> String {
-        ExportPathPlanner.dailyNoteRelativePath(settings: self, date: date)
+    func previewPath(
+        for date: Date,
+        healthSubfolder _: String = "",
+        timeZone: TimeZone = .current
+    ) -> String {
+        ExportPathPlanner.dailyNoteRelativePath(
+            settings: self,
+            date: date,
+            timeZone: timeZone
+        )
     }
 }

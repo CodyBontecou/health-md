@@ -16,11 +16,11 @@ use healthmd_client::{
 use healthmd_protocol::{
     encoding::SwiftUuid,
     v2,
-    wire::{DirectMessage, PeerCapabilities, PeerPlatform, Unlabeled},
+    wire::{DirectMessage, PairingRejected, PeerCapabilities, PeerPlatform, SyncPacket, Unlabeled},
 };
 use secrecy::{ExposeSecret as _, SecretString};
 use tempfile::TempDir;
-use tokio::net::TcpListener;
+use tokio::net::{TcpListener, TcpStream};
 use uuid::Uuid;
 
 #[derive(Clone, Default)]
@@ -79,6 +79,7 @@ async fn accepts_android_pairing_and_v2_negotiation() {
     )
     .await
     .unwrap();
+    assert_eq!(connection.pairing_protocol_version, 3);
 
     connection
         .channel
@@ -235,13 +236,8 @@ async fn accepts_android_pairing_and_v2_negotiation() {
     }
 }
 
-async fn accept_ui_connection(
-    listener: &TcpListener,
-    server_id: &SwiftUuid,
-    trust_store: &TrustStore<MemoryCredentials>,
-    pairing_codes: Option<(&str, &str)>,
-) -> Result<AuthenticatedConnection, ClientError> {
-    let stream = loop {
+async fn accept_ui_stream(listener: &TcpListener) -> Result<TcpStream, ClientError> {
+    loop {
         let (stream, _) = tokio::time::timeout(Duration::from_secs(60), listener.accept())
             .await
             .map_err(|_| ClientError::TimedOut)?
@@ -256,10 +252,18 @@ async fn accept_ui_connection(
             eprintln!("ANDROID_UI_E2E_NON_PROTOCOL_PROBE_IGNORED");
             continue;
         }
-        break stream;
-    };
+        return Ok(stream);
+    }
+}
+
+async fn accept_ui_connection(
+    listener: &TcpListener,
+    server_id: &SwiftUuid,
+    trust_store: &TrustStore<MemoryCredentials>,
+    pairing_codes: Option<(&str, &str)>,
+) -> Result<AuthenticatedConnection, ClientError> {
     authenticate(
-        PacketConnection::new(stream),
+        PacketConnection::new(accept_ui_stream(listener).await?),
         *server_id,
         "Rust Android UI E2E CLI",
         pairing_codes,
@@ -267,6 +271,75 @@ async fn accept_ui_connection(
         Duration::from_secs(30),
     )
     .await
+}
+
+/// After the CLI closes a non-terminal connection (for example the status probe), the Android
+/// session reconnects with bounded backoff until it gives up or the user disconnects. Absorb
+/// those trusted session reconnects — authenticate, negotiate, then close without work — until
+/// the next fresh shared-selector pairing attempt arrives, and reject that attempt exactly as an
+/// old CLI would so Android exercises its selector-2 fallback.
+async fn drain_session_reconnects_then_reject_shared_pairing(
+    listener: &TcpListener,
+    server_id: &SwiftUuid,
+    trust_store: &TrustStore<MemoryCredentials>,
+) {
+    loop {
+        let mut connection = PacketConnection::new(accept_ui_stream(listener).await.unwrap());
+        let packet = match tokio::time::timeout(Duration::from_secs(30), connection.receive()).await
+        {
+            Ok(Ok(packet)) => Some(packet),
+            Ok(Err(_)) | Err(_) => None, // aborted before sending a pairing request
+        };
+        let Some(SyncPacket::PairingRequest(Unlabeled { value: request })) = packet else {
+            continue;
+        };
+        if request.code_verifier.is_empty() {
+            // A leftover session reconnect, possibly aborted mid-handshake when the UI test
+            // disconnects or forgets the session. Absorb it and keep waiting for the pairing.
+            match authenticate(
+                connection,
+                *server_id,
+                "Rust Android UI E2E CLI",
+                None,
+                trust_store,
+                Duration::from_secs(30),
+            )
+            .await
+            {
+                Ok(mut reconnect) => {
+                    assert!(!reconnect.was_new_pairing);
+                    // Negotiate and close without work; an aborted negotiation is also fine.
+                    if reconnect
+                        .channel
+                        .send(&DirectMessage::Hello(Unlabeled::from(
+                            PeerCapabilities::portable_cli_all_versions(*server_id),
+                        )))
+                        .await
+                        .is_ok()
+                    {
+                        let _ = reconnect.channel.receive().await;
+                    }
+                }
+                Err(ClientError::Connection(_) | ClientError::TimedOut) => {}
+                Err(error) => panic!("unexpected session reconnect failure: {error:?}"),
+            }
+            continue;
+        }
+        assert_eq!(
+            request.protocol_version, 3,
+            "expected the fresh shared-selector pairing attempt"
+        );
+        connection
+            .send(&SyncPacket::PairingRejected(Unlabeled::from(
+                PairingRejected {
+                    reason: "legacy CLI does not support pairing selector 3".into(),
+                },
+            )))
+            .await
+            .unwrap();
+        eprintln!("ANDROID_UI_E2E_LEGACY_REJECTION_SENT");
+        return;
+    }
 }
 
 async fn negotiate_ui_connection(
@@ -310,9 +383,10 @@ async fn negotiate_ui_connection(
 
 /// Physical/emulator app gate. The Android instrumentation test drives Settings -> Direct CLI,
 /// while this listener verifies wrong-code rejection, pairing, reconnect, disconnect, status,
-/// forget, and code-based re-pair without requesting or retaining health payloads.
+/// forget, and rejection-only selector-2 fallback without requesting or retaining health payloads.
 #[tokio::test]
 #[ignore = "requires the Android Direct CLI UI instrumentation test"]
+#[allow(clippy::too_many_lines)]
 async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
     let bind_address =
         std::env::var("HEALTHMD_ANDROID_UI_E2E_BIND").unwrap_or_else(|_| "127.0.0.1".into());
@@ -339,21 +413,25 @@ async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
         '0'
     };
     let wrong_code = format!("{wrong_leading_digit}{}", &pairing_code[1..]);
-    let rejected = accept_ui_connection(
-        &listener,
-        &server_id,
-        &store,
-        Some(("123456", &pairing_code)),
-    )
-    .await;
-    match rejected {
-        Err(ClientError::Authentication(_)) => {
-            assert_ne!(wrong_code, pairing_code);
-            eprintln!("ANDROID_UI_E2E_WRONG_CODE_REJECTED");
+    // Current Android retries selector 2 after selector 3 so one user action remains compatible
+    // with older CLIs. A wrong high-entropy code must fail both domain-separated attempts.
+    for _ in 0..2 {
+        let rejected = accept_ui_connection(
+            &listener,
+            &server_id,
+            &store,
+            Some(("123456", &pairing_code)),
+        )
+        .await;
+        match rejected {
+            Err(ClientError::Authentication(_)) => {
+                assert_ne!(wrong_code, pairing_code);
+            }
+            Ok(_) => panic!("wrong pairing code was unexpectedly accepted"),
+            Err(error) => panic!("expected wrong-code authentication rejection, got {error:?}"),
         }
-        Ok(_) => panic!("wrong pairing code was unexpectedly accepted"),
-        Err(error) => panic!("expected wrong-code authentication rejection, got {error:?}"),
     }
+    eprintln!("ANDROID_UI_E2E_WRONG_CODE_REJECTED");
 
     let mut paired = accept_ui_connection(
         &listener,
@@ -364,6 +442,7 @@ async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
     .await
     .unwrap();
     assert!(paired.was_new_pairing);
+    assert_eq!(paired.pairing_protocol_version, 3);
     let first_device_id = paired.device.installation_id;
     negotiate_ui_connection(&mut paired, &server_id).await;
     drop(paired);
@@ -373,6 +452,7 @@ async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
         .await
         .unwrap();
     assert!(!disconnect.was_new_pairing);
+    assert_eq!(disconnect.pairing_protocol_version, 2);
     assert_eq!(disconnect.device.installation_id, first_device_id);
     negotiate_ui_connection(&mut disconnect, &server_id).await;
     eprintln!("ANDROID_UI_E2E_DISCONNECT_READY");
@@ -386,6 +466,7 @@ async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
         .await
         .unwrap();
     assert!(!status.was_new_pairing);
+    assert_eq!(status.pairing_protocol_version, 2);
     assert_eq!(status.device.installation_id, first_device_id);
     negotiate_ui_connection(&mut status, &server_id).await;
     status
@@ -406,6 +487,10 @@ async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
     drop(status);
     eprintln!("ANDROID_UI_E2E_STATUS_COMPLETE");
 
+    // Emulate an old CLI that rejects the shared selector. Android may retry selector 2 only
+    // after this explicit pairing rejection; the second connection must complete legacy pairing.
+    // Leftover session reconnects from the status phase are absorbed first.
+    drain_session_reconnects_then_reject_shared_pairing(&listener, &server_id, &store).await;
     let mut repaired = accept_ui_connection(
         &listener,
         &server_id,
@@ -415,7 +500,9 @@ async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
     .await
     .unwrap();
     assert!(repaired.was_new_pairing);
+    assert_eq!(repaired.pairing_protocol_version, 2);
     assert_eq!(repaired.device.installation_id, first_device_id);
     negotiate_ui_connection(&mut repaired, &server_id).await;
+    eprintln!("ANDROID_UI_E2E_LEGACY_FALLBACK_COMPLETE");
     eprintln!("ANDROID_UI_E2E_COMPLETE");
 }

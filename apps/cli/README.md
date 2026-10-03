@@ -3,10 +3,11 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.1`. Deployed iOS export protocol v1, Android application protocol
-> v2, and capability-gated iPhone query protocol v3 are implemented with automated Swift↔Rust and
-> Kotlin↔Rust compatibility gates.
-> Complete physical-device release QA is still required before the first public release.
+> **Status:** `0.1.0-alpha.7` is a public, explicitly unqualified preview. Deployed iOS export
+> protocol v1, Android application protocol v2, and capability-gated iPhone query protocol v3 are
+> implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. The owner has
+> physically confirmed iPhone and Android direct pairing/connectivity; the complete retained
+> release matrix is still required before the first qualified stable release.
 
 ## How it works
 
@@ -20,8 +21,39 @@ healthmd on macOS / Linux / Windows
 open Health.md iOS or Android app -> platform health provider -> private bounded export spool
 ```
 
-Manual IP is portable. Apple's MultipeerConnectivity-based Nearby transport remains available only
-in the legacy Swift client. No command silently falls back to another backend or transport.
+Manual IP is portable. Apple's MultipeerConnectivity-based Nearby transport is available only in the
+Swift helper bundled inside Health.md for Mac and is not part of this CLI. No command silently falls
+back to another transport, and the CLI never connects through the Health.md Mac app.
+
+### Bounded wake window
+
+Query, export, extract, resume, and cancellation commands wait up to 120 seconds when the paired
+phone is unreachable or reports that Health.md is inactive. Unlocking the phone and opening
+Health.md lets the same in-flight command continue; no re-run is needed. Override the window per
+command with `--wake-timeout SECONDS`, or pass `--wake-timeout 0` to retain fail-fast behavior.
+The operation's existing `--timeout` starts after this readiness window.
+
+MCP uses the same implementation and default. Set `HEALTHMD_WAKE_TIMEOUT=SECONDS` in the MCP host
+environment (`0` disables), and provide an MCP progress token to receive health-free
+`notifications/progress` updates while the phone is unavailable. `healthmd status` reports the
+local `wake_window`, and `healthmd.direct_readiness` reports the same object as `wake`.
+
+RFC-0005 P1 (wait-only) applies to both mobile platforms. Current `main` also compiles the P2
+worker client into every macOS, Linux, and Windows CLI build and uses
+`https://healthmd-wake.costream.workers.dev` by default. A paired iPhone that opted in and enrolled
+wake material receives one best-effort `/wake/request` nudge at wait start. Override the endpoint
+only for an explicit test environment with `HEALTHMD_WAKE_WORKER_URL`; opt out per command with
+`--no-wake` or for MCP with `HEALTHMD_NO_WAKE=1`. The former `wake-worker` Cargo feature remains a
+no-op compatibility alias for alpha.6 source-install commands.
+
+The already-published alpha.6 archives predate this all-build activation and remain wait-only; only
+feature-enabled alpha.6 source builds carried P2. The next CLI release will carry the new default. Android FCM wake remains
+RFC-0005 P3 and is not implemented, so Android honestly uses P1 until that separately qualified
+phase ships. The `wake_window`/`wake` object is reported per selected device: a stored wake
+credential reports `available`/`enrolled`, while no enrollment or ambiguous selection reports
+`unavailable`/`wait_only` and sends no notification. Wake never performs background capture,
+changes pairing trust, bypasses protected-data/permission checks, or routes health data through the
+worker.
 
 ## Platform support
 
@@ -31,6 +63,7 @@ in the legacy Swift client. No command silently falls back to another backend or
 | iOS canonical raw export and extract | Yes | Yes | Yes |
 | Android provider-native JSON/NDJSON raw export | Yes | Yes | Yes |
 | Durable status, resume, cancellation | Yes | Yes | Yes |
+| Bounded wake window; enrolled-iPhone APNs after alpha.6 | Yes | Yes | Yes |
 | Generated-file destination commits | Yes | Yes | Yes |
 | Manual IP / Tailscale | Yes | Yes | Yes |
 | Nearby / MultipeerConnectivity | No | No | No |
@@ -43,41 +76,45 @@ in-memory JSON validation is capped at 64 MiB.
 
 ## Mobile compatibility
 
-| Mobile source | Protocol | Conservative source floor | Portable Rust operations | Public status |
+| Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | selector 1 / v1 | iOS 3.0.3 from exact candidate SHA | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.0.3 from exact candidate SHA | V1 plus 19-tool local MCP/query | Pending physical qualification |
-| Android | selector 2 / v2 | Android 1.5.4 (`versionCode 25`) from exact candidate SHA | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 21-tool local MCP/query and full-corpus jobs | Connectivity confirmed; full qualification pending |
+| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
-No public CLI/mobile pair is qualified yet. V3 does not replace v1 pairing, transport, exports, or
-transfer frames, and Android never downgrades to v1. See the authoritative
+Owner-confirmed physical pairing/connectivity is complete on iPhone and Android, but no public
+CLI/mobile pair has the full retained qualification record yet. Shared pairing selector 3 is
+independent from iPhone query v3; it does not replace application v1/v2, transport, exports, or
+transfer frames, and Android never downgrades its application protocol to v1. See the authoritative
 [mobile compatibility ledger](docs/mobile-compatibility.md); every release records exact mobile
 build IDs because matching marketing versions or protocol numbers alone is insufficient.
 
 ## Installation
 
-Checksummed archives and direct installers become available when the first GitHub release is
-published. Homebrew formula publishing begins with the first stable (non-prerelease) release:
+The `0.1.0-alpha.7` workflow published a checksummed, explicitly unqualified preview. Install it
+with:
 
 ```bash
-# macOS or Linux with Homebrew/Linuxbrew, after the first stable release
 brew install CodyBontecou/tap/healthmd
-
-# Rust users on macOS, Linux, or Windows
-cargo install healthmd-cli --locked
+healthmd --version
 ```
 
+The formula installs both `healthmd` and its `healthmd-mcp` compatibility launcher from the
+same versioned release. This preview does not qualify a CLI/mobile pair; use the exact matching
+mobile build named by release evidence. The tap tracks preview releases until the first qualified
+stable release.
+
 PowerShell installer and checksummed `.zip`/`.tar.xz` archives for Windows, Linux, and macOS are
-attached to each release. Rust users can also install a published version from crates.io:
+attached to each release. After an exact version reaches crates.io, Rust users can install it with:
 
 ```bash
 cargo install healthmd-cli --locked
-# Or use the matching prebuilt GitHub archive after installing cargo-binstall:
+# Or, after installing cargo-binstall:
 cargo binstall healthmd-cli
 ```
 
-Until the first release, build from the monorepo source:
+For unreleased development source, clone the monorepo and install from the CLI workspace:
 
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
@@ -89,12 +126,14 @@ Prebuilt archives use `healthmd-cli/v<version>` tags. Do not use the repository-
 `/releases/latest` URL because the Health.md monorepo reserves that release pointer for the Apple apps.
 For a published version, download the installer and `sha256.sum` plus
 `sha256.sum.sigstore.json` from that exact tag, verify the documented Sigstore workflow identity and
-checksums, then run the shell installer on macOS/Linux or the Authenticode-signed PowerShell
-installer on Windows. macOS users may instead use the notarized, stapled DMG. Replace `VERSION`
+checksums, then run the shell installer on macOS/Linux. On Windows, run the PowerShell installer
+when `release-identities.json` records a `qualified` Windows publisher, or — while the ledger
+defers Authenticode — expect one SmartScreen prompt on first run and rely on the signed checksum
+manifest for integrity. macOS users may also use the notarized, stapled DMG. Replace `VERSION`
 with the complete version including any prerelease suffix:
 
 ```bash
-VERSION='0.1.0-alpha.1'
+VERSION='0.1.0-alpha.7'
 TAG="healthmd-cli/v$VERSION"
 BASE="https://github.com/CodyBontecou/health-md/releases/download/$TAG"
 curl -fLO "$BASE/healthmd-cli-installer.sh"
@@ -118,7 +157,7 @@ sh healthmd-cli-installer.sh
 ```
 
 ```powershell
-$Version = '0.1.0-alpha.1'
+$Version = '0.1.0-alpha.7'
 $Tag = "healthmd-cli/v$Version"
 $Base = "https://github.com/CodyBontecou/health-md/releases/download/$Tag"
 Invoke-WebRequest "$Base/healthmd-cli-installer.ps1" -OutFile healthmd-cli-installer.ps1
@@ -136,11 +175,45 @@ if (!$Line -or !$IdentityLine -or
     (Get-FileHash .\release-identities.json -Algorithm SHA256).Hash.ToLower() -ne $IdentityLine.Substring(0, 64)) { throw 'release asset checksum mismatch' }
 $Identity = Get-Content .\release-identities.json -Raw | ConvertFrom-Json
 $Signature = Get-AuthenticodeSignature .\healthmd-cli-installer.ps1
-if ($Identity.windows.status -ne 'qualified' -or $Signature.Status -ne 'Valid' -or
-    $Signature.SignerCertificate.Subject -cne $Identity.windows.publisher_subject) { throw 'publisher verification failed' }
+if ($Identity.windows.status -eq 'qualified') {
+  if ($Signature.Status -ne 'Valid' -or
+      $Signature.SignerCertificate.Subject -cne $Identity.windows.publisher_subject) { throw 'publisher verification failed' }
+} elseif ($Identity.windows.status -eq 'pending_external_certificate_provisioning') {
+  if ($Signature.Status -eq 'Valid') { throw 'installer is signed by an unrecorded publisher' }
+  Write-Host 'Windows artifacts are Authenticode-unsigned in this release.' -ForegroundColor Yellow
+  Write-Host 'Expect one SmartScreen prompt; integrity is verified by the signed sha256.sum above.' -ForegroundColor Yellow
+} else { throw 'unrecognized Windows signing state in release-identities.json' }
 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\healthmd-cli-installer.ps1
 if ($LASTEXITCODE -ne 0) { throw 'installer failed' }
 ```
+
+## Agent skills
+
+Agent skills provide task-specific instructions to compatible coding agents. They are separate from the CLI and MCP binaries: installing a skill does not install `healthmd`, configure `healthmd-mcp`, pair a mobile source, or grant access to Apple Health or Health Connect.
+
+Most users should install only the public consumer skill:
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+Its [skills.sh page](https://skills.sh/CodyBontecou/health-md/healthmd-cli) and [source](../../.agents/skills/healthmd-cli/SKILL.md) describe bounded CLI/MCP queries, explicit authorization, units and missingness, truthful iPhone/Android capability differences, privacy-safe diagnostics, and durable-job recovery.
+
+The repository also publishes task-specific contributor skills:
+
+| Skill | Intended use |
+|---|---|
+| `healthmd-cli-operator` | Operate and troubleshoot direct iPhone workflows |
+| `healthmd-cli-development` | Change the CLI, MCP server, direct protocol, or iPhone service |
+| `healthmd-cli-qa` | Run compatibility, release, and physical-device validation |
+
+Install one contributor skill by replacing the name after `@`, for example:
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli-qa
+```
+
+Use `npx skills add CodyBontecou/health-md --list` to inspect all discoverable skills without installing them, and `npx skills update healthmd-cli --project --yes` to update the project-scoped consumer skill. Review [Agent skills and installation](../../docs/agents/skills.md) for every install command, local-checkout testing, global versus project scope, and publishing details.
 
 ## Upgrade, uninstall, and support
 
@@ -180,12 +253,12 @@ client. Source builds require Rust 1.85 or newer.
    healthmd direct pair
    ```
 
-2. Keep the command running. Its iOS code, high-entropy 20-digit Android code, listener addresses,
-   and port are printed to stderr.
-3. On iOS, open **Direct CLI Access** in the Mac destination settings. On Android, open
-   **Settings → Direct CLI**. Enter the computer's LAN/Tailscale address, port, and matching
-   platform code, then pair.
-4. The final machine-readable pairing result is written to stdout.
+2. Keep the command running. One universal QR, its shared 20-digit code, listener addresses, port,
+   and a six-digit legacy-iOS fallback are printed to stderr.
+3. On iOS, open **Sync → Direct CLI Access**. On Android, open **Settings → Direct CLI**. Scan the
+   universal QR inside Health.md to pair immediately, or enter the same LAN/Tailscale address, port,
+   and shared 20-digit code manually.
+4. The final pairing result is human-readable in a terminal and machine-readable JSON when piped or invoked with `--json`.
 
 Trust is stored in Keychain, Secret Service, or Windows Credential Manager. Pairing is distinct from
 the Health.md Mac app's sync trust. Linux requires an unlocked freedesktop Secret Service provider
@@ -200,6 +273,25 @@ mobile source, and pair again; never copy the secret into a file or shell comman
 
 ## Commands
 
+Incomplete commands are safe discovery requests. They exit successfully, list required
+choices/examples, and never contact a device. Interactive terminals receive concise human-readable
+text; pipes and `--json` receive the stable `healthmd.cli_guidance/1` JSON contract. A typed operation
+selected without `--arguments` shows an argument synopsis; add `--json` for its complete nested input
+schema:
+
+```bash
+healthmd export
+healthmd extract
+healthmd query
+healthmd query healthmd_sleep_sessions
+healthmd resume
+healthmd cancel
+healthmd direct
+healthmd mcp
+```
+
+Use the resulting structured requirements to build a complete execution request:
+
 ```bash
 # Readiness and local trust
 healthmd status
@@ -209,10 +301,10 @@ healthmd direct devices
 healthmd export --yesterday --raw --output yesterday.json
 healthmd export --last 7 --raw --output week.json
 healthmd export --from 2026-07-01 --to 2026-07-07 --raw
-healthmd export --all --raw --output complete-health-corpus.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 
-# Android raw options
-healthmd export --last 7 --raw --provider health_connect --raw-format ndjson \
+# Android full corpus in provider-native form (routes are included when authorized/readable)
+healthmd export --all --raw --full-corpus --provider health_connect --raw-format ndjson \
   --output health-connect.ndjson
 
 # Typed query through the same operation registry and evaluator as MCP (iOS query v3)
@@ -243,15 +335,32 @@ The source app must remain open while pairing or starting a request. Android use
 user-started data-sync foreground service for an active direct session. Manual IP listens on TCP
 `17647` by default; use the global `--port` option when a different saved port is required.
 
-Command results and errors are JSON on stdout. Pairing instructions and non-sensitive progress may
-use stderr. Raw and extraction output is either streamed as JSON/JSONL or atomically committed to the
-explicit `--output` path. JSONL file output writes its health-free receipt beside it as
-`OUTPUT.receipt.json`. JSONL conversion bounds each daily item to 64 MiB; use JSON for an unusually
-dense day. A validated partial result exits nonzero unless `--allow-partial` is set.
+Structured command results, guidance, and errors are human-readable when stdout is an interactive
+terminal and remain JSON when stdout is piped or redirected. Global `--json` forces the stable JSON
+contract; global `--human` forces readable text through a pipe or pager. Pairing instructions and
+non-sensitive progress may use stderr. Incomplete JSON discovery uses `healthmd.cli_guidance/1` with
+`status: "guidance"`, `request_sent: false`, missing requirements, accepted modes, argv examples,
+and next actions. Malformed or operationally unsuccessful JSON uses `healthmd.cli_error/1` with a
+concise code, stable parser kind when applicable, command-specific help, and bounded recovery
+actions. Parser errors never expose Clap's multiline rendering or rejected user values. Explicit
+`--help` and `--version` remain text. Raw JSON/JSONL and generated-file artifacts retain their exact
+bytes. MCP server modes reserve stdout for JSON-RPC after launch, so formatting flags do not alter
+the protocol and startup diagnostics remain health-free stderr.
+
+See [CLI discovery, guidance, and error contract](docs/command-guidance.md) for fields, exit codes,
+privacy rules, and the recommended agent loop. Raw and extraction output is either streamed as
+JSON/JSONL or atomically committed to the explicit `--output` path. JSONL file output writes its
+health-free receipt beside it as `OUTPUT.receipt.json`. JSONL conversion bounds each daily item to
+64 MiB; use JSON for an unusually dense day. A validated partial result exits nonzero unless
+`--allow-partial` is set. `--full-corpus` means all public record types that the selected source
+supports and the user authorized—not a private Apple/Google database. Existing raw envelopes retain
+their per-type capture, authorization, unsupported, skipped, partial, and read-error evidence so an
+empty or inaccessible type is never silently reported as exported.
 
 ## Durability and security
 
-- iOS keeps its deployed six-digit pairing flow; Android pairing uses a separate 20-digit (~66-bit) one-time code before Keystore-backed reconnect trust.
+- New iOS and Android onboarding shares selector 3 and one 20-digit (~66-bit) one-time code; legacy selectors 1/2 and established reconnect trust remain compatible.
+- Pairing QR handoffs are accepted only by explicit in-app scanners over canonical private-LAN/Tailscale addresses; externally opened custom URLs do not authorize pairing.
 - TCP packets, binary chunks, partitions, Markdown merges, and extraction projections are bounded.
 - Requests, peer bindings, destination identity, manifests, and request fingerprints are immutable
   across resume.
@@ -274,8 +383,10 @@ validation, canonical receipts, and bounded traversal. `healthmd query` calls it
 writes the packaged MCP catalog from the shared registry and CI rejects stale output.
 
 The default `healthmd` build includes only the local stdio MCP transport. It communicates directly
-with the foreground Health.md iPhone app over the paired, authenticated, encrypted channel on port
-`17647`; the Health.md Mac app, an OAuth service, and a health-data cloud are not required.
+with the foreground Health.md app on a paired iPhone or Android device over the authenticated,
+encrypted channel on port `17647`; the Health.md Mac app, an OAuth service, and a health-data cloud
+are not required. Typed query tools remain iPhone-only, while full-corpus raw jobs work with either
+mobile protocol.
 Release archives intentionally use this local-first default feature set. Pairing and MCP deliberately run through the same installed,
 signed executable identity so native credentials never require a second application's Keychain ACL.
 
@@ -296,10 +407,14 @@ cancel tools for approval. `healthmd-mcp` remains an installed compatibility lau
 replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
 and supervises its own same-file helper against the same fixed Credential Manager service/account.
 
-The complete local server exposes 19 fixed operations for pairing, readiness, bounded typed
-queries, charts, sleep, workouts, comparisons, coverage, evidence, and durable generated-file
-exports. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated
-exports require an explicit existing destination.
+The complete local server exposes 21 fixed operations for pairing, readiness, bounded typed
+queries, charts, sleep, workouts, comparisons, coverage, evidence, durable generated-file exports,
+and durable full-corpus raw exports. `healthmd_export_raw` requests every public type supported by
+the selected mobile source and authorized by the user. The artifact remains in the private durable
+job spool; `healthmd_raw_artifact_read` can read only an exact job artifact in base64 chunks of at
+most 64 KiB. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated
+exports require an explicit existing destination, and raw export start/resume/cancel calls require
+explicit host approval.
 
 For a least-privilege local host that should never receive pairing or filesystem-export authority,
 pair outside MCP and use the separate read-only stdio entry:
@@ -310,8 +425,8 @@ healthmd mcp serve-read-only
 ```
 
 `serve-read-only` is part of the default local-first build. It exposes exactly the 13 readiness,
-discovery, and typed-query tools; all six pairing/export-job tools are absent and guessed calls are
-rejected. It starts no MCP HTTP listener, requires no OAuth or tunnel, and uses no Health.md or
+discovery, and typed-query tools; all eight local pairing/export tools are absent and guessed calls
+are rejected. It starts no MCP HTTP listener, requires no OAuth or tunnel, and uses no Health.md or
 third-party cloud service. The iPhone must already be paired and remain foreground for each query.
 
 A complete local desktop MCP client can onboard without opening a separate terminal. Call
@@ -399,7 +514,7 @@ or export. Query pages preserve explicit coverage/truncation receipts; if one re
 366,000-day / 64 MiB compact-context guard, partition dates or metric IDs across calls rather than treating the
 logical corpus as unavailable.
 
-See [the architecture](docs/architecture.md), [iOS export protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
+See [the architecture](docs/architecture.md), [CLI guidance/error contract](docs/command-guidance.md), [iOS export protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
 [iPhone query protocol v3](../../packages/contracts/direct-protocol/v3/protocol.md),
 [Android protocol v2](../../packages/contracts/direct-protocol/v2/protocol.md), [release QA](docs/qa.md), and
 [release process](docs/releasing.md).
@@ -413,6 +528,10 @@ cargo test --workspace --all-features          # experimental remote profiles
 cargo clippy --workspace --all-targets -- -D warnings
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo run -- --help
+cargo run -- export                       # local structured discovery
+cargo run -- extract                      # local structured discovery
+cargo run -- query                        # fixed typed-operation catalog
+cargo run -- query healthmd_sleep_sessions # exact schema and argv examples
 cargo run -- setup codex --help
 cargo run -- query --help
 cargo run -- mcp serve --help

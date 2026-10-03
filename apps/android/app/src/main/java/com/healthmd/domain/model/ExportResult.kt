@@ -21,6 +21,8 @@ data class ExportResult(
     val retryFolderOperationIds: Map<LocalDate, String> = emptyMap(),
     /** Internal accounting marker; durable folder history uses exact acknowledged artifact count. */
     val usesDurableFolderJournal: Boolean = false,
+    /** Exact owner dates left unresolved by cooperative cancellation; never serialized publicly. */
+    val remainingDates: Set<LocalDate> = emptySet(),
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0 && !wasCancelled
     val isPartialSuccess: Boolean get() = (successCount in 1 until totalCount) || (successCount > 0 && wasCancelled)

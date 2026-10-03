@@ -1,7 +1,11 @@
 package com.healthmd.data.settings
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
@@ -9,6 +13,8 @@ import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -27,13 +33,14 @@ class ExportProfileRepositoryTest {
     val temporaryFolder = TemporaryFolder()
 
     private lateinit var dataStoreScope: CoroutineScope
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: ExportProfileRepository
 
     @Before
     fun setUp() {
         dataStoreScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val dataStoreFile = temporaryFolder.newFolder().resolve("export_profiles.preferences_pb")
-        val dataStore = PreferenceDataStoreFactory.create(
+        dataStore = PreferenceDataStoreFactory.create(
             scope = dataStoreScope,
             produceFile = { dataStoreFile },
         )
@@ -61,6 +68,65 @@ class ExportProfileRepositoryTest {
         folderUri = folderUri,
         folderDisplayName = folderUri?.let { "Folder $name" },
     )
+
+    @Test
+    fun `concurrent deletes preserve the final profile`() = runTest {
+        val first = seededProfile(name = "First")
+        val second = seededProfile(name = "Second")
+
+        val results = listOf(first.id, second.id).map { id ->
+            async(Dispatchers.Default) { repository.delete(id) }
+        }.awaitAll()
+
+        assertThat(results.count { it }).isEqualTo(1)
+        assertThat(repository.getProfiles()).hasSize(1)
+        assertThat(repository.getActiveProfileId())
+            .isEqualTo(repository.getProfiles().single().id)
+    }
+
+    @Test
+    fun `concurrent adds use unique names without losing either profile`() = runTest {
+        listOf("Profile", "profile").map { name ->
+            async(Dispatchers.Default) {
+                repository.add(name, "snapshot", ExportTarget.DEVICE_FOLDER)
+            }
+        }.awaitAll()
+
+        val profiles = repository.getProfiles()
+        assertThat(profiles).hasSize(2)
+        assertThat(profiles.map { it.name.lowercase() }.toSet()).hasSize(2)
+        assertThat(profiles.map { it.id }).contains(repository.getActiveProfileId())
+    }
+
+    @Test
+    fun `concurrent migration never overwrites an added profile`() = runTest {
+        val add = async(Dispatchers.Default) {
+            repository.add("User", "user-snapshot", ExportTarget.DEVICE_FOLDER)
+        }
+        val migrate = async(Dispatchers.Default) {
+            repository.migrateDefaultIfNeeded("default-snapshot", ExportTarget.DEVICE_FOLDER)
+        }
+        val added = add.await()
+        migrate.await()
+
+        assertThat(repository.getProfiles().map { it.id }).contains(added.id)
+        assertThat(repository.getProfiles().size).isAtLeast(1)
+    }
+
+    @Test
+    fun `malformed present inventory blocks mutation without replacing bytes`() = runTest {
+        val corrupt = "{not-json"
+        dataStore.edit { it[PROFILES_KEY] = corrupt }
+
+        val addFailure = runCatching {
+            repository.add("Must Not Replace", "snapshot", ExportTarget.DEVICE_FOLDER)
+        }.exceptionOrNull()
+
+        assertThat(addFailure).isNotNull()
+        assertThat(repository.migrateDefaultIfNeeded("default", ExportTarget.DEVICE_FOLDER)).isNull()
+        assertThat(repository.delete("anything")).isFalse()
+        assertThat(dataStore.data.first()[PROFILES_KEY]).isEqualTo(corrupt)
+    }
 
     @Test
     fun `editor update renames retargets rebinds and replaces the snapshot atomically`() = runTest {
@@ -185,5 +251,9 @@ class ExportProfileRepositoryTest {
         val unchanged = repository.profiles.first().single()
         assertThat(unchanged.name).isEqualTo("Daily")
         assertThat(unchanged.settingsSnapshotJson).isEqualTo("snapshot-a")
+    }
+
+    private companion object {
+        val PROFILES_KEY = stringPreferencesKey("export_profiles")
     }
 }

@@ -20,10 +20,10 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Vista previa · MCP directo y portátil</strong>
-<p>La topología independiente <code>healthmd mcp serve</code> de 19 herramientas para macOS, Linux y Windows está implementada, pero aún no está empaquetada públicamente. Su entrada <code>serve-read-only</code> sin nube expone solo las 13 herramientas de disponibilidad y consulta después del emparejamiento local. Los comandos solo portátiles en esta página están marcados como vista previa.</p>
+<p>La topología independiente <code>healthmd mcp serve</code> para macOS, Linux y Windows se publica como la vista previa no cualificada de 19 herramientas <code>0.1.0-alpha.7</code>. Su entrada <code>serve-read-only</code> sin nube expone solo las 13 herramientas de disponibilidad y consulta después del emparejamiento local. Instala en macOS o Linux con <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
-## Requisitos
+## Requisitos de la versión incluida para Mac
 
 - Health.md para Mac instalado y abierto.
 - Health.md abierto en el iPhone conectado cuando la herramienta de actualización o una exportación inicia una nueva lectura de HealthKit.
@@ -31,6 +31,14 @@ Codex / Claude / another local MCP host
 - La ruta del asistente firmado que se muestra en **Health.md para Mac → CLI**.
 
 La ruta habitual del asistente es `/Applications/Health.md.app/Contents/Helpers/healthmd-mcp`. Las versiones principales del protocolo MCP admitidas son `2024-11-05`, `2025-03-26`, `2025-06-18` y `2025-11-25`. No inicies `healthmd-mcp` como un comando interactivo normal; el host MCP posee la entrada estándar y el ciclo de vida del proceso.
+
+## Requisitos del modo directo portátil
+
+- Instala la vista previa independiente en macOS, Linux o Windows; no requiere la aplicación para Mac ni su servicio de loopback.
+- Empareja una vez un iPhone con consultas y mantén Health.md en primer plano para cada petición tipada nueva. Android no admite MCP tipado.
+- Las herramientas de emparejamiento MCP solo incorporan iPhone. Empareja Android explícitamente desde la CLI antes de iniciar MCP.
+- Usa Manual IP o Tailscale y el almacén nativo de credenciales; Linux requiere un proveedor Secret Service desbloqueado.
+- Configura el iniciador de compatibilidad instalado o el servidor stdio del mismo binario. Ambos usan el backend directo emparejado.
 
 ## Configuración de Codex
 
@@ -77,9 +85,9 @@ Las versiones de Claude Desktop que anuncian la extensión estable de MCP Apps m
 
 ## Vista previa portátil de MCP directo
 
-Después del lanzamiento independiente, `healthmd setup codex` emparejará un iPhone en primer plano y creará de forma segura una entrada `healthmd mcp serve` del mismo binario. Esa topología utiliza Manual IP cifrada autenticada o transporte Tailscale en el puerto `17647`, almacenamiento de credenciales nativo y lecturas explícitas de iPhone por solicitud. Linux también requiere un proveedor de Secret Service desbloqueado; Windows utiliza el Windows Credential Manager.
+En la vista previa pública independiente, `healthmd setup codex` empareja un iPhone en primer plano y crea de forma segura una entrada `healthmd mcp serve` del mismo binario. Esa topología utiliza Manual IP cifrada autenticada o transporte Tailscale en el puerto `17647`, almacenamiento de credenciales nativo y lecturas explícitas de iPhone por solicitud. Linux también requiere un proveedor de Secret Service desbloqueado; Windows utiliza el Windows Credential Manager.
 
-Hasta que exista una versión de `healthmd-cli/v<version>`, no confíes en URL de paquetes o instaladores no publicados. Consulta [CLI directa para iPhone](/es/docs/cli-direct/) para conocer el contrato de transporte y emparejamiento por etapas.
+Usa la versión preliminar exacta `healthmd-cli/v<version>` en lugar del puntero a la versión más reciente de todo el repositorio. Consulta [CLI directa para iPhone](/es/docs/cli-direct/) para conocer el contrato de transporte y emparejamiento explícitamente no cualificado.
 
 ## Visualizaciones de la aplicación MCP nativa
 
@@ -108,7 +116,7 @@ Si el host no admite aplicaciones MCP, las herramientas aún funcionan. `healthm
 
 ## Herramientas disponibles
 
-El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y consulta, cuatro de tareas de archivos generados y cuatro de tareas de actualización del contexto cifrado. La vista previa portátil de 19 herramientas conserva las 13 herramientas de disponibilidad y consulta y las cuatro de exportación, sustituye las tareas de actualización de Mac por dos herramientas de emparejamiento directo y ejecuta las consultas tipadas directamente en el iPhone en primer plano.
+El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y consulta, cuatro de tareas de archivos generados y cuatro de actualización del contexto cifrado. La vista previa portátil publicada `0.1.0-alpha.7` tiene 19 herramientas. El código de desarrollo actual tiene 21 al añadir la exportación de corpus completo y la lectura acotada de artefactos; no presupongas esas dos herramientas hasta una versión posterior.
 
 ### Disponibilidad y descubrimiento
 
@@ -137,10 +145,16 @@ El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y co
 
 | Herramienta | Propósito |
 |---|---|
-| `healthmd_export_files` | Ejecutar una exportación persistente a través de la aplicación Mac en su carpeta seleccionada |
+| `healthmd_export_files` | Ejecutar una exportación persistente de archivos; el Mac integrado usa su carpeta seleccionada y el MCP directo portátil exige un destino explícito del ordenador |
 | `healthmd_export_job_status` | Inspeccionar el progreso de la exportación y el recibo de destino |
 | `healthmd_export_job_resume` | Reanudar la tarea de exportación exacta, inmutable y persistente |
 | `healthmd_export_job_cancel` | Cancelar explícitamente la tarea de exportación |
+### Acceso al corpus bruto completo · solo MCP local portátil
+
+| Herramienta | Propósito |
+|---|---|
+| `healthmd_export_raw` | Tras aprobación explícita, iniciar una exportación duradera del corpus bruto en iPhone o Android |
+| `healthmd_raw_artifact_read` | Leer un fragmento limitado del artefacto validado y vinculado a la tarea |
 
 Las herramientas de exportación, reanudación y cancelación están marcadas como escrituras potencialmente destructivas y requieren interacción explícita en los hosts Claude actuales, porque los modos de exportación configurados pueden actualizar o sobrescribir los archivos generados. La configuración del Codex anterior solicita esas herramientas como protección adicional.
 
@@ -236,7 +250,7 @@ Primero selecciona y conserva una carpeta de destino con permisos de escritura e
 
 Usa `date_selection: "all_available"` sin `date_range` para obtener un historial completo. Los campos opcionales `metric_ids`, `categories` o `all_metrics` acotan la adquisición del iPhone sin cambiar la configuración guardada. `detail_level` se aplica solo cuando una de esas selecciones está presente. `all_metrics` no se puede combinar con listas explícitas de métricas/categorías.
 
-Para ejecutar en su lugar un perfil de exportación guardado, establece `settings_policy` en `"profile"` y pasa `profile_reference` con el UUID estable del perfil (un `name` de visualización opcional se registra solo para errores):
+Para ejecutar en su lugar un perfil guardado, establece `settings_policy` en `"profile"` y pasa `profile_reference` con su UUID estable. En el protocolo público, el `name` opcional aporta contexto de visualización y error. Las implementaciones actuales del teléfono pueden consultarlo si falla la búsqueda del ID, pero ese comportamiento no resiste cambios de nombre; la automatización debe tratar el UUID como identidad estable:
 
 ```json
 {
@@ -247,7 +261,22 @@ Para ejecutar en su lugar un perfil de exportación guardado, establece `setting
 }
 ```
 
-El perfil es el dueño del alcance de ajustes: `profile_reference` no se puede combinar con `metric_ids`, `categories`, `all_metrics` ni con la política de ajustes guardados, y un UUID desconocido falla con un error tipado en lugar de recurrir a los ajustes activos.
+El perfil es el dueño del alcance de ajustes: `profile_reference` no se puede combinar con `metric_ids`, `categories`, `all_metrics` ni con la política de ajustes guardados, y una referencia que no se puede resolver falla con un error tipado en lugar de recurrir a los ajustes activos.
+
+Los ejemplos anteriores usan el destino del Mac integrado. Con el MCP directo portátil, cada solicitud de archivos también exige una carpeta absoluta y existente del ordenador en `destination`; el perfil del teléfono aporta los ajustes de salida, no esa ruta del host:
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" },
+  "destination": "/absolute/existing/HealthVault",
+  "wait_timeout_seconds": 300
+}
+```
+
+El modo directo portátil rechaza un destino ausente, relativo, inexistente o que sea un enlace simbólico antes de iniciar la tarea del teléfono.
 
 Inspeccionar:
 

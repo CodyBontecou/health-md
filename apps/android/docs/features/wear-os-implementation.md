@@ -1,8 +1,10 @@
 # Wear OS implementation checklist
 
+> **Deferred release scope:** Wear OS is excluded from Android `1.9.1`. The Play phone app currently hides Wear settings and does not advertise or start Data Layer synchronization. The implementation below is unpublished preview work targeted for requalification in `1.10.0`; this document is not a gate for the current phone-only release.
+
 The expanded evidence-based audit is maintained in [`wear-os-completion-audit.md`](wear-os-completion-audit.md). It is authoritative for remaining manual, hardware, CI, signing, and Play gates; passing local proxies must not override it.
 
-Health.md for Wear OS is a non-standalone companion. Phone Health Connect is authoritative; the watch performs no Health Connect reads and no Health Services sensing. The private `:wearable-contract` is not an export/direct-protocol change.
+The planned Health.md for Wear OS app is a non-standalone **Google Play channel** companion. Phone Health Connect is authoritative; the watch performs no Health Connect reads and no Health Services sensing. While publication is deferred, Wear settings, active services, and manifest capabilities are absent from every shipping phone variant. Dormant Play-only transport source and the private `:wearable-contract` remain for future qualification; they are not an export/direct-protocol change.
 
 ## Prompt-to-artifact checklist
 
@@ -22,14 +24,16 @@ The phone reads only Steps, Active Calories, Exercise Sessions, Sleep Sessions, 
 
 Freshness is 0–4 hours current, 4–24 hours stale with age, and over 24 hours hidden. Tiles/complications are local-cache-only and never claim real-time data. Eligible health synchronization cadence is 30 minutes and platform-inexact. If a foreground publication represents aggregates while background Health Connect reads are ineligible, a separate 30-minute WorkManager audit checks only permission names—never records—and publishes an aggregate-free replacement if any represented grant disappears; full eligibility reconciliation cancels that audit once normal synchronization becomes eligible or retained aggregate state is removed. Tiles include local timeline entries for stale-age, 24-hour expiry, and captured-zone midnight transitions in addition to a one-hour host refresh request; complication polling is push-only with native validity/timeline transitions, including cross-midnight hourly stale entries only for bounded Recovery/Sleep/HRV values.
 
-## Release/runbook
+## Future reactivation runbook
+
+Do not use this runbook for the current phone-only release. Before targeting Wear again, first change `release-scope.json` in an independently reviewed release commit and restore the phone capability/runtime only when all steps below can pass.
 
 1. Keep phone and Wear `versionName` equal; maintain globally unique version codes (phone below 1,000,000; Wear from 1,000,000).
 2. Configure the same release keystore in `local.properties` for both modules.
 3. Run `./scripts/validate-play-listing.sh`. Initial paired AAB upload must not require Wear screenshots because the exact Play-generated/Play-signed installed build does not exist yet.
 4. Run the validation commands below and inspect both AAB manifests with the release keystore environment configured. The validator attests the shared upload-key configuration; the installed Play App Signing certificate remains a credentialed Play Console verification gate because AABs do not embed APK-style signer certificates.
-5. Upload both AABs in one edit, assigning phone to `qa` and Wear to `wear:qa`; retain the successful exact-SHA release run ID and its pre-mutation QA upload intent/AAB artifacts; protected ingest later proves the paired upload and credential cleanup steps succeeded. Verify Play generation/signing, install the exact closed-track Wear build, capture and visually approve its physical app/Tile framebuffers, package those artifacts in a protected evidence submission, and dispatch exact-tag `.github/workflows/android-wear-screenshots.yml` with the submission run ID and attempt. Retain its attempt-qualified checksum-covered committed-edit receipt; do not invoke the implementation script locally.
-6. Perform and explicitly attest closed-track phone-first and watch-first installs, upgrade from production, upgrade/downgrade skew, and delete/uninstall/reinstall before production. Assemble the complete unsigned/unsealed release evidence root (generated APKs, screenshots/capture receipts and independent visual approval, paired/manual QA, battery controls, and exact push-CI receipt); omit the protected screenshot-upload and QA-upload receipt namespaces. Submit its digest-bound tarball with `android-wear-evidence-submit.yml`; protected `android-wear-evidence.yml` takes the full submission run ID/attempt, QA upload run ID, and successful screenshot workflow run ID/attempt (while separately retaining that workflow's earlier screenshot-source submission run/attempt), validates their provenances, downloads both protected receipts plus the exact QA AABs directly, independently retains the current exact `qa`/`wear:qa` pair, safely extracts submitted evidence, creates the checksum/HMAC seal, verifies all artifacts, and retains a SHA/version-bound artifact. Provide that successful ingest run ID to promotion. Promotion revalidates it before obtaining the production-only Play credential, retains an immutable intent, independently compares committed Play screenshot hashes to the sealed assets, and then requires one newly committed paired edit to `production` and `wear:production`. It fails rather than treating an already-partial/full pair as proof. If only post-commit receipt retention fails, the protected recovery-only workflow proves the original paired-edit step succeeded and re-queries the sealed evidence/current Play state without mutating tracks. Never place Wear on a default phone track or promote only one artifact when its contract version changed.
+5. Upload both AABs in one edit, assigning phone to `qa` and Wear to `wear:internal`; retain the successful exact-SHA release run ID and its pre-mutation QA upload intent/AAB artifacts; protected ingest later proves the paired upload and credential cleanup steps succeeded. Verify Play generation/signing, install the exact closed-track Wear build, capture and visually approve its physical app/Tile framebuffers, package those artifacts in a protected evidence submission, and dispatch exact-tag `.github/workflows/android-wear-screenshots.yml` with the submission run ID and attempt. Retain its attempt-qualified checksum-covered committed-edit receipt; do not invoke the implementation script locally.
+6. Perform and explicitly attest closed-track phone-first and watch-first installs, upgrade from production, upgrade/downgrade skew, and delete/uninstall/reinstall before production. Assemble the complete unsigned/unsealed release evidence root (generated APKs, screenshots/capture receipts and independent visual approval, paired/manual QA, battery controls, and exact push-CI receipt); omit the protected screenshot-upload and QA-upload receipt namespaces. Submit its digest-bound tarball with `android-wear-evidence-submit.yml`; protected `android-wear-evidence.yml` takes the full submission run ID/attempt, QA upload run ID, and successful screenshot workflow run ID/attempt (while separately retaining that workflow's earlier screenshot-source submission run/attempt), validates their provenances, downloads both protected receipts plus the exact QA AABs directly, independently retains the current exact `qa`/`wear:internal` pair, safely extracts submitted evidence, creates the checksum/HMAC seal, verifies all artifacts, and retains a SHA/version-bound artifact. Provide that successful ingest run ID to promotion. Promotion revalidates it before obtaining the production-only Play credential, retains an immutable intent, independently compares committed Play screenshot hashes to the sealed assets, and then requires one newly committed paired edit to `production` and `wear:production`. It fails rather than treating an already-partial/full pair as proof. If only post-commit receipt retention fails, the protected recovery-only workflow proves the original paired-edit step succeeded and re-queries the sealed evidence/current Play state without mutating tracks. Never place Wear on a default phone track or promote only one artifact when its contract version changed.
 
 ## Physical battery/OEM QA gate
 
@@ -40,7 +44,7 @@ Example checkpoint (repeat for all four checkpoints, both scenarios, and both OE
 ```bash
 EXPECTED_WEAR_APK_SHA256=<approved-play-base-apk-sha256> \
 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256=<authorized-play-signing-cert-sha256> \
-EXPECTED_WEAR_VERSION_CODE=1000029 EXPECTED_VERSION_NAME=1.7.1 \
+EXPECTED_WEAR_VERSION_CODE=1000037 EXPECTED_VERSION_NAME=1.8.8 \
 REVIEWER_ID=<independent-reviewer> REVIEW_TICKET=<approval-record> \
 CONTROL_PROFILE_ID=wear-battery-profile-v1 \
 CONFIRM_CONTROLLED_CONDITIONS=yes CONFIRM_NO_USER_REFRESH=yes \
@@ -59,8 +63,8 @@ At each manually reached checkpoint (`installed`, `synced`, `offline`, `reconnec
 ```bash
 EXPECTED_PHONE_APK_SHA256=<approved-play-base-apk-sha256> \
 EXPECTED_WEAR_APK_SHA256=<approved-play-base-apk-sha256> \
-EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
-EXPECTED_VERSION_NAME=1.7.1 \
+EXPECTED_PHONE_VERSION_CODE=37 EXPECTED_WEAR_VERSION_CODE=1000037 \
+EXPECTED_VERSION_NAME=1.8.8 \
 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256=<authorized-play-signing-cert-sha256> \
 REVIEWER_ID=<independent-reviewer> REVIEW_TICKET=<approval-record> \
 scripts/capture-wear-paired-qa-evidence.sh \
@@ -75,14 +79,14 @@ The collector fails unless the exact phone 29 / Wear 1,000,029 pair is installed
 ```bash
 ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wearable-contract:test :wear:testDebugUnitTest
 ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wear:lintDebug :wear:assembleDebug
-ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wear:bundleRelease :app:bundleRelease
+ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :app:testPlayDebugUnitTest :app:lintPlayDebug :app:assemblePlayDebug
+ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :wear:bundleRelease :app:bundlePlayRelease
 RELEASE_STORE_FILE=/path/to/release.jks \
 RELEASE_STORE_PASSWORD=... RELEASE_KEY_ALIAS=... RELEASE_KEY_PASSWORD=... \
 WEAR_REQUIRE_SIGNING_ATTESTATION=true \
 ./scripts/validate-wear-artifact.sh \
   wear/build/outputs/bundle/release/wear-release.aab \
-  app/build/outputs/bundle/release/app-release.aab
+  app/build/outputs/bundle/playRelease/app-play-release.aab
 ```
 
 Post-upload Play signer evidence is captured read-only with `scripts/capture-google-play-generated-apk-evidence.sh`. It requires exact expected phone/Wear version codes and semantic version name plus an independently authorized Play signing certificate SHA-256, downloads the exact generated phone/Wear base-master split APKs used as installed `base.apk`, verifies package/version and actual APK certificates, and retains the exact bytes plus raw inventories and checksums in a non-overwritable evidence set. Both collector and release preflight run `verify-google-play-generated-apk-evidence.sh` so the receipt is rebound to those bytes and authorized signing-key group instead of being trusted as self-attested JSON. No Play edit is created.

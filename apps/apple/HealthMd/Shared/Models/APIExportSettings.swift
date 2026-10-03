@@ -104,14 +104,13 @@ final class APIExportSettings: ObservableObject {
         guard let endpointURL else { return nil }
         let displayName = endpointURL.host.flatMap { $0.isEmpty ? nil : $0 }
             ?? endpointURL.absoluteString
-        var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false)
-        components?.query = nil
-        components?.fragment = nil
         return APIExportDestinationSnapshot(
             endpointURL: endpointURL,
             authorizationHeaderValue: authorizationHeaderValue,
             displayName: displayName,
-            redactedEndpointDescription: components?.url?.absoluteString ?? endpointURL.absoluteString
+            redactedEndpointDescription: Self.redactedEndpointDescription(
+                for: endpointURL.absoluteString
+            )
         )
     }
 
@@ -124,13 +123,29 @@ final class APIExportSettings: ObservableObject {
     }
 
     var redactedEndpointDescription: String {
-        guard let endpointURL else { return "No endpoint configured" }
-        guard var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false) else {
-            return endpointURL.absoluteString
+        Self.redactedEndpointDescription(for: endpointURLString)
+    }
+
+    /// A privacy-safe endpoint label for history and diagnostics. User info,
+    /// query parameters, and fragments can contain credentials and are never
+    /// copied into persisted display metadata.
+    nonisolated static func redactedEndpointDescription(
+        for rawValue: String,
+        fallback: String = "No endpoint configured"
+    ) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(),
+              ["https", "http"].contains(scheme),
+              url.host?.isEmpty == false,
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return fallback
         }
+        components.user = nil
+        components.password = nil
         components.query = nil
         components.fragment = nil
-        return components.url?.absoluteString ?? endpointURL.absoluteString
+        return components.url?.absoluteString ?? components.host ?? fallback
     }
 
     var authorizationHeaderValue: String? {

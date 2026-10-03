@@ -41,6 +41,10 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.HealthData
+import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
+import com.healthmd.rawexport.ExerciseRouteConsentGateway
+import com.healthmd.rawexport.PendingExerciseRouteConsent
+import com.healthmd.rawexport.withInteractiveRouteConsent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -102,6 +106,7 @@ class APIEndpointExportEngineIntegrationTest {
         )
 
         assertThat(result.successCount).isEqualTo(2)
+        assertThat(capture.authorizedDateScopes).isEmpty()
         assertThat(capture.calls).containsExactly(first, second).inOrder()
         assertThat(credentials.requestConfigurationCalls).isEqualTo(1)
         assertThat(zoneCalls).isEqualTo(1)
@@ -116,6 +121,57 @@ class APIEndpointExportEngineIntegrationTest {
             .isGreaterThan(events.indexOf("rust-plan"))
         assertThat(events.indexOf("upload"))
             .isGreaterThan(events.indexOf("native-plan"))
+    }
+
+    @Test
+    fun interactiveApiExportAuthorizesGloballyNewestSessionsBeforeCanonicalMultiBatchCapture() = runTest {
+        val dates = (0 until 15).map { first.plusDays(it.toLong()) }
+        val coordinator = ExerciseRouteConsentCoordinator()
+        val prompted = mutableListOf<PendingExerciseRouteConsent>()
+        coordinator.attach(object : ExerciseRouteConsentCoordinator.Surface {
+            override fun launchRouteRequest(session: PendingExerciseRouteConsent): Boolean {
+                prompted += session
+                coordinator.onRouteResult(null)
+                return true
+            }
+        })
+        val capture = ConsentRecordingCapture(
+            data = dates.associateWith { date -> HealthData(date, activity = ActivityData(steps = date.dayOfMonth)) },
+            gateway = coordinator,
+        )
+        val uploader = RecordingUploader()
+        val progressDates = mutableListOf<String>()
+        val planner = APIExportRustPlanner { request ->
+            val bodies = request.requestedDates.chunked(FrozenAPIExportRequest.DEFAULT_MAX_API_BATCH_DAYS)
+                .mapIndexed { index, batch -> previewBody(batch.first(), batch.last(), "batch-$index") }
+            APIExportRustPlan(testPin(ExportEngineMode.rust), apiPlan(request, bodies))
+        }
+        val runner = runner(
+            mode = ExportEngineMode.rust,
+            capture = capture,
+            native = APIExportNativePlanBuilder { error("Rust authority invoked native planner") },
+            rust = planner,
+            uploader = uploader,
+        )
+
+        val result = withInteractiveRouteConsent {
+            runner.exportDates(
+                dates = dates.asReversed(),
+                settings = settings(),
+                onProgress = { _, _, date -> progressDates += date },
+            )
+        }
+
+        assertThat(result.successCount).isEqualTo(dates.size)
+        assertThat(capture.authorizedDateScopes).containsExactly(dates)
+        assertThat(prompted.map { it.sessionId }).containsExactlyElementsIn(
+            dates.takeLast(ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT)
+                .asReversed()
+                .map { "session-$it" },
+        ).inOrder()
+        assertThat(capture.calls).containsExactlyElementsIn(dates).inOrder()
+        assertThat(progressDates).containsExactlyElementsIn(dates.map(LocalDate::toString)).inOrder()
+        assertThat(uploader.payloads).hasSize(3)
     }
 
     @Test
@@ -851,13 +907,46 @@ class APIEndpointExportEngineIntegrationTest {
         private val data: Map<LocalDate, HealthData>,
         private val events: MutableList<String>? = null,
     ) : APIExportCaptureSource {
+        val authorizedDateScopes = mutableListOf<List<LocalDate>>()
         val calls = mutableListOf<LocalDate>()
 
         override fun isBeforeFirstUnlock(): Boolean = false
 
+        override suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) {
+            authorizedDateScopes += dates.toList()
+        }
+
         override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
             calls += date
             events?.add("capture:$date")
+            return data.getValue(date)
+        }
+    }
+
+    private class ConsentRecordingCapture(
+        private val data: Map<LocalDate, HealthData>,
+        private val gateway: ExerciseRouteConsentGateway,
+    ) : APIExportCaptureSource {
+        val authorizedDateScopes = mutableListOf<List<LocalDate>>()
+        val calls = mutableListOf<LocalDate>()
+
+        override fun isBeforeFirstUnlock(): Boolean = false
+
+        override suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) {
+            authorizedDateScopes += dates.toList()
+            gateway.requestRoutes(
+                dates.map { date ->
+                    PendingExerciseRouteConsent(
+                        sessionId = "session-$date",
+                        sessionStartTime = date.atTime(12, 0).atZone(ZoneId.of("UTC")).toInstant(),
+                        sessionEndTime = date.atTime(13, 0).atZone(ZoneId.of("UTC")).toInstant(),
+                    )
+                },
+            )
+        }
+
+        override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
+            calls += date
             return data.getValue(date)
         }
     }

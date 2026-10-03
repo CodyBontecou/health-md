@@ -164,6 +164,42 @@ class HealthConnectRawMappingTest {
             .isEqualTo(RawRouteState.CONSENT_REQUIRED)
     }
 
+    @Test fun grantedRouteMergeSerializesExactlyLikeNativeInlineDataRoute() {
+        val route = ExerciseRoute(listOf(
+            ExerciseRoute.Location(Instant.ofEpochSecond(12, 5), 45.25, -122.75, Length.meters(3.0), Length.meters(4.0), Length.meters(100.0)),
+            ExerciseRoute.Location(Instant.ofEpochSecond(13, 6), 45.5, -122.5, null, null, null),
+        ))
+        val sharedMetadata = Metadata.manualEntry(clientRecordId = "granted")
+        val nativeData = ExerciseSessionRecord(
+            startTime = Instant.ofEpochSecond(10), startZoneOffset = null,
+            endTime = Instant.ofEpochSecond(20), endZoneOffset = null,
+            metadata = sharedMetadata,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            segments = listOf(ExerciseSegment(Instant.ofEpochSecond(11), Instant.ofEpochSecond(14), ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING, 2)),
+            laps = listOf(ExerciseLap(Instant.ofEpochSecond(11), Instant.ofEpochSecond(15), Length.meters(500.0))),
+            exerciseRoute = route,
+        )
+        val withheld = ExerciseSessionRecord(
+            startTime = Instant.ofEpochSecond(10), startZoneOffset = null,
+            endTime = Instant.ofEpochSecond(20), endZoneOffset = null,
+            metadata = sharedMetadata,
+            exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,
+            segments = listOf(ExerciseSegment(Instant.ofEpochSecond(11), Instant.ofEpochSecond(14), ExerciseSegment.EXERCISE_SEGMENT_TYPE_RUNNING, 2)),
+            laps = listOf(ExerciseLap(Instant.ofEpochSecond(11), Instant.ofEpochSecond(15), Length.meters(500.0))),
+        )
+
+        // A session Health Connect withheld as ConsentRequired, merged with the route the user
+        // granted through the per-session consent flow, must be byte-identical to the same
+        // session natively returned with ExerciseRouteResult.Data.
+        val merged = RawHealthConnectMapper.map(withheld.withGrantedExerciseRoute(route), "exercise_session")
+        val native = RawHealthConnectMapper.map(nativeData, "exercise_session")
+
+        assertThat(merged.fields).isEqualTo(native.fields)
+        assertThat(merged.hash).isEqualTo(native.hash)
+        assertThat(merged.nativeIdentity).isEqualTo(native.nativeIdentity)
+        assertThat(RawJson.canonicalRecord(merged)).isEqualTo(RawJson.canonicalRecord(native))
+    }
+
     @Test fun plannedExerciseNestedManualCompletionUsesExplicitDiscriminator() {
         val step = PlannedExerciseStep(
             exerciseType = ExerciseSessionRecord.EXERCISE_TYPE_RUNNING,

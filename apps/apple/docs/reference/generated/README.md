@@ -13,7 +13,7 @@ Generated groups:
 
 - `core/` — daily JSON/CSV/Markdown/Bases, canonical archives, data dictionary, metric catalog, field inventories, and manifests.
 - `individual/` — source-backed and compatibility Individual Entry notes, filenames, and frontmatter fields.
-- `rollups/` — weekly roll-up examples and aggregation rules.
+- `rollups/` — current range-v9 examples, historical weekly-v8 examples, and aggregation rules.
 - `automation/` — API Endpoint, local control, strict raw, sync, and connected-transfer messages.
 - `cli/` — actual CLI requests, responses, diagnostics, and exit behavior.
 

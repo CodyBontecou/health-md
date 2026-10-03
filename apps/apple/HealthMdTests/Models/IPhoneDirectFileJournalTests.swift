@@ -95,6 +95,26 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertEqual(decoded.request, journal.request)
         XCTAssertEqual(decoded.accepted, journal.accepted)
         XCTAssertEqual(decoded.session, journal.session)
+        XCTAssertEqual(decoded.originalRequestedDates, journal.requestedDates)
+        XCTAssertEqual(decoded.originalCalendarTimeZoneIdentifier, "America/Los_Angeles")
+    }
+
+    func testVersionFourMigratesImmutableOriginalRangeFromExistingFields() throws {
+        let journal = try makeJournal()
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(journal)) as? [String: Any]
+        )
+        object["version"] = IPhoneDirectFileJournal.fileBackedCaptureVersion
+        object.removeValue(forKey: "originalRequestedDates")
+        object.removeValue(forKey: "originalCalendarTimeZoneIdentifier")
+
+        let decoded = try JSONDecoder().decode(
+            IPhoneDirectFileJournal.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.originalRequestedDates, decoded.requestedDates)
+        XCTAssertEqual(decoded.originalCalendarTimeZoneIdentifier, "America/Los_Angeles")
     }
 
     func testPresentVersionFourEnginePinsRejectUnknownOrExplicitLegacyAuthority() throws {
@@ -312,42 +332,339 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
 
     @MainActor
-    func testPinnedDirectRollupRangeFailsClosedWhenSourceCaptureIsUnavailable() throws {
+    func testPinnedDirectRangePermitsFailedEdgeDaysWithReducedCoverage() throws {
         let defaults = UserDefaults(suiteName: "IPhoneDirectFileJournalTests.RangeFailure.\(UUID().uuidString)")!
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = [.json]
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let snapshot = ExportSettingsSnapshot.from(
             settings,
             healthSubfolder: "Health",
             calendarTimeZoneIdentifier: "UTC"
         )
-        let date = ExportFixtures.partialDay.date
-        let day = IPhoneDirectCapturedDay(
-            sourceDate: date,
-            sourceDateIdentifier: "2026-03-15",
-            isRequestedDate: true,
-            relativePath: "captured-00000000.json",
-            succeeded: false
-        )
-        let payload = ConnectedCorpusHealthDayPayload(
-            sourceDate: date,
-            isRequestedDate: true,
-            record: nil,
-            externalDailyRecords: [],
-            failure: FailedDateDetail(date: date, reason: .noHealthData)
-        )
+        let middle = ExportFixtures.partialDay
+        let calendar = Calendar(identifier: .gregorian)
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: middle.date))
+        let lastDate = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: middle.date))
+        let days = [
+            IPhoneDirectCapturedDay(
+                sourceDate: firstDate,
+                sourceDateIdentifier: "2026-03-14",
+                isRequestedDate: true,
+                relativePath: "captured-00000000.json",
+                succeeded: false
+            ),
+            IPhoneDirectCapturedDay(
+                sourceDate: middle.date,
+                sourceDateIdentifier: "2026-03-15",
+                isRequestedDate: true,
+                relativePath: "captured-00000001.json",
+                succeeded: true
+            ),
+            IPhoneDirectCapturedDay(
+                sourceDate: lastDate,
+                sourceDateIdentifier: "2026-03-16",
+                isRequestedDate: true,
+                relativePath: "captured-00000002.json",
+                succeeded: false
+            ),
+        ]
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: firstDate,
+                isRequestedDate: true,
+                record: nil,
+                externalDailyRecords: [],
+                failure: FailedDateDetail(date: firstDate, reason: .noHealthData)
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: middle.date,
+                isRequestedDate: true,
+                record: middle,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: lastDate,
+                isRequestedDate: true,
+                record: nil,
+                externalDailyRecords: [],
+                failure: FailedDateDetail(date: lastDate, reason: .healthKitError)
+            ),
+        ]
 
-        XCTAssertThrowsError(try IPhoneDirectFileExportProducer.rangePlanningInput(
-            capturedDays: [day],
-            payloads: [payload],
+        let input = try IPhoneDirectFileExportProducer.rangePlanningInput(
+            capturedDays: days,
+            payloads: payloads,
             settings: settings,
             settingsSnapshot: snapshot
-        )) { error in
-            XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
+        )
+
+        XCTAssertEqual(input.records.map(\.date), [middle.date])
+        XCTAssertEqual(input.dailyOutputOwnerDates, ["2026-03-15"])
+        XCTAssertTrue(input.hasAnyData)
+    }
+
+    @MainActor
+    func testPinnedDirectSummaryOnlyRangeOverTenThousandDaysDisablesOnlySummary() throws {
+        let defaults = UserDefaults(suiteName: "IPhoneDirectFileJournalTests.RangeLimit.\(UUID().uuidString)")!
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.summaryOnlyExport = true
+        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        let originalDates = [
+            try XCTUnwrap(Calendar(identifier: .gregorian).date(from: DateComponents(year: 2000, month: 1, day: 1))),
+            try XCTUnwrap(Calendar(identifier: .gregorian).date(from: DateComponents(year: 2027, month: 5, day: 20))),
+        ]
+
+        let availability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+            snapshot,
+            requestedDates: originalDates,
+            calendarTimeZone: settings.exportTimeZoneOverride!
+        )
+        let effectiveSettings = availability.snapshot.makeAdvancedExportSettings()
+
+        XCTAssertFalse(availability.snapshot.generateRangeSummary)
+        XCTAssertFalse(effectiveSettings.summaryOnlyModeEnabled)
+        XCTAssertEqual(effectiveSettings.looseFormatsPerDate, 1)
+        XCTAssertEqual(availability.warning?.dataType, "Range Summary")
+        XCTAssertTrue(availability.warning?.errorDescription.contains("10,000 days") == true)
+    }
+
+    @MainActor
+    func testDirectMultiDateAllEmptySummaryOnlyIsTerminalWithoutRetryIdentifiers() throws {
+        let base = try makeJournal()
+        let defaults = UserDefaults(suiteName: "IPhoneDirectFileJournalTests.AllEmpty.\(UUID().uuidString)")!
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.summaryOnlyExport = true
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEnginePin: base.appleExportEnginePin,
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        let dates = [
+            Date(timeIntervalSince1970: 1_800_000_000),
+            Date(timeIntervalSince1970: 1_800_086_400),
+        ]
+        let identifiers = ["2027-01-15", "2027-01-16"]
+        let days = zip(dates, identifiers).map { date, identifier in
+            IPhoneDirectCapturedDay(
+                sourceDate: date,
+                sourceDateIdentifier: identifier,
+                isRequestedDate: true,
+                relativePath: "captured-\(identifier).citem",
+                succeeded: true,
+                historyFactsRecorded: true
+            )
         }
+        let journal = IPhoneDirectFileJournal(
+            request: base.request,
+            accepted: base.accepted,
+            session: base.session,
+            settingsSnapshot: snapshot,
+            appleExportEnginePin: base.appleExportEnginePin,
+            appleDirectProtocolPin: base.appleDirectProtocolPin,
+            healthSubfolder: "Health",
+            requestedDates: dates,
+            originalRequestedDates: dates,
+            originalCalendarTimeZoneIdentifier: "UTC",
+            transferDates: dates,
+            capturedDays: days,
+            generatedFiles: [],
+            partitions: [],
+            committedPartitionCount: 0,
+            committedBytes: 0,
+            terminalNoDataDateIdentifiers: identifiers,
+            generationCompleted: true,
+            state: "preparing",
+            completionRecorded: false,
+            updatedAt: dates[1]
+        )
+
+        let reconciliation = try IPhoneDirectFileExportProducer.terminalReconciliation(for: journal)
+
+        XCTAssertEqual(reconciliation.successCount, 0)
+        XCTAssertTrue(reconciliation.retryableFailedDateIdentifiers.isEmpty)
+        XCTAssertFalse(reconciliation.isFullSuccess)
+        XCTAssertEqual(Set(journal.terminalNoDataDateIdentifiers), Set(identifiers))
+        XCTAssertTrue(journal.generationCompleted, "terminal empty generation must not rerun forever")
+        let restored = try JSONDecoder().decode(
+            IPhoneDirectFileJournal.self,
+            from: JSONEncoder().encode(journal)
+        )
+        XCTAssertEqual(restored.terminalNoDataDateIdentifiers, identifiers)
+        XCTAssertTrue(restored.generationCompleted)
+    }
+
+    @MainActor
+    func testTerminalReconciliationKeepsFullSuccessForInformationalOnlyDays() throws {
+        let base = try makeJournal()
+        let date = base.requestedDates[0]
+        let informational = ExportPartialFailure(
+            date: date,
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2027-01-15",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        // The wire manifest still counts the plan omission as a warning (its
+        // day-level truth stays unchanged), while the durable degrading split
+        // records that nothing was actually lost.
+        let day = IPhoneDirectCapturedDay(
+            sourceDate: date,
+            sourceDateIdentifier: "2027-01-15",
+            isRequestedDate: true,
+            relativePath: "captured-00000000.citem",
+            succeeded: true,
+            includedGranularData: true,
+            sampleCount: 12,
+            recordCount: 14,
+            partialFailureCount: 1,
+            integrityWarningCount: 0,
+            hadWarnings: true,
+            degradingFailureCount: 0,
+            hadDegradingWarnings: false,
+            informationalFailures: [informational],
+            historyFactsRecorded: true
+        )
+        let journal = IPhoneDirectFileJournal(
+            request: base.request,
+            accepted: base.accepted,
+            session: base.session,
+            settingsSnapshot: base.settingsSnapshot,
+            appleExportEnginePin: base.appleExportEnginePin,
+            appleDirectProtocolPin: base.appleDirectProtocolPin,
+            healthSubfolder: "Health",
+            requestedDates: base.requestedDates,
+            originalRequestedDates: base.requestedDates,
+            originalCalendarTimeZoneIdentifier: "America/Los_Angeles",
+            transferDates: base.requestedDates,
+            capturedDays: [day],
+            generatedFiles: [],
+            partitions: [],
+            committedPartitionCount: 0,
+            committedBytes: 0,
+            state: "completed",
+            completionRecorded: false,
+            updatedAt: date
+        )
+
+        let reconciliation = try IPhoneDirectFileExportProducer.terminalReconciliation(for: journal)
+
+        XCTAssertEqual(reconciliation.successCount, 1)
+        XCTAssertTrue(
+            reconciliation.isFullSuccess,
+            "informational-only warnings must not degrade the terminal outcome"
+        )
+        XCTAssertTrue(reconciliation.retryableFailedDateIdentifiers.isEmpty)
+    }
+
+    @MainActor
+    func testTerminalReconciliationStillDegradesForLegacyWarningDays() throws {
+        let base = try makeJournal()
+        let date = base.requestedDates[0]
+        // Legacy checkpoint written before the split: the fallback must keep
+        // treating its warnings as degrading.
+        let day = IPhoneDirectCapturedDay(
+            sourceDate: date,
+            sourceDateIdentifier: "2027-01-15",
+            isRequestedDate: true,
+            relativePath: "captured-00000000.citem",
+            succeeded: true,
+            includedGranularData: true,
+            sampleCount: 12,
+            recordCount: 14,
+            partialFailureCount: 1,
+            integrityWarningCount: 0,
+            hadWarnings: true,
+            historyFactsRecorded: true
+        )
+        XCTAssertEqual(day.resolvedDegradingFailureCount, 1)
+        XCTAssertTrue(day.resolvedHadDegradingWarnings)
+
+        let journal = IPhoneDirectFileJournal(
+            request: base.request,
+            accepted: base.accepted,
+            session: base.session,
+            settingsSnapshot: base.settingsSnapshot,
+            appleExportEnginePin: base.appleExportEnginePin,
+            appleDirectProtocolPin: base.appleDirectProtocolPin,
+            healthSubfolder: "Health",
+            requestedDates: base.requestedDates,
+            originalRequestedDates: base.requestedDates,
+            originalCalendarTimeZoneIdentifier: "America/Los_Angeles",
+            transferDates: base.requestedDates,
+            capturedDays: [day],
+            generatedFiles: [],
+            partitions: [],
+            committedPartitionCount: 0,
+            committedBytes: 0,
+            state: "completed",
+            completionRecorded: false,
+            updatedAt: date
+        )
+
+        let reconciliation = try IPhoneDirectFileExportProducer.terminalReconciliation(for: journal)
+
+        XCTAssertEqual(reconciliation.successCount, 1)
+        XCTAssertFalse(reconciliation.isFullSuccess)
+    }
+
+    func testCapturedDayRoundTripsDegradingSplitAndDecodesLegacyFallback() throws {
+        let informational = ExportPartialFailure(
+            date: Date(timeIntervalSince1970: 1_800_000_000),
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2027-01-15",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let day = IPhoneDirectCapturedDay(
+            sourceDate: Date(timeIntervalSince1970: 1_800_000_000),
+            sourceDateIdentifier: "2027-01-15",
+            isRequestedDate: true,
+            relativePath: "captured-00000000.json",
+            succeeded: true,
+            includedGranularData: true,
+            partialFailureCount: 2,
+            integrityWarningCount: 0,
+            hadWarnings: true,
+            degradingFailureCount: 1,
+            hadDegradingWarnings: true,
+            informationalFailures: [informational]
+        )
+        let data = try JSONEncoder().encode(day)
+        let decoded = try JSONDecoder().decode(IPhoneDirectCapturedDay.self, from: data)
+        XCTAssertEqual(decoded, day)
+        XCTAssertEqual(decoded.resolvedDegradingFailureCount, 1)
+        XCTAssertTrue(decoded.resolvedHadDegradingWarnings)
+        XCTAssertEqual(decoded.informationalFailures, [informational])
+
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        for key in ["degradingFailureCount", "hadDegradingWarnings", "informationalFailures"] {
+            legacyObject.removeValue(forKey: key)
+        }
+        let legacy = try JSONDecoder().decode(
+            IPhoneDirectCapturedDay.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+        XCTAssertNil(legacy.degradingFailureCount)
+        XCTAssertNil(legacy.hadDegradingWarnings)
+        XCTAssertNil(legacy.informationalFailures)
+        XCTAssertEqual(legacy.resolvedDegradingFailureCount, 2)
+        XCTAssertTrue(legacy.resolvedHadDegradingWarnings)
     }
 
     @MainActor
@@ -377,28 +694,23 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
 
     #if os(iOS)
     func testDirectCLIPairingLinkAcceptsOnlyExactBoundedPrivateIPv4Payload() throws {
+        let code = "12345678901234567890"
+        let validPayload =
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=\(code)"
         let valid = try XCTUnwrap(IPhoneDirectCLIPairingLink(
-            url: try XCTUnwrap(URL(
-                string: "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
-            ))
+            url: try XCTUnwrap(URL(string: validPayload))
         ))
         XCTAssertEqual(valid.host, "192.168.1.42")
         XCTAssertEqual(valid.port, 17_647)
-        XCTAssertEqual(valid.pairingCode, "123456")
-        XCTAssertEqual(
-            IPhoneDirectCLIPairingLink(
-                scannedPayload: "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
-            ),
-            valid
-        )
-        XCTAssertNil(IPhoneDirectCLIPairingLink(
-            scannedPayload: " healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
-        ))
+        XCTAssertEqual(valid.pairingCode, code)
+        XCTAssertEqual(IPhoneDirectCLIPairingLink(scannedPayload: validPayload), valid)
+        XCTAssertNil(IPhoneDirectCLIPairingLink(scannedPayload: " \(validPayload)"))
         XCTAssertNil(IPhoneDirectCLIPairingLink(
             scannedPayload: String(repeating: "a", count: 513)
         ))
         XCTAssertNil(IPhoneDirectCLIPairingLink(
-            scannedPayload: "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=%31%32%33%34%35%36"
+            scannedPayload:
+                "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=%31%32%33"
         ))
         for allowedHost in [
             "10.0.0.1",
@@ -409,27 +721,30 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         ] {
             XCTAssertNotNil(IPhoneDirectCLIPairingLink(
                 url: try XCTUnwrap(URL(
-                    string: "healthmd://direct-cli/pair?host=\(allowedHost)&port=17647&code=123456"
+                    string: "healthmd://direct-cli/pair?host=\(allowedHost)&port=17647&code=\(code)"
                 ))
             ))
         }
 
         for invalid in [
-            "https://direct-cli/pair?host=192.168.1.42&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=example.com&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=3232235818&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=0300.0250.1.42&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=192.168.001.042&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=127.0.0.1&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=172.15.255.255&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=172.32.0.1&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=100.63.255.255&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=100.128.0.1&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=8.8.8.8&port=17647&code=123456",
-            "healthmd://direct-cli/pair?host=192.168.1.42&port=0&code=123456",
-            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345a",
-            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456&extra=1",
-            "healthmd://other/pair?host=192.168.1.42&port=17647&code=123456"
+            "https://direct-cli/pair?host=192.168.1.42&port=17647&code=\(code)",
+            "HEALTHMD://DIRECT-CLI/pair?host=192.168.1.42&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=example.com&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=3232235818&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=0300.0250.1.42&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=192.168.001.042&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=127.0.0.1&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=172.15.255.255&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=172.32.0.1&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=100.63.255.255&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=100.128.0.1&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=8.8.8.8&port=17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=0&code=\(code)",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=+17647&code=\(code)",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=1234567890123456789a",
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=\(code)&extra=1",
+            "healthmd://other/pair?host=192.168.1.42&port=17647&code=\(code)"
         ] {
             XCTAssertNil(IPhoneDirectCLIPairingLink(url: try XCTUnwrap(URL(string: invalid))))
         }

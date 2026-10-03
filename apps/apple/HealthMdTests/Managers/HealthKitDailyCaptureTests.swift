@@ -12,7 +12,7 @@ final class HealthKitDailyCaptureTests: XCTestCase {
             dateRangeDescription: "2026-05-10",
             errorDescription: "Unavailable"
         )
-        var receivedGranular: Bool?
+        var receivedDetailPolicy: AppleExportDetailPolicy?
         var receivedSelection: MetricSelectionState?
 
         let outcome = try await HealthKitDailyCapture.capture(
@@ -23,8 +23,8 @@ final class HealthKitDailyCaptureTests: XCTestCase {
             emptyRecordPolicy: .retain,
             fetchExternalRecords: false,
             failurePolicy: .apiEndpoint,
-            fetchHealthData: { requestedDate, granular, metricSelection in
-                receivedGranular = granular
+            fetchHealthData: { requestedDate, detailPolicy, metricSelection in
+                receivedDetailPolicy = detailPolicy
                 receivedSelection = metricSelection
                 return HealthData(
                     date: requestedDate,
@@ -35,7 +35,7 @@ final class HealthKitDailyCaptureTests: XCTestCase {
             fetchExternalDailyRecords: nil
         )
 
-        XCTAssertEqual(receivedGranular, true)
+        XCTAssertEqual(receivedDetailPolicy, .lossless)
         XCTAssertTrue(receivedSelection === selection)
         XCTAssertEqual(outcome.record?.activity.steps, 123)
         XCTAssertEqual(outcome.partialFailures, [partial])
@@ -65,6 +65,66 @@ final class HealthKitDailyCaptureTests: XCTestCase {
         )
 
         XCTAssertEqual(outcome.record?.healthKitRecordCaptureStatus, .notRequested)
+    }
+
+    func testSanitizerPreservesAllFourDetailPolicyStates() async throws {
+        let date = day(10)
+        let dayStart = Calendar.current.startOfDay(for: date)
+        let dayEnd = try XCTUnwrap(
+            Calendar.current.date(byAdding: .day, value: 1, to: dayStart)
+        )
+        let archive = HealthKitRecordArchive(
+            captureStatus: .complete,
+            dailyOwnership: HealthKitDailyOwnershipMetadata(
+                ownerDate: "2026-05-10",
+                intervalStart: dayStart,
+                intervalEnd: dayEnd,
+                calendarTimeZoneIdentifier: TimeZone.current.identifier
+            )
+        )
+        var source = HealthData(
+            date: date,
+            healthKitRecordArchive: archive,
+            healthKitRecordCaptureStatus: .complete
+        )
+        source.heart.heartRateSamples = [TimeSample(timestamp: dayStart, value: 60)]
+
+        for policy in [
+            AppleExportDetailPolicy.summary,
+            .detailedTimeSeries,
+            .archiveOnly,
+            .lossless
+        ] {
+            let outcome = try await HealthKitDailyCapture.capture(
+                date: date,
+                detailPolicy: policy,
+                metricSelection: MetricSelectionState(),
+                transform: .sanitizeGranular,
+                emptyRecordPolicy: .retain,
+                fetchExternalRecords: false,
+                failurePolicy: .connectedMac,
+                fetchHealthData: { _, receivedPolicy, _ in
+                    XCTAssertEqual(receivedPolicy, policy)
+                    return source
+                },
+                fetchExternalDailyRecords: nil
+            )
+
+            XCTAssertEqual(
+                outcome.record?.heart.heartRateSamples.isEmpty,
+                !policy.includesSelectedTimeSeries,
+                "Unexpected time-series state for \(policy)"
+            )
+            XCTAssertEqual(
+                outcome.record?.healthKitRecordArchive == nil,
+                !policy.includesCanonicalArchive,
+                "Unexpected archive state for \(policy)"
+            )
+            XCTAssertEqual(
+                outcome.record?.healthKitRecordCaptureStatus,
+                policy.includesCanonicalArchive ? .complete : .notRequested
+            )
+        }
     }
 
     func testNoDataSuppressesProviderFetchAndReturnsTerminalDetail() async throws {

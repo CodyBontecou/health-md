@@ -154,7 +154,7 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
         try checkFailure()
         return AppleDirectProtocolInfo(
             protocolAPIRevision: 1,
-            supportedPairingProtocolVersions: [1, 2],
+            supportedPairingProtocolVersions: [1, 2, 3],
             appleApplicationProtocolVersion: 1,
             manualIPPort: 17_647,
             maximumControlJSONBytes: 2 * 1_024 * 1_024,

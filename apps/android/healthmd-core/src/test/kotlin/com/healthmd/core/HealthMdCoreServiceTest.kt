@@ -44,8 +44,8 @@ class HealthMdCoreServiceTest {
     fun protocolWrapperPassesOwnedFixtureBytesAndMasksUnexpectedFailures() {
         val info = CoreDirectProtocolInfo(
             protocolApiRevision = 1u,
-            directPairingProtocolVersion = 1u,
-            supportedPairingProtocolVersions = listOf(1u, 2u),
+            directPairingProtocolVersion = 3u,
+            supportedPairingProtocolVersions = listOf(1u, 2u, 3u),
             appleApplicationProtocolVersion = 1u,
             androidApplicationProtocolVersion = 2u,
             manualIpPort = 17_647u,

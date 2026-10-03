@@ -18,9 +18,9 @@ android {
     defaultConfig {
         applicationId = "com.healthmd.android"
         minSdk = 30
-        targetSdk = 35
-        versionCode = 1_000_029
-        versionName = "1.7.1"
+        targetSdk = 36
+        versionCode = 1_000_039
+        versionName = "1.9.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

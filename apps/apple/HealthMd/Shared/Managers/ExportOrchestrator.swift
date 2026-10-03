@@ -8,6 +8,7 @@ final class LocalArchiveSpool {
     )
     private var nextIndex = 0
     private(set) var files: [RenderedHealthDataArchiveEntryFile] = []
+    private(set) var capturedDates: Set<Date> = []
 
     func append(
         _ healthData: HealthData,
@@ -60,12 +61,18 @@ final class LocalArchiveSpool {
             throw error
         }
         files.append(contentsOf: stagedFiles)
+        capturedDates.insert(healthData.date)
         nextIndex += stagedFiles.count
+    }
+
+    func markCapturedWithoutOutput(_ date: Date) {
+        capturedDates.insert(date)
     }
 
     func cleanup() {
         try? FileManager.default.removeItem(at: directoryURL)
         files.removeAll(keepingCapacity: false)
+        capturedDates.removeAll(keepingCapacity: false)
     }
 
     private static func archiveEntryPath(
@@ -112,8 +119,13 @@ struct ExportOrchestrator {
         /// Provider records encoded in an API request; never generated files.
         let externalRecordPayloadCount: Int
         let unclassifiedFileCount: Int
+        /// Confirmed wire total retained even when category persistence was truncated.
+        let fileCountLowerBound: Int?
         let authoritativeFileCount: Int?
         let isFileCategoryBreakdownComplete: Bool
+        /// True when persistence budgeting reduced one or more file-category counts.
+        /// Category completeness remains a separate producer fact.
+        let wasFileAccountingTruncated: Bool
         let dailyNoteUpdateCount: Int
         let dailyNoteSkipCount: Int
 
@@ -131,8 +143,10 @@ struct ExportOrchestrator {
             externalRecordFileCount: Int = 0,
             externalRecordPayloadCount: Int = 0,
             unclassifiedFileCount: Int = 0,
+            fileCountLowerBound: Int? = nil,
             authoritativeFileCount: Int? = nil,
             isFileCategoryBreakdownComplete: Bool = false,
+            wasFileAccountingTruncated: Bool = false,
             dailyNoteUpdateCount: Int = 0,
             dailyNoteSkipCount: Int = 0,
             wasCancelled: Bool = false,
@@ -163,11 +177,16 @@ struct ExportOrchestrator {
             self.archiveCount = max(archiveCount, 0)
             self.externalRecordFileCount = max(externalRecordFileCount, 0)
             self.externalRecordPayloadCount = max(externalRecordPayloadCount, 0)
-            self.unclassifiedFileCount = max(unclassifiedFileCount, 0) + legacyUnclassified
+            self.unclassifiedFileCount = ExportOrchestrator.saturatingAdd(
+                max(unclassifiedFileCount, 0),
+                legacyUnclassified
+            )
+            self.fileCountLowerBound = fileCountLowerBound.map { max($0, 0) }
             self.authoritativeFileCount = authoritativeFileCount.map { max($0, 0) }
             self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
                 && looseAggregateFileCount != nil
                 && self.unclassifiedFileCount == 0
+            self.wasFileAccountingTruncated = wasFileAccountingTruncated
             self.dailyNoteUpdateCount = max(dailyNoteUpdateCount, 0)
             self.dailyNoteSkipCount = max(dailyNoteSkipCount, 0)
             self.wasCancelled = wasCancelled
@@ -176,27 +195,54 @@ struct ExportOrchestrator {
 
         init(macExportPayload payload: MacExportResultPayload) {
             let breakdown = payload.outputBreakdown
-            let classified = breakdown?.generatedFileCount ?? 0
+            let impliedLooseFiles = payload.successCount.multipliedReportingOverflow(
+                by: payload.formatsPerDate
+            )
+            let legacyLooseFileCount = impliedLooseFiles.overflow
+                ? 0 : max(impliedLooseFiles.partialValue, 0)
+            let legacyCategorizedFileCount = ExportOrchestrator.saturatingAdd(
+                legacyLooseFileCount,
+                payload.externalRecordFileCount
+            )
+            let knownFiles = breakdown?.generatedFileCount ?? legacyCategorizedFileCount
+            let unclassifiedGap: Int
+            if breakdown?.wasTruncated == true {
+                unclassifiedGap = 0
+            } else {
+                let difference = payload.totalFilesWritten.subtractingReportingOverflow(knownFiles)
+                unclassifiedGap = difference.overflow ? 0 : max(difference.partialValue, 0)
+            }
+            let unclassified = ExportOrchestrator.saturatingAdd(
+                breakdown?.unclassifiedFileCount ?? 0,
+                unclassifiedGap
+            )
             self.init(
                 successCount: payload.successCount,
                 totalCount: payload.totalCount,
                 failedDateDetails: payload.failedDateDetails,
                 partialFailures: payload.partialFailures ?? [],
                 formatsPerDate: payload.formatsPerDate,
-                // Supplying explicit zero avoids also applying the legacy formats-per-day
-                // estimate when the payload has no category breakdown.
-                looseAggregateFileCount: breakdown?.looseAggregateFileCount ?? 0,
+                // Legacy payloads identify successful per-format outputs as loose
+                // files even though they predate the full category breakdown.
+                looseAggregateFileCount: breakdown?.looseAggregateFileCount
+                    ?? legacyLooseFileCount,
                 individualEntryFileCount: breakdown?.individualEntryFileCount ?? 0,
                 dataDictionaryFileCount: breakdown?.dataDictionaryFileCount ?? 0,
                 rollupFileCount: breakdown?.rollupFileCount ?? 0,
                 archiveCount: breakdown?.zipArchiveFileCount ?? 0,
                 externalRecordFileCount: breakdown?.providerSidecarFileCount
                     ?? payload.externalRecordFileCount,
-                unclassifiedFileCount: (breakdown?.unclassifiedFileCount ?? 0)
-                    + max(payload.totalFilesWritten - classified, 0),
+                // Only the remainder after every known category (including provider
+                // sidecars) is unclassified. A truncated breakdown's gap is budget
+                // loss, not evidence that the producer emitted unclassified files.
+                // Saturation also keeps malformed direct construction non-trapping;
+                // app ingress separately rejects inconsistent wire payloads.
+                unclassifiedFileCount: unclassified,
+                fileCountLowerBound: payload.totalFilesWritten,
                 authoritativeFileCount: payload.isTotalFilesWrittenAuthoritative
                     ? payload.totalFilesWritten : nil,
                 isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete ?? false,
+                wasFileAccountingTruncated: breakdown?.wasTruncated ?? false,
                 dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
                 dailyNoteSkipCount: payload.dailyNoteSkipCount,
                 wasCancelled: payload.status == .cancelled,
@@ -206,15 +252,38 @@ struct ExportOrchestrator {
         }
 
         var hasPartialFailures: Bool { !partialFailures.isEmpty }
+        /// Warnings that reduce capture completeness or lose data. Informational
+        /// omissions of optional attachments are excluded, so a full-success
+        /// export with notes reports `false` here.
+        var hasDegradingPartialFailures: Bool {
+            partialFailures.contains(where: \.degradesSuccess)
+        }
         var partialFailureSummary: String {
-            guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 { return "Warning: \(first.summary)" }
-            return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
+            guard let first = partialFailures.first(where: \.degradesSuccess) else { return "" }
+            let degradingCount = partialFailures.filter(\.degradesSuccess).count
+            if degradingCount == 1 { return "Warning: \(first.summary)" }
+            return "Warning: \(degradingCount) export warnings, including \(first.summary)"
         }
         var localizedPartialFailureSummary: String {
-            guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 { return String(localized: "Warning: \(first.localizedSummary)") }
-            return String(localized: "Warning: \(partialFailures.count) export warnings, including \(first.localizedSummary)")
+            guard let first = partialFailures.first(where: \.degradesSuccess) else { return "" }
+            let degradingCount = partialFailures.filter(\.degradesSuccess).count
+            if degradingCount == 1 { return String(localized: "Warning: \(first.localizedSummary)") }
+            return String(localized: "Warning: \(degradingCount) export warnings, including \(first.localizedSummary)")
+        }
+        /// Informational omissions that did not reduce the export below full
+        /// success (for example a WorkoutKit plan this device cannot decode).
+        /// Nil when there are none. Surfaced as a note, never a warning.
+        var informationalNoteSummary: String? {
+            let notes = partialFailures.filter { $0.isInformational == true }
+            guard let first = notes.first else { return nil }
+            if notes.count == 1 { return "Note: \(first.summary)" }
+            return "Note: \(notes.count) export notes, including \(first.summary)"
+        }
+        var localizedInformationalNoteSummary: String? {
+            let notes = partialFailures.filter { $0.isInformational == true }
+            guard let first = notes.first else { return nil }
+            if notes.count == 1 { return String(localized: "Note: \(first.localizedSummary)") }
+            return String(localized: "Note: \(notes.count) export notes, including \(first.localizedSummary)")
         }
         var didCompleteAllRequestedDates: Bool {
             completedDateCount == totalCount && totalCount > 0 && !wasCancelled && !hadTerminalRangeFailure
@@ -225,7 +294,8 @@ struct ExportOrchestrator {
             return requestedDates.map { calendar.startOfDay(for: $0) }.filter { !completedDays.contains($0) }
         }
         var isFullSuccess: Bool {
-            successCount == totalCount && didCompleteAllRequestedDates && failedDateDetails.isEmpty && !hasPartialFailures
+            successCount == totalCount && didCompleteAllRequestedDates && failedDateDetails.isEmpty
+                && !partialFailures.contains(where: \.degradesSuccess)
         }
         var isPartialSuccess: Bool {
             guard !isFullSuccess else { return false }
@@ -240,13 +310,24 @@ struct ExportOrchestrator {
         }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
         var categorizedFileCount: Int {
-            looseAggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
-                + rollupFileCount + archiveCount + externalRecordFileCount
+            [
+                looseAggregateFileCount,
+                individualEntryFileCount,
+                dataDictionaryFileCount,
+                rollupFileCount,
+                archiveCount,
+                externalRecordFileCount
+            ].reduce(0, ExportOrchestrator.saturatingAdd)
         }
-        var knownFileCount: Int { categorizedFileCount + unclassifiedFileCount }
-        var totalFilesWritten: Int { authoritativeFileCount ?? knownFileCount }
+        var knownFileCount: Int {
+            ExportOrchestrator.saturatingAdd(categorizedFileCount, unclassifiedFileCount)
+        }
+        var totalFilesWritten: Int {
+            max(authoritativeFileCount ?? 0, max(fileCountLowerBound ?? 0, knownFileCount))
+        }
         var hasAuthoritativeFileCount: Bool {
-            authoritativeFileCount != nil || isFileCategoryBreakdownComplete
+            !outputBreakdown.wasTruncated
+                && (authoritativeFileCount != nil || isFileCategoryBreakdownComplete)
         }
         var outputBreakdown: ExportHistoryOutputBreakdown {
             ExportHistoryOutputBreakdown(
@@ -261,7 +342,8 @@ struct ExportOrchestrator {
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
                 unclassifiedFileCount: unclassifiedFileCount,
-                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
+                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete,
+                persistedWasTruncated: wasFileAccountingTruncated
             )
         }
 
@@ -339,6 +421,10 @@ struct ExportOrchestrator {
 
         for selectedDate in selectedDates {
             for period in periods {
+                if period == .range {
+                    expandedDates.insert(calendar.startOfDay(for: selectedDate))
+                    continue
+                }
                 let window = HealthRollupPeriodWindow.window(
                     containing: calendar.startOfDay(for: selectedDate),
                     period: period,
@@ -423,6 +509,9 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var externalRecordFileCount = 0
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
@@ -500,7 +589,11 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
                     externalRecordFileCount: externalRecordFileCount,
+                    isFileCategoryBreakdownComplete: true,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
                     dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
@@ -523,7 +616,7 @@ struct ExportOrchestrator {
             do {
                 var healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                    detailPolicy: frozenOperationSettings.effectiveDetailPolicy,
                     metricSelection: frozenOperationSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
@@ -582,6 +675,9 @@ struct ExportOrchestrator {
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
@@ -648,7 +744,11 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
                     externalRecordFileCount: externalRecordFileCount,
+                    isFileCategoryBreakdownComplete: true,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
                     dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
@@ -703,8 +803,32 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
+        // A cancellation delivered by the final source-day await must stop before
+        // any range-level artifact begins. Daily files already committed remain
+        // accounted, while archive mode has no durable per-day success yet.
+        if Task.isCancelled {
+            return ExportResult(
+                successCount: successCount,
+                totalCount: totalDays,
+                failedDateDetails: failedDateDetails,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                externalRecordFileCount: externalRecordFileCount,
+                isFileCategoryBreakdownComplete: true,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                wasCancelled: true,
+                completedDates: settings.archiveModeEnabled
+                    ? terminalNoDataDates(in: failedDateDetails)
+                    : completedDates
+            )
+        }
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
+            requestedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
             writeDataDictionary: shouldWriteDataDictionary,
@@ -724,15 +848,28 @@ struct ExportOrchestrator {
         let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
             : completedDates
+        let authoritativeFileCount = Self.saturatingSum(
+            looseAggregateFileCount,
+            individualEntryFileCount,
+            dataDictionaryFileCount,
+            rollupFileCount,
+            archiveCount,
+            externalRecordFileCount
+        )
         return ExportResult(
             successCount: successCount,
             totalCount: totalDays,
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
+            looseAggregateFileCount: looseAggregateFileCount,
+            individualEntryFileCount: individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
             externalRecordFileCount: externalRecordFileCount,
+            authoritativeFileCount: authoritativeFileCount,
+            isFileCategoryBreakdownComplete: true,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: archiveResult.wasCancelled,
@@ -742,6 +879,7 @@ struct ExportOrchestrator {
 
     private static func exportForegroundPinnedSimpleRange(
         _ dates: [Date],
+        requestedRollupDates: [Date]? = nil,
         healthKitManager: HealthKitManager,
         vaultManager: VaultManager,
         settingsSnapshot: ExportSettingsSnapshot,
@@ -749,26 +887,65 @@ struct ExportOrchestrator {
         sourceTimeZone: TimeZone,
         onProgress: ((Int, Int, String) -> Void)?
     ) async -> ExportResult {
-        let frozenSettings = settingsSnapshot.makeAdvancedExportSettings()
-        let isSummaryOnly = frozenSettings.summaryOnlyModeEnabled
         let totalCount = dates.count
-        let formatsPerDate = looseFormatsPerDate(settings: frozenSettings)
         var calendar = Calendar.current
         calendar.timeZone = sourceTimeZone
+        let immutableRollupDates = requestedRollupDates ?? dates
+        let requestedIdentifiers = Set(immutableRollupDates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: sourceTimeZone.identifier
+            )
+        })
+        var effectiveSettingsSnapshot = settingsSnapshot
+        var requestedRange: HealthRollupRangeRequest?
+        var partialFailures: [ExportPartialFailure] = []
+        if settingsSnapshot.generateRangeSummary {
+            do {
+                requestedRange = try HealthRollupRangeRequest(
+                    ownerDateIdentifiers: requestedIdentifiers,
+                    calendarTimeZoneIdentifier: sourceTimeZone.identifier
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                partialFailures.append(rangeSummaryUnavailableFailure(
+                    requestedDates: immutableRollupDates,
+                    calendarTimeZone: sourceTimeZone
+                ))
+                // The range artifact is independently bounded. Keep the frozen daily renderer
+                // authority and continue the residual daily request without asking core for v9.
+                effectiveSettingsSnapshot.generateRangeSummary = false
+            } catch {
+                return ExportResult(
+                    successCount: 0,
+                    totalCount: totalCount,
+                    failedDateDetails: dates.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        )
+                    },
+                    formatsPerDate: settingsSnapshot.summaryOnlyExport ? 0 : settingsSnapshot.exportFormats.count
+                )
+            }
+        }
+        let frozenSettings = effectiveSettingsSnapshot.makeAdvancedExportSettings()
+        let isSummaryOnly = frozenSettings.summaryOnlyModeEnabled
+        let formatsPerDate = looseFormatsPerDate(settings: frozenSettings)
         let selectedDays = Set(dates.map { calendar.startOfDay(for: $0) })
         let sourceDates = rollupSourceDates(
-            for: dates,
+            for: immutableRollupDates,
             periods: frozenSettings.enabledRollupPeriods,
             calendar: calendar,
             latestAllowedDate: max(Date(), dates.max() ?? Date())
         )
         let captureDates = sourceDates.isEmpty ? dates : sourceDates
         var records: [HealthData] = []
+        var hasRenderableCapture = false
         var selectedRecordDates: [Date] = []
         var dailyOutputOwnerDates: Set<String> = []
         var completedDates: [Date] = []
         var failures: [FailedDateDetail] = []
-        var partialFailures: [ExportPartialFailure] = []
         var selectedProgress = 0
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -805,8 +982,14 @@ struct ExportOrchestrator {
                 let hasRenderableData = autoreleasepool {
                     record.preparedExport(settings: frozenSettings).hasAnyData
                 }
-                if hasRenderableData {
+                // A successful capture is range provenance even when the selected metrics are
+                // empty. Keep it for range-v9 source_dates/days_counted, while selecting daily
+                // output only when the prepared daily artifact has renderable data.
+                if hasRenderableData || requestedRange != nil {
                     records.append(record)
+                }
+                if hasRenderableData {
+                    hasRenderableCapture = true
                     if isSelected && !isSummaryOnly {
                         selectedRecordDates.append(record.date)
                         dailyOutputOwnerDates.insert(
@@ -869,13 +1052,9 @@ struct ExportOrchestrator {
             }
         }
 
-        guard !records.isEmpty else {
+        guard !records.isEmpty, hasRenderableCapture else {
             if isSummaryOnly && partialFailures.isEmpty && totalCount > 0 {
-                failures.append(FailedDateDetail(
-                    date: dates.first ?? Date(),
-                    reason: .noHealthData,
-                    errorDetails: "No roll-up summary data was available for the selected period."
-                ))
+                failures.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
                 completedDates = dates
             }
             return ExportResult(
@@ -902,25 +1081,23 @@ struct ExportOrchestrator {
         do {
             guard let writeResult = try await vaultManager.exportHealthDataRange(
                 records,
-                settingsSnapshot: settingsSnapshot,
+                settingsSnapshot: effectiveSettingsSnapshot,
                 operationSurface: operationSurface,
-                dailyOutputOwnerDates: dailyOutputOwnerDates
+                dailyOutputOwnerDates: dailyOutputOwnerDates,
+                requestedRange: requestedRange
             ) else {
                 // A persisted nonlegacy pin may never be delivered through per-day legacy writes.
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
             if isSummaryOnly {
                 let filesWritten = writeResult.rollupFileCount
+                    + writeResult.dataDictionaryFileCount
                 let isTerminalNoData = filesWritten == 0
                     && failures.isEmpty
-                    && partialFailures.isEmpty
+                    && !partialFailures.contains(where: \.degradesSuccess)
                     && totalCount > 0
                 if isTerminalNoData {
-                    failures.append(FailedDateDetail(
-                        date: dates.first ?? Date(),
-                        reason: .noHealthData,
-                        errorDetails: "No roll-up summary data was available for the selected period."
-                    ))
+                    failures.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
                 }
                 if filesWritten > 0 || isTerminalNoData {
                     completedDates = dates
@@ -932,18 +1109,30 @@ struct ExportOrchestrator {
                     failedDateDetails: failures,
                     partialFailures: partialFailures,
                     formatsPerDate: 0,
-                    rollupFileCount: filesWritten,
+                    dataDictionaryFileCount: writeResult.dataDictionaryFileCount,
+                    rollupFileCount: writeResult.rollupFileCount,
+                    authoritativeFileCount: filesWritten,
+                    isFileCategoryBreakdownComplete: true,
                     completedDates: completedDates
                 )
             }
             completedDates.append(contentsOf: selectedRecordDates)
+            let authoritativeFileCount = Self.saturatingSum(
+                writeResult.dailyFileCount,
+                writeResult.rollupFileCount,
+                writeResult.dataDictionaryFileCount
+            )
             return ExportResult(
                 successCount: selectedRecordDates.count,
                 totalCount: totalCount,
                 failedDateDetails: failures,
                 partialFailures: partialFailures,
                 formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: writeResult.dailyFileCount,
+                dataDictionaryFileCount: writeResult.dataDictionaryFileCount,
                 rollupFileCount: writeResult.rollupFileCount,
+                authoritativeFileCount: authoritativeFileCount,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: completedDates
             )
         } catch is CancellationError {
@@ -1000,6 +1189,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         frozenSettingsSnapshot: ExportSettingsSnapshot? = nil,
+        requestedRollupDates: [Date]? = nil,
         operationSurface: AppleExportOperationSurface = .legacyOnly,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
@@ -1011,6 +1201,7 @@ struct ExportOrchestrator {
                 vaultManager: vaultManager,
                 settings: settings,
                 frozenSettingsSnapshot: frozenSettingsSnapshot,
+                requestedRollupDates: requestedRollupDates,
                 operationSurface: operationSurface,
                 externalIntegrations: externalIntegrations,
                 onProgress: onProgress
@@ -1024,6 +1215,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         frozenSettingsSnapshot: ExportSettingsSnapshot?,
+        requestedRollupDates: [Date]?,
         operationSurface: AppleExportOperationSurface,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
         onProgress: ((Int, Int, String) -> Void)?
@@ -1053,6 +1245,9 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var externalRecordFileCount = 0
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
@@ -1103,6 +1298,7 @@ struct ExportOrchestrator {
             }
             return await exportForegroundPinnedSimpleRange(
                 dates,
+                requestedRollupDates: requestedRollupDates,
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
                 settingsSnapshot: frozenSettingsSnapshot,
@@ -1115,6 +1311,7 @@ struct ExportOrchestrator {
         if settings.summaryOnlyModeEnabled {
             return await exportSummaryOnlyDates(
                 dates,
+                requestedRollupDates: requestedRollupDates,
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
                 settings: settings,
@@ -1154,7 +1351,7 @@ struct ExportOrchestrator {
             do {
                 var healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                    detailPolicy: frozenOperationSettings.effectiveDetailPolicy,
                     metricSelection: frozenOperationSettings.metricSelection,
                     timeZone: frozenOperationSettings.exportTimeZoneOverride
                 )
@@ -1197,6 +1394,9 @@ struct ExportOrchestrator {
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
@@ -1264,6 +1464,10 @@ struct ExportOrchestrator {
                     failedDateDetails: failedDateDetails,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
+                    isFileCategoryBreakdownComplete: true,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
                     dailyNoteSkipCount: dailyNoteSkipCount,
                     wasCancelled: true,
@@ -1308,43 +1512,144 @@ struct ExportOrchestrator {
             onProgress?(dates.count, dates.count, progressFormatter.string(from: lastDate))
         }
 
+        let immutableRollupDates = requestedRollupDates ?? dates
+        var archiveHasCompleteOriginalSources = true
+        if let archiveSpool, requestedRollupDates != nil {
+            var archiveCalendar = Calendar(identifier: .gregorian)
+            archiveCalendar.timeZone = frozenOperationSettings.exportTimeZoneOverride ?? .current
+            let capturedDays = Set(archiveSpool.capturedDates.map { archiveCalendar.startOfDay(for: $0) })
+            for originalDate in immutableRollupDates where !capturedDays.contains(
+                archiveCalendar.startOfDay(for: originalDate)
+            ) {
+                do {
+                    var healthData = try await healthKitManager.fetchHealthData(
+                        for: originalDate,
+                        detailPolicy: frozenOperationSettings.effectiveDetailPolicy,
+                        metricSelection: frozenOperationSettings.metricSelection,
+                        timeZone: frozenOperationSettings.exportTimeZoneOverride
+                    )
+                    if healthData.hasAnyData,
+                       settings.writesExternalProviderSidecars,
+                       ConnectedAppsFeature.isEnabled,
+                       let externalIntegrations,
+                       externalIntegrations.connectedProviderCount > 0 {
+                        let providerRecords = await externalIntegrations.fetchDailyRecords(
+                            for: originalDate,
+                            calendar: archiveCalendar
+                        )
+                        healthData.providers = HealthProviderSections.normalized(from: providerRecords)
+                    }
+                    let prepared = autoreleasepool {
+                        healthData.preparedExportAssumingSelectionApplied(
+                            settings: frozenOperationSettings
+                        )
+                    }
+                    if prepared.hasAnyData {
+                        try await archiveSpool.append(
+                            healthData,
+                            settings: frozenOperationSettings,
+                            preparedExport: prepared
+                        )
+                    } else {
+                        archiveSpool.markCapturedWithoutOutput(healthData.date)
+                    }
+                } catch is CancellationError {
+                    return ExportResult(
+                        successCount: successCount,
+                        totalCount: dates.count,
+                        failedDateDetails: failedDateDetails,
+                        partialFailures: partialFailures,
+                        formatsPerDate: formatsPerDate,
+                        dailyNoteUpdateCount: dailyNoteUpdateCount,
+                        dailyNoteSkipCount: dailyNoteSkipCount,
+                        wasCancelled: true,
+                        completedDates: terminalNoDataDates(in: failedDateDetails)
+                    )
+                } catch {
+                    archiveHasCompleteOriginalSources = false
+                    partialFailures.append(ExportPartialFailure(
+                        date: originalDate,
+                        dataType: "ZIP archive",
+                        dateRangeDescription: progressFormatter.string(from: originalDate),
+                        errorDescription: "The original range could not be recaptured; the existing archive was preserved."
+                    ))
+                    break
+                }
+            }
+        }
         let rollupHealthData = await fetchRollupHealthData(
-            selectedDates: dates,
+            selectedDates: immutableRollupDates,
             seedData: successfulHealthData,
             healthKitManager: healthKitManager,
             settings: settings,
             partialFailures: &partialFailures
         )
+        // Recheck after the final awaited capture. Without this boundary a
+        // cancelled foreground/background task can still publish a range roll-up
+        // or ZIP after its final requested day has returned.
+        if Task.isCancelled {
+            return ExportResult(
+                successCount: successCount,
+                totalCount: dates.count,
+                failedDateDetails: failedDateDetails,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                isFileCategoryBreakdownComplete: true,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                wasCancelled: true,
+                completedDates: settings.archiveModeEnabled
+                    ? terminalNoDataDates(in: failedDateDetails)
+                    : completedDates
+            )
+        }
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
+            requestedDates: immutableRollupDates,
             vaultManager: vaultManager,
             settings: settings,
             writeDataDictionary: shouldWriteDataDictionary,
             partialFailures: &partialFailures
         )
-        let archiveResult = await writeArchive(
+        let archiveResult = archiveHasCompleteOriginalSources ? await writeArchive(
             from: successfulHealthData,
             archiveEntryFiles: archiveSpool?.files ?? [],
             rollupHealthData: rollupHealthData,
-            selectedDates: dates,
+            selectedDates: immutableRollupDates,
             vaultManager: vaultManager,
             settings: settings,
             partialFailures: &partialFailures
-        )
+        ) : .noOutput
         let archiveCount = archiveResult.archiveCount
 
         let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0
             ? terminalNoDataDates(in: failedDateDetails)
             : completedDates
+        let authoritativeFileCount = Self.saturatingSum(
+            looseAggregateFileCount,
+            individualEntryFileCount,
+            dataDictionaryFileCount,
+            rollupFileCount,
+            archiveCount,
+            externalRecordFileCount
+        )
         return ExportResult(
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: formatsPerDate,
+            looseAggregateFileCount: looseAggregateFileCount,
+            individualEntryFileCount: individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
             externalRecordFileCount: externalRecordFileCount,
+            authoritativeFileCount: authoritativeFileCount,
+            isFileCategoryBreakdownComplete: true,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: archiveResult.wasCancelled,
@@ -1366,9 +1671,9 @@ struct ExportOrchestrator {
         guard HealthRollupExporter.isEnabled(settings: settings) else {
             return nil
         }
-        return ConnectedExportGranularMode.sanitized(
+        return ConnectedExportDetailPolicy.sanitized(
             healthData,
-            includesGranularData: false
+            detailPolicy: .summary
         )
     }
 
@@ -1376,6 +1681,20 @@ struct ExportOrchestrator {
 
     private static func looseFormatsPerDate(settings: AdvancedExportSettings) -> Int {
         settings.looseFormatsPerDate
+    }
+
+    /// Saturating total across every file category so an authoritative
+    /// generated-file count can never overflow from absurd category values.
+    private static func saturatingSum(_ values: Int...) -> Int {
+        values.reduce(0, Self.saturatingAdd)
+    }
+
+    /// Saturating addition shared by `ExportResult` and the local export
+    /// paths: overflow clamps to `Int.max` so summed file counts stay
+    /// non-negative and monotonic instead of trapping or wrapping.
+    static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
+        let result = lhs.addingReportingOverflow(rhs)
+        return result.overflow ? Int.max : result.partialValue
     }
 
     private struct ArchiveWriteResult {
@@ -1407,6 +1726,23 @@ struct ExportOrchestrator {
         let sourceDates = archiveEntryFiles.map(\.date) + successfulHealthData.map(\.date)
         let startDate = sortedDates.first ?? sourceDates.min() ?? Date()
         let endDate = sortedDates.last ?? sourceDates.max() ?? startDate
+        if settings.generateRangeSummary,
+           let calendarTimeZone = settings.exportTimeZoneOverride {
+            do {
+                _ = try HealthRollupRangeRequest(
+                    startDate: startDate,
+                    endDate: endDate,
+                    calendarTimeZoneIdentifier: calendarTimeZone.identifier
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                partialFailures.append(rangeSummaryUnavailableFailure(
+                    requestedDates: sortedDates,
+                    calendarTimeZone: calendarTimeZone
+                ))
+            } catch {
+                // The archive writer reports other invalid range authority as its own failure.
+            }
+        }
         do {
             let archiveURL: URL?
             if archiveEntryFiles.isEmpty {
@@ -1453,6 +1789,7 @@ struct ExportOrchestrator {
 
     private static func exportSummaryOnlyDates(
         _ dates: [Date],
+        requestedRollupDates: [Date]? = nil,
         healthKitManager: HealthKitManager,
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
@@ -1462,13 +1799,20 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var failedDateDetails: [FailedDateDetail] = []
 
-        let sourceDateCount = rollupSourceDates(for: dates, settings: settings).count
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let immutableRollupDates = requestedRollupDates ?? dates
+        let sourceDateCount = rollupSourceDates(
+            for: immutableRollupDates,
+            settings: settings,
+            calendar: calendar
+        ).count
         let progressFormatter = DateFormatter()
         progressFormatter.dateFormat = "yyyy-MM-dd"
         progressFormatter.timeZone = settings.exportTimeZoneOverride ?? .current
 
         let rollupHealthData = await fetchRollupHealthData(
-            selectedDates: dates,
+            selectedDates: immutableRollupDates,
             seedData: [],
             healthKitManager: healthKitManager,
             settings: settings,
@@ -1492,6 +1836,7 @@ struct ExportOrchestrator {
 
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
+            requestedDates: immutableRollupDates,
             vaultManager: vaultManager,
             settings: settings,
             partialFailures: &partialFailures
@@ -1514,13 +1859,9 @@ struct ExportOrchestrator {
             && filesWritten == 0
             && totalDays > 0
             && failedDateDetails.isEmpty
-            && partialFailures.isEmpty
+            && !partialFailures.contains(where: \.degradesSuccess)
         if isTerminalNoData {
-            failedDateDetails.append(FailedDateDetail(
-                date: dates.first ?? Date(),
-                reason: .noHealthData,
-                errorDetails: "No roll-up summary data was available for the selected period."
-            ))
+            failedDateDetails.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
         }
 
         return ExportResult(
@@ -1529,8 +1870,11 @@ struct ExportOrchestrator {
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: 0,
+            looseAggregateFileCount: 0,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
+            authoritativeFileCount: filesWritten,
+            isFileCategoryBreakdownComplete: true,
             wasCancelled: archiveResult.wasCancelled,
             completedDates: archiveResult.wasCancelled
                 ? []
@@ -1548,10 +1892,15 @@ struct ExportOrchestrator {
     ) async -> [HealthData] {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return seedData }
 
-        let sourceDates = rollupSourceDates(for: selectedDates, settings: settings)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let sourceDates = rollupSourceDates(
+            for: selectedDates,
+            settings: settings,
+            calendar: calendar
+        )
         guard !sourceDates.isEmpty else { return seedData }
 
-        let calendar = Calendar.current
         var dataByDay = Dictionary(uniqueKeysWithValues: seedData.map { data in
             (calendar.startOfDay(for: data.date), data)
         })
@@ -1579,7 +1928,8 @@ struct ExportOrchestrator {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: false,
-                    metricSelection: settings.metricSelection
+                    metricSelection: settings.metricSelection,
+                    timeZone: calendar.timeZone
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 dataByDay[day] = healthData
@@ -1603,6 +1953,7 @@ struct ExportOrchestrator {
 
     private static func writeRollupSummaries(
         from rollupHealthData: [HealthData],
+        requestedDates: [Date],
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         writeDataDictionary: Bool = true,
@@ -1612,8 +1963,22 @@ struct ExportOrchestrator {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return 0 }
 
         do {
+            guard let timeZone = settings.exportTimeZoneOverride else {
+                throw ExportError.invalidExportPath(path: "missing calendar timezone")
+            }
+            let requestedIdentifiers = Set(requestedDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(
+                    for: $0,
+                    calendarTimeZoneIdentifier: timeZone.identifier
+                )
+            })
+            let requestedRange = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: requestedIdentifiers,
+                calendarTimeZoneIdentifier: timeZone.identifier
+            )
             return try vaultManager.exportRollupSummaries(
                 from: rollupHealthData,
+                requestedRange: requestedRange,
                 settings: settings,
                 writeDataDictionary: writeDataDictionary
             ).count
@@ -1633,13 +1998,88 @@ struct ExportOrchestrator {
             partialFailures.append(
                 ExportPartialFailure(
                     date: firstDate,
-                    dataType: "Roll-up summaries",
+                    dataType: error as? HealthRollupRangeRequest.ValidationError == .exceedsDayLimit
+                        ? "Range Summary"
+                        : "Roll-up summaries",
                     dateRangeDescription: rangeDescription,
                     errorDescription: error.localizedDescription
                 )
             )
             return 0
         }
+    }
+
+    static func settingsByDisablingUnavailableRangeSummary(
+        _ snapshot: ExportSettingsSnapshot,
+        requestedDates: [Date],
+        calendarTimeZone: TimeZone
+    ) -> (snapshot: ExportSettingsSnapshot, warning: ExportPartialFailure?) {
+        guard snapshot.generateRangeSummary else { return (snapshot, nil) }
+        do {
+            _ = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: Set(requestedDates.map {
+                    HealthKitDailyOwnershipMetadata.ownerDate(
+                        for: $0,
+                        calendarTimeZoneIdentifier: calendarTimeZone.identifier
+                    )
+                }),
+                calendarTimeZoneIdentifier: calendarTimeZone.identifier
+            )
+            return (snapshot, nil)
+        } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+            var effectiveSnapshot = snapshot
+            effectiveSnapshot.generateRangeSummary = false
+            return (
+                effectiveSnapshot,
+                rangeSummaryUnavailableFailure(
+                    requestedDates: requestedDates,
+                    calendarTimeZone: calendarTimeZone
+                )
+            )
+        } catch {
+            // Preserve the frozen request for the renderer to report any non-limit validation
+            // failure through its existing terminal path.
+            return (snapshot, nil)
+        }
+    }
+
+    static func terminalNoDataFailures(
+        for requestedDates: [Date],
+        calendar: Calendar = .current,
+        errorDetails: String = "No roll-up summary data was available for the selected period."
+    ) -> [FailedDateDetail] {
+        var seen: Set<Date> = []
+        return requestedDates.compactMap { date in
+            let day = calendar.startOfDay(for: date)
+            guard seen.insert(day).inserted else { return nil }
+            return FailedDateDetail(
+                date: date,
+                reason: .noHealthData,
+                errorDetails: errorDetails
+            )
+        }
+    }
+
+    static func rangeSummaryUnavailableFailure(
+        requestedDates: [Date],
+        calendarTimeZone: TimeZone
+    ) -> ExportPartialFailure {
+        let sortedDates = requestedDates.sorted()
+        let firstDate = sortedDates.first ?? Date()
+        let lastDate = sortedDates.last ?? firstDate
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = calendarTimeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let first = formatter.string(from: firstDate)
+        let last = formatter.string(from: lastDate)
+        return ExportPartialFailure(
+            date: firstDate,
+            dataType: "Range Summary",
+            dateRangeDescription: first == last ? first : "\(first) – \(last)",
+            errorDescription: HealthRollupRangeRequest.dayLimitUnavailableMessage
+        )
     }
 
     // MARK: - Failure Mapping
@@ -1683,7 +2123,8 @@ struct ExportOrchestrator {
         let history = ExportHistoryManager.shared
         let suppliedFileCount = fileCount.map { max($0, 0) }
         let resolvedFileCount = suppliedFileCount ?? result.totalFilesWritten
-        let isAuthoritative = suppliedFileCount != nil || result.hasAuthoritativeFileCount
+        let isAuthoritative = !result.outputBreakdown.wasTruncated
+            && (suppliedFileCount != nil || result.hasAuthoritativeFileCount)
         let historyFileCount = isAuthoritative ? resolvedFileCount : nil
 
         if result.successCount > 0 || result.dailyNoteSkipCount > 0 {

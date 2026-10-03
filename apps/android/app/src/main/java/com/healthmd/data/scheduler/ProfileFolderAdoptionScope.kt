@@ -1,12 +1,17 @@
 package com.healthmd.data.scheduler
 
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.sharedsetup.SharedSetupV2ProfileBlockedException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -28,6 +33,7 @@ import timber.log.Timber
 @Singleton
 class ProfileFolderAdoptionScope @Inject constructor(
     private val settingsRepository: SettingsRepository,
+    private val profileRepository: ExportProfileRepository,
 ) {
     private val mutex = Mutex()
 
@@ -36,6 +42,15 @@ class ProfileFolderAdoptionScope @Inject constructor(
      * restoring the previous value afterwards — including on failure.
      */
     suspend fun <T> withProfileFolder(profile: ExportProfile, block: suspend () -> T): T {
+        val blocked = try {
+            profileRepository.isSharedSetupV2Blocked(profile.id)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            true
+        }
+        if (blocked) throw SharedSetupV2ProfileBlockedException()
+
         val folderUri = profile.folderUri?.takeIf { it.isNotBlank() }
         val needsAdoption = profile.target == ExportTarget.DEVICE_FOLDER && folderUri != null
         if (!needsAdoption) return block()
@@ -57,7 +72,9 @@ class ProfileFolderAdoptionScope @Inject constructor(
             try {
                 block()
             } finally {
-                settingsRepository.saveExportFolderUri(previous)
+                withContext(NonCancellable) {
+                    settingsRepository.saveExportFolderUri(previous)
+                }
             }
         }
     }

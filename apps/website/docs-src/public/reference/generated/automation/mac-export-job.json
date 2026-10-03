@@ -344,6 +344,7 @@
   "settingsSnapshot" : {
     "appleExportEngineAuthorityIsFrozen" : true,
     "archiveExportFiles" : false,
+    "compatibilityDetail" : "selected_time_series",
     "dailyNoteInjection" : {
       "createIfMissing" : false,
       "dailyNotesOnly" : false,
@@ -961,10 +962,9 @@
       "timeFormat" : "HH:mm",
       "unitPreference" : "Metric"
     },
-    "generateMonthlyRollups" : false,
-    "generateWeeklyRollups" : false,
-    "generateYearlyRollups" : false,
+    "generateRangeSummary" : false,
     "groupByCategory" : true,
+    "healthKitSourceArchivePolicy" : "canonical_v1",
     "healthSubfolder" : "Health.md/Synthetic Exports",
     "includeDataDictionary" : false,
     "includeGranularData" : true,

@@ -35,9 +35,16 @@ description: "Kies waar je Markdown-bestanden worden opgeslagen en geef de subma
 <p style="margin-top:6px;">Als iOS de security-scoped bladwijzer intrekt, mislukken exports. Dit komt zelden voor en gebeurt meestal alleen als de onderliggende map is verwijderd of verplaatst. Kies de kluis dan opnieuw via <em>Instellingen</em>.</p>
 </div>
 
+## Een gekozen map veilig vervangen of verplaatsen
+
+Wanneer een opgeslagen bladwijzer naar een ander pad wordt herleid, koppelt Health.md de map automatisch opnieuw als de blijvende identiteit bevestigt dat het om dezelfde map gaat. De app kan ook een succesvol opgeloste beveiligde bladwijzer accepteren wanneer noch de opgeslagen noch de opgeloste map blijvende identiteit biedt, wat vaak voorkomt bij cloudproviders. Alleen een vergelijkbaar pad geldt nooit als bewijs. De geschiedenis blijft het privacyvriendelijke bestemmingslabel tonen dat elke uitvoering gebruikte.
+
+Selecteer de map opnieuw als deze is verwijderd, toegang is ingetrokken, blijvende identiteiten botsen of slechts één kant identiteit biedt en de verplaatsing niet kan worden geverifieerd. Health.md schrijft niet naar een dubbelzinnige bestemming. Omdat elk [exportprofiel](/nl/docs/export-profiles/) een eigen bestemming heeft, controleer of selecteer je de betrokken map opnieuw voor elk profiel.
+
 ## Gerelateerde documentatie
 
 <div class="related">
+  <a href="/nl/docs/export-profiles/"><span>Profielen</span>Beheer maptoegang en bestemmingen per profiel.</a>
   <a href="/nl/docs/onboarding/"><span>Vorige stap</span>Onboarding: hier kies je de kluis voor het eerst.</a>
   <a href="/nl/docs/export/"><span>Volgende stap</span>Voer een export uit naar je nieuwe kluis.</a>
   <a href="/nl/docs/format/"><span>Aanpassen</span>Formaataanpassing: bepaal hoe de bestanden in de submap worden geschreven.</a>

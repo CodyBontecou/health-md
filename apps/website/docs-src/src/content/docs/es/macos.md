@@ -59,7 +59,7 @@ healthmd extract --category Sleep --yesterday --output sleep.json
 healthmd query --category Sleep --yesterday
 ```
 
-Consulta [Health.md CLI](/es/docs/cli/) para la selección de backend y [Agentes locales](/es/docs/agents/) para la arquitectura de consultas.
+Consulta [Health.md CLI](/es/docs/cli/) para el cliente independiente y [Agentes locales](/es/docs/agents/) para la arquitectura de consultas.
 
 ## Contexto de salud cifrado
 
@@ -92,7 +92,7 @@ El modo directo no usa el contexto de consulta cifrado de la app del Mac. En su 
 
 <div class="related">
   <a href="/es/docs/sync/"><span>Destino</span>Sincronización con Mac: empareja iPhone y Mac para exportaciones locales de archivos.</a>
-  <a href="/es/docs/cli/"><span>Terminal</span>Health.md CLI: instala herramientas auxiliares, selecciona un backend y opera comandos.</a>
+  <a href="/es/docs/cli/"><span>Terminal</span>Health.md CLI: instala el cliente independiente y opera comandos.</a>
   <a href="/es/docs/agents/"><span>Contexto local</span>Agentes: adquisición acotada, almacenamiento cifrado, evidencia y retención.</a>
   <a href="/es/docs/mcp/"><span>Herramientas</span>Servidor MCP local: configuración, catálogo de herramientas y límites del sandbox.</a>
   <a href="/es/docs/scheduling/"><span>Flujo</span>Programación: automatiza exportaciones recurrentes.</a>

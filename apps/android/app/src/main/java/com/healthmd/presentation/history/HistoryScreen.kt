@@ -278,6 +278,13 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
                 style = GeistType.copy13Mono,
                 color = AppColors.textMuted,
             )
+            entry.profileName?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    stringResource(R.string.history_profile_label, it),
+                    style = GeistType.copy13Mono,
+                    color = AppColors.textMuted,
+                )
+            }
             localizedTargetLabel(entry)?.let {
                 Text(
                     stringResource(R.string.history_target_label, it),
@@ -383,13 +390,14 @@ private fun HistoryDetailCard(
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
-            HistoryDetailContent(entry = entry, retryMessage = retryMessage)
-            Spacer(modifier = Modifier.weight(1f))
+            // Retry stays above the content so the primary recovery action
+            // is reachable without scrolling through long failure lists.
             Button(onClick = onRetry, enabled = !isRetrying) {
                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(Spacing.xxs))
                 Text(if (isRetrying) stringResource(R.string.action_retrying_export) else stringResource(R.string.action_retry_export))
             }
+            HistoryDetailContent(entry = entry, retryMessage = retryMessage)
         }
     }
 }
@@ -404,6 +412,9 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: Histor
     )
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         DetailLine(stringResource(R.string.history_detail_source), entry.source.localizedDisplayName())
+        entry.profileName?.takeIf { it.isNotBlank() }?.let {
+            DetailLine(stringResource(R.string.history_detail_profile), it)
+        }
         DetailLine(stringResource(R.string.history_detail_when), timestamp)
         DetailLine(
             stringResource(R.string.history_detail_range),
@@ -433,7 +444,16 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: Histor
             ),
         )
         localizedTargetLabel(entry)?.let {
-            DetailLine(stringResource(R.string.history_detail_target), it)
+            DetailLine(
+                stringResource(
+                    if (entry.target == ExportTarget.DEVICE_FOLDER) {
+                        R.string.export_folder_label
+                    } else {
+                        R.string.history_detail_target
+                    },
+                ),
+                it,
+            )
         }
         if (entry.target == ExportTarget.DEVICE_FOLDER) {
             DetailLine(

@@ -44,6 +44,7 @@ import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -63,12 +64,19 @@ import kotlinx.serialization.json.jsonPrimitive
 interface APIExportCaptureSource {
     fun isBeforeFirstUnlock(): Boolean
 
+    suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) = Unit
+
     suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData
 }
 
 /** Production capture source contract for one immutable Android operation context. */
 private interface OperationScopedAPIExportCaptureSource : APIExportCaptureSource {
     suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
+    suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    )
     suspend fun capture(
         date: LocalDate,
         settings: ExportSettings,
@@ -80,6 +88,22 @@ private class HealthRepositoryAPIExportCaptureSource(
     private val healthRepository: HealthRepository,
 ) : OperationScopedAPIExportCaptureSource {
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
+
+    override suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ) {
+        val effectiveSelection = settings.effectiveDataTypeSelection()
+        if (effectiveSelection.workouts) {
+            healthRepository.authorizeExerciseRouteConsent(
+                dates = dates,
+                dataTypes = effectiveSelection,
+                includeGranularData = settings.shouldFetchGranularData(),
+                zoneId = context.zoneId,
+            )
+        }
+    }
 
     override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
         healthRepository.resolveCaptureContext(zoneId)
@@ -280,11 +304,29 @@ class APIEndpointExportRunner private constructor(
             exportedAt = clock(),
             ids = idSource.next(),
         )
+        val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
+        val captureContext = operationSource?.resolveCaptureContext(ZoneId.of(snapshot.calendarTimeZone))
+        if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
+            try {
+                // Authorization sees the complete scope before owner dates are captured in their
+                // canonical ascending order. Noninteractive capture sources intentionally no-op.
+                if (operationSource != null && captureContext != null) {
+                    operationSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings, captureContext)
+                } else {
+                    captureSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings)
+                }
+            } catch (_: CancellationException) {
+                return cancelledResult(normalizedDates, emptyList())
+            } catch (_: Exception) {
+                // Consent is optional; preserve the established capture and failure behavior.
+            }
+        }
         val capture = captureDates(
             normalizedDates,
             snapshot.settings,
             ZoneId.of(snapshot.calendarTimeZone),
             onProgress,
+            captureContext = captureContext,
         )
         if (capture.wasCancelled) {
             return cancelledResult(normalizedDates, capture.failedDateDetails)
@@ -504,9 +546,10 @@ class APIEndpointExportRunner private constructor(
         zoneId: ZoneId,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)?,
         stopAfterRecordCount: Int? = null,
+        captureContext: AndroidCaptureContext? = null,
     ): CaptureResult {
         val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
-        val captureContext = operationSource?.resolveCaptureContext(zoneId)
+        val resolvedCaptureContext = captureContext ?: operationSource?.resolveCaptureContext(zoneId)
         val records = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
         val attempted = mutableListOf<LocalDate>()
@@ -524,8 +567,8 @@ class APIEndpointExportRunner private constructor(
                 continue
             }
             try {
-                val record = if (operationSource != null && captureContext != null) {
-                    operationSource.capture(date, settings, captureContext)
+                val record = if (operationSource != null && resolvedCaptureContext != null) {
+                    operationSource.capture(date, settings, resolvedCaptureContext)
                 } else {
                     captureSource.capture(date, settings)
                 }
@@ -734,6 +777,11 @@ class APIEndpointExportRunner private constructor(
             httpStatusCode = lastStatusCode,
             retryOperationIds = unresolvedDates.associateWith { operation.operationId },
             freshCaptureRetryDates = acknowledgedCaptureFailures.mapTo(linkedSetOf()) { it.date },
+            remainingDates = if (wasCancelled) {
+                (unresolvedDates + acknowledgedCaptureFailures.map { it.date }).toSet()
+            } else {
+                emptySet()
+            },
         )
     }
 
@@ -990,6 +1038,7 @@ class APIEndpointExportRunner private constructor(
         failedDateDetails = failures.map { it.copy(errorDetails = null) },
         wasCancelled = true,
         target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
+        remainingDates = dates.toSet(),
     )
 
     private fun uploadFailure(

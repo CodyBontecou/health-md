@@ -218,6 +218,71 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
         XCTAssertGreaterThan(json.byteCount, markdown.byteCount)
     }
 
+    func testRangeSummaryPreviewCountsOneFilePerFormatAndFullImmutableScope() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2025, month: 1, day: 1)))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 1)))
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
+        let projection = ExportRollupOutputSizeEstimator.estimate(
+            selectedDates: dates,
+            periods: [.range],
+            formats: [.json, .markdown],
+            metricSelection: MetricSelectionState(),
+            customization: FormatCustomization(),
+            latestAllowedDate: end,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(projection.fileCount, 2)
+        XCTAssertEqual(projection.sourceDateCount, dates.count)
+        XCTAssertGreaterThan(projection.sourceDateCount, 400)
+        XCTAssertGreaterThan(projection.byteCount, 0)
+    }
+
+    func testTenThousandOneDayRangeOmitsSummaryProjectionWithoutSuppressingDailyEstimate() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2000,
+            month: 1,
+            day: 1
+        )))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2027,
+            month: 5,
+            day: 19
+        )))
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
+        XCTAssertEqual(dates.count, 10_001)
+
+        let rollup = ExportRollupOutputSizeEstimator.estimate(
+            selectedDates: dates,
+            periods: [.range],
+            formats: [.json],
+            metricSelection: MetricSelectionState(),
+            customization: FormatCustomization(),
+            latestAllowedDate: end,
+            calendar: calendar
+        )
+        let daily = try XCTUnwrap(ExportPreviewSizeEstimator.estimate(
+            totalDateCount: dates.count,
+            attemptedDateCount: 1,
+            samples: [ExportPreviewSizeSample(aggregateByteCount: 100)],
+            renderedAggregateFormatCount: 1,
+            selectedAggregateFormatCount: 1,
+            projectedRollupFileCount: rollup.fileCount,
+            minimumProjectedRollupByteCount: rollup.byteCount
+        ))
+
+        XCTAssertEqual(rollup.fileCount, 0)
+        XCTAssertEqual(rollup.byteCount, 0)
+        XCTAssertEqual(daily.projectedDataDayCount, 10_001)
+        XCTAssertEqual(daily.byteCount, 1_000_100)
+        XCTAssertTrue(HealthRollupRangeRequest.dayLimitUnavailableMessage.contains("Daily files will continue"))
+        XCTAssertTrue(ExportRolloutCopy.rollupSummariesHelp.contains("10,000 days or fewer"))
+    }
+
     func testCurrentDataDictionaryIsNotEstimatedAsLegacySixtyFourKilobytes() {
         XCTAssertGreaterThan(
             ExportDataDictionarySizeEstimator.byteCount(using: FormatCustomization()),

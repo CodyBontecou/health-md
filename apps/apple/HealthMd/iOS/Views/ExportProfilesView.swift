@@ -240,54 +240,14 @@ struct ExportProfilesView: View {
     }
 
     private func profileCard(_ summary: ExportProfileCardSummary) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s3) {
-            HStack(alignment: .top, spacing: Spacing.s3) {
-                Image(systemName: "square.and.arrow.down.on.square")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(summary.isActive ? Color.accent : Color.textMuted)
-                    .frame(width: 32, height: 32)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: Spacing.s2) {
-                        Text(summary.profile.name)
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.textPrimary)
-                            .lineLimit(1)
-
-                        if summary.isActive {
-                            Text("Active")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Color.accent)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Capsule().fill(Color.accent.opacity(0.14)))
-                        }
-                    }
-
-                    Text(destinationLine(summary.destination))
-                        .font(.footnote)
-                        .foregroundStyle(Color.textSecondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-
-                    Text(scheduleLine(summary))
-                        .font(.footnote)
-                        .foregroundStyle(scheduleColor(summary.scheduleStatus))
-                        .lineLimit(2)
-
-                    Text(formatsLine(summary))
-                        .font(.caption)
-                        .foregroundStyle(Color.textMuted)
-                        .lineLimit(2)
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textMuted)
-            }
-        }
+        SchedulingProfileSummary(
+            name: summary.profile.name,
+            destination: destinationLine(summary.destination),
+            cadence: scheduleLine(summary),
+            formats: formatsLine(summary),
+            isActive: summary.isActive,
+            cadenceColor: scheduleColor(summary.scheduleStatus)
+        )
         .padding(Spacing.s4)
         .background(
             RoundedRectangle(cornerRadius: 16)
@@ -604,10 +564,10 @@ struct ExportProfileDetailView: View {
                         )
                     )
                     factRow(
-                        title: String(localized: "Lossless records", comment: "Profile detail lossless row"),
-                        value: settings.includeGranularData
-                            ? String(localized: "On", comment: "Enabled state")
-                            : String(localized: "Off", comment: "Disabled state")
+                        title: String(localized: "Data Detail", comment: "Profile detail data-detail row"),
+                        value: AppleExportDetailPreset(
+                            policy: settings.detailPolicy
+                        ).localizedTitle
                     )
                     rollupRow(settings)
                     factRow(
@@ -658,11 +618,9 @@ struct ExportProfileDetailView: View {
     }
 
     private func rollupRow(_ settings: ExportSettingsSnapshot) -> some View {
-        let periods: [String] = [
-            settings.generateWeeklyRollups ? String(localized: "Weekly", comment: "Roll-up period") : nil,
-            settings.generateMonthlyRollups ? String(localized: "Monthly", comment: "Roll-up period") : nil,
-            settings.generateYearlyRollups ? String(localized: "Yearly", comment: "Roll-up period") : nil
-        ].compactMap { $0 }
+        let periods: [String] = settings.generateRangeSummary
+            ? [String(localized: "Range", comment: "Roll-up period")]
+            : []
         let value = periods.isEmpty
             ? String(localized: "Off", comment: "Disabled state")
             : (settings.summaryOnlyExport
@@ -702,7 +660,8 @@ struct ExportProfileDetailView: View {
                             comment: "Profile detail schedule lookback line"
                         ))
                         .font(.caption)
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -716,6 +675,10 @@ struct ExportProfileDetailView: View {
                         systemImage: "calendar.badge.clock"
                     )
                     .font(.subheadline.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, Spacing.s2)
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
             }
@@ -749,23 +712,21 @@ struct ExportProfileDetailView: View {
             VStack(alignment: .leading, spacing: Spacing.s2) {
                 Text("Use this ID to pin the profile in Shortcuts, the CLI (`healthmd export --profile`), and API automation.")
                     .font(.caption)
-                    .foregroundStyle(Color.textMuted)
+                    .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                HStack(spacing: Spacing.s2) {
+                VStack(alignment: .leading, spacing: Spacing.s2) {
                     Text(profile.id.uuidString)
                         .font(Typography.monoEmphasis())
                         .foregroundStyle(Color.textPrimary)
                         .textSelection(.enabled)
-                        .lineLimit(nil)
-                        .minimumScaleFactor(0.6)
-
-                    Spacer(minLength: 0)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Button {
                         UIPasteboard.general.string = profile.id.uuidString
                         idCopied = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                             idCopied = false
                         }
                     } label: {
@@ -776,10 +737,19 @@ struct ExportProfileDetailView: View {
                             systemImage: idCopied ? "checkmark" : "doc.on.doc"
                         )
                         .font(.caption.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, Spacing.s2)
+                        .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.borderless)
                     .accessibilityIdentifier(AccessibilityID.ExportProfiles.copyIDButton)
                     .accessibilityLabel(String(localized: "Copy profile ID", comment: "Accessibility label for the copy ID button"))
+                    .accessibilityValue(
+                        idCopied
+                            ? String(localized: "Copied", comment: "Accessibility value after copying the profile ID")
+                            : String(localized: "Not copied", comment: "Accessibility value before copying the profile ID")
+                    )
                 }
             }
         }
@@ -789,67 +759,52 @@ struct ExportProfileDetailView: View {
         sectionCard(title: String(localized: "Actions", comment: "Profile detail card title")) {
             VStack(spacing: 0) {
                 if profile.id != profileStore.activeProfileID {
-                    Button {
+                    SchedulingProfileManagementAction(
+                        icon: "checkmark.circle.fill",
+                        title: String(localized: "Make Active & Edit", comment: "Action activating this profile")
+                    ) {
                         configurationProtection.performConfigurationChange {
                             coordinator.activate(profileID: profile.id)
                             dismiss()
                         }
-                    } label: {
-                        actionRowLabel(
-                            icon: "checkmark.circle.fill",
-                            title: String(localized: "Make Active & Edit", comment: "Action activating this profile"),
-                            isDestructive: false
-                        )
                     }
-                    .buttonStyle(.plain)
                     .accessibilityIdentifier(AccessibilityID.ExportProfiles.makeActiveButton)
 
                     rowDivider()
                 }
 
-                Button {
+                SchedulingProfileManagementAction(
+                    icon: "pencil",
+                    title: String(localized: "Rename…", comment: "Action renaming this profile")
+                ) {
                     configurationProtection.performConfigurationChange {
                         renameText = profile.name
                         showRenameAlert = true
                     }
-                } label: {
-                    actionRowLabel(
-                        icon: "pencil",
-                        title: String(localized: "Rename…", comment: "Action renaming this profile"),
-                        isDestructive: false
-                    )
                 }
-                .buttonStyle(.plain)
 
                 rowDivider()
 
-                Button {
+                SchedulingProfileManagementAction(
+                    icon: "plus.square.on.square",
+                    title: String(localized: "Duplicate", comment: "Action duplicating this profile")
+                ) {
                     configurationProtection.performConfigurationChange {
                         duplicateAndWarn(profile)
                     }
-                } label: {
-                    actionRowLabel(
-                        icon: "plus.square.on.square",
-                        title: String(localized: "Duplicate", comment: "Action duplicating this profile"),
-                        isDestructive: false
-                    )
                 }
-                .buttonStyle(.plain)
 
                 rowDivider()
 
-                Button(role: .destructive) {
+                SchedulingProfileManagementAction(
+                    icon: "trash",
+                    title: String(localized: "Delete Profile…", comment: "Action deleting this profile"),
+                    isDestructive: true
+                ) {
                     configurationProtection.performConfigurationChange {
                         showDeleteConfirmation = true
                     }
-                } label: {
-                    actionRowLabel(
-                        icon: "trash",
-                        title: String(localized: "Delete Profile…", comment: "Action deleting this profile"),
-                        isDestructive: true
-                    )
                 }
-                .buttonStyle(.plain)
                 .disabled(profileStore.profiles.count <= 1)
             }
         }
@@ -909,33 +864,7 @@ struct ExportProfileDetailView: View {
     }
 
     private func factRow(title: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            Text(title)
-                .font(.footnote)
-                .foregroundStyle(Color.textMuted)
-                .frame(width: 110, alignment: .leading)
-            Text(value.isEmpty ? "—" : value)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func actionRowLabel(icon: String, title: String, isDestructive: Bool) -> some View {
-        HStack(spacing: Spacing.s3) {
-            Image(systemName: icon)
-                .font(.body.weight(.medium))
-                .foregroundStyle(isDestructive ? Color.error : Color.accent)
-                .frame(width: 28)
-            Text(title)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(isDestructive ? Color.error : Color.textPrimary)
-            Spacer()
-        }
-        .frame(minHeight: 44)
-        .contentShape(Rectangle())
+        SchedulingProfileFact(title: title, value: value)
     }
 
     private func rowDivider() -> some View {
@@ -1159,15 +1088,15 @@ struct ExportProfileEditorSheet: View {
 
     private var destinationSection: some View {
         Section {
-            Picker(
-                String(localized: "Target", comment: "Profile editor target picker label"),
+            SchedulingChoicePicker(
+                title: String(localized: "Target", comment: "Profile editor target picker label"),
+                choices: [
+                    SchedulingChoice(value: ExportTargetSelection.localIPhoneFolder, title: "Local Folder"),
+                    SchedulingChoice(value: ExportTargetSelection.connectedMac, title: "Connected Mac"),
+                    SchedulingChoice(value: ExportTargetSelection.apiEndpoint, title: "API Endpoint")
+                ],
                 selection: $target
-            ) {
-                Text("Local Folder").tag(ExportTargetSelection.localIPhoneFolder)
-                Text("Connected Mac").tag(ExportTargetSelection.connectedMac)
-                Text("API Endpoint").tag(ExportTargetSelection.apiEndpoint)
-            }
-            .pickerStyle(.segmented)
+            )
 
             switch target {
             case .localIPhoneFolder:
@@ -1284,10 +1213,27 @@ struct ExportProfileEditorSheet: View {
                 String(localized: "Data dictionary", comment: "Profile editor data dictionary toggle"),
                 isOn: $draft.includeDataDictionary
             )
-            Toggle(
-                String(localized: "Lossless records", comment: "Profile editor lossless toggle"),
-                isOn: $draft.includeGranularData
-            )
+            Picker(
+                String(localized: "Data Detail", comment: "Profile editor data-detail picker"),
+                selection: Binding(
+                    get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
+                    set: { draft.detailPolicy = $0.policy }
+                )
+            ) {
+                Text(AppleExportDetailPreset.summary.localizedTitle)
+                    .tag(AppleExportDetailPreset.summary)
+                Text(AppleExportDetailPreset.detailedTimeSeries.localizedTitle)
+                    .tag(AppleExportDetailPreset.detailedTimeSeries)
+                Text(AppleExportDetailPreset.losslessHealthRecords.localizedTitle)
+                    .tag(AppleExportDetailPreset.losslessHealthRecords)
+                if draft.detailPolicy == .archiveOnly {
+                    Text(AppleExportDetailPreset.archiveOnly.localizedTitle)
+                        .tag(AppleExportDetailPreset.archiveOnly)
+                }
+            }
+            Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
+                .font(.footnote)
+                .foregroundStyle(Color.textSecondary)
             Toggle(
                 String(localized: "Summary only", comment: "Profile editor summary-only toggle"),
                 isOn: $draft.summaryOnlyExport
@@ -1302,16 +1248,8 @@ struct ExportProfileEditorSheet: View {
     private var rollupSection: some View {
         Section {
             Toggle(
-                String(localized: "Weekly roll-ups", comment: "Profile editor weekly rollup toggle"),
-                isOn: $draft.generateWeeklyRollups
-            )
-            Toggle(
-                String(localized: "Monthly roll-ups", comment: "Profile editor monthly rollup toggle"),
-                isOn: $draft.generateMonthlyRollups
-            )
-            Toggle(
-                String(localized: "Yearly roll-ups", comment: "Profile editor yearly rollup toggle"),
-                isOn: $draft.generateYearlyRollups
+                String(localized: "Range summary", comment: "Profile editor range-summary toggle"),
+                isOn: $draft.generateRangeSummary
             )
         } header: {
             Text("Roll-Ups")
@@ -1330,9 +1268,8 @@ struct ExportProfileEditorSheet: View {
                     healthKitManager: HealthKitManager.shared
                 )
             } label: {
-                HStack {
+                SchedulingAdaptiveStack {
                     Text("Health Metrics")
-                    Spacer()
                     Text(String(
                         localized: "\(enabled) of \(total)",
                         comment: "Enabled versus total metric count in the profile editor"

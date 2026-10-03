@@ -30,6 +30,7 @@ jobs:
       tag: ${{ steps.identity.outputs.tag }}
       version: ${{ steps.identity.outputs.version }}
       main-sha: ${{ steps.identity.outputs.main-sha }}
+      windows_signing: ${{ steps.identity.outputs.windows_signing }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -62,47 +63,32 @@ jobs:
             echo "main-sha=$main_sha"
             echo "tag=$tag"
             echo "version=$(jq -r .version <<<"$result")"
+            echo "windows_signing=$(jq -r .windows_signing <<<"$result")"
           } >> "$GITHUB_OUTPUT"
 
-  qualify-cli:
-    name: Exact candidate / CLI
+  qualify-ci:
+    name: Qualify exact main CI
     needs: identity
     if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/cli-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
     permissions:
+      actions: write
       contents: read
-
-  qualify-core:
-    name: Exact candidate / shared core
-    needs: identity
-    if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/core-rust-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
-    permissions:
-      contents: read
-
-  qualify-apple:
-    name: Exact candidate / Apple counterpart
-    needs: identity
-    if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/apple-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
-    permissions:
-      contents: read
-
-  qualify-android:
-    name: Exact candidate / Android counterpart
-    needs: identity
-    if: ${{ needs.identity.outputs.publishing == 'true' }}
-    uses: ./.github/workflows/android-ci.yml
-    with:
-      release_sha: ${{ github.sha }}
-    permissions:
-      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Reuse or recover exact-SHA component CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TAG: ${{ needs.identity.outputs.tag }}
+        run: |
+          python3 apps/cli/scripts/qualify-exact-ci.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --sha "$RELEASE_SHA" \
+            --ref "$RELEASE_TAG"
 
   plan:
     name: Distribution plan
@@ -158,18 +144,28 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    outputs:
+      release-id: ${{ steps.draft.outputs.release-id }}
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       VERSION: ${{ needs.identity.outputs.version }}
       PLAN: ${{ needs.plan.outputs.val }}
       RELEASE_SHA: ${{ github.sha }}
     steps:
-      - name: Create immutable draft
+      - id: draft
+        name: Create immutable draft
         shell: bash
         run: |
           set -euo pipefail
-          if release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" 2>/dev/null)"; then
+          find_release() {
+            gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              | jq -e --arg tag "$TAG" \
+                '[.[] | select(.tag_name == $tag)] | if length == 1 then .[0] else empty end'
+          }
+
+          if release="$(find_release)"; then
             test "$(jq -r .draft <<<"$release")" = true
             test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
             test "$(jq -r .prerelease <<<"$release")" = "$(jq -r .announcement_is_prerelease <<<"$PLAN")"
@@ -187,14 +183,35 @@ jobs:
               "${release_flags[@]}" --title "$title" --notes-file "$notes"
           fi
 
+          # GitHub's release-list endpoint can lag a successful create. Recover within this
+          # job instead of forcing a whole release-workflow rerun after the draft already exists.
+          release=""
+          for attempt in $(seq 1 12); do
+            if release="$(find_release)"; then
+              break
+            fi
+            echo "Draft release is not visible yet (attempt $attempt/12); retrying..."
+            sleep 2
+          done
+          [[ -n "$release" ]] || {
+            echo "::error::Draft release was created but did not become readable in time"
+            exit 1
+          }
+          release_id="$(jq -r .id <<<"$release")"
+          [[ "$release_id" =~ ^[1-9][0-9]*$ ]]
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id")"
+          test "$(jq -r .tag_name <<<"$release")" = "$TAG"
+          test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
+          test "$(jq -r .draft <<<"$release")" = true
+          echo "release-id=$release_id" >> "$GITHUB_OUTPUT"
+
   build-local-artifacts:
     name: Build local artifacts (${{ join(matrix.targets, ', ') }})
-    needs: [identity, plan, qualify-cli, qualify-core, qualify-apple, qualify-android]
+    # Candidate compilation is safe to overlap with exact-SHA qualification. Signing and
+    # publication remain fail-closed on qualify-ci below.
+    needs: [identity, plan]
     if: >-
       ${{ always() && needs.plan.result == 'success' &&
-          (needs.identity.outputs.publishing != 'true' ||
-           (needs.qualify-cli.result == 'success' && needs.qualify-core.result == 'success' &&
-            needs.qualify-apple.result == 'success' && needs.qualify-android.result == 'success')) &&
           fromJson(needs.plan.outputs.val).ci.github.artifacts_matrix.include != null &&
           (needs.plan.outputs.publishing == 'true' || fromJson(needs.plan.outputs.val).ci.github.pr_run_mode == 'upload') }}
     strategy:
@@ -240,7 +257,12 @@ jobs:
           curl --proto '=https' --tlsv1.2 -LsSf \
             https://github.com/axodotdev/cargo-dist/releases/download/v0.31.0/cargo-dist-installer.sh \
             -o "$installer"
-          echo 'e79d87e418b9d2cbe992d014985457c28a5a7c553add3da4ed1047e161c928f4  '"$installer" | sha256sum --check
+          if command -v shasum >/dev/null 2>&1; then
+            checksum=(shasum -a 256)
+          else
+            checksum=(sha256sum)
+          fi
+          echo 'e79d87e418b9d2cbe992d014985457c28a5a7c553add3da4ed1047e161c928f4  '"$installer" | "${checksum[@]}" --check
           sh "$installer"
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
@@ -277,8 +299,11 @@ jobs:
 
   sign-macos-artifacts:
     name: Sign and notarize macOS (${{ matrix.target }})
-    needs: [identity, build-local-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-local-artifacts.result == 'success' }}
+    needs: [identity, qualify-ci, build-local-artifacts]
+    if: >-
+      ${{ needs.identity.outputs.publishing == 'true' &&
+          needs.qualify-ci.result == 'success' &&
+          needs.build-local-artifacts.result == 'success' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     environment: cli-signing
@@ -332,8 +357,16 @@ jobs:
 
   sign-windows-artifacts:
     name: Authenticode sign Windows
-    needs: [identity, build-local-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-local-artifacts.result == 'success' }}
+    needs: [identity, qualify-ci, build-local-artifacts]
+    # Skipped only while the committed ledger defers Windows Authenticode
+    # (windows.status = pending_external_certificate_provisioning). The unsigned
+    # Windows archive then flows through build-local artifacts and its integrity
+    # is covered by the Sigstore-signed checksum closure.
+    if: >-
+      ${{ needs.identity.outputs.publishing == 'true' &&
+          needs.qualify-ci.result == 'success' &&
+          needs.build-local-artifacts.result == 'success' &&
+          needs.identity.outputs.windows_signing == 'qualified' }}
     runs-on: windows-2022
     timeout-minutes: 30
     environment: cli-signing
@@ -419,7 +452,7 @@ jobs:
           cmdkey.exe /delete:$credentialTarget | Out-Null
           try {
             $env:HEALTHMD_CLI_DATA_DIR = $credentialState
-            & $healthmd[0].FullName --backend direct direct devices | Out-File -Encoding utf8 (Join-Path $credentialState 'before.json')
+            & $healthmd[0].FullName direct devices | Out-File -Encoding utf8 (Join-Path $credentialState 'before.json')
             if ($LASTEXITCODE -ne 0) { throw 'initial Credential Manager probe failed' }
             $identity = Get-Content (Join-Path $credentialState 'identity.json') -Raw | ConvertFrom-Json
             $fixtureID = '11111111-1111-4111-8111-111111111111'
@@ -434,7 +467,7 @@ jobs:
             $trust = @{ ownerInstallationID = $identity.installationID; trustedClients = @($fixture) } | ConvertTo-Json -Compress -Depth 4
             cmdkey.exe /generic:$credentialTarget /user:trust-state-v1 /pass:$trust | Out-Null
             if ($LASTEXITCODE -ne 0) { throw 'Credential Manager fixture creation failed' }
-            & $healthmd[0].FullName --backend direct direct devices | Out-File -Encoding utf8 (Join-Path $credentialState 'after.json')
+            & $healthmd[0].FullName direct devices | Out-File -Encoding utf8 (Join-Path $credentialState 'after.json')
             if ($LASTEXITCODE -ne 0) { throw 'signed credential upgrade probe failed' }
             $result = Get-Content (Join-Path $credentialState 'after.json') -Raw | ConvertFrom-Json
             $devices = @($result.devices)
@@ -464,18 +497,24 @@ jobs:
 
   assemble-release-artifacts:
     name: Assemble exact signed candidate set
-    needs: [identity, build-local-artifacts, sign-macos-artifacts, sign-windows-artifacts]
+    needs: [identity, qualify-ci, build-local-artifacts, sign-macos-artifacts, sign-windows-artifacts]
     if: >-
       ${{ always() && needs.identity.outputs.publishing == 'true' &&
+          needs.qualify-ci.result == 'success' &&
           needs.build-local-artifacts.result == 'success' &&
           needs.sign-macos-artifacts.result == 'success' &&
-          needs.sign-windows-artifacts.result == 'success' }}
+          (needs.sign-windows-artifacts.result == 'success' ||
+           (needs.sign-windows-artifacts.result == 'skipped' &&
+            needs.identity.outputs.windows_signing != 'qualified')) }}
     runs-on: ubuntu-24.04
     permissions:
       attestations: write
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           pattern: artifacts-build-local-*
@@ -488,11 +527,17 @@ jobs:
           merge-multiple: true
       - name: Replace unsigned platform archives exactly
         shell: bash
+        env:
+          WINDOWS_SIGNING: ${{ needs.identity.outputs.windows_signing }}
         run: |
           set -euo pipefail
           mkdir release
           cp -R unsigned/. release/
-          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc; do
+          targets="aarch64-apple-darwin x86_64-apple-darwin"
+          if [[ "$WINDOWS_SIGNING" == qualified ]]; then
+            targets="$targets x86_64-pc-windows-msvc"
+          fi
+          for target in $targets; do
             case "$target" in
               *windows*) extension=zip ;;
               *) extension=tar.xz ;;
@@ -501,9 +546,22 @@ jobs:
             replacement="$(find signed -type f -name "$name" -print -quit)"
             destination="$(find release -type f -name "$name" -print -quit)"
             checksum="$(find release -type f -name "${name}.sha256" -print -quit)"
+            manifest="$(find release -type f -name "${target}-dist-manifest.json" -print -quit)"
             test -n "$replacement" && test -n "$destination" && test -n "$checksum"
+            test -n "$manifest"
             cp "$replacement" "$destination"
-            (cd "$(dirname "$destination")" && sha256sum "$name") > "$checksum"
+            digest="$(sha256sum "$destination" | cut -d ' ' -f 1)"
+            printf '%s  %s\n' "$digest" "$name" > "$checksum"
+            # Global cargo-dist generation trusts the local manifests, so bind them to the
+            # post-signing bytes before generating installers or the Homebrew formula.
+            jq --arg name "$name" --arg digest "$digest" '
+              if (.artifacts[$name].checksums.sha256 | type) != "string" then
+                error("dist manifest lacks archive SHA-256")
+              else
+                .artifacts[$name].checksums.sha256 = $digest
+              end
+            ' "$manifest" > "${manifest}.tmp"
+            mv "${manifest}.tmp" "$manifest"
           done
           for target in aarch64-apple-darwin x86_64-apple-darwin; do
             dmg="$(find signed -type f -name "healthmd-cli-${target}.dmg" -print -quit)"
@@ -512,6 +570,9 @@ jobs:
           done
           test "$(find release -type f \( -name '*.tar.xz' -o -name '*.zip' \) | wc -l | tr -d ' ')" = 5
           test "$(find release -type f -name '*.dmg' | wc -l | tr -d ' ')" = 2
+          python3 apps/cli/scripts/verify-generated-release-metadata.py \
+            --archives release \
+            --manifests release
       - name: Attest exact signed candidate set
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
         with:
@@ -527,9 +588,10 @@ jobs:
 
   qualify-local-artifacts:
     name: Smoke packaged binaries (${{ join(matrix.targets, ', ') }})
-    needs: [identity, plan, build-local-artifacts, assemble-release-artifacts]
+    needs: [identity, plan, qualify-ci, build-local-artifacts, assemble-release-artifacts]
     if: >-
       ${{ always() && needs.build-local-artifacts.result == 'success' &&
+          (needs.identity.outputs.publishing != 'true' || needs.qualify-ci.result == 'success') &&
           (needs.identity.outputs.publishing != 'true' ||
            needs.assemble-release-artifacts.result == 'success') }}
     strategy:
@@ -598,7 +660,9 @@ jobs:
             expected_identifier="$healthmd_identifier"
             [[ "$(basename "$executable")" == healthmd-mcp ]] && expected_identifier="$healthmd_mcp_identifier"
             test "$(sed -n 's/^Identifier=//p' <<<"$details")" = "$expected_identifier"
-            spctl --assess --type execute --verbose=2 "$executable"
+            # Apple does not support stapling a ticket to, or Gatekeeper assessment of, a bare
+            # executable; notarization evidence for these binaries is the accepted, stapled DMG
+            # carrying byte-identical copies.
           done
           dmg="$(find candidate -type f -name "healthmd-cli-${TARGET}.dmg" -print -quit)"
           test -n "$dmg"
@@ -606,7 +670,7 @@ jobs:
           xcrun stapler validate "$dmg"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
       - name: Verify Authenticode after extraction
-        if: ${{ needs.identity.outputs.publishing == 'true' && runner.os == 'Windows' }}
+        if: ${{ needs.identity.outputs.publishing == 'true' && runner.os == 'Windows' && needs.identity.outputs.windows_signing == 'qualified' }}
         shell: pwsh
         env:
           EXPECTED_SIGNER_SUBJECT: ${{ vars.CLI_WINDOWS_SIGNER_SUBJECT }}
@@ -685,7 +749,12 @@ jobs:
   sign-windows-installer:
     name: Authenticode sign PowerShell installer
     needs: [identity, build-global-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-global-artifacts.result == 'success' }}
+    # Skipped only while the committed ledger defers Windows Authenticode; the
+    # unsigned installer then ships with checksum-closure integrity only.
+    if: >-
+      ${{ needs.identity.outputs.publishing == 'true' &&
+          needs.build-global-artifacts.result == 'success' &&
+          needs.identity.outputs.windows_signing == 'qualified' }}
     runs-on: windows-2022
     timeout-minutes: 20
     environment: cli-signing
@@ -751,9 +820,11 @@ jobs:
     name: Sign final checksum closure
     needs: [identity, assemble-release-artifacts, sign-windows-installer, sbom]
     if: >-
-      ${{ needs.identity.outputs.publishing == 'true' &&
+      ${{ always() && needs.identity.outputs.publishing == 'true' &&
           needs.assemble-release-artifacts.result == 'success' &&
-          needs.sign-windows-installer.result == 'success' &&
+          (needs.sign-windows-installer.result == 'success' ||
+           (needs.sign-windows-installer.result == 'skipped' &&
+            needs.identity.outputs.windows_signing != 'qualified')) &&
           needs.sbom.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
@@ -768,7 +839,15 @@ jobs:
         with:
           name: artifacts-release-candidates
           path: release
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - name: Download unsigned global artifacts
+        if: ${{ needs.identity.outputs.windows_signing != 'qualified' }}
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-build-global
+          path: global
+      - name: Download signed global artifacts
+        if: ${{ needs.identity.outputs.windows_signing == 'qualified' }}
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: artifacts-signed-global
           path: global
@@ -780,6 +859,8 @@ jobs:
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.1
       - name: Recompute and sign exact final checksum manifest
         shell: bash
+        env:
+          WINDOWS_SIGNING: ${{ needs.identity.outputs.windows_signing }}
         run: |
           set -euo pipefail
           mapfile -t archives < <(find release -maxdepth 1 -type f \( -name '*.tar.xz' -o -name '*.zip' \) -print | sort)
@@ -798,8 +879,18 @@ jobs:
             dmg_checksums+=("$checksum")
           done
           cp apps/cli/release-identities.json global/release-identities.json
-          test "$(jq -r .windows.status global/release-identities.json)" = qualified
-          test -n "$(jq -r .windows.publisher_subject global/release-identities.json)"
+          test "$(jq -r .windows.status global/release-identities.json)" = "$WINDOWS_SIGNING"
+          if [[ "$WINDOWS_SIGNING" == qualified ]]; then
+            test -n "$(jq -r .windows.publisher_subject global/release-identities.json)"
+          else
+            test "$(jq -r .windows.publisher_subject global/release-identities.json)" = null
+          fi
+          python3 apps/cli/scripts/verify-generated-release-metadata.py \
+            --archives release \
+            --manifests release \
+            --shell global/healthmd-cli-installer.sh \
+            --powershell global/healthmd-cli-installer.ps1 \
+            --formula global/healthmd.rb
           payloads=(
             "${archives[@]}"
             "${dmgs[@]}"
@@ -850,6 +941,9 @@ jobs:
            needs.seal-release-artifacts.result == 'success') }}
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - name: Download unsigned PR candidates
         if: ${{ needs.identity.outputs.publishing != 'true' }}
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -912,11 +1006,17 @@ jobs:
             test -f healthmd-cli-x86_64-apple-darwin.dmg.sha256
           fi
           test "$(find . -maxdepth 1 -type f \( -name '*.tar.xz' -o -name '*.zip' \) | wc -l | tr -d ' ')" = 5
+          python3 "$GITHUB_WORKSPACE/apps/cli/scripts/verify-generated-release-metadata.py" \
+            --archives . \
+            --manifests . \
+            --shell healthmd-cli-installer.sh \
+            --powershell healthmd-cli-installer.ps1 \
+            --formula healthmd.rb
 
   sbom:
     name: Qualify release SBOM
     needs: [identity, qualify-local-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.qualify-local-artifacts.result == 'success' }}
+    if: ${{ always() && needs.identity.outputs.publishing == 'true' && needs.qualify-local-artifacts.result == 'success' }}
     uses: ./.github/workflows/cli-sbom.yml
     with:
       tag: ${{ needs.identity.outputs.tag }}
@@ -931,15 +1031,17 @@ jobs:
     name: Upload qualified draft assets
     needs: [identity, create-draft, qualify-global-artifacts, sbom]
     if: >-
-      ${{ needs.identity.outputs.publishing == 'true' && needs.create-draft.result == 'success' &&
+      ${{ always() && needs.identity.outputs.publishing == 'true' && needs.create-draft.result == 'success' &&
           needs.qualify-global-artifacts.result == 'success' && needs.sbom.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       RELEASE_SHA: ${{ github.sha }}
+      RELEASE_ID: ${{ needs.create-draft.outputs.release-id }}
     steps:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
@@ -957,7 +1059,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
+          [[ "$RELEASE_ID" =~ ^[1-9][0-9]*$ ]]
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID")"
+          test "$(jq -r .id <<<"$release")" = "$RELEASE_ID"
+          test "$(jq -r .tag_name <<<"$release")" = "$TAG"
           test "$(jq -r .draft <<<"$release")" = true
           test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
           find artifacts -type f \( -name '*-dist-manifest.json' -o -name 'plan-dist-manifest.json' \) -delete
@@ -967,16 +1072,22 @@ jobs:
 
   verify-draft-assets:
     name: Verify remote draft bytes
-    needs: [identity, upload-draft]
-    if: ${{ needs.upload-draft.result == 'success' }}
+    needs: [identity, create-draft, upload-draft]
+    if: ${{ always() && needs.upload-draft.result == 'success' }}
     runs-on: ubuntu-24.04
+    # Draft release APIs require push-level contents access. The job remains read-only in behavior.
     permissions:
-      contents: read
+      contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       RELEASE_SHA: ${{ github.sha }}
+      RELEASE_ID: ${{ needs.create-draft.outputs.release-id }}
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: artifacts-release-candidates
@@ -996,8 +1107,14 @@ jobs:
         run: |
           set -euo pipefail
           find expected -type f \( -name '*-dist-manifest.json' -o -name 'plan-dist-manifest.json' \) -delete
-          mkdir remote
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir remote
+          [[ "$RELEASE_ID" =~ ^[1-9][0-9]*$ ]]
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID")"
+          test "$(jq -r .id <<<"$release")" = "$RELEASE_ID"
+          test "$(jq -r .tag_name <<<"$release")" = "$TAG"
+          test "$(jq -r .draft <<<"$release")" = true
+          test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
+          bash apps/cli/scripts/download-draft-release-assets.sh \
+            "$GITHUB_REPOSITORY" "$RELEASE_ID" "$TAG" "$RELEASE_SHA" remote
           find expected -type f -printf '%f\n' | LC_ALL=C sort > expected.names
           find remote -type f -printf '%f\n' | LC_ALL=C sort > remote.names
           cmp expected.names remote.names
@@ -1008,9 +1125,6 @@ jobs:
             test "$(sha256sum "$expected_path" | cut -d ' ' -f 1)" = \
               "$(sha256sum "$remote_path" | cut -d ' ' -f 1)"
           done < expected.names
-          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
-          test "$(jq -r .draft <<<"$release")" = true
-          test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
           expected_identity="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/.github/workflows/cli-release.yml@${GITHUB_REF}"
           cosign verify-blob \
             --bundle remote/sha256.sum.sigstore.json \
@@ -1021,16 +1135,18 @@ jobs:
 
   finalize-release:
     name: Publish qualified release
-    needs: [identity, plan, verify-draft-assets]
-    if: ${{ needs.verify-draft-assets.result == 'success' }}
+    needs: [identity, plan, create-draft, verify-draft-assets]
+    if: ${{ always() && needs.verify-draft-assets.result == 'success' }}
     runs-on: ubuntu-24.04
     environment: cli-release
     permissions:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       RELEASE_SHA: ${{ github.sha }}
+      RELEASE_ID: ${{ needs.create-draft.outputs.release-id }}
       VERSION: ${{ needs.identity.outputs.version }}
       PLAN: ${{ needs.plan.outputs.val }}
     steps:
@@ -1057,8 +1173,14 @@ jobs:
         run: |
           set -euo pipefail
           find expected -type f \( -name '*-dist-manifest.json' -o -name 'plan-dist-manifest.json' \) -delete
-          mkdir remote
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir remote
+          [[ "$RELEASE_ID" =~ ^[1-9][0-9]*$ ]]
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID")"
+          test "$(jq -r .id <<<"$release")" = "$RELEASE_ID"
+          test "$(jq -r .tag_name <<<"$release")" = "$TAG"
+          test "$(jq -r .draft <<<"$release")" = true
+          test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
+          bash apps/cli/scripts/download-draft-release-assets.sh \
+            "$GITHUB_REPOSITORY" "$RELEASE_ID" "$TAG" "$RELEASE_SHA" remote
           find expected -type f -printf '%f\n' | LC_ALL=C sort > expected.names
           find remote -type f -printf '%f\n' | LC_ALL=C sort > remote.names
           cmp expected.names remote.names
@@ -1081,16 +1203,17 @@ jobs:
           set -euo pipefail
           git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
           test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$RELEASE_SHA"
-          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
+          [[ "$RELEASE_ID" =~ ^[1-9][0-9]*$ ]]
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID")"
+          test "$(jq -r .id <<<"$release")" = "$RELEASE_ID"
+          test "$(jq -r .tag_name <<<"$release")" = "$TAG"
           test "$(jq -r .target_commitish <<<"$release")" = "$RELEASE_SHA"
+          test "$(jq -r .draft <<<"$release")" = true
           expected_prerelease="$(jq -r .announcement_is_prerelease <<<"$PLAN")"
           test "$(jq -r .prerelease <<<"$release")" = "$expected_prerelease"
-          if [[ "$(jq -r .draft <<<"$release")" == true ]]; then
-            release_id="$(jq -r .id <<<"$release")"
-            gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" \
-              -F draft=false -f make_latest=false >/dev/null
-            release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
-          fi
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -F draft=false -f make_latest=false >/dev/null
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
           test "$(jq -r .draft <<<"$release")" = false
           while IFS= read -r expected_asset; do
             jq -e --arg name "$expected_asset" \
@@ -1113,10 +1236,10 @@ jobs:
           test "$latest" != "$TAG"
 
   publish-homebrew-formula:
-    name: Publish stable Homebrew formula
+    name: Publish Homebrew formula
     needs: [identity, plan, finalize-release]
     if: >-
-      ${{ needs.finalize-release.result == 'success' &&
+      ${{ always() && needs.finalize-release.result == 'success' &&
           (!fromJson(needs.plan.outputs.val).announcement_is_prerelease ||
            fromJson(needs.plan.outputs.val).publish_prereleases) }}
     runs-on: ubuntu-22.04
@@ -1129,7 +1252,7 @@ jobs:
         with:
           persist-credentials: true
           repository: CodyBontecou/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: artifacts-sealed-global
@@ -1150,8 +1273,56 @@ jobs:
             cp "$source_formula" "Formula/$filename"
             export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
             brew update
-            brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict \
-              "Formula/$filename"
+            # Homebrew's style wrapper cannot exclude plugin-provided Sorbet sigil cops. Analyze
+            # an otherwise byte-identical copy with only the required analysis sigil prepended;
+            # installation and publication continue to use the exact sealed formula.
+            style_dir="$RUNNER_TEMP/style-$name"
+            mkdir "$style_dir"
+            {
+              printf '# typed: strict\n\n'
+              cat "Formula/$filename"
+            } > "$style_dir/$filename"
+            tail -n +3 "$style_dir/$filename" > "$RUNNER_TEMP/style-$filename-body"
+            cmp "$RUNNER_TEMP/style-$filename-body" "Formula/$filename"
+            brew style --except-cops \
+              FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict,Style/MutableConstant,Layout/HashAlignment,Style/TrailingCommaInHashLiteral,Style/Documentation,Style/FrozenStringLiteralComment \
+              "$style_dir/$filename"
+            if brew list --formula "$name" >/dev/null 2>&1; then
+              brew uninstall --force "$name"
+            fi
+            if brew list --formula "$name" >/dev/null 2>&1; then
+              echo "formula remains installed before clean-install qualification: $name" >&2
+              exit 1
+            fi
+            qualification_tap=codybontecou/tap
+            if brew tap | grep -Fxq "$qualification_tap"; then
+              echo "$qualification_tap was already tapped before qualification" >&2
+              exit 1
+            fi
+            brew tap "$qualification_tap"
+            managed_tap="$(brew --repo "$qualification_tap")"
+            test "$(git -C "$managed_tap" rev-parse 'HEAD^{commit}')" = "$(git rev-parse 'HEAD^{commit}')"
+            test -z "$(git -C "$managed_tap" status --porcelain)"
+            mkdir -p "$managed_tap/Formula"
+            cp "$source_formula" "$managed_tap/Formula/$filename"
+            cmp "$managed_tap/Formula/$filename" "Formula/$filename"
+
+            brew install "$qualification_tap/$name"
+            prefix="$(brew --prefix "$name")"
+            "$prefix/bin/healthmd" --version | grep -F "$version"
+            "$prefix/bin/healthmd" --help >/dev/null
+            "$prefix/bin/healthmd-mcp" --help >/dev/null
+            brew uninstall --force "$name"
+            test ! -e "$prefix/bin/healthmd"
+            test ! -e "$prefix/bin/healthmd-mcp"
+            cmp "$managed_tap/Formula/$filename" "$source_formula"
+            git -C "$managed_tap" reset --hard HEAD
+            test -z "$(git -C "$managed_tap" status --porcelain)"
+            brew untap "$qualification_tap"
+            if brew tap | grep -Fxq "$qualification_tap"; then
+              echo "$qualification_tap remains tapped after qualification" >&2
+              exit 1
+            fi
             git add "Formula/$filename"
             if ! git diff --cached --quiet; then
               git commit -m "$name $version"

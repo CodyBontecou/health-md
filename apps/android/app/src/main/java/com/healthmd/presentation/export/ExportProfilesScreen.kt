@@ -45,11 +45,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
@@ -60,6 +62,26 @@ import com.healthmd.presentation.schedule.ProfileCadenceEditorDialog
 import com.healthmd.presentation.schedule.cadenceSummary
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+
+object ExportProfilesTestTags {
+    const val ROW = "export_profile_row"
+}
+
+internal fun attemptExportProfileDetailChange(
+    protectionEnabled: Boolean,
+    closeDetail: () -> Unit,
+    onBlockedChange: () -> Unit,
+    action: () -> Unit,
+) {
+    if (protectionEnabled) {
+        // Material dialogs use a separate window. Close it before publishing the graph-level
+        // notice so the Settings action is visible and touchable above this screen.
+        closeDetail()
+        onBlockedChange()
+    } else {
+        action()
+    }
+}
 
 /**
  * Dedicated export-profiles management screen (cross-platform parity with the iOS
@@ -81,6 +103,14 @@ fun ExportProfilesScreen(
     val protection = LocalConfigurationProtection.current
     val attemptProfileChange: (() -> Unit) -> Unit = { action ->
         if (protection.enabled) protection.onBlockedChange() else action()
+    }
+    val attemptDetailProfileChange: (() -> Unit) -> Unit = { action ->
+        attemptExportProfileDetailChange(
+            protectionEnabled = protection.enabled,
+            closeDetail = { viewModel.openDetail(null) },
+            onBlockedChange = protection.onBlockedChange,
+            action = action,
+        )
     }
 
     Scaffold(
@@ -155,15 +185,16 @@ fun ExportProfilesScreen(
         ProfileDetailDialog(
             row = row,
             canDelete = uiState.rows.size > 1,
-            onActivate = { attemptProfileChange { viewModel.activate(row.profile.id) } },
-            onEdit = { attemptProfileChange { viewModel.openEditor(row.profile.id) } },
-            onRename = { attemptProfileChange { viewModel.startRename(row.profile.id) } },
-            onDuplicate = { attemptProfileChange { viewModel.duplicate(row.profile.id) } },
-            onEditSchedule = { attemptProfileChange { viewModel.openScheduleEditor(row.profile.id) } },
-            onDelete = { attemptProfileChange { viewModel.askDelete(row.profile.id) } },
+            onActivate = { attemptDetailProfileChange { viewModel.activate(row.profile.id) } },
+            onEdit = { attemptDetailProfileChange { viewModel.openEditor(row.profile.id) } },
+            onRename = { attemptDetailProfileChange { viewModel.startRename(row.profile.id) } },
+            onDuplicate = { attemptDetailProfileChange { viewModel.duplicate(row.profile.id) } },
+            onEditSchedule = { attemptDetailProfileChange { viewModel.openScheduleEditor(row.profile.id) } },
+            onDelete = { attemptDetailProfileChange { viewModel.askDelete(row.profile.id) } },
             onFolderSelected = { uri, name ->
-                attemptProfileChange { viewModel.bindProfileFolder(row.profile.id, uri, name) }
+                attemptDetailProfileChange { viewModel.bindProfileFolder(row.profile.id, uri, name) }
             },
+            onBlockedChange = { attemptDetailProfileChange {} },
             onDismiss = { viewModel.openDetail(null) },
         )
     }
@@ -296,6 +327,7 @@ private fun ProfileCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(ExportProfilesTestTags.ROW)
             .clickable(onClick = onOpen),
         colors = CardDefaults.cardColors(containerColor = AppColors.bgSecondary),
     ) {
@@ -328,7 +360,14 @@ private fun ProfileCard(
                     color = AppColors.textSecondary,
                 )
                 Text(
-                    text = cadenceSummary(row.entry),
+                    text = cadenceSummary(
+                        row.entry,
+                        stringResource(
+                            R.string.profile_schedule_refresh_summary,
+                            row.entry?.todayRefreshIntervalHours
+                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+                        ),
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (row.entry?.isEnabled == true) {
                         AppColors.accent
@@ -404,6 +443,7 @@ private fun ProfileDetailDialog(
     onEditSchedule: () -> Unit,
     onDelete: () -> Unit,
     onFolderSelected: (Uri, String?) -> Unit,
+    onBlockedChange: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
@@ -448,7 +488,7 @@ private fun ProfileDetailDialog(
                         // the launch itself is gated so a pick is never
                         // silently discarded afterwards.
                         if (protection.enabled) {
-                            protection.onBlockedChange()
+                            onBlockedChange()
                         } else {
                             folderPickerLauncher.launch(null)
                         }
@@ -462,7 +502,17 @@ private fun ProfileDetailDialog(
                         )
                     }
                 }
-                FactRow("Schedule", cadenceSummary(row.entry))
+                FactRow(
+                    "Schedule",
+                    cadenceSummary(
+                        row.entry,
+                        stringResource(
+                            R.string.profile_schedule_refresh_summary,
+                            row.entry?.todayRefreshIntervalHours
+                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+                        ),
+                    ),
+                )
                 val snapshot = row.snapshot
                 if (snapshot != null) {
                     FactRow(
@@ -474,7 +524,7 @@ private fun ProfileDetailDialog(
                     )
                     FactRow("Metrics", "${snapshot.enabledMetricCount} enabled")
                     FactRow(
-                        "Lossless records",
+                        "Detailed time-series",
                         if (snapshot.includeGranularData == true) "On" else "Off",
                     )
                     snapshot.filenameFormat?.let { FactRow("Filename format", it) }

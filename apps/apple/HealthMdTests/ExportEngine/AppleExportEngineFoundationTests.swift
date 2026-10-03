@@ -153,6 +153,17 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             registrySnapshot: context.registry
         ))
 
+        XCTAssertTrue(decoded.isRangeCompatible(buildInfo: context.buildInfo))
+        var oldRangeCore = context.buildInfo
+        oldRangeCore.coreApiVersion = 3
+        XCTAssertFalse(decoded.isRangeCompatible(buildInfo: oldRangeCore))
+        XCTAssertThrowsError(try decoded.validateRangeCompatibility(buildInfo: oldRangeCore)) { error in
+            XCTAssertEqual(
+                error as? AppleExportEnginePin.CompatibilityError,
+                .incompatibleSemanticProfile
+            )
+        }
+
         var incompatibleBuild = context.buildInfo
         incompatibleBuild.renderProfileRevision += 1
         XCTAssertFalse(decoded.isCompatible(

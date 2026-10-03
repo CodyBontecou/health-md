@@ -2,9 +2,29 @@
   "artifact_set" : "healthmd.generated_rollup_reference_docs",
   "artifacts" : [
     {
-      "bytes" : 104830,
+      "bytes" : 104834,
       "path" : "aggregation-behavior.md",
-      "sha256" : "c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68"
+      "sha256" : "22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92"
+    },
+    {
+      "bytes" : 11629,
+      "path" : "range-bases.md",
+      "sha256" : "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec"
+    },
+    {
+      "bytes" : 38202,
+      "path" : "range.csv",
+      "sha256" : "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7"
+    },
+    {
+      "bytes" : 39662,
+      "path" : "range.json",
+      "sha256" : "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b"
+    },
+    {
+      "bytes" : 9249,
+      "path" : "range.md",
+      "sha256" : "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4"
     },
     {
       "bytes" : 11564,
@@ -27,6 +47,16 @@
       "sha256" : "c2b7fc33e559fea8f71a86a04781feeec9c63dfa21c7cffc1ec681bd79888774"
     }
   ],
+  "current_artifacts" : {
+    "paths" : [
+      "range-bases.md",
+      "range.csv",
+      "range.json",
+      "range.md"
+    ],
+    "rollup_period" : "range",
+    "schema_version" : 9
+  },
   "fixture" : {
     "behavior_evidence" : [
       {
@@ -115,18 +145,17 @@
       }
     ],
     "contains_phi" : false,
-    "coverage_percent" : 42.857142857142854,
+    "coverage_percent" : 50,
     "days_counted" : 3,
-    "days_expected" : 7,
-    "end_date" : "2026-07-12",
+    "days_expected" : 6,
+    "end_date" : "2026-07-11",
     "missing_dates" : [
       "2026-07-07",
       "2026-07-09",
-      "2026-07-10",
-      "2026-07-12"
+      "2026-07-10"
     ],
-    "period" : "weekly",
-    "period_id" : "2026-W28",
+    "period" : "range",
+    "period_id" : "2026-07-06_to_2026-07-11",
     "source_dates" : [
       "2026-07-06",
       "2026-07-08",
@@ -150,10 +179,22 @@
     "script" : "scripts/generated-rollup-reference-docs.sh",
     "test" : "HealthMdTests/Export/GeneratedRollupReferenceDocsTests.swift"
   },
+  "historical_artifacts" : {
+    "paths" : [
+      "weekly-bases.md",
+      "weekly.csv",
+      "weekly.json",
+      "weekly.md"
+    ],
+    "schema_version" : 8,
+    "status" : "immutable"
+  },
   "manifest_version" : 1,
   "schema" : {
     "data_dictionary_entry_count" : 232,
     "rollup" : "healthmd.rollup_summary",
+    "rollup_rules_version" : 8,
+    "rollup_version" : 9,
     "source" : "healthmd.health_data",
     "source_version" : 8
   }

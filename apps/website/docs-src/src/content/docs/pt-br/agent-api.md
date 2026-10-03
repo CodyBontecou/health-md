@@ -28,7 +28,7 @@ A API é vinculada ao loopback na porta `17645`. Ela aceita somente pares de loo
 
 As antigas rotas `/v1/agent/profiles` e `/v1/agent/activity/query` retornam `410 removed_endpoint`.
 
-O backend direto do iPhone não hospeda essas rotas HTTP. O comando independente `healthmd` o utiliza para extração e exportação canônicas, enquanto `healthmd mcp serve` implementa ferramentas de consulta tipada com dados recentes, evidências, catálogo de métricas, prontidão, visualização e exportação persistente diretamente pelo protocolo de consulta do iPhone v3. O emparelhamento e o MCP usam a mesma identidade do executável; a atualização e o contexto criptografado do Mac continuam específicos desta API HTTP.
+O acesso direto ao iPhone não hospeda essas rotas HTTP. O comando independente `healthmd` o utiliza para extração e exportação canônicas, enquanto `healthmd mcp serve` implementa ferramentas de consulta tipada com dados recentes, evidências, catálogo de métricas, prontidão, visualização e exportação persistente diretamente pelo protocolo de consulta do iPhone v3. O emparelhamento e o MCP usam a mesma identidade do executável; a atualização e o contexto criptografado do Mac continuam específicos desta API HTTP.
 
 ## Prefira o adaptador da CLI
 
@@ -292,6 +292,6 @@ Não tente executar novamente uma atualização às cegas após um resultado des
   <a href="/pt-br/docs/agents/"><span>Visão geral</span>Agentes locais e contexto de saúde: configuração, armazenamento criptografado, escopo e regras de relatórios.</a>
   <a href="/pt-br/docs/agent-queries/"><span>Alto nível</span>Receitas de consultas tipadas: comandos validados para perguntas comuns sobre métricas, sono, treinos e evidências.</a>
   <a href="/pt-br/docs/mcp/"><span>Ferramentas</span>Servidor MCP local: configuração de stdio, ferramentas tipadas, paginação e limites do sandbox.</a>
-  <a href="/pt-br/docs/reference/api-and-cli/"><span>Referência</span>Contrato da API e da CLI: exportação, extração, consulta, backend direto e limites operacionais.</a>
+  <a href="/pt-br/docs/reference/api-and-cli/"><span>Referência</span>Contrato da API e da CLI: exportação, extração, consulta, acesso direto e limites operacionais.</a>
   <a href="/pt-br/docs/reference/evidence-packets/"><span>Contratos de dados</span>Consultas compactas e pacotes de evidências: tipos, cursores, operações e IDs determinísticos de pacotes.</a>
 </div>

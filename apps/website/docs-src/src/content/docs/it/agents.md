@@ -8,7 +8,7 @@ Health.md offre agli agenti locali di sviluppo e automazione due modi per lavora
 - la CLI `healthmd` per comandi espliciti da terminale ed estrazione canonica;
 - `healthmd mcp serve` e la relativa app MCP per strumenti tipizzati, visualizzazioni native ed esportazioni approvate di file generati.
 
-Il server MCP multipiattaforma comunica direttamente con l'iPhone in primo piano e non richiede Health.md per Mac. La CLI può usare lo stesso canale diretto per esportazioni grezze o canoniche, oppure l'API di loopback dell'app per Mac per i flussi di lavoro basati sull'indice del Mac. Le letture HealthKit avvengono sempre sull'iPhone e `healthmd.health_data` v7 resta il contratto pubblico dei dati di origine.
+Il server MCP multipiattaforma comunica direttamente con l'iPhone in primo piano e non richiede Health.md per Mac. La CLI può usare lo stesso canale diretto per esportazioni grezze o canoniche, oppure l'API di loopback dell'app per Mac per i flussi di lavoro basati sull'indice del Mac. Le letture HealthKit avvengono sempre sull'iPhone e `healthmd.health_data` v8 resta il contratto pubblico dei dati di origine.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,21 +37,42 @@ Health.md non formula diagnosi, non consiglia trattamenti, non deduce rapporti c
 ## Configurare gli helper locali
 
 <div class="availability preview">
-<strong>Anteprima · configurazione diretta multipiattaforma</strong>
-<p>I passaggi seguenti usano il pacchetto multipiattaforma non ancora pubblicato. Per un flusso di lavoro già disponibile, configura l'helper firmato per Mac <code>healthmd-mcp</code> seguendo <a href="/it/docs/configuration/">Configura il tuo agente</a>.</p>
+<strong>Anteprima pubblica · non ancora una versione stabile qualificata</strong>
+<p>Il pacchetto multipiattaforma è pubblicato come anteprima esplicitamente non qualificata. Usa la build mobile esatta indicata dalle prove di rilascio; l'helper firmato per Mac resta disponibile in <a href="/it/docs/configuration/">Configura il tuo agente</a>.</p>
 </div>
 
-1. Installa il pacchetto CLI multipiattaforma di Health.md.
+1. Su macOS o Linux, esegui `brew install CodyBontecou/tap/healthmd`, quindi verifica `healthmd --version`.
 2. Esegui `healthmd setup codex`: il comando configura Codex e avvia l'abbinamento se l'iPhone non è ancora attendibile.
 3. Completa l'abbinamento in Accesso CLI diretto nell'app Health.md per iPhone e mantieni l'app in primo piano.
 4. Per Claude o una configurazione manuale dell'host, indica il percorso assoluto di `healthmd` con gli argomenti `mcp serve`, come descritto in [Server e app MCP di Health.md](/it/docs/mcp/).
 5. Se la configurazione è cambiata, riavvia l'host e chiama `healthmd_doctor`.
 
+## Installare una skill per agenti
+
 Per chi usa un Mac, l'app Health.md per Mac resta un metodo facoltativo di installazione e distribuzione della skill, non una dipendenza dell'MCP multipiattaforma.
 
-Il programma di installazione della skill crea `healthmd-cli/SKILL.md` nella cartella approvata. Sostituisce soltanto la cartella della skill di Health.md. La skill illustra comandi con limiti espliciti, gestione dei risultati strutturati, regole di privacy e recupero sicuro dopo esiti sconosciuti.
+La maggior parte degli utenti dovrebbe installare soltanto la [skill Health.md CLI per utenti su skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
 
-Se vuoi che un agente crei i collegamenti simbolici, usa il prompt di configurazione nell'app per Mac. Health.md non modifica automaticamente i file di avvio della shell né `/usr/local/bin`.
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+Il repository pubblico offre quattro skill specifiche per attività:
+
+| Skill | Uso previsto |
+|---|---|
+| `healthmd-cli` | Query ed esportazioni CLI e MCP limitate e autorizzate dall'utente |
+| `healthmd-cli-operator` | Operazioni dirette con iPhone e recupero dei job persistenti |
+| `healthmd-cli-development` | Sviluppo di CLI, MCP, protocollo e servizio iPhone |
+| `healthmd-cli-qa` | Validazione automatizzata e su dispositivi fisici |
+
+Per installare una skill per collaboratori, sostituisci il nome dopo `@`; non installare istruzioni di sviluppo o QA per normali richieste di dati sanitari. Usa `npx skills add CodyBontecou/health-md --list` per esaminare il repository senza installare una skill e `npx skills update healthmd-cli --project --yes` per aggiornare la skill utente del progetto. La [guida all'installazione del repository](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md) documenta tutti i comandi e il contratto di pubblicazione.
+
+Una skill è un insieme di istruzioni. Non installa `healthmd` o `healthmd-mcp`, non configura MCP, non abbina un telefono, non concede accesso ai dati sanitari e non si aggiorna automaticamente. Esamina il codice sorgente prima dell'installazione.
+
+Il programma di installazione della skill crea `healthmd-cli/SKILL.md` nella cartella approvata. Sostituisce soltanto la cartella della skill di Health.md. La skill illustra comandi con limiti espliciti, gestione dei risultati strutturati, regole di privacy, limiti di divulgazione relativi al fornitore del modello e recupero sicuro dopo esiti sconosciuti.
+
+Se vuoi che un agente crei i collegamenti simbolici, usa il prompt di configurazione nell'app per Mac. Health.md non modifica silenziosamente i file di avvio della shell né `/usr/local/bin`.
 
 ## Verificare prima lo stato operativo
 
@@ -109,7 +130,7 @@ La distinzione è intenzionale:
 
 | Superficie | Ruolo contrattuale |
 |---|---|
-| `healthmd.health_data` v7 | Documento sorgente giornaliero pubblico |
+| `healthmd.health_data` v8 | Documento sorgente giornaliero pubblico |
 | `healthmd.healthkit_records` v1 | Archivio canonico dei record sorgente nei documenti giornalieri senza perdita |
 | `healthmd.extract_receipt` | Metadati dell'ambito e del completamento dell'estrazione |
 | `healthmd.query_context_day` v1 | Record temporaneo dell'indice crittografato |
@@ -225,6 +246,6 @@ Non includere record grezzi, percorsi, testo clinico, dettagli sui farmaci, regi
   <a href="/it/docs/agent-queries/"><span>Guida CLI</span>Query tipizzate per agenti: metriche, sessioni di sonno, allineamento degli allenamenti, allenamenti, copertura, confronto ed evidenze.</a>
   <a href="/it/docs/mcp/"><span>Protocollo degli strumenti</span>Configurazione di Codex e Claude, 21 strumenti Mac pubblicati, 19 strumenti multipiattaforma in anteprima, grafici dell'app MCP, esportazioni, paginazione e limiti dell’ambiente isolato.</a>
   <a href="/it/docs/agent-api/"><span>Basso livello</span>API di query su loopback: endpoint, richieste JSON dirette, cursori e attività persistenti di acquisizione.</a>
-  <a href="/it/docs/cli-extract/"><span>Oggetti sorgente</span>Estrazione canonica: documenti schema v7, record, proiezioni e ricevute selezionati.</a>
+  <a href="/it/docs/cli-extract/"><span>Oggetti sorgente</span>Estrazione canonica: documenti schema v8, record, proiezioni e ricevute selezionati.</a>
   <a href="/it/docs/reference/evidence-packets/"><span>Contratti</span>Query compatte e pacchetti di evidenze: valori tipizzati, copertura, operazioni e ID deterministici.</a>
 </div>

@@ -14,6 +14,16 @@ if (!configuredPluginRepo) {
 const pluginRepo = path.resolve(configuredPluginRepo);
 const pluginSrc = path.join(pluginRepo, "src");
 const bundleOutfile = path.join(websiteRoot, "assets", "healthmd-plugin-visualizations.js");
+const appleBundleOutfile = path.join(
+  websiteRoot,
+  "..",
+  "apple",
+  "HealthMd",
+  "iOS",
+  "Resources",
+  "PluginVisualization",
+  "healthmd-plugin-visualizations.js"
+);
 const catalogOutfile = path.join(websiteRoot, "assets", "visualizations-catalog.json");
 const pluginCssOutfile = path.join(websiteRoot, "assets", "healthmd-plugin-visualizations.css");
 const sourceRepository = "https://github.com/CodyBontecou/health-md-visualizations";
@@ -246,9 +256,11 @@ window.HealthMdPluginVisualizations = {
     },
   });
   await normalizeSourceMap(`${bundleOutfile}.map`);
+  await fs.copyFile(bundleOutfile, appleBundleOutfile);
 
   console.log(`Bundled ${metadata.catalog.length} plugin visualizations from ${pluginRepo}`);
   console.log(`Wrote ${path.relative(websiteRoot, bundleOutfile)}`);
+  console.log(`Wrote ${path.relative(websiteRoot, appleBundleOutfile)}`);
   console.log(`Wrote ${path.relative(websiteRoot, catalogOutfile)}`);
   console.log(`Wrote ${path.relative(websiteRoot, pluginCssOutfile)}`);
 } finally {

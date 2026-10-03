@@ -29,8 +29,8 @@ pub const MAX_SELECTION_IDS: usize = 512;
 pub const MAX_SESSION_RECORDS: usize = 100_000;
 /// Maximum input bytes accepted over one bounded session.
 pub const MAX_SESSION_BYTES: usize = 32 * 1024 * 1024;
-/// Maximum distinct owner dates in one session.
-pub const MAX_OWNER_DATES: usize = 400;
+/// Maximum distinct owner dates accumulated by one session. Individual batches remain bounded.
+pub const MAX_OWNER_DATES: usize = 10_000;
 /// Maximum extension references on one record.
 pub const MAX_EXTENSIONS_PER_RECORD: usize = 32;
 /// Maximum UTF-8 bytes in one opaque extension retention token.
@@ -71,6 +71,16 @@ pub enum RollupPeriod {
     IsoWeek,
     CalendarMonth,
     CalendarYear,
+    Range,
+}
+
+/// Explicit civil bounds for a range reduction. These are operation inputs,
+/// not values inferred from successfully received owner dates.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RollupRange {
+    pub start_date: String,
+    pub end_date: String,
 }
 
 /// Immutable configuration for one ephemeral semantic session.
@@ -90,6 +100,8 @@ pub struct SemanticSessionConfig {
     pub disabled_output_keys: Vec<String>,
     pub retain_platform_extensions: bool,
     pub rollup_periods: Vec<RollupPeriod>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rollup_range: Option<RollupRange>,
 }
 
 /// One bounded, ordered batch. `final_batch` finalizes daily and period results.
@@ -550,6 +562,13 @@ impl SemanticSession {
         let mut previous = self.last_declared_owner_date;
         for value in values {
             let date = parse_date(value)?;
+            if let Some(range) = &self.config.rollup_range {
+                let start = parse_date(&range.start_date)?;
+                let end = parse_date(&range.end_date)?;
+                if date < start || date > end {
+                    return Err(CoreError::InvalidSemanticBatch);
+                }
+            }
             if previous.is_some_and(|prior| date < prior) || !dates.insert(date) {
                 return Err(CoreError::SemanticSequenceInvalid);
             }
@@ -866,12 +885,29 @@ impl SemanticSession {
             }
             let mut windows: BTreeMap<(NaiveDate, NaiveDate), Vec<&SemanticDayResult>> =
                 BTreeMap::new();
-            for day in days {
-                let date = parse_date(&day.owner_date)?;
-                windows
-                    .entry(period_window(date, *period))
-                    .or_default()
-                    .push(day);
+            if *period == RollupPeriod::Range {
+                let range = self
+                    .config
+                    .rollup_range
+                    .as_ref()
+                    .ok_or(CoreError::InvalidSemanticConfig)?;
+                let start = parse_date(&range.start_date)?;
+                let end = parse_date(&range.end_date)?;
+                let source_days = days
+                    .iter()
+                    .filter(|day| {
+                        parse_date(&day.owner_date).is_ok_and(|date| date >= start && date <= end)
+                    })
+                    .collect::<Vec<_>>();
+                windows.insert((start, end), source_days);
+            } else {
+                for day in days {
+                    let date = parse_date(&day.owner_date)?;
+                    windows
+                        .entry(period_window(date, *period))
+                        .or_default()
+                        .push(day);
+                }
             }
             for ((start, end), source_days) in windows {
                 if is_cancelled() {
@@ -1012,7 +1048,7 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
         || config.canonical_model_version != CANONICAL_MODEL_VERSION
         || config.registry_version != REGISTRY_VERSION
         || config.registry_sha256 != REGISTRY_SHA256
-        || config.profile_revision != 1
+        || !matches!(config.profile_revision, 1 | 2)
         || !valid_identifier(&config.session_id, 128)
         || config.calendar_time_zone.len() > 64
         || config.calendar_time_zone.parse::<chrono_tz::Tz>().is_err()
@@ -1042,6 +1078,29 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
             != config.rollup_periods.len()
     {
         return Err(CoreError::InvalidSemanticConfig);
+    }
+    let contains_range = config.rollup_periods.contains(&RollupPeriod::Range);
+    if contains_range != config.rollup_range.is_some()
+        || (contains_range
+            && (config.rollup_periods.len() != 1
+                || config.semantic_input_version != SEMANTIC_INPUT_VERSION
+                || config.profile_revision != 2
+                || config.profile != SemanticProfile::AppleHealthDataV8))
+    {
+        return Err(CoreError::InvalidSemanticConfig);
+    }
+    if !contains_range && config.profile_revision != 1 {
+        return Err(CoreError::InvalidSemanticConfig);
+    }
+    if let Some(range) = &config.rollup_range {
+        let start = parse_date(&range.start_date)?;
+        let end = parse_date(&range.end_date)?;
+        let days = (end - start).num_days() + 1;
+        let maximum_days =
+            i64::try_from(MAX_OWNER_DATES).map_err(|_| CoreError::InvalidSemanticConfig)?;
+        if start > end || days <= 0 || days > maximum_days {
+            return Err(CoreError::InvalidSemanticConfig);
+        }
     }
     Ok(())
 }
@@ -1985,6 +2044,7 @@ fn period_window(date: NaiveDate, period: RollupPeriod) -> (NaiveDate, NaiveDate
             let next = NaiveDate::from_ymd_opt(date.year() + 1, 1, 1).expect("valid next year");
             (start, next - Duration::days(1))
         }
+        RollupPeriod::Range => unreachable!("range windows come from explicit configuration"),
     }
 }
 
@@ -2235,6 +2295,7 @@ mod tests {
             disabled_output_keys: vec![],
             retain_platform_extensions: true,
             rollup_periods: rollups,
+            rollup_range: None,
         }
     }
 
@@ -2744,6 +2805,114 @@ mod tests {
             numeric_value(&result.rollups[0].values[0].primary_value).expect("numeric"),
             Some(40.0)
         );
+    }
+
+    #[test]
+    fn range_rollup_preserves_requested_bounds_and_successful_empty_days() {
+        let mut session_config = config(&["steps"], vec![RollupPeriod::Range]);
+        session_config.profile_revision = 2;
+        session_config.rollup_range = Some(RollupRange {
+            start_date: "2026-07-06".to_owned(),
+            end_date: "2026-07-11".to_owned(),
+        });
+        let mut session =
+            SemanticSession::from_json(&serde_json::to_vec(&session_config).expect("config"))
+                .expect("session");
+        let batch = SemanticBatch {
+            schema: "healthmd.semantic_input".to_owned(),
+            semantic_input_version: 1,
+            session_id: session_config.session_id,
+            batch_index: 0,
+            final_batch: true,
+            owner_dates: vec![
+                "2026-07-07".to_owned(),
+                "2026-07-08".to_owned(),
+                "2026-07-10".to_owned(),
+            ],
+            records: vec![
+                record(
+                    "range-steps-a",
+                    1,
+                    "2026-07-07",
+                    "steps",
+                    "steps",
+                    "steps",
+                    number(10.0, "count"),
+                    AggregationRule::Sum,
+                ),
+                record(
+                    "range-steps-b",
+                    2,
+                    "2026-07-10",
+                    "steps",
+                    "steps",
+                    "steps",
+                    number(20.0, "count"),
+                    AggregationRule::Sum,
+                ),
+            ],
+        };
+        let bytes = session
+            .process_batch(&serde_json::to_vec(&batch).expect("batch"), || false)
+            .expect("result");
+        let result: SemanticResult = serde_json::from_slice(&bytes).expect("result");
+        let rollup = result.rollups.first().expect("range rollup");
+        assert_eq!(rollup.period, RollupPeriod::Range);
+        assert_eq!(rollup.start_date, "2026-07-06");
+        assert_eq!(rollup.end_date, "2026-07-11");
+        assert_eq!(
+            rollup.source_dates,
+            ["2026-07-07", "2026-07-08", "2026-07-10"]
+        );
+    }
+
+    #[test]
+    fn range_rejects_revision_one_while_calendar_revision_one_remains_valid() {
+        let calendar = config(&["steps"], vec![RollupPeriod::IsoWeek]);
+        assert!(
+            SemanticSession::from_json(&serde_json::to_vec(&calendar).expect("calendar")).is_ok()
+        );
+
+        let mut range = config(&["steps"], vec![RollupPeriod::Range]);
+        range.rollup_range = Some(RollupRange {
+            start_date: "2026-07-06".to_owned(),
+            end_date: "2026-07-11".to_owned(),
+        });
+        assert!(matches!(
+            SemanticSession::from_json(&serde_json::to_vec(&range).expect("range")),
+            Err(CoreError::InvalidSemanticConfig)
+        ));
+        range.profile_revision = 2;
+        assert!(SemanticSession::from_json(&serde_json::to_vec(&range).expect("range-v2")).is_ok());
+    }
+
+    #[test]
+    fn range_accepts_exact_limit_and_rejects_limit_plus_one_or_reversed_bounds() {
+        let mut range = config(&["steps"], vec![RollupPeriod::Range]);
+        range.profile_revision = 2;
+        range.rollup_range = Some(RollupRange {
+            start_date: "2000-01-01".to_owned(),
+            end_date: "2027-05-18".to_owned(),
+        });
+        assert!(SemanticSession::from_json(&serde_json::to_vec(&range).expect("range")).is_ok());
+
+        range.rollup_range = Some(RollupRange {
+            start_date: "2000-01-01".to_owned(),
+            end_date: "2027-05-19".to_owned(),
+        });
+        assert!(matches!(
+            SemanticSession::from_json(&serde_json::to_vec(&range).expect("too-large")),
+            Err(CoreError::InvalidSemanticConfig)
+        ));
+
+        range.rollup_range = Some(RollupRange {
+            start_date: "2027-05-18".to_owned(),
+            end_date: "2000-01-01".to_owned(),
+        });
+        assert!(matches!(
+            SemanticSession::from_json(&serde_json::to_vec(&range).expect("reversed")),
+            Err(CoreError::InvalidSemanticConfig)
+        ));
     }
 
     #[test]

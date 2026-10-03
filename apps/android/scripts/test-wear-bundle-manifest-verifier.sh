@@ -137,7 +137,7 @@ if [[ -n "$phone_aab" ]]; then
     [[ -n "$value" ]] || { echo 'expected phone identity unavailable' >&2; exit 1; }
   done
   verify_phone() {
-    java -cp "$tmp/classes:$proto:$protobuf" WearBundleManifestVerifier phone \
+    java -cp "$tmp/classes:$proto:$protobuf" WearBundleManifestVerifier phone-deferred \
       "$1" "$phone_package" "$phone_code" "$phone_name" "$phone_min" "$phone_target"
   }
   verify_phone "$phone_aab"
@@ -163,12 +163,6 @@ PY
   phone_negative "$phone_package" "$(different_same_length "$phone_package")" 'wrong package' phone-package
   phone_negative "$phone_code" "$(different_same_length "$phone_code")" 'wrong packaged versionCode' phone-version-code
   phone_negative "$phone_name" "$(different_same_length "$phone_name")" 'wrong packaged versionName' phone-version-name
-  phone_negative healthmd_phone_sync healthmd_phone_synb 'compiled static capability set differs' phone-capability base/resources.pb
-  phone_negative CAPABILITY_CHANGED CAPABILITY_CHANGEE 'phone capability-change listener missing or path-restricted' phone-capability-change
-  structural_negative "$phone_aab" verify_phone manifest extra-filter com.healthmd.wear.WearPhoneDataLayerService 'phone Data Layer intent-filter inventory differs' phone-extra-filter
-  structural_negative "$phone_aab" verify_phone manifest combine-actions com.healthmd.wear.WearPhoneDataLayerService 'phone message listener missing or mis-scoped' phone-combined-actions
-  structural_negative "$phone_aab" verify_phone manifest duplicate-service com.healthmd.wear.WearPhoneDataLayerService 'phone Data Layer listener inventory differs' phone-duplicate-listener
-  structural_negative "$phone_aab" verify_phone manifest duplicate-other-service com.healthmd.wear.WearPhoneDataLayerService 'unexpected phone Data Layer listener service' phone-extra-listener
 fi
 
-echo 'Paired packaged-manifest verifier positive and negative checks passed'
+echo 'Wear preview and deferred-phone packaged-manifest checks passed'

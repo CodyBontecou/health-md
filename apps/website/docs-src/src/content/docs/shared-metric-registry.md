@@ -8,7 +8,7 @@ description: Cross-platform Health.md metric identities and compatibility profil
 The shared Rust registry contains deterministic contract metadata while HealthKit and Health Connect capture, permissions, and availability checks remain native.
 
 - 248 explicit semantic rows
-- 230 ordered Apple v7 selections
+- 230 ordered Apple v8 selections
 - 106 ordered Android selections
 - 102 preserved Android unavailable/stale identities
 - Three independent output profiles; no unified v8 schema

@@ -35,7 +35,7 @@ healthmd agent job resume JOB_UUID --timeout 300
 
 - 正確な日付、または全履歴から解決したID
 - 指標、カテゴリ、ソース、詳細レベルのスコープ
-- バックエンドとペアリング済みデバイスの紐付け
+- ペアリング済みデバイスの紐付け
 - 設定ポリシー
 - 生データプロファイルまたは抽出の選択内容
 - ファイル保存先のID
@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 直接接続による生成ファイル：
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -99,10 +99,10 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-直接接続モードでは、元のリクエストと同じバックエンド、デバイス、転送方式、ポート、iPhoneを選択します。
+直接接続モードでは、元のリクエストと同じデバイス、転送方式、ポート、iPhoneを選択します。
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```
@@ -235,7 +235,7 @@ fi
 2. ローカルで`status --job`を実行します。
 3. ジョブが一時停止中、終端状態、期限切れ、確認応答待ちのいずれかを確認します。
 4. 新規処理または確認応答が必要な場合は、同じiPhoneを再度開きます。
-5. 同じバックエンドとデバイスを使って、既存のジョブを再開します。
+5. 同じデバイスを使って、既存のジョブを再開します。
 6. 前の結果が判明したか、期限切れを明示的に受け入れた後でだけ、新しいジョブを開始します。
 
 結果が不明な変更操作を状態確認なしに再試行すると、ファイルのコミット自体が冪等でも、ソース側の処理が重複する可能性があります。
@@ -245,7 +245,7 @@ fi
 | コード | 意味 | 安全な対処 |
 |---|---|---|
 | `timed_out` | ジョブ完了前に、コマンドが待機を終了した | 返されたジョブを確認して再開する |
-| `job_not_found` | そのIDに対応するローカル永続レコードがない | 最初からやり直す前に、バックエンドと状態ディレクトリを確認する |
+| `job_not_found` | そのIDに対応するローカル永続レコードがない | 最初からやり直す前に、状態ディレクトリを確認する |
 | `job_expired` | 固定された7日間の期限を過ぎた | 欠落を記録し、必要に応じて新しいリクエストを作成する |
 | `direct_export_paused` | 直接接続の処理に、ペアリング済みiPhoneが再び必要 | iPhoneを再度開いて再開する |
 | `direct_cancellation_pending` | ローカルのキャンセル意思に対するiPhoneの確認応答がない | iPhoneを再度開き、cancelを再試行する |
@@ -270,7 +270,7 @@ healthmd query --category Sleep --last 30 \
 ## 関連項目
 
 <div class="related">
-  <a href="/ja/docs/cli/"><span>設定</span>Health.md CLI：インストール、バックエンドの選択、コマンド出力の理解。</a>
+  <a href="/ja/docs/cli/"><span>設定</span>Health.md CLI：スタンドアロンクライアントをインストールし、コマンド出力を理解します。</a>
   <a href="/ja/docs/cli-direct/"><span>直接接続</span>iPhone直接接続CLI：ペアリング、限られたバックグラウンド実行時間、明示的な保存先、信頼済みの再開。</a>
   <a href="/ja/docs/agent-queries/"><span>ページング</span>型付きクエリの実例：新規取得とキャッシュモード、ページ走査、カバレッジ、レシート。</a>
   <a href="/ja/docs/reference/generated/cli/exit-codes/"><span>生成済みコントラクト</span>CLI終了コード：本番環境から生成されたステータスとエラー動作。</a>
