@@ -20,6 +20,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  registry-projections:
+    name: Reproduce registry capability projections
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Regenerate from canonical inventories and compare
+        run: |
+          set -euo pipefail
+          python3 packages/healthmd-core-rust/scripts/import-native-registry.py
+          python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py
+          git diff --binary > registry-projections.patch
+          git diff --exit-code
+      - name: Preserve source-only projection diff for diagnosis
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: watch-registry-projections
+          path: registry-projections.patch
+          retention-days: 1
+
   capture-upload-and-build:
     name: Watch capture/upload regressions
     runs-on: macos-26
