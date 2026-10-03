@@ -451,12 +451,33 @@ mod tests {
 
     const GRANT_FIXTURE: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../../../packages/contracts/agent-data/v1/fixtures/grant-explicit.json"
+        "/tests/fixtures/agent-data-v1/grant-explicit.json"
     ));
     const QUERY_FIXTURE: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../../../packages/contracts/agent-data/v1/fixtures/query-records.json"
+        "/tests/fixtures/agent-data-v1/query-records.json"
     ));
+
+    #[test]
+    fn packaged_agent_data_fixtures_match_reviewed_contract_bytes() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+        if !root.join("AGENTS.md").is_file() {
+            return;
+        }
+        for (bundled, name) in [
+            (GRANT_FIXTURE, "grant-explicit.json"),
+            (QUERY_FIXTURE, "query-records.json"),
+        ] {
+            assert_eq!(
+                bundled.as_bytes(),
+                std::fs::read(
+                    root.join("packages/contracts/agent-data/v1/fixtures")
+                        .join(name)
+                )
+                .unwrap()
+            );
+        }
+    }
 
     #[test]
     fn explicit_grant_requires_every_attributed_metric() {

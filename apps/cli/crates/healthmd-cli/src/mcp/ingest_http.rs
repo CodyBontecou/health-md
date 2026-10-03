@@ -629,7 +629,10 @@ mod tests {
 
     fn options(bind: SocketAddr) -> IngestServeOptions {
         IngestServeOptions {
-            database: "/nonexistent/agent-data.sqlite".into(),
+            database: tempfile::tempdir()
+                .unwrap()
+                .path()
+                .join("absent/agent-data.sqlite"),
             bind,
             allowed_hosts: Vec::new(),
             allowed_origins: Vec::new(),
@@ -639,8 +642,7 @@ mod tests {
     #[tokio::test]
     async fn policy_validates_before_the_store_opens() {
         // A non-loopback bind is refused before the (nonexistent) store opens.
-        let mut non_loopback = options(SocketAddr::from(([0, 0, 0, 0], 8_791)));
-        non_loopback.database = "/nonexistent/directory/store.sqlite".into();
+        let non_loopback = options(SocketAddr::from(([0, 0, 0, 0], 8_791)));
         let error = serve_ingest_gateway(non_loopback)
             .await
             .expect_err("non-loopback binds must be refused");

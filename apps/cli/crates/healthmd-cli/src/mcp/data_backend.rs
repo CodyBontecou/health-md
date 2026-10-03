@@ -2388,12 +2388,34 @@ mod tests {
     }"#;
     const APPLE_API_V2: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../../../apps/apple/docs/reference/generated/automation/api-export-v2-provider-sidecar.json"
+        "/tests/fixtures/apple-api-export-v2-provider-sidecar.json"
     ));
     const ANDROID_RAW_SNAPSHOT: &str = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../../../apps/android/app/src/test/resources/raw-export/v1/minimal-snapshot.json"
+        "/tests/fixtures/android-raw-v1-minimal-snapshot.json"
     ));
+
+    #[test]
+    fn packaged_cross_platform_fixtures_match_reviewed_producer_bytes() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../..");
+        // Extracted crate tests use the bundled evidence; repository tests also
+        // prove that those exact bytes still match the independent producers.
+        if !root.join("AGENTS.md").is_file() {
+            return;
+        }
+        for (bundled, producer) in [
+            (
+                APPLE_API_V2,
+                "apps/apple/docs/reference/generated/automation/api-export-v2-provider-sidecar.json",
+            ),
+            (
+                ANDROID_RAW_SNAPSHOT,
+                "apps/android/app/src/test/resources/raw-export/v1/minimal-snapshot.json",
+            ),
+        ] {
+            assert_eq!(bundled.as_bytes(), fs::read(root.join(producer)).unwrap());
+        }
+    }
 
     fn write_file(path: &Path, contents: &str) {
         let mut file = fs::File::create(path).unwrap();
