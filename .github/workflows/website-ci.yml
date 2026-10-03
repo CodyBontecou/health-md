@@ -169,6 +169,23 @@ jobs:
       - name: Build complete website
         run: npm run build
 
+      - name: Stage reference provenance consumer text diagnostics
+        if: ${{ !cancelled() }}
+        run: |
+          npm --prefix docs-src run agent-assets:sync
+          mkdir -p build/reference-provenance
+          cp docs-src/public/reference/source-manifest.json docs-src/public/reference/source-manifest-v1.json build/reference-provenance/
+          cp docs-src/public/agents/manifest.json build/reference-provenance/agent-manifest.json
+
+      - name: Upload reference provenance consumer text diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-reference-provenance-text
+          path: apps/website/build/reference-provenance
+          if-no-files-found: warn
+          retention-days: 1
+
   gate:
     name: Website CI
     if: ${{ always() }}
