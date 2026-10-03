@@ -130,7 +130,12 @@ final class MacContextAutomationCoordinator: ObservableObject {
         case .failure, .cancelled:
             state = .failed
         case .unavailable:
-            // Persistence/admission failure is NOT a job acknowledgement.
+            // Busy is a durable request-level availability response, not a job
+            // acceptance. A native persistence failure still emits NO ack/send.
+            if response.failureReason == "export_in_progress" {
+                publishState(request, state: .unavailable, sync: sync)
+                return
+            }
             guard response.durable == true else { return }
             state = .unavailable
         case .accepted, .preparing, .timedOut: state = .pending

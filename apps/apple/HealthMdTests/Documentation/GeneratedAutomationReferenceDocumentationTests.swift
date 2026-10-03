@@ -27,6 +27,10 @@ final class GeneratedAutomationReferenceDocumentationTests: XCTestCase {
         }
 
         let expected = try GeneratedAutomationReferenceDocumentation.files()
+        // Stage native-serialized diagnostic text for hosted CI. This does NOT
+        // update committed documentation or bypass the drift assertions below.
+        try GeneratedAutomationReferenceDocumentation.write(to:
+            FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-automation-reference-ci", isDirectory: true))
         let committedDirectory = GeneratedAutomationReferenceDocumentation.committedDirectory
         XCTAssertTrue(
             FileManager.default.fileExists(atPath: committedDirectory.path),

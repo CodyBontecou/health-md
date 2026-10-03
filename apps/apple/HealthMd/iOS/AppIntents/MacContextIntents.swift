@@ -71,8 +71,9 @@ final class AppleContextPhoneClient {
     }
 
     func refresh(profileName: String?, startDate: Date, endDate: Date,
-                 profiles: ExportProfileStore = ExportProfileStore()) throws -> MacContextRefreshEntity {
+                 profiles suppliedProfiles: ExportProfileStore? = nil) throws -> MacContextRefreshEntity {
         guard protectedDataAvailable() else { throw ClientError.locked }
+        let profiles = suppliedProfiles ?? ExportProfileStore()
         let profile: ExportProfile?
         if let name = profileName, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             profile = profiles.profile(named: name)
@@ -128,6 +129,8 @@ final class AppleContextPhoneClient {
         _ = try? journal.accept(receipt, authenticatedPeer: peer, localID: sync.installationID, onPhone: true)
     }
 
+    func owns(_ id: UUID) -> Bool { journal.record(id) != nil }
+
     func allowsAcquisition(_ request: IPhoneExportRequest, sync: SyncService) -> Bool {
         guard let record = journal.record(request.jobID) else { return true } // ordinary Mac request
         return sync.canUsePhoneContextAutomation
@@ -174,6 +177,10 @@ struct MacContextRefreshEntity: AppEntity {
     static var defaultQuery = MacContextRefreshQuery()
     var id: String
     @Property(title: "Status") var status: String
+    init(id: String, status: String) {
+        self.id = id
+        self.status = status
+    }
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(title: "Context refresh", subtitle: "\(status)")
     }

@@ -54,8 +54,14 @@ No new enum case is sent to an old or unnegotiated peer.
 Affected producer/consumer: Apple iPhone and Mac SyncService, both app routers,
 context coordinator and iOS App Intents. Android has comparable Health Connect
 owner dates and explicit automation but no paired encrypted desktop-context
-receiver; its concrete staged equivalent is recorded in the neutral product
-inventory. Rust shared core, portable CLI/direct protocols, public Apple/Android
+receiver; its concrete staged equivalent is recorded in the independently
+versioned product-only `packages/contracts/product-automation-capabilities-v1.json`
+ledger. This supplemental ledger is deliberately NOT an M3 metric authority or
+input to the frozen native registry importer. Apple/Android governance tests read
+it directly; aggregation into the existing product catalogue remains a separate
+owner/design gate, not an excuse to repin the frozen registry. The original
+`product-capabilities.json`, contract manifest, M3 registry, native pins and
+semantic fixtures retain their admission bytes. Rust shared core, portable CLI/direct protocols, public Apple/Android
 export schemas, external Obsidian files, canonical archives and frozen fixtures
 are unchanged. No export-schema or direct-protocol bump is appropriate. The
 existing `.contextStore` request, acquisition, partition bytes, strict checks and

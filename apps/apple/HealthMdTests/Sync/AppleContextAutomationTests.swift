@@ -32,6 +32,29 @@ final class AppleContextAutomationTests: XCTestCase {
         return service
     }
 
+    func testProductAutomationInventoryIsSeparateFromFrozenMetricAuthorityAndHasConcreteParityTargets() throws {
+        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while directory.path != "/" && !FileManager.default.fileExists(atPath: directory.appendingPathComponent("packages/contracts/product-automation-capabilities-v1.json").path) {
+            directory.deleteLastPathComponent()
+        }
+        let data = try Data(contentsOf: directory.appendingPathComponent("packages/contracts/product-automation-capabilities-v1.json"))
+        let inventory = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(inventory["schema"] as? String, "healthmd.product_automation_capabilities")
+        XCTAssertEqual(inventory["schema_version"] as? Int, 1)
+        XCTAssertEqual(inventory["metric_authority"] as? Bool, false)
+        let capabilities = try XCTUnwrap(inventory["capabilities"] as? [[String: Any]])
+        XCTAssertEqual(capabilities.count, 1)
+        XCTAssertEqual(capabilities.first?["id"] as? String, "automation.refresh-encrypted-desktop-context")
+        XCTAssertEqual(capabilities.first?["classification"] as? String, "planned")
+        let platforms = try XCTUnwrap(capabilities.first?["platforms"] as? [String: [String: Any]])
+        for platform in ["apple", "android"] {
+            XCTAssertEqual(platforms[platform]?["state"] as? String, "planned")
+            XCTAssertFalse((platforms[platform]?["target"] as? String ?? "").isEmpty)
+        }
+        let frozen = try String(contentsOf: directory.appendingPathComponent("packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"), encoding: .utf8)
+        XCTAssertFalse(frozen.contains("automation.refresh-encrypted-desktop-context"))
+    }
+
     func testLegacyCapabilityMissingOrFalseAndUnauthenticatedOrWrongRoleNeverSend() throws {
         let peerID = UUID()
         let service = service(peerID: peerID)
@@ -55,6 +78,32 @@ final class AppleContextAutomationTests: XCTestCase {
         service.remoteCapabilities = .current(platform: SyncPlatform.current == .iOS ? .macOS : .iOS, installationID: peerID)
         service.send(.appleContext(.status(request)))
         XCTAssertEqual(sends, 0)
+    }
+
+    func testProductionIngressNegotiatesHelloSynchronouslyAndRejectsForeignOrDisabledFamily() throws {
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let capabilities = service.remoteCapabilities!
+        service.remoteCapabilities = nil
+        var contexts = 0
+        service.onMessageReceived = { message in
+            if case .appleContext = message { contexts += 1 }
+        }
+        service.testReceiveDecryptedContextMessage(try JSONEncoder().encode(SyncMessage.hello(capabilities)))
+        XCTAssertTrue(service.canUsePhoneContextAutomation)
+        service.testReceiveDecryptedContextMessage(try JSONEncoder().encode(SyncMessage.appleContext(.status(request()))))
+        XCTAssertEqual(contexts, 1)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(capabilities)) as? [String: Any])
+        object["supportsPhoneContextAutomation"] = false
+        let disabled = try JSONDecoder().decode(SyncPeerCapabilities.self, from: JSONSerialization.data(withJSONObject: object))
+        service.testReceiveDecryptedContextMessage(try JSONEncoder().encode(SyncMessage.hello(disabled)))
+        service.testReceiveDecryptedContextMessage(try JSONEncoder().encode(SyncMessage.appleContext(.status(request()))))
+        XCTAssertEqual(contexts, 1)
+        let foreign = SyncPeerCapabilities.current(platform: capabilities.platform, installationID: UUID())
+        service.testReceiveDecryptedContextMessage(try JSONEncoder().encode(SyncMessage.hello(foreign)))
+        XCTAssertEqual(service.remoteCapabilities, disabled)
+        service.testReceiveDecryptedContextMessage(try JSONEncoder().encode(SyncMessage.appleContext(.status(request()))))
+        XCTAssertEqual(contexts, 1)
     }
 
     func testRequestRejectsHostPathRawPointersUnknownFieldsAndNoncanonicalDates() throws {
@@ -308,7 +357,8 @@ final class AppleContextAutomationTests: XCTestCase {
         wrongZone["sourceTimeZoneIdentifier"] = "America/New_York"
         let changedManifest = try JSONDecoder().decode(ConnectedCorpusExportManifest.self, from: JSONSerialization.data(withJSONObject: wrongZone))
         XCTAssertFalse(adapter.allowsMessage(.connectedCorpusTransferOpen(.init(session: session, partition: partition.descriptor, exportManifest: changedManifest)), sync: service))
-        XCTAssertEqual(corpus.open(open, vaultManager: vault).disposition, .accept)
+        let disposition = corpus.open(open, vaultManager: vault, localInstallationID: service.installationID, remoteInstallationID: peer)
+        XCTAssertEqual(disposition.disposition, .accept, disposition.message ?? "No admission reason")
         try await corpus.applyPartition(fileURL: partition.file.url, descriptor: partition.descriptor, vaultManager: vault)
         let stored = try await contextStore.loadDay(ownerDate: "2026-01-02")
         XCTAssertEqual(stored?.metrics.first(where: { $0.metricID == "steps" })?.value, .quantity(value: 4_321, unit: "steps"))

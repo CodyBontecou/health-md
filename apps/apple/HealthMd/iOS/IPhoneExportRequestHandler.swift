@@ -15,6 +15,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     }
 
     private var activeRequestID: UUID?
+    private var automationIngressInFlight: Set<UUID> = []
     private var pendingRequests: [UUID: PendingRequest] = [:]
     private var streamAbortMessages: [UUID: String] = [:]
     private var cancelledRequestIDs: Set<UUID> = []
@@ -27,9 +28,18 @@ final class IPhoneExportRequestHandler: ObservableObject {
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
-        guard AppleContextPhoneClient.shared.allowsAcquisition(request, sync: syncService) else { return }
+        let automationClient = AppleContextPhoneClient.shared
+        guard automationClient.allowsAcquisition(request, sync: syncService) else { return }
+        let isAutomation = automationClient.owns(request.jobID)
+        if isAutomation {
+            // Admission before authorization awaits: reconnect/replay cannot
+            // start a second capture while the first is awaiting HealthKit.
+            guard automationIngressInFlight.insert(request.jobID).inserted else { return }
+        }
+        defer { if isAutomation { automationIngressInFlight.remove(request.jobID) } }
         // Resolve frozen automation zone before the first authorization await.
-        let automationTimeZone = AppleContextPhoneClient.shared.timeZone(for: request)
+        let automationTimeZone = automationClient.timeZone(for: request)
+        let automationPeerCapabilities = isAutomation ? syncService.remoteCapabilities : nil
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
         defer {
@@ -319,6 +329,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
             }
         }
 
+        if isAutomation {
+            guard automationClient.allowsAcquisition(request, sync: syncService),
+                  syncService.remoteCapabilities == automationPeerCapabilities else { return }
+        }
         activeRequestID = request.jobID
         pendingRequests[request.jobID] = PendingRequest(request: request, settings: settings)
         syncService.isSyncing = true

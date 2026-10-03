@@ -260,6 +260,9 @@ final class SyncService: NSObject, ObservableObject {
     /// inspect raw payload contents.
     var testMessageSendObserver: ((SyncMessage) -> Void)?
     /// Transport-state seam only; never counts as cryptographic/device proof.
+    /// Exercises production post-decryption routing, not handshake/device authentication.
+    func testReceiveDecryptedContextMessage(_ data: Data) { handleReceivedData(data) }
+
     func testSetAuthenticatedContextPeer(_ id: UUID?) {
         verifiedManualInstallationID = id
         manualSessionKey = id.map { _ in SymmetricKey(size: .bits256) }
@@ -307,6 +310,9 @@ final class SyncService: NSObject, ObservableObject {
               remote.supportsPhoneContextAutomation,
               localCapabilities.supportsPhoneContextAutomation,
               remote.supportsRequestScopedContextAcquisition,
+              remote.supportsIPhoneExportRequests,
+              remote.supportsSizeBoundedConnectedTransfers,
+              localCapabilities.supportsSizeBoundedConnectedTransfers,
               remote.supportsCanonicalHealthDataSelection,
               ConnectedCorpusTransferNegotiator.negotiateDurable(source: remote, destination: localCapabilities) != nil,
               (localCapabilities.negotiateConnectedCorpusTransfer(with: remote)?.protocolVersion ?? 0) >= 2 else { return false }
@@ -1736,6 +1742,12 @@ final class SyncService: NSObject, ObservableObject {
             if case .hello(let capabilities) = message,
                let verified = authenticatedContextPeerID,
                (capabilities.installationID != verified || capabilities.platform == localCapabilities.platform) { return }
+            if case .hello(let capabilities) = message,
+               authenticatedContextPeerID != nil {
+                // Negotiation must be visible before another encrypted frame in
+                // this ordered receive batch. App routers still own hello side effects.
+                remoteCapabilities = capabilities
+            }
             logger.info("Received message: \(message.operationalName, privacy: .public)")
             if let peerID, restoreMultipeerConnectionIfNeeded(from: peerID) {
                 send(.hello(localCapabilities))
