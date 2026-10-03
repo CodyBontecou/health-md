@@ -4,6 +4,11 @@
 The two native snapshots and reviewed semantic crosswalk are independent migration fixtures.
 The canonical output becomes the source of truth; generated adapters and normal builds read
 metric-registry-v1.json instead of parsing Swift, Kotlin, or generated documentation.
+
+Registry v1's capability vocabulary is versioned migration evidence too. Unrelated new
+product/transport capabilities must not change its authority hash or invalidate retained
+semantic/render fixtures. Availability of captured IDs still follows live governance;
+a metric requiring a new capability needs a reviewed registry revision.
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ REGISTRY_DIR = WORKSPACE / "crates/healthmd-core/registry"
 REGISTRY_PATH = REGISTRY_DIR / "metric-registry-v1.json"
 APPLE_BASELINE = REGISTRY_DIR / "native-baseline-apple-v7.json"
 ANDROID_BASELINE = REGISTRY_DIR / "native-baseline-android-v4-v5.json"
+CAPABILITY_BASELINE = REGISTRY_DIR / "native-baseline-capabilities-v1.json"
 
 ANDROID_ONLY = {
     "hrv",
@@ -591,18 +597,33 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
                     }
                 )
 
-    capabilities = core_capabilities(json.loads(CAPABILITY_MANIFEST.read_text()))
+    capability_manifest = json.loads(CAPABILITY_MANIFEST.read_text())
+    candidates = core_capabilities(capability_manifest)
+    capability_baseline = json.loads(CAPABILITY_BASELINE.read_text())
+    if (capability_baseline["schema"] != "healthmd.metric_registry_capabilities"
+            or capability_baseline["schema_version"] != 1
+            or capability_baseline["registry_version"] != 1):
+        raise ValueError("Unsupported registry capability baseline")
+    known_ids = capability_baseline["capability_ids"]
+    by_id = {item["id"]: item for item in candidates}
+    if (len(set(known_ids)) != len(known_ids)
+            or len(by_id) != len(candidates)
+            or any(identifier not in by_id for identifier in known_ids)):
+        raise ValueError("Missing or duplicate versioned registry capability")
+    if any(metric["capability_id"] not in known_ids for metric in semantic_metrics):
+        raise ValueError("New metric capability requires a reviewed registry revision")
+    registry_capabilities = [by_id[identifier] for identifier in known_ids]
     return {
         "schema": "healthmd.metric_registry",
         "schema_version": 1,
         "registry_version": 1,
         "known_capability_ids": [
-            capability["id"] for capability in capabilities
+            capability["id"] for capability in registry_capabilities
         ],
         "available_capability_ids_by_platform": {
             platform: [
                 capability["id"]
-                for capability in capabilities
+                for capability in registry_capabilities
                 if capability["platforms"][platform]["state"] == "available"
             ]
             for platform in ("apple", "android")
