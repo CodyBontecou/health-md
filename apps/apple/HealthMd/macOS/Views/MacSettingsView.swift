@@ -800,7 +800,7 @@ struct MacFormatSettingsTab: View {
                 BrandLabel("Display Formats")
             }
 
-            if advancedSettings.exportFormats.contains(.markdown) {
+            if advancedSettings.exportFormats.contains(.markdown) || advancedSettings.dailyNoteInjection.injectMarkdownSections {
                 Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { s in

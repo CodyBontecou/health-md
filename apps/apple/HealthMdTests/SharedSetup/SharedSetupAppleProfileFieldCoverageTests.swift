@@ -224,6 +224,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         markdown.sectionHeaderLevel = 3
         markdown.useEmoji = true
         markdown.includeSummary = false
+        markdown.includeWorkoutDetailsAndMetadata = false
         markdown.bulletStyle = .plus
 
         let formatCustomization = FormatCustomizationSnapshot(
