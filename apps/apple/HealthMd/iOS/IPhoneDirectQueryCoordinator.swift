@@ -204,7 +204,7 @@ final class IPhoneDirectQueryCoordinator {
 
     func validateRequestLease(_ lease: RequestLease) throws {
         guard !Task.isCancelled, lease.epoch == epoch, currentLease == lease else {
-            throw IPhoneDirectQueryError.cancelled
+            throw CancellationError()
         }
     }
 
@@ -287,7 +287,7 @@ final class IPhoneDirectQueryCoordinator {
             try await channel.send(.queryResponse(response))
         } catch {
             let safeError: IPhoneDirectQueryError
-            if Task.isCancelled {
+            if Task.isCancelled || error is CancellationError {
                 safeError = .cancelled
             } else if let contractError = error as? HealthMdQueryContractError {
                 safeError = contractError == .singleItemExceedsPageBytes

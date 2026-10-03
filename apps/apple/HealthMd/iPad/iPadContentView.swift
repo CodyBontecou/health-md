@@ -34,7 +34,9 @@ struct iPadContentView: View {
     @State private var errorReason: ExportFailureReason?
     @State private var exportTask: Task<Void, Never>?
     let historyProfileStore: ExportProfileStore?
+    @State private var historyProfileID: UUID?
     @State private var executionHistoryAssessment: HealthHistoryAssessment?
+    @State private var lastHistorySelection: HealthHistoryExecutionSelection?
     @State private var isAssessingHistory = false
     @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
     @State private var historyExecutionTask: Task<Void, Never>?
@@ -137,7 +139,7 @@ struct iPadContentView: View {
                             canExport: canExport && !isAssessingHistory,
                             onCancelExport: cancelExport,
                             onExportTapped: exportData,
-                            historyProfileStore: historyProfileStore,
+                            historyProfileID: historyProfileID,
                             executionHistoryAssessment: executionHistoryAssessment,
                             isAssessingHistory: isAssessingHistory,
                             historyPreviewWorker: historyPreviewWorker,
@@ -273,6 +275,7 @@ struct iPadContentView: View {
             .healthMdReleaseNotesSheet()
             .keepsScreenAwake(while: isExporting)
             .task {
+                refreshHistoryProfileIdentity()
                 if TestMode.isUITesting {
                     if TestMode.vaultSelected {
                         vaultManager.setTestVault()
@@ -292,11 +295,15 @@ struct iPadContentView: View {
             }
             .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory() }
             .onChange(of: selectedTab) { _, _ in invalidateExecutionHistory() }
-            .onChange(of: interactiveHistorySelection) { _, _ in invalidateExecutionHistory() }
+            .onChange(of: interactiveHistorySelection) { _, current in invalidateIfHistorySelectionChanged(current) }
             .onChange(of: healthKitManager.isAuthorized) { _, _ in invalidateExecutionHistory() }
-            .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
-                if let pending = pendingHistorySelection, pending.scope.profileID != id { invalidateExecutionHistory() }
-                else if let observed = executionHistoryAssessment, observed.scope.profileID != id { invalidateExecutionHistory() }
+            .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { _ in
+                refreshHistoryProfileIdentity()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                // Other canonical-store instances do not publish through our
+                // store. Filter by fresh valid identity, not unrelated writes.
+                refreshHistoryProfileIdentity()
             }
             .onDisappear { invalidateExecutionHistory(); historyPreviewWorker.cancelLogicalWaiter() }
             .onChange(of: scenePhase) { _, newPhase in
@@ -304,7 +311,7 @@ struct iPadContentView: View {
                 historyPreviewWorker.cancelLogicalWaiter()
                 guard newPhase == .active else { return }
                 vaultManager.refreshVaultAccess()
-                _ = historyProfileStore?.activeProfile // Refresh persisted identity, without applying profile settings.
+                refreshHistoryProfileIdentity()
                 Task { await refreshDateRangeSelectionForOpening() }
             }
             .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
@@ -496,11 +503,32 @@ struct iPadContentView: View {
     }
 
     private var interactiveHistorySelection: HealthHistoryExecutionSelection {
+        // Body/onChange evaluation uses cached presentation state only.
+        makeHistorySelection(profileID: historyProfileID)
+    }
+
+    private func freshInteractiveHistorySelection() -> HealthHistoryExecutionSelection {
+        makeHistorySelection(profileID: HealthHistoryCanonicalProfileIdentity.read())
+    }
+
+    private func refreshHistoryProfileIdentity() {
+        let current = HealthHistoryCanonicalProfileIdentity.read()
+        guard current != historyProfileID else { return }
+        historyProfileID = current
+        invalidateIfHistorySelectionChanged(makeHistorySelection(profileID: current))
+    }
+
+    private func invalidateIfHistorySelectionChanged(_ current: HealthHistoryExecutionSelection) {
+        if let pending = pendingHistorySelection, pending != current { invalidateExecutionHistory() }
+        else if let captured = lastHistorySelection, captured != current { invalidateExecutionHistory() }
+    }
+
+    private func makeHistorySelection(profileID: UUID?) -> HealthHistoryExecutionSelection {
         let scope = HealthHistoryScope(metricIDs: advancedSettings.metricSelection.enabledMetrics,
             startDate: startDate, endDate: endDate,
             timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
             allAvailable: dateRangePreset == .allTime,
-            profileID: historyProfileStore?.activeProfileID, rangeSemantics: .ownerDates)
+            profileID: profileID, rangeSemantics: .ownerDates)
         return HealthHistoryExecutionSelection(scope: scope,
             settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
             target: .localIPhoneFolder, preset: dateRangePreset, localDestinationURL: vaultManager.vaultURL)
@@ -518,12 +546,13 @@ struct iPadContentView: View {
         historyExecutionWorker.cancelLogicalWaiter()
         historyExecutionTask?.cancel()
         executionHistoryAssessment = nil
+        lastHistorySelection = nil
         if isAssessingHistory { exportStatusMessage = "History check cancelled. Review the selection and export again." }
         clearPendingHistoryCheck()
     }
 
     private func continueWithoutHistoryVerification() {
-        guard let selection = pendingHistorySelection, selection == interactiveHistorySelection else {
+        guard let selection = pendingHistorySelection, selection == freshInteractiveHistorySelection() else {
             invalidateExecutionHistory(); return
         }
         historyExecutionCoordinator.invalidate()
@@ -535,7 +564,7 @@ struct iPadContentView: View {
     }
 
     private func beginInteractiveCapture(_ selection: HealthHistoryExecutionSelection) {
-        guard selection == interactiveHistorySelection, canExport,
+        guard selection == freshInteractiveHistorySelection(), canExport,
               scenePhase == .active, selectedTab == .export else { return }
         guard purchaseManager.canExport else { presentExportPaywall(); return }
         vaultManager.refreshVaultAccess()
@@ -544,6 +573,7 @@ struct iPadContentView: View {
             configurationProtection.performConfigurationChange { showDestinationChangedAlert = true }
             return
         }
+        lastHistorySelection = selection
         captureExportData(selection)
     }
 
@@ -586,7 +616,8 @@ struct iPadContentView: View {
             return
         }
 
-        let selection = interactiveHistorySelection
+        refreshHistoryProfileIdentity()
+        let selection = freshInteractiveHistorySelection()
         let requestID = historyExecutionCoordinator.beginRequest()
         pendingHistorySelection = selection
         pendingHistoryRequestID = requestID
@@ -595,7 +626,7 @@ struct iPadContentView: View {
         historyExecutionTask = Task {
             defer { if pendingHistoryRequestID == requestID { clearPendingHistoryCheck() } }
             let result = await historyExecutionCoordinator.assess(requestID: requestID, scope: selection.scope, isCurrent: {
-                selection == interactiveHistorySelection && scenePhase == .active
+                selection == freshInteractiveHistorySelection() && scenePhase == .active
             }, operation: {
                 await historyExecutionWorker.assess(notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: selection.scope)) {
                     await healthKitManager.assessHistoryAccess(scope: selection.scope)

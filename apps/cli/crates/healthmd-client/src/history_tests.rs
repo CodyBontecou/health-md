@@ -41,14 +41,21 @@ fn query() -> Value {
 }
 
 fn valid(value: &Value, query: &Value) -> bool {
-    validate_response(value, query, Uuid::parse_str(PEER).unwrap(), Uuid::parse_str(SOURCE).unwrap()).is_ok()
+    validate_response(
+        value,
+        query,
+        Uuid::parse_str(PEER).unwrap(),
+        Uuid::parse_str(SOURCE).unwrap(),
+    )
+    .is_ok()
 }
 
 #[test]
 fn recognized_observation_preserves_metadata_and_never_certifies_capture_coverage() {
     let mut value = response();
     let original = value.clone();
-    let shared: Value = serde_json::from_str(include_str!("../../../../../packages/contracts/query-history/v1/synthetic-response.json")).unwrap();
+    let fixture = include_str!("test-fixtures/history-assessment-v1.json");
+    let shared: Value = serde_json::from_str(fixture).unwrap();
     assert_eq!(shared, value);
     assert!(valid(&shared, &query()));
     assert!(valid(&value, &query()));
@@ -67,11 +74,15 @@ fn recognized_observation_preserves_metadata_and_never_certifies_capture_coverag
 #[test]
 fn absent_and_unknown_version_remain_legacy_or_unsupported_without_mutation() {
     let mut value = response();
-    value["metadata"].as_object_mut().unwrap().remove("history_assessment");
+    value["metadata"]
+        .as_object_mut()
+        .unwrap()
+        .remove("history_assessment");
     assert!(valid(&value, &query()));
     assert!(disclosure_message(&value).contains("legacy/unassessed"));
     let mut future = response();
-    future["metadata"]["history_assessment"] = json!({"schema": "healthmd.history_assessment", "schema_version": 9, "opaque": ["future"]});
+    future["metadata"]["history_assessment"] =
+        json!({"schema": "healthmd.history_assessment", "schema_version": 9, "opaque": ["future"]});
     let original = future.clone();
     assert!(valid(&future, &query()));
     assert_eq!(future, original);
@@ -81,19 +92,49 @@ fn absent_and_unknown_version_remain_legacy_or_unsupported_without_mutation() {
 #[test]
 fn recognized_malformed_outcomes_scope_calendar_and_binding_are_rejected() {
     let mutations = [
-        ("/metadata/history_assessment/types/0/outcome", json!("full_history")),
-        ("/metadata/history_assessment/types/0/intersection", json!("verified")),
-        ("/metadata/history_assessment/types/0/direct_metric_ids", json!(["sleep_total"])),
+        (
+            "/metadata/history_assessment/types/0/outcome",
+            json!("full_history"),
+        ),
+        (
+            "/metadata/history_assessment/types/0/intersection",
+            json!("verified"),
+        ),
+        (
+            "/metadata/history_assessment/types/0/direct_metric_ids",
+            json!(["sleep_total"]),
+        ),
         ("/metadata/history_assessment/types", json!([])),
-        ("/metadata/history_assessment/calendar_identifier", json!("iso8601")),
-        ("/metadata/history_assessment/time_zone_identifier", json!("")),
+        (
+            "/metadata/history_assessment/calendar_identifier",
+            json!("iso8601"),
+        ),
+        (
+            "/metadata/history_assessment/time_zone_identifier",
+            json!(""),
+        ),
         ("/metadata/history_assessment/platform", json!("android")),
         ("/metadata/history_assessment/dataset_digest", json!("bad")),
-        ("/metadata/history_assessment/observed_at", json!("2026-01-01")),
-        ("/metadata/history_assessment/trusted_peer_installation_id", json!(SOURCE)),
-        ("/metadata/history_assessment/source_installation_id", json!(PEER)),
-        ("/metadata/history_assessment/resolved_owner_dates/count", json!(366_001)),
-        ("/metadata/history_assessment/logical_dates", json!({"type": "exact", "range": {"start_date": "2026-01-01", "end_date": "2026-01-01"}})),
+        (
+            "/metadata/history_assessment/observed_at",
+            json!("2026-01-01"),
+        ),
+        (
+            "/metadata/history_assessment/trusted_peer_installation_id",
+            json!(SOURCE),
+        ),
+        (
+            "/metadata/history_assessment/source_installation_id",
+            json!(PEER),
+        ),
+        (
+            "/metadata/history_assessment/resolved_owner_dates/count",
+            json!(366_001),
+        ),
+        (
+            "/metadata/history_assessment/logical_dates",
+            json!({"type": "exact", "range": {"start_date": "2026-01-01", "end_date": "2026-01-01"}}),
+        ),
         ("/metadata/history_assessment", Value::Null),
     ];
     for (pointer, replacement) in mutations {
@@ -102,13 +143,20 @@ fn recognized_malformed_outcomes_scope_calendar_and_binding_are_rejected() {
         assert!(!valid(&value, &query()), "{pointer}");
     }
     let mut value = response();
-    value["metadata"]["history_assessment"]["types"][0]["sample_end_boundary"] = json!("2026-01-01T00:00:00.000000000Z");
+    value["metadata"]["history_assessment"]["types"][0]["sample_end_boundary"] =
+        json!("2026-01-01T00:00:00.000000000Z");
     assert!(!valid(&value, &query()));
 }
 
 #[test]
 fn limited_boundary_unavailable_failure_and_unassessed_keep_distinct_meanings() {
-    for outcome in ["limited", "unknown", "api_unavailable", "assessment_failed", "unassessed"] {
+    for outcome in [
+        "limited",
+        "unknown",
+        "api_unavailable",
+        "assessment_failed",
+        "unassessed",
+    ] {
         let mut value = response();
         let row = &mut value["metadata"]["history_assessment"]["types"][0];
         row["outcome"] = json!(outcome);
@@ -116,7 +164,9 @@ fn limited_boundary_unavailable_failure_and_unassessed_keep_distinct_meanings() 
             row["sample_end_boundary"] = json!("2026-01-01T00:00:00.123456789Z");
             row["intersection"] = json!("potential");
         }
-        if outcome == "unassessed" { row["unassessed_reason"] = json!("special_api_eligibility_unverified"); }
+        if outcome == "unassessed" {
+            row["unassessed_reason"] = json!("special_api_eligibility_unverified");
+        }
         assert!(valid(&value, &query()));
         assert!(disclosure_message(&value).contains("No full-history certification"));
     }
@@ -126,7 +176,8 @@ fn limited_boundary_unavailable_failure_and_unassessed_keep_distinct_meanings() 
 fn provider_only_scope_and_silent_type_truncation_are_rejected() {
     let mut value = response();
     let receipt = &mut value["metadata"]["history_assessment"];
-    receipt["logical_sources"] = json!({"type": "explicit", "source_ids": ["provider_native"], "provider_ids": ["whoop"]});
+    receipt["logical_sources"] =
+        json!({"type": "explicit", "source_ids": ["provider_native"], "provider_ids": ["whoop"]});
     receipt["resolved_source_ids"] = json!(["provider_native"]);
     receipt["resolved_provider_ids"] = json!(["whoop"]);
     let mut scoped_query = query();

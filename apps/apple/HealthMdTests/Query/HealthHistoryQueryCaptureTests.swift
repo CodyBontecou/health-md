@@ -1,5 +1,8 @@
 import Foundation
 import XCTest
+#if os(iOS)
+import HealthMdConnectionCore
+#endif
 @testable import HealthMd
 
 nonisolated enum HistoryQueryFixtures {
@@ -15,7 +18,8 @@ nonisolated enum HistoryQueryFixtures {
 
     static func snapshot(query: HealthMdQueryRequest? = nil, timeZone: TimeZone? = nil,
                          empty: Bool = false, assessmentID: UUID = UUID(), captureID: UUID = UUID(),
-                         access: HealthHistoryAccess = .unknown, peer: UUID = HistoryQueryFixtures.peer) throws -> HealthHistoryQueryCapture {
+                         access: HealthHistoryAccess = .unknown, peer: UUID = HistoryQueryFixtures.peer,
+                         ownerCount: Int = 2) throws -> HealthHistoryQueryCapture {
         let query = query ?? request()
         let timeZone = timeZone ?? TimeZone(identifier: "America/Los_Angeles")!
         let metricIDs: Set<String>
@@ -23,7 +27,7 @@ nonisolated enum HistoryQueryFixtures {
         case .explicit(let ids): metricIDs = Set(ids)
         case .allAvailable: metricIDs = ["steps", "sleep_total", "workouts"]
         }
-        let owners = ["2026-01-01", "2026-01-02"]
+        let owners = Array(["2026-01-01", "2026-01-02", "2026-01-03"].prefix(ownerCount))
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -135,7 +139,10 @@ final class HealthHistoryQueryCaptureTests: XCTestCase {
     }
 
     func testReceiptIsIncludedBeforeByteFitAndOversizeNeverMakesZeroProgressCursor() throws {
-        let snapshot = try HistoryQueryFixtures.snapshot()
+        // Both one/two-item candidates must retain a next cursor. A terminal
+        // two-day page can be SMALLER than a one-day page plus its signed cursor;
+        // that initial fixture did not actually force item fitting.
+        let snapshot = try HistoryQueryFixtures.snapshot(ownerCount: 3)
         let evaluator = try HealthMdQueryEvaluator(days: snapshot.days, cursorKey: HistoryQueryFixtures.cursorKey, cursorBinding: snapshot.cursorBinding)
         let one = try evaluator.evaluateBounded(HistoryQueryFixtures.request(), responseMetadata: snapshot.metadata, responseLimitations: snapshot.limitations)
         let limit = try HealthMdQueryCanonicalSerializer.data(for: one).count + 8
@@ -268,7 +275,7 @@ final class IPhoneHistoryQueryCoordinatorTests: XCTestCase {
                     return staleSnapshot
                 }
                 XCTFail("Lifecycle-invalid capture cannot return/publish")
-            } catch { XCTAssertTrue(error is IPhoneDirectQueryError) }
+            } catch { XCTAssertTrue(error is CancellationError) }
             rejected.fulfill()
         }
         defer { gate.resume(); task.cancel() }

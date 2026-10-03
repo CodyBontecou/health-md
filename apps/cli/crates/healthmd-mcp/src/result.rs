@@ -36,10 +36,8 @@ pub fn query_tool_result(
     if !is_error && valid_query_result(&value) {
         let pages = value.get("pages").and_then(Value::as_array);
         let pages = pages.map_or_else(|| vec![&value], |pages| pages.iter().collect());
-        let messages: std::collections::BTreeSet<_> = pages
-            .into_iter()
-            .map(history_disclosure)
-            .collect();
+        let messages: std::collections::BTreeSet<_> =
+            pages.into_iter().map(history_disclosure).collect();
         for message in messages {
             additional.push(json!({"type": "text", "text": message}));
         }
@@ -124,7 +122,8 @@ mod history_disclosure_tests {
     use super::*;
 
     fn complete_fixture() -> Value {
-        serde_json::from_str(include_str!("../../../../../packages/contracts/query-history/v1/synthetic-response.json")).unwrap()
+        let fixture = include_str!("test-fixtures/history-assessment-v1.json");
+        serde_json::from_str(fixture).unwrap()
     }
 
     #[test]
@@ -136,9 +135,18 @@ mod history_disclosure_tests {
         }}]);
         let supplied = query_tool_result(value.clone(), false, true, true);
         assert_eq!(supplied["structuredContent"], value);
-        assert_eq!(serde_json::from_str::<Value>(supplied["content"][0]["text"].as_str().unwrap()).unwrap(), value);
+        assert_eq!(
+            serde_json::from_str::<Value>(supplied["content"][0]["text"].as_str().unwrap())
+                .unwrap(),
+            value
+        );
         assert_eq!(supplied["content"][1]["type"], "image");
-        assert!(supplied["content"][2]["text"].as_str().unwrap().contains("unverified by this presenter"));
+        assert!(
+            supplied["content"][2]["text"]
+                .as_str()
+                .unwrap()
+                .contains("unverified by this presenter")
+        );
         let error = query_tool_result(value.clone(), true, false, true);
         assert_eq!(error["isError"], true);
         assert!(error.get("structuredContent").is_none());
@@ -147,16 +155,40 @@ mod history_disclosure_tests {
         let mut malformed = value.clone();
         malformed["metadata"]["history_assessment"] = json!({"schema": "healthmd.history_assessment", "schema_version": 1, "types": "bad", "logical_dates": null});
         let mut legacy = value.clone();
-        legacy["metadata"].as_object_mut().unwrap().remove("history_assessment");
+        legacy["metadata"]
+            .as_object_mut()
+            .unwrap()
+            .remove("history_assessment");
         let grouped = json!({"schema": "healthmd.mcp_query_pages", "schema_version": 1, "pages": [value, malformed, legacy]});
         let result = query_tool_result(grouped.clone(), false, true, true);
         assert_eq!(result["structuredContent"], grouped);
-        assert_eq!(serde_json::from_str::<Value>(result["content"][0]["text"].as_str().unwrap()).unwrap(), grouped);
+        assert_eq!(
+            serde_json::from_str::<Value>(result["content"][0]["text"].as_str().unwrap()).unwrap(),
+            grouped
+        );
         assert_eq!(result["content"][1]["type"], "image");
-        let messages: Vec<_> = result["content"].as_array().unwrap().iter().skip(2).map(|entry| entry["text"].as_str().unwrap()).collect();
-        assert!(messages.iter().any(|message| message.contains("legacy/unassessed")));
-        assert!(messages.iter().any(|message| message.contains("unverified by this presenter")));
-        assert!(messages.iter().all(|message| !message.contains("supplied capture-time observation")));
+        let messages: Vec<_> = result["content"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .skip(2)
+            .map(|entry| entry["text"].as_str().unwrap())
+            .collect();
+        assert!(
+            messages
+                .iter()
+                .any(|message| message.contains("legacy/unassessed"))
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|message| message.contains("unverified by this presenter"))
+        );
+        assert!(
+            messages
+                .iter()
+                .all(|message| !message.contains("supplied capture-time observation"))
+        );
     }
 
     #[test]
@@ -167,24 +199,51 @@ mod history_disclosure_tests {
         });
         let result = query_tool_result(value.clone(), false, true, false);
         assert_eq!(result["structuredContent"], value);
-        assert_eq!(serde_json::from_str::<Value>(result["content"][0]["text"].as_str().unwrap()).unwrap(), value);
-        assert!(result["content"][1]["text"].as_str().unwrap().contains("legacy/unassessed"));
-        assert!(result["content"][1]["text"].as_str().unwrap().contains("do not prove full history"));
+        assert_eq!(
+            serde_json::from_str::<Value>(result["content"][0]["text"].as_str().unwrap()).unwrap(),
+            value
+        );
+        assert!(
+            result["content"][1]["text"]
+                .as_str()
+                .unwrap()
+                .contains("legacy/unassessed")
+        );
+        assert!(
+            result["content"][1]["text"]
+                .as_str()
+                .unwrap()
+                .contains("do not prove full history")
+        );
     }
 
     #[test]
     fn generic_presenter_never_endorses_schema_only_or_supplied_receipt_without_context() {
         for (receipt, expected) in [
-            (json!({"schema": "healthmd.history_assessment", "schema_version": 9}), "unsupported"),
+            (
+                json!({"schema": "healthmd.history_assessment", "schema_version": 9}),
+                "unsupported",
+            ),
             (Value::Null, "invalid supplied evidence"),
-            (json!({"schema": "healthmd.history_assessment", "schema_version": 1}), "unverified by this presenter"),
-            (json!({"schema": "healthmd.history_assessment", "schema_version": 1, "types": [{"outcome": "limited", "sample_end_boundary": "bad"}]}), "unverified by this presenter"),
+            (
+                json!({"schema": "healthmd.history_assessment", "schema_version": 1}),
+                "unverified by this presenter",
+            ),
+            (
+                json!({"schema": "healthmd.history_assessment", "schema_version": 1, "types": [{"outcome": "limited", "sample_end_boundary": "bad"}]}),
+                "unverified by this presenter",
+            ),
         ] {
             let value = json!({"schema": "healthmd.query_response", "schema_version": 1,
                 "metadata": {"history_assessment": receipt}});
             let result = query_tool_result(value.clone(), false, true, false);
             assert_eq!(result["structuredContent"], value);
-            assert!(result["content"][1]["text"].as_str().unwrap().contains(expected));
+            assert!(
+                result["content"][1]["text"]
+                    .as_str()
+                    .unwrap()
+                    .contains(expected)
+            );
         }
     }
 }

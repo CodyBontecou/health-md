@@ -28,6 +28,9 @@ jobs:
       - name: Preserve hosted formatting correction without changing tested source
         run: |
           git rev-parse HEAD HEAD^{tree}
+          for crate in healthmd-client healthmd-cli healthmd-mcp; do
+            cmp ../../packages/contracts/query-history/v1/synthetic-response.json "crates/$crate/src/test-fixtures/history-assessment-v1.json"
+          done
           cargo fmt --all
           git diff --binary -- crates > "$RUNNER_TEMP/history-query-rustfmt.patch"
           git restore -- crates

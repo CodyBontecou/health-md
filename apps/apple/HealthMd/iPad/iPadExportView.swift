@@ -25,7 +25,7 @@ struct iPadExportView: View {
     /// Called when the user taps "Export Now". The parent decides whether to export
     /// immediately or show the paywall.
     var onExportTapped: (() -> Void)?
-    let historyProfileStore: ExportProfileStore?
+    let historyProfileID: UUID?
     let executionHistoryAssessment: HealthHistoryAssessment?
     let isAssessingHistory: Bool
     let historyPreviewWorker: HealthHistoryAssessmentWorker
@@ -35,7 +35,6 @@ struct iPadExportView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var historyAssessment: HealthHistoryAssessment?
     @State private var historyRefreshID = UUID()
-    @State private var historyProfileID: UUID?
     @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -69,6 +68,7 @@ struct iPadExportView: View {
         let request = historyPreviewRequest
         let result = await historyCoordinator.assess(scope: request.scope, isCurrent: {
             request == historyPreviewRequest && scenePhase == .active
+                && request.scope.profileID == HealthHistoryCanonicalProfileIdentity.read()
         }, operation: {
             await historyPreviewWorker.assess(notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope)) {
                 await healthKitManager.assessHistoryAccess(scope: request.scope)
@@ -781,11 +781,7 @@ struct iPadExportView: View {
         .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
         .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
         .onChange(of: healthKitManager.isAuthorized) { _, _ in invalidateHistoryPreview() }
-        .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
-            guard historyProfileID != id else { return }
-            historyProfileID = id
-            invalidateHistoryPreview()
-        }
+        .onChange(of: historyProfileID) { _, _ in invalidateHistoryPreview() }
         .onChange(of: scenePhase) { _, _ in invalidateHistoryPreview() }
         .onDisappear { historyCoordinator.invalidate(); historyPreviewWorker.cancelLogicalWaiter() }
         .sheet(isPresented: $showMetricSelection) {

@@ -53,7 +53,7 @@ final class HealthHistoryCaptureCalendarTests: XCTestCase {
 
 /// Test-only lock-protected value supplier; no Apple SDK object conformance or
 /// runtime permission claim. All mutable fields are accessed under this lock.
-private final class HistoryCalendarProbe: @unchecked Sendable {
+nonisolated private final class HistoryCalendarProbe: @unchecked Sendable {
     private let lock = NSLock()
     private var calendar: Calendar
     private var recorded: [Calendar.Identifier] = []
