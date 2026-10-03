@@ -17,7 +17,7 @@ final class MacContextAutomationCoordinator: ObservableObject {
         switch message {
         case .connectedTransferStart(let start):
             jobID = start.manifest.jobID
-            if journal.record(start.manifest.jobID) != nil {
+            if journal.isKnown(start.manifest.jobID) {
                 guard allows(jobID: start.manifest.jobID, sync: sync) else { return false }
                 transferJobs[start.transferID] = start.manifest.jobID
             }
@@ -46,7 +46,7 @@ final class MacContextAutomationCoordinator: ObservableObject {
         case .connectedCorpusTransferCancel(let value): jobID = value.jobID
         default: jobID = nil
         }
-        guard let jobID, journal.record(jobID) != nil else { return true }
+        guard let jobID, journal.isKnown(jobID) else { return true }
         // Context jobs can NEVER be completed by ordinary export/raw messages.
         switch message {
         case .iphoneExportRawData, .macExportRequest, .macExportStreamStart,
@@ -70,7 +70,8 @@ final class MacContextAutomationCoordinator: ObservableObject {
     }
 
     func allows(jobID: UUID, sync: SyncService) -> Bool {
-        guard let record = journal.record(jobID) else { return true }
+        guard journal.isKnown(jobID) else { return true }
+        guard let record = journal.record(jobID), !journal.hasUncertainAuthority(jobID) else { return false }
         return sync.canUsePhoneContextAutomation
             && sync.authenticatedContextPeerID == record.request.phoneInstallationID
             && sync.installationID == record.request.macInstallationID
@@ -87,10 +88,34 @@ final class MacContextAutomationCoordinator: ObservableObject {
               sync.authenticatedContextPeerID == request.phoneInstallationID,
               sync.installationID == request.macInstallationID, request.isValid else { return }
         if let existing = jobs.contextRequest(jobID: request.id), !request.matches(existing) { return }
-        do { try journal.admit(request) } catch { return } // no ack without durable mapping
+        let repaired: Bool
+        do {
+            if case .status = message {
+                repaired = try journal.retryDurability(request.id, expectedRequest: request)
+            } else { repaired = false }
+            try journal.admit(request)
+        } catch { return } // no ack/acquisition without proven durable mapping
         let response = jobs.jobResponse(jobID: request.id)
         if response.failureReason != "job_not_found" {
             publish(request, response: response, sync: sync)
+            if repaired && response.durableState == "sent" {
+                // A receipt/mark-admitted failure can suppress the first native
+                // dispatch. Release ONLY this automation waiter, then resume the
+                // same persisted job; never create a replacement or block ingress.
+                let previous = tasks[request.id]
+                jobs.cancelRequestForDisconnectedClient(jobID: request.id)
+                Task { @MainActor [weak self] in
+                    await previous?.value
+                    guard let self, self.tasks[request.id] == nil,
+                          self.allows(jobID: request.id, sync: sync) else { return }
+                    self.tasks[request.id] = Task { @MainActor in
+                        defer { self.tasks.removeValue(forKey: request.id) }
+                        let resumed = await jobs.resumeExport(jobID: request.id, waitTimeoutSeconds: 30,
+                            syncService: sync, destinationStatus: destination)
+                        self.publish(request, response: resumed, sync: sync)
+                    }
+                }
+            }
             return
         }
         if journal.record(request.id)?.jobWasAdmitted == true {

@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md exposes seven App Intents to Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports. Ordinary Export Shortcuts write to the selected iPhone folder. The #173 draft now adds two separately gated Mac encrypted-context intents in source; they remain unreleased and unqualified. See the [additive context-automation implementation contract](apple-context-automation.md).
+Health.md's seven ordinary App Intents integrate with Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports. Ordinary Export Shortcuts write to the selected iPhone folder. The #173 draft now adds two separately gated Mac encrypted-context intents in source; they remain unreleased and unqualified. See the [additive context-automation implementation contract](apple-context-automation.md).
 
 Shortcuts are useful for personal automations like:
 

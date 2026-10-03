@@ -285,6 +285,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     /// Additional admission for phone-initiated jobs only; ordinary exports
     /// retain their existing transport behavior.
     var contextAutomationPeerAdmission: ((UUID, SyncService) -> Bool)?
+    var contextAutomationOwnsJob: ((UUID) -> Bool)?
 
     func contextRequest(jobID: UUID) -> IPhoneExportRequest? { records[jobID]?.request }
 
@@ -531,7 +532,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         record.state = .sent
         record.paused = false
         record.updatedAt = now()
-        update(record)
+        let persisted = update(record)
+        if contextAutomationOwnsJob?(jobID) == true && !persisted {
+            return .unavailable("Could not durably resume context job.", reason: "job_persistence_failed", jobID: jobID)
+        }
         activeJobID = jobID
         // This is the exact Codable request created by the original POST,
         // including its original createdAt and immutable date identifiers.
@@ -611,7 +615,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             record.paused = false
             record.state = .sent
             record.updatedAt = now()
-            update(record)
+            let persisted = update(record)
+            if contextAutomationOwnsJob?(jobID) == true && !persisted { continue }
             activeJobID = jobID
             syncService.send(.iphoneExportRequest(record.request))
             break // The control plane intentionally serializes connected exports.

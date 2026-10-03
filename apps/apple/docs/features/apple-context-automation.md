@@ -71,7 +71,14 @@ encrypted commit path are reused without rewriting their deployed grammars.
 
 1. Phone persists request ID, verified Mac/phone installations, saved profile ID,
    exact dates/timezone and canonical scope before send. A failed write means no
-   send. The identity contains no health payload or credentials.
+   send. The identity contains no health payload or credentials. A synchronized
+   pending-transaction marker preserves the last proven scope/receipt BEFORE any
+   final-file replacement. A post-atomic, attribute, file-sync or directory-sync
+   error leaves that marker: lookup/query/restart never adopts its candidate.
+   Explicit status makes one bounded retry of that exact transaction; unreadable
+   or corrupt authority is blocked, not erased or interpreted as absence. A
+   resurrected marker after a crash conservatively requires the same retry.
+   Protected-data-unavailable status makes NO send, including for proven records.
 2. Mac validates the authenticated peer and entire immutable scope, persists the
    mapping, and starts acquisition in a separate MainActor task. The receive
    router does not await its response; acceptance/chunks/finalization can run

@@ -50,8 +50,9 @@ final class AppleContextPhoneClient {
         case .connectedCorpusTransferCancel(let value): id = value.jobID
         default: id = nil
         }
-        guard let id, let record = journal.record(id) else { return true }
-        return sync.canUsePhoneContextAutomation
+        guard let id, journal.isKnown(id) else { return true }
+        guard let record = journal.record(id), !journal.hasUncertainAuthority(id) else { return false }
+        return protectedDataAvailable() && sync.canUsePhoneContextAutomation
             && sync.authenticatedContextPeerID == record.request.macInstallationID
             && sync.installationID == record.request.phoneInstallationID
     }
@@ -112,7 +113,15 @@ final class AppleContextPhoneClient {
     }
 
     func status(id: UUID) throws -> MacContextRefreshEntity {
-        guard let record = journal.record(id) else { throw ClientError.unknownRequest }
+        guard protectedDataAvailable() else { throw ClientError.locked }
+        guard let scope = journal.recoveryRequest(id),
+              scope.phoneInstallationID == (sync?.installationID ?? SyncInstallationIdentity.persisted()) else { throw ClientError.unknownRequest }
+        if journal.hasUncertainAuthority(id) {
+            guard protectedDataAvailable() else { throw ClientError.locked }
+            // Explicit action: one retry of the original immutable transaction.
+            try journal.retryDurability(id, expectedRequest: scope)
+        }
+        guard let record = journal.record(id), !journal.hasUncertainAuthority(id) else { throw ClientError.unknownRequest }
         if let sync, sync.canUsePhoneContextAutomation,
            sync.authenticatedContextPeerID == record.request.macInstallationID,
            sync.installationID == record.request.phoneInstallationID {
@@ -129,11 +138,12 @@ final class AppleContextPhoneClient {
         _ = try? journal.accept(receipt, authenticatedPeer: peer, localID: sync.installationID, onPhone: true)
     }
 
-    func owns(_ id: UUID) -> Bool { journal.record(id) != nil }
+    func owns(_ id: UUID) -> Bool { journal.isKnown(id) }
 
     func allowsAcquisition(_ request: IPhoneExportRequest, sync: SyncService) -> Bool {
-        guard let record = journal.record(request.jobID) else { return true } // ordinary Mac request
-        return sync.canUsePhoneContextAutomation
+        guard journal.isKnown(request.jobID) else { return true } // ordinary Mac request
+        guard let record = journal.record(request.jobID), !journal.hasUncertainAuthority(request.jobID) else { return false }
+        return protectedDataAvailable() && sync.canUsePhoneContextAutomation
             && sync.authenticatedContextPeerID == record.request.macInstallationID
             && sync.installationID == record.request.phoneInstallationID
             && record.request.matches(request)
@@ -144,7 +154,10 @@ final class AppleContextPhoneClient {
     }
 
     func entity(for id: UUID) -> MacContextRefreshEntity {
-        guard let record = journal.record(id) else {
+        guard let record = journal.record(id), !journal.hasUncertainAuthority(id) else {
+            return MacContextRefreshEntity(id: id.uuidString, status: "unavailable")
+        }
+        guard record.request.phoneInstallationID == (sync?.installationID ?? SyncInstallationIdentity.persisted()) else {
             return MacContextRefreshEntity(id: id.uuidString, status: "unavailable")
         }
         let state: AppleContextReceipt.State
@@ -190,12 +203,12 @@ struct MacContextRefreshQuery: EntityQuery {
     @MainActor
     func entities(for identifiers: [String]) async throws -> [MacContextRefreshEntity] {
         identifiers.compactMap { UUID(uuidString: $0) }.filter {
-            AppleContextPhoneClient.shared.journal.record($0) != nil
+            AppleContextPhoneClient.shared.journal.recoverableIDs.contains($0)
         }.map { AppleContextPhoneClient.shared.entity(for: $0) }
     }
     @MainActor
     func suggestedEntities() async throws -> [MacContextRefreshEntity] {
-        AppleContextPhoneClient.shared.journal.allRecords.map { AppleContextPhoneClient.shared.entity(for: $0.request.id) }
+        AppleContextPhoneClient.shared.journal.recoverableIDs.map { AppleContextPhoneClient.shared.entity(for: $0) }
     }
 }
 

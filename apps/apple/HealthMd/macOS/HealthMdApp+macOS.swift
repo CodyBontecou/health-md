@@ -412,6 +412,9 @@ struct HealthMdApp: App {
         iphoneExportRequestCoordinator.contextAutomationPeerAdmission = { jobID, service in
             contextAutomationCoordinator.allows(jobID: jobID, sync: service)
         }
+        iphoneExportRequestCoordinator.contextAutomationOwnsJob = { jobID in
+            contextAutomationCoordinator.journal.isKnown(jobID)
+        }
         syncService.contextAutomationOutboundAdmission = { message in
             contextAutomationCoordinator.allowsMessage(message, sync: syncService, inbound: false)
         }
