@@ -312,12 +312,10 @@ final class CIQualityGateTests: XCTestCase {
         let jobs = try workflowJobs(content)
         let consumers: Set<String> = ["test-ios", "test-macos", "test-ios-ui", "build-watch"]
         let artifactName = "name: apple-shared-core\n"
-        XCTAssertEqual(Set(jobs.filter {
-            $0.value.contains("actions/download-artifact@v4") && $0.value.contains(artifactName)
-        }.keys), consumers, "Consumer identities matter, not just a count")
-        XCTAssertEqual(Set(jobs.filter {
-            $0.value.contains("actions/upload-artifact@v4") && $0.value.contains(artifactName)
-        }.keys), ["prepare-shared-core"])
+        let topology = try sharedCoreArtifactTopology(jobs)
+        XCTAssertEqual(topology.consumers, consumers.sorted(), "Consumer identities matter, not just a count")
+        XCTAssertEqual(topology.producers, ["prepare-shared-core"])
+        XCTAssertTrue(topology.isExpected, "Exactly one producer and four named consumers, without duplicates")
         XCTAssertEqual(content.components(separatedBy: artifactName).count - 1, 5)
         let producer = try XCTUnwrap(jobs["prepare-shared-core"])
         XCTAssertEqual(producer.components(separatedBy: "run: make prepare-healthmd-core-rust").count - 1, 1)
@@ -383,6 +381,107 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(projections.contains("python3 packages/healthmd-core-rust/scripts/generate-registry-adapters.py"))
         XCTAssertTrue(projections.contains("git diff --exit-code"))
         XCTAssertFalse(projections.contains("continue-on-error: true"))
+    }
+
+    func testSharedCoreArtifactTopology_diagnosticUploadsAreNotProducers() throws {
+        let topology = try sharedCoreArtifactTopology(artifactFixtureJobs())
+        XCTAssertEqual(topology.producers, ["prepare-shared-core"])
+        XCTAssertEqual(topology.consumers, ["build-watch", "test-ios", "test-ios-ui", "test-macos"])
+        XCTAssertTrue(topology.isExpected)
+    }
+
+    func testSharedCoreArtifactTopology_extraSharedCoreUploadOrMissingConsumerFails() throws {
+        var extraProducer = artifactFixtureJobs()
+        extraProducer["unexpected-producer"] = "    steps:\n" + artifactFixtureStep("upload", name: "apple-shared-core")
+        XCTAssertFalse(try sharedCoreArtifactTopology(extraProducer).isExpected)
+        var duplicateUpload = artifactFixtureJobs()
+        duplicateUpload["prepare-shared-core", default: ""] += artifactFixtureStep("upload", name: "apple-shared-core")
+        XCTAssertFalse(try sharedCoreArtifactTopology(duplicateUpload).isExpected)
+        var missingConsumer = artifactFixtureJobs()
+        missingConsumer.removeValue(forKey: "build-watch")
+        XCTAssertFalse(try sharedCoreArtifactTopology(missingConsumer).isExpected)
+    }
+
+    func testSharedCoreArtifactTopology_requiresNameInsideTheSameActionsWithBlock() throws {
+        var jobs = artifactFixtureJobs()
+        jobs["build-watch"] = """
+            steps:
+              - name: apple-shared-core
+                uses: actions/download-artifact@v4
+                with:
+                  name: diagnostics
+                env:
+                  name: apple-shared-core
+              - uses: actions/upload-artifact@v4
+                with:
+                  name: apple-watch-build-diagnostics
+
+        """
+        let topology = try sharedCoreArtifactTopology(jobs)
+        XCTAssertEqual(topology.producers, ["prepare-shared-core"])
+        XCTAssertFalse(topology.consumers.contains("build-watch"))
+        XCTAssertFalse(topology.isExpected)
+    }
+
+    private struct SharedCoreArtifactTopology {
+        var producers: [String] = []
+        var consumers: [String] = []
+
+        var isExpected: Bool {
+            producers == ["prepare-shared-core"] &&
+                consumers == ["build-watch", "test-ios", "test-ios-ui", "test-macos"]
+        }
+    }
+
+    // Parse the current explicit workflow style only: steps at six spaces,
+    // action fields at eight, and with fields at ten. Never combine fields
+    // from different steps or confuse a display/env name with with.name.
+    private func sharedCoreArtifactTopology(_ jobs: [String: String]) throws -> SharedCoreArtifactTopology {
+        let stepHeader = try NSRegularExpression(pattern: "^      - [a-z][a-z-]*:", options: .anchorsMatchLines)
+        var topology = SharedCoreArtifactTopology()
+        for (id, job) in jobs {
+            guard let stepsRange = job.range(of: "    steps:\n") else { continue }
+            let steps = String(job[stepsRange.upperBound...])
+            let source = steps as NSString
+            let headers = stepHeader.matches(in: steps, range: NSRange(location: 0, length: source.length))
+            for (index, header) in headers.enumerated() {
+                let end = index + 1 < headers.count ? headers[index + 1].range.location : source.length
+                let lines = source.substring(with: NSRange(location: header.range.location, length: end - header.range.location))
+                    .components(separatedBy: "\n")
+                let uses = lines.compactMap { line -> String? in
+                    for prefix in ["      - uses: ", "        uses: "] where line.hasPrefix(prefix) {
+                        return String(line.dropFirst(prefix.count))
+                    }
+                    return nil
+                }
+                guard uses.count == 1, let action = uses.first,
+                      ["actions/upload-artifact@v4", "actions/download-artifact@v4"].contains(action),
+                      let withIndex = lines.firstIndex(of: "        with:") else { continue }
+                let fields = lines.dropFirst(withIndex + 1).prefix { $0.isEmpty || $0.hasPrefix("          ") }
+                let names = fields.filter { $0.hasPrefix("          name: ") }
+                    .map { String($0.dropFirst("          name: ".count)) }
+                guard names == ["apple-shared-core"] else { continue }
+                if action == "actions/upload-artifact@v4" { topology.producers.append(id) }
+                else { topology.consumers.append(id) }
+            }
+        }
+        topology.producers.sort()
+        topology.consumers.sort()
+        return topology
+    }
+
+    private func artifactFixtureStep(_ direction: String, name: String) -> String {
+        "      - uses: actions/\(direction)-artifact@v4\n        with:\n          name: \(name)\n"
+    }
+
+    private func artifactFixtureJobs() -> [String: String] {
+        var jobs = ["prepare-shared-core": "    steps:\n" + artifactFixtureStep("upload", name: "apple-shared-core")]
+        for id in ["test-ios", "test-macos", "test-ios-ui", "build-watch"] {
+            // A named download step followed by a uses-first diagnostic upload.
+            jobs[id] = "    steps:\n      - name: Restore shared core\n        uses: actions/download-artifact@v4\n        with:\n          name: apple-shared-core\n" +
+                artifactFixtureStep("upload", name: "\(id)-diagnostics")
+        }
+        return jobs
     }
 
     // Inspect anchored job sections in the repository's explicit workflow format.
