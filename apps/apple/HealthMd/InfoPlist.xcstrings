@@ -1,396 +1,399 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "CFBundleDisplayName": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         }
       }
     },
-    "CFBundleName": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+    "CFBundleName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md"
           }
         }
       }
     },
-    "NSHealthShareUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md reads only the health data you select to create exports or answer requests from commands you explicitly pair."
+    "Health.md Shared Setup" : {
+
+    },
+    "NSCameraUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md verwendet die Kamera nur, um einen von Ihnen ausgewählten Direct-CLI-Kopplungs-QR-Code zu scannen."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md lee solo los datos de salud que selecciones para crear exportaciones o responder solicitudes de comandos que emparejes explícitamente."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md uses the camera only to scan a Direct CLI pairing QR code you choose."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md lit uniquement les données de santé que vous sélectionnez afin de créer des exportations ou de répondre aux requêtes de commandes que vous associez explicitement."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md usa la cámara únicamente para escanear el código QR de emparejamiento de Direct CLI que elijas."
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md liest nur die von Ihnen ausgewählten Gesundheitsdaten, um Exporte zu erstellen oder Anfragen von ausdrücklich gekoppelten Befehlen zu beantworten."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md utilise la caméra uniquement pour scanner le code QR d’association Direct CLI que vous choisissez."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md legge solo i dati sanitari selezionati per creare esportazioni o rispondere alle richieste dei comandi abbinati esplicitamente."
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md usa la fotocamera solo per scansionare il codice QR di abbinamento Direct CLI scelto da te."
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Health.md lê apenas os dados de saúde selecionados para criar exportações ou responder a solicitações de comandos emparelhados explicitamente."
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.mdは、選択したDirect CLIペアリング用QRコードをスキャンするためにのみカメラを使用します。"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md leest alleen de gezondheidsgegevens die je selecteert om exports te maken of verzoeken te beantwoorden van opdrachten die je expliciet koppelt."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md는 사용자가 선택한 Direct CLI 페어링 QR 코드를 스캔할 때만 카메라를 사용합니다."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.mdは、書き出しを作成するため、または明示的にペアリングしたコマンドからの要求に応答するために、選択したヘルスデータのみを読み取ります。"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md gebruikt de camera alleen om een door jou gekozen QR-code voor Direct CLI-koppeling te scannen."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md는 내보내기를 생성하거나 사용자가 명시적으로 페어링한 명령의 요청에 응답하기 위해 선택한 건강 데이터만 읽습니다."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Health.md usa a câmera somente para escanear o código QR de pareamento do Direct CLI que você escolher."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md 仅会读取您选择的健康数据，用于创建导出内容或响应您明确配对的命令所发出的请求。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md 仅使用相机扫描您选择的 Direct CLI 配对二维码。"
           }
         }
       }
     },
-    "NSCameraUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md uses the camera only to scan a Direct CLI pairing QR code you choose."
+    "NSHealthShareUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md liest nur die von Ihnen ausgewählten Gesundheitsdaten, um Exporte zu erstellen oder Anfragen von ausdrücklich gekoppelten Befehlen zu beantworten."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md usa la cámara únicamente para escanear el código QR de emparejamiento de Direct CLI que elijas."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md reads only the health data you select to create exports or answer requests from commands you explicitly pair."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md utilise la caméra uniquement pour scanner le code QR d’association Direct CLI que vous choisissez."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md lee solo los datos de salud que selecciones para crear exportaciones o responder solicitudes de comandos que emparejes explícitamente."
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md verwendet die Kamera nur, um einen von Ihnen ausgewählten Direct-CLI-Kopplungs-QR-Code zu scannen."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md lit uniquement les données de santé que vous sélectionnez afin de créer des exportations ou de répondre aux requêtes de commandes que vous associez explicitement."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md usa la fotocamera solo per scansionare il codice QR di abbinamento Direct CLI scelto da te."
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md legge solo i dati sanitari selezionati per creare esportazioni o rispondere alle richieste dei comandi abbinati esplicitamente."
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Health.md usa a câmera somente para escanear o código QR de pareamento do Direct CLI que você escolher."
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.mdは、書き出しを作成するため、または明示的にペアリングしたコマンドからの要求に応答するために、選択したヘルスデータのみを読み取ります。"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md gebruikt de camera alleen om een door jou gekozen QR-code voor Direct CLI-koppeling te scannen."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md는 내보내기를 생성하거나 사용자가 명시적으로 페어링한 명령의 요청에 응답하기 위해 선택한 건강 데이터만 읽습니다."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.mdは、選択したDirect CLIペアリング用QRコードをスキャンするためにのみカメラを使用します。"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md leest alleen de gezondheidsgegevens die je selecteert om exports te maken of verzoeken te beantwoorden van opdrachten die je expliciet koppelt."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md는 사용자가 선택한 Direct CLI 페어링 QR 코드를 스캔할 때만 카메라를 사용합니다."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Health.md lê apenas os dados de saúde selecionados para criar exportações ou responder a solicitações de comandos emparelhados explicitamente."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md 仅使用相机扫描您选择的 Direct CLI 配对二维码。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md 仅会读取您选择的健康数据，用于创建导出内容或响应您明确配对的命令所发出的请求。"
           }
         }
       }
     },
-    "NSHealthUpdateUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md may need to update health data metadata as part of the export process."
+    "NSHealthUpdateUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md muss möglicherweise Gesundheitsdaten-Metadaten im Rahmen des Exportvorgangs aktualisieren."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md puede necesitar actualizar los metadatos de datos de salud como parte del proceso de exportación."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md may need to update health data metadata as part of the export process."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md peut avoir besoin de mettre à jour les métadonnées de santé dans le cadre du processus d'exportation."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md puede necesitar actualizar los metadatos de datos de salud como parte del proceso de exportación."
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md muss möglicherweise Gesundheitsdaten-Metadaten im Rahmen des Exportvorgangs aktualisieren."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md peut avoir besoin de mettre à jour les métadonnées de santé dans le cadre du processus d'exportation."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md potrebbe dover aggiornare i metadati dei dati sanitari come parte del processo di esportazione."
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md potrebbe dover aggiornare i metadati dei dati sanitari come parte del processo di esportazione."
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md pode precisar atualizar metadados de saúde como parte do processo de exportação."
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.mdはエクスポート処理の一環として、ヘルスデータのメタデータを更新する場合があります。"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md moet mogelijk metadata van gezondheidsgegevens bijwerken als onderdeel van het exportproces."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md는 내보내기 과정에서 건강 데이터 메타데이터를 업데이트해야 할 수 있습니다."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.mdはエクスポート処理の一環として、ヘルスデータのメタデータを更新する場合があります。"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md moet mogelijk metadata van gezondheidsgegevens bijwerken als onderdeel van het exportproces."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md는 내보내기 과정에서 건강 데이터 메타데이터를 업데이트해야 할 수 있습니다."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md pode precisar atualizar metadados de saúde como parte do processo de exportação."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md 可能需要在导出过程中更新健康数据的元信息。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md 可能需要在导出过程中更新健康数据的元信息。"
           }
         }
       }
     },
-    "NSLocalNetworkUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports and queries."
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md verwendet Ihr lokales Netzwerk, um für private Exporte und Abfragen eine Verbindung zur Mac-App oder zu einem ausdrücklich gekoppelten healthmd-Befehl herzustellen."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md usa tu red local para conectarse a la app para Mac o a un comando healthmd emparejado explícitamente para exportaciones y consultas privadas."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md uses your local network to connect to the Mac app or an explicitly paired healthmd command for private exports and queries."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md utilise votre réseau local pour se connecter à l’app Mac ou à une commande healthmd explicitement associée pour des exportations et requêtes privées."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md usa tu red local para conectarse a la app para Mac o a un comando healthmd emparejado explícitamente para exportaciones y consultas privadas."
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md verwendet Ihr lokales Netzwerk, um für private Exporte und Abfragen eine Verbindung zur Mac-App oder zu einem ausdrücklich gekoppelten healthmd-Befehl herzustellen."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md utilise votre réseau local pour se connecter à l’app Mac ou à une commande healthmd explicitement associée pour des exportations et requêtes privées."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md utilizza la rete locale per connettersi all’app per Mac o a un comando healthmd abbinato esplicitamente per esportazioni e richieste private."
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md utilizza la rete locale per connettersi all’app per Mac o a un comando healthmd abbinato esplicitamente per esportazioni e richieste private."
           }
         },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O Health.md usa sua rede local para se conectar ao app para Mac ou a um comando healthmd emparelhado explicitamente para exportações e consultas privadas."
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.mdはローカルネットワークを使用して、Macアプリまたは明示的にペアリングしたhealthmdコマンドに接続し、非公開の書き出しやクエリを行います。"
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md gebruikt je lokale netwerk om verbinding te maken met de Mac-app of een expliciet gekoppelde healthmd-opdracht voor privé-exports en -query’s."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md는 비공개 내보내기와 쿼리를 위해 로컬 네트워크를 사용하여 Mac 앱 또는 명시적으로 페어링한 healthmd 명령에 연결합니다."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.mdはローカルネットワークを使用して、Macアプリまたは明示的にペアリングしたhealthmdコマンドに接続し、非公開の書き出しやクエリを行います。"
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md gebruikt je lokale netwerk om verbinding te maken met de Mac-app of een expliciet gekoppelde healthmd-opdracht voor privé-exports en -query’s."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md는 비공개 내보내기와 쿼리를 위해 로컬 네트워크를 사용하여 Mac 앱 또는 명시적으로 페어링한 healthmd 명령에 연결합니다."
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Health.md usa sua rede local para se conectar ao app para Mac ou a um comando healthmd emparelhado explicitamente para exportações e consultas privadas."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md 使用本地网络连接 Mac App 或您明确配对的 healthmd 命令，以进行私密导出和查询。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health.md 使用本地网络连接 Mac App 或您明确配对的 healthmd 命令，以进行私密导出和查询。"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

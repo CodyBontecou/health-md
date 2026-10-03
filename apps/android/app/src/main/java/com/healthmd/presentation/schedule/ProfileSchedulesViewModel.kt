@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.data.scheduler.ScheduledProfileEntryStore
-import com.healthmd.data.scheduler.ScheduledProfileUsageProjection
 import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.data.settings.ExportProfileCoordinator
@@ -31,7 +30,6 @@ data class ProfileScheduleRow(
 
 data class ProfileSchedulesUiState(
     val rows: List<ProfileScheduleRow> = emptyList(),
-    val projectedMonthlyRequests: Int = 0,
     val editingProfileId: String? = null,
 )
 
@@ -65,14 +63,7 @@ class ProfileSchedulesViewModel @Inject constructor(
                 }
             }.collect { rows ->
                 _uiState.update { state ->
-                    state.copy(
-                        rows = rows,
-                        projectedMonthlyRequests = rows.sumOf { row ->
-                            if (row.entry?.isEnabled == true) {
-                                ScheduledProfileUsageProjection.projectedMonthlyRequests(row.entry)
-                            } else 0
-                        },
-                    )
+                    state.copy(rows = rows)
                 }
             }
         }

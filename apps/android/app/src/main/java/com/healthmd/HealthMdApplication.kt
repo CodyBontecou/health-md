@@ -8,15 +8,12 @@ import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.healthmd.R
-import com.healthmd.data.attribution.CampaignAttributionInitializer
 import com.healthmd.data.export.ExportAwakeCoordinator
-import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsInitializer
+import com.healthmd.distribution.DistributionRuntime
 import com.healthmd.data.scheduler.ExportWorker
 import com.healthmd.direct.DirectCliForegroundService
 import com.healthmd.direct.DirectCliJobStore
 import com.healthmd.widget.glance.HealthWidgetLocaleRefresher
-import com.healthmd.wear.WearPhoneSync
-import com.healthmd.wear.WearPhoneSyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -38,19 +35,10 @@ class HealthMdApplication : Application(), Configuration.Provider {
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
-    lateinit var campaignAttributionInitializer: CampaignAttributionInitializer
-
-    @Inject
-    lateinit var onboardingAnalyticsInitializer: OnboardingAnalyticsInitializer
+    lateinit var distributionRuntime: DistributionRuntime
 
     @Inject
     lateinit var directCliJobStore: DirectCliJobStore
-
-    @Inject
-    lateinit var wearPhoneSyncScheduler: WearPhoneSyncScheduler
-
-    @Inject
-    lateinit var wearPhoneSync: WearPhoneSync
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -65,18 +53,8 @@ class HealthMdApplication : Application(), Configuration.Provider {
         initializeLogging()
         ExportAwakeCoordinator.shared.initialize(this)
         createNotificationChannels()
-        campaignAttributionInitializer.start()
-        onboardingAnalyticsInitializer.start()
+        distributionRuntime.initialize()
         directCliJobStore.sweepExpired()
-        configurationRefreshScope.launch {
-            // Finish an explicit privacy clear before allowing ordinary scheduling to repopulate
-            // the durable snapshot after process death. Also retain WorkManager recovery if this
-            // application coroutine is interrupted again.
-            if (wearPhoneSync.resumePendingClear() == com.healthmd.wear.WearPhoneSyncResult.RETRY) {
-                WearPhoneSyncScheduler.enqueueClearRecovery(this@HealthMdApplication)
-            }
-            wearPhoneSyncScheduler.reconcile()
-        }
     }
 
     override fun onConfigurationChanged(newConfig: AndroidConfiguration) {

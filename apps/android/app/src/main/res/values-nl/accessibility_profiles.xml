@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Profielschema’s</string>
+    <string name="a11y_profiles_empty">Nog geen exportprofielen.</string>
+    <string name="a11y_profiles_add">Nieuw profiel met huidige instellingen</string>
+    <string name="a11y_profiles_none_enabled">Geen profielschema’s ingeschakeld.</string>
+    <string name="a11y_profiles_edit">Schema bewerken</string>
+    <string name="a11y_profiles_edit_named">Schema voor %1$s bewerken</string>
+    <string name="a11y_profiles_delete">Verwijderen</string>
+    <string name="a11y_profiles_delete_named">Profiel %1$s verwijderen</string>
+    <string name="a11y_profiles_schedule_named">Schema voor %1$s</string>
+    <string name="a11y_profiles_save">Opslaan</string>
+    <string name="a11y_profiles_delete_title">‘%1$s’ verwijderen?</string>
+    <string name="a11y_profiles_delete_body">De opgeslagen instellingen en het schema worden verwijderd. Het laatste overgebleven profiel kan niet worden verwijderd.</string>
+    <string name="a11y_profiles_cadence_unit">Intervaleenheid</string>
+    <string name="a11y_profiles_days">Dagen</string>
+    <string name="a11y_profiles_weeks">Weken</string>
+    <string name="a11y_profiles_months">Maanden</string>
+    <string name="a11y_profiles_weekday">Weekdag</string>
+    <string name="a11y_profiles_hour">Uur</string>
+    <string name="a11y_profiles_minute">Minuut</string>
+    <string name="a11y_profiles_lookback">Afgelopen dagen (1–30)</string>
+    <string name="a11y_profiles_every_days">Elke N dagen</string>
+    <string name="a11y_profiles_every_weeks">Elke N weken</string>
+    <string name="a11y_profiles_every_months">Elke N maanden</string>
+</resources>

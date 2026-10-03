@@ -17,7 +17,10 @@ CLI queries, local stdio, and direct-backed HTTP use the same `HealthOperations`
 `HealthDataBackend` contract. The packaged MCP catalog is generated from that shared registry. The
 read-only profiles expose only the 13 readiness/query tools and still query the paired foreground
 iPhone; they have no synchronized corpus or server-side health-data fallback. The local read-only
-stdio profile needs no HTTP, OAuth, tunnel, or cloud service. Pairing execution and filesystem
-exports remain in `healthmd-cli`; only its complete local stdio adapter may expose those guarded MCP
-operations, while local read-only, HTTP, and OAuth profiles cannot discover or invoke them. See the
+stdio profile needs no HTTP, OAuth, tunnel, or cloud service. Pairing, filesystem export, and
+full-corpus raw jobs remain in `healthmd-cli`; only its complete local stdio adapter may expose those
+guarded MCP operations, while local read-only, HTTP, and OAuth profiles cannot discover or invoke
+them. Full-corpus artifacts are private durable job outputs and are available only as bounded,
+base64-encoded chunks tied to an exact completed job UUID; MCP never receives arbitrary file-read
+authority. See the
 repository's [Remote MCP architecture](https://github.com/CodyBontecou/health-md/blob/main/apps/cli/docs/remote-mcp.md).

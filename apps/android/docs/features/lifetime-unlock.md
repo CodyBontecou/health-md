@@ -1,64 +1,46 @@
-# Lifetime Unlock
+# Lifetime Access
 
 ## Status
 
-- **Docs status:** draft
+- **Docs status:** implemented
 - **Video priority:** low
-- **Primary screen:** Settings → Unlock (paywall)
-- **Source files:** `app/src/main/java/com/healthmd/presentation/paywall/PaywallScreen.kt`, `app/src/main/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`, `app/src/main/java/com/healthmd/domain/billing/FreemiumPolicy.kt`
+- **Primary screen:** Settings → Unlock (Google Play); included during onboarding (F-Droid)
+- **Source files:** `app/src/main/java/com/healthmd/domain/distribution/DistributionPolicy.kt`, `app/src/main/java/com/healthmd/domain/repository/EntitlementRepository.kt`, `app/src/main/java/com/healthmd/domain/repository/PurchaseRepository.kt`, `app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`, `app/src/fdroid/java/com/healthmd/data/access/FdroidAccessRepository.kt`
 
 ## What it does
 
-Health.md is free to try with **10 free manual export actions**, then unlocks forever with a **one-time lifetime purchase** through Google Play Billing. No subscription, no recurring charge — the live price is always shown by Google Play inside the app.
+Health.md has one channel-neutral entitlement outcome: access to unlimited manual exports, scheduled exports, automation, recovery, and Direct CLI export.
 
-## Who it is for
+- **Google Play:** 10 free manual export actions, followed by a one-time lifetime purchase through Google Play Billing. There is no subscription.
+- **F-Droid:** full access is included. There is no free counter, paywall, product lookup, purchase, or restore action.
 
-- Everyone: the free tier exists to verify permissions, folder access, formats, and your Obsidian workflow before paying
-- Lifetime unlock buyers get unlimited exports and automated scheduled exports
-- Not a data plan — purchases never relate to where your data goes
+The distribution difference does not change export formats, bytes, schemas, or direct-device protocol behavior.
 
-## Where to find it
+## Google Play flow
 
-1. Open **Settings**.
-2. Tap **Unlock** / **Unlock Health.md**, or hit the paywall when the free limit is reached.
+1. Use the free exports to verify permissions, folder access, formats, and the Obsidian workflow.
+2. Open **Settings → Unlock**, or follow the paywall after the free limit.
+3. Tap **Unlock for …** using the live Play price, or **Restore Purchase** for an existing purchase.
 
-## Prerequisites
+The counter tracks export actions, not files: one action that writes Markdown, JSON, and CSV for a date range still consumes one free action.
 
-- A Google account with Google Play
-- Internet access for the purchase
+## F-Droid flow
 
-## Setup
+No setup is required. Onboarding states that full access is included, and Settings shows the F-Droid channel plus source and AGPL links instead of purchase controls. More than ten exports, schedules, automation intents, recovery, and Direct CLI remain admitted through the same entitlement interfaces.
 
-1. Use your free exports to confirm everything works.
-2. Open the paywall and tap **Unlock for …** (live price shown).
-3. Complete the Google Play purchase, or **Restore Purchase** after reinstalling or switching phones.
+## Channel switching
 
-## Example output
-
-Paywall rows: **Unlimited exports, forever** · **Automated scheduled exports** · **All future features included** · **One-time payment — no subscription**.
-
-## Tips
-
-- The counter tracks **export actions, not files**: exporting Markdown + JSON + CSV for a whole range still counts as **one** action.
-- Free actions cover manual exports; scheduled automation requires the unlock ("Scheduled exports require the lifetime unlock").
-- Restore Purchase reclaims the unlock on a new device or after reinstall.
+Google Play and F-Droid use different signing keys. Switching requires uninstall/reinstall, which removes local app state. Health.md does not promise transfer of Play purchases, settings, history, credentials, or app-private files across signatures. Exported files remain wherever the user saved them.
 
 ## Troubleshooting
 
-| Problem | Likely cause | Fix |
-|---|---|---|
-| "No previous purchase" | Not signed into the purchasing account | Sign into the same Google account, then Restore Purchase |
-| Unlock lost after reinstall | Purchase not restored yet | Tap Restore Purchase |
-| "Export failed: unlock required" | Free limit reached or schedule gated | Retry after unlocking |
-
-## Video outline
-
-- **Suggested title:** Free to Try, Yours Forever
-- **Hook:** "Ten exports to prove it works. One payment, forever."
-- **Demo flow:** run a free export → hit the paywall → unlock → schedule unlocks.
-- **Key screenshot/recording moments:** feature rows, price button, restore.
-- **CTA / next video:** Scheduled Exports.
+| Problem | Channel | Fix |
+| --- | --- | --- |
+| "No previous purchase" | Google Play | Sign into the purchasing Google account, then Restore Purchase |
+| Unlock lost after reinstall | Google Play | Restore the purchase with the same account |
+| Purchase controls are missing | F-Droid | Expected: full access is already included |
+| Export reports unlock required | F-Droid | This is a defect; capture the channel shown in Settings and file an issue |
 
 ## Implementation notes
 
-`FreemiumPolicy.FREE_EXPORT_LIMIT = 10`; `canExport(isUnlocked, freeExportsUsed)` gates manual runs and `ExportAccountingPolicy` counts actions across every trigger (manual, scheduled, automation). `BillingRepositoryImpl` wraps Google Play Billing 7 acknowledgements/purchases; `PaywallScreen` maps `BillingError` cases (`PRODUCT_UNAVAILABLE`, `SERVICE_UNAVAILABLE`, `PURCHASE_FAILED`, `NO_PREVIOUS_PURCHASE`, `RESTORE_FAILED`) to user copy. Apple's equivalent unlock is documented separately in the Apple feature docs; pricing mechanics differ by platform store.
+`DistributionPolicy` declares channel capabilities. Consumers gate behavior through `EntitlementRepository`, not Billing classes. The Play implementation combines current/cached Billing entitlement with `PurchaseRepository`; the F-Droid repository exposes a stable unlocked state and unavailable purchase operations. `ExportAccountingPolicy` never consumes a free action for an unlocked entitlement. Workers, automation, recovery, Direct CLI, schedules, export view models, and paywall navigation all use these channel-neutral boundaries.

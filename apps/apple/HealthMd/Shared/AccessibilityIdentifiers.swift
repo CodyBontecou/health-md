@@ -30,8 +30,6 @@ enum AccessibilityID {
         static let customStartDatePicker = "export.dateRange.custom.startDate"
         static let customEndDatePicker = "export.dateRange.custom.endDate"
         static let pathPreview = "export.pathPreview"
-        static let exportProgress = "export.progressView"
-        static let statusMessage = "export.statusMessage"
         static let activityBanner = "export.activityBanner"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
@@ -93,6 +91,7 @@ enum AccessibilityID {
     // MARK: - Notification Export Activity
     enum Notification {
         static let exportActivity = "notification.exportActivity"
+        static let cancelExportButton = "notification.cancelButton"
     }
 
     // MARK: - Export Modal
@@ -120,6 +119,13 @@ enum AccessibilityID {
         static let errorMessage = "paywall.errorMessage"
     }
 
+    // MARK: - Value Moment Prompt
+    enum UpgradePrompt {
+        static let upgrade = "upgradePrompt.upgradeButton"
+        static let notNow = "upgradePrompt.notNowButton"
+        static let title = "upgradePrompt.title"
+    }
+
     // MARK: - Schedule
     enum Schedule {
         static let enableToggle = "schedule.enableToggle"
@@ -137,10 +143,12 @@ enum AccessibilityID {
 
     // MARK: - Sync
     enum Sync {
+        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"
         static let autoSyncToggle = "sync.autoSyncToggle"
+        static let directCLIToggle = "sync.directCLIToggle"
         static let directCLIScanButton = "sync.directCLIScanButton"
     }
 

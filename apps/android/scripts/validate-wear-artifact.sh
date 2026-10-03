@@ -20,7 +20,7 @@ phone_name=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' "$phone" | head -1)
 wear_code=$(sed -n 's/.*versionCode = \([0-9_]*\).*/\1/p' "$wear" | head -1 | tr -d _)
 phone_code=$(sed -n 's/.*versionCode = \([0-9_]*\).*/\1/p' "$phone" | head -1 | tr -d _)
 [[ -n "$wear_package" && "$wear_package" == "$phone_package" ]] || fail "application IDs differ"
-[[ "$wear_min_sdk" == 30 && "$wear_target_sdk" == 35 ]] || fail "Wear SDK contract"
+[[ "$wear_min_sdk" == 30 && "$wear_target_sdk" == 36 ]] || fail "Wear SDK contract"
 [[ -n "$phone_min_sdk" && -n "$phone_target_sdk" ]] || fail "phone SDK contract unavailable"
 test "$wear_name" = "$phone_name" || fail "version names differ"
 test "$phone_code" -lt 1000000 && test "$wear_code" -ge 1000000 && test "$wear_code" != "$phone_code" || fail "version-code range collision"

@@ -566,7 +566,8 @@ enum GeneratedAutomationReferenceDocumentation {
             installationID: installationID,
             supportsDurableConnectedExportRecovery: true,
             connectedTransferBinaryFrameVersions: [ConnectedTransferBinaryFrame.currentVersion],
-            connectedTransferMaximumInFlightChunks: 4
+            connectedTransferMaximumInFlightChunks: 4,
+            supportsSplitExportDetailPolicy: true
         )
     }
 

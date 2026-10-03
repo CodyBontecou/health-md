@@ -20,8 +20,9 @@
 | Shared Rust core | `packages/healthmd-core-rust` | Metric registry, semantic/render engine, protocol, UniFFI |
 | Contracts | `packages/contracts` | Language-neutral public + internal contracts |
 | Practice portal (synthetic) | `apps/practice` | Production-disabled clinician-portal foundation |
+| Direct CLI wake doorbell | `apps/wake` | Notification-only Cloudflare Worker + isolated D1; no health-data path |
 | Website + public docs | `apps/website` | Astro docs site, 10 locales, blog, visualizations |
-| Cloudflare workers | `apps/apple/worker/{oauth-broker,pricing-analytics}` | OAuth broker + coarse pricing analytics |
+| Other Cloudflare workers | `apps/apple/worker/{oauth-broker,pricing-analytics}` | OAuth broker + coarse pricing analytics |
 
 ---
 
@@ -29,7 +30,7 @@
 
 | Feature | Products | Description | Evidence | Docs |
 |---|---|---|---|---|
-| First-run onboarding flow | iOS, Android | 7-step path: welcome → health access → sample export → Obsidian plugin demo → folder → unlock → ready | `iOS/Views/OnboardingView.swift`; `android presentation/onboarding/OnboardingScreen.kt` | ✅ `apple docs/features/onboarding.md`; 🟡 website `onboarding.md` |
+| First-run onboarding flow | iOS, Android | Apple uses a 5-step non-blocking path: welcome → health access → sample/plugin link → folder → ready, followed by a one-time dismissible offer after the first preview. Android retains its native setup flow with the same permissions/destination/ready outcome. | `iOS/Views/OnboardingView.swift`; `android presentation/onboarding/OnboardingScreen.kt` | ✅ `apple docs/features/onboarding.md`; ✅ website `onboarding.md` |
 | Health data permission request | iOS, Android | Request read access to HealthKit types / Health Connect permission flow | `Shared/Managers/HealthKitManager.swift`; android `data/health/` | ✅ `healthkit-permissions.md`; 🟡 website |
 | Permission rationale & usage disclosure | Android | Exported Health Connect rationale screen (`ACTION_SHOW_PERMISSIONS_RATIONALE`) + platform `ViewPermissionUsageActivity` activity-alias onto the same screen (`VIEW_PERMISSION_USAGE`); enforced by manifest contract test | `presentation/HealthPermissionsRationaleActivity.kt`, `AndroidManifest.xml` (activity + alias), `HealthConnectManifestContractTest.kt` | 🔧 |
 | Sample export preview (onboarding) | iOS, Android | Preview a sample export before choosing destination | `OnboardingView.swift` (`sampleExportStepIndex`); android onboarding | 🟡 inside onboarding pages |
@@ -66,11 +67,11 @@
 | Medication dose events | iOS | HealthKit medication catalog + taken/skipped dose events in export | export schema; parity ledger | ✅ via export-schema/parity docs |
 | Zip archive export toggle | iOS | Bundle export files into a zip (DEFLATE) | `ExportTabView.swift:673`, `ZipArchiveWriter.swift` | 🟡 within `multi-format-export.md` |
 | Export schema contract | iOS, Android, CLI, core | Versioned public schema (Apple v8; Android frozen v4 + analytical v5; v9 proposed) | `packages/contracts/`, `HealthMdExportSchema` | ✅ `export-schema.md` + contracts |
-| Raw API Snapshot product | Android (+CLI delivery) | Immutable versioned JSON/NDJSON provider-native snapshot: Health Connect + Fitbit/Oura/WHOOP/Withings cloud; manifests, checksums, `.sha256` sidecars, preview-without-destination, HTTPS-only streaming upload | android `rawexport/`, `rawchanges/`; docs `raw-snapshot-v1.md`, `raw-record-v1.md`, `raw-changes-v1.md` | ✅ android export-contract docs + website `guides/raw-snapshots` (canonical EN, translations pending) |
+| Raw API Snapshot product | Android (+CLI delivery) | Immutable versioned JSON/NDJSON provider-native snapshot: Health Connect + Fitbit/Oura/WHOOP/Withings cloud; manifests, checksums, `.sha256` sidecars, preview-without-destination, HTTPS-only streaming upload | android `rawexport/`, `rawchanges/`; docs `raw-snapshot-v1.md`, `raw-record-v1.md`, `raw-changes-v1.md` | ✅ android export-contract docs + website `guides/raw-snapshots` (authored in all 10 locales) |
 | Raw changes backend | Android | `healthmd.raw-changes` change tokens + deletion tombstones for incremental archives | android `rawchanges/` | ✅ `raw-changes-v1.md` |
 | Exercise route consent | Android | Explicit consent coordination before exporting exercise routes | `rawexport/ExerciseRouteConsent*.kt` | 🟡 raw docs |
 | Daily note injection | iOS, macOS, Android | Merge health sections into existing Obsidian daily notes | `DailyNoteInjector` (+`MarkdownMerger`) | ✅ `daily-note-injection.md`; website `daily-notes.md` |
-| Clinician report (PDF) | iOS, Android | Clinician-facing configured report (presets, metric selection) rendered to PDF with share sheet; localized copy | `iOS/ClinicianReport/*`, `Shared/ClinicianReport/`; android `presentation/clinicianreport/` | ✅ `apps/apple/docs/features/clinician-report.md` (spec: root `docs/features/clinician-report-v1.md`) |
+| Clinician report (PDF) | iOS, Android | Clinician-facing configured report (presets, metric selection) rendered to PDF with share sheet; localized copy | `iOS/ClinicianReport/*`, `Shared/ClinicianReport/`; android `presentation/clinicianreport/` | ✅ Apple + Android feature pages; website `clinician-report.md`; spec `docs/features/clinician-report-v1.md` |
 
 ## 4. Export configuration & customization
 
@@ -80,7 +81,7 @@
 | Folder organization | iOS, macOS, Android | Date-based subfolders `{year}/{month}`, `{year}/{quarter}`; Android folder-by-type | `AdvancedExportSettings`, `VaultManager` | ✅ `folder-organization.md` |
 | Frontmatter customization | iOS, macOS, Android | Rename metric fields, snake/camelCase, static + placeholder fields | `FrontmatterCustomizationView` | ✅ `frontmatter-customization.md` |
 | Markdown template choice | iOS, macOS, Android | Compact/standard/detailed/custom templates | `MarkdownTemplateView`, `MarkdownExporter` | ✅ `markdown-template-customization.md` |
-| Date/time/unit preferences | iOS, macOS, Android | Date style, time style, metric/imperial | `FormatPreferences`, `FormatCustomizationView` | ✅ `date-time-units.md` |
+| Date/time/unit preferences | iOS, macOS, Android | Date style, time style, metric/imperial | `FormatPreferences`, `FormatCustomizationView` | ✅ `date-time-units.md` (both trees) |
 | Write modes | iOS, macOS, Android | Overwrite / append / update-merge | `WriteMode`, `MarkdownMerger` | ✅ `write-modes.md` |
 | Emoji headers / grouping options | macOS (+iOS) | Section grouping, emoji headers, folder-by-type | `MacSettingsView` Format tab | 🟡 mac settings coverage |
 | Configuration protection | iOS | "Prevent Accidental Changes" lock for config edits | `SettingsTabView.configurationProtectionSection` | 🟡 within `manual-export.md` |
@@ -117,7 +118,7 @@
 |---|---|---|---|---|
 | Scheduled exports | iOS, macOS, Android | Recurring exports at chosen time; APNs push registration (Apple), notifications, missed-date recovery, boot rescheduling (Android WorkManager) | `SchedulingManager`, `ExportNotificationScheduler`, `PushRegistrationManager`; android `data/scheduler/*Worker.kt` | ✅ `scheduled-exports.md`; website `scheduling.md` |
 | Per-profile schedules | iOS, macOS, Android | Independent schedules per export profile | `ProfileScheduleSection`; android `ScheduledProfileExportWorker` | 🟡 export-profiles/scheduled docs |
-| Apple Shortcuts / App Intents | iOS | 9 intents: export range/date/last-N/yesterday, get summary, get export status, toggle schedule, App Shortcuts provider | `iOS/AppIntents/*` | ✅ `apple-shortcuts.md`; website `shortcuts.md` |
+| Apple Shortcuts / App Intents | iOS | 7 released actions: export range/date/last-N/yesterday, get summary, get export status, toggle schedule. Current development source adds Refresh Mac Health Context and Get Mac Context Refresh Status (9 total); availability must follow exact release notes. | `iOS/AppIntents/*` | ✅ `apple-shortcuts.md`; website `shortcuts.md` |
 | Explicit broadcast automation intents | Android | Tasker/adb explicit broadcast receiver triggers exports | `automation/AutomationReceiver.kt`, `docs/android-automation-intents.md` | ✅ android doc |
 | Launcher shortcuts | Android | Export / Schedule / History shortcuts | res shortcuts | 🟡 android README |
 | Deep links / exported routes | Android | Handled initial routes incl. shared-setup import | `HealthMdNavigation.kt` | 🟡 |
@@ -129,19 +130,19 @@
 | Feature | Products | Description | Evidence | Docs |
 |---|---|---|---|---|
 | `healthmd status` / `direct devices` / `unpair` / `reset-trust` | CLI | Readiness, device inventory, trust management | `healthmd-cli/src/main.rs` | ✅ README + skill |
-| `healthmd export` (raw / files / Android) | CLI | Raw JSON/NDJSON, production-generated files (iOS v1 / Android v2), provider + format flags, `--allow-partial` | main.rs, `healthmd-client` | ✅ |
+| `healthmd export` (raw / files / Android) | CLI | Raw JSON/NDJSON, production-generated files (iOS v1 / Android v2), provider + format flags, and `--allow-partial`. Current development source adds explicit `--full-corpus` public/authorized scope; it is not part of published `0.1.0-alpha.7`. | main.rs, `healthmd-client` | ✅ website `cli.md`, `cli-direct.md`, QA-gated `full-corpus-export.md` |
 | `healthmd extract` | CLI | Scoped canonical extraction projection (iOS v1) incl. JSONL | main.rs | ✅ website `cli-extract.md` |
 | `healthmd query <op>` | CLI | Typed operations through the same registry/evaluator as MCP (iOS query v3) | main.rs, `healthmd-operations` | ✅ |
 | `healthmd resume` / `cancel` | CLI | Durable job resume/cancel (7-day jobs) | main.rs, `job.rs`/`v2_job.rs` | ✅ website `cli-jobs.md` |
 | `healthmd direct pair` | CLI | iOS 6-digit / Android 20-digit pairing; QR code; LAN + Tailscale addresses | `pairing.rs` | ✅ |
 | `healthmd setup codex` | CLI | Guided Codex MCP host config + pairing | `onboarding.rs` | ✅ skill |
-| `healthmd mcp serve` / `serve-read-only` | CLI, macOS | Full 19-tool local MCP; 13-tool read-only profile, stdio | `healthmd-mcp`, `mcp-tools-v1.json` | ✅ `local-mcp.md`, `remote-mcp.md`; website `mcp.md` |
+| `healthmd mcp serve` / `serve-read-only` | CLI, macOS | Published standalone `0.1.0-alpha.7` preview has 19 tools; current development source has 21 after durable full-corpus jobs and bounded artifact reads. The read-only stdio profile remains 13 tools. | `healthmd-mcp`, `mcp-tools-v1.json` | ✅ README, `remote-mcp.md`; website `mcp.md`, `release-status.md` |
 | `healthmd mcp serve-http` | CLI | Loopback Streamable HTTP with Host/Origin allowlists + optional OAuth resource server (JWT/JWKS) | `transport/streamable_http.rs`, `auth/jwt.rs` | ✅ `remote-mcp.md` |
 | `healthmd mcp schema` | CLI | Offline fixed tool JSON-Schema catalog | main.rs | ✅ |
-| MCP tool catalog (19 tools) | CLI, macOS | status/doctor/capabilities/metrics; metric_chart (PNG/HTML), sleep_sessions, training_alignment, workouts, coverage, compare_periods, training_evidence; query, evidence_packet; pairing_start/status; export_files + job status/resume/cancel | `healthmd-operations/src/registry.rs`, assets | ✅ reference/generated/automation |
-| Evidence packets / query manifests | macOS, CLI, iOS | `healthmd.evidence_packet` v1, `healthmd.query_request/response/error` v1 paged typed queries | `Shared/Query/*`, `docs/reference/evidence-packets.md` | 🟡 reference docs only (not in features index) |
-| Encrypted query-context store | macOS | AES-256-GCM per-day encrypted local context, Keychain device key | `EncryptedHealthContextStore.swift` | ✅ page exists but missing from features index |
-| Bounded encrypted query executor | macOS | Bounded-memory paged execution over encrypted context | `EncryptedHealthContextQueryExecutor.swift` | ✅ page exists but missing from features index |
+| MCP tool catalog (21 tools) | CLI, macOS | status/doctor/capabilities/metrics; metric_chart (PNG/HTML), sleep_sessions, training_alignment, workouts, coverage, compare_periods, training_evidence; query, evidence_packet; pairing_start/status; export_files; export_raw + bounded job-bound artifact read; shared job status/resume/cancel | `healthmd-operations/src/registry.rs`, assets | ✅ reference/generated/automation |
+| Evidence packets / query manifests | macOS, CLI, iOS | `healthmd.evidence_packet` v1, `healthmd.query_request/response/error` v1 paged typed queries | `Shared/Query/*`, `docs/reference/evidence-packets.md` | ✅ `apps/apple/docs/features/evidence-packets.md` (indexed in `apps/apple/docs/features/index.md` Automation rows) |
+| Encrypted query-context store | macOS | AES-256-GCM per-day encrypted local context, Keychain device key | `EncryptedHealthContextStore.swift` | ✅ `encrypted-query-context-store.md` (indexed) |
+| Bounded encrypted query executor | macOS | Bounded-memory paged execution over encrypted context | `EncryptedHealthContextQueryExecutor.swift` | ✅ `bounded-encrypted-query-executor.md` (indexed) |
 | Bundled CLI distribution | macOS | `healthmd` + `healthmd-mcp` bundled in Mac app; Install for Terminal; Codex/Claude connect; agent skill install | `HealthMdCLI/`, `MacCLIView.swift`, `scripts/healthmd` | ✅ `cli-distribution.md` |
 | Credential helper + OS keychain | CLI | OS credential store integration, credential-helper protocol, supervision probe | `credentials.rs` | 🔧 internal |
 | Remote MCP relay profile | CLI | `RemoteReadOnly` surface profile for remote relay identity | `healthmd-operations/src/model.rs` | 🟡 remote-mcp.md |
@@ -156,6 +157,8 @@
 | Direct protocol v2 (Android) | contract | 20-digit pairing, provider-native raw + generated files, fail-closed | `direct-protocol/v2/` | ✅ |
 | Query protocol v3 (iPhone) | contract | Typed query capability: coverage, series, sleep sessions, workouts, alignment, packets; cursors; page caps | `direct-protocol/v3/` | ✅ |
 | Direct CLI pairing UI | Android | Settings → Direct CLI; 20-digit code; visible data-sync foreground service; Keystore trust; resumable 7-day transfers; private spools | `presentation/directcli/DirectCliScreen.kt`, `direct-protocol/` Kotlin | ✅ android README + desktop-destination doc |
+| Direct CLI wake window | iOS, Android, CLI | Bounded cancellable P1 wait keeps the same query/export/resume/cancel request in flight while the owner opens Health.md | `healthmd-client/src/direct.rs`, RFC-0005 | ✅ CLI README + RFC-0005 |
+| Direct CLI push wake | iOS, CLI, cloud; Android planned | Opt-in health-free APNs doorbell through `apps/wake`; Android FCM is explicit P3 and Android remains wait-only | `IPhoneDirectWakeManager.swift`, `healthmd-client/src/wake.rs`, `apps/wake/` | ✅ RFC-0005 + Worker spec |
 | CLI-triggered Mac↔iPhone export | iOS, macOS | Trigger export on connected open iPhone from Mac/CLI, file mode, strict raw profile | `MacExportJobBuilder`, `SyncPayload.swift` | ✅ `cli-mac-iphone-export.md` |
 | Corpus export session & recovery | iOS, macOS | Corpus producer, progress journal, recovery manager | `IPhoneCorpusExportRecoveryManager.swift` | 🟡 |
 
@@ -168,8 +171,8 @@
 | Watch app | watchOS | Watch dashboard from health snapshot | `HealthMdWatch/WatchDashboardView.swift` | ✅ `apps/apple/docs/features/watch-app.md` |
 | Watch widgets | watchOS | DailyActivity, Recovery, Steps, MoveEnergy, ExerciseMinutes, StandHours, Sleep, RestingHeartRate, HRV, BloodOxygen | `HealthMdWatchWidgets/WatchHealthWidgets.swift` | ✅ within `watch-app.md` |
 | Android home-screen widgets | Android | Glance: Health Summary, Activity, Heart Range, Sleep; 14-day no-backup snapshot; 7-day charts; permission-revocation pulse; no lock-screen measurement widgets | `widget/` package | ✅ `docs/features/widgets.md` |
-| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os-implementation.md` + website `guides/wear-os` (canonical EN, translations pending) |
-| Wear OS complications | Wear | 10 metric complications (activity, recovery, steps, move, exercise, sleep, RHR, avg HR, HRV, SpO2) | `wear/.../surface/HealthComplications.kt` | ✅ wear docs |
+| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os.md` + runbook `wear-os-implementation.md` + website `guides/wear-os` (authored in all 10 locales) |
+| Wear OS complications | Wear | 10 metric complications (activity, recovery, steps, move, exercise, sleep, RHR, avg HR, HRV, SpO2) | `wear/.../surface/HealthComplications.kt` | ✅ `wear-os.md` |
 | Wear data layer sync | Wear, Android | Phone-authoritative aggregate transport, diagnostics provider, invalidation | `wear/.../sync/`, `wearable-contract/` | ✅ |
 
 ## 11. Third-party integrations & providers
@@ -186,7 +189,7 @@
 
 | Feature | Products | Description | Evidence | Docs |
 |---|---|---|---|---|
-| Clinician report (in-app) | iOS, Android | Configurable clinician report → PDF → share; date presets; freeze-while-busy | `iOS/ClinicianReport/*`; android `presentation/clinicianreport/` | ❌ feature page (spec: root `docs/features/clinician-report-v1.md`) |
+| Clinician report (in-app) | iOS, Android | Configurable clinician report → PDF → share; date presets; freeze-while-busy | `iOS/ClinicianReport/*`; android `presentation/clinicianreport/` | ✅ Apple + Android feature pages; website `clinician-report.md`; root architecture spec |
 | Practice portal (synthetic) | Practice | Production-disabled clinician portal foundation: 26 fixed routes, one `POST /api/v1/operation` synthetic simulator, tenant/MFA/CSRF/audit models as test doubles, pilot protocol + EHR discovery docs | `apps/practice/src/*`, `docs/product/practice/` | ✅ practice docs (component-scoped) |
 | Practice feature policy gate | iOS | In-app policy gating clinician-portal features | `Shared/Practice/PracticeFeaturePolicy.swift` | 🔧 |
 
@@ -194,7 +197,7 @@
 
 | Feature | Products | Description | Evidence | Docs |
 |---|---|---|---|---|
-| Full Access unlock | iOS, macOS | StoreKit 2; 10 free exports; subscription + Individual/Family Lifetime; Family Sharing; restore | `PurchaseManager.swift`, `PaywallView.swift`, `HealthMd.storekit` (at `apps/apple/HealthMd.storekit`) | ✅ `full-access-unlock.md`; website `paywall.md` |
+| Full Access unlock | iOS, macOS | StoreKit 2; 10 free actions; one-time Individual/Family Lifetime + eligible Family upgrade; non-blocking post-preview and 3rd/7th reminders; Family Sharing; restore | `PurchaseManager.swift`, `PaywallView.swift`, `ExportUpgradePrompt.swift`, `HealthMd.storekit` | ✅ `full-access-unlock.md`; website `paywall.md` |
 | Lifetime unlock (Play Billing) | Android | One-time lifetime purchase; 10 free manual export actions; action-based (not file-based) accounting | `data/billing/`, `domain/billing/` | ✅ android README Pricing |
 | Paywall screen | iOS, Android | Contextual paywall (onboarding, export limit, schedule limit, settings upgrade) | `PaywallView.swift`; android `presentation/paywall/` | ✅ |
 | Pricing experiments | iOS | A/B pricing funnel (lifetime price experiment) with analytics worker | `docs/experiments/*`, `Shared/Analytics/PricingExperiment*` | 🔧 internal experiments docs |
@@ -221,7 +224,7 @@
 |---|---|---|---|---|
 | Discord / email feedback / GitHub issues | iOS, macOS | Support section + FeedbackHelper | `SettingsTabView.supportSection` | ✅ `community-feedback.md` |
 | Feature video series roadmap | iOS docs | 14-episode roadmap tied to feature pages | `docs/features/video-series.md` | ✅ |
-| Website public docs | website | 28 doc pages incl. 10 locales (de, es, fr, it, ja, ko, nl, pt-br, zh-hans + en), guides, reference, blog, visualizations, llms.txt | `apps/website/docs-src/src/content/docs/` | ✅ |
+| Website public docs | website | Localized authored user-guide set in 10 locales (de, es, fr, it, ja, ko, nl, pt-br, zh-hans + en), plus canonical-English generated reference, blog, visualizations, and llms.txt | `apps/website/docs-src/src/content/docs/` | ✅ |
 | Release-notes notelet media | iOS | Short in-app release videos/images | `iOS/Resources/ReleaseNotes/` | 🔧 |
 
 ## 16. Shared foundations
@@ -231,30 +234,30 @@
 | Shared Rust core (semantic/render) | core | Deterministic post-capture semantic ingestion + frozen render formats (apple_v8, rollups, android v4/v5) | `healthmd-core/src/{semantic,render}` | ✅ ADR-0001, milestone baselines |
 | Rust output profile engine (planned) | core | Native-authoritative → Rust serialization migration, shadow gates | `product-capabilities.json` (planned) | ✅ rollout runbooks |
 | UniFFI bindings | core | Swift + Kotlin bindings, xcframework, registry adapters | `healthmd-core-uniffi`, `scripts/generate-*-bindings.sh` | ✅ |
-| Share My Setup (portable configuration) | iOS, macOS, Android | Export/review/transactionally import bounded setup profile (no health data/credentials); apply/undo/share; registry entry `planned` pending device QA (contract pre-canonical) | `Shared/SharedSetup/`, `iOS/SharedSetup/SharedSetupCoordinator.swift`; android `sharedsetup/`; contract `shared-setup/v1` | 🟡 `apps/apple/docs/features/share-my-setup.md` (status: needs QA) |
+| Share My Setup (portable configuration) | iOS, macOS, Android | Export/review/transactionally import bounded multi-profile setup document (no health data/credentials); Add/Replace apply, one-shot Undo, blocked-destination rebind; registry entry `planned` pending device QA (contract pre-canonical). v2 is the one and only profile contract since the 2026-09-05 sunset (ADR-0006); v1 input fails closed as unsupported | `Shared/SharedSetup/`, `iOS/SharedSetup/SharedSetupCoordinator.swift`; android `sharedsetup/`; contract `shared-setup/v2` (v1 family removed) | ✅ Apple + Android feature pages; website `share-my-setup.md` clearly QA-gated |
 | Semantic-input / render-input contracts | core | Internal post-capture envelope + rendering/artifact-plan contracts | `packages/contracts/{semantic-input,render-input}` | ✅ contract docs |
 | Unified v9 proposal | contract | Proposed unified Apple/Android daily contract with platform sections | `proposals/unified-health-data-v9` | ✅ RFC-0004 |
 
 ## 17. Release & CI surfaces (meta)
 
-Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submit-version`, `apple-review-status`, `apple-review-state`, `apple-cancel-review-submission`, `apple-announce`), Android (`android-ci`, `android-release`, promote-production ±recover, announce, wear evidence/screenshots), CLI (`cli-ci`, `cli-release`, `cli-publish-crates`, `cli-sbom`), core (`core-rust-ci`), practice (`practice-ci`), website (`website-ci`). Distribution: App Store, Google Play (incl. Wear same listing), cargo-dist + crates.io + homebrew tap, commit-based website deploys. See root `AGENTS.md` release contract.
+Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submit-version`, `apple-review-status`, `apple-review-state`, `apple-cancel-review-submission`, `apple-announce`), Android (`android-ci`, `android-release`, promote-production ±recover, announce, wear evidence/screenshots), CLI (`cli-ci`, `cli-release`, `cli-publish-crates`, `cli-sbom`), core (`core-rust-ci`), practice (`practice-ci`), wake (`wake-ci`), website (`website-ci`). Distribution: App Store, Google Play (incl. Wear same listing), cargo-dist + crates.io + homebrew tap, commit-based website and wake-service deploys. See root `AGENTS.md` release contract.
 
 ---
 
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-- None remaining. (Website follow-up: translate `guides/raw-snapshots` and `guides/wear-os` into the 9 non-English locales and promote them from canonical-English fallback to authored guides. Android follow-up: editorial pass — screenshots, on-device verification, and public-site selection for the 26 new `apps/android/docs/features/` pages drafted 2026-08-22.)
+- None remaining. (Website follow-up closed 2026-09-05: `guides/raw-snapshots`, `guides/wear-os`, `guides/connect-agent`, and `guides/platform-features` are translated into the 9 non-English locales and promoted from canonical-English fallback to authored guides — every guide is authored in all 10 locales. Android follow-up: editorial pass — screenshots, on-device verification, and public-site selection for the 26 new `apps/android/docs/features/` pages drafted 2026-08-22.)
 
 (Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed; six minor Apple surfaces folded into existing pages — configuration protection → `manual-export.md`, zip export → `multi-format-export.md`, exported Markdown viewer → `export-preview.md`, permission guidance → `healthkit-permissions.md`, progress banners → `scheduled-exports.md`, Mac menu-bar popup → `mac-sync.md`; Wear OS and Raw API Snapshot public website guides published as canonical-English fallback pages under `guides/` with sidebar entries in all 10 locale labels, verified by i18n:check, website tests, and a full site build.)
 
 ### C. Docs-only / weakly-mapped surfaces
 - None fully orphaned. `bounded-encrypted-query-executor.md` and `encrypted-query-context-store.md` have thin user-facing UI (Mac settings maintenance buttons) and read as contract docs — consider moving to `docs/reference/` or reframing.
-- Query manifests / evidence packets have reference docs but no feature-page framing.
+- Query manifests / evidence packets: feature-page framing closed 2026-09-05 — dedicated page `apps/apple/docs/features/evidence-packets.md` drafted and indexed (§8 row flipped ✅).
 
 ### D. Cross-platform parity flags (from `product-capabilities.json` + ledgers)
 - Range/rollup summaries: Apple available, Android planned (v9).
-- Share My Setup: planned on both (contract + code staged).
+- Share My Setup: planned on both (contract + code staged; v2-only since ADR-0006 — v1 removed, writers emit v2 exclusively, physical-device matrix outstanding).
 - Apple-only: lossless HealthKit archive, medication dose events, State of Mind, wrist temperature, hearing/symptoms, typed WHOOP section.
 - Android-only: activity intensity, planned workouts, menstruation periods, PHR/FHIR, nutrition meals, contextual source fields, skin temperature, cloud raw snapshots (Fitbit/Oura/WHOOP/Withings), raw changes backend.
 - Never equivalent (explicitly distinct): HRV SDNN vs RMSSD; wrist vs skin temperature; Apple menstrual flow vs HC period intervals.

@@ -1,13 +1,13 @@
 package com.healthmd.export
 
 import android.app.Activity
-import com.android.billingclient.api.ProductDetails
-import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.review.ReviewPromptResult
+import com.healthmd.domain.review.ReviewPrompter
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -137,39 +137,6 @@ class FakeSettingsRepository(
 
     override suspend fun getExportSettings(): ExportSettings = exportSettingsState.value
 
-    override suspend fun applySharedSetupTransaction(
-        expectedCurrent: ExportSettings,
-        candidate: ExportSettings,
-        pendingEndpoint: String?,
-        preservedAppleExtension: String?,
-    ): Boolean {
-        updateExportSettings(candidate)
-        return true
-    }
-
-    override suspend fun getSharedSetupUndo(): ExportSettings? = null
-
-    override suspend fun undoSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings? = null
-
-    override suspend fun rollbackSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings? = null
-
-    override suspend fun getPendingSharedSetupEndpoint(): String? = null
-
-    override suspend fun confirmSharedSetupEndpoint(
-        expectedCurrent: ExportSettings,
-        expectedPendingEndpoint: String,
-        candidate: ExportSettings,
-    ): Boolean = false
-
-    override suspend fun rollbackSharedSetupEndpointConfirmation(
-        expectedCurrent: ExportSettings,
-        restored: ExportSettings,
-        pendingEndpoint: String,
-    ): Boolean = false
-
-    override suspend fun getPreservedSharedSetupAppleExtension(): String? = null
-
-
     override val exportFolderUri: Flow<String?> = exportFolderUriState
 
     override suspend fun saveExportFolderUri(uri: String) {
@@ -292,41 +259,28 @@ class FakeExportHistoryRepository : ExportHistoryRepository {
     }
 }
 
-class FakeBillingRepository(initialUnlocked: Boolean = false) : BillingRepository {
+class FakeReviewPrompter(
+    override val isAvailable: Boolean = true,
+) : ReviewPrompter {
+    override suspend fun prompt(activity: Activity): ReviewPromptResult = ReviewPromptResult.Completed
+}
+
+class FakeBillingRepository(initialUnlocked: Boolean = false) : EntitlementRepository {
     override val isUnlocked = MutableStateFlow(initialUnlocked)
-    override val isPurchasing = MutableStateFlow(false)
-    override val isRestoring = MutableStateFlow(false)
-    override val purchaseError = MutableStateFlow<BillingError?>(null)
-    override val productDetails = MutableStateFlow<ProductDetails?>(null)
 
     var startConnectionCalls: Int = 0
         private set
 
-    override fun startConnection() {
+    override fun refresh() {
         startConnectionCalls++
-    }
-
-    override suspend fun queryProduct() = Unit
-
-    override suspend fun launchPurchase(activity: Activity): Boolean = true
-
-    override suspend fun refreshPurchaseStatus() = Unit
-
-    override suspend fun restorePurchase(): Boolean = isUnlocked.value
-
-    override suspend fun acknowledgePurchase(purchaseToken: String) = Unit
-
-    override fun clearError() {
-        purchaseError.value = null
     }
 
     override fun debugSetUnlocked(unlocked: Boolean) {
         isUnlocked.value = unlocked
     }
 
-    override fun debugResetPurchaseState() {
+    override fun debugReset() {
         isUnlocked.value = false
-        purchaseError.value = null
     }
 }
 

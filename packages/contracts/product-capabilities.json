@@ -217,6 +217,29 @@
       ]
     },
     {
+      "id": "export.selected-time-series-detail",
+      "name": "Selected detailed time-series",
+      "classification": "shared",
+      "summary": "Export selected timestamped compatibility samples independently from platform-native source archive or raw snapshot products.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/time-series-data.md",
+        "apps/android/docs/features/csv-export.md"
+      ]
+    },
+    {
       "id": "export.completed-workouts",
       "name": "Completed workouts",
       "classification": "shared",
@@ -368,6 +391,52 @@
         "apps/apple/HealthMdUITests/ExportProfilesJourneyUITests.swift",
         "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportProfilesScreen.kt",
         "apps/android/app/src/test/java/com/healthmd/presentation/export/ExportProfilesViewModelTest.kt"
+      ]
+    },
+    {
+      "id": "export.scheduled-today-refresh",
+      "name": "Scheduled exports refresh today's file",
+      "classification": "shared",
+      "summary": "A scheduled export keeps the current day's partial file fresh alongside completed-day trailing windows, so a daytime run captures last night's sleep in addition to yesterday. The user outcome is unified; the native mechanism differs: Apple runs best-effort same-day refresh occurrences (3, 6, or 12 hours) beside the completed-day schedule, Android profile schedules mirror those refresh slots exactly, and the Android single schedule offers a 'past complete days + today' window that pairs with its sub-day cadence. Shared Setup v2 carries Today Refresh only in the Apple typed extension today; the neutral schedule section remains review-pending.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Utilities/ScheduleDateMath.swift",
+        "apps/apple/HealthMd/Shared/Models/ExportSchedule.swift",
+        "apps/apple/HealthMd/iOS/Views/ScheduleSettingsView.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileEntry.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledExportPendingRequests.kt",
+        "apps/android/app/src/test/java/com/healthmd/data/scheduler/ScheduledProfileOccurrenceMathTest.kt",
+        "apps/android/docs/features/scheduled-exports.md"
+      ]
+    },
+    {
+      "id": "automation.cancel-active-export",
+      "name": "Cancel an in-progress automated export",
+      "classification": "shared",
+      "summary": "Stop the current automated export attempt without disabling its schedule. Completed dates remain completed, and unresolved dates remain eligible for a later retry.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/Components/NotificationExportActivityBanner.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledExportCancellation.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileExportWorker.kt"
       ]
     },
     {
@@ -589,10 +658,94 @@
       ]
     },
     {
+      "id": "direct-cli.shared-qr-pairing",
+      "name": "Direct CLI QR pairing",
+      "classification": "shared",
+      "summary": "Pair either mobile platform to the portable CLI from one in-app QR and shared 20-digit authentication profile, with manual entry fallback.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/direct-protocol/pairing-v3/protocol.md",
+        "apps/apple/HealthMd/iOS/Views/DirectCLIPairingScannerView.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingScanner.kt"
+      ]
+    },
+    {
+      "id": "direct.full_public_authorized_corpus",
+      "name": "Direct full public and authorized health corpus",
+      "classification": "shared",
+      "summary": "Capture every public record type supported by the selected mobile integration and authorized by the user as a durable platform-native CLI or local-MCP raw artifact, with truthful completeness evidence and bounded job-bound MCP reads.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "packages/contracts/health-corpus/v1/contract.md",
+        "apps/cli/README.md",
+        "apps/apple/docs/features/cli-direct-iphone.md",
+        "apps/android/docs/features/direct-cli.md",
+        "apps/android/docs/export-contract/raw-snapshot-v1.md"
+      ]
+    },
+    {
+      "id": "direct.cli_agent_wake",
+      "name": "Direct CLI agent wake window",
+      "classification": "shared",
+      "summary": "Keep an unavailable direct query, export, resume, or cancellation request waiting for a bounded, cancellable window so opening either mobile app unblocks the same in-flight request.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "docs/architecture/rfc-0005-direct-cli-agent-wake.md",
+        "apps/cli/README.md"
+      ]
+    },
+    {
+      "id": "direct.cli_agent_push_wake",
+      "name": "Direct CLI agent push wake",
+      "classification": "planned",
+      "summary": "Send one authenticated, health-free, rate-limited notification for an enrolled paired device while the shared wake window holds; the tap restores user presence but never authorizes background health access.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Implement RFC-0005 P3 with FCM for Play builds, explicit P1-only degradation for F-Droid and force-stopped apps, and matching enrollment, revocation, notification, and physical-device gates."
+        }
+      },
+      "evidence": [
+        "docs/architecture/rfc-0005-direct-cli-agent-wake.md",
+        "docs/architecture/rfc-0005-worker-spec.md",
+        "apps/wake/src/wake.ts",
+        "apps/apple/HealthMd/iOS/IPhoneDirectWakeManager.swift",
+        "apps/cli/crates/healthmd-client/src/wake.rs"
+      ]
+    },
+    {
       "id": "setup.share-portable-configuration",
       "name": "Share My Setup",
       "classification": "planned",
-      "summary": "Export, review, and transactionally import a bounded portable setup profile without health data, credentials, device grants, purchases, or runtime state; physical-device QA remains before availability.",
+      "summary": "Export, review, and transactionally import a bounded portable setup profile without health data, credentials, device grants, purchases, or runtime state; v2 transaction semantics are wired host-side behind explicit caller-supplied seams and stay deferred with default writers on the one and only v2 contract while physical-device interoperability and accessibility QA remain before availability.",
       "profiles": [],
       "platforms": {
         "apple": {
@@ -605,11 +758,20 @@
         }
       },
       "evidence": [
-        "packages/contracts/shared-setup/v1/contract.md",
+        "packages/contracts/shared-setup/v2/contract.md",
+        "packages/contracts/shared-setup/v2/shared-setup.schema.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
+        "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
         "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
-        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ProfileTransaction.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ExecutionGate.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2TransactionAdapter.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV2TransactionScenariosTests.swift",
         "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupScreen.kt",
-        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt"
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProfileTransaction.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2ProductionTransaction.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupV2TransactionScenariosTest.kt",
+        "docs/qa/shared-setup-v2.md"
       ]
     },
     {

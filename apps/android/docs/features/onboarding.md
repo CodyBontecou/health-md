@@ -9,7 +9,7 @@
 
 ## What it does
 
-First-run setup walks you through everything Health.md needs in five swipeable pages: a welcome, Health Connect access, an export folder, the optional unlock, and a ready screen. Granting Health Connect permission or picking a folder auto-advances after a short pause, and the Health and Folder steps can be skipped — you can complete them later from the Export tab.
+First-run setup walks through a welcome, Health Connect access, an export folder, distribution-specific access information, and a ready screen. Granting Health Connect permission or picking a folder auto-advances after a short pause, and the Health and Folder steps can be skipped—you can complete them later from the Export tab. The Play build offers the optional lifetime purchase; the F-Droid build explains that full access is included and has no purchase controls.
 
 ## Who it is for
 
@@ -19,8 +19,8 @@ First-run setup walks you through everything Health.md needs in five swipeable p
 
 ## Where to find it
 
-1. Install Health.md from Google Play and open it for the first time.
-2. Swipe (or use Back/Continue) through the five pages: **Welcome → Health → Storage → Unlock → Ready**.
+1. Install Health.md from Google Play or F-Droid and open it for the first time.
+2. Swipe (or use Back/Continue) through the five pages: **Welcome → Health → Storage → Unlock → Ready** on Play, or **Welcome → Health → Storage → Included → Ready** on F-Droid.
 3. On the Ready page, tap to finish and land on the Export tab.
 
 ## Prerequisites
@@ -34,7 +34,7 @@ First-run setup walks you through everything Health.md needs in five swipeable p
 1. **Welcome** — review what Health.md does. If you already have a shared setup file, tap **Use a Shared Setup** to review and apply a `.healthmdconfig` file instead of configuring by hand (the shared-setup surface also lives under Settings after onboarding).
 2. **Health** — tap to grant Health Connect read access. The page shows a green check when permission is granted and continues automatically.
 3. **Storage** — tap to open the Android folder picker and choose where exports are written. The selected folder name is shown and the page continues automatically.
-4. **Unlock** — optionally buy the lifetime unlock or restore a purchase. **Continue free** keeps the 10 free export actions.
+4. **Access** — on Play, optionally buy the lifetime unlock or restore a purchase; **Continue free** keeps the 10 free export actions. On F-Droid, confirm the included full-access explanation and continue without a paywall.
 5. **Ready** — finish setup.
 
 ## Example output
@@ -45,7 +45,7 @@ A completed onboarding ends on the Export tab with your folder shown under **Exp
 
 - Skipped steps are not lost: re-grant permissions from the Export tab's permission notice, and pick a folder any time from **Export Folder → Select**.
 - Onboarding respects your system layout direction and swipes right-to-left in RTL locales.
-- The unlock page always shows, even for existing purchasers, so restore is reachable on a new device.
+- The Play unlock page always shows, even for existing purchasers, so restore is reachable on a new device. F-Droid never shows purchase or restore controls.
 
 ## Troubleshooting
 
@@ -69,4 +69,4 @@ A completed onboarding ends on the Export tab with your folder shown under **Exp
 
 ## Implementation notes
 
-`OnboardingScreen.kt` is a five-page `HorizontalPager` (Welcome, HealthAccess, StorageSetup, embedded `PaywallScreen`, Ready). Permission requests use `HealthConnectManager.getPermissionContract()` with a `permissionPlan()` built from `HealthConnectPermissionPolicy`; unavailable providers route to install (`HealthConnectIntentLauncher.openInstallOrUpdate`) or Health Connect settings. Folder selection uses `ActivityResultContracts.OpenDocumentTree()` and persists a persistable URI permission (see ./health-connect-permissions.md and ./folder-destination.md). Auto-advance is keyed to `pagerState.settledPage` and gated by `allowAutomaticAdvance` (used by tests). Step views, skips, continue-free, and purchase taps emit first-party onboarding analytics events (`OnboardingAnalyticsClient`) that never include health values. Deliberate difference from Apple: Android onboarding pairs permission grant and folder choice with the same five-page shape but launches the system Health Connect permission sheet rather than an in-app type picker.
+`OnboardingScreen.kt` is a five-page `HorizontalPager`. `onboardingPages(DistributionPolicy)` selects either `PLAY_ACCESS` (embedded `PaywallScreen`) or `INCLUDED_ACCESS` without changing the shared surrounding flow. Permission requests use `HealthConnectManager.getPermissionContract()` with a `permissionPlan()` built from `HealthConnectPermissionPolicy`; unavailable providers route to install (`HealthConnectIntentLauncher.openInstallOrUpdate`) or Health Connect settings. Folder selection uses `ActivityResultContracts.OpenDocumentTree()` and persists a persistable URI permission (see ./health-connect-permissions.md and ./folder-destination.md). Auto-advance is keyed to `pagerState.settledPage` and gated by `allowAutomaticAdvance` (used by tests). Play step events use the bounded first-party `OnboardingEventSink`; F-Droid binds a no-op sink and creates no analytics identity or state. Deliberate difference from Apple: Android launches the system Health Connect permission sheet rather than an in-app type picker.

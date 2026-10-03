@@ -3,7 +3,9 @@ package com.healthmd.data.scheduler
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ScheduleCadenceUnit
+import com.healthmd.domain.model.ScheduleDateWindow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -108,6 +110,77 @@ class ScheduledProfileSchedulerRulesTest {
 
         requireNotNull(entry)
         assertEquals(ScheduledProfileCadenceUnit.WEEK, entry.cadenceUnit)
+    }
+
+    @Test
+    fun `legacy migration keeps past-complete-days window without today refresh`() {
+        val entry = legacyMigrationEntry(
+            settings = ExportSettings(
+                scheduleEnabled = true,
+                scheduleCadenceUnit = ScheduleCadenceUnit.DAYS,
+            ),
+            existingEntries = emptyList(),
+            defaultProfileId = "default-1",
+            zone = ZoneId.of("UTC"),
+            today = LocalDate.of(2026, 8, 19),
+        )
+
+        requireNotNull(entry)
+        assertFalse(entry.todayRefreshEnabled)
+        assertEquals(ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS, entry.todayRefreshIntervalHours)
+    }
+
+    @Test
+    fun `legacy migration maps today-bearing windows onto today refresh`() {
+        val zone = ZoneId.of("UTC")
+        val today = LocalDate.of(2026, 8, 19)
+
+        // TODAY window + hourly cadence: refresh on, interval clamped to the nearest option.
+        val todayWindow = legacyMigrationEntry(
+            settings = ExportSettings(
+                scheduleEnabled = true,
+                scheduleCadenceUnit = ScheduleCadenceUnit.HOURS,
+                scheduleCadenceValue = 4,
+                scheduleDateWindow = ScheduleDateWindow.TODAY,
+            ),
+            existingEntries = emptyList(),
+            defaultProfileId = "default-1",
+            zone = zone,
+            today = today,
+        )
+        requireNotNull(todayWindow)
+        assertTrue(todayWindow.todayRefreshEnabled)
+        assertEquals(3, todayWindow.todayRefreshIntervalHours)
+
+        // Through-today window maps the same way, whatever the cadence.
+        val throughToday = legacyMigrationEntry(
+            settings = ExportSettings(
+                scheduleEnabled = true,
+                scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY,
+            ),
+            existingEntries = emptyList(),
+            defaultProfileId = "default-1",
+            zone = zone,
+            today = today,
+        )
+        requireNotNull(throughToday)
+        assertTrue(throughToday.todayRefreshEnabled)
+
+        // A 12-hour legacy cadence maps to the 12-hour interval exactly.
+        val twelveHourly = legacyMigrationEntry(
+            settings = ExportSettings(
+                scheduleEnabled = true,
+                scheduleCadenceUnit = ScheduleCadenceUnit.HOURS,
+                scheduleCadenceValue = 12,
+                scheduleDateWindow = ScheduleDateWindow.TODAY,
+            ),
+            existingEntries = emptyList(),
+            defaultProfileId = "default-1",
+            zone = zone,
+            today = today,
+        )
+        requireNotNull(twelveHourly)
+        assertEquals(12, twelveHourly.todayRefreshIntervalHours)
     }
 
     @Test

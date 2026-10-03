@@ -683,7 +683,7 @@ enum IPhoneExportRequestSettingsResolver {
         }
 
         if request.rawProfile == .canonicalSourceRecordsV1 {
-            settings.includeGranularData = true
+            settings.detailPolicy = .lossless
             // Strict raw is a lossless transport mode, not a summary-only file job.
             // Keep this request-scoped so the saved iPhone setting is untouched.
             settings.summaryOnlyExport = false
@@ -699,7 +699,9 @@ enum IPhoneExportRequestSettingsResolver {
                     .filter { metricIDs.contains($0.id) }
                     .map { $0.category.rawValue }
             )
-            settings.includeGranularData = selection.detailLevel == .lossless
+            settings.detailPolicy = selection.detailLevel == .lossless
+                ? .lossless
+                : .summary
             settings.summaryOnlyExport = false
             settings.generateWeeklyRollups = false
             settings.generateMonthlyRollups = false

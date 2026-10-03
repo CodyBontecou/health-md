@@ -277,6 +277,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let connectedTransferBinaryFrameVersions: [Int]
     /// Hard bound for chunks sent before waiting on durable acknowledgements.
     let connectedTransferMaximumInFlightChunks: Int
+    /// Whether this peer preserves the two-dimensional compatibility-series /
+    /// canonical-archive policy instead of interpreting the legacy combined Boolean.
+    let supportsSplitExportDetailPolicy: Bool
     /// Canonical `healthmd.healthkit_records` archive schema versions this peer can produce/consume.
     let canonicalArchiveSchemaVersions: [Int]
     /// Versioned strict CLI raw-result envelope schema versions this peer can produce/consume.
@@ -313,6 +316,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsDurableConnectedExportRecovery
         case connectedTransferBinaryFrameVersions
         case connectedTransferMaximumInFlightChunks
+        case supportsSplitExportDetailPolicy
         case canonicalArchiveSchemaVersions
         case canonicalRawResultSchemaVersions
     }
@@ -349,7 +353,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
         installationID: UUID? = nil,
         supportsDurableConnectedExportRecovery: Bool = false,
         connectedTransferBinaryFrameVersions: [Int] = [],
-        connectedTransferMaximumInFlightChunks: Int = 1
+        connectedTransferMaximumInFlightChunks: Int = 1,
+        supportsSplitExportDetailPolicy: Bool = false
     ) {
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
@@ -386,6 +391,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             max(connectedTransferMaximumInFlightChunks, 1),
             8
         )
+        self.supportsSplitExportDetailPolicy = supportsSplitExportDetailPolicy
         self.canonicalArchiveSchemaVersions = Array(Set(canonicalArchiveSchemaVersions)).sorted()
         self.canonicalRawResultSchemaVersions = Array(Set(canonicalRawResultSchemaVersions)).sorted()
     }
@@ -464,6 +470,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
             Int.self,
             forKey: .connectedTransferMaximumInFlightChunks
         ) ?? 1, 1), 8)
+        supportsSplitExportDetailPolicy = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsSplitExportDetailPolicy
+        ) ?? false
         canonicalArchiveSchemaVersions = try container.decodeIfPresent(
             [Int].self,
             forKey: .canonicalArchiveSchemaVersions
@@ -563,16 +573,20 @@ struct SyncPeerCapabilities: Codable, Equatable {
         rangeV9SummaryEnabled: Bool = false,
         summaryOnlyExportEnabled: Bool = false,
         effectiveGranularDataEnabled: Bool = false,
+        detailPolicy exactDetailPolicy: AppleExportDetailPolicy? = nil,
         dailyNotesOnlyExportEnabled: Bool = false,
         dataDictionarySuppressionRequested: Bool = false
     ) -> Bool {
-        isCompatibleWithMacExportJobs
+        let detailPolicy = exactDetailPolicy
+            ?? (effectiveGranularDataEnabled ? .lossless : .summary)
+        return isCompatibleWithMacExportJobs
             && (!rollupSummariesEnabled || supportsRollupSummaries)
             && (!rangeV9SummaryEnabled || supportsRangeV9Summaries)
             && (!summaryOnlyExportEnabled || supportsSummaryOnlyExports)
             && (!dailyNotesOnlyExportEnabled || supportsDailyNoteOnlyExports)
             && (!dataDictionarySuppressionRequested || supportsDataDictionaryExportPreference)
-            && (!effectiveGranularDataEnabled || (
+            && (detailPolicy.isLegacyRepresentable || supportsSplitExportDetailPolicy)
+            && (!detailPolicy.includesCanonicalArchive || (
                 supportsSizeBoundedConnectedTransfers
                     && canonicalArchiveSchemaVersions.contains(
                         HealthKitRecordArchive.currentRecordSchemaVersion
@@ -616,7 +630,8 @@ struct SyncPeerCapabilities: Codable, Equatable {
             installationID: installationID,
             supportsDurableConnectedExportRecovery: true,
             connectedTransferBinaryFrameVersions: [ConnectedTransferBinaryFrame.currentVersion],
-            connectedTransferMaximumInFlightChunks: 4
+            connectedTransferMaximumInFlightChunks: 4,
+            supportsSplitExportDetailPolicy: true
         )
     }
 }

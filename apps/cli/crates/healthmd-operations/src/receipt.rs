@@ -51,6 +51,9 @@ pub fn backend_error_value(error: &BackendError) -> Value {
     if let Some(job_id) = error.job_id {
         value["job_id"] = json!(job_id);
     }
+    if let Some(seconds) = error.wake_window_seconds {
+        value["wake_window_seconds"] = Value::from(seconds);
+    }
     value
 }
 

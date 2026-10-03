@@ -19,13 +19,29 @@ description: "A aba Exportar é a tela principal. Ela mostra se o HealthKit e se
 ## Prévia ou Exportar
 <div class="options"><div class="option"><strong>Prévia</strong><p>Mostra os arquivos e o conteúdo que serão gerados antes de qualquer gravação.</p></div><div class="option"><strong>Exportar</strong><p>Executa a exportação, mostra o progresso e registra o resultado no histórico.</p></div></div>
 
+## Escolher o nível de detalhes dos dados
+
+<div class="options">
+<div class="option"><strong>Resumo</strong><p>Totais diários e consolidações compactos para leitura, notas e painéis.</p></div>
+<div class="option"><strong>Série temporal detalhada</strong><p>Amostras e intervalos selecionados com horário. Esse nível está disponível na Apple e no Android quando a métrica oferece o detalhe adequado.</p></div>
+<div class="option"><strong>Registros de saúde sem perdas</strong><p>O arquivo canônico dos registros de origem do HealthKit. Esse nível é exclusivo da Apple; o Android não converte registros do Health Connect em um arquivo do HealthKit.</p></div>
+</div>
+
 ## O que "exportar" realmente faz
-<ol><li>Para cada dia, captura as projeções de resumo selecionadas e, quando Registros de Saúde sem Perdas está ativado, os registros canônicos de origem e diagnósticos de consulta.</li><li>Aplica o formato escolhido (Markdown, Bases, JSON ou CSV) e o modelo.</li><li>Grava um arquivo por dia em <code>{vault}/{subfolder}/</code>, transfere arquivos pelo fluxo do Mac conectado ou envia por POST um envelope JSON versionado ao endpoint.</li><li>Se <em>Rastreamento individual</em> estiver ativo, deriva arquivos Markdown por registro do arquivo canônico para destinos baseados em arquivos.</li><li>Se <em>Injeção em notas diárias</em> estiver ativa, mescla campos de resumo nas notas.</li></ol>
+<ol><li>Para cada dia, captura os resumos selecionados, acrescenta amostras compatíveis para Série temporal detalhada e, em Registros de saúde sem perdas, acrescenta registros canônicos de origem e diagnósticos de consulta.</li><li>Aplica o formato escolhido (Markdown, Bases, JSON ou CSV) e o modelo.</li><li>Grava um arquivo por dia em <code>{vault}/{subfolder}/</code>, transfere arquivos pelo fluxo do Mac conectado ou envia por POST um envelope JSON versionado ao endpoint.</li><li>Se <em>Rastreamento individual</em> estiver ativo, deriva arquivos Markdown por registro do arquivo canônico para destinos baseados em arquivos.</li><li>Se <em>Injeção em notas diárias</em> estiver ativa, mescla campos de resumo nas notas.</li></ol>
 <p>JSON e CSV podem preservar registros canônicos. Markdown e Bases continuam legíveis e exibem diagnósticos compactos, sem incorporar o arquivo. Consulte a <a href="/pt-br/docs/reference/">referência completa de exportação</a> para schemas e regras de omissão.</p>
+
+## Parar, cancelar e tentar novamente
+
+Parar ou cancelar encerra somente a tentativa atual. Arquivos e datas concluídos permanecem concluídos, enquanto datas pendentes podem ser tentadas novamente. Cancelar uma tentativa agendada não desativa seu agendamento recorrente.
+
+## Perfis e histórico confiável
+
+Um perfil salvo congela as configurações e o destino da execução. As linhas do histórico de execuções agendadas e automatizadas associadas a perfis mantêm o perfil usado; o histórico também preserva um rótulo privado do destino real. Uma linha de exportação manual pode omitir o nome do perfil. Alterações posteriores de nome ou destino não reescrevem o histórico existente. Referências ausentes falham de forma segura. Consulte [Perfis de exportação](/pt-br/docs/export-profiles/).
 
 ## Barra de abas
 <p>As quatro abas — Exportar, Agendar, Sincronizar e Ajustes — abrangem todo o app. O restante fica um ou dois níveis abaixo de Ajustes.</p>
-<div class="callout"><strong>Comportamento do desbloqueio.</strong><p style="margin-top:6px;">Full Access libera exportações ilimitadas, exportações agendadas, destinos no Mac e Atalhos. <a href="/pt-br/docs/paywall/">Veja a página do paywall</a>.</p></div>
+<div class="callout"><strong>Comportamento do desbloqueio.</strong><p style="margin-top:6px;">Nas plataformas Apple, a cota gratuita cobre 10 ações de exportação manuais ou agendadas. Full Access remove esse limite e libera fluxos com destino no Mac e Atalhos. O Android oferece 10 ações manuais gratuitas e exige a compra vitalícia para agendamento. <a href="/pt-br/docs/paywall/">Veja a página do paywall</a> para detalhes da compra Apple.</p></div>
 
 ## Relacionados
-<div class="related"><a href="/pt-br/docs/scheduling/"><span>Uso diário</span>Agendamento — automatize para não precisar tocar em Exportar.</a><a href="/pt-br/docs/api-endpoint/"><span>Integrar</span>Endpoint da API — envie JSON selecionado ao seu serviço.</a><a href="/pt-br/docs/format/"><span>Personalizar</span>Formato — altere a aparência dos arquivos.</a><a href="/pt-br/docs/shortcuts/"><span>Avançado</span>Atalhos — acione exportações com Siri, automações ou outros apps.</a><a href="/pt-br/docs/reference/"><span>Referência</span>Referência de exportação — schemas, registros e exemplos.</a></div>
+<div class="related"><a href="/pt-br/docs/export-profiles/"><span>Perfis</span>Salve destinos, ajustes, agendamentos e IDs de automação independentes.</a><a href="/pt-br/docs/scheduling/"><span>Uso diário</span>Agendamento — automatize para não precisar tocar em Exportar.</a><a href="/pt-br/docs/api-endpoint/"><span>Integrar</span>Endpoint da API — envie JSON selecionado ao seu serviço.</a><a href="/pt-br/docs/format/"><span>Personalizar</span>Formato — altere a aparência dos arquivos.</a><a href="/pt-br/docs/shortcuts/"><span>Avançado</span>Atalhos — acione exportações com Siri, automações ou outros apps.</a><a href="/pt-br/docs/reference/"><span>Referência</span>Referência de exportação — schemas, registros e exemplos.</a></div>

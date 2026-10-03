@@ -7,7 +7,12 @@ import pathlib
 import re
 import sys
 
-STABLE_SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+PRERELEASE_IDENTIFIER = r"(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+SEMVER = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    rf"(?:-({PRERELEASE_IDENTIFIER}(?:\.{PRERELEASE_IDENTIFIER})*))?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
+)
 FORMULA_VERSION = re.compile(r'^\s*version\s+"([^"]+)"\s*$', re.MULTILINE)
 
 
@@ -15,11 +20,21 @@ def fail(message: str) -> None:
     raise SystemExit(f"Homebrew formula freshness error: {message}")
 
 
-def parse_version(value: str, label: str) -> tuple[int, int, int]:
-    match = STABLE_SEMVER.fullmatch(value)
+def parse_version(
+    value: str, label: str
+) -> tuple[tuple[int, ...], bool, tuple[tuple[int, int | str], ...]]:
+    match = SEMVER.fullmatch(value)
     if match is None:
-        fail(f"{label} is not a stable SemVer: {value!r}")
-    return tuple(int(component) for component in match.groups())
+        fail(f"{label} is not a valid SemVer: {value!r}")
+    core = tuple(int(component) for component in match.groups()[:3])
+    prerelease = match.group(4)
+    identifiers = tuple(
+        (0, int(part)) if part.isdigit() else (1, part)
+        for part in prerelease.split(".")
+    ) if prerelease is not None else ()
+    # Stable beats previews; numeric identifiers sort numerically and before text.
+    # Build metadata never changes precedence, so same-precedence rewrites stay forbidden.
+    return core, prerelease is None, identifiers
 
 
 def formula_version(path: pathlib.Path, label: str) -> str:
@@ -45,7 +60,7 @@ def main() -> int:
     embedded_candidate = parse_version(
         embedded_candidate_text, "candidate formula version"
     )
-    if embedded_candidate != candidate:
+    if embedded_candidate != candidate or embedded_candidate_text != candidate_text:
         fail(
             "candidate formula version differs from the release plan: "
             f"{embedded_candidate_text!r} != {candidate_text!r}"

@@ -53,7 +53,7 @@ ECG, audiogram, heartbeat series, scored assessments, State of Mind, quantities,
 
 With Lossless Health Records on, JSON/CSV includes a query manifest showing exact type, operation, interval, status, count, and safe error detail. One failed child query retains successful siblings and marks the archive `partial`.
 
-With the setting off, output is summary-only and explicitly says `raw_capture_status: not_requested`.
+When canonical archive capture is off, output says `raw_capture_status: not_requested`. Detailed Time-Series may still retain selected compatibility samples; that status describes only the archive.
 
 ## Tips
 

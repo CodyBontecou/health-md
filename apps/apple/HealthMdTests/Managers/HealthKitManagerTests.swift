@@ -1596,6 +1596,45 @@ final class HealthKitManagerGranularDataTests: XCTestCase {
         XCTAssertEqual(data.heart.averageHeartRate!, 72, accuracy: 0.1)
         XCTAssertEqual(data.heart.hrv!, 42, accuracy: 0.1)
     }
+
+    @MainActor
+    func test_fetchHealthData_detailedTimeSeriesDoesNotCaptureCanonicalArchive() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullHeart(store)
+        HealthKitFixtures.populateGranularSamples(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            detailPolicy: .detailedTimeSeries
+        )
+
+        XCTAssertFalse(data.heart.heartRateSamples.isEmpty)
+        XCTAssertFalse(data.heart.hrvSamples.isEmpty)
+        XCTAssertNil(data.healthKitRecordArchive)
+        XCTAssertEqual(data.healthKitRecordCaptureStatus, .notRequested)
+        XCTAssertTrue(store.queriedQuantityRecordIdentifiers.isEmpty)
+        XCTAssertTrue(store.queriedCategoryRecordIdentifiers.isEmpty)
+    }
+
+    @MainActor
+    func test_fetchHealthData_archiveOnlySkipsCompatibilitySampleQueries() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateFullHeart(store)
+        HealthKitFixtures.populateGranularSamples(store)
+        let sut = makeSUT(store: store)
+
+        let data = try await sut.fetchHealthData(
+            for: HealthKitFixtures.referenceDate,
+            detailPolicy: .archiveOnly
+        )
+
+        XCTAssertTrue(data.heart.heartRateSamples.isEmpty)
+        XCTAssertTrue(data.heart.hrvSamples.isEmpty)
+        XCTAssertNotNil(data.healthKitRecordArchive)
+        XCTAssertEqual(data.healthKitRecordCaptureStatus, .complete)
+        XCTAssertFalse(store.queriedQuantityRecordIdentifiers.isEmpty)
+    }
 }
 
 // MARK: - Lossless HealthKit Record Archive Tests

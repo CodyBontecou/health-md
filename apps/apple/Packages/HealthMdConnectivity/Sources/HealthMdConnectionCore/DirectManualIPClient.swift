@@ -32,10 +32,19 @@ public final class DirectManualIPClient: @unchecked Sendable {
               let endpointPort = NWEndpoint.Port(rawValue: port) else {
             throw DirectChannelError.connectionFailed("The direct CLI host or port is invalid.")
         }
+        // A CLI listener that silently disappears (Mac sleep, network roam, process death
+        // without a clean close) leaves this socket half-open forever without kernel probes.
+        // Keepalives bound that state so a wedged channel fails and the reconnect loop dials
+        // again instead of reporting a stale "connected" state.
+        let tcpOptions = NWProtocolTCP.Options()
+        tcpOptions.noDelay = true
+        tcpOptions.keepaliveIdle = DirectPairingSecurity.tcpKeepaliveIdleSeconds
+        tcpOptions.keepaliveInterval = DirectPairingSecurity.tcpKeepaliveIntervalSeconds
+        tcpOptions.keepaliveCount = DirectPairingSecurity.tcpKeepaliveCount
         let connection = NWConnection(
             host: NWEndpoint.Host(normalizedHost),
             port: endpointPort,
-            using: .tcp
+            using: NWParameters(tls: nil, tcp: tcpOptions)
         )
         let packetConnection = DirectPacketConnection(
             connection: connection,
@@ -110,6 +119,23 @@ public final class DirectManualIPClient: @unchecked Sendable {
         guard trustedServer != nil || normalizedCode?.isEmpty == false else {
             throw DirectChannelError.authenticationFailed("Enter the pairing code shown by the healthmd CLI.")
         }
+        let pairingProtocolVersion: Int
+        if trustedServer != nil {
+            // Trusted reconnects retain selector 1 so existing pairings remain compatible with
+            // deployed CLIs. The reconnect secret, not the one-time code profile, authenticates it.
+            pairingProtocolVersion = DirectPairingSecurity.legacyAppleProtocolVersion
+        } else {
+            switch normalizedCode?.utf8.count {
+            case DirectPairingSecurity.legacyPairingCodeDigits:
+                pairingProtocolVersion = DirectPairingSecurity.legacyAppleProtocolVersion
+            case DirectPairingSecurity.sharedPairingCodeDigits:
+                pairingProtocolVersion = DirectPairingSecurity.sharedProtocolVersion
+            default:
+                throw DirectChannelError.authenticationFailed(
+                    "Enter the 20-digit pairing code, or a six-digit code from a legacy CLI."
+                )
+            }
+        }
 
         let privateKey = Curve25519.KeyAgreement.PrivateKey()
         let publicKey = privateKey.publicKey.rawRepresentation
@@ -125,19 +151,28 @@ public final class DirectManualIPClient: @unchecked Sendable {
                 clientNonce: clientNonce
             )
         } else if let normalizedCode {
-            codeVerifier = DirectPairingSecurity.pairingVerifier(
-                pairingCode: normalizedCode,
-                clientInstallationID: installationID,
-                clientPublicKey: publicKey,
-                clientNonce: clientNonce
-            )
+            if pairingProtocolVersion == DirectPairingSecurity.sharedProtocolVersion {
+                codeVerifier = DirectPairingSecurity.sharedPairingVerifier(
+                    pairingCode: normalizedCode,
+                    clientInstallationID: installationID,
+                    clientPublicKey: publicKey,
+                    clientNonce: clientNonce
+                )
+            } else {
+                codeVerifier = DirectPairingSecurity.pairingVerifier(
+                    pairingCode: normalizedCode,
+                    clientInstallationID: installationID,
+                    clientPublicKey: publicKey,
+                    clientNonce: clientNonce
+                )
+            }
             trustedVerifier = nil
         } else {
             throw DirectChannelError.authenticationFailed("The direct CLI pairing code is missing.")
         }
 
         try await packetConnection.send(.pairingRequest(ManualIPPairingRequest(
-            protocolVersion: DirectPairingSecurity.protocolVersion,
+            protocolVersion: pairingProtocolVersion,
             deviceName: displayName,
             clientPublicKey: publicKey,
             clientNonce: clientNonce,
@@ -150,7 +185,7 @@ public final class DirectManualIPClient: @unchecked Sendable {
             throw DirectChannelError.authenticationFailed(rejection.reason)
         }
         guard case .pairingResponse(let response) = packet,
-              response.protocolVersion == DirectPairingSecurity.protocolVersion,
+              response.protocolVersion == pairingProtocolVersion,
               let serverInstallationID = response.macInstallationID,
               let verifier = response.authenticationVerifier,
               let sealedReconnectSecret = response.sealedReconnectSecret else {
@@ -190,16 +225,29 @@ public final class DirectManualIPClient: @unchecked Sendable {
                 serverNonce: response.serverNonce
             )
         } else if let normalizedCode {
-            expectedVerifier = DirectPairingSecurity.pairingServerVerifier(
-                pairingCode: normalizedCode,
-                clientInstallationID: installationID,
-                clientPublicKey: publicKey,
-                clientNonce: clientNonce,
-                serverInstallationID: serverInstallationID,
-                serverPublicKey: response.serverPublicKey,
-                serverNonce: response.serverNonce,
-                sealedReconnectSecret: sealedReconnectSecret
-            )
+            if pairingProtocolVersion == DirectPairingSecurity.sharedProtocolVersion {
+                expectedVerifier = DirectPairingSecurity.sharedPairingServerVerifier(
+                    pairingCode: normalizedCode,
+                    clientInstallationID: installationID,
+                    clientPublicKey: publicKey,
+                    clientNonce: clientNonce,
+                    serverInstallationID: serverInstallationID,
+                    serverPublicKey: response.serverPublicKey,
+                    serverNonce: response.serverNonce,
+                    sealedReconnectSecret: sealedReconnectSecret
+                )
+            } else {
+                expectedVerifier = DirectPairingSecurity.pairingServerVerifier(
+                    pairingCode: normalizedCode,
+                    clientInstallationID: installationID,
+                    clientPublicKey: publicKey,
+                    clientNonce: clientNonce,
+                    serverInstallationID: serverInstallationID,
+                    serverPublicKey: response.serverPublicKey,
+                    serverNonce: response.serverNonce,
+                    sealedReconnectSecret: sealedReconnectSecret
+                )
+            }
         } else {
             throw DirectChannelError.authenticationFailed("The direct CLI pairing state was lost.")
         }

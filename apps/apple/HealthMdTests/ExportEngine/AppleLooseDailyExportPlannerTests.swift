@@ -724,6 +724,8 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         cases.append((archive, ExportFixtures.partialDay, .localVaultWithoutSideEffects))
         let lossless = makeSimpleSettings(); lossless.includeGranularData = true
         cases.append((lossless, ExportFixtures.losslessDay, .localVaultWithoutSideEffects))
+        let detailed = makeSimpleSettings(); detailed.detailPolicy = .detailedTimeSeries
+        cases.append((detailed, ExportFixtures.partialDay, .localVaultWithoutSideEffects))
         cases.append((makeSimpleSettings(), ExportFixtures.losslessDay, .localVaultWithoutSideEffects))
         let summaryOnly = makeSimpleSettings(); summaryOnly.summaryOnlyExport = true
         cases.append((summaryOnly, ExportFixtures.partialDay, .localVaultWithoutSideEffects))

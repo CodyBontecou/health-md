@@ -730,6 +730,11 @@ class APIEndpointExportRunner private constructor(
             httpStatusCode = lastStatusCode,
             retryOperationIds = unresolvedDates.associateWith { operation.operationId },
             freshCaptureRetryDates = acknowledgedCaptureFailures.mapTo(linkedSetOf()) { it.date },
+            remainingDates = if (wasCancelled) {
+                (unresolvedDates + acknowledgedCaptureFailures.map { it.date }).toSet()
+            } else {
+                emptySet()
+            },
         )
     }
 
@@ -986,6 +991,7 @@ class APIEndpointExportRunner private constructor(
         failedDateDetails = failures.map { it.copy(errorDetails = null) },
         wasCancelled = true,
         target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
+        remainingDates = dates.toSet(),
     )
 
     private fun uploadFailure(

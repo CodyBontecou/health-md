@@ -145,23 +145,37 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
         local_only: true,
     },
     OperationDefinition {
+        name: "healthmd_export_raw",
+        title: "Export the full public health corpus",
+        description: "After explicit user approval, capture every public record type supported by the selected mobile source and authorized by the user. The validated artifact stays in the job-bound private spool and can be read only through bounded healthmd_raw_artifact_read calls.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_raw_artifact_read",
+        title: "Read a raw health-corpus chunk",
+        description: "Read one bounded base64 chunk from a validated local raw-export artifact by exact job ID. This is job-bound access, not arbitrary filesystem access.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
         name: "healthmd_export_job_status",
         title: "Check export status",
-        description: "Inspect a durable generated-file export job and its destination/progress receipt.",
+        description: "Inspect a durable generated-file or raw-corpus export job and its progress/artifact receipt.",
         kind: OperationKind::Export,
         local_only: true,
     },
     OperationDefinition {
         name: "healthmd_export_job_resume",
         title: "Resume a Health.md export",
-        description: "After explicit user approval, resume the exact immutable durable generated-file export job.",
+        description: "After explicit user approval, resume the exact immutable durable generated-file or raw-corpus export job.",
         kind: OperationKind::Export,
         local_only: true,
     },
     OperationDefinition {
         name: "healthmd_export_job_cancel",
         title: "Cancel a Health.md export",
-        description: "After explicit user approval, explicitly cancel a durable generated-file export job. This cannot be undone.",
+        description: "After explicit user approval, explicitly cancel a durable generated-file or raw-corpus export job. This cannot be undone.",
         kind: OperationKind::Export,
         local_only: true,
     },
@@ -292,7 +306,7 @@ fn base_operation_declarations() -> Vec<Value> {
                         "openWorldHint": false
                     });
                 }
-                "healthmd_export_files" | "healthmd_export_job_resume" => {
+                "healthmd_export_files" | "healthmd_export_raw" | "healthmd_export_job_resume" => {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(false);
                 }
@@ -300,7 +314,9 @@ fn base_operation_declarations() -> Vec<Value> {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(true);
                 }
-                "healthmd_pairing_status" | "healthmd_export_job_status" => {
+                "healthmd_pairing_status"
+                | "healthmd_raw_artifact_read"
+                | "healthmd_export_job_status" => {
                     declaration["annotations"] = json!({
                         "readOnlyHint": true,
                         "destructiveHint": false,
@@ -364,6 +380,8 @@ fn base_input_schema(name: &str) -> Value {
         "healthmd_pairing_start" => pairing_start_schema(),
         "healthmd_pairing_status" => pairing_status_schema(),
         "healthmd_export_files" => export_files_schema(),
+        "healthmd_export_raw" => raw_export_schema(),
+        "healthmd_raw_artifact_read" => raw_artifact_read_schema(),
         "healthmd_export_job_status" | "healthmd_export_job_cancel" => job_schema(false),
         "healthmd_export_job_resume" => job_schema(true),
         _ => empty_schema(),
@@ -455,6 +473,75 @@ fn export_files_schema() -> Value {
             "detail_level": {"type": "string", "enum": ["summary", "lossless"]},
             "wait_timeout_seconds": {"type": "number", "minimum": MINIMUM_EXPORT_TIMEOUT_SECONDS, "maximum": MAXIMUM_EXPORT_TIMEOUT_SECONDS},
             "destination": {"type": "string", "description": "Existing absolute destination directory. It is validated and bound durably before transfer."}
+        }
+    })
+}
+
+fn raw_export_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scope", "date_selection"],
+        "properties": {
+            "scope": {
+                "type": "string",
+                "enum": ["all_public_authorized"],
+                "description": "Every public record type supported by the selected source and authorized by the user. This never means a platform-private database."
+            },
+            "date_selection": {"type": "string", "enum": ["explicit_range", "all_available"]},
+            "date_range": {
+                "type": "object", "additionalProperties": false, "required": ["start", "end"],
+                "properties": {
+                    "start": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+                    "end": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"}
+                }
+            },
+            "provider_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9_.-]{1,64}$",
+                "description": "Android provider-native source; defaults to health_connect. Omit for iPhone HealthKit."
+            },
+            "format": {
+                "type": "string",
+                "enum": ["auto", "json", "ndjson"],
+                "default": "auto",
+                "description": "Auto selects JSON for iPhone and streaming-friendly NDJSON for Android. An explicit iPhone format must be JSON."
+            },
+            "include_exercise_routes": {
+                "type": "boolean",
+                "default": true,
+                "description": "Android includes routes already readable by Health Connect. Third-party routes can still report consent_required because MCP cannot launch per-session Android consent UI."
+            },
+            "wait_timeout_seconds": {
+                "type": "number",
+                "minimum": MINIMUM_EXPORT_TIMEOUT_SECONDS,
+                "maximum": MAXIMUM_EXPORT_TIMEOUT_SECONDS,
+                "default": DEFAULT_EXPORT_TIMEOUT_SECONDS
+            }
+        },
+        "examples": [{
+            "scope": "all_public_authorized",
+            "date_selection": "all_available",
+            "format": "auto",
+            "include_exercise_routes": true
+        }]
+    })
+}
+
+fn raw_artifact_read_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["job_id"],
+        "properties": {
+            "job_id": {"type": "string", "format": "uuid"},
+            "offset": {"type": "integer", "minimum": 0, "default": 0},
+            "max_bytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": crate::limits::MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES,
+                "default": crate::limits::DEFAULT_RAW_ARTIFACT_CHUNK_BYTES
+            }
         }
     })
 }
@@ -1193,7 +1280,7 @@ mod tests {
     #[test]
     fn local_catalog_exposes_bounded_pairing_tools_with_safe_annotations() {
         let tools = list(SurfaceProfile::LocalDirect);
-        assert_eq!(tools.len(), 19);
+        assert_eq!(tools.len(), 21);
         let start = tools
             .iter()
             .find(|tool| tool["name"] == "healthmd_pairing_start")

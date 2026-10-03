@@ -173,7 +173,7 @@ final class SyncService: NSObject, ObservableObject {
             rollupSummariesEnabled: false,
             rangeV9SummaryEnabled: settings.generateRangeSummary && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
-            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
+            detailPolicy: settings.effectiveDetailPolicy,
             dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled,
             dataDictionarySuppressionRequested: !settings.includeDataDictionary
                 && !settings.dailyNotesOnlyModeEnabled
@@ -187,7 +187,7 @@ final class SyncService: NSObject, ObservableObject {
             rollupSummariesEnabled: false,
             rangeV9SummaryEnabled: settings.generateRangeSummary && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
-            effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
+            detailPolicy: settings.effectiveDetailPolicy,
             dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled,
             dataDictionarySuppressionRequested: !settings.includeDataDictionary
                 && !settings.dailyNotesOnlyModeEnabled
@@ -204,7 +204,12 @@ final class SyncService: NSObject, ObservableObject {
             if settings.generateRangeSummary {
                 return "Update Health.md on Mac to export range summaries"
             }
-            if ConnectedExportGranularMode.isEnabled(for: settings) {
+            let detailPolicy = settings.effectiveDetailPolicy
+            if !detailPolicy.isLegacyRepresentable,
+               remoteCapabilities?.supportsSplitExportDetailPolicy != true {
+                return "Update Health.md on Mac to use this data detail setting"
+            }
+            if detailPolicy.includesCanonicalArchive {
                 return "Update Health.md on Mac to export Lossless Health Records"
             }
             return "Update Health.md on Mac"

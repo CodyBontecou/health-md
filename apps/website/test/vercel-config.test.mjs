@@ -30,6 +30,38 @@ test("Vercel applies security headers to extensionless and directory routes", ()
   }
 });
 
+test("Vercel normalizes duplicate directory and index.html routes", () => {
+  assert.equal(config.trailingSlash, true);
+
+  assert.deepEqual(config.redirects.find((entry) => entry.source === "/index.html"), {
+    source: "/index.html",
+    destination: "/",
+    permanent: true,
+  });
+
+  assert.deepEqual(config.redirects.find((entry) => entry.source === "/:path*/index.html"), {
+    source: "/:path*/index.html",
+    destination: "/:path*/",
+    permanent: true,
+  });
+});
+
+test("Vercel redirects clean legal URLs to the canonical html routes", () => {
+  for (const locale of publishedLocales('legal')) {
+    for (const routeId of ['privacy', 'terms']) {
+      const destination = routePath(routeId, locale.code);
+      const cleanPath = destination.replace(/\.html$/, '');
+      for (const source of [cleanPath, `${cleanPath}/`]) {
+        assert.deepEqual(config.redirects.find((entry) => entry.source === source), {
+          source,
+          destination,
+          permanent: true,
+        }, `missing legal redirect for ${source}`);
+      }
+    }
+  }
+});
+
 test("Vercel preserves canonical directory redirects and immutable docs assets", () => {
   const localizedRoutes = publishedLocales('redirect').flatMap(({ code }) => [
     routePath('home', code).replace(/\/$/, ''),

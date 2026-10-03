@@ -291,7 +291,7 @@ final class IPhoneDirectQueryCoordinator {
         let timeZone = TimeZone.current
         let settings = AdvancedExportSettings()
         settings.exportTimeZoneOverride = timeZone
-        settings.includeGranularData = directRequest.detailLevel == .lossless
+        settings.detailPolicy = directRequest.detailLevel == .lossless ? .lossless : .summary
         settings.metricSelection.enabledMetrics = metricIDs
         let days: [HealthMdCompactContextDay]
         if let continuationDays {
@@ -312,16 +312,16 @@ final class IPhoneDirectQueryCoordinator {
                 try Task.checkCancellation()
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: settings.includeGranularData,
+                    detailPolicy: settings.effectiveDetailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranularAndFilter,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: false,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, metricSelection in
+                    fetchHealthData: { date, detailPolicy, metricSelection in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
                             timeZone: timeZone
                         )

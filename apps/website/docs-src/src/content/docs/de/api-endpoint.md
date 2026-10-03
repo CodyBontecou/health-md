@@ -25,10 +25,10 @@ description: "Senden Sie ausgewählte Apple Health-JSON-Daten direkt vom iPhone 
 
 ## Struktur der Nutzlast
 
-<p>Health.md sendet pro Exportvorgang eine POST-Anfrage. Der Request-Body ist ein unabhängig versionierter API-Envelope vom Typ <code>healthmd.api_export</code> mit täglichen Datensätzen des öffentlichen Schemas v7 <code>healthmd.health_data</code>. Der API-Envelope v1 enthält die täglichen Datensätze; v2 kann zusätzlich Provider-Sidecars enthalten, ohne das Schema der täglichen Datensätze zu ändern.</p>
+<p>Health.md sendet pro Exportvorgang eine POST-Anfrage. Der Request-Body ist ein unabhängig versionierter API-Envelope vom Typ <code>healthmd.api_export</code> mit täglichen Datensätzen des öffentlichen Schemas v8 <code>healthmd.health_data</code>. Der API-Envelope v1 enthält die täglichen Datensätze; v2 kann zusätzlich Provider-Sidecars enthalten, ohne das Schema der täglichen Datensätze zu ändern.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Vollständige tägliche Schema-v7-Objekte, die für den angeforderten Zeitraum beibehalten wurden, einschließlich vollständig leerer Datensätze, deren Abfragemanifest als Nachweis dient.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Vollständige tägliche Schema-v8-Objekte, die für den angeforderten Zeitraum beibehalten wurden, einschließlich vollständig leerer Datensätze, deren Abfragemanifest als Nachweis dient.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>Datumswerte, bei denen ein Fehler auftrat, bevor ein Tagesdokument beibehalten werden konnte.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p>Die Version des täglichen Schemas innerhalb von <code>records</code>. Sie wird unabhängig von der Version des API-Envelopes weiterentwickelt.</p></div>
 <div class="option"><strong>Provider-Sidecars</strong><p>Bedingte externe v2-Datensätze mit eigenem Schema und eigenen Identitätsregeln, wenn ein verbundener Provider aktiviert ist.</p></div>

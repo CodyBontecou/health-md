@@ -22,6 +22,7 @@ target/
 .gradle/
 .build/
 DerivedData/
+.derived/
 .wrangler/
 .vercel/
 .asc/

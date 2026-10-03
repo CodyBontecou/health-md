@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">添加自定义字段</string>
+    <string name="a11y_frontmatter_add_placeholder_field">添加占位字段</string>
+    <string name="a11y_frontmatter_delete_custom_field">删除自定义字段 %1$s</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">删除占位字段 %1$s</string>
+</resources>

@@ -148,7 +148,7 @@ jobs:
         run: |
           set -euo pipefail
           receipt="$RUNNER_TEMP/qa-upload-receipt/qa-upload-receipt.json"
-          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-release.aab -print)
+          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-play-release.aab -print)
           mapfile -t wear_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name wear-release.aab -print)
           [[ -f "$receipt" && ${#phone_aabs[@]} -eq 1 && ${#wear_aabs[@]} -eq 1 ]]
           phone_sha=$(sha256sum "${phone_aabs[0]}" | awk '{print $1}')
@@ -162,7 +162,7 @@ jobs:
             .workflow == ".github/workflows/android-release.yml" and .event == "push" and
             .runId == $run and .tag == $tag and .headSha == $sha and .tagPeeledSha == $sha and
             .versionName == $version and .phoneVersionCode == $phone and .wearVersionCode == $wear and
-            .phoneTrack == "qa" and .wearTrack == "wear:qa" and .releaseStatus == "completed" and
+            .phoneTrack == "qa" and .wearTrack == "wear:internal" and .releaseStatus == "completed" and
             .phoneAabSha256 == $phoneSha and .wearAabSha256 == $wearSha and .uploadPrepared == true
           ' "$receipt" >/dev/null
           run_attempt=$(jq -er .runAttempt "$receipt")
@@ -329,7 +329,7 @@ jobs:
           cp -R "$RUNNER_TEMP/screenshot-upload-artifact/wear-play-screenshot-upload" \
             "$root/wear-play-screenshot-upload"
           mkdir "$root/qa-upload"
-          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-release.aab -print)
+          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-play-release.aab -print)
           mapfile -t wear_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name wear-release.aab -print)
           [[ ${#phone_aabs[@]} -eq 1 && ${#wear_aabs[@]} -eq 1 ]]
           cp "${phone_aabs[0]}" "$root/qa-upload/phone-release.aab"
@@ -423,7 +423,7 @@ jobs:
           curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
             -H "Authorization: Bearer $token" "$api/qa/releases" -o "$root/google-play-qa-current.json"
           curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-            -H "Authorization: Bearer $token" "$api/wear:qa/releases" -o "$root/google-play-wear-qa-current.json"
+            -H "Authorization: Bearer $token" "$api/wear:internal/releases" -o "$root/google-play-wear-qa-current.json"
           jq -e --argjson code "$PHONE_VERSION_CODE" '
             any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
           ' "$root/google-play-qa-current.json" >/dev/null

@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEngineMode
@@ -18,6 +19,7 @@ import com.healthmd.rawexport.ExportMode
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.PendingScheduledExportRequest
+import com.healthmd.export.FakeBillingRepository
 import com.healthmd.export.FakeExportHistoryRepository
 import com.healthmd.export.FakeExportRepository
 import com.healthmd.export.FakeHealthRepository
@@ -501,5 +503,7 @@ class ScheduledExportRecoveryManagerTest {
         exportHistoryRepository = historyRepository,
         rawSnapshotService = rawSnapshotService,
         apiCredentialStore = apiCredentialStore,
+        entitlementRepository = FakeBillingRepository(),
+        distributionPolicy = DistributionPolicy.play(),
     )
 }

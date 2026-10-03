@@ -19,7 +19,7 @@ Writes one readable Markdown file per day — `# Health Data — 2026-05-12` fol
 ## Where to find it
 
 1. Enable **Markdown** in **Export Format** on the Export tab.
-2. Open **Settings → Format customization** for template options.
+2. Open **Settings → Format customization** for template options — date styles, time styles, and units live in the same screen ([Date, time, and unit preferences](./date-time-units.md)).
 3. Export; one `.md` file appears per day at your destination.
 
 ## Prerequisites

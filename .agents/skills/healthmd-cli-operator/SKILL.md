@@ -10,10 +10,15 @@ Use the installed standalone `healthmd`. Do not use the monorepo's `apps/apple/s
 
 ## Rules
 
-- Direct Manual IP/Tailscale is the portable default. Never add `--backend mac-app` or `--transport nearby`.
+- Direct Manual IP/Tailscale is the only portable transport. Never add `--transport nearby`.
 - On macOS/Linux use `NO_COLOR=1 TERM=dumb`, a hard `timeout`, and stdin from `/dev/null`. Give exports longer bounds than status.
-- Parse stdout JSON or the explicit output artifact. Pairing instructions and health-free progress may use stderr.
-- Never infer success from exit status alone.
+- Parse stdout JSON or the explicit output artifact. Add global `--json` whenever automation requires a structured result; interactive terminals otherwise render readable text. Pairing instructions and health-free progress may use stderr.
+- For an unfamiliar shape, run the incomplete command first: `healthmd export`, `extract`, `resume`,
+  `cancel`, or a selected `query` returns local `healthmd.cli_guidance/1` with requirements and
+  `request_sent: false`; it does not contact iPhone.
+- Never infer execution success from exit status alone. A zero exit may be non-network guidance;
+  require the expected result schema/status before reporting completion. Failures use
+  `healthmd.cli_error/1` with `help_command` and bounded `next_actions`.
 - Ask for physical iPhone actions when needed: open/unlock Health.md, scan a pairing QR with its in-app Direct CLI scanner (which connects automatically), enable Direct CLI Access, enter a fallback code, approve local-network access, or grant HealthKit read access.
 - Never print health values unless explicitly requested. Counts, dates, paths, statuses, and diagnostics are enough.
 - Never retry an unknown-outcome export blindly. Inspect its durable job first.
@@ -43,9 +48,9 @@ NO_COLOR=1 TERM=dumb timeout 180 healthmd direct pair </dev/null
 
 While it waits, tell the user to:
 
-1. In foreground Health.md, open **Sync → Direct CLI Access**, tap **Scan Pairing QR**, and scan the displayed image. The in-app scan starts pairing automatically; no second Pair tap is required. Do not open the QR as a custom URL.
+1. In foreground Health.md, open **Sync → CLI**, tap **Scan Pairing QR** under **Direct CLI Access**, and scan the displayed image. The in-app scan starts pairing automatically; no second Pair tap is required. Do not open the QR as a custom URL.
 2. Keep Health.md foregrounded through success.
-3. If in-app scanning is unavailable, open **Sync → Direct CLI Access**, enable **Manual IP**, and enter the printed LAN/Tailscale address, port, and six-digit code.
+3. If in-app scanning is unavailable, open **Sync → CLI**, enable **Direct CLI Access**, select **Manual IP**, and enter the printed LAN/Tailscale address, port, and shared 20-digit code. Use the six-digit Apple code only with a legacy iOS release.
 
 Confirm stdout has `healthmd.direct_pairing_result`, `status: success`, and the intended device. After an unknown outcome, inspect `healthmd direct devices` rather than pairing again.
 
@@ -59,7 +64,7 @@ NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 
 Require:
 
-- `backend == "direct"` and `mac_app == "bypassed"`;
+- the source reports `connected` and a `platform` of `ios` or `android` with readiness fields;
 - `iphone.connected == true`;
 - `iphone.app_active == true` for new work;
 - `iphone.protected_data_available == true`;
@@ -67,7 +72,21 @@ Require:
 - `iphone.can_trigger_exports == true` for generated files;
 - no conflicting `iphone.active_job_id`.
 
-Ignore status `destination.selected`: direct file mode uses the command's explicit destination. If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
+Status reports no destination: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy plus this device's truthful wake enrollment: `unavailable`/`wait_only` without a stored wake credential (no push is sent), `available`/`enrolled` when the paired iPhone enrolled wake material. Published alpha.6 binaries are still wait-only; in subsequent official builds an enrolled locked-phone wait sends one best-effort APNs notification. Android remains wait-only until FCM ships. If status fails, report its JSON and ask for the minimum action. Never switch device, port, or transport silently.
+
+## Waiting for an unavailable phone
+
+Query, export, extract, resume, and cancel wait up to 120 seconds by default. When health-free
+progress says the phone is unavailable, ask the user to unlock it and open Health.md; do not stop
+and re-run the command. Set `--wake-timeout SECONDS` when a different bounded window is needed, or
+`--wake-timeout 0` for explicit fail-fast behavior. Set the shell's outer `timeout` longer than the
+wake window plus the command's operation timeout.
+
+For MCP, configure `HEALTHMD_WAKE_TIMEOUT`; cancellation interrupts the wait immediately. Only
+tell the user to expect a notification when a post-alpha.6 build reports the selected iPhone as
+`available`/`enrolled`; delivery is best effort. Otherwise ask them to open Health.md while the P1
+window waits. Wake expiry preserves `direct_source_unavailable` and adds `wake_window_seconds`.
+Neither expiry nor local cancellation is terminal phone-side job cancellation.
 
 ## Strict raw
 
@@ -188,7 +207,7 @@ Do not paste source records, routes, clinical content, measurements, or full raw
 | `invalid_direct_file_receipt` | Do not manually append/merge; inspect and resume if permitted. |
 | `job_expired` | The seven-day deadline elapsed; confirm before starting a new request. |
 | `transport_unsupported` | Use Manual IP/LAN/Tailscale, not Nearby. |
-| `not_implemented` for `mac-app` | Remove the backend option; direct is default. |
+| `unknown_argument` after passing `--backend` | Remove it; the CLI is direct-only and has no backend option. |
 
 ## Privacy
 

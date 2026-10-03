@@ -25,7 +25,7 @@ Portable Codex onboarding is:
 healthmd setup codex
 ```
 
-When pairing is needed, the command displays an ephemeral QR. On iPhone, open Health.md's **Sync** tab, tap **Scan Pairing QR** under **Direct CLI Access**, and scan the displayed image. That in-app camera scan is the explicit pairing action: Health.md validates an exact private-LAN or Tailscale IPv4 endpoint/port/six-digit code and starts the authenticated connection automatically without persisting the code or requiring a second Pair tap. External `healthmd://` opens are rejected because their source cannot prove a physical scan. Manual entry remains the fallback. The generated MCP entry points to the absolute `healthmd` path with arguments `mcp serve`, pins an explicit iPhone when needed, preserves unrelated Codex configuration, applies bounded timeouts, and prompts for export/resume/cancel. Use `--skip-pairing` only when configuration and pairing must be separated.
+When pairing is needed, the command displays an ephemeral QR. On iPhone, open Health.md's **Sync** tab, choose **CLI**, tap **Scan Pairing QR** under **Direct CLI Access**, and scan the displayed image. That in-app camera scan is the explicit pairing action: Health.md validates an exact private-LAN or Tailscale IPv4 endpoint/port/shared 20-digit code and starts the selector-3 authenticated connection automatically without persisting the code or requiring a second Pair tap. External `healthmd://` opens are rejected because their source cannot prove a physical scan. Manual entry remains the fallback. The generated MCP entry points to the absolute `healthmd` path with arguments `mcp serve`, pins an explicit iPhone when needed, preserves unrelated Codex configuration, applies bounded timeouts, and prompts for export/resume/cancel. Use `--skip-pairing` only when configuration and pairing must be separated.
 
 ## Bundled Mac topology
 
@@ -247,3 +247,11 @@ The helper has no prompts, roots, sampling, shell, SQL, arbitrary filesystem, ar
 The loopback listener is the complete authorization boundary. Any local process that can reach it while Health.md is open can issue the same requests. Do not expose or proxy port `17645`.
 
 Health.md outputs factual observations with units, provenance, coverage, and missingness. It does not diagnose, recommend treatment, infer causation, or label changes better or worse.
+
+## Video outline
+
+- **Suggested title:** Connect Claude or Codex to Health.md (Local MCP)
+- **Hook:** "A local agent with no cloud, no shell, and no guessing."
+- **Demo flow:** 1. Add the MCP server entry for Codex (`config.toml`) or Claude Desktop. 2. Run `healthmd_doctor`, then request a small `healthmd_metric_chart`. 3. Show the interactive MCP Apps view next to the text/PNG fallback; approve one generated-file export.
+- **Key screenshot/recording moments:** the config snippet, the doctor check, the inline visualization vs PNG fallback, the approval prompt on `healthmd_export_files`.
+- **CTA / next video:** [Typed queries and evidence packets](./evidence-packets.md).

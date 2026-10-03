@@ -1,9 +1,11 @@
 ---
 title: "Extraction canonique des données de santé"
-description: "Utilisez healthmd extract pour acquérir des métriques Apple Health sélectionnées et émettre des documents canoniques au schéma v7, des enregistrements sources, des projections JSON Pointer ou du JSONL avec des reçus explicites."
+description: "Utilisez healthmd extract pour acquérir des métriques Apple Health sélectionnées et émettre des documents canoniques au schéma v8, des enregistrements sources, des projections JSON Pointer ou du JSONL avec des reçus explicites."
 ---
 
-`healthmd extract` est la commande de données sources pour les scripts et les agents. Elle demande à l’iPhone d’acquérir uniquement les métriques et le détail sélectionnés, valide le transfert persistant, retire l’enveloppe de transport et émet des documents canoniques `healthmd.health_data` v7 ou des projections clairement étiquetées.
+`healthmd extract` est la commande de données sources pour les scripts et les agents. Elle demande à l’iPhone d’acquérir uniquement les métriques et le détail sélectionnés, valide le transfert persistant, retire l’enveloppe de transport et émet des documents canoniques `healthmd.health_data` v8 ou des projections clairement étiquetées.
+
+L’extraction canonique est une fonctionnalité de l’iPhone, adossée au protocole direct v1 d’iOS. Les sources directes Android renvoient plutôt des instantanés Health Connect natifs du fournisseur via l’[export brut](/fr/docs/cli-direct/).
 
 Utilisez l’extraction lorsque vous avez besoin des données Health.md d’origine. Utilisez les [requêtes typées](/fr/docs/agent-queries/) lorsque vous avez besoin de sessions, comparaisons, alignement d’entraînements, couverture ou paquets de preuves.
 
@@ -214,20 +216,20 @@ healthmd extract --category Sleep --last 30 \
 
 Cette option modifie le comportement d’émission et le code de sortie. Il ne retire pas les diagnostics et ne transforme pas des données partielles en données complètes.
 
-## Back-ends de l’app Mac et direct
+## CLI autonome et utilitaire Mac intégré
 
-La commande fonctionne avec l’un ou l’autre back-end :
+La CLI autonome exécute l’extraction directement sur l’iPhone jumelé. L’utilitaire Swift intégré à Health.md for Mac atteint la même extraction par défaut via le loopback de l’app Mac, ou directement avec son préfixe `--backend direct` :
 
 ```bash
-# Bundled helper default: Mac app loopback and connected iPhone
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Direct-capable helper: bypass the Mac app
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-Les deux chemins utilisent le même schéma quotidien public et une validation stricte. Le transport, le jumelage, le stockage et les enregistrements de tâches diffèrent.
+Les deux chemins utilisent le même schéma quotidien public et une validation stricte. Le transport, le jumelage, le stockage et les enregistrements de tâches diffèrent. Les deux chemins exigent une source iPhone ; les sources directes Android n’implémentent pas l’extraction canonique.
 
 ## Historique volumineux
 
@@ -255,7 +257,7 @@ Utilisez JSONL ou une sélection plus étroite lorsqu’un corpus est volumineux
 <div class="related">
   <a href="/fr/docs/cli/"><span>CLI</span>CLI Health.md : configuration, sélection du back-end, liste des commandes et règles de sortie.</a>
   <a href="/fr/docs/agent-queries/"><span>Vues dérivées</span>Recettes de requêtes typées : séries de métriques, sommeil, entraînement, séances d’entraînement, comparaisons et preuves.</a>
-  <a href="/fr/docs/reference/daily-records/"><span>Schéma</span>Enregistrements quotidiens : le contrat complet des documents quotidiens au schéma v7.</a>
+  <a href="/fr/docs/reference/daily-records/"><span>Schéma</span>Enregistrements quotidiens : le contrat complet des documents quotidiens au schéma v8.</a>
   <a href="/fr/docs/reference/canonical-healthkit-records/"><span>Archive source</span>Enregistrements Apple Health canoniques : identité, provenance, relations et charges utiles.</a>
   <a href="/fr/docs/reference/api-and-cli/"><span>Protocole</span>Référence API et CLI : requêtes d’extraction, reçus, validation stricte et comportement de sortie.</a>
 </div>

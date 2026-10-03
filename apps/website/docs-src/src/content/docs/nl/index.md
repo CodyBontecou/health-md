@@ -27,7 +27,7 @@ description: Exporteer gegevens uit Apple Health of Health Connect, verbind het 
 <div class="reference-stats">
 <div><strong>21</strong><span>gebundelde MCP-tools voor de Mac</span></div>
 <div><strong>4</strong><span>exportformaten</span></div>
-<div><strong>v7</strong><span>openbaar exportschema</span></div>
+<div><strong>v8</strong><span>openbaar Apple-exportschema</span></div>
 <div><strong>0</strong><span>vereiste overdrachten via een Health.md-cloud</span></div>
 </div>
 
@@ -63,8 +63,8 @@ Een gereed resultaat van `doctor` gebruikt het schema `healthmd.cli_doctor` en b
 
 <div class="related">
   <a href="/nl/docs/agent-queries/"><span>Getypeerde queries</span>Vraag naar meetwaarden, slaapsessies, work-outs, vergelijkingen, dekking en feitelijk bewijs.</a>
-  <a href="/nl/docs/cli-direct/"><span>Preview · platformonafhankelijke CLI</span>Rechtstreekse iPhone-toegang: begrijp koppeling via Manual IP of Tailscale voordat het zelfstandige pakket verschijnt.</a>
-  <a href="/nl/docs/cli-extract/"><span>Brongegevens</span>Canonieke extractie: haal geselecteerde dagen uit schema v7, bronrecords, samenvattingsweergaven of JSONL op.</a>
+  <a href="/nl/docs/cli-direct/"><span>Preview · platformonafhankelijke CLI</span>Rechtstreekse telefoontoegang: bekijk koppeling via handmatig IP of Tailscale en de huidige niet-gekwalificeerde iPhone-/Android-compatibiliteitsmatrix.</a>
+  <a href="/nl/docs/cli-extract/"><span>Brongegevens</span>Canonieke extractie: haal geselecteerde dagen uit schema v8, bronrecords, samenvattingsweergaven of JSONL op.</a>
   <a href="/nl/docs/cli-jobs/"><span>Betrouwbare uitvoering</span>Persistente taken: ga veilig om met time-outs, onbekende uitkomsten, hervatten, annuleren en gedeeltelijke resultaten.</a>
   <a href="/nl/docs/agent-api/"><span>Laag niveau</span>Loopback-API: gebruik exacte routes voor queries, bewijs, cursors, verversing en persistente taken.</a>
   <a href="/nl/docs/reference/integration-recipes/"><span>Patronen</span>Integratierecepten: verwerk en valideer Health.md-uitvoer zonder de contracten af te zwakken.</a>
@@ -78,7 +78,7 @@ Een gereed resultaat van `doctor` gebruikt het schema `healthmd.cli_doctor` en b
   <a href="/nl/docs/reference/"><span>Contractoverzicht</span>Exportreferentie: bekijk schema's, meetwaarden, formaten, records en interoperabiliteitsfixtures.</a>
   <a href="/nl/docs/reference/api-and-cli/"><span>Automatisering</span>API- &amp; CLI-contracten: bekijk enveloppen, routes, afsluitgedrag en gegenereerde voorbeelden.</a>
   <a href="/nl/docs/reference/evidence-packets/"><span>Agentresultaten</span>Queries &amp; bewijs: getypeerde waarden, dekking, ontbrekende gegevens, bewerkingen en deterministische identiteiten.</a>
-  <a href="/nl/docs/reference/daily-records/"><span>Schema v7</span>Dagrecords: begrijp het openbare brondocument en de eigendomsregels.</a>
+  <a href="/nl/docs/reference/daily-records/"><span>Schema v8</span>Dagrecords: begrijp het openbare brondocument en de eigendomsregels.</a>
   <a href="/nl/docs/shared-metric-registry/"><span>Terminologie</span>Meetwaarderegister: gebruik stabiele platformonafhankelijke meetwaarde-ID's, categorieën, eenheden en profielmetadata.</a>
   <a href="/nl/docs/reference/generated/"><span>Machineleesbaar</span>Gegenereerde artefacten: open canonieke velden, fixtures, berichtinventarissen en CLI-contracten.</a>
 </div>
@@ -87,13 +87,22 @@ Een gereed resultaat van `doctor` gebruikt het schema `healthmd.cli_doctor` en b
 
 ## Apps en exports
 
+### Betrouwbare profielgebaseerde exports
+
+- Kies Samenvatting of gedeelde Gedetailleerde tijdreeks; het canonieke verliesvrije archief is alleen voor Apple.
+- Bewaar onafhankelijke instellingen, bestemmingen en schema’s in lokale profielen op iPhone of Android.
+- Stoppen of annuleren raakt alleen de actieve poging: voltooide datums blijven, andere zijn herhaalbaar en schema’s blijven actief.
+
+Begin bij [Exportprofielen](/nl/docs/export-profiles/) voor stabiele ID’s, automatisering, bestemmingsgeschiedenis en veilig falen.
+
 <div class="related">
+  <a href="/nl/docs/export-profiles/"><span>Herbruikbare workflows</span>Exportprofielen — zet bestemming, formaten, meetwaarden, planning en automatiserings-ID vast.</a>
   <a href="/nl/docs/iphone-first-export/"><span>Begin hier · iPhone</span>Eerste export: geef Apple Health-toegang, kies een map, bekijk de uitvoer en controleer de geschreven bestanden.</a>
   <a href="/nl/docs/android/"><span>Android</span>Health Connect: kies een map van een documentprovider en configureer automatisering voor Android.</a>
   <a href="/nl/docs/export/"><span>Bestanden</span>Exporteren: voer expliciete datumbereiken uit in Markdown, CSV, JSON of Obsidian Bases.</a>
   <a href="/nl/docs/format/"><span>Structuur</span>Formaataanpassing: bepaal eenheden, datums, frontmatter, bestandsnamen en schrijfgedrag.</a>
-  <a href="/nl/docs/scheduling/"><span>Achtergrond</span>Planning: begrijp het gedrag van dagelijkse en wekelijkse exports en de beperkingen van het platform.</a>
+  <a href="/nl/docs/scheduling/"><span>Achtergrond</span>Planning: begrijp terugkerende ritmes, herstel en tijdsbeperkingen per platform.</a>
   <a href="/nl/docs/shortcuts/"><span>Automatisering</span>Shortcuts &amp; App Intents: start exports, samenvattingen en statuscontroles vanuit Apple-workflows.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Documentatiestructuur bijgewerkt op 2 augustus 2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Documentatiestructuur bijgewerkt op 31 augustus 2026</p>

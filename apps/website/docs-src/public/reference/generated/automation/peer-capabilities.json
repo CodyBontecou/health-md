@@ -47,6 +47,7 @@
   "supportsRequestScopedContextAcquisition" : true,
   "supportsRollupSummaries" : true,
   "supportsSizeBoundedConnectedTransfers" : true,
+  "supportsSplitExportDetailPolicy" : true,
   "supportsStrictRawStreaming" : true,
   "supportsSummaryOnlyExports" : true
 }

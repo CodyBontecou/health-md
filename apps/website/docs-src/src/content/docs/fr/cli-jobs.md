@@ -35,7 +35,7 @@ Une tâche peut conserver :
 
 - les dates exactes ou les identifiants résolus pour tout l’historique ;
 - la portée de métriques, catégories, sources et détails ;
-- le back-end et l’association à l’appareil jumelé ;
+- l’association à l’appareil jumelé ;
 - la politique de réglages ;
 - le profil brut ou la sélection d’extraction ;
 - l’identité de destination des fichiers ;
@@ -85,7 +85,7 @@ healthmd extract --category Sleep --last 30 \
 Fichiers directs générés :
 
 ```bash
-healthmd --backend direct export --last 30 \
+healthmd export --last 30 \
   --destination "$HOME/Documents/HealthVault"
 ```
 
@@ -99,10 +99,10 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-En mode direct, sélectionnez les mêmes back-end, appareil, transport, port et iPhone que ceux utilisés par la requête d’origine :
+En mode direct, sélectionnez le même appareil, transport, port et iPhone que ceux utilisés par la requête d’origine :
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID \
+healthmd --device DEVICE_UUID \
   --transport manual-ip --port 17647 \
   resume JOB_UUID --timeout 300 --output recovered.json
 ```
@@ -235,7 +235,7 @@ Un agent ou planificateur doit suivre cet ordre :
 2. Exécuter `status --job` localement.
 3. Vérifier si la tâche est en pause, terminale, expirée ou en attente d’accusé de réception.
 4. Rouvrir le même iPhone lorsque des données actualisées ou un accusé de réception sont nécessaires.
-5. Reprendre la tâche existante avec le même back-end et le même appareil.
+5. Reprendre la tâche existante avec le même appareil.
 6. Démarrer une nouvelle tâche uniquement lorsque le résultat précédent est connu ou que l’expiration est explicitement acceptée.
 
 Relancer aveuglément une mutation peut dupliquer le travail source, même lorsque les validations de fichiers elles-mêmes sont idempotentes.
@@ -245,7 +245,7 @@ Relancer aveuglément une mutation peut dupliquer le travail source, même lorsq
 | Code | Signification | Réponse recommandée |
 |---|---|---|
 | `timed_out` | La commande a cessé d’attendre avant la fin de la tâche | Inspecter la tâche renvoyée et la reprendre |
-| `job_not_found` | Aucun enregistrement local persistant n’existe pour cet ID | Confirmer le back-end et le répertoire d’état avant de recommencer |
+| `job_not_found` | Aucun enregistrement local persistant n’existe pour cet ID | Confirmer le répertoire d’état avant de recommencer |
 | `job_expired` | L’échéance fixe de sept jours est dépassée | Enregistrer l’écart et créer une nouvelle requête si approprié |
 | `direct_export_paused` | Le travail direct nécessite à nouveau l’iPhone jumelé | Rouvrir l’iPhone et reprendre |
 | `direct_cancellation_pending` | L’intention locale d’annulation n’a pas d’accusé de réception iPhone | Rouvrir l’iPhone et réessayer cancel |
@@ -270,7 +270,7 @@ Le JSONL de progression peut inclure la phase, le nombre de pages, le nombre d�
 ## Pages associées
 
 <div class="related">
-  <a href="/fr/docs/cli/"><span>Configuration</span>CLI Health.md : installer, choisir un back-end et comprendre la sortie des commandes.</a>
+  <a href="/fr/docs/cli/"><span>Configuration</span>CLI Health.md : installer le client autonome et comprendre la sortie des commandes.</a>
   <a href="/fr/docs/cli-direct/"><span>Direct</span>CLI iPhone directe : jumelage, temps d’arrière-plan limité, destination explicite et reprise de confiance.</a>
   <a href="/fr/docs/agent-queries/"><span>Pagination</span>Recettes de requêtes typées : modes actualisé et en cache, parcours des pages, couverture et reçus.</a>
   <a href="/fr/docs/reference/generated/cli/exit-codes/"><span>Contrat généré</span>Codes de sortie CLI : états et comportements d’erreur générés en production.</a>

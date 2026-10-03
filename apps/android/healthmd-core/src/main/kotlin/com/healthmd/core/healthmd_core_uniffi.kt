@@ -3784,7 +3784,8 @@ public object FfiConverterTypeCoreArtifactWriteMode: FfiConverterRustBuffer<Core
 enum class CoreDirectPairingProfile {
     
     APPLE_V1,
-    ANDROID_V2;
+    ANDROID_V2,
+    SHARED_V3;
 
     
 

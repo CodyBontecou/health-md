@@ -1,69 +1,28 @@
 ---
 title: "Shortcuts & App Intents"
-description: "Seven App Intents let you trigger exports, fetch summaries, and toggle the schedule from Siri, the Shortcuts app, Focus filters, automations, and any other AppIntent-aware host."
+description: "Use seven published actions and two current-development Mac context actions from Shortcuts and Siri."
 ---
 
-## Available intents
-<div class="options">
-<div class="option"><strong>Export Yesterday's Health Data</strong><p>Zero-parameter shortcut. The fast path for &quot;just export yesterday's data and shut up about it.&quot; Same engine as the manual export. Optional <em>Profile</em> parameter (see <a href="#profiles">Export profiles</a>).</p></div>
-<div class="option"><strong>Export Health Data for a Date</strong><p>Single <em>Date</em> parameter. Time-of-day is ignored. Useful in calendar-driven automations. Optional <em>Profile</em> parameter.</p></div>
-<div class="option"><strong>Export Health Data for Date Range</strong><p><em>Start Date</em> and <em>End Date</em> parameters, inclusive on both ends. Use for backfills. Optional <em>Profile</em> parameter.</p></div>
-<div class="option"><strong>Export Last N Days of Health Data</strong><p><em>Number of Days</em> parameter (1–366). Ends yesterday. Default 7. Good for &quot;every Sunday, export last 7 days&quot; automations. Optional <em>Profile</em> parameter.</p></div>
-<div class="option"><strong>Get Health Summary for a Date</strong><p>Returns a structured snapshot — steps, active calories, sleep, heart rate — without writing anything to the vault. Use this in Shortcuts to feed values into other apps.</p></div>
-<div class="option"><strong>Get Last Export Status</strong><p>Returns the timestamp, success state, day count, and any failure reason from the most recent recorded export. A locked-device request remains pending until retried, so it is not returned as the current status while pending.</p></div>
-<div class="option"><strong>Turn Scheduled Export On or Off</strong><p>Boolean parameter. Use to suspend the schedule (e.g. on vacation Focus) and resume it later.</p></div>
-</div>
+<div class="availability preview"><strong>Seven published actions · nine in current source</strong><p>The two Mac context actions require compatible iPhone and Mac builds. Check the exact release notes.</p></div>
 
-<a id="profiles"></a>
-## Export profiles
-<p>Create and manage saved export profiles in Health.md on iPhone or Android. Apple profile management is currently documented for iPhone only; iPad and macOS management availability is not claimed.</p>
-<p>All four export intents accept an optional <em>Profile</em> parameter. Once profiles exist, leaving it empty uses the active profile; in legacy zero-profile mode, it uses the current in-app export settings. Pass a saved profile name to run that profile's frozen configuration — its metric selection, formats, and destination — regardless of what the app currently shows.</p>
-<div class="callout">
-<strong>Heads-up for existing zero-parameter shortcuts.</strong>
-<p style="margin-top:6px;">Once you create your first export profile in the app, a shortcut with no <em>Profile</em> set exports using the <em>active</em> profile's saved settings instead of the app's live settings. If you rely on the old behavior, pin the shortcut to a specific profile (or keep zero profiles) to stay explicit. A profile name that no longer exists fails with a clear error instead of exporting the wrong thing.</p>
-</div>
+## Actions
 
-## Where to find them
-<p>Open the Shortcuts app on iOS or macOS. Tap the <em>+</em> button to create a new shortcut, search for &quot;Health.md&quot; or any of the intent titles above. They live under the <em>Health</em> category.</p>
-<p>Most intents have <code>openAppWhenRun = false</code>, so they execute headlessly — no app launch, no UI flash. They work from automations, Focus filters, the Hey Siri handoff, and the Action Button.</p>
+- export yesterday, one date, a range, or the last N days;
+- get a health summary or the last export status;
+- turn scheduling on or off;
+- **Refresh Mac Health Context** (development): request a durable encrypted-context refresh bound to a profile;
+- **Get Mac Context Refresh Status** (development): read its status and job ID.
 
-<div class="callout">
-<strong>Running while locked does not unlock HealthKit.</strong>
-<p style="margin-top:6px;">Apple protects HealthKit data while the iPhone is locked and <a href="https://support.apple.com/guide/security/protecting-access-to-users-health-data-sec88be9900f/web">relinquishes app access about ten minutes after locking</a>. <em>Allow Running When Locked</em> lets Shortcuts start the action, but it does not override HealthKit data protection. The Health.md app-content permission in Shortcuts does not override it either.</p>
-<p>If HealthKit is unavailable, Health.md preserves the requested dates as pending and posts a <em>Health Export Needs Attention</em> notification. Unlock the iPhone, then tap the notification or open Health.md to retry. A fully unattended export cannot be guaranteed while the phone remains locked.</p>
-</div>
+The four export actions accept an optional **Profile**. An unknown name fails without fallback. Ordinary Shortcuts write to the iPhone folder and do not silently switch to API Endpoint or Connected Mac.
 
-<a id="recipe-nightly-export-with-confirmation"></a>
-## Recipe: daily export with confirmation
-<ol>
-<li><strong>Personal Automation</strong> → <em>Time of Day</em> → choose a time when you normally use your unlocked iPhone, such as 8:00 AM.</li>
-<li><em>Export Yesterday's Health Data</em> intent.</li>
-<li><em>Get Last Export Status</em> intent.</li>
-<li><em>Show Notification</em> with the result.</li>
-</ol>
-<p><strong>Pending-status note:</strong> <em>Get Last Export Status</em> reads the most recent recorded export-history entry. If this run encountered locked HealthKit data, it may still show the previous export until you retry the pending request. Health.md's own recovery notification is the authoritative signal for pending work.</p>
+Allowing locked execution does not unlock HealthKit. Health.md preserves the request and shows **Health Export Needs Attention**.
 
-## Recipe: backfill on a one-off
-<ol>
-<li>Create a shortcut.</li>
-<li><em>Export Health Data for Date Range</em> with start = 2024-01-01, end = 2024-12-31.</li>
-<li>Run from Shortcuts. Walks the year, writes one file per day. May take a few minutes for full years.</li>
-</ol>
+### Morning automation
 
-## Recipe: pause schedule on vacation
-<ol>
-<li><strong>Focus filter</strong>: when <em>Vacation</em> Focus turns on, run <em>Turn Scheduled Export On or Off</em> with Enabled = false.</li>
-<li>When Focus turns off, run again with Enabled = true.</li>
-</ol>
+1. Create a time automation.
+2. Add **Export Yesterday's Health Data**.
+3. Add **Get Last Export Status** and a notification.
 
-<div class="callout">
-<strong>Authorization required.</strong>
-<p style="margin-top:6px;">Intents inherit your in-app HealthKit permission and vault selection. They will fail with a clear error if the app hasn't been opened-and-set-up at least once on this device.</p>
-</div>
+Yesterday includes sleep whose night began yesterday. See [Sleep dates](/docs/sleep-date-attribution/).
 
-## Related
-
-<div class="related">
-  <a href="/docs/scheduling/"><span>Source</span>Scheduling — the in-app equivalent of the toggle intent.</a>
-  <a href="/docs/export/"><span>Source</span>Export — the in-app equivalent of the date-range intents.</a>
-</div>
+<div class="related"><a href="/docs/export-profiles/"><span>Profiles</span>Use stable identities.</a><a href="/docs/release-status/"><span>Compatibility</span>Check qualified versions.</a></div>

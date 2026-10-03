@@ -47,7 +47,16 @@ trap cleanup EXIT
 git -C "$work" init -q
 git -C "$work" remote add origin https://github.com/CodyBontecou/homebrew-tap.git
 mkdir -p "$work/Formula"
-cp "$formula" "$work/Formula/$filename"
+# Current Homebrew requires a Sorbet sigil that its style wrapper cannot exclude.
+# Add it before sealing, never to an already signed formula during qualification.
+if grep -q '^# typed:' "$formula"; then
+  cp "$formula" "$work/Formula/$filename"
+else
+  {
+    printf '# typed: strict\n\n'
+    awk '1' "$formula"
+  } > "$work/Formula/$filename"
+fi
 (
   cd "$work"
   "$brew_executable" style \

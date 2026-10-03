@@ -44,6 +44,7 @@ for (const [index, locale] of translatedLocales.entries()) {
     assert.equal((html.match(/class="language-menu/g) ?? []).length, 1);
     assert.ok(html.includes(translation.landing.static.downloadTitle));
     assert.ok(html.includes(translation.landing.static.downloadOffer));
+    assert.ok(html.includes(`href="/about/">${translation.landing.static.about}</a>`));
     assert.ok(html.includes(`href="${routePath('privacy', legalLocale)}">${translation.landing.static.privacy}</a>`));
     assert.ok(html.includes(`href="${routePath('terms', legalLocale)}">${translation.landing.static.terms}</a>`));
     assert.ok(html.includes('class="language-menu footer-language-menu"'));

@@ -85,6 +85,10 @@ class ExportProfileCoordinator @Inject constructor(
             )
         }
         val active = profileRepository.getActiveProfile() ?: return@withLock false
+        if (profileRepository.isSharedSetupV2Blocked(active.id)) {
+            Timber.w("Blocked imported profile remains inert during bootstrap")
+            return@withLock false
+        }
         applyProfile(active, settingsRepository.getExportSettings())
     }
 
@@ -97,6 +101,7 @@ class ExportProfileCoordinator @Inject constructor(
      */
     suspend fun activate(profileId: String): Boolean = mutex.withLock {
         val profile = profileRepository.profileById(profileId) ?: return false
+        if (profileRepository.isSharedSetupV2Blocked(profile.id)) return false
         val active = profileRepository.getActiveProfile()
         if (active?.id == profile.id) {
             // Re-applying the already-active profile (editor save, folder rebind): the frozen
@@ -160,6 +165,7 @@ class ExportProfileCoordinator @Inject constructor(
         val outgoingSettings = settingsRepository.getExportSettings()
         val successor = profileRepository.getProfiles().firstOrNull { it.id != profileId }
             ?: return false
+        if (profileRepository.isSharedSetupV2Blocked(successor.id)) return false
         val staged = snapshotFactory.applyForActivation(successor, outgoingSettings)
             ?: return false
 
@@ -206,7 +212,29 @@ class ExportProfileCoordinator @Inject constructor(
     suspend fun folderWasSelected(uri: String, displayName: String?) {
         mutex.withLock {
             val active = profileRepository.getActiveProfile() ?: return
-            profileRepository.bindFolder(active.id, uri, displayName)
+            if (!profileRepository.isSharedSetupV2Blocked(active.id)) {
+                profileRepository.bindFolder(active.id, uri, displayName)
+                return
+            }
+
+            // Stage the imported snapshot while the block still denies every execution path.
+            // Once persistence starts, finish the live-settings projection plus explicit picker
+            // binding without exposing an allowed active profile backed by stale global settings.
+            val before = settingsRepository.getExportSettings()
+            val staged = snapshotFactory.applyForActivation(active, before) ?: return
+            withContext(NonCancellable) {
+                settingsRepository.updateExportSettings(staged)
+                val rebound = try {
+                    profileRepository.bindFolder(active.id, uri, displayName) &&
+                        !profileRepository.isSharedSetupV2Blocked(active.id)
+                } catch (error: Throwable) {
+                    rollbackLiveSettings(before, error)
+                    throw error
+                }
+                if (!rebound && !rollbackLiveSettings(before)) {
+                    error("Profile folder rebind failed and live settings could not be restored.")
+                }
+            }
         }
     }
 
@@ -216,6 +244,7 @@ class ExportProfileCoordinator @Inject constructor(
     private suspend fun flushEditsLocked() {
         if (!editFlushEnabled.get()) return
         val active = profileRepository.getActiveProfile() ?: return
+        if (profileRepository.isSharedSetupV2Blocked(active.id)) return
         val current = settingsRepository.getExportSettings()
         val target = current.scheduledExportTarget
         val endpointUrl = current.apiEndpointUrl.takeIf { it.isNotBlank() }

@@ -13,6 +13,7 @@ import unittest
 SCRIPTS = pathlib.Path(__file__).resolve().parent
 VERIFY = SCRIPTS / "verify-sealed-homebrew-formula.sh"
 FRESHNESS = SCRIPTS / "check-homebrew-formula-freshness.py"
+NORMALIZE = SCRIPTS / "normalize-homebrew-formula.sh"
 TAG = "healthmd-cli/v0.1.0"
 IDENTITY = (
     "https://github.com/CodyBontecou/health-md/.github/workflows/"
@@ -188,14 +189,72 @@ class HomebrewReleaseScriptTests(unittest.TestCase):
         self.assertNotEqual(rewrite.returncode, 0)
         self.assertIn("immutable", rewrite.stderr)
 
-    def test_freshness_rejects_prerelease_until_policy_supports_it(self) -> None:
+    def test_freshness_orders_previews_and_stable_by_semver(self) -> None:
+        current = self.root / "tap" / "healthmd.rb"
         candidate = self.root / "candidate.rb"
-        self.write_formula(candidate, "0.1.0-alpha.1")
-        result = self.run_freshness(
-            "0.1.0-alpha.1", self.root / "missing.rb", candidate
+        versions = [
+            "0.1.0-alpha", "0.1.0-alpha.1", "0.1.0-alpha.2", "0.1.0-alpha.10",
+            "0.1.0-alpha.beta", "0.1.0-beta", "0.1.0-beta.2", "0.1.0-beta.11",
+            "0.1.0-rc.1", "0.1.0", "0.2.0-alpha.1",
+        ]
+        self.write_formula(candidate, versions[0])
+        first = self.run_freshness(versions[0], current, candidate)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        for older, newer in zip(versions, versions[1:]):
+            with self.subTest(older=older, newer=newer):
+                self.write_formula(current, older)
+                self.write_formula(candidate, newer)
+                upgrade = self.run_freshness(newer, current, candidate)
+                self.assertEqual(upgrade.returncode, 0, upgrade.stderr)
+                current.write_bytes(candidate.read_bytes())
+                identical = self.run_freshness(newer, current, candidate)
+                self.assertEqual(identical.returncode, 0, identical.stderr)
+                self.write_formula(candidate, older)
+                rollback = self.run_freshness(older, current, candidate)
+                self.assertNotEqual(rollback.returncode, 0)
+                self.assertIn("rollback", rollback.stderr)
+
+    def test_freshness_rejects_invalid_versions_and_metadata_rewrites(self) -> None:
+        current = self.root / "tap" / "healthmd.rb"
+        candidate = self.root / "candidate.rb"
+        for version in ["01.1.0", "0.1.0-alpha.01", "0.1.0-", "0.1.0-a..b"]:
+            with self.subTest(version=version):
+                self.write_formula(candidate, version)
+                result = self.run_freshness(version, current, candidate)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("not a valid SemVer", result.stderr)
+        self.write_formula(current, "0.1.0+build.1")
+        self.write_formula(candidate, "0.1.0+build.2")
+        rewrite = self.run_freshness("0.1.0+build.2", current, candidate)
+        self.assertNotEqual(rewrite.returncode, 0)
+        self.assertIn("immutable", rewrite.stderr)
+        mismatch = self.run_freshness("0.1.0+build.3", current, candidate)
+        self.assertNotEqual(mismatch.returncode, 0)
+        self.assertIn("differs from the release plan", mismatch.stderr)
+
+    def test_normalization_adds_sigil_once_and_updates_checksum(self) -> None:
+        brew = self.bin / "brew"
+        brew.write_text(
+            "#!/usr/bin/env python3\n"
+            "import pathlib, sys\n"
+            "assert sys.argv[1] == 'style', sys.argv\n"
+            "assert pathlib.Path(sys.argv[-1]).read_text().startswith('# typed: strict\\n')\n"
         )
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("not a stable SemVer", result.stderr)
+        brew.chmod(0o755)
+        env = self.env.copy()
+        env["RUNNER_TEMP"] = str(self.root)
+        original = self.formula.read_bytes()
+        for _ in range(2):
+            result = subprocess.run(
+                [str(NORMALIZE), str(self.formula), str(self.artifacts / "sha256.sum")],
+                text=True, capture_output=True, env=env, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(self.formula.read_bytes(), b"# typed: strict\n\n" + original)
+            digest = hashlib.sha256(self.formula.read_bytes()).hexdigest()
+            self.assertEqual(
+                (self.artifacts / "sha256.sum").read_text(), f"{digest}  healthmd.rb\n"
+            )
 
 
 if __name__ == "__main__":

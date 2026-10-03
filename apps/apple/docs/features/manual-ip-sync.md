@@ -22,7 +22,7 @@ Manual IP / Tailscale mode is an opt-in fallback that lets the iPhone connect di
 ## iPhone setup
 
 1. Open Health.md on iPhone.
-2. Go to **Mac Destination**.
+2. Open **Sync → Mac Destination**.
 3. In **Connect by IP Address**, enter:
    - the Mac Tailscale IP or hostname;
    - port `17646` unless you are using a custom build;
@@ -55,6 +55,14 @@ Health.md still does not upload health data to a Health.md server. The transfer 
 | Connected but export disabled | Choose or re-select the Mac destination folder. |
 | Mac address list is empty | Confirm Wi‑Fi or Tailscale is active, then click **Refresh**. |
 | macOS firewall blocks the connection | Allow incoming connections for Health.md or permit TCP port `17646`. |
+
+## Video outline
+
+- **Suggested title:** Sync Health.md to Your Mac over Tailscale
+- **Hook:** "Bonjour can't cross a tailnet. Manual IP can."
+- **Demo flow:** 1. On Mac, enable Allow Manual IP Connections and generate a code. 2. On iPhone, Sync → Mac Destination → Connect by IP Address with the Tailscale address, port, and code. 3. Export to the Connected Mac, then reconnect later without a code.
+- **Key screenshot/recording moments:** the Tailscale address card, the pairing code, the first successful export, the trusted reconnect.
+- **CTA / next video:** [iPhone → Mac destination](./mac-sync.md).
 
 ## Implementation notes
 

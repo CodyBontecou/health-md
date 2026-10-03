@@ -131,7 +131,7 @@ The full export still runs on every selected date and queries the complete touch
 ## Implementation notes
 
 - `ExportTabView` presents `ExportPreviewView` as a sheet.
-- Preview calls the same HealthKit fetch path as export; the user-facing Lossless Health Records setting remains `includeGranularData` internally.
+- Preview calls the same HealthKit fetch path as export and preserves the exact compatibility-detail and HealthKit-source-archive policy.
 - `ExportPreviewView.buildPreviews()` uses `ExportOrchestrator.dateRange(from:to:)`, then walks dates in reverse.
 - `maxRenderedDates` is 5 and `maxFetchAttempts` is 14.
 - File content is generated with `healthData.export(format:settings:)`, the same renderer used by real exports.

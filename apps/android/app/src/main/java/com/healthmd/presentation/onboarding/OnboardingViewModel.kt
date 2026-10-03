@@ -7,8 +7,9 @@ import android.provider.DocumentsContract
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.health.HealthConnectManager
-import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsClient
-import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsStep
+import com.healthmd.domain.distribution.DistributionPolicy
+import com.healthmd.domain.onboarding.OnboardingEventSink
+import com.healthmd.domain.onboarding.OnboardingStep
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.util.runCatchingCancellable
@@ -18,6 +19,23 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+
+enum class OnboardingPage(val analyticsStep: OnboardingStep) {
+    WELCOME(OnboardingStep.WELCOME),
+    HEALTH_ACCESS(OnboardingStep.HEALTH_ACCESS),
+    FOLDER_SETUP(OnboardingStep.FOLDER_SETUP),
+    PLAY_ACCESS(OnboardingStep.ACCESS),
+    INCLUDED_ACCESS(OnboardingStep.ACCESS),
+    READY(OnboardingStep.READY),
+}
+
+fun onboardingPages(policy: DistributionPolicy): List<OnboardingPage> = listOf(
+    OnboardingPage.WELCOME,
+    OnboardingPage.HEALTH_ACCESS,
+    OnboardingPage.FOLDER_SETUP,
+    if (policy.purchasesAvailable) OnboardingPage.PLAY_ACCESS else OnboardingPage.INCLUDED_ACCESS,
+    OnboardingPage.READY,
+)
 
 data class OnboardingUiState(
     val healthConnectAvailable: Boolean = false,
@@ -32,8 +50,11 @@ data class OnboardingUiState(
 class OnboardingViewModel @Inject constructor(
     application: Application,
     private val settingsRepository: SettingsRepository,
-    private val onboardingAnalytics: OnboardingAnalyticsClient,
+    private val onboardingEvents: OnboardingEventSink,
+    val distributionPolicy: DistributionPolicy,
 ) : AndroidViewModel(application) {
+
+    val pages: List<OnboardingPage> = onboardingPages(distributionPolicy)
 
     private val healthConnectManager = HealthConnectManager(application)
 
@@ -131,49 +152,41 @@ class OnboardingViewModel @Inject constructor(
 
             // Save to settings
             settingsRepository.saveExportFolderUri(uri.toString())
-            runCatchingCancellable { onboardingAnalytics.folderSelected() }
+            runCatchingCancellable { onboardingEvents.folderSelected() }
         }
     }
 
     fun recordInitialOnboarding() {
         viewModelScope.launch {
             val startRecorded = runCatchingCancellable {
-                onboardingAnalytics.onboardingStarted()
+                onboardingEvents.onboardingStarted()
             }.isSuccess
             if (startRecorded) {
                 runCatchingCancellable {
-                    onboardingAnalytics.stepViewed(OnboardingAnalyticsStep.WELCOME)
+                    onboardingEvents.stepViewed(OnboardingStep.WELCOME)
                 }
             }
         }
     }
 
-    fun recordSettledPage(page: Int) {
-        val step = when (page) {
-            0 -> OnboardingAnalyticsStep.WELCOME
-            1 -> OnboardingAnalyticsStep.HEALTH_ACCESS
-            2 -> OnboardingAnalyticsStep.FOLDER_SETUP
-            3 -> OnboardingAnalyticsStep.UNLOCK
-            4 -> OnboardingAnalyticsStep.READY
-            else -> return
-        }
-        recordAnalytics { onboardingAnalytics.stepViewed(step) }
+    fun recordSettledPage(page: OnboardingPage) {
+        recordAnalytics { onboardingEvents.stepViewed(page.analyticsStep) }
     }
 
     fun recordHealthSkipped() {
-        recordAnalytics { onboardingAnalytics.healthSkipped() }
+        recordAnalytics { onboardingEvents.healthSkipped() }
     }
 
     fun recordFolderSkipped() {
-        recordAnalytics { onboardingAnalytics.folderSkipped() }
+        recordAnalytics { onboardingEvents.folderSkipped() }
     }
 
     fun recordContinueFreeTapped() {
-        recordAnalytics { onboardingAnalytics.continueFreeTapped() }
+        recordAnalytics { onboardingEvents.continueFreeTapped() }
     }
 
     fun recordPurchaseTapped() {
-        recordAnalytics { onboardingAnalytics.purchaseTapped() }
+        recordAnalytics { onboardingEvents.purchaseTapped() }
     }
 
     fun completeOnboarding(onComplete: () -> Unit) {
@@ -181,7 +194,7 @@ class OnboardingViewModel @Inject constructor(
             runCatchingCancellable { settingsRepository.setOnboardingCompleted(true) }
             // Give the durable local queue a brief chance to persist without ever trapping setup.
             withTimeoutOrNull(ANALYTICS_COMPLETION_TIMEOUT_MS) {
-                runCatchingCancellable { onboardingAnalytics.onboardingCompleted() }
+                runCatchingCancellable { onboardingEvents.onboardingCompleted() }
             }
             onComplete()
         }

@@ -1,8 +1,19 @@
+use std::time::Duration;
+
 use healthmd_protocol::{MAXIMUM_PACKET_BYTES, wire::SyncPacket};
+use socket2::{SockRef, TcpKeepalive};
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 use tokio::net::TcpStream;
 
 use crate::ClientError;
+
+/// Idle time before the first TCP keepalive probe on a direct socket.
+const TCP_KEEPALIVE_IDLE: Duration = Duration::from_secs(10);
+/// Delay between keepalive probes once the idle threshold passes.
+const TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(5);
+/// Keepalive probes lost before the kernel declares the connection dead (Unix).
+#[cfg(unix)]
+const TCP_KEEPALIVE_RETRIES: u32 = 3;
 
 pub struct PacketConnection {
     stream: TcpStream,
@@ -11,7 +22,19 @@ pub struct PacketConnection {
 
 impl PacketConnection {
     #[must_use]
-    pub const fn new(stream: TcpStream) -> Self {
+    pub fn new(stream: TcpStream) -> Self {
+        // Hardening only: a mobile source that silently disappears (sleep, Wi-Fi/Tailscale
+        // roam, process death without a clean close) leaves the accepted socket half-open.
+        // Kernel keepalives bound that state so command listeners do not wait on a peer
+        // that will never speak again. Failures degrade to the deployed no-keepalive
+        // behavior instead of breaking an otherwise usable connection.
+        let _ = stream.set_nodelay(true);
+        let keepalive = TcpKeepalive::new()
+            .with_time(TCP_KEEPALIVE_IDLE)
+            .with_interval(TCP_KEEPALIVE_INTERVAL);
+        #[cfg(unix)]
+        let keepalive = keepalive.with_retries(TCP_KEEPALIVE_RETRIES);
+        let _ = SockRef::from(&stream).set_tcp_keepalive(&keepalive);
         Self {
             stream,
             maximum_packet_bytes: MAXIMUM_PACKET_BYTES,
@@ -103,6 +126,36 @@ mod tests {
 
         sender.send(&packet).await.unwrap();
         assert_eq!(receiver.receive().await.unwrap(), packet);
+    }
+
+    #[tokio::test]
+    async fn new_applies_transport_hardening_socket_options() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let client = tokio::spawn(TcpStream::connect(address));
+        let (server, _) = listener.accept().await.unwrap();
+        let hardened = PacketConnection::new(server);
+
+        assert!(hardened.stream.nodelay().unwrap());
+        let socket = SockRef::from(&hardened.stream);
+        assert!(
+            socket.keepalive().unwrap(),
+            "accepted direct sockets must probe silent peers"
+        );
+        #[cfg(unix)]
+        {
+            assert_eq!(socket.tcp_keepalive_time().unwrap(), TCP_KEEPALIVE_IDLE);
+            assert_eq!(
+                socket.tcp_keepalive_interval().unwrap(),
+                TCP_KEEPALIVE_INTERVAL
+            );
+            assert_eq!(
+                socket.tcp_keepalive_retries().unwrap(),
+                TCP_KEEPALIVE_RETRIES
+            );
+        }
+        drop(hardened);
+        drop(client.await.unwrap().unwrap());
     }
 
     #[tokio::test]

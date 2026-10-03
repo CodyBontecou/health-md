@@ -690,8 +690,23 @@ struct ExportPresentationTarget: Equatable, Sendable {
 nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     let dailyFileCount: Int
     let rollupFileCount: Int
+    /// Data-dictionary artifact written beside the planned range outputs.
+    /// Defaults to zero so stored journals and older call sites stay valid.
+    let dataDictionaryFileCount: Int
 
-    var totalFileCount: Int { dailyFileCount + rollupFileCount }
+    init(
+        dailyFileCount: Int,
+        rollupFileCount: Int,
+        dataDictionaryFileCount: Int = 0
+    ) {
+        self.dailyFileCount = max(dailyFileCount, 0)
+        self.rollupFileCount = max(rollupFileCount, 0)
+        self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+    }
+
+    var totalFileCount: Int {
+        dailyFileCount + rollupFileCount + dataDictionaryFileCount
+    }
 }
 
 nonisolated struct AppleLooseDailyMaterializedFile: Equatable, Sendable {
@@ -1919,6 +1934,7 @@ final class VaultManager: ObservableObject {
         let bookmarkData: Data
         let standardizedPath: String
         let displayName: String
+        let identity: VaultFolderIdentity?
     }
 
     /// Returns the persisted bookmark and trusted selection when a complete,
@@ -1933,7 +1949,8 @@ final class VaultManager: ObservableObject {
             return PersistedVaultSnapshot(
                 bookmarkData: bookmarkData,
                 standardizedPath: decoded.standardizedPath,
-                displayName: decoded.displayName
+                displayName: decoded.displayName,
+                identity: decoded.identity
             )
         }
 
@@ -1944,7 +1961,8 @@ final class VaultManager: ObservableObject {
             bookmarkData: bookmarkData,
             standardizedPath: URL(fileURLWithPath: legacyPath).standardizedFileURL.path,
             displayName: defaults.string(forKey: vaultNameKey)
-                ?? URL(fileURLWithPath: legacyPath).lastPathComponent
+                ?? URL(fileURLWithPath: legacyPath).lastPathComponent,
+            identity: nil
         )
     }
 
@@ -1953,17 +1971,36 @@ final class VaultManager: ObservableObject {
     /// single-vault flow uses, then re-running the verified load path. The
     /// destination-store row is authoritative only for storage; resolution,
     /// staleness, and expected-path verification remain VaultManager's.
+    ///
+    /// `identity` is the persistent identity evidence stored with the row.
+    /// Rows saved before identity capture (and identity-less file providers)
+    /// pass nil; the trusted identity is then re-captured through the row's
+    /// own bookmark round-trip — the same round-trip that verified it at
+    /// selection time — so identity-bearing volumes (local "On My iPhone"
+    /// folders) keep durable evidence across profile adoption and a moved
+    /// path can rebind through an identity match instead of demanding
+    /// reselection on every launch (issue #143).
+    ///
+    /// Returns the post-verification persisted snapshot — healed identity,
+    /// and the refreshed bookmark, standardized path, and display name when
+    /// verification rebound a moved or stale bookmark — so callers persist
+    /// every refreshed field back into the destination row instead of only
+    /// the identity.
+    @discardableResult
     func adoptPersistedVault(
         bookmarkData: Data,
         standardizedPath: String,
-        displayName: String
-    ) {
+        displayName: String,
+        identity: VaultFolderIdentity? = nil
+    ) -> PersistedVaultSnapshot? {
+        let trustedIdentity = identity
+            ?? adoptableIdentity(fromBookmarkData: bookmarkData)
         defaults.set(bookmarkData, forKey: bookmarkKey)
         let selection = SavedVaultSelection(
             version: Self.savedSelectionVersion,
             standardizedPath: standardizedPath,
             displayName: displayName,
-            identity: nil
+            identity: trustedIdentity
         )
         if let encoded = try? JSONEncoder().encode(selection) {
             defaults.set(encoded, forKey: vaultSelectionKey)
@@ -1971,6 +2008,57 @@ final class VaultManager: ObservableObject {
         defaults.set(displayName, forKey: vaultNameKey)
         defaults.set(standardizedPath, forKey: vaultPathKey)
         loadSavedSettings()
+        return persistedVaultSnapshot()
+    }
+
+    /// Adopts a profile-bound folder and writes every verified refresh back to
+    /// the same destination row. Keeping this in one path prevents profile
+    /// activation, Shortcuts, and scheduled exports from drifting on bookmark
+    /// refresh behavior, including identity-less iCloud Drive and Dropbox rows.
+    @discardableResult
+    func adoptPersistedVault(
+        destinationID: UUID?,
+        from destinationStore: ProfileDestinationStore
+    ) -> PersistedVaultSnapshot? {
+        guard let destination = destinationStore.vault(id: destinationID) else {
+            return nil
+        }
+
+        let refreshed = adoptPersistedVault(
+            bookmarkData: destination.bookmarkData,
+            standardizedPath: destination.standardizedPath,
+            displayName: destination.name,
+            identity: destination.identity
+        )
+        guard let refreshed else { return nil }
+
+        if refreshed.standardizedPath != destination.standardizedPath
+            || refreshed.displayName != destination.name
+            || refreshed.bookmarkData != destination.bookmarkData
+            || refreshed.identity != destination.identity {
+            destinationStore.updateVault(
+                id: destination.id,
+                name: refreshed.displayName,
+                standardizedPath: refreshed.standardizedPath,
+                bookmarkData: refreshed.bookmarkData,
+                identity: refreshed.identity
+            )
+        }
+        return refreshed
+    }
+
+    /// Captures identity evidence for a destination row through its own
+    /// bookmark round-trip while security scope is acquired. Mirrors
+    /// `makeSavedSelection`'s round-trip capture so adoption-time and
+    /// selection-time evidence agree. Any failure leaves the row without
+    /// identity evidence; the verified load then applies its own rules.
+    private func adoptableIdentity(fromBookmarkData bookmarkData: Data) -> VaultFolderIdentity? {
+        guard let (resolvedURL, _) = try? bookmarkResolver.resolveBookmark(data: bookmarkData),
+              bookmarkResolver.startAccessing(resolvedURL) else {
+            return nil
+        }
+        defer { bookmarkResolver.stopAccessing(resolvedURL) }
+        return try? identityProbe.persistentIdentity(for: resolvedURL)
     }
 
     // MARK: - Folder Selection
@@ -1979,7 +2067,9 @@ final class VaultManager: ObservableObject {
     /// (for example the profile editor's destination picker). Creates the
     /// security-scoped bookmark without changing the live shared vault
     /// selection — callers own where the resulting binding is applied.
-    func selectionMetadata(for url: URL) -> (bookmarkData: Data, standardizedPath: String, displayName: String)? {
+    func selectionMetadata(
+        for url: URL
+    ) -> (bookmarkData: Data, standardizedPath: String, displayName: String, identity: VaultFolderIdentity?)? {
         guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = "Failed to access folder"
             return nil
@@ -1991,7 +2081,8 @@ final class VaultManager: ObservableObject {
             return (
                 bookmarkData,
                 selection.standardizedPath,
-                selection.displayName
+                selection.displayName,
+                selection.identity
             )
         } catch {
             lastExportStatus = error.localizedDescription
@@ -1999,10 +2090,15 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    func setVaultFolder(_ url: URL) {
+    /// Saves a user-picked destination. Returns true only after the bookmark
+    /// and trusted selection metadata have both been persisted, allowing the
+    /// profile coordinator to bind the new folder without replacing a valid
+    /// profile destination when provider access or bookmark creation fails.
+    @discardableResult
+    func setVaultFolder(_ url: URL) -> Bool {
         guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = "Failed to access folder"
-            return
+            return false
         }
 
         defer { bookmarkResolver.stopAccessing(url) }
@@ -2022,8 +2118,10 @@ final class VaultManager: ObservableObject {
             lastExportStatus = nil
             clearLastExportPresentationTarget()
             Self.logger.info("User explicitly selected an export destination")
+            return true
         } catch {
             lastExportStatus = "Failed to save folder access: \(error.localizedDescription)"
+            return false
         }
     }
 
@@ -2431,7 +2529,8 @@ final class VaultManager: ObservableObject {
             dataDictionary: dictionary,
             result: AppleLooseDailyRangeWriteResult(
                 dailyFileCount: operation.artifacts.count - rollupFileCount,
-                rollupFileCount: rollupFileCount
+                rollupFileCount: rollupFileCount,
+                dataDictionaryFileCount: dictionary != nil ? 1 : 0
             )
         )
     }
@@ -3681,9 +3780,9 @@ final class VaultManager: ObservableObject {
         try Task.checkCancellation()
         let payload = try decodeConnectedHealthDayPayload(from: sourceURL)
         guard let record = payload.record else { return false }
-        let projection = ConnectedExportGranularMode.sanitized(
+        let projection = ConnectedExportDetailPolicy.sanitized(
             record,
-            includesGranularData: false
+            detailPolicy: .summary
         )
         try JSONEncoder().encode(projection).write(to: destinationURL, options: .atomic)
         return true

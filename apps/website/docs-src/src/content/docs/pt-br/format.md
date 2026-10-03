@@ -7,7 +7,7 @@ description: "Controle a formatação da saída sem alterar o que é coletado. E
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>Padrão. Um arquivo por dia. Frontmatter YAML opcional e seções com títulos por categoria.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown com frontmatter estruturado e otimizado para o plugin <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> do Obsidian. Propriedades numéricas continuam numéricas e datas continuam sendo datas.</p></div>
-<div class="option"><strong>JSON</strong><p>Um arquivo JSON por dia. Resumos diários do schema v7 podem incorporar o arquivo oficial <code>healthmd.healthkit_records</code> v1 quando os registros de saúde sem perdas estão ativados.</p></div>
+<div class="option"><strong>JSON</strong><p>Um arquivo JSON por dia. Resumos diários Apple do schema v8 podem incorporar o arquivo oficial <code>healthmd.healthkit_records</code> v1 quando os registros de saúde sem perdas estão ativados.</p></div>
 <div class="option"><strong>CSV</strong><p>Um arquivo CSV por dia com o cabeçalho <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Linhas de resumo de compatibilidade contêm cinco campos e omitem a coluna de data e hora; linhas com data e hora e linhas de registros canônicos contêm os seis campos.</p></div>
 </div>
 
@@ -29,8 +29,15 @@ description: "Controle a formatação da saída sem alterar o que é coletado. E
 ## Prévia
 <p>No fim da tela Formato, um bloco de prévia renderiza os dados de hoje com as configurações atuais. É a maneira mais rápida de iterar: altere um controle, veja a prévia e repita.</p>
 
+## Detalhes dos dados e perfis
+
+Resumo produz projeções diárias compactas. Série temporal detalhada acrescenta amostras e intervalos selecionados na Apple e no Android quando a métrica permite. Registros de saúde sem perdas acrescenta o arquivo canônico HealthKit, exclusivo da Apple e não uma camada de compatibilidade Android.
+
+O detalhe é congelado com o [perfil de exportação](/pt-br/docs/export-profiles/). Alterá-lo com um perfil ativo muda somente esse perfil.
+
 ## Relacionados
 <div class="related">
+<a href="/pt-br/docs/export-profiles/"><span>Perfis</span>Salve nível de detalhe e formato para cada fluxo.</a>
 <a href="/pt-br/docs/metrics/"><span>O quê</span>Métricas de saúde — escolha primeiro os dados.</a>
 <a href="/pt-br/docs/individual-tracking/"><span>Detalhado</span>Rastreamento individual — uma saída diferente, com arquivos por registro.</a>
 <a href="/pt-br/docs/daily-notes/"><span>Obsidian</span>Injeção em notas diárias — usa os mesmos campos do frontmatter.</a>

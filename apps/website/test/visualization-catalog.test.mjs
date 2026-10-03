@@ -39,7 +39,19 @@ test("generated website catalog includes every plugin visualization exactly once
     assert.ok(item.description, item.type);
     assert.ok(item.category, item.type);
     assert.ok(item.renderer === "canvas" || item.renderer === "html", item.type);
+    assert.ok(Array.isArray(item.exportSources) && item.exportSources.length > 0, `${item.type} exportSources`);
+    for (const source of item.exportSources) {
+      assert.ok(
+        ["daily-json", "daily-csv", "daily-markdown", "rollups", "workout-notes"].includes(source),
+        `${item.type} export source ${source}`
+      );
+    }
   }
+  const byId = Object.fromEntries(catalog.visualizations.map((item) => [item.type, item]));
+  assert.deepEqual(byId["rollup-explorer"].exportSources, ["rollups"]);
+  assert.deepEqual(byId["workout-map"].exportSources, ["daily-json"]);
+  assert.ok(byId["heart-terrain"].exportSources.includes("daily-csv"));
+  assert.ok(!byId["heart-terrain"].exportSources.includes("daily-markdown"));
 });
 
 test("Visualization Studio derives availability from the generated plugin catalog", async () => {
@@ -51,6 +63,7 @@ test("Visualization Studio derives availability from the generated plugin catalo
   assert.match(customizer, /buildVisualizationsFromPluginCatalog/);
   assert.match(customizer, /Array\.isArray\(api\.catalog\)/);
   assert.match(customizer, /Object\.assign\(\{\}, curated\?\.config \|\| \{\}, generatedConfig\)/);
+  assert.match(customizer, /option\("units", "auto, metric, imperial"/);
   assert.match(pageGenerator, /visualizations-catalog\.json/);
   assert.doesNotMatch(pageGenerator, /extractVisualizations\(source\)/);
   assert.match(bundleGenerator, /VISUALIZATION_CATALOG/);
@@ -120,7 +133,7 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "7d8fdee95b1bdec064d66687fc61d08032fe773d");
+  assert.equal(externalSources.obsidian_plugin.revision, "d9bd050949dde067f32ea49381ca58e7ccbcf21d");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);

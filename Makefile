@@ -5,10 +5,11 @@ CORE_RUST_DIR := packages/healthmd-core-rust
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 
 .PHONY: test test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
-        test-apple test-android test-cli test-practice test-website apple-ios apple-macos cli-build \
-        android-build practice-build website-build
+        test-apple test-android test-cli test-practice test-wake test-website apple-ios apple-macos cli-build \
+        android-build android-play-debug android-fdroid-debug android-fdroid-release \
+        practice-build website-build
 
-test: test-contracts test-core test-apple test-android test-cli test-practice test-website
+test: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website
 
 test-contracts:
 	python3 packages/contracts/validate.py
@@ -52,6 +53,9 @@ test-cli:
 test-practice:
 	cd apps/practice && npm run check
 
+test-wake:
+	cd apps/wake && npm test && npm run check
+
 test-website:
 	cd apps/website && npm test
 
@@ -64,8 +68,17 @@ apple-macos:
 cli-build:
 	cd apps/cli && cargo build --workspace
 
-android-build:
-	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew assembleDebug
+android-build: android-play-debug
+
+android-play-debug:
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew :app:assemblePlayDebug
+
+android-fdroid-debug:
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew :app:assembleFdroidDebug
+
+android-fdroid-release:
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew :app:assembleFdroidRelease
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./scripts/verify-fdroid-artifact.sh
 
 practice-build:
 	cd apps/practice && npm run build

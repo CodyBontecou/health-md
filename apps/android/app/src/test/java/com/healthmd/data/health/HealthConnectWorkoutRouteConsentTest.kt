@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.aggregate.AggregationResult
+import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -69,12 +70,18 @@ class HealthConnectWorkoutRouteConsentTest {
     private fun manager(client: HealthConnectClient, gateway: ExerciseRouteConsentGateway) =
         HealthConnectManager(mockk<Context>(relaxed = true), client, routeConsentGateway = gateway)
 
+    /** Relaxed result whose step metric resolves to a real Long; daily steps are always aggregated. */
+    private fun stubAggregationResult(): AggregationResult =
+        mockk<AggregationResult>(relaxed = true).also { result ->
+            every { result[StepsRecord.COUNT_TOTAL] } returns 0L
+        }
+
     private fun stubClient(session: ExerciseSessionRecord): HealthConnectClient {
         val client = mockk<HealthConnectClient>()
         val features = mockk<HealthConnectFeatures>()
         every { features.getFeatureStatus(any()) } returns HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
         every { client.features } returns features
-        coEvery { client.aggregate(any<AggregateRequest>()) } returns mockk<AggregationResult>(relaxed = true)
+        coEvery { client.aggregate(any<AggregateRequest>()) } returns stubAggregationResult()
         coEvery { client.readRecords(any<ReadRecordsRequest<ExerciseSessionRecord>>()) } answers {
             val request = firstArg<ReadRecordsRequest<*>>()
             if (request.recordType == ExerciseSessionRecord::class) {
@@ -153,7 +160,7 @@ class HealthConnectWorkoutRouteConsentTest {
         val features = mockk<HealthConnectFeatures>()
         every { features.getFeatureStatus(any()) } returns HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
         every { client.features } returns features
-        coEvery { client.aggregate(any<AggregateRequest>()) } returns mockk<AggregationResult>(relaxed = true)
+        coEvery { client.aggregate(any<AggregateRequest>()) } returns stubAggregationResult()
         coEvery { client.readRecords(any<ReadRecordsRequest<ExerciseSessionRecord>>()) } answers {
             val request = firstArg<ReadRecordsRequest<*>>()
             if (request.recordType == ExerciseSessionRecord::class) {

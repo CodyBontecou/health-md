@@ -1,0 +1,347 @@
+name: Android Google Play access audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Immutable android/v* release tag whose Play access is being audited'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-google-play-mutation
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit protected Google Play access
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: google-play
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout workflow revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate audit and release identities
+        id: identity
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_TYPE" = tag
+          [[ "$GITHUB_REF_NAME" == android/v* || "$GITHUB_REF_NAME" == android/recovery/* ]]
+          [[ "$RELEASE_TAG" =~ ^android/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          for tag in "$GITHUB_REF_NAME" "$RELEASE_TAG"; do
+            git fetch --force --no-tags origin "+refs/tags/${tag}:refs/tags/${tag}"
+            test "$(git cat-file -t "$tag")" = tag
+          done
+          workflow_sha=$(git rev-parse "$GITHUB_REF_NAME^{commit}")
+          release_sha=$(git rev-parse "$RELEASE_TAG^{commit}")
+          version_code=$(git show "$RELEASE_TAG:apps/android/release-scope.json" \
+            | jq -er '.googlePlay.phone.versionCode | select(type == "number" and . >= 1 and . < 1000000)')
+          test "$workflow_sha" = "$GITHUB_SHA"
+          git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$workflow_sha" refs/remotes/origin/main
+          git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main
+          {
+            echo "workflow_sha=$workflow_sha"
+            echo "release_sha=$release_sha"
+            echo "version_code=$version_code"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Retain immutable access-audit intent
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_SHA: ${{ steps.identity.outputs.release_sha }}
+          VERSION_CODE: ${{ steps.identity.outputs.version_code }}
+          WORKFLOW_SHA: ${{ steps.identity.outputs.workflow_sha }}
+        run: |
+          set -euo pipefail
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow '.github/workflows/android-google-play-access-audit.yml' \
+            --arg workflowRef "$GITHUB_REF" --arg workflowSha "$WORKFLOW_SHA" \
+            --arg releaseTag "$RELEASE_TAG" --arg releaseSha "$RELEASE_SHA" \
+            --argjson versionCode "$VERSION_CODE" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              workflowRef:$workflowRef,workflowSha:$workflowSha,releaseTag:$releaseTag,
+              releaseSha:$releaseSha,versionCode:$versionCode,runId:$runId,runAttempt:$runAttempt,
+              requestedChecks:["internal-track-state","generated-apks-state","empty-edit-insert-delete"],
+              noPlayEditCommit:true,preparedAtUtc:$preparedAt
+            }' > "$RUNNER_TEMP/google-play-access-audit-intent.json"
+
+      - name: Upload access-audit intent
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-google-play-access-audit-intent-${{ steps.identity.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/google-play-access-audit-intent.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Authenticate to Google Play with protected Workload Identity
+        id: play-auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GOOGLE_PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          create_credentials_file: false
+
+      - name: Verify artifact state and empty-edit authority without committing
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_SHA: ${{ steps.identity.outputs.release_sha }}
+          VERSION_CODE: ${{ steps.identity.outputs.version_code }}
+          WORKFLOW_SHA: ${{ steps.identity.outputs.workflow_sha }}
+        run: |
+          set -euo pipefail
+          api='https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.healthmd.android'
+          work="$RUNNER_TEMP/google-play-access-audit"
+          mkdir -p "$work"
+          edit_id=''
+          cleanup_edit() {
+            [[ -z "$edit_id" ]] || curl -fsS --retry 2 --max-time 30 -X DELETE \
+              -H "Authorization: Bearer $ACCESS_TOKEN" "$api/edits/$edit_id" >/dev/null 2>&1 || true
+          }
+          trap cleanup_edit EXIT
+          report_error() {
+            local stage=$1 status=$2 body=$3 detail
+            detail=$(jq -r '
+              if (.error | type) == "object" then
+                [(.error.status // empty), (.error.message // empty)]
+                | map(select(type == "string" and length > 0)) | join(": ")
+              else empty end
+            ' "$body" 2>/dev/null || true)
+            detail=$(printf '%s' "$detail" | tr '\r\n\t' '   ' | cut -c1-500)
+            [[ -n "$detail" ]] || detail='no structured error detail'
+            echo "::error::$stage failed (HTTP ${status:-000}): $detail"
+          }
+
+          set +e
+          read_http=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $ACCESS_TOKEN" "$api/tracks/internal/releases" \
+            -o "$work/internal.json" --write-out '%{http_code}')
+          read_exit=$?
+          set -e
+          if [[ $read_exit -ne 0 || ! "$read_http" =~ ^2[0-9][0-9]$ ]]; then
+            report_error 'Internal-track read' "$read_http" "$work/internal.json"
+            exit 1
+          fi
+          jq -e '.releases | type == "array"' "$work/internal.json" >/dev/null
+          if jq -e --argjson code "$VERSION_CODE" '
+            any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
+          ' "$work/internal.json" >/dev/null; then
+            internal_contains_code=true
+          else
+            internal_contains_code=false
+          fi
+
+          # A generated-APK result can distinguish a code consumed by an earlier orphaned bundle
+          # upload from a code active on a track. This endpoint is read-only. Some narrowly scoped
+          # Play grants cannot query it; retain that as an explicit inconclusive result.
+          set +e
+          generated_http=$(curl --fail-with-body --retry 2 --max-time 30 -sS \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "$api/generatedApks/$VERSION_CODE" -o "$work/generated-apks.json" \
+            --write-out '%{http_code}')
+          generated_exit=$?
+          set -e
+          generated_query_authorized=false
+          generated_apks_present=false
+          if [[ $generated_exit -eq 0 && "$generated_http" =~ ^2[0-9][0-9]$ ]]; then
+            jq -e '.generatedApks | type == "array"' "$work/generated-apks.json" >/dev/null
+            generated_query_authorized=true
+            if jq -e '(.generatedApks | length) > 0' "$work/generated-apks.json" >/dev/null; then
+              generated_apks_present=true
+            fi
+          elif [[ "$generated_http" == 404 ]]; then
+            generated_query_authorized=true
+          else
+            detail=$(jq -r '.error.message // "no structured error detail"' \
+              "$work/generated-apks.json" 2>/dev/null | tr '\r\n\t' '   ' | cut -c1-500)
+            echo "::warning::Generated-APK state query was inconclusive (HTTP ${generated_http:-000}): $detail"
+          fi
+
+          # Insert one empty edit without retries, then delete it. No bundle, track, listing, commit,
+          # or review endpoint is called. This proves baseline edit access, not bundle-upload authority.
+          set +e
+          edit_http=$(curl --fail-with-body --max-time 30 -sS -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
+            -d '{}' "$api/edits" -o "$work/edit.json" --write-out '%{http_code}')
+          edit_exit=$?
+          set -e
+          if [[ $edit_exit -ne 0 || ! "$edit_http" =~ ^2[0-9][0-9]$ ]]; then
+            report_error 'Empty Play edit insertion' "$edit_http" "$work/edit.json"
+            exit 1
+          fi
+          edit_id=$(jq -er .id "$work/edit.json")
+          curl --fail-with-body --retry 2 --retry-all-errors --max-time 30 -sS -X DELETE \
+            -H "Authorization: Bearer $ACCESS_TOKEN" "$api/edits/$edit_id" >/dev/null
+          edit_id=''
+          trap - EXIT
+
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow '.github/workflows/android-google-play-access-audit.yml' \
+            --arg workflowRef "$GITHUB_REF" --arg workflowSha "$WORKFLOW_SHA" \
+            --arg releaseTag "$RELEASE_TAG" --arg releaseSha "$RELEASE_SHA" \
+            --argjson versionCode "$VERSION_CODE" \
+            --argjson internalContainsCode "$internal_contains_code" \
+            --argjson generatedQueryAuthorized "$generated_query_authorized" \
+            --argjson generatedApksPresent "$generated_apks_present" \
+            --argjson generatedHttpStatus "${generated_http:-0}" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              workflowRef:$workflowRef,workflowSha:$workflowSha,releaseTag:$releaseTag,
+              releaseSha:$releaseSha,versionCode:$versionCode,runId:$runId,runAttempt:$runAttempt,
+              workloadIdentityAuthenticated:true,internalTrackReadVerified:true,
+              internalTrackContainsVersionCode:$internalContainsCode,
+              generatedApksQueryAuthorized:$generatedQueryAuthorized,
+              generatedApksQueryHttpStatus:$generatedHttpStatus,
+              generatedApksPresent:$generatedApksPresent,
+              emptyEditInsertDeleteVerified:true,noPlayEditCommit:true,
+              verifiedAtUtc:$verifiedAt
+            }' > "$RUNNER_TEMP/google-play-access-audit-receipt.json"
+
+      - name: Upload verified access-audit receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-google-play-access-audit-result-${{ steps.identity.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/google-play-access-audit-receipt.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+  audit-upload-signer:
+    name: Audit protected Play upload signer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: google-play-qa
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout workflow revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate audit and release identities
+        id: identity
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_TYPE" = tag
+          [[ "$GITHUB_REF_NAME" == android/v* || "$GITHUB_REF_NAME" == android/recovery/* ]]
+          [[ "$RELEASE_TAG" =~ ^android/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          for tag in "$GITHUB_REF_NAME" "$RELEASE_TAG"; do
+            git fetch --force --no-tags origin "+refs/tags/${tag}:refs/tags/${tag}"
+            test "$(git cat-file -t "$tag")" = tag
+          done
+          workflow_sha=$(git rev-parse "$GITHUB_REF_NAME^{commit}")
+          release_sha=$(git rev-parse "$RELEASE_TAG^{commit}")
+          test "$workflow_sha" = "$GITHUB_SHA"
+          git fetch --force origin '+refs/heads/main:refs/remotes/origin/main'
+          git merge-base --is-ancestor "$workflow_sha" refs/remotes/origin/main
+          git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main
+          {
+            echo "workflow_sha=$workflow_sha"
+            echo "release_sha=$release_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java certificate tools
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify protected keystore matches the registered Play upload certificate
+        id: signer
+        shell: bash
+        env:
+          ANDROID_RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            test -n "${!name:-}"
+          done
+          keystore="$RUNNER_TEMP/play-upload-keystore.jks"
+          trap 'rm -f "$keystore"' EXIT
+          printf '%s' "$ANDROID_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          chmod 600 "$keystore"
+          sha1=$(keytool -exportcert -keystore "$keystore" -storepass "$RELEASE_STORE_PASSWORD" \
+            -alias "$RELEASE_KEY_ALIAS" -keypass "$RELEASE_KEY_PASSWORD" 2>/dev/null \
+            | sha1sum | awk '{print $1}')
+          sha256=$(keytool -exportcert -keystore "$keystore" -storepass "$RELEASE_STORE_PASSWORD" \
+            -alias "$RELEASE_KEY_ALIAS" -keypass "$RELEASE_KEY_PASSWORD" 2>/dev/null \
+            | sha256sum | awk '{print $1}')
+          expected_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'
+          test "$sha1" = "$expected_sha1" || {
+            echo "::error::Protected google-play-qa signer does not match the registered Play upload certificate"; exit 1;
+          }
+          {
+            echo "sha1=$sha1"
+            echo "sha256=$sha256"
+          } >> "$GITHUB_OUTPUT"
+          rm -f "$keystore"
+          trap - EXIT
+
+      - name: Retain upload-signer audit receipt
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_SHA: ${{ steps.identity.outputs.release_sha }}
+          WORKFLOW_SHA: ${{ steps.identity.outputs.workflow_sha }}
+          CERTIFICATE_SHA1: ${{ steps.signer.outputs.sha1 }}
+          CERTIFICATE_SHA256: ${{ steps.signer.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow '.github/workflows/android-google-play-access-audit.yml' \
+            --arg workflowRef "$GITHUB_REF" --arg workflowSha "$WORKFLOW_SHA" \
+            --arg releaseTag "$RELEASE_TAG" --arg releaseSha "$RELEASE_SHA" \
+            --arg sha1 "$CERTIFICATE_SHA1" --arg sha256 "$CERTIFICATE_SHA256" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              workflowRef:$workflowRef,workflowSha:$workflowSha,releaseTag:$releaseTag,
+              releaseSha:$releaseSha,runId:$runId,runAttempt:$runAttempt,
+              signingEnvironment:"google-play-qa",registeredUploadCertificateMatched:true,
+              uploadCertificateSha1:$sha1,uploadCertificateSha256:$sha256,
+              privateKeyRetained:false,verifiedAtUtc:$verifiedAt
+            }' > "$RUNNER_TEMP/google-play-upload-signer-audit.json"
+
+      - name: Upload upload-signer audit receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-google-play-upload-signer-audit-${{ steps.identity.outputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/google-play-upload-signer-audit.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Remove protected keystore material
+        if: ${{ always() }}
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/play-upload-keystore.jks"

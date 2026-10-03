@@ -519,7 +519,7 @@ jobs:
 
           asc versions attach-build \
             --version-id "$VERSION_ID" \
-            --build "${{ steps.asc_upload.outputs.build_id }}"
+            --build-id "${{ steps.asc_upload.outputs.build_id }}"
 
           echo "Applying canonical app-info and $VERSION metadata"
           if [[ -n "${{ github.event.inputs.app_info }}" ]]; then

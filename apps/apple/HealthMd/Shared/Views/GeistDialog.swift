@@ -1,15 +1,12 @@
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 // MARK: - Geist Dialog
 // A custom modal following DESIGN.md (Geist) instead of native `.alert`.
 // Surfaces: 12px radius (menus and modals), background-100 card with a subtle
 // border, and the documented modal elevation shadow. Motion: ~300ms overlay
-// transition with the Geist easing curve, honoring reduced-motion.
+// transition with the Geist easing curve, omitted with reduced-motion.
 //
-// Attach at the root of a full-screen (or full-window) view, e.g.:
+// Attach at the root of a full-screen (or full-window), keyboard-safe view, e.g.:
 //
 //     .geistDialog(
 //         isPresented: $showRollupHelp,
@@ -63,6 +60,7 @@ struct GeistDialogAction {
 }
 
 /// A text entry field shown between the message and the actions.
+/// The existing placeholder is also the persistent external/accessibility label.
 /// Configured for names/keys: autocorrection off and, on iOS, no autocapitalization.
 struct GeistDialogField {
     let placeholder: LocalizedStringKey
@@ -88,65 +86,62 @@ private struct GeistDialogModifier<Presenting: View>: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var dialogAnimation: Animation {
-        if reduceMotion {
-            return .easeInOut(duration: 0.15)
-        }
-        // DESIGN.md motion: ~300ms for overlays and modals with a snappy,
-        // slightly overshooting curve (cubic-bezier(0.175, 0.885, 0.32, 1.1)).
-        return .spring(duration: 0.3, bounce: 0.08)
-    }
-
     var body: some View {
-        presenting.overlay {
-            ZStack {
-                if isPresented {
-                    Color.dialogScrim
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-                        .onTapGesture(perform: performCancelDismissal)
-                        .accessibilityHidden(true)
+        presenting
+            .accessibilityHidden(isPresented)
+            .allowsHitTesting(!isPresented)
+            .overlay {
+                // Only the scrim ignores safe areas. The card's actual remaining
+                // proposal follows the native keyboard and short/narrow host bounds.
+                GeometryReader { geometry in
+                    let inset = geometry.size.width < 360 || geometry.size.height < 360 ? Spacing.s2 : Spacing.s6
+                    ZStack {
+                        if isPresented {
+                            Color.dialogScrim
+                                .ignoresSafeArea()
+                                .onTapGesture(perform: performCancelDismissal)
+                                .accessibilityHidden(true)
+                                .transition(reduceMotion ? .identity : .opacity)
 
-                    GeistDialogCard(
-                        title: title,
-                        message: message,
-                        messageAccessibilityIdentifier: messageAccessibilityIdentifier,
-                        actions: actions,
-                        fields: fields,
-                        onAction: performAction,
-                        onCancel: performCancelDismissal
-                    )
-                    .padding(Spacing.s6)
-                    .transition(
-                        reduceMotion
-                            ? .opacity
-                            : .opacity.combined(with: .scale(scale: 0.96))
-                    )
+                            GeistDialogCard(
+                                title: title,
+                                message: message,
+                                messageAccessibilityIdentifier: messageAccessibilityIdentifier,
+                                actions: actions,
+                                fields: fields,
+                                maximumHeight: max(0, geometry.size.height - inset * 2),
+                                onAction: performAction,
+                                onCancel: performCancelDismissal
+                            )
+                            .frame(width: min(420, max(0, geometry.size.width - inset * 2)))
+                            .transition(reduceMotion ? .identity : .opacity.combined(with: .scale(scale: 0.96)))
+                        }
+                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("geist-dialog.overlay")
+                    .accessibilityHidden(!isPresented)
                 }
+                .animation(GeistDialogMotion.presentationAnimation(reduceMotion: reduceMotion), value: isPresented)
             }
-            .animation(dialogAnimation, value: isPresented)
-        }
     }
 
     private func performAction(_ action: GeistDialogAction) {
-        action.handler()
-        isPresented = false
+        GeistDialogInteraction(actions: actions).perform(action, isPresented: $isPresented)
     }
 
     private func performCancelDismissal() {
-        if let cancel = actions.first(where: { $0.role == .secondary }) {
-            performAction(cancel)
-        } else {
-            isPresented = false
-        }
+        GeistDialogInteraction(actions: actions).cancel(isPresented: $isPresented)
     }
 }
 
 extension View {
     /// Presents a Geist-styled modal dialog in place of a native `.alert`.
     ///
-    /// Tap the scrim or press Escape to dismiss through the cancel action.
-    /// Any action button dismisses the dialog before running its handler.
+    /// Tap the scrim, use VoiceOver Escape, or press macOS Escape to dismiss through
+    /// the first secondary action. Any action runs its handler, then dismisses.
+    /// iOS focuses the first field; Next advances and the final Done submits the
+    /// first non-secondary action. macOS retains Return-to-submit and native Tab.
     func geistDialog(
         isPresented: Binding<Bool>,
         title: Text,
@@ -164,213 +159,5 @@ extension View {
             fields: fields,
             presenting: self
         )
-    }
-}
-
-// MARK: - Card
-
-private struct GeistDialogCard: View {
-    let title: Text
-    let message: Text?
-    let messageAccessibilityIdentifier: String?
-    let actions: [GeistDialogAction]
-    let fields: [GeistDialogField]
-    let onAction: (GeistDialogAction) -> Void
-    let onCancel: () -> Void
-
-    @FocusState private var isFieldFocused: Bool
-
-    private var primaryAction: GeistDialogAction? {
-        actions.first(where: { $0.role != .secondary })
-    }
-
-    /// Quiet actions sit left (or on top); filled actions anchor right (or bottom).
-    private var orderedActions: [GeistDialogAction] {
-        let quiet = actions.filter { $0.role == .secondary }
-        let prominent = actions.filter { $0.role != .secondary }
-        return quiet + prominent
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s4) {
-            title
-                .font(Typography.headline())
-                .tracking(-0.32)
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-
-            if let message {
-                message
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .modifier(GeistDialogAccessibilityIdentifier(messageAccessibilityIdentifier))
-            }
-
-            if !fields.isEmpty {
-                VStack(spacing: Spacing.s2) {
-                    ForEach(fields.indices, id: \.self) { index in
-                        dialogField(fields[index])
-                    }
-                }
-            }
-
-            if !actions.isEmpty {
-                actionsView
-            }
-        }
-        .padding(Spacing.s6)
-        .frame(minWidth: 280, maxWidth: 420, alignment: .leading)
-        .background(Color.bgPrimary)
-        .clipShape(RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        // DESIGN.md modal elevation: three-layer shadow.
-        .shadow(color: Color.black.opacity(0.02), radius: 1, x: 0, y: 1)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 8)
-        .shadow(color: Color.black.opacity(0.06), radius: 16, x: 0, y: 24)
-        #if os(macOS)
-        .onExitCommand(perform: onCancel)
-        #endif
-        .accessibilityElement(children: .contain)
-        #if os(iOS)
-        .accessibilityAddTraits(.isModal)
-        .onAppear {
-            UIAccessibility.post(notification: .screenChanged, argument: nil)
-            if !fields.isEmpty {
-                isFieldFocused = true
-            }
-        }
-        #else
-        .onAppear {
-            if !fields.isEmpty {
-                isFieldFocused = true
-            }
-        }
-        #endif
-    }
-
-    @ViewBuilder
-    private func dialogField(_ field: GeistDialogField) -> some View {
-        TextField("", text: field.text, prompt: Text(field.placeholder).foregroundStyle(Color.textMuted))
-            .font(Typography.body())
-            .foregroundStyle(Color.textPrimary)
-            .autocorrectionDisabled(true)
-            #if os(iOS)
-            .textInputAutocapitalization(.never)
-            .submitLabel(.done)
-            #endif
-            .onSubmit {
-                if let primaryAction {
-                    onAction(primaryAction)
-                }
-            }
-            .focused($isFieldFocused)
-            .padding(.horizontal, Spacing.s3)
-            .frame(height: 40)
-            .background(Color.bgPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-    }
-
-    @ViewBuilder
-    private var actionsView: some View {
-        if orderedActions.count <= 2 {
-            HStack(spacing: Spacing.s2) {
-                ForEach(Array(orderedActions.enumerated()), id: \.offset) { _, action in
-                    dialogButton(action, fillsWidth: true)
-                }
-            }
-        } else {
-            VStack(spacing: Spacing.s2) {
-                ForEach(Array(orderedActions.enumerated()), id: \.offset) { _, action in
-                    dialogButton(action, fillsWidth: true)
-                }
-            }
-        }
-    }
-
-    private func dialogButton(_ action: GeistDialogAction, fillsWidth: Bool) -> some View {
-        Button {
-            onAction(action)
-        } label: {
-            Text(action.label)
-                .font(Typography.bodyEmphasis())
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 40)
-                .padding(.horizontal, Spacing.s3)
-        }
-        .buttonStyle(GeistDialogButtonStyle(role: action.role))
-        .modifier(GeistDialogAccessibilityIdentifier(action.accessibilityIdentifier))
-    }
-}
-
-/// Applies an accessibility identifier when present; no-op otherwise.
-private struct GeistDialogAccessibilityIdentifier: ViewModifier {
-    let identifier: String?
-
-    init(_ identifier: String?) {
-        self.identifier = identifier
-    }
-
-    func body(content: Content) -> some View {
-        if let identifier {
-            content.accessibilityIdentifier(identifier)
-        } else {
-            content
-        }
-    }
-}
-
-// MARK: - Button Style
-
-private struct GeistDialogButtonStyle: ButtonStyle {
-    let role: GeistDialogAction.Role
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(labelColor)
-            .background(fillColor(pressed: configuration.isPressed), in: RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(borderColor, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .animation(AnimationTimings.fast, value: configuration.isPressed)
-    }
-
-    private var labelColor: Color {
-        switch role {
-        case .primary:
-            // Brand accent fill inverts against the page surface in each theme.
-            Color.bgPrimary
-        case .secondary:
-            Color.textPrimary
-        case .destructive:
-            Color.white
-        }
-    }
-
-    private var borderColor: Color {
-        role == .secondary ? Color.borderDefault : Color.clear
-    }
-
-    private func fillColor(pressed: Bool) -> Color {
-        switch role {
-        case .primary:
-            pressed ? Color.accentHover : Color.accent
-        case .secondary:
-            pressed ? Color.geistGray100 : Color.bgPrimary
-        case .destructive:
-            Color.error
-        }
     }
 }

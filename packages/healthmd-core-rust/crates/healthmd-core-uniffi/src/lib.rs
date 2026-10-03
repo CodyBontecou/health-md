@@ -122,6 +122,7 @@ pub struct CoreDirectTransferNegotiation {
 pub enum CoreDirectPairingProfile {
     AppleV1,
     AndroidV2,
+    SharedV3,
 }
 
 /// Owned, JSON-free input for stateless new-pairing client-proof verification.
@@ -722,6 +723,7 @@ impl From<CoreDirectPairingProfile> for healthmd_protocol::foundation::PairingPr
         match value {
             CoreDirectPairingProfile::AppleV1 => Self::AppleV1,
             CoreDirectPairingProfile::AndroidV2 => Self::AndroidV2,
+            CoreDirectPairingProfile::SharedV3 => Self::SharedV3,
         }
     }
 }
@@ -1696,8 +1698,8 @@ mod tests {
     fn protocol_foundation_crosses_the_ffi_boundary_with_exact_fixture_bytes() {
         let info = get_direct_protocol_info().expect("protocol info");
         assert_eq!(info.protocol_api_revision, 1);
-        assert_eq!(info.direct_pairing_protocol_version, 1);
-        assert_eq!(info.supported_pairing_protocol_versions, [1, 2]);
+        assert_eq!(info.direct_pairing_protocol_version, 3);
+        assert_eq!(info.supported_pairing_protocol_versions, [1, 2, 3]);
         assert_eq!(info.apple_application_protocol_version, 1);
         assert_eq!(info.android_application_protocol_version, 2);
         assert_eq!(info.maximum_chunk_bytes, 512 * 1_024);

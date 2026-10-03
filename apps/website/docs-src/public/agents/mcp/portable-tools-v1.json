@@ -3569,13 +3569,138 @@
     "title": "Export Health.md files"
   },
   {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "After explicit user approval, capture every public record type supported by the selected mobile source and authorized by the user. The validated artifact stays in the job-bound private spool and can be read only through bounded healthmd_raw_artifact_read calls.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "examples": [
+        {
+          "date_selection": "all_available",
+          "format": "auto",
+          "include_exercise_routes": true,
+          "scope": "all_public_authorized"
+        }
+      ],
+      "properties": {
+        "date_range": {
+          "additionalProperties": false,
+          "properties": {
+            "end": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            },
+            "start": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "type": "object"
+        },
+        "date_selection": {
+          "enum": [
+            "explicit_range",
+            "all_available"
+          ],
+          "type": "string"
+        },
+        "format": {
+          "default": "auto",
+          "description": "Auto selects JSON for iPhone and streaming-friendly NDJSON for Android. An explicit iPhone format must be JSON.",
+          "enum": [
+            "auto",
+            "json",
+            "ndjson"
+          ],
+          "type": "string"
+        },
+        "include_exercise_routes": {
+          "default": true,
+          "description": "Android includes routes already readable by Health Connect. Third-party routes can still report consent_required because MCP cannot launch per-session Android consent UI.",
+          "type": "boolean"
+        },
+        "provider_id": {
+          "description": "Android provider-native source; defaults to health_connect. Omit for iPhone HealthKit.",
+          "pattern": "^[a-z0-9_.-]{1,64}$",
+          "type": "string"
+        },
+        "scope": {
+          "description": "Every public record type supported by the selected source and authorized by the user. This never means a platform-private database.",
+          "enum": [
+            "all_public_authorized"
+          ],
+          "type": "string"
+        },
+        "wait_timeout_seconds": {
+          "default": 300,
+          "maximum": 900,
+          "minimum": 5,
+          "type": "number"
+        }
+      },
+      "required": [
+        "scope",
+        "date_selection"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_raw",
+    "title": "Export the full public health corpus"
+  },
+  {
     "annotations": {
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "Inspect a durable generated-file export job and its destination/progress receipt.",
+    "description": "Read one bounded base64 chunk from a validated local raw-export artifact by exact job ID. This is job-bound access, not arbitrary filesystem access.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "job_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "max_bytes": {
+          "default": 65536,
+          "maximum": 65536,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "offset": {
+          "default": 0,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "job_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_raw_artifact_read",
+    "title": "Read a raw health-corpus chunk"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Inspect a durable generated-file or raw-corpus export job and its progress/artifact receipt.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3601,7 +3726,7 @@
       "openWorldHint": false,
       "readOnlyHint": false
     },
-    "description": "After explicit user approval, resume the exact immutable durable generated-file export job.",
+    "description": "After explicit user approval, resume the exact immutable durable generated-file or raw-corpus export job.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3632,7 +3757,7 @@
       "openWorldHint": false,
       "readOnlyHint": false
     },
-    "description": "After explicit user approval, explicitly cancel a durable generated-file export job. This cannot be undone.",
+    "description": "After explicit user approval, explicitly cancel a durable generated-file or raw-corpus export job. This cannot be undone.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {

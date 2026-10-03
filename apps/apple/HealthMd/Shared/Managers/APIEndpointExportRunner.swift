@@ -263,10 +263,10 @@ struct APIEndpointExportRunner {
                 destination: destination,
                 calendarTimeZone: calendarTimeZone,
                 connectedAppsEnabled: connectedAppsEnabled,
-                fetchHealthData: { date, includeGranularData, metricSelection in
+                fetchHealthData: { date, detailPolicy, metricSelection in
                     try await healthKitManager.fetchHealthData(
                         for: date,
-                        includeGranularData: includeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
                         timeZone: calendarTimeZone
                     )
@@ -720,7 +720,7 @@ struct APIEndpointExportRunner {
             try Task.checkCancellation()
             let outcome = try await HealthKitDailyCapture.capture(
                 date: date,
-                includeGranularData: frozenSettings.includeGranularData,
+                detailPolicy: frozenSettings.effectiveDetailPolicy,
                 metricSelection: frozenSettings.metricSelection,
                 transform: .filterToSelection,
                 emptyRecordPolicy: .reportNoData,
@@ -1479,7 +1479,7 @@ struct APIEndpointExportRunner {
             do {
                 outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: settings.includeGranularData,
+                    detailPolicy: settings.effectiveDetailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .filterToSelection,
                     emptyRecordPolicy: .reportNoData,

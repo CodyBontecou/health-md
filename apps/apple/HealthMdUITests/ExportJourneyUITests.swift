@@ -85,6 +85,10 @@ final class ExportJourneyUITests: XCTestCase {
             app.buttons[UITestLaunchHelper.Export.cancelExportButton].waitForExistence(timeout: 1),
             "The simulated multi-file export should still be running"
         )
+        XCTAssertFalse(
+            exportButton.exists,
+            "The bottom export bar should hide while the top activity banner owns progress and cancellation"
+        )
 
         let activityBanner = app.descendants(matching: .any)[UITestLaunchHelper.Export.activityBanner]
         XCTAssertTrue(

@@ -597,7 +597,7 @@ class ExportProfilesViewModelTest {
         val harness = harness()
         coEvery { harness.repository.profileById("p2") } returns profile("p2", name = "Weekly")
         coEvery {
-            harness.repository.add(any(), any(), any(), any())
+            harness.repository.add(any(), any(), any(), any(), any(), any(), any())
         } answers {
             profile(id = "p-copy", name = "Weekly 2")
         }
@@ -613,6 +613,9 @@ class ExportProfilesViewModelTest {
                 settingsSnapshotJson = snapshotJson,
                 target = ExportTarget.DEVICE_FOLDER,
                 apiEndpointUrl = null,
+                folderUri = null,
+                folderDisplayName = null,
+                derivedFromProfileId = "p2",
             )
         }
         assertThat(viewModel.uiState.value.detailProfileId).isEqualTo("p-copy")

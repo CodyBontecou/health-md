@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">Aangepast veld toevoegen</string>
+    <string name="a11y_frontmatter_add_placeholder_field">Tijdelijk veld toevoegen</string>
+    <string name="a11y_frontmatter_delete_custom_field">Aangepast veld %1$s verwijderen</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">Tijdelijk veld %1$s verwijderen</string>
+</resources>

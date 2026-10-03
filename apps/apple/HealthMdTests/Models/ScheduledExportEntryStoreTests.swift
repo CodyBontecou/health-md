@@ -234,6 +234,137 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
         XCTAssertFalse(due.contains { $0.profileID == disabledProfile })
     }
 
+    func testDueOccurrencesDailyEntryStaysDueTheDayAfterARun() {
+        // Regression (user report 2026-09-05): a completed-day run on Aug 9
+        // exported Aug 8's data. The Aug 10 occurrence must still be due and
+        // export Aug 9 — previously catch-up started after the run day, so
+        // the schedule skipped every other day reporting "nothing to export"
+        // and the run day's data was never exported.
+        let store = makeStore()
+        let profileID = UUID()
+        store.upsert(
+            makeEntry(profileID: profileID) {
+                $0.frequency = .daily
+                $0.preferredHour = 8
+                $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+                $0.lastExportDate = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+            }
+        )
+
+        let due = store.dueOccurrences(now: fixedNow, calendar: calendar)
+
+        let occurrence = due.first {
+            $0.profileID == profileID && $0.kind == .completedDay
+        }
+        XCTAssertNotNil(occurrence, "Day-after occurrence must remain due")
+        XCTAssertEqual(
+            occurrence?.exportDates,
+            [makeDate(year: 2026, month: 8, day: 9)],
+            "The run day's data day is the next unexported day"
+        )
+    }
+
+    func testDailyOccurrenceReexportsFullLookbackAfterYesterdaySucceeded() throws {
+        let store = makeStore()
+        let entry = makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.lookbackDays = 14
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+        }
+        store.upsert(entry)
+
+        // Before today's boundary, yesterday's successful occurrence stays satisfied.
+        XCTAssertTrue(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 10, hour: 7), calendar: calendar
+        ).isEmpty)
+        let due = try XCTUnwrap(store.dueOccurrences(now: fixedNow, calendar: calendar).first)
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.first, makeDate(year: 2026, month: 7, day: 27))
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 8, day: 9))
+
+        store.recordSuccess(profileID: entry.profileID, kind: due.kind, occurrenceDate: due.fireDate)
+        XCTAssertTrue(store.dueOccurrences(now: fixedNow, calendar: calendar).isEmpty)
+        let tomorrow = try XCTUnwrap(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 11, hour: 8), calendar: calendar
+        ).first)
+        XCTAssertEqual(tomorrow.exportDates.count, 14)
+        XCTAssertEqual(tomorrow.exportDates.first, makeDate(year: 2026, month: 7, day: 28))
+        XCTAssertEqual(tomorrow.exportDates.last, makeDate(year: 2026, month: 8, day: 10))
+    }
+
+    func testDelayedWeeklyOccurrenceUsesItsFireDayAndDoesNotRepeatBetweenBoundaries() throws {
+        let store = makeStore()
+        let entry = makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.frequency = .weekly
+            $0.weekday = 1
+            $0.lookbackDays = 14
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 3, hour: 8)
+        }
+        store.upsert(entry)
+        let wednesday = makeDate(year: 2026, month: 8, day: 12, hour: 12)
+        let due = try XCTUnwrap(store.dueOccurrences(now: wednesday, calendar: calendar).first)
+        XCTAssertEqual(due.fireDate, makeDate(year: 2026, month: 8, day: 10, hour: 8))
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.first, makeDate(year: 2026, month: 7, day: 27))
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 8, day: 9))
+        store.recordSuccess(profileID: entry.profileID, kind: due.kind, occurrenceDate: due.fireDate)
+        XCTAssertTrue(store.dueOccurrences(now: wednesday, calendar: calendar).isEmpty)
+    }
+
+    func testCustomCadenceDoesNotReexportLookbackOnAnOffDay() throws {
+        let store = makeStore()
+        store.upsert(makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.frequency = .custom
+            $0.customInterval = 2
+            $0.customUnit = .day
+            $0.customAnchorDate = makeDate(year: 2026, month: 8, day: 10)
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 10, hour: 8)
+            $0.lookbackDays = 14
+        })
+        XCTAssertTrue(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 11, hour: 12), calendar: calendar
+        ).isEmpty)
+        let due = try XCTUnwrap(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 12, hour: 8), calendar: calendar
+        ).first)
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 8, day: 11))
+    }
+
+    func testLookbackRetainsCalendarDaysAcrossDaylightSavingTime() throws {
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let store = makeStore()
+        store.upsert(makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 2, day: 1)
+            $0.lookbackDays = 14
+            $0.lastExportDate = makeDate(year: 2026, month: 3, day: 9, hour: 8)
+        })
+        let due = try XCTUnwrap(store.dueOccurrences(
+            now: makeDate(year: 2026, month: 3, day: 10, hour: 8), calendar: calendar
+        ).first)
+        XCTAssertEqual(due.exportDates.count, 14)
+        XCTAssertEqual(due.exportDates.first, makeDate(year: 2026, month: 2, day: 24))
+        XCTAssertEqual(due.exportDates.last, makeDate(year: 2026, month: 3, day: 9))
+        XCTAssertTrue(due.exportDates.allSatisfy { calendar.startOfDay(for: $0) == $0 })
+    }
+
+    func testCompletingOlderRetryDoesNotRewindOccurrenceMarkers() {
+        let store = makeStore()
+        let entry = makeEntry()
+        store.upsert(entry)
+        for kind in ScheduledExportKind.allCases {
+            store.recordSuccess(profileID: entry.profileID, kind: kind, occurrenceDate: fixedNow)
+            store.recordSuccess(
+                profileID: entry.profileID, kind: kind,
+                occurrenceDate: makeDate(year: 2026, month: 8, day: 9, hour: 8)
+            )
+        }
+        XCTAssertEqual(store.entry(profileID: entry.profileID)?.lastExportDate, fixedNow)
+        XCTAssertEqual(store.entry(profileID: entry.profileID)?.lastTodayRefreshDate, fixedNow)
+    }
+
     func testDueOccurrencesIncludePerEntryTodayRefresh() {
         let store = makeStore()
         let profileID = UUID()
@@ -306,47 +437,6 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
                 calendar: calendar
             )
         )
-    }
-
-    // MARK: - Usage projection
-
-    func testUsageProjectionCountsMainRunsAndRefreshes() {
-        let dailyWithRefresh = makeEntry {
-            $0.frequency = .daily
-            $0.preferredHour = 8
-            $0.todayRefreshEnabled = true
-            $0.todayRefreshIntervalHours = 3
-        }
-        // Refresh slots from 8: 8, 11, 14, 17, 20, 23 → 6 refreshes + 1 run.
-        let weekly = makeEntry { $0.frequency = .weekly }
-        let disabled = makeEntry(enabled: false) { $0.frequency = .daily }
-
-        let projections = ScheduledUsageProjection.projectedMonthlyActions(
-            entries: [dailyWithRefresh, weekly, disabled]
-        )
-        let byProfile = Dictionary(uniqueKeysWithValues: projections.map { ($0.profileID, $0) })
-
-        XCTAssertEqual(byProfile[dailyWithRefresh.profileID]?.monthlyTotal, 7 * 30)
-        XCTAssertEqual(byProfile[weekly.profileID]?.monthlyTotal, Int((30.0 / 7.0).rounded(.up)))
-        XCTAssertEqual(byProfile[disabled.profileID]?.monthlyTotal, 30)
-
-        XCTAssertEqual(
-            ScheduledUsageProjection.projectedMonthlyTotal(
-                entries: [dailyWithRefresh, weekly, disabled]
-            ),
-            7 * 30 + 5
-        )
-    }
-
-    func testUsageProjectionCustomCadence() {
-        let everyOtherWeek = makeEntry {
-            $0.frequency = .custom
-            $0.customInterval = 2
-            $0.customUnit = .week
-        }
-        // 1 run / 14 days → 30/14 ≈ 2.14 → ceil 3 per month.
-        let projections = ScheduledUsageProjection.projectedMonthlyActions(entries: [everyOtherWeek])
-        XCTAssertEqual(projections.first?.monthlyTotal, 3)
     }
 }
 

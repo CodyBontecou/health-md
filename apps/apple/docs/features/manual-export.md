@@ -9,9 +9,9 @@
 
 ## What it does
 
-Manual Export immediately exports a selected date range using current metrics, formats, paths, write mode, **Lossless Health Records**, and optional roll-ups/Markdown side effects. Targets are iPhone Folder, Connected Mac, or API Endpoint.
+Manual Export immediately exports a selected date range using current metrics, formats, paths, write mode, **Data Detail**, and optional roll-ups/Markdown side effects. Targets are iPhone Folder, Connected Mac, or API Endpoint.
 
-New installs default Lossless Health Records off for a faster first export. Existing explicit on or off choices are preserved; enable it when the export needs canonical source records.
+New installs default to Summary. Choose Detailed Time-Series for selected timestamped samples without the canonical archive, or Lossless Health Records when the export needs canonical source records. Existing combined on/off choices migrate without changing behavior.
 
 ## Setup
 
@@ -20,14 +20,15 @@ New installs default Lossless Health Records off for a faster first export. Exis
 3. Set start/end dates.
 4. Choose Health Metrics.
 5. Select Markdown, Bases, JSON, CSV, or a combination.
-6. Review **Lossless Health Records**.
+6. Choose **Summary**, **Detailed Time-Series**, or **Lossless Health Records** under Data Detail.
 7. Configure roll-ups, daily-note injection, individual entries, paths, write mode, and whether to write the data dictionary.
 8. Preview one day, then export.
 
 ## Output roles
 
-- JSON contains the authoritative canonical source archive.
-- CSV contains the same canonical records as JSON rows.
+- Detailed Time-Series adds compatible timestamped arrays/rows/tables to JSON, CSV, and Markdown where supported.
+- Lossless JSON contains the authoritative canonical source archive.
+- Lossless CSV contains the same canonical records as JSON rows.
 - Markdown/Bases contain summaries and archive status/counts/diagnostics.
 - Individual entries derive from canonical records when the archive exists.
 
@@ -98,6 +99,6 @@ Lossless capture can include routes, waveforms, exact binary values, and attachm
 ## Implementation notes
 
 - `ExportOrchestrator.exportDates(...)` processes the inclusive range.
-- `HealthKitManager.fetchHealthData(for:includeGranularData:metricSelection:)` builds unchanged summaries and optional canonical archive.
+- `HealthKitManager.fetchHealthData(for:detailPolicy:metricSelection:)` independently controls compatible time-series queries and canonical archive capture.
 - Local export uses `VaultManager`; Connected Mac uses bounded `ConnectedTransfer`; API uses its independently versioned envelope containing schema-v8 daily records.
 - `ExportResult` tracks file success/failure separately from source capture diagnostics.

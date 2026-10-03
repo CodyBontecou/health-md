@@ -9,19 +9,39 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DOCS_ROOT = path.resolve(SCRIPT_DIR, '..');
 const REPOSITORY_ROOT = path.resolve(DOCS_ROOT, '../../..');
 const PUBLIC_ROOT = path.join(DOCS_ROOT, 'public');
+const SKILL_V1_SHA256 = '6f36d8e479552745ae282a30a8471bc2ce477e7d1d6d8040f6ba72cd75047792';
+const SKILL_V2_SHA256 = '400468f3dd7ddb79e969bea6567db0d3d2b30d64430e0c4295d8e4e04012afd3';
+const SKILL_V3_SHA256 = '5e77d61461ce2806e3285b8e6794aeb272401db042b869036a45b88e2ed6612f';
+const SKILL_V4_SHA256 = '1d18de03c162e8ce343b6763986c18f206331371e1b90162d81219f04c99b095';
+const SKILL_V5_SHA256 = 'bb96f4f7416a1cf59b1229b9947be1eb407b790cce2cdd806b2bf054c1c17e04';
+const SKILL_V6_SHA256 = 'f1f6340ba0dafeee4f3c549b186a78cca1ee6676b4c219d2252bfa2d6a064515';
 
 const SOURCES = {
+  cliIndex: path.join(DOCS_ROOT, 'agent-docs/cli-llms.txt'),
   provenance: path.join(DOCS_ROOT, 'reference-source.json'),
   macTools: path.join(PUBLIC_ROOT, 'agents/mcp/mac-tools-v1.json'),
   portableTools: path.join(REPOSITORY_ROOT, 'apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json'),
   skill: path.join(REPOSITORY_ROOT, '.agents/skills/healthmd-cli/SKILL.md'),
+  skillV1: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v1/SKILL.md'),
+  skillV2: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v2/SKILL.md'),
+  skillV3: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v3/SKILL.md'),
+  skillV4: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v4/SKILL.md'),
+  skillV5: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v5/SKILL.md'),
+  skillV6: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v6/SKILL.md'),
 };
 
 const OUTPUTS = {
+  cliIndex: 'docs/cli/llms.txt',
   provenance: 'reference/source-manifest.json',
   provenanceV1: 'reference/source-manifest-v1.json',
   portableTools: 'agents/mcp/portable-tools-v1.json',
-  skill: 'agents/skills/healthmd-cli/v1/SKILL.md',
+  skillV1: 'agents/skills/healthmd-cli/v1/SKILL.md',
+  skillV2: 'agents/skills/healthmd-cli/v2/SKILL.md',
+  skillV3: 'agents/skills/healthmd-cli/v3/SKILL.md',
+  skillV4: 'agents/skills/healthmd-cli/v4/SKILL.md',
+  skillV5: 'agents/skills/healthmd-cli/v5/SKILL.md',
+  skillV6: 'agents/skills/healthmd-cli/v6/SKILL.md',
+  skillV7: 'agents/skills/healthmd-cli/v7/SKILL.md',
   skillManifest: 'agents/skills/healthmd-cli/manifest.json',
   agentManifest: 'agents/manifest.json',
 };
@@ -82,26 +102,77 @@ function parseToolCatalog(buffer, label, expectedCount) {
 }
 
 async function expectedOutputs() {
-  const [provenance, macTools, portableTools, skill] = await Promise.all([
+  const [cliIndex, provenance, macTools, portableTools, skill, skillV1, skillV2, skillV3, skillV4, skillV5, skillV6] = await Promise.all([
+    readRequired(SOURCES.cliIndex, 'CLI agent index'),
     readRequired(SOURCES.provenance, 'reference provenance manifest'),
     readRequired(SOURCES.macTools, 'generated Mac MCP tool catalog'),
     readRequired(SOURCES.portableTools, 'portable MCP tool catalog'),
     readRequired(SOURCES.skill, 'Health.md CLI skill'),
+    readRequired(SOURCES.skillV1, 'immutable Health.md CLI skill v1'),
+    readRequired(SOURCES.skillV2, 'immutable Health.md CLI skill v2'),
+    readRequired(SOURCES.skillV3, 'immutable Health.md CLI skill v3'),
+    readRequired(SOURCES.skillV4, 'immutable Health.md CLI skill v4'),
+    readRequired(SOURCES.skillV5, 'immutable Health.md CLI skill v5'),
+    readRequired(SOURCES.skillV6, 'immutable Health.md CLI skill v6'),
   ]);
 
   const macToolNames = parseToolCatalog(macTools, 'Mac MCP tool catalog', 21);
-  const portableToolNames = parseToolCatalog(portableTools, 'portable MCP tool catalog', 19);
-  const skillArtifact = artifact('/agents/skills/healthmd-cli/v1/SKILL.md', skill, {
+  const portableToolNames = parseToolCatalog(portableTools, 'portable MCP tool catalog', 21);
+  if (sha256(skillV1) !== SKILL_V1_SHA256) {
+    throw new Error('Published Health.md CLI skill v1 was modified; versioned assets are immutable.');
+  }
+  if (sha256(skillV2) !== SKILL_V2_SHA256) {
+    throw new Error('Published Health.md CLI skill v2 was modified; versioned assets are immutable.');
+  }
+  if (sha256(skillV3) !== SKILL_V3_SHA256) {
+    throw new Error('Published Health.md CLI skill v3 was modified; versioned assets are immutable.');
+  }
+  if (sha256(skillV4) !== SKILL_V4_SHA256) {
+    throw new Error('Published Health.md CLI skill v4 was modified; versioned assets are immutable.');
+  }
+  if (sha256(skillV5) !== SKILL_V5_SHA256) {
+    throw new Error('Published Health.md CLI skill v5 was modified; versioned assets are immutable.');
+  }
+  if (sha256(skillV6) !== SKILL_V6_SHA256) {
+    throw new Error('Published Health.md CLI skill v6 was modified; versioned assets are immutable.');
+  }
+  const skillV1Artifact = artifact('/agents/skills/healthmd-cli/v1/SKILL.md', skillV1, {
     version: 1,
+  });
+  const skillV2Artifact = artifact('/agents/skills/healthmd-cli/v2/SKILL.md', skillV2, {
+    version: 2,
+  });
+  const skillV3Artifact = artifact('/agents/skills/healthmd-cli/v3/SKILL.md', skillV3, {
+    version: 3,
+  });
+  const skillV4Artifact = artifact('/agents/skills/healthmd-cli/v4/SKILL.md', skillV4, {
+    version: 4,
+  });
+  const skillV5Artifact = artifact('/agents/skills/healthmd-cli/v5/SKILL.md', skillV5, {
+    version: 5,
+  });
+  const skillV6Artifact = artifact('/agents/skills/healthmd-cli/v6/SKILL.md', skillV6, {
+    version: 6,
+  });
+  const skillV7Artifact = artifact('/agents/skills/healthmd-cli/v7/SKILL.md', skill, {
+    version: 7,
   });
   const skillManifest = canonicalJSON({
     schema: 'healthmd.agent_skill_manifest',
     schema_version: 1,
     name: 'healthmd-cli',
-    availability: 'preview_until_public_healthmd_cli_release',
+    availability: 'public_preview',
     install_as: 'healthmd-cli/SKILL.md',
-    latest: skillArtifact,
-    versions: [skillArtifact],
+    latest: skillV7Artifact,
+    versions: [
+      skillV1Artifact,
+      skillV2Artifact,
+      skillV3Artifact,
+      skillV4Artifact,
+      skillV5Artifact,
+      skillV6Artifact,
+      skillV7Artifact,
+    ],
     source: {
       repository: 'https://github.com/CodyBontecou/health-md',
       path: '.agents/skills/healthmd-cli/SKILL.md',
@@ -112,6 +183,11 @@ async function expectedOutputs() {
     schema: 'healthmd.agent_assets',
     schema_version: 1,
     artifacts: [
+      artifact('/docs/cli/llms.txt', cliIndex, {
+        id: 'cli_docs_index',
+        availability: 'public_preview',
+        index_version: 1,
+      }),
       artifact('/agents/mcp/mac-tools-v1.json', macTools, {
         id: 'mac_mcp_tools',
         availability: 'released',
@@ -122,7 +198,7 @@ async function expectedOutputs() {
       }),
       artifact('/agents/mcp/portable-tools-v1.json', portableTools, {
         id: 'portable_mcp_tools',
-        availability: 'preview_until_public_healthmd_cli_release',
+        availability: 'public_preview',
         catalog_version: 1,
         profile: 'local_direct',
         tool_count: portableToolNames.length,
@@ -130,7 +206,7 @@ async function expectedOutputs() {
       }),
       artifact('/agents/skills/healthmd-cli/manifest.json', skillManifest, {
         id: 'healthmd_cli_skill_manifest',
-        availability: 'preview_until_public_healthmd_cli_release',
+        availability: 'public_preview',
         manifest_version: 1,
       }),
       artifact('/docs/reference/source-manifest.json', provenance, {
@@ -142,10 +218,17 @@ async function expectedOutputs() {
   });
 
   return new Map([
+    [OUTPUTS.cliIndex, cliIndex],
     [OUTPUTS.provenance, provenance],
     [OUTPUTS.provenanceV1, provenance],
     [OUTPUTS.portableTools, portableTools],
-    [OUTPUTS.skill, skill],
+    [OUTPUTS.skillV1, skillV1],
+    [OUTPUTS.skillV2, skillV2],
+    [OUTPUTS.skillV3, skillV3],
+    [OUTPUTS.skillV4, skillV4],
+    [OUTPUTS.skillV5, skillV5],
+    [OUTPUTS.skillV6, skillV6],
+    [OUTPUTS.skillV7, skill],
     [OUTPUTS.skillManifest, skillManifest],
     [OUTPUTS.agentManifest, agentManifest],
   ]);

@@ -19,7 +19,7 @@ _raw_verify = validator.verify
 def verify_fixture(*args, **kwargs):
     kwargs.setdefault("expected_phone_code", "29")
     kwargs.setdefault("expected_wear_code", "1000029")
-    kwargs.setdefault("expected_version_name", "1.7.1")
+    kwargs.setdefault("expected_version_name", "1.8.0")
     kwargs.setdefault("expected_reviewer", "physical-qa-reviewer")
     kwargs.setdefault("expected_review_ticket", "https://example.invalid/qa/123")
     return _raw_verify(*args, **kwargs)
@@ -70,7 +70,7 @@ class WearPairedEvidenceValidatorTest(unittest.TestCase):
                 f"watch_serial={oem}-watch-1",
                 "phone_version_code=29",
                 "watch_version_code=1000029",
-                "version_name=1.7.1",
+                "version_name=1.8.0",
                 f"phone_base_apk_sha256={phone_digest}",
                 f"watch_base_apk_sha256={actual_wear_digest}",
                 f"expected_play_app_signing_cert_sha256={signer}",
@@ -92,7 +92,7 @@ class WearPairedEvidenceValidatorTest(unittest.TestCase):
             (directory / label / "signer.txt").write_text(signer_text)
             code = "29" if label == "phone" else "1000029"
             (directory / label / "package.txt").write_text(
-                f"versionCode={code} minSdk=28 targetSdk=35\nversionName=1.7.1\n"
+                f"versionCode={code} minSdk=28 targetSdk=35\nversionName=1.8.0\n"
             )
             for name in ("services.txt", "broadcast-history.txt", "connectivity.txt", "battery.txt"):
                 (directory / label / name).write_text(f"{label}-{name}\n")
@@ -154,7 +154,7 @@ class WearPairedEvidenceValidatorTest(unittest.TestCase):
                     root,
                     expected_phone_code="29",
                     expected_wear_code="1000029",
-                    expected_version_name="1.7.1",
+                    expected_version_name="1.8.0",
                 )
 
     def test_retained_play_artifact_or_signer_mismatch_fails(self) -> None:

@@ -30,7 +30,7 @@ struct MacLocalExportResultReconciliation {
         let isAllEmptySummaryOnly = summaryOnly
             && !wasCancelled
             && rollupFileCount + archiveCount == 0
-            && partialFailures.isEmpty
+            && !partialFailures.contains(where: \.degradesSuccess)
             && !hasRenderableSummaryData
             && !requestedDays.isEmpty
             && requestedDays.isSubset(of: capturedDays)
