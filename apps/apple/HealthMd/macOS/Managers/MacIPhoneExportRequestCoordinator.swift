@@ -284,7 +284,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     /// Additional admission for phone-initiated jobs only; ordinary exports
     /// retain their existing transport behavior.
-    var contextAutomationPeerAdmission: ((UUID, SyncService) -> Bool)?
+    var contextAutomationPeerAdmission: ((UUID, SyncService, IPhoneExportRequest.ResponseMode) -> Bool)?
     var contextAutomationOwnsJob: ((UUID) -> Bool)?
 
     func contextRequest(jobID: UUID) -> IPhoneExportRequest? { records[jobID]?.request }
@@ -334,7 +334,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     ) async -> ExportResponse {
         cleanupExpiredJobs()
         if let jobID = exportRequest.jobID,
-           contextAutomationPeerAdmission?(jobID, syncService) == false {
+           contextAutomationPeerAdmission?(jobID, syncService, exportRequest.responseMode) == false {
             return .unavailable("Authenticated context peer is unavailable.", reason: "context_peer_unavailable")
         }
         guard exportRequest.rawProfile != .healthDataProjection
@@ -1259,7 +1259,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func matchesBoundPeer(_ record: JobRecord, syncService: SyncService) -> Bool {
-        guard contextAutomationPeerAdmission?(record.request.jobID, syncService) != false else { return false }
+        guard contextAutomationPeerAdmission?(record.request.jobID, syncService, record.request.responseMode) != false else { return false }
         guard record.sourceInstallationID != nil || record.destinationInstallationID != nil else {
             return true
         }

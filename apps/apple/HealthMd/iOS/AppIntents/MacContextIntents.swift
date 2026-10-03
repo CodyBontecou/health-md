@@ -30,6 +30,7 @@ final class AppleContextPhoneClient {
 
     private func allowsOutbound(_ message: SyncMessage, sync: SyncService) -> Bool {
         let id: UUID?
+        var requiresContextAuthority = false
         switch message {
         case .connectedTransferStart(let value):
             id = value.manifest.jobID
@@ -43,6 +44,7 @@ final class AppleContextPhoneClient {
         case .connectedCorpusStatus(let value): id = value.jobID
         case .connectedCorpusTransferOpen(let value):
             id = value.session.jobID
+            requiresContextAuthority = value.exportManifest?.mode == .encryptedContext
             if let record = journal.record(value.session.jobID) {
                 guard let manifest = value.exportManifest, record.request.matches(manifest) else { return false }
             }
@@ -50,7 +52,10 @@ final class AppleContextPhoneClient {
         case .connectedCorpusTransferCancel(let value): id = value.jobID
         default: id = nil
         }
-        guard let id, journal.isKnown(id) else { return true }
+        guard let id else { return true }
+        if !journal.isKnown(id) {
+            return !requiresContextAuthority || journal.authorityState(id) == .absent
+        }
         guard let record = journal.record(id), !journal.hasUncertainAuthority(id) else { return false }
         return protectedDataAvailable() && sync.canUsePhoneContextAutomation
             && sync.authenticatedContextPeerID == record.request.macInstallationID
@@ -141,7 +146,11 @@ final class AppleContextPhoneClient {
     func owns(_ id: UUID) -> Bool { journal.isKnown(id) }
 
     func allowsAcquisition(_ request: IPhoneExportRequest, sync: SyncService) -> Bool {
-        guard journal.isKnown(request.jobID) else { return true } // ordinary Mac request
+        if !journal.isKnown(request.jobID) {
+            // A cold read error is NOT proof of ordinary context absence.
+            // Unowned file/raw exports retain their existing semantics.
+            return request.responseMode != .contextStore || journal.authorityState(request.jobID) == .absent
+        }
         guard let record = journal.record(request.jobID), !journal.hasUncertainAuthority(request.jobID) else { return false }
         return protectedDataAvailable() && sync.canUsePhoneContextAutomation
             && sync.authenticatedContextPeerID == record.request.macInstallationID

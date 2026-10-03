@@ -409,8 +409,8 @@ struct HealthMdApp: App {
     // MARK: - Sync Message Handling
 
     private func setupSyncMessageHandler() {
-        iphoneExportRequestCoordinator.contextAutomationPeerAdmission = { jobID, service in
-            contextAutomationCoordinator.allows(jobID: jobID, sync: service)
+        iphoneExportRequestCoordinator.contextAutomationPeerAdmission = { jobID, service, mode in
+            contextAutomationCoordinator.allows(jobID: jobID, sync: service, requiresContextAuthority: mode == .contextStore)
         }
         iphoneExportRequestCoordinator.contextAutomationOwnsJob = { jobID in
             contextAutomationCoordinator.journal.isKnown(jobID)

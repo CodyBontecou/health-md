@@ -199,8 +199,9 @@ final class AppleContextJournal {
             // Only an explicit ENOENT-style result, with no previously observed
             // identities, is a first-run absence. Permission/corruption errors
             // are never treated as an empty journal or a replacement opportunity.
-            let absent = failure.domain == NSCocoaErrorDomain &&
-                (failure.code == CocoaError.fileReadNoSuchFile.rawValue || failure.code == CocoaError.fileNoSuchFile.rawValue)
+            let underlying = failure.userInfo[NSUnderlyingErrorKey] as? NSError
+            let posix = failure.domain == NSPOSIXErrorDomain ? failure : underlying
+            let absent = posix?.domain == NSPOSIXErrorDomain && posix?.code == Int(ENOENT)
             directoryReadFailed = !absent || !knownIDs.isEmpty || !records.isEmpty
             return
         }
@@ -257,6 +258,14 @@ final class AppleContextJournal {
     func recoveryRequest(_ id: UUID) -> AppleContextRequest? { reload(); return transactions[id]?.candidate.request ?? records[id]?.request }
     func hasUncertainAuthority(_ id: UUID) -> Bool { reload(); return directoryReadFailed || uncertain.contains(id) }
     func isKnown(_ id: UUID) -> Bool { reload(); return knownIDs.contains(id) || records[id] != nil }
+    enum AuthorityState: Equatable { case absent, proven, uncertain, unavailable }
+    func authorityState(_ id: UUID) -> AuthorityState {
+        reload()
+        if directoryReadFailed { return .unavailable }
+        if uncertain.contains(id) { return .uncertain }
+        if records[id] != nil { return .proven }
+        return .absent
+    }
 
     /// One explicit, bounded retry of the ORIGINAL transaction, not a reload
     /// side effect. No new identity, profile resolution, receipt, or fallback.

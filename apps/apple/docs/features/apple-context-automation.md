@@ -79,6 +79,10 @@ encrypted commit path are reused without rewriting their deployed grammars.
    or corrupt authority is blocked, not erased or interpreted as absence. A
    resurrected marker after a crash conservatively requires the same retry.
    Protected-data-unavailable status makes NO send, including for proven records.
+   Authority distinguishes proven absence, proven record, uncertain transaction
+   and unavailable directory. Cold read/non-directory errors cannot become an
+   ordinary context fallback. Genuine first-run ENOENT and unowned ordinary
+   file exports retain their existing behavior; restoration does not erase state.
 2. Mac validates the authenticated peer and entire immutable scope, persists the
    mapping, and starts acquisition in a separate MainActor task. The receive
    router does not await its response; acceptance/chunks/finalization can run

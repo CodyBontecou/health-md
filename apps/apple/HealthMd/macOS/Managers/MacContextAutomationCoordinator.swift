@@ -14,6 +14,7 @@ final class MacContextAutomationCoordinator: ObservableObject {
 
     func allowsMessage(_ message: SyncMessage, sync: SyncService, inbound: Bool = true) -> Bool {
         let jobID: UUID?
+        var requiresContextAuthority = false
         switch message {
         case .connectedTransferStart(let start):
             jobID = start.manifest.jobID
@@ -24,7 +25,9 @@ final class MacContextAutomationCoordinator: ObservableObject {
         case .connectedTransferChunk(let chunk): jobID = transferJobs[chunk.transferID]
         case .connectedTransferComplete(let complete): jobID = transferJobs[complete.transferID]
         case .connectedTransferAbort(let abort): jobID = abort.jobID ?? transferJobs[abort.transferID]
-        case .iphoneExportRequest(let value): jobID = value.jobID
+        case .iphoneExportRequest(let value):
+            jobID = value.jobID
+            requiresContextAuthority = value.responseMode == .contextStore
         case .iphoneExportAccepted(let value): jobID = value.jobID
         case .iphoneExportPreparationProgress(let value): jobID = value.jobID
         case .iphoneExportRejected(let value): jobID = value.jobID
@@ -35,6 +38,7 @@ final class MacContextAutomationCoordinator: ObservableObject {
         case .macExportFailed(let value): jobID = value.jobID
         case .connectedCorpusTransferOpen(let value):
             jobID = value.session.jobID
+            requiresContextAuthority = value.exportManifest?.mode == .encryptedContext
             if let record = journal.record(value.session.jobID) {
                 guard let manifest = value.exportManifest, record.request.matches(manifest),
                       value.session.peerBinding == ConnectedCorpusPeerBinding(
@@ -46,7 +50,10 @@ final class MacContextAutomationCoordinator: ObservableObject {
         case .connectedCorpusTransferCancel(let value): jobID = value.jobID
         default: jobID = nil
         }
-        guard let jobID, journal.isKnown(jobID) else { return true }
+        guard let jobID else { return true }
+        if !journal.isKnown(jobID) {
+            return !requiresContextAuthority || journal.authorityState(jobID) == .absent
+        }
         // Context jobs can NEVER be completed by ordinary export/raw messages.
         switch message {
         case .iphoneExportRawData, .macExportRequest, .macExportStreamStart,
@@ -69,8 +76,10 @@ final class MacContextAutomationCoordinator: ObservableObject {
         }
     }
 
-    func allows(jobID: UUID, sync: SyncService) -> Bool {
-        guard journal.isKnown(jobID) else { return true }
+    func allows(jobID: UUID, sync: SyncService, requiresContextAuthority: Bool = true) -> Bool {
+        if !journal.isKnown(jobID) {
+            return !requiresContextAuthority || journal.authorityState(jobID) == .absent
+        }
         guard let record = journal.record(jobID), !journal.hasUncertainAuthority(jobID) else { return false }
         return sync.canUsePhoneContextAutomation
             && sync.authenticatedContextPeerID == record.request.phoneInstallationID

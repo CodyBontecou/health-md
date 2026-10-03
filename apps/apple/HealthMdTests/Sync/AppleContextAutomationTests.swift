@@ -234,6 +234,27 @@ final class AppleContextAutomationTests: XCTestCase {
         XCTAssertEqual(restarted.record(scope.id)?.receipt, completion)
     }
 
+    func testColdDirectoryErrorIsUnavailableNotAbsenceAndRestorationPreservesContents() throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let blockedRoot = root.appendingPathComponent("not-a-directory")
+        let original = Data("preserve this obstruction".utf8)
+        try original.write(to: blockedRoot)
+        let journal = AppleContextJournal(root: blockedRoot)
+        let id = UUID()
+        XCTAssertFalse(journal.isKnown(id), "Unavailable must not label all unknown UUIDs as known")
+        XCTAssertEqual(journal.authorityState(id), .unavailable)
+        XCTAssertThrowsError(try journal.admit(request(id: id)))
+        XCTAssertEqual(try Data(contentsOf: blockedRoot), original)
+        let retained = root.appendingPathComponent("retained-obstruction")
+        try FileManager.default.moveItem(at: blockedRoot, to: retained)
+        try FileManager.default.createDirectory(at: blockedRoot, withIntermediateDirectories: false)
+        XCTAssertEqual(journal.authorityState(id), .absent)
+        XCTAssertEqual(try Data(contentsOf: retained), original)
+        let firstRun = AppleContextJournal(root: root.appendingPathComponent("genuine-enoent"))
+        XCTAssertEqual(firstRun.authorityState(id), .absent)
+        XCTAssertFalse(firstRun.isKnown(id))
+    }
+
     #if os(iOS)
     func testPhoneProductionAdapterFreezesProfileBeforeSendAndRecoversLostAckWithoutQuota() throws {
         let peer = UUID()
@@ -324,7 +345,7 @@ final class AppleContextAutomationTests: XCTestCase {
         let journal = AppleContextJournal(root: directory)
         let client = AppleContextPhoneClient(journal: journal, bindingRoot: bindings, protectedDataAvailable: { true }, executionBlocked: { _ in false })
         client.install(service)
-        try client.bind(profileID: profile.id, sync: service)
+        try client.bind(profileID: profile.id)
         var sends = 0
         service.testMessageSendObserver = { _ in sends += 1 }
         journal.writeFailurePointForTesting = .afterFinalAtomicWrite
@@ -435,6 +456,51 @@ final class AppleContextAutomationTests: XCTestCase {
         }
     }
 
+    func testColdUnavailablePhoneAuthorityBlocksActualHandlerButPreservesOrdinaryFilesAndFirstRunContext() async throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let blockedRoot = root.appendingPathComponent("blocked")
+        try Data("not a directory".utf8).write(to: blockedRoot)
+        let journal = AppleContextJournal(root: blockedRoot)
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let scope = request(phone: service.installationID, mac: peer)
+        let client = AppleContextPhoneClient(journal: journal, protectedDataAvailable: { true }, executionBlocked: { _ in false })
+        client.install(service)
+        let native = IPhoneExportRequest(jobID: scope.id, createdAt: Date(), dateRangeStart: scope.startDate,
+            dateRangeEnd: scope.endDate, requestedDateIdentifiers: scope.ownerDates, requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly, responseMode: .contextStore, canonicalSelection: scope.selection)
+        let ordinaryFile = IPhoneExportRequest(jobID: UUID(), createdAt: Date(), dateRangeStart: scope.startDate,
+            dateRangeEnd: scope.endDate, requestedBy: .macApp, settingsPolicy: .currentIPhoneSettings)
+        XCTAssertFalse(client.allowsAcquisition(native, sync: service))
+        XCTAssertTrue(client.allowsAcquisition(ordinaryFile, sync: service))
+        let store = FakeHealthStore()
+        store.authRequestStatus = .unnecessary
+        let health = LifecycleHarness.retain(HealthKitManager(store: store, userDefaults: UserDefaults(suiteName: "cold-handler-\(UUID().uuidString)")!))
+        health.isAuthorized = true
+        let handler = LifecycleHarness.retain(IPhoneExportRequestHandler(automationClient: client))
+        var manifests = 0
+        var sends = 0
+        service.testMessageSendObserver = { _ in sends += 1 }
+        handler.contextManifestForTesting = { _ in manifests += 1 }
+        handler.contextCaptureLeasePassedForTesting = { throw CancellationError() }
+        await handler.handle(native, syncService: service, healthKitManager: health)
+        XCTAssertEqual(manifests, 0)
+        XCTAssertTrue(store.statusReadTypes.isEmpty, "Cold failure must stop before authorization/capture")
+        XCTAssertEqual(sends, 0)
+        XCTAssertThrowsError(try client.status(id: scope.id))
+        XCTAssertEqual(sends, 0)
+        let retained = root.appendingPathComponent("retained")
+        try FileManager.default.moveItem(at: blockedRoot, to: retained)
+        try FileManager.default.createDirectory(at: blockedRoot, withIntermediateDirectories: false)
+        XCTAssertTrue(client.allowsAcquisition(native, sync: service))
+        await handler.handle(native, syncService: service, healthKitManager: health)
+        XCTAssertEqual(manifests, 1, "Readable proven absence preserves the ordinary context path")
+        let fresh = AppleContextPhoneClient(journal: AppleContextJournal(root: root.appendingPathComponent("enoent")), protectedDataAvailable: { true }, executionBlocked: { _ in false })
+        fresh.install(service)
+        XCTAssertTrue(fresh.allowsAcquisition(native, sync: service))
+        XCTAssertTrue(fresh.allowsAcquisition(ordinaryFile, sync: service))
+    }
+
     func testProtectedStatusCannotTransmitEvenWithProvenAdmission() throws {
         let peer = UUID()
         let service = service(peerID: peer)
@@ -505,7 +571,7 @@ final class AppleContextAutomationTests: XCTestCase {
         let mappingRoot = root.appendingPathComponent("mapping")
         let adapter = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: mappingRoot), contextReadiness: { nil }))
         let jobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: root.appendingPathComponent("jobs")))
-        jobs.contextAutomationPeerAdmission = { adapter.allows(jobID: $0, sync: $1) }
+        jobs.contextAutomationPeerAdmission = { adapter.allows(jobID: $0, sync: $1, requiresContextAuthority: $2 == .contextStore) }
         var acquisitions: [IPhoneExportRequest] = []
         var receipts: [AppleContextReceipt] = []
         service.testMessageSendObserver = { message in
@@ -614,7 +680,7 @@ final class AppleContextAutomationTests: XCTestCase {
             let restartedJournal = AppleContextJournal(root: directory)
             let restarted = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: restartedJournal, contextReadiness: { nil }))
             service.contextAutomationOutboundAdmission = { restarted.allowsMessage($0, sync: service, inbound: false) }
-            jobs.contextAutomationPeerAdmission = { restarted.allows(jobID: $0, sync: $1) }
+            jobs.contextAutomationPeerAdmission = { restarted.allows(jobID: $0, sync: $1, requiresContextAuthority: $2 == .contextStore) }
             jobs.contextAutomationOwnsJob = { restartedJournal.isKnown($0) }
             restartedJournal.writeFailurePointForTesting = point
             restarted.handle(.status(scope), sync: service, jobs: jobs, destination: destination(service))
@@ -642,7 +708,7 @@ final class AppleContextAutomationTests: XCTestCase {
         let adapter = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: journal, contextReadiness: { nil }))
         let jobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: root.appendingPathComponent("jobs")))
         service.contextAutomationOutboundAdmission = { adapter.allowsMessage($0, sync: service, inbound: false) }
-        jobs.contextAutomationPeerAdmission = { adapter.allows(jobID: $0, sync: $1) }
+        jobs.contextAutomationPeerAdmission = { adapter.allows(jobID: $0, sync: $1, requiresContextAuthority: $2 == .contextStore) }
         jobs.contextAutomationOwnsJob = { journal.isKnown($0) }
         var acknowledgements = 0
         var acquisitions: [IPhoneExportRequest] = []
@@ -666,6 +732,40 @@ final class AppleContextAutomationTests: XCTestCase {
         XCTAssertEqual(journal.record(scope.id)?.request, scope)
         jobs.cancelRequestForDisconnectedClient(jobID: scope.id)
         for _ in 0..<10 { await Task.yield() }
+    }
+
+    func testColdUnavailableMacAuthorityBlocksContextButNotOrdinaryFilesAndRecoversWithoutErase() throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let blockedRoot = root.appendingPathComponent("blocked")
+        try Data("retained obstruction".utf8).write(to: blockedRoot)
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let scope = request(phone: peer, mac: service.installationID)
+        let journal = AppleContextJournal(root: blockedRoot)
+        let adapter = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: journal, contextReadiness: { nil }))
+        let jobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: root.appendingPathComponent("jobs")))
+        var sends = 0
+        service.testMessageSendObserver = { _ in sends += 1 }
+        XCTAssertFalse(adapter.allows(jobID: scope.id, sync: service))
+        XCTAssertTrue(adapter.allows(jobID: UUID(), sync: service, requiresContextAuthority: false))
+        let context = IPhoneExportRequest(jobID: scope.id, createdAt: Date(), dateRangeStart: scope.startDate,
+            dateRangeEnd: scope.endDate, requestedDateIdentifiers: scope.ownerDates, requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly, responseMode: .contextStore, canonicalSelection: scope.selection)
+        let ordinary = IPhoneExportRequest(jobID: UUID(), createdAt: Date(), dateRangeStart: scope.startDate,
+            dateRangeEnd: scope.endDate, requestedBy: .macApp, settingsPolicy: .currentIPhoneSettings)
+        XCTAssertFalse(adapter.allowsMessage(.iphoneExportRequest(context), sync: service, inbound: false))
+        XCTAssertTrue(adapter.allowsMessage(.iphoneExportRequest(ordinary), sync: service, inbound: false))
+        adapter.handle(.refresh(scope), sync: service, jobs: jobs, destination: destination(service))
+        XCTAssertEqual(sends, 0)
+        XCTAssertNil(jobs.contextRequest(jobID: scope.id))
+        let retained = root.appendingPathComponent("retained")
+        try FileManager.default.moveItem(at: blockedRoot, to: retained)
+        try FileManager.default.createDirectory(at: blockedRoot, withIntermediateDirectories: false)
+        XCTAssertTrue(adapter.allows(jobID: scope.id, sync: service))
+        XCTAssertTrue(adapter.allowsMessage(.iphoneExportRequest(context), sync: service, inbound: false))
+        let fresh = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: root.appendingPathComponent("enoent")), contextReadiness: { nil }))
+        XCTAssertTrue(fresh.allows(jobID: scope.id, sync: service))
+        XCTAssertEqual(try String(contentsOf: retained, encoding: .utf8), "retained obstruction")
     }
 
     func testMacLockedAdmissionAndForeignPeerNeverAcquireOrClaimSuccess() throws {
