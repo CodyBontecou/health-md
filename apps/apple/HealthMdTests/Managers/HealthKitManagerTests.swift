@@ -3162,6 +3162,55 @@ final class HealthKitManagerObserverTests: XCTestCase {
         ))
     }
 
+    // These characterize readable-date discovery, not history authorization.
+    // In particular a successful empty query is query-complete, even though
+    // HealthKit may hide denied or older unauthorized data behind that result.
+    @MainActor
+    func test_earliestDiscovery_emptyReadableDataIsQueryComplete() async {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps"])
+
+        XCTAssertNil(discovery.earliestDate)
+        XCTAssertTrue(discovery.isQueryComplete)
+        XCTAssertEqual(discovery.isComplete, discovery.isQueryComplete)
+        XCTAssertEqual(discovery.queriedTypeIdentifiers, [HKQuantityTypeIdentifier.stepCount.rawValue])
+    }
+
+    @MainActor
+    func test_earliestDiscovery_mixedReadableDatesAndEmptyTypeRemainsQueryComplete() async {
+        let store = FakeHealthStore()
+        let readableDate = Date(timeIntervalSince1970: 1_600_000_000)
+        store.earliestSampleDates[HKQuantityTypeIdentifier.stepCount.rawValue] = readableDate
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps", "heart_rate_avg"])
+
+        XCTAssertEqual(discovery.earliestDate, readableDate)
+        XCTAssertTrue(discovery.isQueryComplete)
+        XCTAssertEqual(discovery.queriedTypeIdentifiers, [
+            HKQuantityTypeIdentifier.heartRate.rawValue,
+            HKQuantityTypeIdentifier.stepCount.rawValue,
+        ].sorted())
+    }
+
+    @MainActor
+    func test_earliestDiscovery_failedTypeRetainsReadableSiblingWithoutQueryCompleteness() async {
+        let store = FakeHealthStore()
+        let readableDate = Date(timeIntervalSince1970: 1_600_000_000)
+        store.earliestSampleDates[HKQuantityTypeIdentifier.stepCount.rawValue] = readableDate
+        store.errorsForEarliestSampleDates[HKQuantityTypeIdentifier.heartRate.rawValue] = HealthKitFixtures.genericQueryError
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps", "heart_rate_avg"])
+
+        XCTAssertEqual(discovery.earliestDate, readableDate)
+        XCTAssertFalse(discovery.isQueryComplete)
+        XCTAssertEqual(discovery.failedTypeIdentifiers, [HKQuantityTypeIdentifier.heartRate.rawValue])
+        XCTAssertEqual(discovery.isComplete, discovery.isQueryComplete)
+    }
+
     @MainActor
     func test_findEarliestDate_emptyStore_returnsNil() async {
         let store = FakeHealthStore()

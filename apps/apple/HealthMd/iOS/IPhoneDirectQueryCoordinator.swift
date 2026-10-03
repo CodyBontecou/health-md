@@ -492,7 +492,7 @@ final class IPhoneDirectQueryCoordinator {
                 enabledMetricIDs: metricIDs,
                 timeZone: timeZone
             )
-            guard discovery.isComplete else { throw IPhoneDirectQueryError.queryUnavailable }
+            guard discovery.isQueryComplete else { throw IPhoneDirectQueryError.queryUnavailable }
             let end = calendar.startOfDay(for: Date())
             let start = discovery.earliestDate.map(calendar.startOfDay(for:)) ?? end
             return try sourceDateRange(from: start, to: end, calendar: calendar)

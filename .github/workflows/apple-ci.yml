@@ -75,6 +75,10 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Diagnose history-authorization SDK availability
+        # Diagnostic only: compilation does not verify on-device authorization.
+        run: bash scripts/diagnose-history-authorization-sdk.sh
+
       - id: shared-core-cache
         name: Restore exact-source shared-core cache
         uses: actions/cache@v4

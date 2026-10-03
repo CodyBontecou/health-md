@@ -1425,7 +1425,7 @@ final class IPhoneDirectFileExportProducer {
                 enabledMetricIDs: settings.metricSelection.enabledMetrics,
                 timeZone: sourceTimeZone
             )
-            guard discovery.isComplete else {
+            guard discovery.isQueryComplete else {
                 throw IPhoneDirectFileProducerError.invalidRequest(
                     "The iPhone could not prove complete earliest-date coverage."
                 )

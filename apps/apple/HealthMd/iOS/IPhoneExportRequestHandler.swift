@@ -233,7 +233,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     let discovery = await healthKitManager.discoverEarliestHealthDataDate(
                         enabledMetricIDs: settings.metricSelection.enabledMetrics
                     )
-                    guard discovery.isComplete else {
+                    guard discovery.isQueryComplete else {
                         let unavailable = discovery.unresolvedMetricIDs + discovery.failedTypeIdentifiers
                         syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                             jobID: request.jobID,

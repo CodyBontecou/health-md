@@ -51,9 +51,10 @@ private enum HealthKitOrdinaryRecordQueryCacheError: LocalizedError {
     }
 }
 
-/// Exact result of catalog-backed earliest-date discovery. Callers that claim
-/// `all_available` completeness must require `isComplete`; the legacy helper may
-/// still use `earliestDate` as a best-effort start while surfacing diagnostics.
+/// Result of catalog-backed discovery of the oldest currently readable samples.
+/// Query completion is not evidence of full-history read authorization: HealthKit
+/// may return limited data or a successful empty result when read access is denied.
+/// A separate authorization-boundary assessment is required to describe history.
 nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
     let earliestDate: Date?
     let queriedTypeIdentifiers: [String]
@@ -61,9 +62,14 @@ nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
     let failedTypeIdentifiers: [String]
     let unresolvedMetricIDs: [String]
 
-    var isComplete: Bool {
+    /// Every selected catalog query resolved without failure. This says nothing
+    /// about whether older samples exist outside the app's readable history.
+    var isQueryComplete: Bool {
         failedTypeIdentifiers.isEmpty && unresolvedMetricIDs.isEmpty
     }
+
+    /// Source compatibility for existing callers; query completion only.
+    var isComplete: Bool { isQueryComplete }
 }
 
 @MainActor
@@ -2418,9 +2424,9 @@ final class HealthKitManager: ObservableObject {
         )
     }
 
-    /// Backward-compatible best-effort helper used by legacy sync. New
-    /// all-available jobs must use `discoverEarliestHealthDataDate` and require
-    /// its completeness result before claiming a full historical range.
+    /// Backward-compatible best-effort helper used by legacy sync. All-available
+    /// jobs use `discoverEarliestHealthDataDate` to check query completion, not to
+    /// prove full-history authorization. Neither helper verifies that authorization.
     func findEarliestHealthDataDate() async -> Date? {
         let result = await discoverEarliestHealthDataDate(
             enabledMetricIDs: HealthKitRecordCatalog.expectedMetricIDs

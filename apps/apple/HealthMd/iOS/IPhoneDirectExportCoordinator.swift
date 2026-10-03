@@ -993,7 +993,7 @@ final class IPhoneDirectExportCoordinator {
                 enabledMetricIDs: settings.metricSelection.enabledMetrics,
                 timeZone: sourceTimeZone
             )
-            guard discovery.isComplete else {
+            guard discovery.isQueryComplete else {
                 let missing = discovery.unresolvedMetricIDs + discovery.failedTypeIdentifiers
                 throw IPhoneDirectExportError.invalidRequest(
                     "The iPhone could not prove complete earliest-date coverage for: \(missing.joined(separator: ", "))."

@@ -795,7 +795,8 @@ protocol HealthStoreProviding: Sendable {
 
     /// Earliest source date for any sample type, queried one type at a time so
     /// callers can isolate authorization/runtime failures without hiding a
-    /// later successful type. A nil result means this type has no readable samples.
+    /// later successful type. A nil result means the query returned no readable
+    /// samples, not that no samples exist or that full-history access was granted.
     func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date?
     /// Activity summaries are not HKSample values and require their dedicated API.
     func queryEarliestActivitySummaryDate(calendar: Calendar) async throws -> Date?
