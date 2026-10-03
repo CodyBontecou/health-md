@@ -4,6 +4,24 @@ import XCTest
 @testable import HealthMdWatchExport
 
 @MainActor
+private final class RecordingKeychain: WatchExportKeychainClient {
+    var copyStatus: OSStatus = errSecItemNotFound
+    var updateStatus: OSStatus = errSecItemNotFound
+    var addStatus: OSStatus = errSecSuccess
+    var updates: [[String: Any]] = []
+    var additions: [[String: Any]] = []
+    func copy(_ query: CFDictionary, result: inout CFTypeRef?) -> OSStatus { copyStatus }
+    func update(_ query: CFDictionary, attributes: CFDictionary) -> OSStatus {
+        updates.append(attributes as! [String: Any])
+        return updateStatus
+    }
+    func add(_ item: CFDictionary) -> OSStatus {
+        additions.append(item as! [String: Any])
+        return addStatus
+    }
+}
+
+@MainActor
 final class WatchExportKeychainTests: XCTestCase {
     func testKeychainRoundTripStoresDestinationAndPendingTogetherWithoutSynchronization() async throws {
         let service = "com.healthmd.watch-export.test.\(UUID().uuidString)"
@@ -22,11 +40,34 @@ final class WatchExportKeychainTests: XCTestCase {
         var result: CFTypeRef?
         XCTAssertEqual(SecItemCopyMatching(attributeQuery as CFDictionary, &result), errSecSuccess)
         let attributes = try XCTUnwrap(result as? [String: Any])
-        XCTAssertEqual(attributes[kSecAttrAccessible as String] as? String, kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
+        // The macOS file-based Keychain does not expose iOS/watchOS accessibility
+        // attributes. Actual Watch lock behavior remains a physical-device gate;
+        // test the production policy arguments separately below, not via a skip.
         XCTAssertFalse(attributes[kSecAttrSynchronizable as String] as? Bool ?? false)
         try store.save(WatchExportState(destination: destination))
         XCTAssertNil(try store.load().pending)
         XCTAssertEqual(try store.load().destination, destination)
+    }
+
+    func testProductionWritesRequestUnlockedDeviceOnlyPolicyAndNeverAddAfterUpdateFailure() async throws {
+        let client = RecordingKeychain()
+        let store = WatchExportKeychain(service: "synthetic-test", client: client)
+        try store.save(WatchExportState())
+        let update = try XCTUnwrap(client.updates.last)
+        let add = try XCTUnwrap(client.additions.last)
+        XCTAssertEqual(update[kSecAttrAccessible as String] as? String, kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
+        XCTAssertEqual(add[kSecAttrAccessible as String] as? String, kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
+        XCTAssertEqual(add[kSecAttrSynchronizable as String] as? Bool, false)
+        XCTAssertEqual(add[kSecAttrAccount as String] as? String, "destination-and-pending")
+        XCTAssertNotNil(add[kSecValueData as String] as? Data)
+        client.updateStatus = errSecInteractionNotAllowed
+        XCTAssertThrowsError(try store.save(WatchExportState()))
+        XCTAssertEqual(client.additions.count, 1, "A locked/read-error item must not be replaced")
+        client.copyStatus = errSecInteractionNotAllowed
+        XCTAssertThrowsError(try store.load())
+        client.updateStatus = errSecItemNotFound
+        client.addStatus = errSecAuthFailed
+        XCTAssertThrowsError(try store.save(WatchExportState()))
     }
 
     func testMalformedKeychainDataFailsClosedInsteadOfErasingState() async throws {

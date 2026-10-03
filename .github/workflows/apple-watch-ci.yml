@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   capture-upload-and-build:
-    name: Watch capture/upload regressions and Watch build
+    name: Watch capture/upload regressions
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -38,17 +38,6 @@ jobs:
           mkdir -p apps/apple/build/watch-ci
           swift test --package-path apps/apple/Packages/HealthMdWatchExport --jobs 2 \
             2>&1 | tee apps/apple/build/watch-ci/tests.log
-      - name: Compile actual Watch app and widgets
-        if: ${{ !cancelled() }}
-        working-directory: apps/apple
-        run: |
-          set -euo pipefail
-          xcodebuild build -project HealthMd.xcodeproj -scheme HealthMdWatch \
-            -configuration Debug -destination 'generic/platform=watchOS Simulator' \
-            -derivedDataPath build/watch-derived -jobs 2 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY='' DEVELOPMENT_TEAM='' PROVISIONING_PROFILE_SPECIFIER='' \
-            2>&1 | tee build/watch-ci/build.log
       - name: Preserve bounded diagnostics
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

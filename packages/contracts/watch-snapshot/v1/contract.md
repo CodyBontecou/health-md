@@ -65,7 +65,7 @@ The current bundle remains companion-dependent (`WKRunsIndependentlyOfCompanionA
 
 ## Evidence and open gates
 
-The dependency-free `apps/apple/Packages/HealthMdWatchExport` suite behavior-tests capture, payload fixtures, validation, durable state transitions, offline/rejection/cancellation/retry, Keychain storage, request construction, URLSession responses, and redirect refusal. `.github/workflows/apple-watch-ci.yml` runs it and compiles the actual Watch scheme with its source registrations on a free hosted macOS runner. HealthKit queries/UI are compiled for Watch, not simulated as proof of permissions or on-device runtime behavior. Existing Apple/Android/contract consumer checks remain required for their inventory surface.
+The dependency-free `apps/apple/Packages/HealthMdWatchExport` suite behavior-tests capture, payload fixtures, validation, durable state transitions, offline/rejection/cancellation/retry, Keychain storage, request construction, URLSession responses, and redirect refusal. `.github/workflows/apple-watch-ci.yml` runs it on a free hosted macOS runner; the existing `.github/workflows/apple-ci.yml` builds the actual Watch scheme with its source registrations, reusing its prepared shared-core artifact for Xcode package resolution. HealthKit queries/UI are compiled for Watch, not simulated as proof of permissions or on-device runtime behavior. Existing Apple/Android/contract consumer checks remain required for their inventory surface.
 
 Required hardware matrix and receipt fields: `apps/apple/docs/features/watch-api-sync.md`. Until physical Wi-Fi/cellular evidence and a compatible backend idempotency receipt exist, keep the PR draft and #171 open.
 
