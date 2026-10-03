@@ -36,6 +36,9 @@ struct iPadExportView: View {
     @State private var historyAssessment: HealthHistoryAssessment?
     @State private var historyRefreshID = UUID()
     @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
+    #if DEBUG
+    @State private var syntheticHistoryPreviewStage = "not started"
+    #endif
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -64,6 +67,11 @@ struct iPadExportView: View {
     }
 
     private func refreshHistoryAssessment() async {
+        #if DEBUG
+        if TestMode.isUITesting {
+            syntheticHistoryPreviewStage = "starting; active=\(scenePhase == .active); metrics=\(historyScope.metricIDs.count)"
+        }
+        #endif
         guard scenePhase == .active else { return }
         let request = historyPreviewRequest
         let result = await historyCoordinator.assess(scope: request.scope, isCurrent: {
@@ -74,11 +82,29 @@ struct iPadExportView: View {
                 await healthKitManager.assessHistoryAccess(scope: request.scope)
             }
         })
+        #if DEBUG
+        if TestMode.isUITesting, request == historyPreviewRequest {
+            // Diagnostic ownership follows the current request too: an obsolete
+            // cancelled/late result cannot relabel the newest task's stage.
+            // Keep identity mismatches visible for a CURRENT request.
+            // Public synthetic booleans/counts only; fresh canonical read is
+            // at the async boundary, never in body. No IDs/values/dates.
+            let canonicalMatches = request.scope.profileID == HealthHistoryCanonicalProfileIdentity.read()
+            syntheticHistoryPreviewStage = "returned=\(result != nil); active=\(scenePhase == .active); selection=\(request == historyPreviewRequest); identity=\(canonicalMatches); metrics=\(request.scope.metricIDs.count); types=\(result?.types.count ?? 0); warning=\(result?.needsWarning ?? false); displayed=\(result?.scope == historyScope)"
+        }
+        #endif
         guard let result else { return }
         historyAssessment = result
     }
 
     @ViewBuilder private var historyWarningSection: some View {
+        #if DEBUG
+        if TestMode.isUITesting, ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+            Text(syntheticHistoryPreviewStage)
+                .font(.caption)
+                .accessibilityIdentifier("export.synthetic.historyPreviewStage")
+        }
+        #endif
         if isAssessingHistory {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 iPadBrandLabel("Checking history access")

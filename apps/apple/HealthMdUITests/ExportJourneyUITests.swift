@@ -575,16 +575,28 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        scrollUntilHittable(customPreset, in: app, swipingUp: true)
-        // A partially visible SwiftUI button can report isHittable while its center remains below
-        // the bottom tab bar. Move the preset row a bounded distance into the viewport.
         let scrollView = app.scrollViews.firstMatch
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
+        // Actual a162 geometry placed the row ABOVE the viewport after the
+        // one-way swipe/up-drag. Reveal using public frames and signed bounded
+        // scrolling, never a coordinate tap or an assertion substitute.
+        // Retain the existing six-attempt budget and the actual button tap.
+        for _ in 0..<6 {
+            let viewport = scrollView.frame.intersection(app.frame)
+            let tabs = app.tabBars.firstMatch
+            let bottom = tabs.exists ? min(viewport.maxY, tabs.frame.minY) : viewport.maxY
+            let visible = CGRect(x: viewport.minX, y: viewport.minY,
+                                 width: viewport.width, height: max(0, bottom - viewport.minY))
+            let center = customPreset.exists ? CGPoint(x: customPreset.frame.midX, y: customPreset.frame.midY) : .zero
+            if customPreset.exists && customPreset.isHittable && visible.contains(center) { break }
+            let above = customPreset.exists && center.y < visible.minY
+            let from = CGVector(dx: 0.5, dy: above ? 0.6 : 0.75)
+            let to = CGVector(dx: 0.5, dy: above ? 0.75 : 0.6)
+            scrollView.coordinate(withNormalizedOffset: from).press(
+                forDuration: 0.05, thenDragTo: scrollView.coordinate(withNormalizedOffset: to)
+            )
+        }
         if !customPreset.exists || !customPreset.isHittable {
-            // Synthetic-only public geometry; keep the exact assertions/drag
+            // Synthetic-only public geometry; keep the exact assertions
             // and budgets. No private nodes, user data or tap substitution.
             let buttonFrame = customPreset.exists ? String(describing: customPreset.frame) : "absent"
             let tabs = app.tabBars.firstMatch

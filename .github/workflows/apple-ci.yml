@@ -51,6 +51,9 @@ jobs:
             packages/healthmd-core-rust/**
             Makefile
             .github/workflows/apple-ci.yml
+      - name: Verify both phone pipelines fail closed
+        if: ${{ steps.detect.outputs.run == 'true' }}
+        run: python3 apps/apple/scripts/test-history-ui-pipeline-status.py
 
   prepare-shared-core:
     name: Prepare shared Rust core once
@@ -417,6 +420,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
+          phone_first_status=0
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
@@ -437,9 +441,10 @@ jobs:
             -maximum-test-execution-time-allowance 300 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee build/logs/build-ios-ui.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+            2>&1 | tee -a build/logs/build-ios-ui.log \
+            | grep -E "Test Case|error:|PASSED|FAILED|Executed" || phone_first_status=$?
 
+          phone_second_status=0
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
@@ -460,7 +465,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee -a build/logs/build-ios-ui.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+            | grep -E "Test Case|error:|PASSED|FAILED|Executed" || phone_second_status=$?
+
+          printf 'Phone pipeline status: first=%s second=%s\n' "$phone_first_status" "$phone_second_status"
+          if [[ "$phone_first_status" -ne 0 ]]; then
+            exit "$phone_first_status"
+          fi
+          exit "$phone_second_status"
 
       - name: Run App Review export regression (iPad)
         if: ${{ !cancelled() }}

@@ -109,6 +109,17 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
             if element.exists && element.isHittable { return }
             app.swipeUp()
         }
+        if !element.exists || !element.isHittable {
+            let stage = app.descendants(matching: .any)["export.synthetic.historyPreviewStage"]
+            print("HISTORY_ROOT_DIAGNOSTIC stage=\(stage.exists ? stage.label : "absent") app=\(app.frame)")
+            for id in ["export.historyWarning", "export.historyWarning.message", "export.historyWarning.reviewAccess"] {
+                let controls = app.descendants(matching: .any).matching(identifier: id)
+                let geometry = controls.allElementsBoundByIndex.prefix(2).map {
+                    "type=\($0.elementType.rawValue),frame=\($0.frame),hittable=\($0.isHittable)"
+                }
+                print("HISTORY_ROOT_DIAGNOSTIC id=\(id) count=\(controls.count) geometry=\(geometry)")
+            }
+        }
         XCTAssertTrue(element.exists && element.isHittable, "History warning control should be reachable")
     }
 }
