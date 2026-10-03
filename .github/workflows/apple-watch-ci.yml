@@ -30,14 +30,16 @@ jobs:
         with:
           xcode-version: latest-stable
       - name: Validate contract inventory and mirrored fixture
-        run: python3 packages/contracts/validate.py --inventory-only
+        run: python3 packages/contracts/validate.py
       - name: Run dependency-free capture and upload behavior tests
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           mkdir -p apps/apple/build/watch-ci
           swift test --package-path apps/apple/Packages/HealthMdWatchExport --jobs 2 \
             2>&1 | tee apps/apple/build/watch-ci/tests.log
       - name: Compile actual Watch app and widgets
+        if: ${{ !cancelled() }}
         working-directory: apps/apple
         run: |
           set -euo pipefail
