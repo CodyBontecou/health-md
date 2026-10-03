@@ -180,6 +180,8 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         XCTAssertEqual(installedMarkdown.sectionHeaderLevel, 4)
         XCTAssertTrue(installedMarkdown.useEmoji)
         XCTAssertFalse(installedMarkdown.includeSummary)
+        XCTAssertTrue(installedMarkdown.includeWorkoutDetailsAndMetadata,
+                      "Shared Setup v2 must use the native default for its unrepresented local-only preference")
         XCTAssertEqual(installedMarkdown.bulletStyle, .plus)
         XCTAssertNil(native.folderVaultID)
         XCTAssertNil(native.apiEndpointID)
