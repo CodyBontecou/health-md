@@ -32,7 +32,10 @@ final class ExportJourneyUITests: XCTestCase {
         // After the simulated export, the status badge should appear
         // ExportStatusBadge is a complex view — use descendants query
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
-        XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export status badge should appear after export")
+        let completed = statusBadge.waitForExistence(timeout: 10)
+        let diagnostic = app.staticTexts["export.synthetic.statusMessage"]
+        let syntheticStatus = diagnostic.exists ? diagnostic.label : "no synthetic stage element"
+        XCTAssertTrue(completed, "Export status badge should appear after export. Synthetic stage: \(syntheticStatus)")
         XCTAssertTrue(
             app.buttons["View Exported File"].exists,
             "A successful local export should offer an exact-file viewer"
@@ -572,14 +575,36 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        scrollUntilHittable(customPreset, in: app, swipingUp: true)
-        // A partially visible SwiftUI button can report isHittable while its center remains below
-        // the bottom tab bar. Move the preset row a bounded distance into the viewport.
         let scrollView = app.scrollViews.firstMatch
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
+        // Actual a162 geometry placed the row ABOVE the viewport after the
+        // one-way swipe/up-drag. Reveal using public frames and signed bounded
+        // scrolling, never a coordinate tap or an assertion substitute.
+        // Retain the existing six-attempt budget and the actual button tap.
+        for _ in 0..<6 {
+            let viewport = scrollView.frame.intersection(app.frame)
+            let tabs = app.tabBars.firstMatch
+            let bottom = tabs.exists ? min(viewport.maxY, tabs.frame.minY) : viewport.maxY
+            let visible = CGRect(x: viewport.minX, y: viewport.minY,
+                                 width: viewport.width, height: max(0, bottom - viewport.minY))
+            let center = customPreset.exists ? CGPoint(x: customPreset.frame.midX, y: customPreset.frame.midY) : .zero
+            if customPreset.exists && customPreset.isHittable && visible.contains(center) { break }
+            let above = customPreset.exists && center.y < visible.minY
+            let from = CGVector(dx: 0.5, dy: above ? 0.6 : 0.75)
+            let to = CGVector(dx: 0.5, dy: above ? 0.75 : 0.6)
+            scrollView.coordinate(withNormalizedOffset: from).press(
+                forDuration: 0.05, thenDragTo: scrollView.coordinate(withNormalizedOffset: to)
+            )
+        }
+        if !customPreset.exists || !customPreset.isHittable {
+            // Synthetic-only public geometry; keep the exact assertions
+            // and budgets. No private nodes, user data or tap substitution.
+            let buttonFrame = customPreset.exists ? String(describing: customPreset.frame) : "absent"
+            let tabs = app.tabBars.firstMatch
+            let tabFrame = tabs.exists ? String(describing: tabs.frame) : "absent"
+            let warning = app.staticTexts["export.historyWarning.message"]
+            let warningFrame = warning.exists ? String(describing: warning.frame) : "absent"
+            print("HISTORY_TAP_DIAGNOSTIC custom=\(buttonFrame) scroll=\(scrollView.frame) app=\(app.frame) tabs=\(tabFrame) warning=\(warningFrame)")
+        }
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible")
         XCTAssertTrue(customPreset.isHittable, "Custom preset should be tappable")
         customPreset.tap()

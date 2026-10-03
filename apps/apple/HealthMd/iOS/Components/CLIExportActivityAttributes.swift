@@ -2,9 +2,11 @@
 import ActivityKit
 import Foundation
 
-struct CLIExportActivityAttributes: ActivityAttributes, Hashable {
-    struct ContentState: Codable, Hashable {
-        enum Phase: String, Codable, Hashable {
+// Immutable ActivityKit DTOs cross SDK27 @concurrent APIs. Only the value
+// conformances are executor-neutral; the Live Activity controller stays MainActor.
+nonisolated struct CLIExportActivityAttributes: ActivityAttributes, Hashable, Sendable {
+    nonisolated struct ContentState: Codable, Hashable, Sendable {
+        nonisolated enum Phase: String, Codable, Hashable, Sendable {
             case preparing
             case capturing
             case transferring

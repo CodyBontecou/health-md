@@ -207,7 +207,7 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: macos-26\n    timeout-minutes: 60"),
+            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
             "The split UI job must allow at least 60 minutes for clean builds"
         )
         XCTAssertEqual(
@@ -240,7 +240,23 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
         }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertEqual(smokeSelectionCount, 16, "PR smoke must preserve all selected UI regressions")
+        XCTAssertEqual(smokeSelectionCount, 19, "PR smoke must preserve all 16 regressions plus three history journeys")
+        XCTAssertEqual(content.components(separatedBy: "runs-on: xcode-27").count - 1, 4,
+                       "All native consumers and the single producer must use the verified free SDK27 runner")
+        XCTAssertEqual(content.components(separatedBy: "name: apple-sdk27-shared-core").count - 1, 4,
+                       "The producer and all three consumers must share the SDK27 artifact namespace")
+        XCTAssertTrue(content.contains("apple-shared-core-sdk27-27A266a-"))
+        XCTAssertEqual(content.components(separatedBy: "cmp build/logs/history-sdk27-receipt.txt").count - 1, 3,
+                       "All native consumers must verify producer SDK/target/head/tree provenance")
+        XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide"))
+        XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess"))
+        XCTAssertTrue(content.contains("HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction"))
+        XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport"))
+        let qualifier = try String(contentsOf: projectDir.appendingPathComponent("scripts/qualify-history-authorization-sdk27.sh"), encoding: .utf8)
+        XCTAssertTrue(qualifier.contains("Xcode 27.0\\nBuild version 27A266a"))
+        XCTAssertTrue(qualifier.contains("swiftlang-6.4.0.34.1 clang-2100.3.34.1"))
+        XCTAssertTrue(qualifier.contains("[[ \"$sdk_version\" == 27.0 ]]"))
+        XCTAssertFalse(qualifier.contains("== 27.*"), "Floating SDK versions cannot relabel the pinned shared-core cache")
         XCTAssertTrue(
             smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
             "PR smoke must cover deterministic returning-user release notes"
