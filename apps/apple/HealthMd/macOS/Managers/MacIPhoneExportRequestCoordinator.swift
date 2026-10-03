@@ -282,6 +282,18 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     /// the currently connected iPhone matches this durable job's binding.
     var onRequestTermination: ((_ jobID: UUID, _ notifyPeer: Bool) -> Void)?
 
+    /// Additional admission for phone-initiated jobs only; ordinary exports
+    /// retain their existing transport behavior.
+    var contextAutomationPeerAdmission: ((UUID, SyncService, IPhoneExportRequest.ResponseMode) -> Bool)?
+    var contextAutomationOwnsJob: ((UUID) -> Bool)?
+
+    func contextRequest(jobID: UUID) -> IPhoneExportRequest? { records[jobID]?.request }
+    func canExplicitlyResumeContext(jobID: UUID) -> Bool {
+        guard let record = records[jobID], record.request.responseMode == .contextStore,
+              !record.state.isTerminal, waiters[jobID] == nil else { return false }
+        return record.state == .sent || record.paused
+    }
+
     private let fileManager: FileManager
     private let rootURL: URL
     private let now: () -> Date
@@ -322,9 +334,14 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     func requestExport(
         _ exportRequest: ExportRequest,
         syncService: SyncService,
-        destinationStatus: MacDestinationStatus
+        destinationStatus: MacDestinationStatus,
+        onDurableAdmission: (() -> Void)? = nil
     ) async -> ExportResponse {
         cleanupExpiredJobs()
+        if let jobID = exportRequest.jobID,
+           contextAutomationPeerAdmission?(jobID, syncService, exportRequest.responseMode) == false {
+            return .unavailable("Authenticated context peer is unavailable.", reason: "context_peer_unavailable")
+        }
         guard exportRequest.rawProfile != .healthDataProjection
                 || exportRequest.canonicalSelection != nil,
               exportRequest.rawProfile != .canonicalSourceRecordsV1
@@ -449,6 +466,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         records[request.jobID] = record
         activeJobID = request.jobID
         latestProgress = nil
+        onDurableAdmission?()
         syncService.send(.iphoneExportRequest(request))
         return await waitForJob(jobID: request.jobID, timeoutSeconds: exportRequest.waitTimeoutSeconds)
     }
@@ -519,7 +537,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         record.state = .sent
         record.paused = false
         record.updatedAt = now()
-        update(record)
+        let persisted = update(record)
+        if contextAutomationOwnsJob?(jobID) == true && !persisted {
+            return .unavailable("Could not durably resume context job.", reason: "job_persistence_failed", jobID: jobID)
+        }
         activeJobID = jobID
         // This is the exact Codable request created by the original POST,
         // including its original createdAt and immutable date identifiers.
@@ -599,7 +620,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             record.paused = false
             record.state = .sent
             record.updatedAt = now()
-            update(record)
+            let persisted = update(record)
+            if contextAutomationOwnsJob?(jobID) == true && !persisted { continue }
             activeJobID = jobID
             syncService.send(.iphoneExportRequest(record.request))
             break // The control plane intentionally serializes connected exports.
@@ -939,7 +961,24 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
-        guard let record = records[payload.jobID], !record.state.isTerminal else { return false }
+        guard let record = records[payload.jobID], !record.state.isTerminal,
+              record.request.responseMode != .contextStore else { return false }
+        return completeResult(payload, record: record)
+    }
+
+    @discardableResult
+    func completeEncryptedContext(with evidence: MacEncryptedContextCommitEvidence) -> Bool {
+        let payload = evidence.result
+        guard let record = records[payload.jobID], !record.state.isTerminal,
+              record.request.responseMode == .contextStore,
+              evidence.manifest.mode == .encryptedContext,
+              evidence.manifest.canonicalSelection == record.request.canonicalSelection,
+              evidence.manifest.requestedDateIdentifiers == expectedDateIdentifiers(for: record),
+              payload.totalFilesWritten == 0 else { return false }
+        return completeResult(payload, record: record)
+    }
+
+    private func completeResult(_ payload: MacExportResultPayload, record: JobRecord) -> Bool {
         let status: ExportResponse.Status
         switch payload.status {
         case .success: status = .success
@@ -1242,6 +1281,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func matchesBoundPeer(_ record: JobRecord, syncService: SyncService) -> Bool {
+        guard contextAutomationPeerAdmission?(record.request.jobID, syncService, record.request.responseMode) != false else { return false }
         guard record.sourceInstallationID != nil || record.destinationInstallationID != nil else {
             return true
         }
