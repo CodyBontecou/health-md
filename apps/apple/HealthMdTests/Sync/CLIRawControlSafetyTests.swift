@@ -622,8 +622,9 @@ final class CLIRawControlSafetyTests: XCTestCase {
             .appendingPathComponent("context-pending-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let service = SyncService()
+        let peerInstallationID = UUID()
         service.connectionState = .connected
-        service.remoteCapabilities = .current(platform: .iOS)
+        service.remoteCapabilities = .current(platform: .iOS, installationID: peerInstallationID)
         var sentRequests: [IPhoneExportRequest] = []
         service.testMessageSendObserver = { message in
             if case .iphoneExportRequest(let request) = message { sentRequests.append(request) }
@@ -658,6 +659,11 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertNil(pending.rawData)
         XCTAssertNil(pending.rawResult)
 
+        // Simulate a fresh hello from the same installation after reconnect.
+        // The mock transport has no live socket and clears capabilities on
+        // send failure; scope validation requires a newly negotiated peer.
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS, installationID: peerInstallationID)
         let changedSelection = makeContextRequest(jobID: jobID, selection: CanonicalHealthDataSelection(
             metricIDs: ["sleep_total"], sourceIDs: ["apple_health"], detailLevel: .summary
         ))
