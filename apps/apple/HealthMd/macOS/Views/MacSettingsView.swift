@@ -800,7 +800,7 @@ struct MacFormatSettingsTab: View {
                 BrandLabel("Display Formats")
             }
 
-            if advancedSettings.exportFormats.contains(.markdown) {
+            if advancedSettings.exportFormats.contains(.markdown) || advancedSettings.dailyNoteInjection.injectMarkdownSections {
                 Section {
                     Picker("Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
                         ForEach(MarkdownTemplateStyle.allCases, id: \.self) { s in
@@ -827,6 +827,11 @@ struct MacFormatSettingsTab: View {
                         .tint(Color.accent)
                     Toggle("Include Summary", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeSummary)
                         .tint(Color.accent)
+                    Toggle("Workout Details and Metadata", isOn: $advancedSettings.formatCustomization.markdownTemplate.includeWorkoutDetailsAndMetadata)
+                        .tint(Color.accent)
+                    Text("Turn off to omit these two tables from Markdown exports and daily notes while keeping readable workout summaries. Structured data and source capture are unchanged.")
+                        .font(BrandTypography.caption())
+                        .foregroundStyle(Color.textMuted)
                 } header: {
                     BrandLabel("Markdown Template")
                 }

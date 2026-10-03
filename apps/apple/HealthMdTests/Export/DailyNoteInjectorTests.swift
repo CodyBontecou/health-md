@@ -22,6 +22,12 @@ final class DailyNoteInjectorTests: XCTestCase {
     }()
 
     private static let customization = FormatCustomization()
+    // Immutable retained fixture for workout presentation suppression.
+    private static let summaryWorkoutCustomization: FormatCustomization = {
+        let c = FormatCustomization()
+        c.markdownTemplate.includeWorkoutDetailsAndMetadata = false
+        return c
+    }()
     private static let imperialCustomization: FormatCustomization = {
         let c = FormatCustomization()
         c.unitPreference = .imperial
@@ -671,6 +677,53 @@ final class DailyNoteInjectorTests: XCTestCase {
         // User's Journal section is preserved.
         XCTAssertTrue(merged.contains("## Journal"))
         XCTAssertTrue(merged.contains("Felt great today."))
+    }
+
+    func testInject_workoutTableSuppressionReplacesManagedContentAndPreservesUserData() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+        let fileURL = tmpDir.appendingPathComponent(Self.sectionsCreateSettings.formatFilename(for: Self.testDate) + ".md")
+        let existing = "---\ntitle: My Day\ncustom_property: keep me\n---\n\n# My Day\n\nMy introduction.\n\n## Journal\n\nUser-written Details and Metadata.\n"
+        try existing.write(to: fileURL, atomically: true, encoding: .utf8)
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [
+            WorkoutData(workoutType: .running, startTime: Self.testDate,
+                        metadata: ["Device": "Workout metadata sentinel"], duration: 1800,
+                        calories: 250, distance: 5000, avgHeartRate: 145),
+            WorkoutData(workoutType: .walking, startTime: Self.testDate.addingTimeInterval(3600),
+                        duration: 600, calories: nil, distance: nil)
+        ]
+        func inject(_ config: FormatCustomization) throws -> String {
+            let result = DailyNoteInjector.inject(
+                healthData: data, into: tmpDir, settings: Self.sectionsCreateSettings,
+                customization: config, metricSelection: Self.workoutsOnly
+            )
+            guard case .updated = result else {
+                XCTFail("Expected updated, got \(result)")
+                return ""
+            }
+            return try String(contentsOf: fileURL, encoding: .utf8)
+        }
+        let rich = try inject(Self.customization)
+        XCTAssertTrue(rich.contains("#### Details"), rich)
+        XCTAssertTrue(rich.contains("#### Metadata"), rich)
+        let suppressed = try inject(Self.summaryWorkoutCustomization)
+        XCTAssertFalse(suppressed.contains("#### Details"), suppressed)
+        XCTAssertFalse(suppressed.contains("#### Metadata"), suppressed)
+        XCTAssertFalse(suppressed.contains("| Field | Value |"), suppressed)
+        XCTAssertFalse(suppressed.contains("| Device | Workout metadata sentinel |"), suppressed)
+        XCTAssertTrue(suppressed.contains("### 1. Running"), suppressed)
+        XCTAssertTrue(suppressed.contains("### 2. Walking"), suppressed)
+        for label in ["Time", "Duration", "Distance", "Calories", "Avg Heart Rate"] {
+            XCTAssertTrue(suppressed.contains("**\(label):**"), suppressed)
+        }
+        for userText in ["title: My Day", "custom_property: keep me", "# My Day",
+                         "My introduction.", "## Journal", "User-written Details and Metadata."] {
+            XCTAssertTrue(suppressed.contains(userText), suppressed)
+        }
+        XCTAssertTrue(suppressed.contains("workout_count: 2"), suppressed)
+        XCTAssertEqual(try inject(Self.summaryWorkoutCustomization), suppressed, "Repeated injection must be idempotent")
+        XCTAssertEqual(try inject(Self.customization), rich, "Re-enabling must restore the managed tables")
     }
 
     func testInject_sectionsEnabled_preservesExistingPreamble() throws {

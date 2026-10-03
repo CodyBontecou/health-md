@@ -1,0 +1,31 @@
+{
+  "schema": "healthmd.workout_presentation_parity",
+  "schema_version": 1,
+  "capability_id": "export.workout-table-presentation",
+  "parent_capability_id": "export.completed-workouts",
+  "classification": "planned",
+  "setting": "markdownTemplate.includeWorkoutDetailsAndMetadata",
+  "default": true,
+  "outcome": "Omit Details and Metadata tables from readable Markdown while retaining workout summaries and structured/source data.",
+  "platforms": {
+    "apple": {
+      "state": "available",
+      "profile": "apple-v8",
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Export/MarkdownExporter.swift",
+        "apps/apple/HealthMdTests/Export/WorkoutGranularDetailsTests.swift",
+        "apps/apple/HealthMdTests/Export/DailyNoteInjectorTests.swift",
+        "apps/apple/HealthMdTests/Models/ExportSettingsSnapshotTests.swift"
+      ]
+    },
+    "android": {
+      "state": "planned",
+      "target": "Add the same setting identity and enabled default to Android's first unified-v9 Markdown presentation-settings/profile writer; preserve frozen v4/v5 output.",
+      "current_behavior": "Current workoutsMarkdown renders summary bullets, not Details/Metadata tables. No Health Connect API blocker prevents a future presentation control.",
+      "evidence": [
+        "apps/android/app/src/main/java/com/healthmd/data/export/MarkdownExporter.kt"
+      ]
+    }
+  },
+  "version_impact": "Optional Apple body presentation only; no public data schema, source archive, protocol, or semantic/render envelope change."
+}
