@@ -285,6 +285,8 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: |
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell wm dismiss-keyguard
             # The short-window editor matrix exercises the real software keyboard. Hosted
             # API 35 headless AVDs can leave that IME suppressed, so make the software-IME
             # contract explicit and prove a default method is ready before instrumentation.
@@ -293,6 +295,19 @@ jobs:
             for attempt in $(seq 1 30); do default_ime=$(adb -s emulator-5554 shell settings get secure default_input_method | tr -d '\r'); if [ -n "$default_ime" ] && [ "$default_ime" != null ] && adb -s emulator-5554 shell ime list -s | tr -d '\r' | grep -Fx "$default_ime"; then exit 0; fi; sleep 1; done; exit 1
             cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedFdroidDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
             cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
+
+      - name: Retain synthetic instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/android/healthmd-core/build/reports/androidTests/
+            apps/android/healthmd-core/build/outputs/androidTest-results/
+            apps/android/app/build/reports/androidTests/
+            apps/android/app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 7
 
   fdroid:
     name: F-Droid clean build
