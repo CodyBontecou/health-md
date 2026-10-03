@@ -8,6 +8,10 @@ import Security
 @MainActor
 final class MacContextAutomationCoordinator: ObservableObject {
     let journal: AppleContextJournal
+    weak var nativeJobs: MacIPhoneExportRequestCoordinator?
+    private func ownsContextJob(_ id: UUID) -> Bool {
+        journal.isKnown(id) || nativeJobs?.contextRequest(jobID: id)?.responseMode == .contextStore
+    }
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private var transferJobs: [UUID: UUID] = [:]
     private let contextReadiness: () -> AppleContextReceipt.State?
@@ -18,12 +22,15 @@ final class MacContextAutomationCoordinator: ObservableObject {
         switch message {
         case .connectedTransferStart(let start):
             jobID = start.manifest.jobID
-            if journal.isKnown(start.manifest.jobID) {
-                guard allows(jobID: start.manifest.jobID, sync: sync) else { return false }
+            if ownsContextJob(start.manifest.jobID) {
+                guard start.manifest.kind == .connectedCorpusPartitionV1,
+                      allows(jobID: start.manifest.jobID, sync: sync) else { return false }
                 transferJobs[start.transferID] = start.manifest.jobID
             }
         case .connectedTransferChunk(let chunk): jobID = transferJobs[chunk.transferID]
         case .connectedTransferComplete(let complete): jobID = transferJobs[complete.transferID]
+        case .connectedTransferAck(let acknowledgement): jobID = transferJobs[acknowledgement.transferID]
+        case .connectedTransferFinalAck(let acknowledgement): jobID = transferJobs[acknowledgement.transferID]
         case .connectedTransferAbort(let abort): jobID = abort.jobID ?? transferJobs[abort.transferID]
         case .iphoneExportRequest(let value):
             jobID = value.jobID
@@ -48,10 +55,13 @@ final class MacContextAutomationCoordinator: ObservableObject {
         case .connectedCorpusTransferFinalize(let value): jobID = value.jobID
         case .connectedCorpusStatus(let value): jobID = value.jobID
         case .connectedCorpusTransferCancel(let value): jobID = value.jobID
+        case .connectedCorpusTransferDisposition(let value): jobID = value.jobID
+        case .connectedCorpusTransferFinalAck(let value): jobID = value.jobID
+        case .connectedCorpusTransferCancelAck(let value): jobID = value.jobID
         default: jobID = nil
         }
         guard let jobID else { return true }
-        if !journal.isKnown(jobID) {
+        if !ownsContextJob(jobID) {
             return !requiresContextAuthority || journal.authorityState(jobID) == .absent
         }
         // Context jobs can NEVER be completed by ordinary export/raw messages.
@@ -60,6 +70,23 @@ final class MacContextAutomationCoordinator: ObservableObject {
              .macExportResult, .macExportFailed: return !inbound && allows(jobID: jobID, sync: sync)
         default: return allows(jobID: jobID, sync: sync)
         }
+    }
+
+    /// Production app-root start delegation: denied owned file/raw kinds never
+    /// reach the generic receiver or subsequently the ordinary file executor.
+    func receiveTransferStart(_ start: ConnectedTransferStart, sync: SyncService,
+                              receiver: ConnectedTransferReceiver) -> ConnectedTransferReceiver.StartResult? {
+        guard allowsMessage(.connectedTransferStart(start), sync: sync) else { return nil }
+        return receiver.receive(start)
+    }
+
+    /// Last app-root exclusion before any ordinary file execution, including
+    /// restored native context jobs whose private automation journal is unreadable.
+    func executeOrdinaryFileJob(_ job: MacExportJob, sync: SyncService,
+                                executor: MacExportJobExecutor, vault: VaultManager,
+                                progress: MacExportJobExecutor.ProgressHandler? = nil) async -> Result<MacExportResultPayload, MacExportFailure>? {
+        guard allowsMessage(.macExportRequest(job), sync: sync) else { return nil }
+        return await executor.execute(job, vaultManager: vault, progress: progress)
     }
 
     init(journal: AppleContextJournal? = nil, contextReadiness: (() -> AppleContextReceipt.State?)? = nil) {
@@ -78,6 +105,9 @@ final class MacContextAutomationCoordinator: ObservableObject {
 
     func allows(jobID: UUID, sync: SyncService, requiresContextAuthority: Bool = true) -> Bool {
         if !journal.isKnown(jobID) {
+            if nativeJobs?.contextRequest(jobID: jobID)?.responseMode == .contextStore {
+                return journal.authorityState(jobID) == .absent
+            }
             return !requiresContextAuthority || journal.authorityState(jobID) == .absent
         }
         guard let record = journal.record(jobID), !journal.hasUncertainAuthority(jobID) else { return false }
@@ -88,6 +118,7 @@ final class MacContextAutomationCoordinator: ObservableObject {
 
     func handle(_ message: AppleContextMessage, sync: SyncService,
                 jobs: MacIPhoneExportRequestCoordinator, destination: MacDestinationStatus) {
+        nativeJobs = jobs
         let request: AppleContextRequest
         switch message {
         case .refresh(let value), .status(let value): request = value
@@ -107,9 +138,10 @@ final class MacContextAutomationCoordinator: ObservableObject {
         let response = jobs.jobResponse(jobID: request.id)
         if response.failureReason != "job_not_found" {
             publish(request, response: response, sync: sync)
-            if repaired && response.durableState == "sent" {
-                // A receipt/mark-admitted failure can suppress the first native
-                // dispatch. Release ONLY this automation waiter, then resume the
+            if case .status = message,
+               (repaired && response.durableState == "sent") || jobs.canExplicitlyResumeContext(jobID: request.id) {
+                // Marker repair OR a cold native restart can require dispatch.
+                // Release ONLY this automation waiter, then resume the
                 // same persisted job; never create a replacement or block ingress.
                 let previous = tasks[request.id]
                 jobs.cancelRequestForDisconnectedClient(jobID: request.id)

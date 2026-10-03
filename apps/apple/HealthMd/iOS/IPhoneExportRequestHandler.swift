@@ -24,6 +24,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
     var contextAuthorizationCompletedForTesting: (() async -> Void)?
     var contextManifestForTesting: ((ConnectedCorpusExportManifest) async throws -> Void)?
     var contextCaptureLeasePassedForTesting: (() throws -> Void)?
+    var contextCaptureCompletedForTesting: (() throws -> Void)?
     #endif
 
     private var activeRequestID: UUID?
@@ -1059,6 +1060,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     fetchExternalDailyRecords: scopedExternalFetcher
                 )
                 guard captureLease() else { throw CancellationError() }
+                #if DEBUG
+                try contextCaptureCompletedForTesting?()
+                #endif
                 return try await ConnectedCorpusSpoolItem.encodeHealthDay(
                     ConnectedCorpusHealthDayPayload(
                         sourceDate: date,

@@ -288,6 +288,11 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     var contextAutomationOwnsJob: ((UUID) -> Bool)?
 
     func contextRequest(jobID: UUID) -> IPhoneExportRequest? { records[jobID]?.request }
+    func canExplicitlyResumeContext(jobID: UUID) -> Bool {
+        guard let record = records[jobID], record.request.responseMode == .contextStore,
+              !record.state.isTerminal, waiters[jobID] == nil else { return false }
+        return record.state == .sent || record.paused
+    }
 
     private let fileManager: FileManager
     private let rootURL: URL
@@ -956,7 +961,24 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
-        guard let record = records[payload.jobID], !record.state.isTerminal else { return false }
+        guard let record = records[payload.jobID], !record.state.isTerminal,
+              record.request.responseMode != .contextStore else { return false }
+        return completeResult(payload, record: record)
+    }
+
+    @discardableResult
+    func completeEncryptedContext(with evidence: MacEncryptedContextCommitEvidence) -> Bool {
+        let payload = evidence.result
+        guard let record = records[payload.jobID], !record.state.isTerminal,
+              record.request.responseMode == .contextStore,
+              evidence.manifest.mode == .encryptedContext,
+              evidence.manifest.canonicalSelection == record.request.canonicalSelection,
+              evidence.manifest.requestedDateIdentifiers == expectedDateIdentifiers(for: record),
+              payload.totalFilesWritten == 0 else { return false }
+        return completeResult(payload, record: record)
+    }
+
+    private func completeResult(_ payload: MacExportResultPayload, record: JobRecord) -> Bool {
         let status: ExportResponse.Status
         switch payload.status {
         case .success: status = .success

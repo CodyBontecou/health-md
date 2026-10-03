@@ -409,6 +409,7 @@ struct HealthMdApp: App {
     // MARK: - Sync Message Handling
 
     private func setupSyncMessageHandler() {
+        contextAutomationCoordinator.nativeJobs = iphoneExportRequestCoordinator
         iphoneExportRequestCoordinator.contextAutomationPeerAdmission = { jobID, service, mode in
             contextAutomationCoordinator.allows(jobID: jobID, sync: service, requiresContextAuthority: mode == .contextStore)
         }
@@ -784,7 +785,8 @@ struct HealthMdApp: App {
             return
         }
 
-        switch connectedTransferReceiver.receive(start) {
+        guard let received = contextAutomationCoordinator.receiveTransferStart(start, sync: syncService, receiver: connectedTransferReceiver) else { return }
+        switch received {
         case .acknowledgement(let acknowledgement):
             if start.manifest.kind == .connectedCorpusPartitionV1 {
                 connectedCorpusAwakeCoordinator.beginTransfer(
@@ -828,6 +830,7 @@ struct HealthMdApp: App {
             syncService.send(.connectedTransferAbort(abort))
             handleConnectedTransferAbort(abort)
         case .ready(let ready):
+            guard contextAutomationCoordinator.allowsMessage(.connectedTransferStart(ready.start), sync: syncService) else { return }
             do {
                 if ready.start.manifest.kind == .connectedCorpusPartitionV1 {
                     let applicationActivityID = UUID()
@@ -859,6 +862,7 @@ struct HealthMdApp: App {
                         if updatesEncryptedContext {
                             await encryptedHealthContextManager.refresh()
                         }
+                        guard contextAutomationCoordinator.allowsMessage(.connectedTransferComplete(complete), sync: syncService) else { return }
                         guard let acknowledgement = connectedTransferReceiver.finish(
                             transferID: ready.start.transferID,
                             accepted: true
@@ -931,6 +935,16 @@ struct HealthMdApp: App {
         }
     }
 
+    private func completeVerifiedCorpusResult(_ result: MacExportResultPayload, finalize: ConnectedCorpusTransferFinalize) -> Bool {
+        if iphoneExportRequestCoordinator.contextRequest(jobID: result.jobID)?.responseMode == .contextStore {
+            guard let evidence = try? macCorpusExportSessionManager.encryptedContextCommitEvidence(for: finalize) else { return false }
+            return iphoneExportRequestCoordinator.completeEncryptedContext(with: evidence)
+                || iphoneExportRequestCoordinator.jobResponse(jobID: result.jobID).durableState == "completed"
+        }
+        _ = iphoneExportRequestCoordinator.complete(with: result)
+        return true // preserve unsolicited ordinary file-export completion behavior
+    }
+
     private func finalizeConnectedCorpus(_ finalize: ConnectedCorpusTransferFinalize) async {
         let applicationActivityID = UUID()
         IdleTimerCoordinator.shared.beginActivity(applicationActivityID)
@@ -954,6 +968,7 @@ struct HealthMdApp: App {
                     iphoneExportRequestCoordinator.handleMacExportProgress(progress)
                 }
             )
+            guard contextAutomationCoordinator.allowsMessage(.connectedCorpusTransferFinalize(finalize), sync: syncService) else { return }
             switch outcome {
             case .inProgress:
                 iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: finalize.jobID)
@@ -961,7 +976,7 @@ struct HealthMdApp: App {
                 if let fileResult {
                     syncService.lastMacExportResult = fileResult
                     syncService.lastMacExportFailure = nil
-                    _ = iphoneExportRequestCoordinator.complete(with: fileResult)
+                    guard completeVerifiedCorpusResult(fileResult, finalize: finalize) else { return }
                     syncService.send(.macExportResult(fileResult))
                 }
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
@@ -981,7 +996,7 @@ struct HealthMdApp: App {
             case .files(let result, let acknowledgement):
                 syncService.lastMacExportResult = result
                 syncService.lastMacExportFailure = nil
-                _ = iphoneExportRequestCoordinator.complete(with: result)
+                guard completeVerifiedCorpusResult(result, finalize: finalize) else { return }
                 syncService.send(.macExportResult(result))
                 syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
                 if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
@@ -1118,6 +1133,7 @@ struct HealthMdApp: App {
     }
 
     private func executeMacExportJob(_ job: MacExportJob) async {
+        guard contextAutomationCoordinator.allowsMessage(.macExportRequest(job), sync: syncService) else { return }
         guard syncService.remoteCapabilities?.supportsAuthoritativeMacExportFileAccounting == true else {
             let failure = MacExportFailure(
                 jobID: job.jobID,
@@ -1144,14 +1160,14 @@ struct HealthMdApp: App {
         syncService.lastMacExportResult = nil
         syncService.lastMacExportFailure = nil
         publishMacDestinationStatus(activeJobID: job.jobID)
-        let result = await macExportJobExecutor.execute(
-            job,
-            vaultManager: vaultManager,
+        guard let result = await contextAutomationCoordinator.executeOrdinaryFileJob(
+            job, sync: syncService, executor: macExportJobExecutor,
+            vault: vaultManager,
             progress: { progress in
                 publishMacExportProgress(progress)
                 iphoneExportRequestCoordinator.handleMacExportProgress(progress)
             }
-        )
+        ) else { syncService.isSyncing = false; return }
         syncService.isSyncing = false
         switch result {
         case .success(let payload):

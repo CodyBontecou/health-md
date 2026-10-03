@@ -456,6 +456,52 @@ final class AppleContextAutomationTests: XCTestCase {
         }
     }
 
+    func testActualFakeHealthKitCaptureAwaitRechecksPeerCapabilityAndUncertainAuthority() async throws {
+        for scenario in ["stable", "peer", "capability", "uncertain"] {
+            let peer = UUID()
+            let service = service(peerID: peer)
+            let scope = request(phone: service.installationID, mac: peer)
+            let journal = AppleContextJournal(root: root.appendingPathComponent(UUID().uuidString))
+            try journal.admit(scope)
+            let client = AppleContextPhoneClient(journal: journal, bindingRoot: root.appendingPathComponent("capture-bindings"), protectedDataAvailable: { true }, executionBlocked: { _ in false })
+            client.install(service)
+            let store = FakeHealthStore()
+            store.authRequestStatus = .unnecessary
+            store.querySumAsyncResult = { identifier, _ in
+                await Task.yield() // actual fake HealthKit async query, not a pre-capture checkpoint
+                try await MainActor.run {
+                    if scenario == "peer" { service.testSetAuthenticatedContextPeer(UUID()) }
+                    if scenario == "capability" {
+                        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(service.remoteCapabilities!)) as! [String: Any]
+                        object["supportsPhoneContextAutomation"] = false
+                        service.remoteCapabilities = try JSONDecoder().decode(SyncPeerCapabilities.self, from: JSONSerialization.data(withJSONObject: object))
+                    }
+                    if scenario == "uncertain" {
+                        journal.writeFailurePointForTesting = .afterFinalAtomicWrite
+                        XCTAssertThrowsError(try journal.accept(.init(request: scope, revision: 1, state: .pending),
+                            authenticatedPeer: peer, localID: service.installationID, onPhone: true))
+                    }
+                }
+                return identifier == .stepCount ? 4_321 : nil
+            }
+            let health = LifecycleHarness.retain(HealthKitManager(store: store, userDefaults: UserDefaults(suiteName: "capture-\(UUID().uuidString)")!))
+            health.isAuthorized = true
+            let handler = LifecycleHarness.retain(IPhoneExportRequestHandler(automationClient: client))
+            var passedCaptureReturnLease = 0
+            handler.contextCaptureCompletedForTesting = {
+                passedCaptureReturnLease += 1
+                throw CancellationError() // stop before spool encoding/network; real fake-store capture already occurred
+            }
+            let native = IPhoneExportRequest(jobID: scope.id, createdAt: Date(), dateRangeStart: scope.startDate, dateRangeEnd: scope.endDate,
+                requestedDateIdentifiers: scope.ownerDates, requestedBy: .cli, settingsPolicy: .requestedDatesOnly,
+                responseMode: .contextStore, canonicalSelection: scope.selection)
+            await handler.handle(native, syncService: service, healthKitManager: health)
+            XCTAssertTrue(store.queriedSumIdentifiers.contains("HKQuantityTypeIdentifierStepCount"), scenario)
+            XCTAssertEqual(passedCaptureReturnLease, scenario == "stable" ? 1 : 0, scenario)
+            _ = await IPhoneCorpusExportRecoveryManager.shared.cancel(jobID: scope.id, notifyPeer: false)
+        }
+    }
+
     func testColdUnavailablePhoneAuthorityBlocksActualHandlerButPreservesOrdinaryFilesAndFirstRunContext() async throws {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let blockedRoot = root.appendingPathComponent("blocked")
@@ -623,7 +669,54 @@ final class AppleContextAutomationTests: XCTestCase {
         XCTAssertFalse(adapter.allowsMessage(.connectedCorpusTransferOpen(.init(session: session, partition: partition.descriptor, exportManifest: changedManifest)), sync: service))
         let disposition = corpus.open(open, vaultManager: vault, localInstallationID: service.installationID, remoteInstallationID: peer)
         XCTAssertEqual(disposition.disposition, .accept, disposition.message ?? "No admission reason")
-        try await corpus.applyPartition(fileURL: partition.file.url, descriptor: partition.descriptor, vaultManager: vault)
+        let receiver = ConnectedTransferReceiver()
+        let bytes = try Data(contentsOf: partition.file.url)
+        let partitionStart = ConnectedTransferStart(protocolVersion: ConnectedTransferStart.corpusPartitionProtocolVersion,
+            transferID: partition.transferID, manifest: .init(kind: .connectedCorpusPartitionV1, jobID: scope.id,
+                payloadSchemaVersion: ConnectedCorpusPartitionFileManifest.currentVersion, corpusPartition: partition.descriptor),
+            totalBytes: partition.file.totalBytes, totalChunks: 1, chunkBytes: bytes.count, sha256: partition.file.sha256)
+        let fileBypass = ConnectedTransferStart(protocolVersion: 1, transferID: UUID(),
+            manifest: .init(kind: .macExportJobV1, jobID: scope.id, payloadSchemaVersion: 1),
+            totalBytes: partition.file.totalBytes, totalChunks: 1, chunkBytes: bytes.count, sha256: partition.file.sha256)
+        XCTAssertNil(adapter.receiveTransferStart(fileBypass, sync: service, receiver: receiver), "Actual app-root delegate must reject ordinary file kind")
+        XCTAssertTrue(receiver.activeTransferIDs.isEmpty)
+        guard case .acknowledgement(let startAck)? = adapter.receiveTransferStart(partitionStart, sync: service, receiver: receiver) else {
+            return XCTFail("Legitimate context corpus partition must remain routable")
+        }
+        XCTAssertTrue(adapter.allowsMessage(.connectedTransferAck(startAck), sync: service, inbound: false))
+        guard case .acknowledgement = receiver.receive(ConnectedTransferChunk(transferID: partition.transferID, sequence: 1,
+            data: bytes, sha256: ConnectedTransferFile.sha256Hex(bytes))) else { return XCTFail("Native partition chunk rejected") }
+        let transportComplete = ConnectedTransferComplete(transferID: partition.transferID, totalBytes: partition.file.totalBytes,
+            totalChunks: 1, sha256: partition.file.sha256)
+        guard case .ready(let ready) = receiver.receive(transportComplete) else { return XCTFail("Native partition completion rejected") }
+        corpus.afterEncryptedContextApplyForTesting = {
+            await Task.yield()
+            service.testSetAuthenticatedContextPeer(UUID()) // switch during REAL encrypted apply await
+        }
+        try await corpus.applyPartition(fileURL: ready.fileURL, descriptor: partition.descriptor, vaultManager: vault)
+        let transportFinalAck = ConnectedTransferFinalAck(transferID: partition.transferID, accepted: true, sha256: partition.file.sha256, message: nil)
+        XCTAssertFalse(adapter.allowsMessage(.connectedTransferComplete(transportComplete), sync: service))
+        XCTAssertFalse(adapter.allowsMessage(.connectedTransferAck(startAck), sync: service, inbound: false))
+        XCTAssertFalse(adapter.allowsMessage(.connectedTransferFinalAck(transportFinalAck), sync: service, inbound: false))
+        XCTAssertFalse(adapter.allowsMessage(.connectedCorpusTransferDisposition(disposition), sync: service, inbound: false))
+        service.testSetAuthenticatedContextPeer(peer)
+        let corpusFinalAck = ConnectedCorpusTransferFinalAck(sessionID: session.sessionID, jobID: scope.id, accepted: true,
+            requestFingerprint: session.requestFingerprint, finalPartitionSHA256: partition.descriptor.sha256, message: nil)
+        let cancelAck = ConnectedCorpusTransferCancelAck(sessionID: session.sessionID, jobID: scope.id, accepted: true, acknowledgedAt: Date(), message: nil)
+        for ack in [SyncMessage.connectedTransferAck(startAck), .connectedTransferFinalAck(transportFinalAck),
+                    .connectedCorpusTransferDisposition(disposition), .connectedCorpusTransferFinalAck(corpusFinalAck), .connectedCorpusTransferCancelAck(cancelAck)] {
+            XCTAssertTrue(adapter.allowsMessage(ack, sync: service, inbound: false))
+        }
+        adapter.journal.writeFailurePointForTesting = .afterFinalAtomicWrite
+        XCTAssertThrowsError(try adapter.journal.accept(.init(request: scope, revision: 100, state: .pending),
+            authenticatedPeer: peer, localID: service.installationID, onPhone: false))
+        for ack in [SyncMessage.connectedTransferAck(startAck), .connectedTransferFinalAck(transportFinalAck),
+                    .connectedCorpusTransferDisposition(disposition), .connectedCorpusTransferFinalAck(corpusFinalAck), .connectedCorpusTransferCancelAck(cancelAck)] {
+            XCTAssertFalse(adapter.allowsMessage(ack, sync: service, inbound: false))
+        }
+        adapter.journal.writeFailurePointForTesting = nil
+        XCTAssertTrue(try adapter.journal.retryDurability(scope.id, expectedRequest: scope))
+        XCTAssertNotNil(receiver.finish(transferID: partition.transferID, accepted: true))
         let stored = try await contextStore.loadDay(ownerDate: "2026-01-02")
         XCTAssertEqual(stored?.metrics.first(where: { $0.metricID == "steps" })?.value, .quantity(value: 4_321, unit: "steps"))
         let finalize = ConnectedCorpusTransferFinalize(sessionID: session.sessionID, jobID: scope.id,
@@ -633,7 +726,9 @@ final class AppleContextAutomationTests: XCTestCase {
         guard case .files(let committedResult, _) = outcome else { return XCTFail("Expected committed encrypted context") }
         XCTAssertEqual(committedResult.totalFilesWritten, 0)
         XCTAssertTrue(fileSystem.files.isEmpty, "Context must never write export files")
-        XCTAssertTrue(jobs.complete(with: committedResult))
+        XCTAssertFalse(jobs.complete(with: committedResult), "Ordinary file result cannot complete context even with zero files")
+        let proof = try XCTUnwrap(corpus.encryptedContextCommitEvidence(for: finalize))
+        XCTAssertTrue(jobs.completeEncryptedContext(with: proof))
         for _ in 0..<20 { await Task.yield() }
         adapter.handle(.status(scope), sync: service, jobs: jobs, destination: destination(service))
         XCTAssertEqual(receipts.last?.state, .completed)
@@ -732,6 +827,108 @@ final class AppleContextAutomationTests: XCTestCase {
         XCTAssertEqual(journal.record(scope.id)?.request, scope)
         jobs.cancelRequestForDisconnectedClient(jobID: scope.id)
         for _ in 0..<10 { await Task.yield() }
+    }
+
+    func testColdNativeSentJobStatusResumesOriginalScopeWithoutJournalRepairOrDuplicateWaiter() async throws {
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let scope = request(phone: peer, mac: service.installationID)
+        let journalRoot = root.appendingPathComponent("restart-journal")
+        let jobsRoot = root.appendingPathComponent("restart-jobs")
+        let initial = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: journalRoot), contextReadiness: { nil }))
+        let originalJobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: jobsRoot))
+        var acquisitions: [IPhoneExportRequest] = []
+        service.testMessageSendObserver = { if case .iphoneExportRequest(let native) = $0 { acquisitions.append(native) } }
+        initial.handle(.refresh(scope), sync: service, jobs: originalJobs, destination: destination(service))
+        for _ in 0..<100 where acquisitions.isEmpty { await Task.yield() }
+        let originalRequest = try XCTUnwrap(acquisitions.first)
+        originalJobs.cancelRequestForDisconnectedClient(jobID: scope.id) // drain old in-memory waiter without altering persisted sent job
+        for _ in 0..<20 { await Task.yield() }
+        let restartedJournal = AppleContextJournal(root: journalRoot)
+        let restarted = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: restartedJournal, contextReadiness: { nil }))
+        let restoredJobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: jobsRoot))
+        XCTAssertFalse(restartedJournal.hasUncertainAuthority(scope.id))
+        XCTAssertTrue(restartedJournal.record(scope.id)?.jobWasAdmitted == true)
+        XCTAssertEqual(restoredJobs.jobResponse(jobID: scope.id).durableState, "sent")
+        XCTAssertTrue(restoredJobs.canExplicitlyResumeContext(jobID: scope.id))
+        restoredJobs.resumePausedJobsAfterHello(syncService: service, destinationStatus: destination(service))
+        XCTAssertEqual(acquisitions.count, 1, "Hello alone does not resume persisted sent/unpaused work")
+        restarted.handle(.status(scope), sync: service, jobs: restoredJobs, destination: destination(service))
+        restarted.handle(.status(scope), sync: service, jobs: restoredJobs, destination: destination(service))
+        for _ in 0..<100 where acquisitions.count < 2 { await Task.yield() }
+        XCTAssertEqual(acquisitions.count, 2)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        XCTAssertEqual(try encoder.encode(acquisitions[1]), try encoder.encode(originalRequest))
+        XCTAssertEqual(restartedJournal.record(scope.id)?.request, scope)
+        XCTAssertFalse(restoredJobs.canExplicitlyResumeContext(jobID: scope.id), "Resumed live waiter must not be duplicated")
+        restarted.handle(.status(scope), sync: service, jobs: restoredJobs, destination: destination(service))
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(acquisitions.count, 2)
+        restoredJobs.cancelRequestForDisconnectedClient(jobID: scope.id)
+        for _ in 0..<20 { await Task.yield() }
+    }
+
+    func testColdUnavailableJournalAndRestoredNativeContextJobExcludeDirectAndBoundedFilesButAllowUnownedFiles() async throws {
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let scope = request(phone: peer, mac: service.installationID)
+        let jobsRoot = root.appendingPathComponent("cold-file-jobs")
+        let initial = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: root.appendingPathComponent("cold-file-journal")), contextReadiness: { nil }))
+        let originalJobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: jobsRoot))
+        var sent = false
+        service.testMessageSendObserver = { if case .iphoneExportRequest = $0 { sent = true } }
+        initial.handle(.refresh(scope), sync: service, jobs: originalJobs, destination: destination(service))
+        for _ in 0..<100 where !sent { await Task.yield() }
+        XCTAssertTrue(sent)
+        originalJobs.cancelRequestForDisconnectedClient(jobID: scope.id)
+        for _ in 0..<20 { await Task.yield() }
+        let blockedRoot = root.appendingPathComponent("unreadable-private-journal")
+        try Data("retained obstruction".utf8).write(to: blockedRoot)
+        let adapter = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: blockedRoot), contextReadiness: { nil }))
+        let restoredJobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: jobsRoot))
+        adapter.nativeJobs = restoredJobs // exact production app-root ownership wiring
+        XCTAssertEqual(adapter.journal.authorityState(scope.id), .unavailable)
+        XCTAssertFalse(adapter.journal.isKnown(scope.id))
+        XCTAssertEqual(restoredJobs.contextRequest(jobID: scope.id)?.responseMode, .contextStore)
+        let fileSystem = FakeFileSystem()
+        let resolver = FakeBookmarkResolver()
+        resolver.accessGranted = true
+        let vault = LifecycleHarness.retain(VaultManager(defaults: FakeUserDefaults(), fileSystem: fileSystem,
+            bookmarkResolver: resolver, identityProbe: FakeVaultFolderIdentityProbe()))
+        vault.setVaultFolder(root.appendingPathComponent("ordinary-vault"))
+        let executor = LifecycleHarness.retain(MacExportJobExecutor())
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: UserDefaults(suiteName: "file-exclusion-\(UUID().uuidString)")!))
+        settings.metricSelection.enabledMetrics = ["steps"]
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")
+        var record = HealthData(date: scope.startDate)
+        record.activity.steps = 4_321
+        func fileJob(_ id: UUID) -> MacExportJob {
+            .init(jobID: id, createdAt: Date(), sourceDeviceName: "Synthetic iPhone", dateRangeStart: scope.startDate, dateRangeEnd: scope.endDate,
+                requestedDates: [scope.startDate], records: [record], settingsSnapshot: .from(settings, calendarTimeZoneIdentifier: "UTC"),
+                requestedTarget: .init(kind: .connectedMac, displayName: "Connected Mac", destinationDisplayName: "ordinary-vault"))
+        }
+        let sameID = fileJob(scope.id)
+        XCTAssertFalse(adapter.allowsMessage(.macExportRequest(sameID), sync: service))
+        let denied = await adapter.executeOrdinaryFileJob(sameID, sync: service, executor: executor, vault: vault)
+        XCTAssertNil(denied, "Actual app-root file execution delegate must refuse before executor writes")
+        let receiver = ConnectedTransferReceiver()
+        let bytes = try JSONEncoder().encode(sameID)
+        let bounded = ConnectedTransferStart(protocolVersion: 1, transferID: UUID(),
+            manifest: .init(kind: .macExportJobV1, jobID: scope.id, payloadSchemaVersion: 1), totalBytes: Int64(bytes.count),
+            totalChunks: 1, chunkBytes: bytes.count, sha256: ConnectedTransferFile.sha256Hex(bytes))
+        XCTAssertNil(adapter.receiveTransferStart(bounded, sync: service, receiver: receiver))
+        XCTAssertTrue(receiver.activeTransferIDs.isEmpty)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertEqual(restoredJobs.jobResponse(jobID: scope.id).durableState, "sent")
+        let ordinary = fileJob(UUID())
+        XCTAssertTrue(adapter.allowsMessage(.macExportRequest(ordinary), sync: service))
+        let positive = await adapter.executeOrdinaryFileJob(ordinary, sync: service, executor: executor, vault: vault)
+        guard case .success(let result)? = positive else { return XCTFail("Genuinely unowned ordinary file export must still execute: \(String(describing: positive))") }
+        XCTAssertGreaterThan(result.totalFilesWritten, 0)
+        XCTAssertFalse(fileSystem.files.isEmpty)
+        XCTAssertEqual(restoredJobs.jobResponse(jobID: scope.id).durableState, "sent")
+        XCTAssertEqual(try String(contentsOf: blockedRoot, encoding: .utf8), "retained obstruction")
     }
 
     func testColdUnavailableMacAuthorityBlocksContextButNotOrdinaryFilesAndRecoversWithoutErase() throws {

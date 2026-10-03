@@ -241,6 +241,22 @@ jobs:
                     f"{summary.get('skippedTests', 0)} skipped")
           PY
 
+      - name: Collect bounded named iOS automation test receipt
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          xcrun xcresulttool get test-results tests --path build/test-results/HealthMd-iOS.xcresult > build/logs/ios-test-tree.json
+          python3 scripts/ci-automation-test-receipt.py build/logs/ios-test-tree.json build/logs/ios-automation-test-receipt.txt --head "$GITHUB_SHA" --platform iOS
+
+      - name: Upload bounded iOS automation test receipt
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-automation-test-receipt
+          path: apps/apple/build/logs/ios-automation-test-receipt.txt
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Check warnings (iOS)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log
@@ -329,6 +345,23 @@ jobs:
       - name: Check warnings (macOS)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/build-macos.log
+
+      - name: Collect bounded named Mac automation test receipt
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          xcrun xcresulttool get test-results tests --path build/coverage/HealthMd.xcresult > build/logs/macos-test-tree.json
+          python3 scripts/ci-automation-test-receipt.py build/logs/macos-test-tree.json build/logs/macos-automation-test-receipt.txt --head "$GITHUB_SHA" --platform macOS
+
+      - name: Upload bounded Mac automation test receipt
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-automation-test-receipt
+          path: apps/apple/build/logs/macos-automation-test-receipt.txt
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Collect native-generated automation reference text
         if: ${{ !cancelled() }}
