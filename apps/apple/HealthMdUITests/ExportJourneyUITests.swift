@@ -589,12 +589,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
         let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        scrollUntilHittable(custom, in: app, swipingUp: true)
-        let scrollView = app.scrollViews.firstMatch
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
+        scrollDatePresetIntoView(custom, in: app)
         XCTAssertTrue(custom.isEnabled)
         custom.tap()
         let start = app.descendants(matching: .any)[UITestLaunchHelper.Export.customStartDatePicker]
@@ -605,11 +600,7 @@ final class ExportJourneyUITests: XCTestCase {
 
         tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync").tap()
         tabButton(in: app, identifier: UITestLaunchHelper.Tab.export, label: "Export").tap()
-        scrollUntilHittable(custom, in: app, swipingUp: true)
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
+        scrollDatePresetIntoView(custom, in: app)
         XCTAssertTrue(custom.isEnabled, "Selected Custom must not become a disabled preset on reentry")
         XCTAssertEqual(custom.value as? String, "Selected")
         custom.tap() // Deliberately do not select Today first.
