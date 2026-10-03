@@ -251,11 +251,22 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Called when a `SyncMessage` is received from the connected peer.
     var onMessageReceived: ((SyncMessage) -> Void)?
+    /// Prevent an asynchronous owned context response from migrating to a
+    /// different connection while capture/commit was suspended.
+    var contextAutomationOutboundAdmission: ((SyncMessage) -> Bool)?
 
     #if DEBUG
     /// Unit-test observation only. Production operational logging must never
     /// inspect raw payload contents.
     var testMessageSendObserver: ((SyncMessage) -> Void)?
+    /// Transport-state seam only; never counts as cryptographic/device proof.
+    func testSetAuthenticatedContextPeer(_ id: UUID?) {
+        verifiedManualInstallationID = id
+        manualSessionKey = id.map { _ in SymmetricKey(size: .bits256) }
+        manualConnectionHasPaired = id != nil
+        activeTransport = .manualIP
+        connectionState = .connected
+    }
     #endif
 
     // MARK: - Private Properties
@@ -277,6 +288,30 @@ final class SyncService: NSObject, ObservableObject {
     private var manualReceiveBuffer = Data()
     private var manualSessionKey: SymmetricKey?
     private var manualConnectionHasPaired = false
+    /// Set only after v2 proof verification AND durable trust storage.
+    /// Nearby encryption/hello fields are not installation authentication.
+    private var verifiedManualInstallationID: UUID?
+
+    var authenticatedContextPeerID: UUID? {
+        guard activeTransport == .manualIP, manualConnectionHasPaired,
+              manualSessionKey != nil, connectionState == .connected else { return nil }
+        return verifiedManualInstallationID
+    }
+
+    var canUsePhoneContextAutomation: Bool {
+        guard let verified = authenticatedContextPeerID,
+              let remote = remoteCapabilities,
+              remote.installationID == verified,
+              remote.platform != localCapabilities.platform,
+              remote.protocolVersion == SyncPeerCapabilities.currentProtocolVersion,
+              remote.supportsPhoneContextAutomation,
+              localCapabilities.supportsPhoneContextAutomation,
+              remote.supportsRequestScopedContextAcquisition,
+              remote.supportsCanonicalHealthDataSelection,
+              ConnectedCorpusTransferNegotiator.negotiateDurable(source: remote, destination: localCapabilities) != nil,
+              (localCapabilities.negotiateConnectedCorpusTransfer(with: remote)?.protocolVersion ?? 0) >= 2 else { return false }
+        return true
+    }
     private let manualIPTrustStore = ManualIPTrustStore()
     private lazy var manualIPTrustState = manualIPTrustStore.loadState(ownerInstallationID: installationID)
 
@@ -1496,6 +1531,8 @@ final class SyncService: NSObject, ObservableObject {
 
     /// Send a `SyncMessage` to all connected peers.
     func send(_ message: SyncMessage) {
+        if case .appleContext = message, !canUsePhoneContextAutomation { return }
+        guard contextAutomationOutboundAdmission?(message) != false else { return }
         #if DEBUG
         testMessageSendObserver?(message)
         #endif
@@ -1531,6 +1568,8 @@ final class SyncService: NSObject, ObservableObject {
     /// Send a `SyncMessage` using streaming for large payloads.
     @discardableResult
     func sendLargePayload(_ message: SyncMessage) -> Bool {
+        if case .appleContext = message, !canUsePhoneContextAutomation { return false }
+        guard contextAutomationOutboundAdmission?(message) != false else { return false }
         #if DEBUG
         testMessageSendObserver?(message)
         #endif
@@ -1693,6 +1732,10 @@ final class SyncService: NSObject, ObservableObject {
             } else {
                 message = try decoder.decode(SyncMessage.self, from: data)
             }
+            if case .appleContext = message, !canUsePhoneContextAutomation { return }
+            if case .hello(let capabilities) = message,
+               let verified = authenticatedContextPeerID,
+               (capabilities.installationID != verified || capabilities.platform == localCapabilities.platform) { return }
             logger.info("Received message: \(message.operationalName, privacy: .public)")
             if let peerID, restoreMultipeerConnectionIfNeeded(from: peerID) {
                 send(.hello(localCapabilities))
@@ -1934,6 +1977,7 @@ final class SyncService: NSObject, ObservableObject {
         manualReceiveBuffer.removeAll(keepingCapacity: false)
         manualSessionKey = nil
         manualConnectionHasPaired = false
+        verifiedManualInstallationID = nil
         #if os(iOS)
         manualClientPrivateKey = nil
         manualClientNonce = nil
@@ -2229,6 +2273,7 @@ final class SyncService: NSObject, ObservableObject {
             }
 
             manualSessionKey = sessionKey
+            verifiedManualInstallationID = response.macInstallationID
             completeManualPairing(peerName: response.macName)
         } catch {
             lastError = "Manual IP pairing failed: \(error.localizedDescription)"
@@ -2427,6 +2472,7 @@ final class SyncService: NSObject, ObservableObject {
         manualReceiveBuffer.removeAll(keepingCapacity: false)
         manualSessionKey = nil
         manualConnectionHasPaired = false
+        verifiedManualInstallationID = nil
         connection.stateUpdateHandler = { [weak self] state in
             guard let strongSelf = self else { return }
             Task { @MainActor in
@@ -2607,6 +2653,8 @@ final class SyncService: NSObject, ObservableObject {
 
             manualServerPrivateKey = privateKey
             manualSessionKey = sessionKey
+            verifiedManualInstallationID = request.protocolVersion == ManualIPSyncSecurity.protocolVersion
+                ? request.clientInstallationID : nil
             try sendManualPacket(.pairingResponse(response), on: connection)
             completeManualPairing(peerName: request.deviceName)
         } catch {

@@ -27,6 +27,9 @@ final class IPhoneExportRequestHandler: ObservableObject {
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
+        guard AppleContextPhoneClient.shared.allowsAcquisition(request, sync: syncService) else { return }
+        // Resolve frozen automation zone before the first authorization await.
+        let automationTimeZone = AppleContextPhoneClient.shared.timeZone(for: request)
         externalIntegrations?.beginExportAction()
         defer { externalIntegrations?.endExportAction() }
         defer {
@@ -141,6 +144,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 for: request,
                 savedSettings: AdvancedExportSettings()
             )
+        if let automationTimeZone { settings.exportTimeZoneOverride = automationTimeZone }
         let healthSubfolder = VaultManager.savedHealthSubfolder()
         let sourceTimeZone = settings.exportTimeZoneOverride ?? .current
         var sourceCalendar = Calendar(identifier: .gregorian)
@@ -861,7 +865,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 requestedDates = dates
                 settingsSnapshot = ExportSettingsSnapshot.from(
                     settings,
-                    healthSubfolder: healthSubfolder
+                    healthSubfolder: healthSubfolder,
+                    calendarTimeZoneIdentifier: AppleContextPhoneClient.shared.timeZone(for: request)?.identifier
                 )
                 requestedTarget = nil
             }

@@ -44,6 +44,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "automation.refresh-encrypted-desktop-context",
             ),
             idsWithState(states, "planned"),
         )
@@ -137,6 +138,7 @@ class ProductCapabilityManifestTest {
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
+            "automation.refresh-encrypted-desktop-context",
             "core.shared-rust-profile-engine",
         )
     }

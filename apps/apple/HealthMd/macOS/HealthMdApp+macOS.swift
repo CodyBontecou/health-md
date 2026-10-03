@@ -273,6 +273,7 @@ struct HealthMdApp: App {
     @StateObject private var healthDataStore = HealthDataStore()
     @StateObject private var encryptedHealthContextManager: MacEncryptedHealthContextManager
     @StateObject private var iphoneExportRequestCoordinator = MacIPhoneExportRequestCoordinator()
+    @StateObject private var contextAutomationCoordinator = MacContextAutomationCoordinator()
     @StateObject private var controlServer = HealthMdControlServer()
     private let macExportJobExecutor = MacExportJobExecutor()
     private let encryptedHealthContextStore: EncryptedHealthContextStore
@@ -408,6 +409,12 @@ struct HealthMdApp: App {
     // MARK: - Sync Message Handling
 
     private func setupSyncMessageHandler() {
+        iphoneExportRequestCoordinator.contextAutomationPeerAdmission = { jobID, service in
+            contextAutomationCoordinator.allows(jobID: jobID, sync: service)
+        }
+        syncService.contextAutomationOutboundAdmission = { message in
+            contextAutomationCoordinator.allowsMessage(message, sync: syncService, inbound: false)
+        }
         iphoneExportRequestCoordinator.onRequestTermination = { jobID, notifyPeer in
             let cancelledTransfers = connectedTransferReceiver.cancel(
                 jobID: jobID,
@@ -442,6 +449,12 @@ struct HealthMdApp: App {
             publishMacDestinationStatus()
         }
         syncService.onMessageReceived = { message in
+            guard contextAutomationCoordinator.allowsMessage(message, sync: syncService) else { return }
+            if case .appleContext(let contextMessage) = message {
+                contextAutomationCoordinator.handle(contextMessage, sync: syncService,
+                    jobs: iphoneExportRequestCoordinator, destination: makeMacDestinationStatus())
+                return
+            }
             // Start/chunk handling must remain synchronous with SyncService's
             // ordered ingress queue. Spawning one task per chunk can reorder
             // reliable Multipeer frames before the strict disk spool accepts them.
@@ -464,7 +477,9 @@ struct HealthMdApp: App {
                 break
             }
             Task { @MainActor in
+                guard contextAutomationCoordinator.allowsMessage(message, sync: syncService) else { return }
                 switch message {
+                case .appleContext: break // handled synchronously above
                 case .healthData(let payload):
                     healthDataStore.store(payload.healthRecords, fromDevice: payload.deviceName)
                     SyncEventHistoryManager.shared.record(syncEvent(from: payload))

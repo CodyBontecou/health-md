@@ -282,6 +282,12 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     /// the currently connected iPhone matches this durable job's binding.
     var onRequestTermination: ((_ jobID: UUID, _ notifyPeer: Bool) -> Void)?
 
+    /// Additional admission for phone-initiated jobs only; ordinary exports
+    /// retain their existing transport behavior.
+    var contextAutomationPeerAdmission: ((UUID, SyncService) -> Bool)?
+
+    func contextRequest(jobID: UUID) -> IPhoneExportRequest? { records[jobID]?.request }
+
     private let fileManager: FileManager
     private let rootURL: URL
     private let now: () -> Date
@@ -322,9 +328,14 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     func requestExport(
         _ exportRequest: ExportRequest,
         syncService: SyncService,
-        destinationStatus: MacDestinationStatus
+        destinationStatus: MacDestinationStatus,
+        onDurableAdmission: (() -> Void)? = nil
     ) async -> ExportResponse {
         cleanupExpiredJobs()
+        if let jobID = exportRequest.jobID,
+           contextAutomationPeerAdmission?(jobID, syncService) == false {
+            return .unavailable("Authenticated context peer is unavailable.", reason: "context_peer_unavailable")
+        }
         guard exportRequest.rawProfile != .healthDataProjection
                 || exportRequest.canonicalSelection != nil,
               exportRequest.rawProfile != .canonicalSourceRecordsV1
@@ -449,6 +460,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         records[request.jobID] = record
         activeJobID = request.jobID
         latestProgress = nil
+        onDurableAdmission?()
         syncService.send(.iphoneExportRequest(request))
         return await waitForJob(jobID: request.jobID, timeoutSeconds: exportRequest.waitTimeoutSeconds)
     }
@@ -1242,6 +1254,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func matchesBoundPeer(_ record: JobRecord, syncService: SyncService) -> Bool {
+        guard contextAutomationPeerAdmission?(record.request.jobID, syncService) != false else { return false }
         guard record.sourceInstallationID != nil || record.destinationInstallationID != nil else {
             return true
         }

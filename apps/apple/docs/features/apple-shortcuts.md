@@ -9,7 +9,7 @@
 
 ## What it does
 
-Health.md exposes seven App Intents to Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports. Ordinary Export Shortcuts write to the selected iPhone folder. A separate authenticated Mac encrypted-context refresh action is requested in [issue #173](https://github.com/CodyBontecou/health-md/issues/173), but is not implemented or available in this source revision.
+Health.md exposes seven App Intents to Apple Shortcuts and Siri so users can export health data, backfill date ranges, retrieve structured health summaries, and toggle scheduled exports. Ordinary Export Shortcuts write to the selected iPhone folder. The #173 draft now adds two separately gated Mac encrypted-context intents in source; they remain unreleased and unqualified. See the [additive context-automation implementation contract](apple-context-automation.md).
 
 Shortcuts are useful for personal automations like:
 
@@ -21,7 +21,7 @@ Shortcuts are useful for personal automations like:
 
 ## Available actions
 
-The seven actions below are the public set registered in source. **Refresh Mac Health Context** and **Get Mac Context Refresh Status** are proposed, not development-available actions. Neither action has an intent, a phone-initiated sync request, or a persisted phone-side context receipt implementation. Do not configure automations around them; availability must be established by implementation, qualification, and an exact Apple release note.
+The seven ordinary actions below are retained unchanged. The draft source additionally registers **Refresh Mac Health Context** and **Get Mac Context Refresh Status** with authenticated phone-initiated requests and durable receipts, but they are not released or device-qualified. Do not infer customer availability; qualification and an exact Apple release note are still required.
 
 | Shortcut action | What it does | Parameters | Returns |
 |---|---|---|---|
@@ -54,7 +54,7 @@ All actions are available in the Shortcuts app even if they do not have multiple
 - At least one export format selected.
 - Free export quota remaining or Full Access unlocked when an export runs.
 - Turning the scheduled export on or off does not require Full Access; a scheduled request that exports at least one date uses the same free-export allowance as manual and Shortcut exports.
-- There is currently no Mac-context Shortcut. Computer-side MCP refresh is a separate, Mac-initiated operation; it does not provide an iOS personal automation.
+- Mac-context intents in the draft require separate explicit profile binding and authenticated Manual IP sessions; they remain unreleased. Computer-side MCP refresh is a separate, Mac-initiated operation.
 
 ## Setup: daily morning export
 
@@ -130,9 +130,9 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - updates schedule bookkeeping when yesterday is part of the run;
 - does not send ordinary Shortcut exports to API Endpoint or Connected Mac, even if those destinations are selected for manual or scheduled exports.
 
-## Proposed Mac context actions (not available)
+## Draft Mac context implementation (not released)
 
-[Issue #173](https://github.com/CodyBontecou/health-md/issues/173) requests a separate **Refresh Mac Health Context** action with explicit profile/date scope and a **Get Mac Context Refresh Status** action with a recoverable durable job identity. The future implementation must reuse authenticated, capability-negotiated context acquisition, write no export files, consume no file-export quota, and report unavailable, locked, incompatible, and pending states truthfully. Parameter defaults and return types are not yet a supported contract.
+[Issue #173](https://github.com/CodyBontecou/health-md/issues/173) now has additive source for **Refresh Mac Health Context** with an explicit saved profile/date scope and **Get Mac Context Refresh Status** with a recoverable durable request entity. The [implementation contract](apple-context-automation.md) documents authentication, narrow source/detail support, durability and remaining qualification gates. This source change does not establish a released automation contract.
 
 An automation cannot be promised to wake a sleeping Mac, bypass protected HealthKit data, or run without the supported app/session availability conditions. Physical-iPhone personal-automation QA after wake remains required. See the [source investigation and remaining work](../investigations/issue-173-mac-context-shortcuts.md).
 
