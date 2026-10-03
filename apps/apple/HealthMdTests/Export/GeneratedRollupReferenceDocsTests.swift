@@ -108,15 +108,19 @@ private enum GeneratedRollupReferenceDocs {
     static func makeArtifacts() throws -> [String: Data] {
         let settings = makeSettings()
         let dictionaryEntries = HealthMetricDataDictionary.entries(using: settings.formatCustomization)
+        let requestedRange = try HealthRollupRangeRequest(
+            startDate: utcCalendar.date(from: DateComponents(year: 2026, month: 7, day: 6))!,
+            endDate: utcCalendar.date(from: DateComponents(year: 2026, month: 7, day: 11))!,
+            calendarTimeZoneIdentifier: "UTC"
+        )
         let snapshots = HealthRollupGenerator.generate(
             from: syntheticDailySummaries(),
+            requestedRange: requestedRange,
             settings: settings,
-            periods: [.weekly],
-            generatedAt: generatedAt,
-            calendar: utcCalendar
+            generatedAt: generatedAt
         )
         guard snapshots.count == 1, let snapshot = snapshots.first else {
-            throw GenerationError.invalidFixture("Expected exactly one weekly roll-up; generated \(snapshots.count).")
+            throw GenerationError.invalidFixture("Expected exactly one range summary; generated \(snapshots.count).")
         }
 
         try validate(snapshot: snapshot, dictionaryEntries: dictionaryEntries)
@@ -126,11 +130,21 @@ private enum GeneratedRollupReferenceDocs {
                 entries: dictionaryEntries,
                 snapshot: snapshot
             ).utf8),
-            "weekly-bases.md": Data(snapshot.toRollupObsidianBases().utf8),
-            "weekly.csv": Data(snapshot.toRollupCSV().utf8),
-            "weekly.json": Data(snapshot.toRollupJSON().utf8),
-            "weekly.md": Data(snapshot.toRollupMarkdown().utf8)
+            "range-bases.md": Data(snapshot.toRollupObsidianBases().utf8),
+            "range.csv": Data(snapshot.toRollupCSV().utf8),
+            "range.json": Data(snapshot.toRollupJSON().utf8),
+            "range.md": Data(snapshot.toRollupMarkdown().utf8)
         ]
+        // Shipped v8 calendar artifacts are immutable compatibility references. The
+        // generator carries them forward byte-for-byte beside current range-v9 output.
+        let historicalDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("docs/reference/generated/rollups", isDirectory: true)
+        for name in ["weekly-bases.md", "weekly.csv", "weekly.json", "weekly.md"] {
+            artifacts[name] = try Data(contentsOf: historicalDirectory.appendingPathComponent(name))
+        }
         artifacts["manifest.json"] = Data(manifest(for: artifacts, snapshot: snapshot, entryCount: dictionaryEntries.count).utf8)
         return artifacts
     }
@@ -156,6 +170,7 @@ private enum GeneratedRollupReferenceDocs {
         settings.formatCustomization.unitPreference = .metric
         settings.formatCustomization.timeFormat = .hour24
         settings.formatCustomization.dateFormat = .iso8601
+        settings.generateRangeSummary = true
         return LifecycleHarness.retain(settings)
     }
 
@@ -312,14 +327,14 @@ private enum GeneratedRollupReferenceDocs {
         snapshot: RollupDataSnapshot,
         dictionaryEntries: [HealthMetricDataDictionaryEntry]
     ) throws {
-        guard snapshot.period == .weekly,
-              snapshot.periodID == "2026-W28",
+        guard snapshot.period == .range,
+              snapshot.periodID == "2026-07-06_to_2026-07-11",
               snapshot.dayString(snapshot.window.startDate) == "2026-07-06",
-              snapshot.dayString(snapshot.window.endDate) == "2026-07-12",
-              snapshot.daysExpected == 7,
+              snapshot.dayString(snapshot.window.endDate) == "2026-07-11",
+              snapshot.daysExpected == 6,
               snapshot.daysCounted == 3,
-              abs(snapshot.coveragePercent - (300.0 / 7.0)) < 0.000_001 else {
-            throw GenerationError.invalidFixture("Weekly fixture must expose the Monday-through-Sunday ISO week with three of seven UTC source days and partial coverage.")
+              abs(snapshot.coveragePercent - 50.0) < 0.000_001 else {
+            throw GenerationError.invalidFixture("Range fixture must span the six requested UTC days with three present source days and 50% coverage.")
         }
 
         let entriesByKey = Dictionary(uniqueKeysWithValues: dictionaryEntries.map { ($0.key, $0) })
@@ -378,7 +393,7 @@ private enum GeneratedRollupReferenceDocs {
             "# Health.md roll-up aggregation behavior matrix",
             "",
             "Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v\(HealthMdExportSchema.version).",
-            "The weekly evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.",
+            "The range evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.",
             "",
             "- Dictionary entries: \(entries.count)",
             "- Distinct rule groups: \(sortedGroups.count)",
@@ -402,13 +417,13 @@ private enum GeneratedRollupReferenceDocs {
                 group.weightedBy ?? "none",
                 group.nullHandling,
                 group.periods.joined(separator: "<br>"),
-                examples.isEmpty ? "none in weekly example" : examples.joined(separator: "<br>"),
+                examples.isEmpty ? "none in range example" : examples.joined(separator: "<br>"),
                 allKeys.joined(separator: "<br>")
             ].map(markdownCell).joined(separator: " | ").withTableEdges)
         }
 
         lines.append("")
-        lines.append("## Required weekly evidence")
+        lines.append("## Required range evidence")
         lines.append("")
         lines.append("| Behavior | Dictionary rule | Generated key |")
         lines.append("|---|---|---|")
@@ -494,10 +509,22 @@ private enum GeneratedRollupReferenceDocs {
                     "HealthMetricDataDictionary.entries(using:)"
                 ]
             ],
+            "current_artifacts": [
+                "schema_version": 9,
+                "rollup_period": "range",
+                "paths": ["range-bases.md", "range.csv", "range.json", "range.md"]
+            ],
+            "historical_artifacts": [
+                "schema_version": 8,
+                "status": "immutable",
+                "paths": ["weekly-bases.md", "weekly.csv", "weekly.json", "weekly.md"]
+            ],
             "schema": [
                 "rollup": HealthRollupExportSchema.identifier,
+                "rollup_version": HealthRollupExportSchema.currentVersion,
                 "source": HealthMdExportSchema.identifier,
-                "source_version": HealthMdExportSchema.version,
+                "source_version": HealthRollupExportSchema.sourceDailyVersion,
+                "rollup_rules_version": HealthRollupExportSchema.rulesVersion,
                 "data_dictionary_entry_count": entryCount
             ],
             "fixture": [

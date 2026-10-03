@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.StepsRecord
@@ -84,6 +85,67 @@ class HealthConnectPinnedZoneRangeTest {
         }
     }
 
+    @Test fun rangeExportAggregatesStepsOverExactZonedLocalDaysWhileOtherActivityMetricsStayPeriodBased() = runTest {
+        val previous = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
+            val pinned = ZoneId.of("Pacific/Chatham")
+            assertThat(ZoneId.systemDefault()).isNotEqualTo(pinned)
+            val fallBackDay = LocalDate.of(2026, 4, 5)
+            val springForwardDay = LocalDate.of(2026, 9, 27)
+            val aggregateRequests = mutableListOf<AggregateRequest>()
+            val periodRequests = mutableListOf<AggregateGroupByPeriodRequest>()
+            val aggregateResult = mockk<AggregationResult>()
+            every { aggregateResult[StepsRecord.COUNT_TOTAL] } returns 1_234L
+            val features = mockk<HealthConnectFeatures>()
+            every { features.getFeatureStatus(any()) } returns
+                HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
+            val client = mockk<HealthConnectClient>()
+            every { client.features } returns features
+            coEvery { client.aggregate(capture(aggregateRequests)) } returns aggregateResult
+            coEvery {
+                client.aggregateGroupByPeriod(capture(periodRequests))
+            } returns emptyList()
+            coEvery {
+                client.readRecords(any<ReadRecordsRequest<ExerciseSessionRecord>>())
+            } returns ReadRecordsResponse(emptyList(), null)
+            val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
+
+            val result = manager.fetchHealthDataRange(
+                dates = listOf(fallBackDay, springForwardDay),
+                selection = DataTypeSelection().deselectAll().copy(activity = true),
+                includeGranularData = false,
+                zoneId = pinned,
+                pinnedCalendarDays = false,
+            )
+
+            assertThat(result.map { it.activity.steps }).containsExactly(1_234, 1_234).inOrder()
+            assertThat(aggregateRequests).hasSize(2)
+            val requestsByStart = aggregateRequests.associateBy {
+                it.timeRangeFilterForTest().startTime
+            }
+            for ((date, expectedHours) in listOf(fallBackDay to 25L, springForwardDay to 23L)) {
+                val expectedStart = date.atStartOfDay(pinned).toInstant()
+                val expectedEnd = date.plusDays(1).atStartOfDay(pinned).toInstant()
+                val request = requestsByStart.getValue(expectedStart)
+                assertThat(request.metricsForTest()).containsExactly(StepsRecord.COUNT_TOTAL)
+                assertThat(request.timeRangeFilterForTest().endTime).isEqualTo(expectedEnd)
+                assertThat(Duration.between(expectedStart, expectedEnd).toHours()).isEqualTo(expectedHours)
+                assertThat(expectedStart)
+                    .isNotEqualTo(date.atStartOfDay(ZoneId.of("UTC")).toInstant())
+            }
+            // Other activity metrics still flow through period aggregation, but steps must not.
+            assertThat(periodRequests).isNotEmpty()
+            for (request in periodRequests) {
+                assertThat(request.periodMetricsForTest()).doesNotContain(StepsRecord.COUNT_TOTAL)
+            }
+            assertThat(periodRequests.first().periodMetricsForTest())
+                .contains(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
+        } finally {
+            TimeZone.setDefault(previous)
+        }
+    }
+
     @Test fun managerUsesPinnedNonDefaultZoneForInstantBoundary() = runTest {
         val previous = TimeZone.getDefault()
         try {
@@ -118,6 +180,13 @@ class HealthConnectPinnedZoneRangeTest {
     @Suppress("UNCHECKED_CAST")
     private fun AggregateRequest.metricsForTest(): Set<AggregateMetric<*>> =
         AggregateRequest::class.java.getDeclaredField("metrics").let { field ->
+            field.isAccessible = true
+            field.get(this) as Set<AggregateMetric<*>>
+        }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun AggregateGroupByPeriodRequest.periodMetricsForTest(): Set<AggregateMetric<*>> =
+        AggregateGroupByPeriodRequest::class.java.getDeclaredField("metrics").let { field ->
             field.isAccessible = true
             field.get(this) as Set<AggregateMetric<*>>
         }

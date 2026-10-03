@@ -27,6 +27,216 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.2",
+            items: [
+                .list(
+                    title: "A faster start and gentler upgrade reminders",
+                    rows: [
+                        .init(
+                            symbolSystemName: "figure.walk.motion",
+                            title: "Shorter setup",
+                            description: "Onboarding is now five quick steps. The Obsidian plugin intro moved onto the sample-export screen, and importing a shared setup stays available as a quiet link on the first screen."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.text.magnifyingglass",
+                            title: "See your first export, then decide",
+                            description: "Nothing blocks setup anymore. After your first real export preview, a single optional screen explains unlimited exports — dismiss it and keep going with your 10 free exports."
+                        ),
+                        .init(
+                            symbolSystemName: "sparkles",
+                            title: "Gentle progress reminders",
+                            description: "After your 3rd and 7th free exports, a small reminder shows how many remain and how unlimited exports work. Your free count is unchanged."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.4.1",
+            items: [
+                .list(
+                    title: "Safer setup sharing and dependable exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "square.and.arrow.up.on.square.fill",
+                            title: "Share My Setup",
+                            description: "Move export profiles between devices in one small file, review changes before applying them, and undo once. Shared files contain no health data or credentials."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Schedules keep your full lookback",
+                            description: "Scheduled profiles now refresh the full lookback you chose on every run. Optional Today Refresh can update today’s in-progress export every 3, 6, or 12 hours."
+                        ),
+                        .init(
+                            symbolSystemName: "list.bullet.rectangle.fill",
+                            title: "Clearer Export History",
+                            description: "Generated files and outcomes are easier to understand, with retries and informational notes easier to reach."
+                        ),
+                        .init(
+                            symbolSystemName: "accessibility",
+                            title: "More accessible throughout",
+                            description: "VoiceOver, keyboard focus, touch targets, scrolling, and large-text layouts are improved across onboarding, export setup, metrics, schedules, and connection screens."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.4.0",
+            items: [
+                .list(
+                    title: "Share My Setup and truthful exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "square.and.arrow.up.on.square.fill",
+                            title: "Share My Setup",
+                            description: "Package your export profiles — metrics, formats, and naming — into one portable file under Settings → Configuration, then review and apply them on your other device as an Add or Replace with one-shot Undo. Files carry no health data or credentials, and imported profiles wait until you rebind their destination."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Daily schedules run every day",
+                            description: "Scheduled daily exports no longer skip the day after a successful run — each occurrence now exports the prior day’s data, and Export History shows the true number of files every run wrote."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal.fill",
+                            title: "Truthful export outcomes",
+                            description: "A workout whose optional plan can’t be decoded no longer marks the whole export “Partial” — samples still export and the omission appears as a plain note. Retry Export also sits at the top of the detail sheet."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.3.0",
+            items: [
+                .list(
+                    title: "Wake requests and a clearer Sync tab",
+                    rows: [
+                        .init(
+                            symbolSystemName: "bell.badge.fill",
+                            title: "Wake requests for Direct CLI Access",
+                            description: "Turn on “Allow paired computers to send wake requests” under Sync → Direct CLI Access to let a waiting CLI command send one visible notification while its wake window holds — tap it and the command completes. Everything is opt-in, and your health data never touches the notifications worker."
+                        ),
+                        .init(
+                            symbolSystemName: "qrcode",
+                            title: "One pairing code everywhere",
+                            description: "Direct CLI QR and manual pairing now use the same 20-digit code as Android, with the six-digit code kept only as a legacy CLI fallback."
+                        ),
+                        .init(
+                            symbolSystemName: "sidebar.leading",
+                            title: "A clearer Sync tab",
+                            description: "Mac Destination and CLI setup are now separated by a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.2.1",
+            items: [
+                .list(
+                    title: "More dependable exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "clock.badge.checkmark",
+                            title: "History remembers each destination",
+                            description: "Scheduled export history now keeps the exact profile and destination used by every run and retry."
+                        ),
+                        .init(
+                            symbolSystemName: "folder.badge.gearshape",
+                            title: "Folder changes stay saved",
+                            description: "A new local, iCloud Drive, or Dropbox folder becomes active only after access is saved successfully. If access is denied, Health.md keeps your previous valid destination."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.2",
+            items: [
+                .list(
+                    title: "Exports you can stop",
+                    rows: [
+                        .init(
+                            symbolSystemName: "stop.circle.fill",
+                            title: "Stop running exports",
+                            description: "A single banner now owns export progress. Stop cancels the running scheduled, Shortcut, or manual export — completed dates stay completed, and schedules remain enabled."
+                        ),
+                        .init(
+                            symbolSystemName: "list.bullet.rectangle.fill",
+                            title: "Detailed Time-Series, separated",
+                            description: "Export Data Detail now separates Detailed Time-Series from Lossless Health Records, so per-sample data no longer drags along the much larger canonical archive. New presets are available in the Export tab and export profiles."
+                        ),
+                        .init(
+                            symbolSystemName: "arrow.triangle.2.circlepath",
+                            title: "Self-healing Direct CLI Access",
+                            description: "Connections recover automatically after your Mac sleeps, the app quits, or the network changes — no manual disconnect or repeated Pair tap required."
+                        ),
+                        .init(
+                            symbolSystemName: "internaldrive.fill",
+                            title: "Local folders stay selected",
+                            description: "Folders on “On My iPhone” storage keep their saved selection across restarts, so automatic exports and Shortcuts keep working."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.1.1",
+            items: [
+                .list(
+                    title: "Cloud folders stay selected",
+                    rows: [
+                        .init(
+                            symbolSystemName: "icloud.fill",
+                            title: "Cloud folders stay selected",
+                            description: "Export folders on iCloud Drive, Dropbox, and similar cloud locations no longer lose their selection when the app restarts, so automatic exports and Shortcuts keep working without re-selecting the folder."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.circle.fill",
+                            title: "Honest export toasts",
+                            description: "A completed export shows the success toast with its Preview and Browse actions again instead of a red error."
+                        ),
+                        .init(
+                            symbolSystemName: "text.badge.checkmark",
+                            title: "Clearer failure reasons",
+                            description: "Scheduled exports targeting an API endpoint with no configured URL now say exactly what to fix, and choosing the iCloud Drive root shows its real name."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.1",
+            items: [
+                .list(
+                    title: "Profiles, fully editable",
+                    rows: [
+                        .init(
+                            symbolSystemName: "slider.horizontal.3",
+                            title: "One-place profile editor",
+                            description: "Edit every export profile setting — target, destination folder or endpoint, formats, write mode, templates, and metrics — from a single editor with a system folder picker and inline endpoint creation."
+                        ),
+                        .init(
+                            symbolSystemName: "exclamationmark.triangle",
+                            title: "Overlap warnings",
+                            description: "Health.md warns live when a new profile would write the same files as an existing one, before your data lands in the wrong place."
+                        ),
+                        .init(
+                            symbolSystemName: "clock.badge.checkmark",
+                            title: "Dependable scheduled exports",
+                            description: "Profile schedules and the classic schedule run side by side, preserved retries survive interruptions, and notification taps resume the exact export."
+                        ),
+                        .init(
+                            symbolSystemName: "figure.run",
+                            title: "Clearer workout warnings",
+                            description: "When a workout's structured plan can't be read on your device you'll see plain-language detail, and partial-export warnings can now be copied for bug reports."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0.5",
             items: [
                 .list(

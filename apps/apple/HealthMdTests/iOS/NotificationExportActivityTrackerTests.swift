@@ -43,12 +43,14 @@ final class NotificationExportActivityTrackerTests: XCTestCase {
     }
 
     func testPartialResultBecomesWarningAndSuppressesDuplicateAlert() {
+        let operationID = UUID()
         let result = NotificationExportResult(
             status: .partialSuccess(exported: 1, total: 2),
-            timestamp: Date(timeIntervalSince1970: 123)
+            timestamp: Date(timeIntervalSince1970: 123),
+            operationID: operationID
         )
         tracker.begin(
-            operationID: UUID(),
+            operationID: operationID,
             source: .shortcut,
             targetLabel: "Local iPhone Folder",
             totalDays: 2,
@@ -82,8 +84,59 @@ final class NotificationExportActivityTrackerTests: XCTestCase {
             message: "Foreign"
         )
 
+        let foreignResult = NotificationExportResult(
+            status: .success(daysExported: 1),
+            timestamp: Date(timeIntervalSince1970: 321),
+            operationID: UUID()
+        )
+        tracker.finish(with: foreignResult)
+
         XCTAssertEqual(tracker.snapshot?.operationID, activeID)
+        XCTAssertEqual(tracker.snapshot?.phase, .preparing)
         XCTAssertEqual(tracker.snapshot?.message, "Active")
+        XCTAssertFalse(tracker.handles(foreignResult))
+    }
+
+    func testCancellationRequestIsOperationScopedAndCannotBeRepeated() {
+        let operationID = UUID()
+        tracker.begin(
+            operationID: operationID,
+            source: .scheduled,
+            targetLabel: "API Endpoint",
+            totalDays: 3,
+            message: "Starting"
+        )
+
+        XCTAssertFalse(tracker.requestCancellation(operationID: UUID()))
+        XCTAssertTrue(tracker.requestCancellation(operationID: operationID))
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelling)
+        XCTAssertEqual(tracker.snapshot?.message, "Cancelling export…")
+        XCTAssertTrue(tracker.keepsScreenAwake)
+        XCTAssertFalse(tracker.requestCancellation(operationID: operationID))
+    }
+
+    func testCancelledResultBecomesTerminalAndSuppressesDuplicateAlert() {
+        let operationID = UUID()
+        let result = NotificationExportResult(
+            status: .cancelled,
+            timestamp: Date(timeIntervalSince1970: 456),
+            operationID: operationID
+        )
+        tracker.begin(
+            operationID: operationID,
+            source: .shortcut,
+            targetLabel: "Local iPhone Folder",
+            totalDays: 2,
+            message: "Starting"
+        )
+        XCTAssertTrue(tracker.requestCancellation(operationID: operationID))
+
+        tracker.finish(with: result)
+
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelled)
+        XCTAssertEqual(tracker.snapshot?.message, result.message)
+        XCTAssertTrue(tracker.handles(result))
+        XCTAssertFalse(tracker.keepsScreenAwake)
     }
 }
 #endif

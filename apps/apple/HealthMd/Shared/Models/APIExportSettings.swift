@@ -10,9 +10,22 @@ struct APIExportDestinationSnapshot: Equatable {
     let redactedEndpointDescription: String
 }
 
+enum APIExportSettingsPersistenceError: LocalizedError, Equatable {
+    case verificationFailed
+
+    var errorDescription: String? {
+        "Health.md could not verify the saved endpoint credential."
+    }
+}
+
 /// User-configurable destination for direct iOS API exports.
 @MainActor
 final class APIExportSettings: ObservableObject {
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes on older iOS runtimes when the last release happened off
+    // the main actor. Matches the AdvancedExportSettings convention.
+    nonisolated deinit {}
     static let endpointURLStorageKey = "apiExport.endpointURL"
     private static let bearerTokenKeychainKey = "apiExport.bearerToken"
 
@@ -22,6 +35,7 @@ final class APIExportSettings: ObservableObject {
 
     @Published var bearerToken: String {
         didSet {
+            guard !isSynchronizingVerifiedCredential else { return }
             let trimmed = bearerToken.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
                 keychain.remove(key: Self.bearerTokenKeychainKey)
@@ -33,6 +47,7 @@ final class APIExportSettings: ObservableObject {
 
     private let userDefaults: UserDefaults
     private let keychain: any KeychainStoring
+    private var isSynchronizingVerifiedCredential = false
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -42,6 +57,31 @@ final class APIExportSettings: ObservableObject {
         self.keychain = keychain ?? SystemKeychainStore()
         self.endpointURLString = userDefaults.string(forKey: Self.endpointURLStorageKey) ?? ""
         self.bearerToken = self.keychain.readString(key: Self.bearerTokenKeychainKey) ?? ""
+    }
+
+    func sharedSetupPersistedBearerToken() throws -> String {
+        try keychain.readStringOrThrow(key: Self.bearerTokenKeychainKey) ?? ""
+    }
+
+    func replaceBearerTokenVerifiably(_ value: String) throws {
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            try keychain.removeOrThrow(key: Self.bearerTokenKeychainKey)
+        } else {
+            try keychain.writeStringOrThrow(key: Self.bearerTokenKeychainKey, value: value)
+        }
+        guard try sharedSetupPersistedBearerToken() == (value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : value) else {
+            throw APIExportSettingsPersistenceError.verificationFailed
+        }
+        isSynchronizingVerifiedCredential = true
+        defer { isSynchronizingVerifiedCredential = false }
+        bearerToken = value
+    }
+
+    func replaceEndpointURLVerifiably(_ value: String) throws {
+        endpointURLString = value
+        guard (userDefaults.string(forKey: Self.endpointURLStorageKey) ?? "") == value else {
+            throw APIExportSettingsPersistenceError.verificationFailed
+        }
     }
 
     var endpointURL: URL? {
@@ -64,14 +104,13 @@ final class APIExportSettings: ObservableObject {
         guard let endpointURL else { return nil }
         let displayName = endpointURL.host.flatMap { $0.isEmpty ? nil : $0 }
             ?? endpointURL.absoluteString
-        var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false)
-        components?.query = nil
-        components?.fragment = nil
         return APIExportDestinationSnapshot(
             endpointURL: endpointURL,
             authorizationHeaderValue: authorizationHeaderValue,
             displayName: displayName,
-            redactedEndpointDescription: components?.url?.absoluteString ?? endpointURL.absoluteString
+            redactedEndpointDescription: Self.redactedEndpointDescription(
+                for: endpointURL.absoluteString
+            )
         )
     }
 
@@ -84,13 +123,29 @@ final class APIExportSettings: ObservableObject {
     }
 
     var redactedEndpointDescription: String {
-        guard let endpointURL else { return "No endpoint configured" }
-        guard var components = URLComponents(url: endpointURL, resolvingAgainstBaseURL: false) else {
-            return endpointURL.absoluteString
+        Self.redactedEndpointDescription(for: endpointURLString)
+    }
+
+    /// A privacy-safe endpoint label for history and diagnostics. User info,
+    /// query parameters, and fragments can contain credentials and are never
+    /// copied into persisted display metadata.
+    nonisolated static func redactedEndpointDescription(
+        for rawValue: String,
+        fallback: String = "No endpoint configured"
+    ) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(),
+              ["https", "http"].contains(scheme),
+              url.host?.isEmpty == false,
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return fallback
         }
+        components.user = nil
+        components.password = nil
         components.query = nil
         components.fragment = nil
-        return components.url?.absoluteString ?? endpointURL.absoluteString
+        return components.url?.absoluteString ?? components.host ?? fallback
     }
 
     var authorizationHeaderValue: String? {

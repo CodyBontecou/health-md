@@ -12,7 +12,7 @@ record = json.loads(Path("2026-03-15.json").read_text())
 
 if record.get("schema") != "healthmd.health_data":
     raise ValueError("unsupported daily schema")
-if record.get("schema_version") != 7:
+if record.get("schema_version") != 8:
     raise ValueError("unsupported daily schema version")
 
 status = record["raw_capture_status"]
@@ -263,7 +263,7 @@ async function receive(request: Request): Promise<Response> {
     return new Response("Unsupported envelope", { status: 400 });
   }
   if (body.daily_record_schema !== "healthmd.health_data" ||
-      body.daily_record_schema_version !== 7) {
+      body.daily_record_schema_version !== 8) {
     return new Response("Unsupported daily schema", { status: 422 });
   }
 

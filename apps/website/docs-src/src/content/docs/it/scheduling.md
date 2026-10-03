@@ -1,6 +1,6 @@
 ---
 title: "Programmazione"
-description: "Esegui automaticamente le esportazioni, ogni giorno o ogni settimana, all'ora che preferisci. Utilizza le attività in background di iOS e, come soluzione alternativa quando il dispositivo è bloccato, una notifica locale programmata."
+description: "Esegui automaticamente le esportazioni con cadenze giornaliere, settimanali o di calendario personalizzate. iOS usa attività in background e una notifica locale di ripristino quando i dati protetti non sono disponibili."
 ---
 
 ## Il pannello Programmazione
@@ -15,12 +15,12 @@ description: "Esegui automaticamente le esportazioni, ogni giorno o ogni settima
 ## Impostazioni della programmazione
 <div class="options">
 <div class="option"><strong>Abilita esportazioni programmate</strong><p>Interruttore principale nella parte superiore. Quando è disattivato, non vengono eseguite attività in background né inviate notifiche.</p></div>
-<div class="option"><strong>Frequenza</strong><p>Giornaliera, settimanale o mensile. Le esportazioni giornaliere includono i dati di ieri; quelle settimanali i 7 giorni precedenti; quelle mensili i 30 giorni precedenti.</p></div>
+<div class="option"><strong>Frequenza</strong><p>Giornaliera, settimanale o personalizzata. Le pianificazioni personalizzate si ripetono ogni N giorni, settimane o mesi a partire da una data iniziale. L’intervallo retrospettivo determina quanti giorni completati include ogni esecuzione.</p></div>
 <div class="option"><strong>Ora</strong><p>Ora e minuti. iOS la considera un'indicazione, non una garanzia — consulta l'avviso sulle limitazioni qui sotto.</p></div>
 </div>
 
 ## Cronologia delle esportazioni
-<p>L'elenco nella parte inferiore della schermata Programmazione registra ogni esecuzione programmata con il relativo esito. Tocca una riga per visualizzarne i dettagli. Le esecuzioni non riuscite includono un pulsante <em>Riprova</em> che ripete l'esportazione per quello specifico intervallo di date.</p>
+<p>L'elenco nella parte inferiore della schermata Programmazione registra ogni esecuzione programmata con il relativo esito. Tocca una riga per visualizzarne i dettagli. Le esecuzioni non riuscite includono un pulsante <em>Riprova</em> che ripete l’intervallo con le impostazioni e la destinazione configurate attualmente, quindi registra una nuova riga nella cronologia.</p>
 
 ## Come funziona realmente la programmazione su iOS
 <div class="doc-diagram">
@@ -45,9 +45,19 @@ description: "Esegui automaticamente le esportazioni, ogni giorno o ogni settima
 ## Controllo programmatico
 <p>Puoi attivare o disattivare la programmazione da Comandi Rapidi usando l'intento <em>Attiva o disattiva l'esportazione programmata</em>. <a href="/it/docs/shortcuts/">Consulta Comandi Rapidi</a> per alcuni esempi.</p>
 
+## Pianificazioni per profilo e annullamento
+
+- Ogni profilo conserva la propria pianificazione, compresa una cadenza personalizzata; cambiare profilo attivo non reindirizza un’altra pianificazione.
+- Un avviso di collisione compare quando i profili potrebbero scrivere gli stessi percorsi generati nella stessa destinazione. Verificalo prima di attivare pianificazioni concorrenti; Health.md non modifica silenziosamente alcun profilo.
+- Interrompere o Annullare termina solo il tentativo corrente. Le date completate restano tali, le altre possono essere riprovate e la pianificazione resta attiva.
+- Ogni riga della cronologia resta legata al profilo di esecuzione e all’etichetta privata della destinazione effettiva.
+
+Gestisci impostazioni congelate e destinazione in [Profili di esportazione](/it/docs/export-profiles/).
+
 ## Contenuti correlati
 
 <div class="related">
+  <a href="/it/docs/export-profiles/"><span>Profili</span>Gestisci pianificazioni e destinazioni indipendenti.</a>
   <a href="/it/docs/export/"><span>Manuale</span>Esportazione — per intervalli di date occasionali.</a>
   <a href="/it/docs/shortcuts/"><span>Automatizza</span>Comandi Rapidi — attiva o disattiva la programmazione tramite automazioni.</a>
   <a href="/it/docs/sync/"><span>Tra dispositivi</span>Sincronizzazione con il Mac — programma anche sul Mac.</a>

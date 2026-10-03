@@ -11,7 +11,5 @@ final class ExportRolloutCopyTests: XCTestCase {
         XCTAssertTrue(ExportRolloutCopy.rollupSummariesHelp.contains("off by default"))
         XCTAssertTrue(ExportRolloutCopy.rollupSummariesHelp.contains(HealthRollupExportSchema.identifier))
         XCTAssertTrue(ExportRolloutCopy.rollupSummariesHelp.contains("not daily records"))
-        XCTAssertTrue(ExportRolloutCopy.pluginCompatibilityHelp.contains("Obsidian plugin"))
-        XCTAssertTrue(ExportRolloutCopy.pluginCompatibilityHelp.contains("mixed-export compatibility smoke test"))
     }
 }

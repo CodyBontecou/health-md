@@ -158,6 +158,10 @@ struct CustomFrontmatterField: Codable, Identifiable, Equatable {
 
 // MARK: - Frontmatter Configuration
 
+extension CodingUserInfoKey {
+    static let includeSharedSetupExactFrontmatter = CodingUserInfoKey(rawValue: "healthmd.includeSharedSetupExactFrontmatter")!
+}
+
 class FrontmatterConfiguration: ObservableObject, Codable {
     @Published var fields: [CustomFrontmatterField]
     @Published var customFields: [String: String]  // Additional user-defined fields with fixed values
@@ -168,10 +172,13 @@ class FrontmatterConfiguration: ObservableObject, Codable {
     @Published var customTypeKey: String
     @Published var customTypeValue: String
     @Published var keyStyle: FrontmatterKeyStyle
+    /// Shared-setup imports treat the explicit field ledger as authority. Native settings keep
+    /// the historical migration behavior that appends newly introduced default fields.
+    var preservesExactFieldSet: Bool
     
     enum CodingKeys: String, CodingKey {
         case fields, customFields, placeholderFields, includeDate, includeType
-        case customDateKey, customTypeKey, customTypeValue, keyStyle
+        case customDateKey, customTypeKey, customTypeValue, keyStyle, preservesExactFieldSet
     }
     
     static let defaultFields: [CustomFrontmatterField] = [
@@ -313,6 +320,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         self.customTypeKey = "type"
         self.customTypeValue = "health-data"
         self.keyStyle = .snakeCase
+        self.preservesExactFieldSet = false
         #if DEBUG
         LifecycleTracker.trackCreation(of: "FrontmatterConfiguration")
         #endif
@@ -335,8 +343,13 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         customTypeKey = try container.decodeIfPresent(String.self, forKey: .customTypeKey) ?? "type"
         customTypeValue = try container.decodeIfPresent(String.self, forKey: .customTypeValue) ?? "health-data"
         keyStyle = try container.decodeIfPresent(FrontmatterKeyStyle.self, forKey: .keyStyle) ?? .snakeCase
+        if decoder.userInfo[.includeSharedSetupExactFrontmatter] as? Bool == true {
+            preservesExactFieldSet = try container.decodeIfPresent(Bool.self, forKey: .preservesExactFieldSet) ?? false
+        } else {
+            preservesExactFieldSet = false
+        }
 
-        // Migration: inject any default fields that are missing from a saved config.
+        // Migration: inject any default fields that are missing from a saved native config.
         // This ensures users upgrading from older versions see new fields rather than
         // having them silently absent.
         let existingKeys = Set(decoded.map { $0.originalKey })
@@ -345,7 +358,7 @@ class FrontmatterConfiguration: ObservableObject, Codable {
             "cycling_mi": "cycling_km",
             "workout_distance_mi": "workout_distance_km",
         ]
-        for defaultField in Self.defaultFields {
+        for defaultField in Self.defaultFields where !preservesExactFieldSet {
             guard !existingKeys.contains(defaultField.originalKey) else { continue }
             var fieldToInsert = defaultField
             if let sourceKey = unitAlternateSourceKeys[defaultField.originalKey],
@@ -388,6 +401,9 @@ class FrontmatterConfiguration: ObservableObject, Codable {
         try container.encode(customTypeKey, forKey: .customTypeKey)
         try container.encode(customTypeValue, forKey: .customTypeValue)
         try container.encode(keyStyle, forKey: .keyStyle)
+        if encoder.userInfo[.includeSharedSetupExactFrontmatter] as? Bool == true {
+            try container.encode(preservesExactFieldSet, forKey: .preservesExactFieldSet)
+        }
     }
     
     /// Get the output key for a given original key

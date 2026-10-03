@@ -13,6 +13,14 @@ struct ExportHealthDataDateRangeIntent: AppIntent {
 
     static var openAppWhenRun: Bool = false
 
+    /// Optional export profile name (trimmed, case-insensitive). Empty uses
+    /// the active profile once profiles exist.
+    @Parameter(
+        title: "Profile",
+        description: "Name of the export profile to run. Leave empty to use the active profile."
+    )
+    var profile: String?
+
     @Parameter(title: "Start Date")
     var startDate: Date
 
@@ -28,8 +36,8 @@ struct ExportHealthDataDateRangeIntent: AppIntent {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: min(startDate, endDate))
         let end = calendar.startOfDay(for: max(startDate, endDate))
-        let dates = ExportOrchestrator.dateRange(from: start, to: end)
-        let outcome = await ExportIntentRunner.run(dates: dates)
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
+        let outcome = await ExportIntentRunner.run(dates: dates, profileName: profile)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }
 }

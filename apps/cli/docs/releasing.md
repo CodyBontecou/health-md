@@ -4,7 +4,7 @@
 
 - Apple silicon and Intel macOS signed archives plus notarized, stapled DMGs
 - ARM64 and x86-64 Linux archives
-- Authenticode-signed x86-64 Windows archives
+- x86-64 Windows archives (Authenticode after the signing ledger is qualified; signed-checksum integrity initially)
 - POSIX shell and PowerShell
 - Homebrew/Linuxbrew formulae
 
@@ -18,25 +18,41 @@ manifests have been accepted. crates.io publication is a separate staged process
 
 1. Keep the CLI workspace under `apps/cli` and its shared `healthmd-protocol` dependency under the independently locked `packages/healthmd-core-rust` workspace in `CodyBontecou/health-md`.
 2. Create and initialize `CodyBontecou/homebrew-tap`.
-3. Add a fine-grained token with contents write permission for that tap as the
-   `HOMEBREW_TAP_TOKEN` Actions secret in `health-md`.
+3. Add a write-enabled SSH deploy key scoped only to that tap, and store its private key as the
+   `HOMEBREW_TAP_DEPLOY_KEY` Actions secret in `health-md`.
 4. Protect the `cli-release` GitHub environment with required reviewers. Approval is the final evidence gate after exact-candidate CI, native archive smoke tests, checksums, and SBOMs have passed.
-5. Protect the `crates-io` environment. Configure crates.io Trusted Publishing for all five crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
-6. Create a protected `cli-signing` environment and configure the Apple and Azure identities in
-   the next section. Signing is mandatory on release tags; missing or invalid credentials leave the
-   release as a draft. Pull requests continue to build and smoke unsigned candidates without access
-   to signing credentials.
+5. Protect the `crates-io` environment and restrict its deployment branch policy to `main`. Configure crates.io Trusted Publishing for all five crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
+6. Create a protected `cli-signing` environment and configure the Apple identity in the next
+   section. Add the Azure identity before changing the Windows signing ledger to `qualified`.
+   Ledger-required signing is mandatory on release tags; missing or invalid required credentials
+   leave the release as a draft. Pull requests continue to build and smoke unsigned candidates
+   without access to signing credentials.
 
-Homebrew publishing is intentionally disabled for prereleases by dist. Stable release formulae are
-installed with:
+The project tap is explicitly preview-capable before the first qualified stable release, so dist
+publishes SemVer prerelease formulae as well as stable formulae. Preview tags may retain pending
+mobile qualification only when release notes and the compatibility ledger identify them as
+unqualified previews; stable tags still require complete retained physical evidence. Install the
+current formula with:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
 ```
 
+Before publishing the first stable release, decide whether the tap should continue tracking
+prereleases. Set `publish-prereleases = false` first if stable users must not receive later preview
+upgrades.
+
 ## Signing, notarization, and checksum identity
 
-The release workflow does not accept unsigned tag artifacts. It signs the two Mach-O executables,
+macOS release artifacts must always be Developer ID signed and notarized. Windows Authenticode is
+ledger-gated: while `release-identities.json` records
+`windows.status = pending_external_certificate_provisioning`, the release ships the Windows archive
+and PowerShell installer Authenticode-unsigned (SmartScreen will warn; integrity is still covered by
+the Sigstore-signed checksum closure), the signing jobs skip cleanly, and verify-release.py accepts
+the tag. Once a qualified publisher subject is committed, every Windows artifact must carry that
+exact signature and the pipeline never accepts an unsigned Windows artifact again.
+
+When signing is active the workflow signs the two Mach-O executables,
 submits an architecture-specific DMG to Apple's notary service, staples and validates that DMG,
 and then reconstructs the matching tar archive from the byte-identical signed executables. Apple
 publishes tickets for the nested standalone binaries, but Apple does not support stapling a ticket
@@ -72,10 +88,14 @@ Give the Entra principal the **Artifact Signing Certificate Profile Signer** rol
 selected profile. Add a federated credential for the GitHub environment subject
 `repo:CodyBontecou/health-md:environment:cli-signing`; do not create a long-lived Azure client
 secret. Protect `cli-signing` with required reviewers and restrict it to
-`healthmd-cli/v*` tags. Before creating the first tag, commit the exact public certificate subject
-as `windows.publisher_subject` in `release-identities.json`, set its status to `qualified`, and make
-`CLI_WINDOWS_SIGNER_SUBJECT` match exactly. `verify-release.py` blocks tags while that public
-identity remains pending, and native signing jobs compare the committed ledger with the certificate.
+`healthmd-cli/v*` tags. Windows Authenticode may be deferred: while the ledger records
+`pending_external_certificate_provisioning` with a null subject, tags are permitted and the Windows
+archive/installer publish unsigned with checksum-closure integrity only. Windows Authenticode is explicitly outside the initial CLI release criteria; the pending ledger
+state and signed checksum closure are the accepted initial Windows posture. Before the first later
+release whose Windows artifacts must be signed, commit the exact public certificate subject as
+`windows.publisher_subject` in `release-identities.json`, set its status to `qualified`, and make
+`CLI_WINDOWS_SIGNER_SUBJECT` match exactly; a qualified subject must never regress to pending.
+Native signing jobs compare the committed ledger with the certificate.
 The separate `cli-release` environment remains the final publication approval after all signature
 and artifact qualification jobs pass.
 
@@ -96,7 +116,7 @@ keyless Sigstore identity and publishes `sha256.sum.sigstore.json`. Verify a dow
 with the exact tag identity before trusting its checksums:
 
 ```bash
-tag='healthmd-cli/v0.1.0-alpha.1'
+tag='healthmd-cli/v0.1.0-alpha.6'
 cosign verify-blob \
   --bundle sha256.sum.sigstore.json \
   --certificate-identity "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/$tag" \
@@ -110,9 +130,12 @@ SHA-256 with its exact manifest row as shown in the README. On Windows, also req
 and match `SignerCertificate.Subject` to the `qualified` subject in the checksum-covered
 `release-identities.json`; never accept an undocumented publisher.
 
-Native post-extraction gates independently require `codesign` plus Gatekeeper assessment on both
-macOS binaries, `stapler validate` plus Gatekeeper assessment on each DMG, and a valid expected
-Authenticode signer plus timestamp on both Windows executables and the PowerShell installer. A checksum, signing, notarization,
+Native post-extraction gates independently require strict `codesign` verification of both macOS
+binaries, `stapler validate` plus Gatekeeper assessment on each DMG (Apple supports neither
+stapling a ticket to, nor Gatekeeper assessment of, a bare executable — the binaries' notarization
+evidence is the accepted, stapled DMG carrying byte-identical copies), and — only while the
+ledger's Windows identity is `qualified` — a valid expected Authenticode signer plus timestamp on
+both Windows executables and the PowerShell installer. A checksum, signing, notarization,
 stapling, credential-upgrade, or post-extraction failure leaves the GitHub Release in draft state.
 
 ## Release checks
@@ -142,49 +165,86 @@ cargo test --workspace --all-features --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 rustup run 1.85.0 cargo check -p healthmd-cli --all-targets \
   --no-default-features --features streamable-http --locked
+python3 -m unittest \
+  scripts/test_verify_release.py \
+  scripts/test_qualify_exact_ci.py \
+  scripts/test_watch_cli_release.py
 python3 scripts/verify-release.py
 version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
 python3 scripts/smoke-crate-packages.py --version "$version"
 cargo deny --manifest-path Cargo.toml --config ../../deny.toml check
-dist generate --check
 dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
 
-Distribution builds intentionally use the empty default feature set: shipped binaries expose the
-19-tool complete local stdio/direct-iPhone MCP entry and the separately authorized 13-tool
-`serve-read-only` stdio entry, but not `serve-http` or OAuth. The optional direct-backed HTTP
-transport is source-build-only and is never added to release archives implicitly. Health.md has no
-synchronized remote health-data corpus command.
+Distribution builds use the default local-first feature set: shipped binaries expose the 21-tool
+complete local stdio/direct-mobile MCP entry, the separately authorized 13-tool `serve-read-only`
+stdio entry, and the bounded health-free P2 wake HTTPS client on every desktop target. They do not
+include `serve-http` or OAuth. The direct-backed MCP HTTP transport is source-build-only and is
+never added to release archives implicitly. Health.md has no synchronized remote health-data corpus
+command. Release qualification must verify the production wake URL remains the default and the
+`wake-worker` Cargo feature remains only a compatibility alias rather than an activation gate.
 
 Review generated artifacts and checksums under `apps/cli/target/distrib`, and review the
-[mobile compatibility ledger](mobile-compatibility.md). The first public release remains blocked
-until every supported row contains the exact machine-checked qualified record and evidence digest
-documented there. `verify-release.py` rejects a `healthmd-cli/v<version>` tag while any row is
-pending or malformed. The tag must point to the exact current `main` commit. It triggers
-`.github/workflows/cli-release.yml`, which creates a draft, reruns CLI/core/Apple/Android gates at
-the tag SHA, executes every packaged binary on its native runner, validates installers and
-checksums, builds SBOMs, and then waits for approval on the protected `cli-release` environment.
-Only that final job changes the draft to public, with `make_latest=false` so Apple remains the
-repository-wide latest release. Never publish an artifact built from uncommitted source.
+[mobile compatibility ledger](mobile-compatibility.md). The first qualified stable release remains
+blocked until every supported row contains the exact machine-checked qualified record and evidence
+digest documented there. `verify-release.py` allows
+an explicitly labeled SemVer prerelease tag to retain pending rows, rejects malformed rows for every
+channel, and rejects a stable `healthmd-cli/v<version>` tag while any required row is pending. The
+tag must point to the exact current `main` commit. It triggers
+`.github/workflows/cli-release.yml`, which reuses successful main-push CLI/core/Apple/Android runs
+only when each run is bound to that exact SHA. A missing or concurrency-cancelled run is recovered
+by dispatching the same workflow at the immutable release tag; a failed exact-SHA run is never
+masked by a retry. The five platform archives build in parallel with this qualification, but no
+signing, assembly, upload, or publication can start until qualification succeeds. The workflow
+creates a draft with bounded read-after-create recovery, executes every packaged binary on its
+native runner, validates installers and checksums, builds SBOMs, and then waits for approval on the
+protected `cli-release` environment. Only that final job changes the draft to public, with
+`make_latest=false` so Apple remains the repository-wide latest release. Never publish an artifact
+built from uncommitted source.
 
-The root workflow is a path-adjusted version of cargo-dist's generated workflow. After changing
-`dist-workspace.toml`, generate into a temporary checkout and port relevant changes into
-`.github/workflows/cli-release.yml`; do not replace its monorepo working directories and tag filter.
+Keep the two required human decisions, but avoid unattended approval idle time by starting the
+review watcher after pushing the tag:
+
+```bash
+tag='healthmd-cli/v<VERSION>'
+run_id="$(gh run list --workflow cli-release.yml --branch "$tag" --limit 1 \
+  --json databaseId --jq '.[0].databaseId')"
+python3 apps/cli/scripts/watch-cli-release.py "$run_id"
+```
+
+The watcher never approves automatically. It accepts only an immutable CLI tag run, verifies
+exact-SHA CI plus all five candidate builds before offering `cli-signing`, verifies the remote
+draft bytes before offering `cli-release`, and requires an explicit `y` for each protected
+environment.
+
+The root workflow is a path-adjusted version of cargo-dist's generated workflow, so `dist generate
+--check` is not a release gate: it reports the intentionally absent generated root `release.yml`.
+After changing `dist-workspace.toml`, run `dist plan --allow-dirty`, then generate in a temporary
+checkout and port relevant changes into `.github/workflows/cli-release.yml`; do not replace its
+monorepo working directories, custom qualification jobs, signing closure, or tag filter.
 
 ## crates.io staging
 
-After the GitHub release is public, run the protected **CLI Publish crates.io** workflow on the
-exact `healthmd-cli/v<version>` tag and type its explicit confirmation. Use `trusted-publishing`
-unless performing the one-time bootstrap. The workflow validates the tag, public release, `main`
-ancestry, all eight package versions, both lockfiles, exact internal requirements, and publication
-policy before testing both workspaces and their extracted `.crate` archives.
+After the GitHub release is public, run the protected **CLI Publish crates.io** workflow from the
+current clean `main`, supply the exact version and 40-character SHA recorded by the successful
+**CLI Release** run, and type its explicit confirmation. Use `trusted-publishing` unless performing
+the one-time bootstrap. The workflow checks out that exact SHA rather than publishing the current
+branch, requires the version tag and public release to retain the same SHA, and independently checks
+it against the successful immutable release-run record before validating `main` ancestry, all eight
+package versions, both lockfiles, exact internal requirements, and publication policy. It then tests
+both workspaces and their extracted `.crate` archives. Running the workflow definition from `main`
+allows a reviewed publication-workflow fix to recover a failed first attempt without moving or
+replacing the release tag.
 
 Publication is retry-safe. For each crate in protocol → operations → client → MCP → CLI order, the workflow
 packages the local source, checks whether the exact version already exists, and compares the downloaded
 registry archive byte-for-byte. An identical archive is accepted; a checksum mismatch fails
 closed. If `cargo publish` returns an unknown outcome, the workflow polls and performs the same
-checksum comparison before proceeding.
+checksum comparison before proceeding. crates.io rejects anonymous generic-curl API requests, so
+both the workflow and helper provide a repository-identifying user agent. The workflow-level curl
+configuration intentionally applies even when a recovery run checks out an older immutable release
+SHA whose helper predates the explicit user-agent flag.
 
 Internal path dependencies carry exact versions, so crates must be published in dependency order and allowed to propagate through the index before publishing the next crate. Run these from the repository root. `healthmd-protocol`
 is published from the shared-core workspace before the four CLI-workspace crates:
@@ -221,10 +281,12 @@ gate verifies the captured tag/SHA identity, stages the CLI and shared-protocol 
 generates SPDX and CycloneDX source SBOMs, attests them, and adds both SBOMs plus their SHA-256
 file to the draft. A failed SBOM or archive qualification leaves the release in draft state.
 
-Pull-request candidates remain unsigned and must never be described as releases. Tag builds require
-Developer ID/notarization, Authenticode, and a Sigstore-signed checksum closure. Do not call even an
-alpha release complete until the protected signing identities are provisioned and the exact
-candidate's native signature gates have executed successfully.
+Pull-request candidates remain unsigned and must never be described as releases. macOS tag builds
+always require Developer ID/notarization, a Sigstore-signed checksum closure, and (while the
+Windows ledger is `qualified`) Developer-trusted Authenticode with RFC 3161 timestamps. While the
+Windows ledger defers signing, publish the release with an explicit Windows-unsigned note in the
+notes and README so users expect the SmartScreen prompt and verify through the signed checksum
+manifest instead.
 
 Use the [health-free release evidence template](release-evidence-template.md) for every candidate.
 It records exact source/mobile/artifact identity, signatures, qualification, publication, and
@@ -256,8 +318,8 @@ Treat suspected key access as an incident, not an ordinary failed release:
 
 1. Disable or freeze the `cli-signing`, `cli-release`, `crates-io`, and Homebrew publication paths.
 2. Revoke/rotate the Developer ID certificate and App Store Connect notary key. Disable the Azure
-   Artifact Signing profile or compromised role/federated credential. Rotate the Homebrew token,
-   bootstrap crates.io token if one exists, and affected GitHub credentials.
+   Artifact Signing profile or compromised role/federated credential. Rotate the Homebrew tap
+   deploy key, bootstrap crates.io token if one exists, and affected GitHub credentials.
 3. Audit GitHub Actions, Apple, Azure, Sigstore transparency, crates.io, and tap history for the
    exposure window. Inventory every tag, archive, DMG, installer, formula, checksum bundle, and crate
    version that may have been signed or published.
@@ -273,11 +335,11 @@ logs into issues or release evidence.
 ## crates.io yank and recovery
 
 Yanking prevents new dependency resolution but does not erase the immutable crate archive or break
-existing lockfiles. For a broken coordinated release, review and yank all four exact versions in
+existing lockfiles. For a broken coordinated release, review and yank all five exact versions in
 dependency order from a protected operator environment:
 
 ```bash
-version='0.1.0-alpha.1'
+version='<affected-version>'
 cargo yank --vers "$version" healthmd-cli
 cargo yank --vers "$version" healthmd-mcp
 cargo yank --vers "$version" healthmd-client
@@ -301,5 +363,6 @@ Linux before committing the formula idempotently to `CodyBontecou/homebrew-tap`.
 If the formula is wrong, revert its tap commit or publish a reviewed correction; never mutate the
 release archives. User recovery is `brew update`, `brew upgrade healthmd`, or `brew uninstall
 healthmd` followed by a verified reinstall. Remove the tap only when intended with `brew untap
-CodyBontecou/tap`. Homebrew is not a Windows recovery path; use the exact versioned signed ZIP or
-PowerShell installer there. Record the tap commit and install/upgrade results in release evidence.
+CodyBontecou/tap`. Homebrew is not a Windows recovery path; use the exact versioned,
+checksum-verified ZIP or PowerShell installer there, and require Authenticode only after the ledger
+is qualified. Record the tap commit and install/upgrade results in release evidence.

@@ -1687,6 +1687,21 @@ struct HealthKitQueryResult: Codable, Equatable, Sendable {
         self.statusDescription = statusDescription
     }
 
+    /// A WorkoutKit structured-plan child query that failed with a recoverable
+    /// import error. The workout itself and all of its samples (GPS routes
+    /// included) exported successfully; only the optional structured plan —
+    /// written by another app, device, or OS version this device cannot decode —
+    /// was omitted. Such omissions are informational and must not degrade an
+    /// export's status below full success. Both the plan-load identifier
+    /// (`…:workoutPlan`) and the plan-serialization identifier
+    /// (`…:workoutPlan:dataRepresentation`) describe the same optional
+    /// attachment, so both are covered.
+    var isInformationalWorkoutPlanOmission: Bool {
+        (identifier.hasSuffix(":workoutPlan") || identifier.hasSuffix(":workoutPlan:dataRepresentation"))
+            && error?.domain == "WorkoutKit.ImportError"
+            && (error?.isRecoverable ?? false)
+    }
+
     fileprivate func filteringMetricIDs(to enabledMetricIDs: Set<String>) -> HealthKitQueryResult {
         HealthKitQueryResult(
             identifier: identifier,

@@ -148,6 +148,26 @@ class HealthRepositoryImpl(
         }
     }
 
+    override suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        dataTypes: DataTypeSelection,
+        includeGranularData: Boolean,
+        zoneId: ZoneId,
+    ) {
+        if (!dataTypes.workouts) return
+        if (!shouldUseAllConnected()) {
+            activeProvider().authorizeExerciseRouteConsent(dates, dataTypes, includeGranularData, zoneId)
+            return
+        }
+        val attemptedIds = configuredProviderIds()
+        val (providers, _) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
+        providers.forEach { provider ->
+            runCatchingCancellable {
+                provider.authorizeExerciseRouteConsent(dates, dataTypes, includeGranularData, zoneId)
+            }
+        }
+    }
+
     override suspend fun isAvailable(): Boolean =
         if (shouldUseAllConnected()) connectedProviders().isNotEmpty() else activeProvider().isAvailable()
 

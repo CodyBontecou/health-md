@@ -88,11 +88,12 @@ struct MacMetricSelectionView: View {
             }
             .padding()
         }
-        .alert("Medication tracking pending", isPresented: $showPendingApprovalAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Medication tracking requires special permission from Apple. We've applied and are waiting for approval. We'll enable this metric automatically once it's granted.")
-        }
+        .geistDialog(
+            isPresented: $showPendingApprovalAlert,
+            title: Text("Medication tracking pending"),
+            message: Text("Medication tracking requires special permission from Apple. We've applied and are waiting for approval. We'll enable this metric automatically once it's granted."),
+            actions: [.action("OK", role: .secondary)]
+        )
     }
 
     // MARK: - Computed

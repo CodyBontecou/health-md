@@ -163,12 +163,12 @@ struct MacGeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Lossless Health Records on iPhone, then send the export to this Mac.")
+                Text("Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Data Detail on iPhone, then send the export to this Mac.")
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Lossless Health Records retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn it off on iPhone for summary-only exports.")
+                Text("Detailed Time-Series keeps selected timestamped samples without the canonical archive. Lossless Health Records adds the complete selected HealthKit source representation and can create much larger files.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -325,31 +325,40 @@ struct MacGeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
-                healthDataStore.deleteAll()
-            }
-        } message: {
-            Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or exported files.")
-        }
-        .alert("Delete All Encrypted Query Context?", isPresented: $showEncryptedContextDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete All", role: .destructive) {
-                Task { await encryptedHealthContextManager.deleteAll() }
-            }
-        } message: {
-            Text("This removes every compact context day and its dedicated Keychain key. Exported files and Apple Health remain unchanged.")
-        }
-        .alert("Delete Context Before \(retentionOwnerDate)?", isPresented: $showRetentionConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete Older Days", role: .destructive) {
-                let boundary = retentionOwnerDate
-                Task { await encryptedHealthContextManager.delete(before: boundary) }
-            }
-        } message: {
-            Text("Every encrypted owner day earlier than this date will be permanently removed. The boundary date and newer days remain.")
-        }
+        .geistDialog(
+            isPresented: $showClearConfirmation,
+            title: Text("Delete Legacy Synced Data?"),
+            message: Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or exported files."),
+            actions: [
+                .cancel(),
+                .destructive("Delete") {
+                    healthDataStore.deleteAll()
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showEncryptedContextDeleteConfirmation,
+            title: Text("Delete All Encrypted Query Context?"),
+            message: Text("This removes every compact context day and its dedicated Keychain key. Exported files and Apple Health remain unchanged."),
+            actions: [
+                .cancel(),
+                .destructive("Delete All") {
+                    Task { await encryptedHealthContextManager.deleteAll() }
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showRetentionConfirmation,
+            title: Text("Delete Context Before \(retentionOwnerDate)?"),
+            message: Text("Every encrypted owner day earlier than this date will be permanently removed. The boundary date and newer days remain."),
+            actions: [
+                .cancel(),
+                .destructive("Delete Older Days") {
+                    let boundary = retentionOwnerDate
+                    Task { await encryptedHealthContextManager.delete(before: boundary) }
+                }
+            ]
+        )
     }
 
     private var retentionOwnerDate: String {
@@ -388,8 +397,8 @@ struct MacGeneralSettingsView: View {
         if syncService.isSyncing { return String(localized: "Receiving export") }
         if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
-        if vaultManager.vaultURL == nil { return String(localized: "Choose folder") }
-        if !folderAccessHealthy { return String(localized: "Re-select folder") }
+        if !vaultManager.hasVaultSelection { return String(localized: "Choose folder") }
+        if !folderAccessHealthy { return vaultManager.vaultAvailabilityText }
         return String(localized: "Ready")
     }
 
@@ -698,41 +707,27 @@ struct MacFormatSettingsTab: View {
             }
 
             Section {
-                Toggle("Weekly summaries", isOn: $advancedSettings.generateWeeklyRollups)
+                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .accessibilityLabel("Weekly roll-up summaries")
-                    .accessibilityValue(macEnabledState(advancedSettings.generateWeeklyRollups))
-                Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .accessibilityLabel("Monthly roll-up summaries")
-                    .accessibilityValue(macEnabledState(advancedSettings.generateMonthlyRollups))
-                Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .accessibilityLabel("Yearly roll-up summaries")
-                    .accessibilityValue(macEnabledState(advancedSettings.generateYearlyRollups))
+                    .accessibilityLabel("Range roll-up summary")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateRangeSummary))
 
-                Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
                     .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Export roll-up summaries only")
                     .accessibilityValue(macEnabledState(advancedSettings.summaryOnlyModeEnabled))
 
-                Text("Skips daily files and side effects. Health.md still fetches the full touched periods to build the enabled summaries.")
+                Text("Skips daily files and side effects. Health.md still fetches the requested range to build the summary.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
 
                 Text(ExportRolloutCopy.rollupSummariesHelp)
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
-
-                Text(ExportRolloutCopy.pluginCompatibilityHelp)
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.textMuted)
             } header: {
-                BrandLabel("Roll-up Summaries")
+                BrandLabel("Range Summary")
             }
 
             Section {
@@ -926,7 +921,7 @@ struct MacDataSettingsTab: View {
 
         guard shouldTrack else { return }
         for metric in individualTrackableMetrics {
-            advancedSettings.individualTracking.setTrackIndividually(metric.id, enabled: true)
+            advancedSettings.setIndividuallyTracked(metric.id, enabled: true)
         }
     }
 

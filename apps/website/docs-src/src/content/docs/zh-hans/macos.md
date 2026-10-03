@@ -59,7 +59,7 @@ healthmd extract --category Sleep --yesterday --output sleep.json
 healthmd query --category Sleep --yesterday
 ```
 
-后端选择请参阅 [Health.md CLI](/zh-hans/docs/cli/)，查询架构请参阅[本地智能体](/zh-hans/docs/agents/)。
+独立客户端请参阅 [Health.md CLI](/zh-hans/docs/cli/)，查询架构请参阅[本地智能体](/zh-hans/docs/agents/)。
 
 ## 加密健康上下文
 
@@ -92,7 +92,7 @@ iPhone 的 **Direct CLI 访问**设置会在支持直接连接的 CLI 与 iPhone
 
 <div class="related">
   <a href="/zh-hans/docs/sync/"><span>目标位置</span>Mac 同步：配对 iPhone 和 Mac，以便在本地导出文件。</a>
-  <a href="/zh-hans/docs/cli/"><span>终端</span>Health.md CLI：安装辅助程序、选择后端并执行命令。</a>
+  <a href="/zh-hans/docs/cli/"><span>终端</span>Health.md CLI：安装独立客户端并执行命令。</a>
   <a href="/zh-hans/docs/agents/"><span>本地上下文</span>智能体：限定范围的获取、加密存储、证据和保留设置。</a>
   <a href="/zh-hans/docs/mcp/"><span>工具</span>本地 MCP 服务器：设置、工具目录和沙盒边界。</a>
   <a href="/zh-hans/docs/scheduling/"><span>工作流</span>计划导出：自动执行定期导出。</a>

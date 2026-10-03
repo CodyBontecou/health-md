@@ -30,18 +30,21 @@ struct ExportTabView: View {
     @ObservedObject var syncService: SyncService
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     let externalIntegrations: ExternalIntegrationDailyRecordProviding?
     @Binding var exportTargetSelection: ExportTargetSelection
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
     @Binding var isExporting: Bool
-    @Binding var exportProgress: Double
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
     @Binding var presentFirstExportPreview: Bool
+    /// Fired whenever the export-preview sheet closes. ContentView uses this
+    /// to surface the one-time post-onboarding paywall after the first real
+    /// export preview — the value moment — instead of blocking onboarding.
+    var onFirstExportPreviewDismissed: (() -> Void)? = nil
     let canExport: Bool
-    var onCancelExport: (() -> Void)?
     let onExportTapped: () -> Void
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -54,12 +57,13 @@ struct ExportTabView: View {
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
     @State private var showAPIEndpointSettings = false
-    @State private var showClinicianReport = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
+    @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
+    @State private var isResolvingAllTimeRange = false
+    @State private var resumeExportTapWhenAllTimeResolves = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.locale) private var locale
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
@@ -79,12 +83,13 @@ struct ExportTabView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { proxy in
-            ScrollView {
+            SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
                     heroHeader
                     statusBadges
-                    clinicianReportSection
+                        .configurationChangesProtected()
                     exportTargetSection
+                        .configurationChangesProtected()
                     dateRangeSection
                     healthDataSection
                         .id("marketing-export-health-data")
@@ -94,48 +99,17 @@ struct ExportTabView: View {
                     outputSection
                     pathPreviewSection
                     resetButton
+                        .configurationChangesProtected()
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.lg)
-            }
-            .scrollIndicators(.hidden)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            } footer: {
                 floatingExportBar
                     .zIndex(1)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
-                Button("Open Health App") {
-                    if let healthURL = URL(string: "x-apple-health://") {
-                        UIApplication.shared.open(healthURL)
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
-            }
-            .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
-                if previewNeedsHealthPermission {
-                    Button("Connect Apple Health") {
-                        Task {
-                            _ = try? await healthKitManager.requestAuthorization()
-                            if healthKitManager.isAuthorized {
-                                await Task.yield()
-                                showPreview = true
-                            }
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text(previewRequirementsMessage)
-            }
-            .alert("Roll-Up Summaries", isPresented: $showRollupHelp) {
-                Button("Done", role: .cancel) { }
-            } message: {
-                Text("\(ExportRolloutCopy.rollupSummariesHelp)\n\n\(ExportRolloutCopy.pluginCompatibilityHelp)")
-            }
             .onChange(of: exportStatusMessage) { oldValue, newValue in
                 if !newValue.isEmpty && newValue != oldValue {
                     UIAccessibility.post(notification: .announcement, argument: newValue)
@@ -157,6 +131,64 @@ struct ExportTabView: View {
             #endif
             }
         }
+        .geistDialog(
+            isPresented: $showHealthPermissionsGuide,
+            title: Text("Adjust Health Permissions"),
+            message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
+            actions: [
+                .cancel(),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") {
+                        UIApplication.shared.open(healthURL)
+                    }
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showPreviewRequirementsPrompt,
+            title: Text("Finish Preview Setup"),
+            message: Text(previewRequirementsMessage),
+            actions: previewNeedsHealthPermission
+                ? [
+                    .cancel(),
+                    .action("Connect Apple Health") {
+                        Task {
+                            _ = try? await healthKitManager.requestAuthorization()
+                            if healthKitManager.isAuthorized {
+                                await Task.yield()
+                                showPreview = true
+                            }
+                        }
+                    }
+                ]
+                : [.cancel()]
+        )
+        .geistDialog(
+            isPresented: isPresentingLargeExportConfirmation,
+            title: Text("Confirm Large Export"),
+            message: Text(largeExportConfirmationMessage),
+            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+            actions: [
+                .cancel(
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                },
+                .action(
+                    "Export Anyway",
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                    onExportTapped()
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showRollupHelp,
+            title: Text("Roll-Up Summaries"),
+            message: Text(ExportRolloutCopy.rollupSummariesHelp),
+            actions: [.action("Done", role: .secondary)]
+        )
         .sheet(isPresented: $showFilenameEditor) {
             FilenameFormatEditor(filenameFormat: $advancedSettings.filenameFormat)
         }
@@ -182,13 +214,7 @@ struct ExportTabView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $showClinicianReport) {
-            ClinicianReportView(
-                healthKitManager: healthKitManager,
-                unitPreference: advancedSettings.formatCustomization.unitPreference
-            )
-        }
-        .sheet(isPresented: $showPreview) {
+        .sheet(isPresented: $showPreview, onDismiss: { onFirstExportPreviewDismissed?() }) {
             ExportPreviewView(
                 startDate: previewDateRange.startDate,
                 endDate: previewDateRange.endDate,
@@ -205,7 +231,8 @@ struct ExportTabView: View {
                     if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveGranularDataEnabled
+                            includeGranularData: advancedSettings.effectiveDetailPolicy
+                                .includesSelectedTimeSeries
                         )
                     }
                     #endif
@@ -213,7 +240,7 @@ struct ExportTabView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveGranularDataEnabled,
+                            detailPolicy: advancedSettings.effectiveDetailPolicy,
                             metricSelection: advancedSettings.metricSelection,
                             timeZone: advancedSettings.exportTimeZoneOverride ?? .current
                         )
@@ -318,7 +345,10 @@ struct ExportTabView: View {
             macSubtitle: macTargetSubtitle,
             apiSubtitle: apiTargetSubtitle,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            // Prompt on any state where the retained selection cannot be used
+            // right now (including temporary unavailability and the reselection/
+            // review states), not merely when no selection metadata is retained.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             onRequestFolderPicker: { showFolderPicker = true },
             onOpenAPISettings: { showAPIEndpointSettings = true }
         )
@@ -386,7 +416,10 @@ struct ExportTabView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -396,12 +429,15 @@ struct ExportTabView: View {
     private var dateRangeSection: some View {
         sectionCard(title: "Date Range") {
             VStack(spacing: Spacing.md) {
-                LazyVGrid(
-                    columns: [GridItem(.flexible()), GridItem(.flexible())],
-                    spacing: Spacing.sm
-                ) {
-                    ForEach(ExportDateRangePreset.allCases) { preset in
-                        dateRangePresetButton(preset)
+                SchedulingDatePresets(
+                    options: ExportDateRangePreset.allCases.map {
+                        SchedulingDatePreset(value: $0, title: $0.title, hint: $0.accessibilityHint,
+                                             identifier: accessibilityIdentifier(for: $0))
+                    },
+                    selection: dateRangePreset
+                ) { preset in
+                    configurationProtection.performConfigurationChange {
+                        selectDateRangePreset(preset)
                     }
                 }
 
@@ -409,29 +445,31 @@ struct ExportTabView: View {
                     Divider().background(Color.borderSubtle)
 
                     VStack(spacing: Spacing.md) {
-                        DatePicker(
-                            "Start Date",
-                            selection: $startDate,
-                            in: ...endDate,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.compact)
-                        .tint(Color.accent)
-                        .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
-                        .accessibilityHint("Select the start date for your export range")
+                        SchedulingLabeledControl(title: "Start Date", value: Text(startDate, style: .date)) {
+                            DatePicker(
+                                "Start Date",
+                                selection: configurationProtection.protecting($startDate),
+                                in: ...endDate,
+                                displayedComponents: .date
+                            )
+                            .tint(Color.accent)
+                            .accessibilityIdentifier(AccessibilityID.Export.customStartDatePicker)
+                            .accessibilityHint("Select the start date for your export range")
+                        }
 
                         Divider().background(Color.borderSubtle)
 
-                        DatePicker(
-                            "End Date",
-                            selection: $endDate,
-                            in: startDate...Date(),
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.compact)
-                        .tint(Color.accent)
-                        .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
-                        .accessibilityHint("Select the end date for your export range")
+                        SchedulingLabeledControl(title: "End Date", value: Text(endDate, style: .date)) {
+                            DatePicker(
+                                "End Date",
+                                selection: configurationProtection.protecting($endDate),
+                                in: startDate...Date(),
+                                displayedComponents: .date
+                            )
+                            .tint(Color.accent)
+                            .accessibilityIdentifier(AccessibilityID.Export.customEndDatePicker)
+                            .accessibilityHint("Select the end date for your export range")
+                        }
                     }
                 }
             }
@@ -442,40 +480,6 @@ struct ExportTabView: View {
         (startDate, endDate)
     }
 
-    private func dateRangePresetButton(_ preset: ExportDateRangePreset) -> some View {
-        let isSelected = dateRangePreset == preset
-        return Button {
-            selectDateRangePreset(preset)
-        } label: {
-            HStack(spacing: Spacing.xs) {
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(Typography.headline())
-                }
-                Text(LocalizedStringKey(preset.title))
-                    .font(.footnote.weight(.semibold))
-            }
-            .foregroundStyle(isSelected ? Color.accent : Color.textSecondary)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.sm)
-            .background(
-                Capsule()
-                    .fill(isSelected ? Color.accent.opacity(0.18) : Color.bgSecondary)
-            )
-            .overlay(
-                Capsule()
-                    .strokeBorder(isSelected ? Color.accent.opacity(0.45) : Color.borderSubtle, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(accessibilityIdentifier(for: preset))
-        .accessibilityLabel(preset.title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint(preset.accessibilityHint)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
 
@@ -484,14 +488,30 @@ struct ExportTabView: View {
             return
         case .allTime:
             Task {
+                isResolvingAllTimeRange = true
                 let earliestDate = await healthKitManager.findEarliestHealthDataDate()
                 await MainActor.run {
-                    guard dateRangePreset == .allTime else { return }
-                    applyResolvedDateRange(
-                        for: .allTime,
-                        allTimeStartDate: earliestDate,
-                        allTimeEndDate: Date()
-                    )
+                    isResolvingAllTimeRange = false
+                    // A tap deferred while this resolution was in flight must be
+                    // judged against the resolved range, whether or not the user
+                    // has since switched presets.
+                    let resumeExportTap = resumeExportTapWhenAllTimeResolves
+                    resumeExportTapWhenAllTimeResolves = false
+                    guard dateRangePreset == .allTime else {
+                        if resumeExportTap { handleExportButtonTapped() }
+                        return
+                    }
+                    configurationProtection.performConfigurationChange {
+                        guard dateRangePreset == .allTime else { return }
+                        applyResolvedDateRange(
+                            for: .allTime,
+                            allTimeStartDate: earliestDate,
+                            allTimeEndDate: Date()
+                        )
+                    }
+                    if resumeExportTap {
+                        handleExportButtonTapped()
+                    }
                 }
             }
         case .today, .yesterday:
@@ -551,63 +571,69 @@ struct ExportTabView: View {
 
                 rowDivider()
 
-                losslessHealthRecordsInlineRow
+                dataDetailInlineRow
+                    .configurationChangesProtected()
             }
         }
     }
 
-    private var clinicianReportSection: some View {
-        let copy = ClinicianReportCopy(locale: locale)
-        return sectionCard(title: copy.string(.title)) {
-            Button {
-                showClinicianReport = true
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "doc.text.fill")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.accent)
-                        .frame(width: 28, height: 44)
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(copy.string(.title))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.textPrimary)
-                        Text(copy.string(.entry_subtitle))
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .multilineTextAlignment(.leading)
-                    }
-                    Spacer(minLength: Spacing.xs)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-                }
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(AccessibilityID.ClinicianReport.entry)
-            .accessibilityLabel(copy.string(.title))
-            .accessibilityHint(copy.string(.accessibility_hint))
-        }
-    }
+    private var dataDetailInlineRow: some View {
+        let selectedPreset = AppleExportDetailPreset(policy: advancedSettings.detailPolicy)
+        let presets: [AppleExportDetailPreset] = [
+            .summary,
+            .detailedTimeSeries,
+            .losslessHealthRecords
+        ] + (selectedPreset == .archiveOnly ? [.archiveOnly] : [])
 
-    private var losslessHealthRecordsInlineRow: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            inlineIcon("waveform.path.ecg", isActive: advancedSettings.includeGranularData)
+        return HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon(
+                "waveform.path.ecg",
+                isActive: advancedSettings.detailPolicy.hasAnyDetail
+            )
 
             VStack(alignment: .leading, spacing: Spacing.s2) {
-                Toggle("Lossless Health Records", isOn: $advancedSettings.includeGranularData)
-                    .tint(Color.accent)
-                    .font(.body.weight(.semibold))
-                    .accessibilityHint("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.s2) {
+                        Text("Data Detail")
+                            .font(.body.weight(.semibold))
+                        Spacer()
+                        dataDetailPicker(presets: presets)
+                    }
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        Text("Data Detail")
+                            .font(.body.weight(.semibold))
+                        dataDetailPicker(presets: presets)
+                    }
+                }
 
-                Text("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
+                Text(selectedPreset.localizedDescription)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.vertical, Spacing.s3)
+        .accessibilityElement(children: .contain)
+        .accessibilityHint(selectedPreset.localizedDescription)
+    }
+
+    private func dataDetailPicker(
+        presets: [AppleExportDetailPreset]
+    ) -> some View {
+        Picker(
+            "Data Detail",
+            selection: Binding(
+                get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
+                set: { advancedSettings.detailPolicy = $0.policy }
+            )
+        ) {
+            ForEach(presets) { preset in
+                Text(preset.localizedTitle).tag(preset)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .tint(Color.accent)
     }
 
     // MARK: - Export Formats
@@ -631,6 +657,7 @@ struct ExportTabView: View {
                 }
                 .padding(.bottom, Spacing.s1)
 
+                VStack(spacing: 0) {
                 ForEach(ExportFormat.allCases, id: \.self) { format in
                     Toggle(format.rawValue, isOn: Binding(
                         get: { advancedSettings.exportFormats.contains(format) },
@@ -712,6 +739,8 @@ struct ExportTabView: View {
                     .foregroundStyle(Color.error)
                     .padding(.top, Spacing.s2)
                 }
+                }
+                .configurationChangesProtected()
             }
         }
     }
@@ -747,7 +776,10 @@ struct ExportTabView: View {
                 NavigationLink {
                     IndividualTrackingView(
                         settings: advancedSettings.individualTracking,
-                        metricSelection: advancedSettings.metricSelection
+                        metricSelection: advancedSettings.metricSelection,
+                        setIndividuallyTracked: { metricID, enabled in
+                            advancedSettings.setIndividuallyTracked(metricID, enabled: enabled)
+                        }
                     )
                 } label: {
                     inlineNavigationRowLabel(
@@ -770,7 +802,7 @@ struct ExportTabView: View {
                 inlineIcon("calendar.badge.clock", isActive: advancedSettings.rollupSummariesEnabled)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Roll-Up Summaries")
+                    Text("Range Summary")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
@@ -793,37 +825,26 @@ struct ExportTabView: View {
             }
 
             VStack(spacing: 0) {
-                Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates weekly roll-up files for every selected export format")
+                    .accessibilityHint("Generates one range summary for every selected export format")
 
-                Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates monthly roll-up files for every selected export format")
-
-                Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates yearly roll-up files for every selected export format")
-
-                Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
                     .padding(.vertical, Spacing.s1)
                     .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityHint("Skips daily export files and writes only the enabled roll-up summaries")
 
-                Text("When enabled, Health.md fetches the full touched periods but skips daily files, daily-note injection, and individual entries.")
+                Text("When enabled, Health.md summarizes the full requested range but skips daily files, daily-note injection, and individual entries.")
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, Spacing.s1)
             }
             .padding(.leading, 40)
+            .configurationChangesProtected()
         }
         .padding(.vertical, Spacing.s3)
     }
@@ -843,6 +864,7 @@ struct ExportTabView: View {
                 rowDivider()
 
                 writeModeInlineRow
+                    .configurationChangesProtected()
             }
         }
     }
@@ -924,6 +946,7 @@ struct ExportTabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.Export.filenameEditorButton)
                 .accessibilityLabel("Filename format: \(advancedSettings.filenameFormat)")
                 .accessibilityHint("Double tap to customize filename format")
             }
@@ -957,154 +980,24 @@ struct ExportTabView: View {
     // MARK: - Floating Export Bar
 
     private var floatingExportBar: some View {
-        VStack(spacing: Spacing.s2) {
-            if isExporting {
-                exportProgressPanel
-                    .transition(.opacity)
-
-                Divider()
-                    .overlay(Color.borderSubtle)
-            }
-
-            if !purchaseManager.isUnlocked && canExport && !isExporting {
-                let remaining = purchaseManager.freeExportsRemaining
-                Text(remaining == 1
-                     ? "1 free export remaining"
-                     : "\(remaining) free exports remaining")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.textMuted)
-                    .accessibilityIdentifier(AccessibilityID.Export.freeExportsLabel)
-                    .accessibilityLabel("\(remaining) free export\(remaining == 1 ? "" : "s") remaining before purchase required")
-            }
-
-            Group {
-                if usesAccessibilityLayout {
-                    VStack(spacing: Spacing.s2) {
-                        floatingBarButtons
-                    }
-                } else {
-                    HStack(spacing: Spacing.s2) {
-                        floatingBarButtons
-                    }
-                }
-            }
-        }
-        .padding(Spacing.s2)
-        .background(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .fill(Color.bgPrimary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.s3)
-        .padding(.bottom, Spacing.s2)
-        .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                colors: [Color.bgPrimary.opacity(0), Color.bgPrimary],
-                startPoint: .top,
-                endPoint: .bottom
+        SchedulingExportFooter(
+            freeExportsRemaining: !purchaseManager.isUnlocked && canExport ? purchaseManager.freeExportsRemaining : nil,
+            freeExportsIdentifier: AccessibilityID.Export.freeExportsLabel
+        ) {
+            SchedulingExportActions(
+                previewIdentifier: AccessibilityID.Export.previewButton,
+                exportIdentifier: AccessibilityID.Export.exportButton,
+                previewHint: healthKitManager.isAuthorized
+                    ? "Shows the files and contents that will be exported"
+                    : "Prompts to connect Apple Health before showing preview",
+                exportHint: canExport
+                    ? "Exports the selected health data"
+                    : "Opens the setup step required before exporting",
+                onPreview: handlePreviewTapped,
+                onExport: handleExportButtonTapped
             )
-            .ignoresSafeArea()
-        )
-    }
-
-    private var exportProgressPanel: some View {
-        let sizeEstimate = statusExportSizeEstimate
-        let sizeSummary = exportSizeSummary(for: sizeEstimate)
-        let sizeAccessibilitySummary = exportSizeAccessibilitySummary(for: sizeEstimate)
-        let outputSummary = exportOutputSummary
-
-        return VStack(alignment: .leading, spacing: Spacing.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
-                Text(exportStatusMessage.isEmpty ? "Preparing export…" : exportStatusMessage)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(usesAccessibilityLayout ? nil : 2)
-                    .truncationMode(.middle)
-                    .accessibilityIdentifier(AccessibilityID.Export.statusMessage)
-
-                Spacer(minLength: Spacing.s2)
-
-                Text("\(exportProgressPercentage)%")
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(Color.accent)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.accentSubtle))
-                    .accessibilityHidden(true)
-            }
-
-            ProgressView(value: min(max(exportProgress, 0), 1))
-                .progressViewStyle(.linear)
-                .tint(Color.accent)
-                .accessibilityIdentifier(AccessibilityID.Export.exportProgress)
-                .accessibilityLabel("Export progress")
-                .accessibilityValue("\(exportProgressPercentage) percent complete")
-
-            LazyVGrid(
-                columns: Array(
-                    repeating: GridItem(.flexible(), alignment: .leading),
-                    count: usesAccessibilityLayout ? 1 : 2
-                ),
-                alignment: .leading,
-                spacing: 7
-            ) {
-                exportMetadataItem(
-                    icon: "calendar",
-                    text: exportDateRangeSummary,
-                    accessibilityLabel: "Export date range, \(exportDateRangeAccessibilitySummary)"
-                )
-                exportMetadataItem(
-                    icon: "externaldrive",
-                    text: sizeSummary,
-                    accessibilityLabel: sizeAccessibilitySummary
-                )
-                exportMetadataItem(
-                    icon: "doc.on.doc",
-                    text: outputSummary,
-                    accessibilityLabel: "Expected output, \(outputSummary)"
-                )
-                exportMetadataItem(
-                    icon: exportTargetIcon,
-                    text: exportTargetSummary,
-                    accessibilityLabel: "Export destination, \(exportTargetSummary)"
-                )
-            }
         }
-        .padding(.horizontal, Spacing.s2)
-        .padding(.top, Spacing.s2)
-    }
-
-    private func exportMetadataItem(
-        icon: String,
-        text: String,
-        accessibilityLabel: String
-    ) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.accent)
-                .frame(width: 14)
-                .accessibilityHidden(true)
-
-            Text(text)
-                .font(.caption2)
-                .foregroundStyle(Color.textSecondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var exportProgressPercentage: Int {
-        Int((min(max(exportProgress, 0), 1) * 100).rounded())
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
     }
 
     private var exportDateCount: Int {
@@ -1115,40 +1008,13 @@ struct ExportTabView: View {
     }
 
     private var exportDates: [Date] {
-        ExportOrchestrator.dateRange(
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
+        return ExportOrchestrator.dateRange(
             from: min(startDate, endDate),
-            to: max(startDate, endDate)
+            to: max(startDate, endDate),
+            calendar: calendar
         )
-    }
-
-    private var exportDateRangeSummary: String {
-        let calendar = Calendar.current
-        let start = min(startDate, endDate)
-        let end = max(startDate, endDate)
-        let startComponents = calendar.dateComponents([.year, .month], from: start)
-        let endComponents = calendar.dateComponents([.year, .month], from: end)
-        let dayLabel = exportDateCount == 1 ? "1 day" : "\(exportDateCount) days"
-
-        if exportDateCount == 1 {
-            return "\(start.formatted(.dateTime.month(.abbreviated).day())) · \(dayLabel)"
-        }
-        if startComponents.year == endComponents.year,
-           startComponents.month == endComponents.month {
-            return "\(start.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.day())) · \(dayLabel)"
-        }
-        if startComponents.year == endComponents.year {
-            return "\(start.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.month(.abbreviated).day())) · \(dayLabel)"
-        }
-        return "\(start.formatted(.dateTime.year()))–\(end.formatted(.dateTime.year())) · \(dayLabel)"
-    }
-
-    private var exportDateRangeAccessibilitySummary: String {
-        let start = min(startDate, endDate).formatted(date: .long, time: .omitted)
-        let end = max(startDate, endDate).formatted(date: .long, time: .omitted)
-        if exportDateCount == 1 {
-            return "\(start), 1 day"
-        }
-        return "\(start) through \(end), \(exportDateCount) days"
     }
 
     private var exportSizeEstimateConfiguration: ExportSizeEstimateConfiguration {
@@ -1162,7 +1028,8 @@ struct ExportTabView: View {
             formatCustomization: FormatCustomizationSnapshot.from(
                 advancedSettings.formatCustomization
             ),
-            includesLosslessRecords: advancedSettings.effectiveGranularDataEnabled,
+            includesLosslessRecords: advancedSettings.effectiveDetailPolicy
+                .includesCanonicalArchive,
             includesIndividualEntries: advancedSettings.writesIndividualEntryFiles,
             updatesDailyNotes: advancedSettings.dailyNoteInjection.enabled,
             dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
@@ -1176,68 +1043,6 @@ struct ExportTabView: View {
     private var sampledExportSizeEstimate: ExportPreviewSizeEstimate? {
         guard previewSizeEstimateConfiguration == exportSizeEstimateConfiguration else { return nil }
         return previewSizeEstimate
-    }
-
-    private var statusExportSizeEstimate: ExportPreviewSizeEstimate? {
-        if let sampledExportSizeEstimate {
-            return sampledExportSizeEstimate
-        }
-
-        let rollupProjection = projectedRollupOutputProjection
-        return ExportStatusSizeEstimator.estimate(
-            totalDateCount: exportDateCount,
-            selectedFormats: advancedSettings.exportFormats,
-            enabledMetricCount: advancedSettings.metricSelection.totalEnabledCount,
-            includesLosslessRecords: advancedSettings.effectiveGranularDataEnabled,
-            includesIndividualEntries: advancedSettings.writesIndividualEntryFiles,
-            updatesDailyNotes: advancedSettings.dailyNoteInjection.enabled,
-            dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
-            summaryOnly: advancedSettings.summaryOnlyModeEnabled,
-            archiveMode: advancedSettings.archiveModeEnabled,
-            projectedRollupFileCount: rollupProjection.fileCount,
-            projectedRollupByteCount: rollupProjection.byteCount,
-            fixedByteCount: projectedFixedExportByteCount,
-            projectedProcessingDayCount: max(exportDateCount, rollupProjection.sourceDateCount),
-            isAPIPayload: exportTargetSelection == .apiEndpoint
-        )
-    }
-
-    private func exportSizeSummary(for estimate: ExportPreviewSizeEstimate?) -> String {
-        guard let estimate else { return "Estimating output…" }
-        let prefix = exportTargetSelection == .apiEndpoint ? "Payload" : "Est. output"
-        return "\(prefix) ~\(estimate.sizeLabel)"
-    }
-
-    private func exportSizeAccessibilitySummary(
-        for estimate: ExportPreviewSizeEstimate?
-    ) -> String {
-        guard let estimate else {
-            return "Estimating final export output size"
-        }
-        let isAPI = exportTargetSelection == .apiEndpoint
-        let kind = isAPI ? "payload" : "final export output"
-        let basis: String
-        if isAPI {
-            basis = sampledExportSizeEstimate != nil
-                ? "sampled export data"
-                : "the selected dates and metrics"
-        } else {
-            basis = sampledExportSizeEstimate != nil
-                ? "sampled export data and the configured roll-up scope"
-                : "the selected dates, metrics, formats, and complete roll-up windows"
-        }
-        let processingScope = estimate.projectedProcessingDayCount > exportDateCount
-            ? ". The export processes \(estimate.projectedProcessingDayCount) source days"
-            : ""
-        return "Estimated \(kind), approximately \(estimate.sizeLabel), based on \(basis)\(processingScope)"
-    }
-
-    private var projectedFixedExportByteCount: Int {
-        guard exportTargetSelection != .apiEndpoint,
-              advancedSettings.writesDataDictionary else { return 0 }
-        return ExportDataDictionarySizeEstimator.byteCount(
-            using: advancedSettings.formatCustomization
-        )
     }
 
     private var projectedRollupOutputProjection: ExportRollupOutputProjection {
@@ -1256,22 +1061,7 @@ struct ExportTabView: View {
     }
 
     private var projectedRollupFileCount: Int {
-        guard exportTargetSelection != .apiEndpoint,
-              !advancedSettings.dailyNotesOnlyModeEnabled,
-              !advancedSettings.enabledRollupPeriods.isEmpty,
-              !advancedSettings.exportFormats.isEmpty else { return 0 }
-
-        var windows = Set<HealthRollupPeriodWindow>()
-        for period in advancedSettings.enabledRollupPeriods {
-            for date in exportDates {
-                windows.insert(HealthRollupPeriodWindow.window(
-                    containing: date,
-                    period: period,
-                    calendar: .current
-                ))
-            }
-        }
-        return windows.count * advancedSettings.exportFormats.count
+        projectedRollupOutputProjection.fileCount
     }
 
     private var projectedRollupSourceDateCount: Int {
@@ -1281,147 +1071,81 @@ struct ExportTabView: View {
             return exportDateCount
         }
 
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return max(
             exportDateCount,
             ExportOrchestrator.rollupSourceDates(
                 for: exportDates,
-                periods: advancedSettings.enabledRollupPeriods
+                periods: advancedSettings.enabledRollupPeriods,
+                calendar: calendar
             ).count
         )
     }
 
-    private var exportOutputSummary: String {
-        let formatCount = advancedSettings.exportFormats.count
-        let formatLabel = formatCount == 1 ? "1 format" : "\(formatCount) formats"
-
-        if exportTargetSelection == .apiEndpoint {
-            return exportDateCount == 1 ? "1 JSON record" : "\(exportDateCount) JSON records"
-        }
-        if advancedSettings.dailyNotesOnlyModeEnabled {
-            return exportDateCount == 1 ? "1 note update" : "\(exportDateCount) note updates"
-        }
-        if advancedSettings.archiveModeEnabled {
-            return "1 ZIP · \(formatLabel)"
-        }
-        if advancedSettings.summaryOnlyModeEnabled {
-            let fileLabel = projectedRollupFileCount == 1
-                ? "1 summary"
-                : "\(projectedRollupFileCount) summaries"
-            return "\(fileLabel) · \(projectedRollupSourceDateCount) source days"
-        }
-
-        let baseFileCount = exportDateCount * formatCount + projectedRollupFileCount
-        let variableSuffix = advancedSettings.writesIndividualEntryFiles ? "+" : ""
-        if advancedSettings.dailyNoteInjection.enabled {
-            return "\(baseFileCount)\(variableSuffix) files + notes"
-        }
-        return "\(baseFileCount)\(variableSuffix) files · \(formatLabel)"
-    }
-
-    private var exportTargetIcon: String {
-        switch exportTargetSelection {
-        case .localIPhoneFolder: return "folder"
-        case .connectedMac: return "desktopcomputer"
-        case .apiEndpoint: return "network"
-        }
-    }
-
-    private var exportTargetSummary: String {
-        switch exportTargetSelection {
-        case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : vaultManager.vaultName
-        case .connectedMac:
-            return syncService.macDestinationStatus?.destinationDisplayName
-                ?? syncService.connectedPeerName
-                ?? "Connected Mac"
-        case .apiEndpoint:
-            return apiExportSettings.displayName
-        }
-    }
-
-    @ViewBuilder
-    private var floatingBarButtons: some View {
-        if !isExporting {
-            previewPillButton
-                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-        }
-
-        pearlExportButton
-
-        if isExporting {
-            pearlStopButton
-                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-        }
-    }
-
-    private var pearlExportButton: some View {
-        Button(action: onExportTapped) {
-            HStack(spacing: Spacing.s2) {
-                if isExporting {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color.bgPrimary))
-                        .scaleEffect(0.7)
-                        .frame(width: 13, height: 13)
-                } else {
-                    Image(systemName: "arrow.up")
-                        .font(.footnote.weight(.semibold))
-                }
-                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export Data"))
-                    .font(.callout.weight(.semibold))
-            }
-            .foregroundStyle(Color.bgPrimary)
-            .frame(minWidth: 132)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.textPrimary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.textPrimary.opacity(0.08), lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .opacity(isExporting ? 0.45 : 1)
-        }
-        .buttonStyle(.plain)
-        .disabled(isExporting)
-        .accessibilityIdentifier(AccessibilityID.Export.exportButton)
-        .accessibilityLabel(isExporting ? "Exporting" : "Export Health Data")
-        .accessibilityHint(canExport
-            ? "Exports the selected health data"
-            : "Opens the setup step required before exporting")
-    }
-
-    private var previewPillButton: some View {
-        Button { handlePreviewTapped() } label: {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: "eye")
-                    .font(.footnote.weight(.semibold))
-                Text("Preview")
-                    .font(.callout.weight(.semibold))
-            }
-            .foregroundStyle(Color.textPrimary)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.bgSecondary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(AccessibilityID.Export.previewButton)
-        .accessibilityLabel("Preview Export")
-        .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
-    }
-
     private var previewNeedsHealthPermission: Bool {
         !healthKitManager.isAuthorized
+    }
+
+    // MARK: - Large Export Confirmation
+
+    /// Guards only the interactive Export tab button. The scale verdict runs
+    /// before the `canExport` routing: a tap that first routes through the
+    /// Health-authorization flow re-enters the export after access is granted,
+    /// so a multi-thousand-day range must be confirmed up front or that path
+    /// could start it unconfirmed. Scheduled, shortcut, CLI, preview, and
+    /// programmatic export paths never pass through this handler.
+    private func handleExportButtonTapped() {
+        // All Time resolution updates startDate/endDate asynchronously; a tap
+        // during that window is judged against the resolved range, never the
+        // stale one it is about to replace.
+        if isResolvingAllTimeRange {
+            resumeExportTapWhenAllTimeResolves = true
+            return
+        }
+
+        let verdict = ExportScaleGuard.verdict(
+            startDate: startDate,
+            endDate: endDate,
+            granularDataEnabled: advancedSettings.effectiveDetailPolicy
+                .includesCanonicalArchive,
+            formatCount: advancedSettings.exportFormats.count,
+            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
+        )
+
+        switch verdict {
+        case .proceed:
+            onExportTapped()
+        case .confirm(let scale):
+            pendingLargeExportConfirmation = scale
+        }
+    }
+
+    private var isPresentingLargeExportConfirmation: Binding<Bool> {
+        Binding(
+            get: { pendingLargeExportConfirmation != nil },
+            set: { isPresented in
+                if !isPresented { pendingLargeExportConfirmation = nil }
+            }
+        )
+    }
+
+    private var largeExportConfirmationMessage: String {
+        guard let scale = pendingLargeExportConfirmation else {
+            return ""
+        }
+
+        let scaleSummary: String
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
+        } else {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
+        }
+
+        guard scale.includesGranularData else { return scaleSummary }
+
+        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export.")
+        return scaleSummary + "\n\n" + granularWarning
     }
 
     private var previewRequirementsMessage: String {
@@ -1430,6 +1154,10 @@ struct ExportTabView: View {
 
     private func handlePreviewTapped() {
         if previewNeedsHealthPermission {
+            guard !configurationProtection.isEnabled else {
+                configurationProtection.presentBlockedChangeToast()
+                return
+            }
             showPreviewRequirementsPrompt = true
         } else {
             showPreview = true
@@ -1448,7 +1176,7 @@ struct ExportTabView: View {
     private var previewDestinationLabel: String {
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : "iPhone: \(vaultManager.vaultName)"
+            return vaultManager.hasVaultSelection ? "iPhone: \(vaultManager.vaultName)" : "iPhone folder"
         case .connectedMac:
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
                 return "Mac: \(path)"
@@ -1480,31 +1208,6 @@ struct ExportTabView: View {
         case .apiEndpoint:
             return .apiEndpoint
         }
-    }
-
-    private var pearlStopButton: some View {
-        Button {
-            onCancelExport?()
-        } label: {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: "stop.fill")
-                    .font(.footnote.weight(.semibold))
-                Text("Stop")
-                    .font(.callout.weight(.semibold))
-            }
-            .foregroundStyle(Color.white)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.error)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .shadow(color: Color.error.opacity(0.18), radius: 10, x: 0, y: 4)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(AccessibilityID.Export.cancelExportButton)
-        .accessibilityLabel("Stop export")
     }
 
     // MARK: - Reset
@@ -1683,9 +1386,9 @@ struct ExportTabView: View {
             return "Paused · Daily Notes Only skips roll-up files."
         }
         guard advancedSettings.rollupSummariesEnabled else {
-            return "Off · Enable a period to write summary files."
+            return String(localized: "Off · Enable the range summary to write one summary per format.")
         }
-        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName }.joined(separator: " · ")
+        let periods = advancedSettings.enabledRollupPeriods.map { $0.localizedDisplayName }.joined(separator: " · ")
         let formatCount = advancedSettings.exportFormats.count
         if formatCount == 0 {
             return "\(periods) · Select an export format first."
@@ -2025,18 +1728,25 @@ private struct ExportTargetOptionRow: View {
 struct APIExportSettingsSheet: View {
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("https://api.example.com/healthmd", text: $settings.endpointURLString)
+                    TextField(
+                        "https://api.example.com/healthmd",
+                        text: configurationProtection.protecting($settings.endpointURLString)
+                    )
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityLabel("API endpoint URL")
 
-                    SecureField("Optional bearer token", text: $settings.bearerToken)
+                    SecureField(
+                        "Optional bearer token",
+                        text: configurationProtection.protecting($settings.bearerToken)
+                    )
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityLabel("API bearer token")
@@ -2053,7 +1763,7 @@ struct APIExportSettingsSheet: View {
                         Text(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL")
                     }
                 } footer: {
-                    Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Lossless Health Records setting.")
+                    Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
                 }
             }
             .navigationTitle("API Export")
@@ -2062,6 +1772,16 @@ struct APIExportSettingsSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }

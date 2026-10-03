@@ -154,26 +154,34 @@ struct ExportPreviewView: View {
         .task {
             await buildPreviews()
         }
-        .alert(item: $permissionGuidance) { guidance in
-            #if os(iOS)
-            Alert(
-                title: Text("Health Permissions Needed"),
-                message: Text(guidance.iOSInstructions),
-                primaryButton: .default(Text("Request Access")) {
-                    requestAdditionalHealthAccess()
-                },
-                secondaryButton: .default(Text("Open Health App")) {
-                    openHealthApp()
-                }
-            )
-            #else
-            Alert(
-                title: Text("Health Permissions Needed"),
-                message: Text(guidance.macInstructions),
-                dismissButton: .default(Text("Done"))
-            )
-            #endif
-        }
+        .geistDialog(
+            isPresented: Binding(
+                get: { permissionGuidance != nil },
+                set: { if !$0 { permissionGuidance = nil } }
+            ),
+            title: Text("Health Permissions Needed"),
+            message: permissionGuidance.map { guidance in
+                #if os(iOS)
+                Text(guidance.iOSInstructions)
+                #else
+                Text(guidance.macInstructions)
+                #endif
+            },
+            actions: {
+                #if os(iOS)
+                [
+                    .action("Request Access") {
+                        requestAdditionalHealthAccess()
+                    },
+                    .action("Open Health App") {
+                        openHealthApp()
+                    }
+                ]
+                #else
+                [.action("Done", role: .secondary)]
+                #endif
+            }()
+        )
     }
 
     // MARK: - States
@@ -375,7 +383,7 @@ struct ExportPreviewView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                if settings.effectiveGranularDataEnabled {
+                if settings.effectiveDetailPolicy.includesCanonicalArchive {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
@@ -433,10 +441,26 @@ struct ExportPreviewView: View {
         partialFailures.filter { ExportPermissionGuidance(failure: $0) == nil }
     }
 
+    /// Warnings that reduce capture completeness. Informational omissions of
+    /// optional attachments (for example a WorkoutKit plan this device cannot
+    /// decode) are excluded; they render as notes below the warnings.
+    private var degradingNonPermissionFailures: [ExportPartialFailure] {
+        nonPermissionFailures.filter(\.degradesSuccess)
+    }
+
+    private var informationalFailures: [ExportPartialFailure] {
+        partialFailures.filter { $0.isInformational == true }
+    }
+
     @ViewBuilder
     private var partialFailuresSection: some View {
         if !partialFailures.isEmpty {
-            Section("Warnings") {
+            Section(
+                degradingNonPermissionFailures.isEmpty
+                    && bloodPressurePermissionFailures.isEmpty
+                    && additionalPermissionFailures.isEmpty
+                    ? "Export Notes" : "Warnings"
+            ) {
                 if !bloodPressurePermissionFailures.isEmpty {
                     bloodPressurePermissionRecoveryCard
                 }
@@ -445,9 +469,23 @@ struct ExportPreviewView: View {
                     additionalHealthPermissionRecoveryCard(guidance)
                 }
 
-                ForEach(Array(nonPermissionFailures.enumerated()), id: \.offset) { _, failure in
+                ForEach(Array(degradingNonPermissionFailures.enumerated()), id: \.offset) { _, failure in
                     HStack(alignment: .top, spacing: Spacing.sm) {
                         warningGlyph
+                            .frame(width: 44, height: 44)
+                            .accessibilityHidden(true)
+
+                        Text(failure.localizedSummary)
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, Spacing.s2)
+                    }
+                }
+
+                ForEach(Array(informationalFailures.enumerated()), id: \.offset) { _, failure in
+                    HStack(alignment: .top, spacing: Spacing.sm) {
+                        infoGlyph
                             .frame(width: 44, height: 44)
                             .accessibilityHidden(true)
 
@@ -539,6 +577,12 @@ struct ExportPreviewView: View {
             .foregroundStyle(Color.orange)
     }
 
+    private var infoGlyph: some View {
+        Image(systemName: "info.circle")
+            .font(.title3)
+            .foregroundStyle(Color.textSecondary)
+    }
+
     private func fileRow(_ file: FilePreview) -> some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: file.kind.iconName)
@@ -581,7 +625,7 @@ struct ExportPreviewView: View {
     private var previewScope: ExportPreviewScope {
         ExportPreviewScope.make(
             selectedFormats: settings.exportFormats,
-            losslessEnabled: settings.effectiveGranularDataEnabled,
+            losslessEnabled: settings.effectiveDetailPolicy.includesCanonicalArchive,
             defaultMaximumRenderedDates: Self.maxRenderedDates
         )
     }
@@ -598,7 +642,14 @@ struct ExportPreviewView: View {
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
 
-        let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let frozenTimeZone = settings.exportTimeZoneOverride ?? .current
+        var frozenCalendar = Calendar(identifier: .gregorian)
+        frozenCalendar.timeZone = frozenTimeZone
+        let dates = ExportOrchestrator.dateRange(
+            from: startDate,
+            to: endDate,
+            calendar: frozenCalendar
+        )
         totalDateCount = dates.count
 
         guard settings.hasFileDestinationOutput,
@@ -762,7 +813,7 @@ struct ExportPreviewView: View {
                     records: rollupInputs,
                     settings: settings,
                     destination: apiDestination,
-                    calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+                    calendarTimeZone: frozenTimeZone,
                     connectedAppsEnabled: connectedAppsEnabled,
                     fetchExternalDailyRecords: fetchExternalDailyRecords
                 ) {
@@ -784,9 +835,37 @@ struct ExportPreviewView: View {
         }
 
         renderedDayPreviewCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
+        let requestedIdentifiers = Set(dates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+        })
+        let requestedRange: HealthRollupRangeRequest?
+        do {
+            requestedRange = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: requestedIdentifiers,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+        } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+            requestedRange = nil
+            if settings.generateRangeSummary {
+                warnings.append(ExportPartialFailure(
+                    date: dates.first ?? startDate,
+                    dataType: "Range Summary",
+                    dateRangeDescription: rangeDescription(
+                        dates: dates,
+                        timeZone: frozenTimeZone
+                    ),
+                    errorDescription: HealthRollupRangeRequest.dayLimitUnavailableMessage
+                ))
+            }
+        } catch {
+            requestedRange = nil
+        }
         let rollupSection = targetType == .apiEndpoint
             ? nil
-            : rollupSummaryPreviewSection(for: rollupInputs)
+            : requestedRange.flatMap { rollupSummaryPreviewSection(for: rollupInputs, requestedRange: $0) }
         if scope.includesSupplementalFiles, let rollupSection {
             built.insert(rollupSection, at: 0)
         }
@@ -866,11 +945,29 @@ struct ExportPreviewView: View {
         return ExportDataDictionarySizeEstimator.byteCount(using: settings.formatCustomization)
     }
 
-    private func rollupSummaryPreviewSection(for healthData: [HealthData]) -> DatePreview? {
+    private func rangeDescription(dates: [Date], timeZone: TimeZone) -> String {
+        let sorted = dates.sorted()
+        let firstDate = sorted.first ?? startDate
+        let lastDate = sorted.last ?? firstDate
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let first = formatter.string(from: firstDate)
+        let last = formatter.string(from: lastDate)
+        return first == last ? first : "\(first) – \(last)"
+    }
+
+    private func rollupSummaryPreviewSection(
+        for healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest
+    ) -> DatePreview? {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return nil }
 
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
+            requestedRange: requestedRange,
             settings: settings
         )
         guard !summaries.isEmpty else { return nil }
@@ -989,7 +1086,8 @@ struct ExportPreviewView: View {
             base: previewBase,
             settings: dailyNoteSettings,
             customization: settings.formatCustomization,
-            metricSelection: settings.metricSelection
+            metricSelection: settings.metricSelection,
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current
         )
 
         switch result {
@@ -1016,10 +1114,10 @@ struct ExportPreviewView: View {
             return .resolved(.emptyDocument)
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             return .unreadable(ExportError.accessDenied)
         }
-        defer { vaultManager.stopVaultAccess() }
+        defer { accessLease.stop() }
 
         if FileManager.default.fileExists(atPath: localURL.path) {
             do {
@@ -1038,14 +1136,16 @@ struct ExportPreviewView: View {
         return ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
     }
 
     private func dailyNoteFolderPath(for date: Date) -> String {
         let relativePath = ExportPathPlanner.dailyNoteRelativePath(
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         let folderComponents = relativePath.split(separator: "/").dropLast().map(String.init)
         var components: [String] = [destinationRootName ?? vaultManager.vaultName]

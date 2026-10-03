@@ -1073,6 +1073,109 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertEqual(fileSystem.files.count, 1)
     }
 
+    func testExportEntries_workoutRouteWritesSidecarAndFrontmatterReference() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let route = [
+            RoutePoint(timestamp: Self.testDate, latitude: 21.3069, longitude: -157.8583, altitudeMeters: 12, speedMps: 1.4, courseDegrees: 92, horizontalAccuracyMeters: 4.5),
+            RoutePoint(timestamp: Self.testDate.addingTimeInterval(5), latitude: 21.3071, longitude: -157.8581, altitudeMeters: nil, speedMps: nil, courseDegrees: nil, horizontalAccuracyMeters: nil)
+        ]
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [
+            WorkoutData(workoutType: .running, startTime: Self.testDate, duration: 1800, calories: 320.0, distance: 5000, route: route)
+        ]
+        let samples = exporter.extractIndividualSamples(from: data, settings: Self.workoutSettings)
+
+        let count = try exporter.exportIndividualEntries(
+            samples: samples,
+            to: tmpDir,
+            settings: Self.workoutSettings,
+            formatSettings: Self.formatSettings
+        )
+
+        XCTAssertEqual(count, 1)
+
+        let noteURLs = try filesIn(tmpDir).filter { $0.pathExtension == "md" }
+        XCTAssertEqual(noteURLs.count, 1)
+        let note = try String(contentsOf: noteURLs[0], encoding: .utf8)
+        XCTAssertTrue(note.contains("route_points: 2"), "Route point count missing: \(note)")
+        let sidecarName = noteURLs[0].deletingPathExtension().lastPathComponent + ".route.json"
+        XCTAssertTrue(note.contains("route_file: \"\(sidecarName)\""), "Route file reference missing: \(note)")
+
+        let sidecarURL = noteURLs[0].deletingLastPathComponent().appendingPathComponent(sidecarName)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: sidecarURL.path), "Sidecar missing at \(sidecarURL.path)")
+        let sidecar = try JSONSerialization.jsonObject(with: Data(contentsOf: sidecarURL)) as? [String: Any]
+        XCTAssertEqual(sidecar?["schema"] as? String, "healthmd.workout_route")
+        XCTAssertEqual(sidecar?["schema_version"] as? Int, 1)
+        XCTAssertEqual(sidecar?["point_count"] as? Int, 2)
+        let points = sidecar?["route"] as? [[String: Any]]
+        XCTAssertEqual(points?.count, 2)
+        XCTAssertEqual(points?.first?["latitude"] as? Double, 21.3069)
+        XCTAssertEqual(points?.first?["speedMps"] as? Double, 1.4)
+        XCTAssertNil(points?.last?["altitude"])
+    }
+
+    func testExportEntries_workoutWithoutRouteWritesNoSidecar() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [
+            WorkoutData(workoutType: .yoga, startTime: Self.testDate, duration: 3600, calories: nil, distance: nil)
+        ]
+        let samples = exporter.extractIndividualSamples(from: data, settings: Self.workoutSettings)
+
+        _ = try exporter.exportIndividualEntries(
+            samples: samples,
+            to: tmpDir,
+            settings: Self.workoutSettings,
+            formatSettings: Self.formatSettings
+        )
+
+        XCTAssertTrue(
+            try filesIn(tmpDir).filter { $0.lastPathComponent.hasSuffix(".route.json") }.isEmpty,
+            "Indoor/route-less workouts must not produce sidecar files"
+        )
+        let note = try String(contentsOf: try filesIn(tmpDir).filter { $0.pathExtension == "md" }[0], encoding: .utf8)
+        XCTAssertFalse(note.contains("route_file:"))
+        XCTAssertFalse(note.contains("route_points:"))
+    }
+
+    func testPreviewWorkoutEntryContent_omitsRouteFileReference() throws {
+        var data = HealthData(date: Self.testDate)
+        data.workouts = [
+            WorkoutData(
+                workoutType: .running,
+                startTime: Self.testDate,
+                duration: 1800,
+                calories: 320.0,
+                distance: 5000,
+                route: [
+                    RoutePoint(timestamp: Self.testDate, latitude: 1, longitude: 2, altitudeMeters: nil, speedMps: nil, courseDegrees: nil, horizontalAccuracyMeters: nil)
+                ]
+            )
+        ]
+        let sample = exporter.extractIndividualSamples(from: data, settings: Self.workoutSettings).first!
+        let content = exporter.previewEntryContent(for: sample, formatSettings: Self.formatSettings)
+
+        XCTAssertTrue(content.contains("route_points: 1"))
+        XCTAssertFalse(content.contains("route_file:"), "Preview has no sidecar filename to reference")
+    }
+
+    private func filesIn(_ root: URL) throws -> [URL] {
+        var results: [URL] = []
+        if let enumerator = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) {
+            for case let url as URL in enumerator where url.lastPathComponent != ".DS_Store" {
+                var isDir: ObjCBool = false
+                if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), !isDir.boolValue {
+                    results.append(url)
+                }
+            }
+        }
+        return results
+    }
+
     func testExportEntries_preservesBloodPressureReadingsWithinSameMinute() throws {
         let tmpDir = makeTempDir()
         defer { cleanup(tmpDir) }
@@ -1198,6 +1301,215 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertTrue(content.contains("source: \"Apple Watch\""))
     }
 
+    // MARK: - coverageGaps: lossless capture coverage
+
+    func testCoverageGaps_absentArchiveReturnsNoGaps() {
+        var data = HealthData(date: Self.testDate)
+        data.body.weight = 72.5
+        let selection = allEnabledSelection(excluding: [])
+        let gaps = exporter.coverageGaps(
+            emittedSamples: [],
+            from: data,
+            settings: Self.weightSettings,
+            metricSelection: selection
+        )
+        XCTAssertTrue(gaps.isEmpty)
+    }
+
+    func testCoverageGaps_successfulEmptyQueryIsNotAGap() {
+        // A successful query with zero records is a normal day without data,
+        // never a silent capture loss.
+        let data = healthDataWithArchive(
+            records: [],
+            queryResults: [makeQueryResult(
+                metricID: "weight",
+                objectTypeIdentifier: "HKQuantityTypeIdentifierBodyMass",
+                status: .success
+            )]
+        )
+        let selection = allEnabledSelection(excluding: [])
+        let gaps = exporter.coverageGaps(
+            emittedSamples: [],
+            from: data,
+            settings: Self.weightSettings,
+            metricSelection: selection
+        )
+        XCTAssertTrue(gaps.isEmpty)
+    }
+
+    func testCoverageGaps_trackedButUnselectedMetricIsReported() {
+        // The dominant silent failure: individual tracking is on, but the
+        // archive plan is built from the export selection, which never
+        // queried this metric.
+        let data = healthDataWithArchive(records: [], queryResults: [])
+        let selection = allEnabledSelection(excluding: ["weight"])
+        let gaps = exporter.coverageGaps(
+            emittedSamples: [],
+            from: data,
+            settings: Self.weightSettings,
+            metricSelection: selection
+        )
+        XCTAssertEqual(gaps.map(\.metricID), ["weight"])
+        XCTAssertEqual(gaps.first?.reason, .notSelectedForExport)
+    }
+
+    func testCoverageGaps_failedQueryIsReportedWithDetail() {
+        let data = healthDataWithArchive(
+            records: [],
+            queryResults: [makeQueryResult(
+                metricID: "weight",
+                objectTypeIdentifier: "HKQuantityTypeIdentifierBodyMass",
+                status: .failure,
+                error: HealthKitQueryError(
+                    domain: "HKErrorDomain",
+                    code: 3,
+                    description: "HealthKit is unavailable"
+                )
+            )]
+        )
+        let selection = allEnabledSelection(excluding: [])
+        let gaps = exporter.coverageGaps(
+            emittedSamples: [],
+            from: data,
+            settings: Self.weightSettings,
+            metricSelection: selection
+        )
+        XCTAssertEqual(gaps.map(\.metricID), ["weight"])
+        XCTAssertEqual(gaps.first?.reason, .queryFailed("HealthKit is unavailable"))
+    }
+
+    func testCoverageGaps_unsupportedQueryIsReported() {
+        let data = healthDataWithArchive(
+            records: [],
+            queryResults: [makeQueryResult(
+                metricID: "medications",
+                objectTypeIdentifier: "HKDataTypeIdentifierMedicationDoseEvent",
+                status: .skipped,
+                statusDescription: "Medication capture was skipped because the user has not opened Apple's per-object selector from Health.md."
+            )]
+        )
+        let gaps = exporter.coverageGaps(
+            emittedSamples: [],
+            from: data,
+            settings: Self.medicationsSettings,
+            metricSelection: allEnabledSelection(excluding: [])
+        )
+        XCTAssertEqual(gaps.map(\.metricID), ["medications"])
+        XCTAssertEqual(
+            gaps.first?.reason,
+            .queryUnavailable("Medication capture was skipped because the user has not opened Apple's per-object selector from Health.md.")
+        )
+    }
+
+    func testCoverageGaps_emittedSamplesCoverTheirMetrics() {
+        let record = canonicalRecord(
+            uuid: UUID(uuidString: "40000000-0000-0000-0000-000000000001")!,
+            metricID: "weight",
+            objectTypeIdentifier: HKQuantityTypeIdentifier.bodyMass.rawValue,
+            kind: .quantity,
+            payload: .quantity(.init(value: 72.5, unit: "kg")),
+            start: Self.testDate
+        )
+        let data = healthDataWithArchive(
+            records: [record],
+            queryResults: [makeQueryResult(
+                metricID: "weight",
+                objectTypeIdentifier: HKQuantityTypeIdentifier.bodyMass.rawValue,
+                status: .success
+            )]
+        )
+        let samples = exporter.extractIndividualSamples(from: data, settings: Self.weightSettings)
+        XCTAssertFalse(samples.isEmpty)
+        let gaps = exporter.coverageGaps(
+            emittedSamples: samples,
+            from: data,
+            settings: Self.weightSettings,
+            metricSelection: allEnabledSelection(excluding: [])
+        )
+        XCTAssertTrue(gaps.isEmpty)
+    }
+
+    func testCoverageGaps_bloodPressureUmbrellaCoversComponentMetrics() {
+        // The canonical correlation emits one umbrella "blood_pressure"
+        // sample; both tracked component metrics must count as covered.
+        let correlation = HealthKitRecord(
+            originalUUID: UUID(uuidString: "40000000-0000-0000-0000-000000000002")!,
+            objectTypeIdentifier: HKCorrelationTypeIdentifier.bloodPressure.rawValue,
+            recordKind: .correlation,
+            selectedMetricIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"],
+            includedBecause: .selectedMetric,
+            metricAttribution: HealthKitMetricAttribution(
+                directMetricIDs: ["blood_pressure_systolic", "blood_pressure_diastolic"]
+            ),
+            startDate: Self.testDate,
+            endDate: Self.testDate.addingTimeInterval(60),
+            sourceRevision: sourceRevisionFixture,
+            payload: .correlation(componentUUIDs: [])
+        )
+        let data = healthDataWithArchive(records: [correlation], queryResults: [])
+        let samples = exporter.extractIndividualSamples(from: data, settings: Self.bpSettings)
+        XCTAssertEqual(samples.map(\.metricId), ["blood_pressure"])
+        let gaps = exporter.coverageGaps(
+            emittedSamples: samples,
+            from: data,
+            settings: Self.bpSettings,
+            metricSelection: allEnabledSelection(excluding: [])
+        )
+        XCTAssertTrue(gaps.isEmpty)
+    }
+
+    func testCoverageGaps_ignoreMetricsUnavailableInCurrentBuild() {
+        var settings = IndividualTrackingSettings()
+        settings.globalEnabled = true
+        settings.setTrackIndividually("not_a_real_metric_id", enabled: true)
+        let data = healthDataWithArchive(records: [], queryResults: [])
+        let gaps = exporter.coverageGaps(
+            emittedSamples: [],
+            from: data,
+            settings: settings,
+            metricSelection: allEnabledSelection(excluding: [])
+        )
+        XCTAssertTrue(gaps.isEmpty)
+    }
+
+    private func allEnabledSelection(excluding excluded: Set<String>) -> MetricSelectionState {
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics = HealthMetrics.availableMetricIDsInCurrentBuild
+            .subtracting(excluded)
+        return selection
+    }
+
+    private var sourceRevisionFixture: HealthKitSourceRevision {
+        HealthKitSourceRevision(
+            name: "Fixture Watch",
+            bundleIdentifier: "com.example.health",
+            version: "1.2.3",
+            productType: "Watch7,5"
+        )
+    }
+
+    private func makeQueryResult(
+        metricID: String,
+        objectTypeIdentifier: String,
+        status: HealthKitQueryResultStatus,
+        error: HealthKitQueryError? = nil,
+        statusDescription: String? = nil
+    ) -> HealthKitQueryResult {
+        let dayStart = Calendar.current.startOfDay(for: Self.testDate)
+        return HealthKitQueryResult(
+            identifier: objectTypeIdentifier,
+            objectTypeIdentifier: objectTypeIdentifier,
+            operation: "sampleQuery",
+            metricIDs: [metricID],
+            interval: HealthKitQueryInterval(startDate: dayStart, endDate: dayStart.addingTimeInterval(86_400)),
+            status: status,
+            recordCount: 0,
+            error: error,
+            statusDescription: statusDescription
+        )
+    }
+
     // MARK: - Helpers
 
     private func canonicalRecord(
@@ -1234,7 +1546,10 @@ final class IndividualEntryExporterTests: XCTestCase {
         )
     }
 
-    private func healthDataWithArchive(records: [HealthKitRecord]) -> HealthData {
+    private func healthDataWithArchive(
+        records: [HealthKitRecord],
+        queryResults: [HealthKitQueryResult] = []
+    ) -> HealthData {
         let dayStart = Calendar.current.startOfDay(for: Self.testDate)
         let archive = HealthKitRecordArchive(
             captureStatus: .complete,
@@ -1244,7 +1559,8 @@ final class IndividualEntryExporterTests: XCTestCase {
                 intervalEnd: dayStart.addingTimeInterval(86_400),
                 calendarTimeZoneIdentifier: TimeZone.current.identifier
             ),
-            records: records
+            records: records,
+            queryManifest: HealthKitQueryManifest(results: queryResults)
         )
         return HealthData(date: dayStart, healthKitRecordArchive: archive)
     }

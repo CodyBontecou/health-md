@@ -20,10 +20,10 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>미리보기 · 이식 가능한 직접 MCP</strong>
-<p>macOS, Linux 및 Windows용 별도의 19개 도구 <code>healthmd mcp serve</code> 토폴로지가 구현되었지만 아직 공개 패키지로 제공되지 않습니다. 클라우드가 필요 없는 <code>serve-read-only</code> 진입점은 로컬 페어링 후 준비 상태/쿼리 도구 13개만 제공합니다. 이 페이지의 이식 가능한 버전 전용 명령은 미리보기로 표시됩니다.</p>
+<p>macOS, Linux 및 Windows용 별도 <code>healthmd mcp serve</code> 토폴로지는 19개 도구의 미인증 미리보기 <code>0.1.0-alpha.7</code>로 게시되어 있습니다. 클라우드가 필요 없는 <code>serve-read-only</code> 진입점은 로컬 페어링 후 준비 상태/쿼리 도구 13개만 제공합니다. macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 설치합니다.</p>
 </div>
 
-## 요구 사항
+## 번들 Mac 요구 사항
 
 - 설치되어 열려 있는 Mac용 Health.md
 - 업데이트 도구나 내보내기가 새 HealthKit 작업을 시작할 때 연결된 iPhone에서 열려 있는 Health.md
@@ -31,6 +31,14 @@ Codex / Claude / another local MCP host
 - **Mac용 Health.md → CLI**에 표시되는 서명된 도우미 경로
 
 일반 도우미 경로는 `/Applications/Health.md.app/Contents/Helpers/healthmd-mcp`입니다. 지원되는 핵심 MCP 프로토콜 버전은 `2024-11-05`, `2025-03-26`, `2025-06-18` 및 `2025-11-25`입니다. `healthmd-mcp`를 일반 대화형 명령으로 실행하지 마세요. MCP 호스트가 stdin과 프로세스 수명 주기를 관리합니다.
+
+## 이식 가능한 직접 연결 요구 사항
+
+- macOS, Linux 또는 Windows에 독립 실행형 미리보기를 설치합니다. Mac 앱과 루프백 서비스는 필요하지 않습니다.
+- 쿼리 지원 iPhone과 한 번 페어링하고 새 타입 지정 요청마다 Health.md를 포그라운드에 유지합니다. Android 타입 지정 MCP는 지원되지 않습니다.
+- MCP 페어링 도구는 iPhone만 등록합니다. Android는 MCP 시작 전에 CLI에서 명시적으로 페어링합니다.
+- Manual IP 또는 Tailscale 연결과 운영체제 자격 증명 저장소를 사용합니다. Linux에는 잠금 해제된 Secret Service 제공자가 필요합니다.
+- 설치된 호환성 실행기 또는 동일 바이너리 stdio 서버를 구성합니다. 둘 다 페어링된 직접 백엔드를 사용합니다.
 
 ## Codex 설정
 
@@ -77,9 +85,9 @@ Claude Desktop의 MCP 구성 또는 신뢰할 수 있는 Claude Code `.mcp.json`
 
 ## 이식 가능한 직접 MCP 미리보기
 
-독립 실행형 출시 후 `healthmd setup codex`는 포그라운드 iPhone을 페어링하고 동일 바이너리의 `healthmd mcp serve` 항목을 안전하게 만듭니다. 이 토폴로지는 포트 `17647`의 인증되고 암호화된 수동 IP 또는 Tailscale 전송, 네이티브 자격 증명 저장소 및 요청별 명시적 iPhone 읽기를 사용합니다. Linux에는 잠금 해제된 Secret Service 제공자가 추가로 필요하며 Windows는 Credential Manager를 사용합니다.
+공개 독립 실행형 미리보기에서 `healthmd setup codex`는 포그라운드 iPhone을 페어링하고 동일 바이너리의 `healthmd mcp serve` 항목을 안전하게 만듭니다. 이 토폴로지는 포트 `17647`의 인증되고 암호화된 수동 IP 또는 Tailscale 전송, 네이티브 자격 증명 저장소 및 요청별 명시적 iPhone 읽기를 사용합니다. Linux에는 잠금 해제된 Secret Service 제공자가 추가로 필요하며 Windows는 Credential Manager를 사용합니다.
 
-`healthmd-cli/v<version>` 출시 전에는 공개되지 않은 패키지 또는 설치 프로그램 URL에 의존하지 마세요. 준비된 페어링 및 전송 계약은 [직접 iPhone CLI](/ko/docs/cli-direct/)를 참조하세요.
+저장소 전체의 최신 릴리스 포인터 대신 정확한 `healthmd-cli/v<version>` 시험판을 사용하세요. 명시적으로 검증되지 않은 페어링 및 전송 계약은 [직접 iPhone CLI](/ko/docs/cli-direct/)를 참조하세요.
 
 ## 네이티브 MCP App 시각화
 
@@ -108,7 +116,7 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 
 ## 사용 가능한 도구
 
-번들 Mac 서버는 준비 상태/쿼리 도구 13개, 생성 파일 작업 도구 4개, 암호화 컨텍스트 업데이트 작업 도구 4개로 구성된 고정 도구 21개를 제공합니다. 19개 도구의 이식 가능한 미리보기는 준비 상태/쿼리 도구 13개와 내보내기 도구 4개를 유지하고, Mac 업데이트 작업을 직접 페어링 도구 2개로 대체하며, 포그라운드 iPhone에서 타입 지정 쿼리를 직접 실행합니다.
+번들 Mac 서버는 준비 상태/쿼리 13개, 생성 파일 4개, 암호화 컨텍스트 업데이트 4개로 고정 도구 21개를 제공합니다. 게시된 이식형 미리보기 `0.1.0-alpha.7`은 19개 도구입니다. 현재 개발 소스는 전체 데이터와 제한된 아티팩트 읽기를 더해 21개지만, 이후 릴리스 전에는 그 두 도구를 전제로 삼지 마세요.
 
 ### 준비 상태 및 검색
 
@@ -137,10 +145,16 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 
 | 도구 | 목적 |
 |---|---|
-| `healthmd_export_files` | Mac 앱을 통해 선택한 폴더에 영속 내보내기 실행 |
+| `healthmd_export_files` | 영속 파일 내보내기 실행. 번들 Mac은 선택된 폴더를 사용하고 휴대용 Direct MCP는 명시적인 컴퓨터 대상을 요구 |
 | `healthmd_export_job_status` | 내보내기 진행 상황 및 대상 수신 확인 검토 |
 | `healthmd_export_job_resume` | 정확하고 변경 불가능한 영속 내보내기 작업 재개 |
 | `healthmd_export_job_cancel` | 내보내기 작업 명시적 취소 |
+### 전체 원시 코퍼스 액세스 · 휴대용 로컬 MCP 전용
+
+| 도구 | 목적 |
+|---|---|
+| `healthmd_export_raw` | 명시적 승인 후 iPhone 또는 Android에서 내구성 있는 원시 코퍼스 내보내기 시작 |
+| `healthmd_raw_artifact_read` | 검증되고 작업에 바인딩된 아티팩트를 제한된 청크로 읽기 |
 
 내보내기, 재개 및 취소 도구는 잠재적으로 파괴적인 쓰기로 표시되며 현재 Claude 호스트에서 명시적 상호 작용이 필요합니다. 구성된 내보내기 모드가 생성 파일을 업데이트하거나 덮어쓸 수 있기 때문입니다. 위 Codex 구성은 추가 보호 수단으로 해당 도구에서 확인을 요청합니다.
 
@@ -230,6 +244,34 @@ healthmd mcp schema # complete fixed catalog
 ```
 
 전체 기록에는 `date_selection: "all_available"`을 사용하고 `date_range`는 생략하세요. 선택적 `metric_ids`, `categories` 또는 `all_metrics`는 저장된 설정을 변경하지 않고 iPhone 가져오기를 좁힙니다. `detail_level`은 이러한 선택 중 하나가 있을 때만 적용됩니다. `all_metrics`는 명시적 측정 항목/카테고리 목록과 함께 사용할 수 없습니다.
+
+저장된 프로필을 실행하려면 `settings_policy`를 `"profile"`로 설정하고 안정적인 UUID가 담긴 `profile_reference`를 전달하세요. 공개 프로토콜에서 선택적 `name`은 표시 및 오류 컨텍스트입니다. 현재 휴대전화 구현은 ID를 찾지 못한 뒤 이름을 참조할 수 있지만 이 동작은 이름 변경에 안전하지 않습니다. 자동화에서는 UUID를 안정적인 식별자로 취급해야 합니다.
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+프로필이 설정 범위를 소유합니다: `profile_reference`는 `metric_ids`, `categories`, `all_metrics` 또는 저장된 설정 정책과 결합할 수 없으며, 확인할 수 없는 참조는 현재 설정으로 대체되지 않고 형식화된 오류로 실패합니다.
+
+위 예시는 번들 Mac 대상을 사용합니다. 휴대용 Direct MCP에서는 모든 생성 파일 요청의 `destination`에 기존 절대 컴퓨터 폴더도 지정해야 합니다. 휴대전화 프로필은 출력 설정만 제공하며 호스트 경로를 제공하지 않습니다.
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" },
+  "destination": "/absolute/existing/HealthVault",
+  "wait_timeout_seconds": 300
+}
+```
+
+대상이 없거나 상대 경로이거나 존재하지 않거나 심볼릭 링크이면 휴대용 Direct MCP는 휴대전화 작업을 시작하기 전에 거부합니다.
 
 다음을 확인하세요.
 

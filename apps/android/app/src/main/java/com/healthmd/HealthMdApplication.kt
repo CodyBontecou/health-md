@@ -8,9 +8,8 @@ import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.healthmd.R
-import com.healthmd.data.attribution.CampaignAttributionInitializer
 import com.healthmd.data.export.ExportAwakeCoordinator
-import com.healthmd.data.onboardinganalytics.OnboardingAnalyticsInitializer
+import com.healthmd.distribution.DistributionRuntime
 import com.healthmd.data.scheduler.ExportWorker
 import com.healthmd.direct.DirectCliForegroundService
 import com.healthmd.direct.DirectCliJobStore
@@ -36,10 +35,7 @@ class HealthMdApplication : Application(), Configuration.Provider {
     lateinit var workerFactory: HiltWorkerFactory
 
     @Inject
-    lateinit var campaignAttributionInitializer: CampaignAttributionInitializer
-
-    @Inject
-    lateinit var onboardingAnalyticsInitializer: OnboardingAnalyticsInitializer
+    lateinit var distributionRuntime: DistributionRuntime
 
     @Inject
     lateinit var directCliJobStore: DirectCliJobStore
@@ -57,8 +53,7 @@ class HealthMdApplication : Application(), Configuration.Provider {
         initializeLogging()
         ExportAwakeCoordinator.shared.initialize(this)
         createNotificationChannels()
-        campaignAttributionInitializer.start()
-        onboardingAnalyticsInitializer.start()
+        distributionRuntime.initialize()
         directCliJobStore.sweepExpired()
     }
 

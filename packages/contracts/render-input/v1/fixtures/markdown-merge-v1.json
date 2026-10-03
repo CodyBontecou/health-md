@@ -1,0 +1,87 @@
+{
+  "schema": "healthmd.markdown_merge_vectors",
+  "schema_version": 1,
+  "render_profile_revision": 2,
+  "vectors": [
+    {
+      "id": "issue-95-indentation-list",
+      "existing": "---\ndate: 2026-08-03\ntags:\n  - daily-notes\n---\nUser body without final newline",
+      "generated": "---\ndate: 2026-07-30\nsteps: 2119\n---\n",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\ndate: 2026-07-30\ntags:\n  - daily-notes\nsteps: 2119\n---\nUser body without final newline"
+    },
+    {
+      "id": "multiline-double-quoted-scalar",
+      "existing": "---\nnotes: \"first\nsteps: literal\"\nkeep: unchanged\n---\nBody",
+      "generated": "---\nsteps: 42\n---\n",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\nnotes: \"first\nsteps: literal\"\nkeep: unchanged\nsteps: 42\n---\nBody"
+    },
+    {
+      "id": "multiline-single-quoted-scalar",
+      "existing": "---\nnotes: 'first\nsteps: literal''s value'\nkeep: unchanged\n---\nBody",
+      "generated": "---\nsteps: 42\n---\n",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\nnotes: 'first\nsteps: literal''s value'\nkeep: unchanged\nsteps: 42\n---\nBody"
+    },
+    {
+      "id": "typed-plain-keys-do-not-collide-with-quoted-strings",
+      "existing": "---\n\"true\": keep-string\ntrue: replace-bool\n\"1\": keep-string-one\n1: replace-int\nkeep: unchanged\n---\n",
+      "generated": "---\ntrue: updated-bool\n1: updated-int\n---\n",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\n\"true\": keep-string\ntrue: updated-bool\n\"1\": keep-string-one\n1: updated-int\nkeep: unchanged\n---\n"
+    },
+    {
+      "id": "yaml-1-1-booleans-and-string-looking-keys",
+      "existing": "---\n\"y\": keep-string-y\ny: replace-bool-y\n\"n\": keep-string-n\nn: replace-bool-n\n\"_1\": replace-string\n\"1e1_0\": replace-string-exponent\n1e1_0: replace-plain-string-exponent\n\"1e10\": keep-string-numeric-exponent\n1e10: replace-numeric-exponent\n---\n",
+      "generated": "---\ny: updated-bool-y\nn: updated-bool-n\n_1: updated-string\n1e1_0: updated-string-exponent\n1e10: updated-numeric-exponent\n---\n",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\n\"y\": keep-string-y\ny: updated-bool-y\n\"n\": keep-string-n\nn: updated-bool-n\n_1: updated-string\n1e1_0: updated-string-exponent\n\"1e10\": keep-string-numeric-exponent\n1e10: updated-numeric-exponent\n---\n"
+    },
+    {
+      "id": "null-numeric-and-timestamp-key-domains",
+      "existing": "---\n\"null\": keep-string-null\nnull: replace-null\n\"01\": keep-string-leading-zero\n01: replace-leading-zero\n\"2026-01-01\": keep-string-date\n2026-01-01: replace-date\n---\n",
+      "generated": "---\nnull: updated-null\n01: updated-leading-zero\n2026-01-01: updated-date\n---\n",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\n\"null\": keep-string-null\nnull: updated-null\n\"01\": keep-string-leading-zero\n01: updated-leading-zero\n\"2026-01-01\": keep-string-date\n2026-01-01: updated-date\n---\n"
+    },
+    {
+      "id": "quoted-string-key-does-not-collide-with-typed-plain-key",
+      "existing": "---\n\"true\": replace-string\ntrue: keep-bool\nkeep: unchanged\n---\n",
+      "generated": "---\n\"true\": updated-string\n---\n",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\n\"true\": updated-string\ntrue: keep-bool\nkeep: unchanged\n---\n"
+    },
+    {
+      "id": "ordinary-update-uses-generated-preamble",
+      "existing": "---\nuser: keep\n---\nExisting intro\n## Sleep\nold\n## Notes\nkeep\n",
+      "generated": "---\nsteps: 42\n---\nGenerated intro\n## Sleep\nnew\n",
+      "preserve_preamble": false,
+      "outcome": "merged",
+      "expected": "---\nuser: keep\nsteps: 42\n---\nGenerated intro\n## Sleep\nnew\n## Notes\nkeep\n"
+    },
+    {
+      "id": "unsupported-complex-key-rejects",
+      "existing": "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\nBody",
+      "generated": "---\nsteps: 300\n---\n",
+      "preserve_preamble": true,
+      "outcome": "rejected",
+      "expected": null
+    },
+    {
+      "id": "crlf-and-eof-boundary",
+      "existing": "---\r\nuser: keep\r\n---",
+      "generated": "## Sleep\nfresh",
+      "preserve_preamble": true,
+      "outcome": "merged",
+      "expected": "---\r\nuser: keep\r\n---\r\n## Sleep\nfresh"
+    }
+  ]
+}

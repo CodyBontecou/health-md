@@ -132,9 +132,11 @@ struct iPadScheduleView: View {
                 }
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 if schedulingManager.schedule.isEnabled {
                     scheduledDestinationSection
+                        .configurationChangesProtected()
 
                     VStack(alignment: .leading, spacing: Spacing.s3) {
                         iPadBrandLabel("Configuration")
@@ -236,6 +238,7 @@ struct iPadScheduleView: View {
                     }
                     .padding(Spacing.s4)
                     .iPadLiquidGlass()
+                    .configurationChangesProtected()
 
                     VStack(alignment: .leading, spacing: Spacing.s3) {
                         HStack(spacing: Spacing.s2) {
@@ -264,6 +267,7 @@ struct iPadScheduleView: View {
                             }
                         ))
                         .tint(Color.accent)
+                        .configurationChangesProtected()
 
                         if schedulingManager.schedule.todayRefreshEnabled {
                             Picker("Refresh interval", selection: Binding(
@@ -279,6 +283,7 @@ struct iPadScheduleView: View {
                                 }
                             }
                             .pickerStyle(.segmented)
+                            .configurationChangesProtected()
 
                             VStack(alignment: .leading, spacing: Spacing.s2) {
                                 VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -297,6 +302,7 @@ struct iPadScheduleView: View {
                                     }
                                 }
                                 .pickerStyle(.segmented)
+                                .configurationChangesProtected()
                             }
                         }
                     }
@@ -344,11 +350,12 @@ struct iPadScheduleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Today Refresh", isPresented: $showTodayRefreshInfo) {
-            Button("Got it", role: .cancel) {}
-        } message: {
-            Text(todayRefreshInfoMessage)
-        }
+        .geistDialog(
+            isPresented: $showTodayRefreshInfo,
+            title: Text("Today Refresh"),
+            message: Text(todayRefreshInfoMessage),
+            actions: [.action("Got it", role: .secondary)]
+        )
     }
 
     private var preferredTimeText: String {
@@ -380,7 +387,7 @@ struct iPadScheduleView: View {
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
@@ -451,7 +458,10 @@ struct iPadScheduleView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }

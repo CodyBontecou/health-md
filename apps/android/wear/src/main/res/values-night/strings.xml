@@ -1,0 +1,3 @@
+<resources>
+    <!-- Wear OS inherits the app's supported locale set. English fallback remains available while translations are reviewed. -->
+</resources>

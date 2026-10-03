@@ -13,6 +13,14 @@ struct ExportHealthDataForDateIntent: AppIntent {
 
     static var openAppWhenRun: Bool = false
 
+    /// Optional export profile name (trimmed, case-insensitive). Empty uses
+    /// the active profile once profiles exist.
+    @Parameter(
+        title: "Profile",
+        description: "Name of the export profile to run. Leave empty to use the active profile."
+    )
+    var profile: String?
+
     @Parameter(
         title: "Date",
         description: "The day to export. Time-of-day is ignored."
@@ -26,7 +34,7 @@ struct ExportHealthDataForDateIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let day = Calendar.current.startOfDay(for: date)
-        let outcome = await ExportIntentRunner.run(dates: [day])
+        let outcome = await ExportIntentRunner.run(dates: [day], profileName: profile)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }
 }

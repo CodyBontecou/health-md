@@ -14,6 +14,7 @@ extension ExportHistoryEntry: Hashable {
 // MARK: - iPad History View (matching macOS MacHistoryView)
 
 struct iPadHistoryView: View {
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @ObservedObject private var historyManager = ExportHistoryManager.shared
     @State private var selectedEntry: ExportHistoryEntry?
 
@@ -93,8 +94,10 @@ struct iPadHistoryView: View {
             if !historyManager.history.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear History", role: .destructive) {
-                        selectedEntry = nil
-                        historyManager.clearHistory()
+                        configurationProtection.performConfigurationChange {
+                            selectedEntry = nil
+                            historyManager.clearHistory()
+                        }
                     }
                     .tint(Color.error)
                 }
@@ -232,15 +235,25 @@ struct iPadHistoryView: View {
 
                     if !entry.partialFailures.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
-                            iPadBrandLabel("Partial Export Warnings")
+                            // Informational omissions (for example an optional
+                            // WorkoutKit plan this device cannot decode) do not
+                            // reduce the export below full success, so the
+                            // section reads as notes rather than warnings.
+                            iPadBrandLabel(entry.isFullSuccess ? "Export Notes" : "Partial Export Warnings")
                             ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
                                 HStack(alignment: .top, spacing: 6) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .foregroundStyle(Color.warning)
+                                    Image(systemName: failure.isInformational == true
+                                        ? "info.circle"
+                                        : "exclamationmark.triangle.fill")
+                                        .foregroundStyle(failure.isInformational == true
+                                            ? Color.textSecondary
+                                            : Color.warning)
                                         .font(Typography.caption())
                                     Text(failure.summary)
                                         .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .textSelection(.enabled)
                                 }
                             }
                         }

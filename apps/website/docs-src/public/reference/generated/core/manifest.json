@@ -22,9 +22,9 @@
       "sha256" : "cc4af5712c431922533bba1907ff0864a03907504b693a4936f7e350df66100c"
     },
     {
-      "bytes" : 246039,
+      "bytes" : 222265,
       "path" : "data-dictionary.json",
-      "sha256" : "53ed0dd9d6a7cf8731f79aee7a717b324c25ecd23bb2c6538218589d1f94b6dc"
+      "sha256" : "1dfcfc07801878319500cc26b9ca7f03f00d4f50e378bb3eb483bf6c753d04fd"
     },
     {
       "bytes" : 15628,

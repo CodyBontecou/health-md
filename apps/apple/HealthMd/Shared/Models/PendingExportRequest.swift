@@ -7,7 +7,12 @@ enum PendingExportSource: String, Codable, Equatable {
 
 struct PendingExportRequest: Codable, Equatable, Identifiable {
     let id: UUID
-    let dates: [Date]
+    /// Residual dates still requiring daily work.
+    private(set) var dates: [Date]
+    /// Immutable original owner-date request used to overwrite/regenerate the same range summary.
+    let originalRequestedDates: [Date]
+    /// Frozen calendar authority for the original request. Nil identifies a legacy request.
+    let originalCalendarTimeZoneIdentifier: String?
     let source: PendingExportSource
     let scheduledFireDate: Date?
     let scheduledKind: ScheduledExportKind
@@ -20,12 +25,47 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// Frozen output-affecting settings for durable scheduled work. A missing snapshot identifies
     /// an explicitly legacy request that continues to read mutable settings at execution time.
     let settingsSnapshot: ExportSettingsSnapshot?
+    /// Export profile this scheduled request runs (phase 3). Per-profile
+    /// in-flight identity: two profiles' pending requests never deduplicate
+    /// each other. Nil identifies legacy profile-free requests.
+    let profileID: UUID?
+    /// Display name captured at queue time for notifications and history
+    /// labels. Not used for resolution — `profileID` is authoritative.
+    let profileName: String?
+    /// When a scheduled run attempted this request and preserved unresolved
+    /// dates for retry. An attempted request is a preserved retry: bulk
+    /// fallback re-arm cancellation must never delete it (only its exact-ID
+    /// completion/discard paths may). Nil means the request was armed as a
+    /// not-yet-fired fallback and never ran.
+    private(set) var attemptedAt: Date?
+
+    /// Copy with `attemptedAt` set, preserving the already-normalized dates
+    /// exactly. The designated initializer re-normalizes through its calendar
+    /// and would shift dates captured under a different timezone.
+    func markingAttempted(at timestamp: Date) -> PendingExportRequest {
+        replacingResidualDates(dates, attemptedAt: timestamp)
+    }
+
+    /// Copy with reduced residual work while preserving the immutable original
+    /// owner-date instants byte-for-byte. Callers must compute `dates` with the
+    /// request's frozen timezone authority before using this method.
+    func replacingResidualDates(
+        _ dates: [Date],
+        attemptedAt timestamp: Date
+    ) -> PendingExportRequest {
+        var copy = self
+        copy.dates = dates
+        copy.attemptedAt = timestamp
+        return copy
+    }
 
     var usesLegacyMutableSettings: Bool { settingsSnapshot == nil }
 
     init(
         id: UUID = UUID(),
         dates: [Date],
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         source: PendingExportSource,
         scheduledFireDate: Date? = nil,
         scheduledKind: ScheduledExportKind = .completedDay,
@@ -33,10 +73,24 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         notificationMetadata: [String: String] = [:],
         exportTarget: ExportTargetSelection? = nil,
         settingsSnapshot: ExportSettingsSnapshot? = nil,
+        profileID: UUID? = nil,
+        profileName: String? = nil,
+        attemptedAt: Date? = nil,
         calendar: Calendar = .current
     ) {
         self.id = id
         self.dates = Self.normalizedDates(dates, calendar: calendar)
+        let frozenOriginalTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
+            ?? settingsSnapshot?.calendarTimeZoneIdentifier
+            ?? calendar.timeZone.identifier
+        var originalCalendar = Calendar(identifier: .gregorian)
+        originalCalendar.timeZone = TimeZone(identifier: frozenOriginalTimeZoneIdentifier)
+            ?? calendar.timeZone
+        self.originalRequestedDates = Self.normalizedDates(
+            originalRequestedDates ?? dates,
+            calendar: originalCalendar
+        )
+        self.originalCalendarTimeZoneIdentifier = frozenOriginalTimeZoneIdentifier
         self.source = source
         self.scheduledFireDate = scheduledFireDate
         self.scheduledKind = source == .scheduled ? scheduledKind : .completedDay
@@ -44,12 +98,19 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.notificationMetadata = notificationMetadata
         self.exportTarget = source == .scheduled ? exportTarget : nil
         self.settingsSnapshot = settingsSnapshot
+        self.profileID = source == .scheduled ? profileID : nil
+        self.profileName = source == .scheduled ? profileName : nil
+        self.attemptedAt = source == .scheduled ? attemptedAt : nil
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         dates = try container.decode([Date].self, forKey: .dates)
+        originalRequestedDates = try container.decodeIfPresent(
+            [Date].self,
+            forKey: .originalRequestedDates
+        ) ?? dates
         source = try container.decode(PendingExportSource.self, forKey: .source)
         scheduledFireDate = try container.decodeIfPresent(Date.self, forKey: .scheduledFireDate)
         scheduledKind = source == .scheduled
@@ -65,7 +126,19 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
             ExportSettingsSnapshot.self,
             forKey: .settingsSnapshot
         )
+        originalCalendarTimeZoneIdentifier = try container.decodeIfPresent(
+            String.self,
+            forKey: .originalCalendarTimeZoneIdentifier
+        ) ?? settingsSnapshot?.calendarTimeZoneIdentifier
+        // Phase-3 identity is additive: legacy persisted requests decode as
+        // profile-free and keep their legacy execution path.
+        profileID = try container.decodeIfPresent(UUID.self, forKey: .profileID)
+        profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
+        // Pre-marker persisted requests decode as never-attempted; the
+        // fallback-window heuristic covers those during migration.
+        attemptedAt = try container.decodeIfPresent(Date.self, forKey: .attemptedAt)
     }
+
 
     private static func normalizedDates(_ dates: [Date], calendar: Calendar = .current) -> [Date] {
         let startOfDays = dates.map { calendar.startOfDay(for: $0) }
@@ -134,10 +207,15 @@ struct PendingExportStore: PendingExportStoring {
             return existing.dates == request.dates
         }
 
+        // Per-profile replacement identity: two profiles (or a profile and
+        // the legacy schedule) firing at the same minute must never clobber
+        // each other's stored request or preserved retry — the stable-ID
+        // notification of a clobbered request would become a dead tap.
         return existing.source == .scheduled
             && request.source == .scheduled
             && existing.scheduledFireDate == request.scheduledFireDate
             && existing.scheduledKind == request.scheduledKind
+            && existing.profileID == request.profileID
             && request.scheduledFireDate != nil
     }
 

@@ -17,6 +17,7 @@ use healthmd_protocol::{
     },
 };
 use tokio::{net::TcpListener, time::Instant};
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::{
@@ -37,6 +38,100 @@ use crate::{
 
 const MAXIMUM_AUTHENTICATION_ATTEMPTS: usize = 8;
 const MAXIMUM_REQUEST_CLOCK_SKEW: chrono::Duration = chrono::Duration::minutes(5);
+const WAKE_INITIAL_BACKOFF: Duration = Duration::from_millis(250);
+const WAKE_MAXIMUM_BACKOFF: Duration = Duration::from_secs(2);
+const WAKE_PROGRESS_INTERVAL: Duration = Duration::from_secs(10);
+
+pub const DEFAULT_WAKE_TIMEOUT_SECONDS: u64 = 120;
+pub const MAXIMUM_WAKE_TIMEOUT_SECONDS: u64 = 3_600;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct WakeWindow {
+    timeout: Duration,
+}
+
+/// The RFC-0005 wake enrollment truth for one selected paired device.
+///
+/// [`WakeEnrollment::Enrolled`] means a stored wake credential exists for the selected device, so
+/// a wait can fire the best-effort push nudge. [`WakeEnrollment::WaitOnly`] is the honest report
+/// when no credential exists (or no single device is selected): waits degrade to P1 wait-only.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WakeEnrollment {
+    /// A stored wake credential exists for the selected device (P2 push wake can fire).
+    Enrolled,
+    /// No stored credential exists for the selected device; waits stay wait-only (P1).
+    WaitOnly,
+}
+
+impl WakeEnrollment {
+    #[must_use]
+    pub const fn state(self) -> &'static str {
+        match self {
+            Self::Enrolled => "available",
+            Self::WaitOnly => "unavailable",
+        }
+    }
+
+    #[must_use]
+    pub const fn mode(self) -> &'static str {
+        match self {
+            Self::Enrolled => "enrolled",
+            Self::WaitOnly => "wait_only",
+        }
+    }
+}
+
+impl WakeWindow {
+    #[must_use]
+    pub const fn from_seconds(timeout_seconds: u64) -> Self {
+        Self {
+            timeout: Duration::from_secs(timeout_seconds),
+        }
+    }
+
+    #[must_use]
+    pub const fn timeout(self) -> Duration {
+        self.timeout
+    }
+
+    #[must_use]
+    pub const fn timeout_seconds(self) -> u64 {
+        self.timeout.as_secs()
+    }
+
+    #[must_use]
+    pub const fn enabled(self) -> bool {
+        !self.timeout.is_zero()
+    }
+
+    /// Serialize the shared wake-window status object with the enrollment truth for the
+    /// selected device. This is the single implementation behind both the CLI `wake_window`
+    /// object and the MCP `wake` object (RFC-0005 decision 2).
+    #[must_use]
+    pub fn status_value(self, enrollment: WakeEnrollment) -> serde_json::Value {
+        serde_json::json!({
+            "enabled": self.enabled(),
+            "timeout_seconds": self.timeout_seconds(),
+            "enrollment": {
+                "state": enrollment.state(),
+                "mode": enrollment.mode()
+            }
+        })
+    }
+}
+
+impl Default for WakeWindow {
+    fn default() -> Self {
+        Self::from_seconds(DEFAULT_WAKE_TIMEOUT_SECONDS)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WakeProgress {
+    pub elapsed_seconds: u64,
+    pub timeout_seconds: u64,
+    pub message: &'static str,
+}
 
 struct TrustLease {
     _file: fs::File,
@@ -102,6 +197,24 @@ pub struct AndroidExportResult {
 pub struct QueryResult {
     pub response: serde_json::Value,
     pub port: u16,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RawArtifactPlatform {
+    Ios,
+    Android,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DurableRawArtifact {
+    pub path: std::path::PathBuf,
+    pub platform: RawArtifactPlatform,
+    pub format: &'static str,
+    pub profile: String,
+    pub provider_id: Option<String>,
+    pub status: String,
+    pub byte_count: u64,
+    pub sha256: String,
 }
 
 pub struct DirectClient<C = OsCredentialStore> {
@@ -214,8 +327,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// incompatible source, or unavailable secure storage.
     pub async fn pair<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         on_listening: F,
@@ -224,8 +337,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         F: FnOnce(u16),
     {
         self.pair_expected_source(
-            ios_pairing_code,
-            android_pairing_code,
+            legacy_apple_pairing_code,
+            shared_pairing_code,
             port,
             timeout,
             None,
@@ -245,8 +358,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// [`Self::pair`], plus an authentication error when the peer is not an iPhone.
     pub async fn pair_ios<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         on_listening: F,
@@ -255,8 +368,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         F: FnOnce(u16),
     {
         self.pair_expected_source(
-            ios_pairing_code,
-            android_pairing_code,
+            legacy_apple_pairing_code,
+            shared_pairing_code,
             port,
             timeout,
             Some(SourceKind::Ios),
@@ -277,8 +390,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// plus the bounded errors documented by [`Self::pair_ios`].
     pub async fn pair_first_ios<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         on_listening: F,
@@ -287,8 +400,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         F: FnOnce(u16),
     {
         self.pair_expected_source(
-            ios_pairing_code,
-            android_pairing_code,
+            legacy_apple_pairing_code,
+            shared_pairing_code,
             port,
             timeout,
             Some(SourceKind::Ios),
@@ -301,8 +414,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     #[allow(clippy::too_many_arguments)]
     async fn pair_expected_source<F>(
         &self,
-        ios_pairing_code: &str,
-        android_pairing_code: &str,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
         port: u16,
         timeout: Duration,
         expected_source: Option<SourceKind>,
@@ -312,11 +425,11 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     where
         F: FnOnce(u16),
     {
-        let ios_code = crate::handshake::normalize_pairing_code(ios_pairing_code);
-        let android_code = crate::handshake::normalize_pairing_code(android_pairing_code);
-        if ios_code.len() != 6 || android_code.len() != 20 {
+        let legacy_apple_code = crate::handshake::normalize_pairing_code(legacy_apple_pairing_code);
+        let shared_code = crate::handshake::normalize_pairing_code(shared_pairing_code);
+        if legacy_apple_code.len() != 6 || shared_code.len() != 20 {
             return Err(ClientError::Authentication(
-                "iOS pairing requires 6 digits and Android pairing requires 20 digits".into(),
+                "shared pairing requires 20 digits; legacy Apple v1 requires 6 digits".into(),
             ));
         }
         let listener = bind_listener(port).await?;
@@ -325,7 +438,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let mut connection = self
             .accept_compatible_with_policy(
                 &listener,
-                Some((&ios_code, &android_code)),
+                Some((&legacy_apple_code, &shared_code)),
                 None,
                 timeout,
                 new_pairing_policy,
@@ -334,7 +447,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let device_id = connection.device.installation_id.0;
         let was_new_pairing = connection.was_new_pairing;
         let result = async {
-            let peer =
+            let (peer, wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             let (source, _) = validate_source_peer(&connection.channel, &peer)?;
             if expected_source.is_some_and(|expected| expected != source) {
@@ -358,6 +471,9 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             }
             self.remember_platform(device_id, peer.platform).await?;
             connection.device.platform = Some(peer.platform);
+            if let Some(enrollment) = wake_enrollment {
+                self.store_wake_enrollment(device_id, enrollment).await?;
+            }
             Ok(PairingResult {
                 device: connection.device,
                 source,
@@ -386,13 +502,183 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let selected = self.selected_device_id(device_id).await?;
         let listener = bind_listener(port).await?;
         let bound_port = listener.local_addr().map_err(connection_error)?.port();
+        self.status_on_listener(&listener, selected, bound_port, timeout)
+            .await
+    }
+
+    /// Wait for the selected authenticated mobile app to report that it is active.
+    ///
+    /// The listener remains bound for the complete bounded wake window. Unreachable peers and
+    /// authenticated inactive statuses are retried with a 250 ms to 2 s backoff. A local waiter
+    /// cancellation is distinct from phone-side durable-job cancellation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ClientError::WaitCancelled`] on local cancellation, [`ClientError::TimedOut`] on
+    /// wake-window expiry, or a non-retryable trust/authentication/protocol error.
+    pub async fn wait_for_active_source<F>(
+        &self,
+        device_id: Option<Uuid>,
+        port: u16,
+        wake_window: WakeWindow,
+        wake_request: bool,
+        cancellation: &CancellationToken,
+        mut on_progress: F,
+    ) -> Result<(), ClientError>
+    where
+        F: FnMut(WakeProgress),
+    {
+        if !wake_window.enabled() {
+            return Ok(());
+        }
+        let selected = self.selected_device_id(device_id).await?;
+        let source = self.selected_source(Some(selected)).await?;
+        let listener = bind_listener(port).await?;
+        let bound_port = listener.local_addr().map_err(connection_error)?.port();
+        let started = Instant::now();
+        let deadline = started + wake_window.timeout();
+        let mut wake_attempted = !wake_request;
+        let mut wake_notification_requested = false;
+        let mut backoff = WAKE_INITIAL_BACKOFF;
+        let mut waiting_reported = false;
+        let mut next_progress = WAKE_PROGRESS_INTERVAL;
+
+        loop {
+            if cancellation.is_cancelled() {
+                return Err(ClientError::WaitCancelled);
+            }
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
+            let attempt_timeout = remaining.min(backoff);
+            let attempt_started = Instant::now();
+            let attempt = tokio::select! {
+                result = self.status_on_listener(
+                    &listener,
+                    selected,
+                    bound_port,
+                    attempt_timeout,
+                ) => result,
+                () = tokio::time::sleep(remaining) => return Err(ClientError::TimedOut),
+                () = cancellation.cancelled() => return Err(ClientError::WaitCancelled),
+            };
+            match attempt {
+                Ok(result) if source_status_is_active(&result.status) => return Ok(()),
+                Ok(_) | Err(ClientError::TimedOut | ClientError::Connection(_)) => {}
+                Err(error) => return Err(error),
+            }
+
+            if !wake_attempted {
+                wake_attempted = true;
+                wake_notification_requested = self
+                    .request_enrolled_wake(selected, source.platform, deadline, cancellation)
+                    .await?;
+            }
+            let waiting_message = match source.platform {
+                Some(PeerPlatform::Android) => "Waiting for Android; open Health.md.",
+                _ if wake_notification_requested => {
+                    "Waiting for iPhone; open Health.md or tap its wake notification if it arrives."
+                }
+                _ => "Waiting for iPhone; open Health.md.",
+            };
+            let elapsed = started.elapsed();
+            if waiting_reported {
+                while elapsed >= next_progress {
+                    on_progress(WakeProgress {
+                        elapsed_seconds: elapsed.as_secs(),
+                        timeout_seconds: wake_window.timeout_seconds(),
+                        message: waiting_message,
+                    });
+                    next_progress += WAKE_PROGRESS_INTERVAL;
+                }
+            } else {
+                waiting_reported = true;
+                on_progress(WakeProgress {
+                    elapsed_seconds: elapsed.as_secs(),
+                    timeout_seconds: wake_window.timeout_seconds(),
+                    message: waiting_message,
+                });
+                while elapsed >= next_progress {
+                    next_progress += WAKE_PROGRESS_INTERVAL;
+                }
+            }
+
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err(ClientError::TimedOut);
+            }
+            let delay = attempt_timeout
+                .saturating_sub(attempt_started.elapsed())
+                .min(remaining);
+            if !delay.is_zero() {
+                tokio::select! {
+                    () = tokio::time::sleep(delay) => {}
+                    () = cancellation.cancelled() => return Err(ClientError::WaitCancelled),
+                }
+            }
+            backoff = backoff.saturating_mul(2).min(WAKE_MAXIMUM_BACKOFF);
+        }
+    }
+
+    async fn request_enrolled_wake(
+        &self,
+        selected: Uuid,
+        platform: Option<PeerPlatform>,
+        deadline: Instant,
+        cancellation: &CancellationToken,
+    ) -> Result<bool, ClientError> {
+        if platform == Some(PeerPlatform::Android) {
+            return Ok(false);
+        }
+        let (Some(base_url), Ok(Some(credential))) = (
+            crate::wake::worker_base_url(),
+            self.wake_credential(selected).await,
+        ) else {
+            return Ok(false);
+        };
+
+        // Bind happens before this P2 attempt. Missing enrollment, an unreachable Worker, or a
+        // rejected request degrades silently to P1; the health-data path never depends on it.
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(ClientError::TimedOut);
+        }
+        if cancellation.is_cancelled() {
+            return Err(ClientError::WaitCancelled);
+        }
+        tokio::select! {
+            biased;
+            () = cancellation.cancelled() => return Err(ClientError::WaitCancelled),
+            () = tokio::time::sleep(remaining) => return Err(ClientError::TimedOut),
+            _ = crate::wake::request_wake(
+                &base_url,
+                &credential.wake_id,
+                &credential.wake_key,
+                &self.display_name,
+            ) => {}
+        }
+        Ok(true)
+    }
+
+    async fn status_on_listener(
+        &self,
+        listener: &TcpListener,
+        selected: Uuid,
+        bound_port: u16,
+        timeout: Duration,
+    ) -> Result<StatusResult, ClientError> {
         let mut connection = self
-            .accept_compatible(&listener, None, Some(selected), timeout)
+            .accept_compatible(listener, None, Some(selected), timeout)
             .await?;
-        let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+        let (peer, wake_enrollment) =
+            exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
         let (source, application_protocol_version) =
             validate_source_peer(&connection.channel, &peer)?;
         self.remember_platform(selected, peer.platform).await?;
+        if let Some(enrollment) = wake_enrollment {
+            self.store_wake_enrollment(selected, enrollment).await?;
+        }
 
         let (status, android_capabilities) = match source {
             SourceKind::Ios => {
@@ -499,7 +785,8 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let mut connection = self
             .accept_compatible(&listener, None, Some(selected), timeout)
             .await?;
-        let peer = exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
+        let (peer, _wake_enrollment) =
+            exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
         let (source, _) = validate_source_peer(&connection.channel, &peer)?;
         self.remember_platform(selected, peer.platform).await?;
         if source != SourceKind::Ios
@@ -690,7 +977,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), overall_remaining)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             let (source, version) = validate_source_peer(&connection.channel, &peer)?;
             if source != SourceKind::Android || version != ANDROID_APPLICATION_PROTOCOL_VERSION {
@@ -893,7 +1180,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             let negotiation = negotiate_transfer(
@@ -1034,7 +1321,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             let negotiation = negotiate_transfer(
@@ -1145,6 +1432,91 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         Ok(record)
     }
 
+    /// Reopen a completed raw artifact from either durable mobile protocol and verify its exact
+    /// byte count and SHA-256 before returning a job-bound path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent, incomplete, not a raw product, or changed on disk.
+    pub fn raw_artifact(&self, job_id: Uuid) -> Result<DurableRawArtifact, ClientError> {
+        match self.job_record(job_id) {
+            Ok(record) => {
+                if record.request.response_mode != ResponseMode::RawJson {
+                    return Err(ClientError::JobNotResumable(job_id, "not_raw".into()));
+                }
+                if record.state != JobState::Completed {
+                    return Err(ClientError::JobNotResumable(
+                        job_id,
+                        format!("{:?}", record.state).to_lowercase(),
+                    ));
+                }
+                let artifact =
+                    RawReceiver::new(self.layout.clone(), JobStore::new(self.layout.clone())?)
+                        .artifact(job_id)?;
+                let profile = match artifact.profile {
+                    healthmd_protocol::wire::RawProfile::CanonicalSourceRecordsV1 => {
+                        "canonical_source_records_v1"
+                    }
+                    healthmd_protocol::wire::RawProfile::HealthDataProjection => {
+                        "health_data_projection"
+                    }
+                };
+                Ok(DurableRawArtifact {
+                    path: artifact.path,
+                    platform: RawArtifactPlatform::Ios,
+                    format: "json",
+                    profile: profile.to_owned(),
+                    provider_id: Some("apple_health".to_owned()),
+                    status: artifact.status,
+                    byte_count: u64::try_from(artifact.byte_count)
+                        .map_err(|_| ClientError::InvalidJob)?,
+                    sha256: artifact.sha256,
+                })
+            }
+            Err(ClientError::JobNotFound) => {
+                let record = self.v2_job_record(job_id)?;
+                if record.state != JobState::Completed {
+                    return Err(ClientError::JobNotResumable(
+                        job_id,
+                        format!("{:?}", record.state).to_lowercase(),
+                    ));
+                }
+                let (format, provider_id) = match &record.request.product {
+                    v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                        provider_id,
+                        format,
+                        ..
+                    } => (
+                        match format {
+                            v2::RawSnapshotFormat::Json => "json",
+                            v2::RawSnapshotFormat::Ndjson => "ndjson",
+                        },
+                        provider_id.clone(),
+                    ),
+                    _ => {
+                        return Err(ClientError::JobNotResumable(job_id, "not_raw".into()));
+                    }
+                };
+                let receipt = V2ArtifactReceiver::new(
+                    self.layout.clone(),
+                    V2JobStore::new(self.layout.clone())?,
+                )
+                .receipt(job_id)?;
+                Ok(DurableRawArtifact {
+                    path: receipt.path,
+                    platform: RawArtifactPlatform::Android,
+                    format,
+                    profile: "android_provider_native_snapshot_v1".to_owned(),
+                    provider_id: Some(provider_id),
+                    status: receipt.status,
+                    byte_count: receipt.byte_count,
+                    sha256: receipt.sha256,
+                })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
     /// Materialize a completed canonical projection into the public extraction envelope.
     ///
     /// # Errors
@@ -1173,6 +1545,22 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         RawReceiver::new(self.layout.clone(), jobs).extraction_jsonl(job_id, pointers)
     }
 
+    /// Durably record an explicit cancellation request for an Android job without opening a
+    /// network listener. An already-running export process can observe and deliver this marker.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent, corrupt, pinned to another device, or terminal in
+    /// a state other than already cancelled.
+    pub fn request_android_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<(), ClientError> {
+        self.prepare_android_job_cancellation(job_id, device_id)
+            .map(|_| ())
+    }
+
     /// Deliver a durable cancellation request to the Android source.
     ///
     /// # Errors
@@ -1185,29 +1573,10 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         port: u16,
         timeout: Duration,
     ) -> Result<(), ClientError> {
-        let jobs = V2JobStore::new(self.layout.clone())?;
-        let mut record = jobs.load(job_id)?;
-        if record.state == JobState::Cancelled {
+        let Some((jobs, selected)) = self.prepare_android_job_cancellation(job_id, device_id)?
+        else {
             return Ok(());
-        }
-        if record.state.is_terminal() {
-            return Err(ClientError::JobNotResumable(
-                job_id,
-                format!("{:?}", record.state).to_lowercase(),
-            ));
-        }
-        let selected = record.request.source_installation_id;
-        if let Some(requested) = device_id {
-            if requested != selected {
-                return Err(ClientError::DeviceNotPaired(requested));
-            }
-        }
-        jobs.request_cancellation(job_id)?;
-        record.state = JobState::CancellationPending;
-        record.updated_at = Utc::now();
-        record.message = Some("Cancellation is pending delivery to Android.".into());
-        jobs.save(&record)?;
-
+        };
         let deadline = Instant::now() + timeout;
         let result = async {
             let listener = bind_listener(port).await?;
@@ -1218,7 +1587,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), remaining)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             if validate_source_peer(&connection.channel, &peer)?.0 != SourceKind::Android {
                 return Err(ClientError::Authentication(
@@ -1257,6 +1626,21 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         result.map_err(|_| ClientError::CancellationPending(job_id))
     }
 
+    /// Durably record an explicit cancellation request for an iPhone job without opening a
+    /// network listener. An already-running export process can observe and deliver this marker.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent, corrupt, unbound, pinned to another device, or
+    /// terminal in a state other than already cancelled.
+    pub fn request_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<(), ClientError> {
+        self.prepare_job_cancellation(job_id, device_id).map(|_| ())
+    }
+
     /// Deliver a durable cancellation request to the job's pinned iPhone.
     ///
     /// # Errors
@@ -1269,39 +1653,15 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         port: u16,
         timeout: Duration,
     ) -> Result<(), ClientError> {
-        let jobs = JobStore::new(self.layout.clone())?;
-        let mut record = jobs.load(job_id)?;
-        if record.state == JobState::Cancelled {
+        let Some((jobs, selected)) = self.prepare_job_cancellation(job_id, device_id)? else {
             return Ok(());
-        }
-        if record.state.is_terminal() {
-            return Err(ClientError::JobNotResumable(
-                job_id,
-                format!("{:?}", record.state).to_lowercase(),
-            ));
-        }
-        let selected = record
-            .peer_binding
-            .as_ref()
-            .map(|binding| binding.source_installation_id.0)
-            .ok_or_else(|| ClientError::JobNotResumable(job_id, "unbound".into()))?;
-        if let Some(requested) = device_id {
-            if requested != selected {
-                return Err(ClientError::DeviceNotPaired(requested));
-            }
-        }
-        jobs.request_cancellation(job_id)?;
-        record.state = JobState::CancellationPending;
-        record.updated_at = Utc::now();
-        record.message = Some("Cancellation is pending delivery to the paired iPhone.".into());
-        jobs.save(&record)?;
-
+        };
         let result = async {
             let listener = bind_listener(port).await?;
             let mut connection = self
                 .accept_compatible(&listener, None, Some(selected), timeout)
                 .await?;
-            let peer =
+            let (peer, _wake_enrollment) =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             validate_iphone_peer(&connection.channel, &peer)?;
             connection
@@ -1325,6 +1685,70 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         }
         .await;
         result.map_err(|_| ClientError::CancellationPending(job_id))
+    }
+
+    fn prepare_android_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<Option<(V2JobStore, Uuid)>, ClientError> {
+        let jobs = V2JobStore::new(self.layout.clone())?;
+        let mut record = jobs.load(job_id)?;
+        if record.state == JobState::Cancelled {
+            return Ok(None);
+        }
+        if record.state.is_terminal() {
+            return Err(ClientError::JobNotResumable(
+                job_id,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
+        }
+        let selected = record.request.source_installation_id;
+        if let Some(requested) = device_id {
+            if requested != selected {
+                return Err(ClientError::DeviceNotPaired(requested));
+            }
+        }
+        jobs.request_cancellation(job_id)?;
+        record.state = JobState::CancellationPending;
+        record.updated_at = Utc::now();
+        record.message = Some("Cancellation is pending delivery to Android.".into());
+        jobs.save(&record)?;
+        Ok(Some((jobs, selected)))
+    }
+
+    fn prepare_job_cancellation(
+        &self,
+        job_id: Uuid,
+        device_id: Option<Uuid>,
+    ) -> Result<Option<(JobStore, Uuid)>, ClientError> {
+        let jobs = JobStore::new(self.layout.clone())?;
+        let mut record = jobs.load(job_id)?;
+        if record.state == JobState::Cancelled {
+            return Ok(None);
+        }
+        if record.state.is_terminal() {
+            return Err(ClientError::JobNotResumable(
+                job_id,
+                format!("{:?}", record.state).to_lowercase(),
+            ));
+        }
+        let selected = record
+            .peer_binding
+            .as_ref()
+            .map(|binding| binding.source_installation_id.0)
+            .ok_or_else(|| ClientError::JobNotResumable(job_id, "unbound".into()))?;
+        if let Some(requested) = device_id {
+            if requested != selected {
+                return Err(ClientError::DeviceNotPaired(requested));
+            }
+        }
+        jobs.request_cancellation(job_id)?;
+        record.state = JobState::CancellationPending;
+        record.updated_at = Utc::now();
+        record.message = Some("Cancellation is pending delivery to the paired iPhone.".into());
+        jobs.save(&record)?;
+        Ok(Some((jobs, selected)))
     }
 
     /// Resume a durable generated-file job without changing its request or destination.
@@ -1916,6 +2340,74 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         self.trust_store.load(self.identity.installation_id).await
     }
 
+    /// The persisted RFC-0005 P2 wake credential for a paired device, if any. `None` means
+    /// wait-only P1 behavior.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when native trust state cannot be read.
+    pub async fn wake_credential(
+        &self,
+        device_id: Uuid,
+    ) -> Result<Option<crate::trust::TrustedWakeCredential>, ClientError> {
+        Ok(self
+            .load_trust()
+            .await?
+            .client(device_id)
+            .and_then(|client| client.wake.clone()))
+    }
+
+    /// The shared wake-window status object with enrollment reported truthfully per device.
+    ///
+    /// The selected device is resolved exactly as the wake wait resolves it, and a stored wake
+    /// credential for that device reports [`WakeEnrollment::Enrolled`]. Without a resolvable
+    /// selection or a stored credential — including nothing paired at all — the honest report is
+    /// [`WakeEnrollment::WaitOnly`], matching what the wake wait would actually do.
+    pub async fn wake_status_value(
+        &self,
+        requested: Option<Uuid>,
+        window: WakeWindow,
+    ) -> serde_json::Value {
+        let enrolled = match self.selected_device_id(requested).await {
+            Ok(device) => matches!(self.wake_credential(device).await, Ok(Some(_))),
+            Err(_) => false,
+        };
+        window.status_value(if enrolled {
+            WakeEnrollment::Enrolled
+        } else {
+            WakeEnrollment::WaitOnly
+        })
+    }
+
+    /// Persist a wake enrollment from a paired phone under its existing trust binding. A later
+    /// enrollment replaces the stored material (rotation); unpairing removes it with the trust
+    /// entry.
+    async fn store_wake_enrollment(
+        &self,
+        device_id: Uuid,
+        enrollment: healthmd_protocol::wire::WakeEnrollment,
+    ) -> Result<(), ClientError> {
+        if !enrollment.is_valid() {
+            return Err(ClientError::UnexpectedMessage);
+        }
+        let wake_key = crate::wake::decode_wake_key(&enrollment.wake_key)
+            .ok_or(ClientError::UnexpectedMessage)?;
+        let _lease = acquire_trust_lease(self.layout.clone()).await?;
+        let mut state = self.load_trust().await?;
+        let now = Utc::now();
+        let client = state
+            .trusted_clients
+            .iter_mut()
+            .find(|client| client.installation_id.0 == device_id)
+            .ok_or(ClientError::DeviceNotPaired(device_id))?;
+        client.wake = Some(crate::trust::TrustedWakeCredential {
+            wake_id: enrollment.wake_id,
+            wake_key,
+            enrolled_at: now,
+        });
+        self.trust_store.save(&state).await
+    }
+
     async fn remember_platform(
         &self,
         device_id: Uuid,
@@ -1923,6 +2415,9 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     ) -> Result<(), ClientError> {
         let _lease = acquire_trust_lease(self.layout.clone()).await?;
         let mut state = self.load_trust().await?;
+        if state.client(device_id).and_then(|client| client.platform) == Some(platform) {
+            return Ok(());
+        }
         if !state.set_client_platform(device_id, platform) {
             return Err(ClientError::DeviceNotPaired(device_id));
         }
@@ -2043,6 +2538,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     }
 }
 
+const fn source_status_is_active(status: &SourceStatus) -> bool {
+    match status {
+        SourceStatus::Ios(status) => status.app_active,
+        SourceStatus::Android(status) => status.app_active,
+    }
+}
+
 async fn acquire_trust_lease(layout: StorageLayout) -> Result<TrustLease, ClientError> {
     acquire_trust_lease_until(layout, Instant::now() + Duration::from_secs(10)).await
 }
@@ -2095,27 +2597,67 @@ async fn bind_listener(port: u16) -> Result<TcpListener, ClientError> {
 async fn exchange_hello(
     channel: &mut SecureChannel,
     installation_id: SwiftUuid,
-) -> Result<PeerCapabilities, ClientError> {
+) -> Result<
+    (
+        PeerCapabilities,
+        Option<healthmd_protocol::wire::WakeEnrollment>,
+    ),
+    ClientError,
+> {
     let local = PeerCapabilities::portable_cli_all_versions(installation_id);
     channel
         .send(&DirectMessage::Hello(Unlabeled::from(local)))
         .await?;
-    match receive_message(channel, Duration::from_secs(10)).await? {
-        DirectMessage::Hello(Unlabeled { value }) => Ok(value),
-        _ => Err(ClientError::UnexpectedMessage),
-    }
+    let DirectMessage::Hello(Unlabeled { value: peer }) =
+        receive_message(channel, Duration::from_secs(10)).await?
+    else {
+        return Err(ClientError::UnexpectedMessage);
+    };
+    // RFC-0005 P2: a phone that advertised wake support sends exactly one enrollment as the very
+    // next message; a phone that did not advertise must never send one, so any stray enrollment
+    // later in a stream fails closed as an unexpected message.
+    let enrollment =
+        if peer.wake == Some(healthmd_protocol::wire::WakeCapabilities { supported: true }) {
+            match receive_message(channel, Duration::from_secs(10)).await? {
+                DirectMessage::WakeEnrollment(Unlabeled { value }) => Some(value),
+                _ => return Err(ClientError::UnexpectedMessage),
+            }
+        } else {
+            None
+        };
+    Ok((peer, enrollment))
 }
 
 async fn receive_message(
     channel: &mut SecureChannel,
     timeout: Duration,
 ) -> Result<DirectMessage, ClientError> {
-    match tokio::time::timeout(timeout, channel.receive())
-        .await
-        .map_err(|_| ClientError::TimedOut)??
-    {
-        SecurePayload::Message(message) => Ok(*message),
-        SecurePayload::BinaryTransferFrame(_) => Err(ClientError::UnexpectedMessage),
+    let deadline = Instant::now() + timeout;
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(ClientError::TimedOut);
+        }
+        match tokio::time::timeout(remaining, channel.receive())
+            .await
+            .map_err(|_| ClientError::TimedOut)??
+        {
+            SecurePayload::Message(message) => match *message {
+                DirectMessage::Ping(Empty {}) => {
+                    let remaining = deadline.saturating_duration_since(Instant::now());
+                    if remaining.is_zero() {
+                        return Err(ClientError::TimedOut);
+                    }
+                    tokio::time::timeout(remaining, channel.send(&DirectMessage::Pong(Empty {})))
+                        .await
+                        .map_err(|_| ClientError::TimedOut)??;
+                }
+                message => return Ok(message),
+            },
+            SecurePayload::BinaryTransferFrame(_) => {
+                return Err(ClientError::UnexpectedMessage);
+            }
+        }
     }
 }
 
@@ -2168,14 +2710,18 @@ async fn receive_android_source_hello(
 const fn pairing_protocol_matches_platform(version: i32, platform: PeerPlatform) -> bool {
     matches!(
         (version, platform),
-        (1, PeerPlatform::Ios) | (2, PeerPlatform::Android)
+        (1, PeerPlatform::Ios)
+            | (2, PeerPlatform::Android)
+            | (3, PeerPlatform::Ios | PeerPlatform::Android)
     )
 }
 
 const fn pairing_protocol_matches_source(version: i32, source: SourceKind) -> bool {
     matches!(
         (version, source),
-        (1, SourceKind::Ios) | (2, SourceKind::Android)
+        (1, SourceKind::Ios)
+            | (2, SourceKind::Android)
+            | (3, SourceKind::Ios | SourceKind::Android)
     )
 }
 
@@ -3349,6 +3895,7 @@ mod tests {
                 end: "2026-07-02".into(),
             }),
             settings_policy: healthmd_protocol::models::SettingsPolicy::RequestedDatesOnly,
+            profile_reference: None,
             response_mode: ResponseMode::RawJson,
             raw_profile: Some(healthmd_protocol::wire::RawProfile::HealthDataProjection),
             canonical_selection: None,
@@ -3420,11 +3967,101 @@ mod tests {
     }
 
     #[test]
-    fn pairing_protocol_cannot_downgrade_android_to_the_ios_code_path() {
+    fn pairing_protocols_preserve_legacy_platform_binding_and_share_v3() {
         assert!(pairing_protocol_matches_source(1, SourceKind::Ios));
         assert!(pairing_protocol_matches_source(2, SourceKind::Android));
+        assert!(pairing_protocol_matches_source(3, SourceKind::Ios));
+        assert!(pairing_protocol_matches_source(3, SourceKind::Android));
+        assert!(pairing_protocol_matches_platform(3, PeerPlatform::Ios));
+        assert!(pairing_protocol_matches_platform(3, PeerPlatform::Android));
         assert!(!pairing_protocol_matches_source(1, SourceKind::Android));
+        assert!(!pairing_protocol_matches_source(2, SourceKind::Ios));
         assert!(!pairing_protocol_matches_platform(1, PeerPlatform::Android));
+    }
+
+    #[tokio::test]
+    async fn receive_message_answers_heartbeat_before_returning_control_message() {
+        use tokio::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let client = tokio::spawn(TcpStream::connect(address));
+        let (server, _) = listener.accept().await.unwrap();
+        let client = client.await.unwrap().unwrap();
+        let peer_id = Uuid::new_v4();
+        let mut source = SecureChannel::new(
+            PacketConnection::new(client),
+            [9; 32],
+            peer_id,
+            "source".into(),
+        );
+        let mut destination = SecureChannel::new(
+            PacketConnection::new(server),
+            [9; 32],
+            peer_id,
+            "destination".into(),
+        );
+        let expected = DirectMessage::Hello(Unlabeled::from(
+            PeerCapabilities::portable_cli_all_versions(SwiftUuid(peer_id)),
+        ));
+        let source_expected = expected.clone();
+        let source_task = tokio::spawn(async move {
+            source.send(&DirectMessage::Ping(Empty {})).await.unwrap();
+            source.send(&source_expected).await.unwrap();
+            assert_eq!(
+                source.receive().await.unwrap(),
+                SecurePayload::Message(Box::new(DirectMessage::Pong(Empty {})))
+            );
+        });
+
+        assert_eq!(
+            receive_message(&mut destination, Duration::from_secs(1))
+                .await
+                .unwrap(),
+            expected
+        );
+        source_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn repeated_heartbeats_do_not_extend_receive_deadline() {
+        use tokio::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let client = tokio::spawn(TcpStream::connect(address));
+        let (server, _) = listener.accept().await.unwrap();
+        let client = client.await.unwrap().unwrap();
+        let peer_id = Uuid::new_v4();
+        let mut source = SecureChannel::new(
+            PacketConnection::new(client),
+            [11; 32],
+            peer_id,
+            "source".into(),
+        );
+        let mut destination = SecureChannel::new(
+            PacketConnection::new(server),
+            [11; 32],
+            peer_id,
+            "destination".into(),
+        );
+        let source_task = tokio::spawn(async move {
+            loop {
+                source.send(&DirectMessage::Ping(Empty {})).await.unwrap();
+                assert_eq!(
+                    source.receive().await.unwrap(),
+                    SecurePayload::Message(Box::new(DirectMessage::Pong(Empty {})))
+                );
+                tokio::time::sleep(Duration::from_millis(1)).await;
+            }
+        });
+
+        assert!(matches!(
+            receive_message(&mut destination, Duration::from_millis(25)).await,
+            Err(ClientError::TimedOut)
+        ));
+        source_task.abort();
+        let _ = source_task.await;
     }
 
     #[test]

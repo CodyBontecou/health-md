@@ -1756,7 +1756,6 @@ fn make_receipt(
     let object = value
         .as_object_mut()
         .ok_or_else(|| invalid("receipt is not an object"))?;
-    object.insert("backend".into(), json!("direct"));
     object.insert(
         "message".into(),
         json!("iPhone export files were committed to the explicit destination."),
@@ -2214,6 +2213,7 @@ mod tests {
                 end: "2026-07-23".into(),
             }),
             settings_policy: SettingsPolicy::RequestedDatesOnly,
+            profile_reference: None,
             response_mode: ResponseMode::WriteFiles,
             raw_profile: None,
             canonical_selection: None,

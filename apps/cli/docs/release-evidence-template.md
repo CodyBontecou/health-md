@@ -11,7 +11,7 @@ metadata. Do not attach command stdout that may contain health payloads.
 - Captured `origin/main` SHA:
 - Tag peeled to candidate SHA: pass/fail
 - Candidate equals captured main: pass/fail
-- Seven package versions and internal exact requirements aligned: pass/fail
+- Eight package versions and internal exact requirements aligned: pass/fail
 - `apps/cli/Cargo.lock` verified: pass/fail
 - `packages/healthmd-core-rust/Cargo.lock` verified: pass/fail
 - Draft release target SHA/prerelease state verified: pass/fail
@@ -30,9 +30,11 @@ metadata. Do not attach command stdout that may contain health payloads.
 
 ## Exact mobile candidates
 
-- [`mobile-compatibility.md`](mobile-compatibility.md) has machine-checked qualified records for all three supported rows: pass/fail
-- Each ledger `evidence_sha256` matches this retained health-free evidence record: pass/fail
-- Exact qualified records are copied to the release notes without weakening or substituting marketing versions: pass/fail
+- Release channel: preview/stable
+- Stable: [`mobile-compatibility.md`](mobile-compatibility.md) has machine-checked qualified records for all three supported rows: pass/fail/N/A
+- Stable: each ledger `evidence_sha256` matches this retained health-free evidence record: pass/fail/N/A
+- Preview: pending rows remain exact and the release notes explicitly say unqualified preview: pass/fail/N/A
+- Exact qualified records, when present, are copied without weakening or substituting marketing versions: pass/fail/N/A
 
 | Source | App version | Build ID/commit | Device/OS | LAN | Tailscale | Result |
 |---|---|---|---|---|---|---|
@@ -77,10 +79,10 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 - Both DMGs stapled and Gatekeeper-assessed: pass/fail
 - Both extracted Mach-O binaries Gatekeeper-assessed: pass/fail
 - Keychain signed-upgrade synthetic device probe: pass/fail
-- Windows expected publisher subject:
-- Both PE signatures and RFC 3161 timestamps: pass/fail
-- PowerShell installer signature and RFC 3161 timestamp: pass/fail
-- Credential Manager legacy-target synthetic device probe: pass/fail
+- Windows expected publisher subject (or `pending_external_certificate_provisioning` deferred):
+- Both PE signatures and RFC 3161 timestamps (skip when deferred): pass/fail/deferred
+- PowerShell installer signature and RFC 3161 timestamp (skip when deferred): pass/fail/deferred
+- Credential Manager legacy-target synthetic device probe: pass/fail/deferred (signing-gated)
 
 ## CLI/MCP smoke
 
@@ -88,7 +90,7 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 - `healthmd-mcp --help`: pass/fail
 - `healthmd setup codex --skip-pairing` idempotent isolated run: pass/fail
 - MCP initialize/tools/resources: pass/fail
-- Fixed tool count (`17`): pass/fail
+- Fixed tool count (`19`): pass/fail
 - Same-executable/Windows same-file helper path: pass/fail
 - `direct devices` or readiness result (code/count only):
 - UI resource and PNG dimensions/format: pass/fail
@@ -98,6 +100,7 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 Record statuses, counts, job/request IDs, durations, and artifact digests only.
 
 - iPhone LAN pair/reconnect/status/raw/extract/files: pass/fail
+- iPhone silent channel-death self-heal (sleep/airplane-mode, LAN and Tailscale): pass/fail
 - iPhone interruption/resume/cancel/background/protected-data negatives: pass/fail
 - iPhone MCP typed queries/paging/cancel/UI/PNG/export controls: pass/fail
 - iPhone Tailscale: pass/fail

@@ -144,8 +144,34 @@ Workout notes combine canonical source identity with UUID-matched readable prese
 - lap/split tables;
 - heart-rate zones;
 - route and sample counts;
+- a `route_file` reference to a sidecar JSON file with full GPS coordinates;
 - metadata;
 - canonical record fields and JSON.
+
+### Route sidecars
+
+Workout notes keep only a `route_points` count in frontmatter so notes stay compact. When a workout has GPS coordinates, the exporter also writes `<note-filename>.route.json` next to the note and references it with `route_file`. The sidecar is a JSON object:
+
+```json
+{
+  "schema": "healthmd.workout_route",
+  "schema_version": 1,
+  "point_count": 2150,
+  "route": [
+    {
+      "timestamp": "2026-08-27T21:00:00Z",
+      "latitude": 21.3069,
+      "longitude": -157.8583,
+      "altitude": 12,
+      "speedMps": 1.4,
+      "courseDegrees": 92,
+      "horizontalAccuracyMeters": 4.5
+    }
+  ]
+}
+```
+
+Each point mirrors the daily JSON export's `workouts[].route` entry shape, so consumers can reuse one parser. Route-less and indoor workouts produce no sidecar and no `route_file` key. Preview rendering omits `route_file` because no destination filename exists; the key appears only in exported files.
 
 Presentation enrichment is used only after matching the same source UUID. It cannot replace canonical identity.
 

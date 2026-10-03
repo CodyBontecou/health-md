@@ -33,6 +33,13 @@ enum UITestLaunchHelper {
         static let customEndDatePicker = "export.dateRange.custom.endDate"
         static let pathPreview = "export.pathPreview"
         static let activityBanner = "export.activityBanner"
+        static let filenameEditorButton = "export.filenameEditorButton"
+        static let outputEditorSaveButton = "export.outputEditorSaveButton"
+    }
+
+    enum Notification {
+        static let exportActivity = "notification.exportActivity"
+        static let cancelExportButton = "notification.cancelButton"
     }
 
     enum ExportModal {
@@ -67,13 +74,33 @@ enum UITestLaunchHelper {
     }
 
     enum Sync {
+        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"
+        static let directCLIToggle = "sync.directCLIToggle"
+    }
+
+    enum ConfigurationProtection {
+        static let toggle = "configurationProtection.toggle"
+        static let section = "configurationProtection.section"
+        static let protectedRegion = "configurationProtection.protectedRegion"
+        static let toast = "configurationProtection.toast"
     }
 
     enum Status {
         static let exportStatusBadge = "status.exportBadge"
+    }
+
+    enum SharedSetup {
+        static let configurationCard = "sharedSetup.configurationCard"
+        static let use = "sharedSetup.use"
+        static let share = "sharedSetup.share"
+        static let review = "sharedSetup.review"
+        static let apply = "sharedSetup.apply"
+        static let success = "sharedSetup.success"
+        static let undo = "sharedSetup.undo"
+        static let finish = "sharedSetup.finish"
     }
 
     enum ExportedFile {
@@ -104,12 +131,14 @@ enum UITestLaunchHelper {
         freeExportsUsed: Int = 0,
         syncState: String = "disconnected",
         scheduleEnabled: Bool = false,
+        configurationProtectionEnabled: Bool = false,
         useHealthKitExportPreviewFixtures: Bool = false,
         exportResult: String? = nil,
         macExportStatus: String = "none",
         macDestinationPath: String = "/tmp/TestMacVault",
         analyticsTransport: String? = nil,
-        remoteConfig: String? = nil
+        remoteConfig: String? = nil,
+        showsPostOnboardingPaywall: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
@@ -123,9 +152,11 @@ enum UITestLaunchHelper {
             "UITEST_FREE_EXPORTS_USED": "\(freeExportsUsed)",
             "UITEST_SYNC_STATE": syncState,
             "UITEST_SCHEDULE_ENABLED": scheduleEnabled ? "true" : "false",
+            "UITEST_CONFIGURATION_PROTECTION_ENABLED": configurationProtectionEnabled ? "true" : "false",
             "UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES": useHealthKitExportPreviewFixtures ? "true" : "false",
             "UITEST_MAC_EXPORT_STATUS": macExportStatus,
             "UITEST_MAC_DESTINATION_PATH": macDestinationPath,
+            "UITEST_SHOW_POST_ONBOARDING_PAYWALL": showsPostOnboardingPaywall ? "true" : "false",
         ]
         if let exportResult {
             app.launchEnvironment["UITEST_EXPORT_RESULT"] = exportResult

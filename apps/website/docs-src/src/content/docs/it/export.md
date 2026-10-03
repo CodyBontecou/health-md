@@ -37,9 +37,17 @@ description: "Il pannello Esportazione è l'area di lavoro principale. Mostra se
 <div class="option"><strong>Esporta</strong><p>Avvia l'esportazione, ne mostra l'avanzamento nella schermata principale e registra il risultato nella cronologia.</p></div>
 </div>
 
+## Scegliere il livello di dettaglio dei dati
+
+<div class="options">
+<div class="option"><strong>Riepilogo</strong><p>Totali giornalieri e aggregazioni compatti per lettura, note e dashboard.</p></div>
+<div class="option"><strong>Serie temporale dettagliata</strong><p>Campioni e intervalli selezionati con data e ora. Il livello è disponibile su Apple e Android quando la metrica offre dettagli adeguati.</p></div>
+<div class="option"><strong>Dati sanitari senza perdita</strong><p>L’archivio canonico dei record di origine HealthKit. Il livello è esclusivo di Apple; Android non trasforma i record Health Connect in un archivio HealthKit.</p></div>
+</div>
+
 ## Che cosa avviene durante l'esportazione
 <ol>
-<li>Per ogni giorno dell'intervallo, acquisisce le proiezioni di riepilogo selezionate e, quando Lossless Health Records è abilitato, i relativi record sorgente canonici e la diagnostica delle query.</li>
+<li>Per ogni giorno dell'intervallo, acquisisce i riepiloghi selezionati, aggiunge i campioni compatibili per la serie temporale dettagliata e, per i dati sanitari senza perdita, aggiunge i record sorgente canonici e la diagnostica delle query.</li>
 <li>Applica il formato scelto (Markdown, Obsidian Bases, JSON o CSV) e il modello.</li>
 <li>Scrive un file per ogni giorno in <code>{vault}/{subfolder}/</code>, trasferisce i file tramite il flusso di lavoro del Mac connesso oppure invia tramite POST un involucro JSON con versione al tuo endpoint API.</li>
 <li>Se <em>Monitoraggio individuale</em> è attivo, ricava dall'archivio canonico i file Markdown selezionati per ciascuna voce per le destinazioni basate su file.</li>
@@ -48,18 +56,27 @@ description: "Il pannello Esportazione è l'area di lavoro principale. Mostra se
 
 <p>JSON e CSV possono conservare i record canonici. Markdown e Obsidian Bases rimangono leggibili e mostrano una diagnostica di acquisizione compatta anziché incorporare l'archivio. Consulta il <a href="/it/docs/reference/">riferimento completo sull'esportazione</a> per gli schemi esatti e le regole di omissione.</p>
 
+## Interrompere, annullare e riprovare
+
+Interrompere o annullare termina solo il tentativo corrente. I file e le date completati restano tali, mentre le date irrisolte possono essere riprovate. L’annullamento di un tentativo pianificato non disattiva la ricorrenza.
+
+## Profili e cronologia affidabile
+
+Un profilo salvato congela impostazioni e destinazione per l’esecuzione. Le righe della cronologia relative a esecuzioni pianificate e automatizzate associate a un profilo conservano il profilo usato; la cronologia mantiene anche un’etichetta rispettosa della privacy per la destinazione effettiva. Una riga di esportazione manuale può omettere il nome del profilo. Le modifiche successive a nome o destinazione non riscrivono la cronologia esistente. I riferimenti mancanti falliscono in sicurezza. Consulta [Profili di esportazione](/it/docs/export-profiles/).
+
 ## Barra dei pannelli
 
 <p>I quattro pannelli nella parte inferiore dello schermo — Esportazione, Programmazione, Sincronizzazione, Impostazioni — comprendono l'intera superficie dell'app. Tutto il resto si trova uno o due livelli più in profondità nelle Impostazioni.</p>
 
 <div class="callout">
 <strong>Funzionamento dello sblocco.</strong>
-<p style="margin-top:6px;">Full Access sblocca un numero illimitato di esportazioni, le esportazioni programmate, le destinazioni Mac e Comandi Rapidi. <a href="/it/docs/paywall/">Consulta la pagina Paywall</a> per maggiori dettagli.</p>
+<p style="margin-top:6px;">Sulle piattaforme Apple, la quota gratuita copre 10 azioni di esportazione manuali o pianificate. Full Access elimina il limite e sblocca i flussi verso Mac e Comandi rapidi. Android offre invece 10 azioni manuali gratuite e richiede l’acquisto a vita per la pianificazione. <a href="/it/docs/paywall/">Consulta la pagina Paywall</a> per l’acquisto Apple.</p>
 </div>
 
 ## Contenuti correlati
 
 <div class="related">
+  <a href="/it/docs/export-profiles/"><span>Profili</span>Salva destinazioni, impostazioni, pianificazioni e ID di automazione indipendenti.</a>
   <a href="/it/docs/scheduling/"><span>Uso quotidiano</span>Programmazione — automatizza l'operazione per non dover più toccare Esporta.</a>
   <a href="/it/docs/api-endpoint/"><span>Integrazione</span>Endpoint API — invia i dati JSON selezionati direttamente al tuo servizio.</a>
   <a href="/it/docs/format/"><span>Personalizzazione</span>Personalizzazione del formato — modifica l'aspetto di ciascun file.</a>

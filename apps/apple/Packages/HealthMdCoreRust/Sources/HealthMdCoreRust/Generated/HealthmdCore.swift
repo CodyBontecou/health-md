@@ -2917,6 +2917,7 @@ public enum CoreDirectPairingProfile: Equatable, Hashable {
     
     case appleV1
     case androidV2
+    case sharedV3
 
 
 
@@ -2942,6 +2943,8 @@ public struct FfiConverterTypeCoreDirectPairingProfile: FfiConverterRustBuffer {
         
         case 2: return .androidV2
         
+        case 3: return .sharedV3
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -2956,6 +2959,10 @@ public struct FfiConverterTypeCoreDirectPairingProfile: FfiConverterRustBuffer {
         
         case .androidV2:
             writeInt(&buf, Int32(2))
+        
+        
+        case .sharedV3:
+            writeInt(&buf, Int32(3))
         
         }
     }

@@ -353,7 +353,9 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
 
     @MainActor
     private static func dataDictionaryEntries(using customization: FormatCustomization) -> [DataDictionaryEntrySignature] {
-        HealthMetricDataDictionary.entries(using: customization)
+        // The v8 schema contract includes the optional provider dictionary
+        // rows; pin them regardless of this host build's WHOOP rollout flag.
+        HealthMetricDataDictionary.entries(using: customization, includeProviderEntries: true)
             .map(DataDictionaryEntrySignature.init)
             .sorted()
     }

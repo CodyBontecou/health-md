@@ -68,10 +68,10 @@ struct MacMenuBarView: View {
 
             VStack(spacing: 2) {
                 menuAction(
-                    icon: vaultManager.vaultURL == nil ? "folder.badge.plus" : "folder",
-                    label: vaultManager.vaultURL == nil
-                        ? String(localized: "Choose Destination…")
-                        : String(localized: "Change Destination…")
+                    icon: vaultManager.hasVaultSelection ? "folder" : "folder.badge.plus",
+                    label: vaultManager.hasVaultSelection
+                        ? String(localized: "Change Destination…")
+                        : String(localized: "Choose Destination…")
                 ) {
                     chooseDestinationFolder()
                 }
@@ -212,8 +212,10 @@ struct MacMenuBarView: View {
     }
 
     private var destinationDetail: String {
-        guard vaultManager.vaultURL != nil else { return String(localized: "Choose folder") }
-        return folderAccessHealthy ? vaultManager.vaultName : String(localized: "Access denied")
+        guard vaultManager.hasVaultSelection else { return String(localized: "Choose folder") }
+        return folderAccessHealthy
+            ? vaultManager.vaultName
+            : "\(vaultManager.vaultName): \(vaultManager.vaultAvailabilityText)"
     }
 
     private var readinessIsPositive: Bool {
@@ -227,8 +229,8 @@ struct MacMenuBarView: View {
         if syncService.isSyncing { return String(localized: "Receiving export") }
         if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
-        if vaultManager.vaultURL == nil { return String(localized: "Choose folder") }
-        if !folderAccessHealthy { return String(localized: "Re-select folder") }
+        if !vaultManager.hasVaultSelection { return String(localized: "Choose folder") }
+        if !folderAccessHealthy { return vaultManager.vaultAvailabilityText }
         return String(localized: "Ready")
     }
 
@@ -246,7 +248,7 @@ struct MacMenuBarView: View {
             switch result.status {
             case .success:
                 if result.dailyNoteUpdateCount > 0,
-                   result.isTotalFilesWrittenAuthoritative,
+                   result.hasAuthoritativeFileCount,
                    result.totalFilesWritten == 0 {
                     return String(localized: "\(result.dailyNoteUpdateCount) daily notes updated")
                 }
@@ -254,12 +256,12 @@ struct MacMenuBarView: View {
                     ?? String(localized: "Export Complete")
             case .partialSuccess:
                 if result.dailyNoteSkipCount > 0,
-                   result.isTotalFilesWrittenAuthoritative,
+                   result.hasAuthoritativeFileCount,
                    result.totalFilesWritten == 0 {
                     return String(localized: "\(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) daily notes skipped")
                 }
                 if result.dailyNoteUpdateCount > 0,
-                   result.isTotalFilesWrittenAuthoritative,
+                   result.hasAuthoritativeFileCount,
                    result.totalFilesWritten == 0 {
                     return String(localized: "Partial: \(result.dailyNoteUpdateCount) daily notes updated")
                 }

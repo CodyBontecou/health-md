@@ -131,13 +131,14 @@ Complete generated examples:
 
 The v8 data dictionary retains `µg` for microgram summary keys and adds provider-prefixed WHOOP entries with no period roll-ups.
 
-## Summary-only behavior
+## Archive-off behavior
 
-When Lossless Health Records is off:
+When the canonical HealthKit archive is off (Summary or Detailed Time-Series):
 
 - `raw_capture_status` is `not_requested`;
 - JSON has no `healthkit_record_archive`;
 - CSV has no canonical record/manifest rows;
+- Detailed Time-Series may still include compatible sample arrays/rows/tables;
 - Markdown/Bases retain compact status/frontmatter behavior;
 - summaries remain available.
 

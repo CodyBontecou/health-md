@@ -77,7 +77,7 @@ class APIExportRustPlannerInstrumentationTest {
             ShadowComparisonDiagnostic(
                 profile = AndroidExportProfile.android_frozen_v4,
                 semanticProfileRevision = 1u,
-                renderProfileRevision = 1u,
+                renderProfileRevision = 2u,
                 comparison = ExportArtifactPlanComparison(emptyList()),
             ),
         )

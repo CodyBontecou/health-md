@@ -2,37 +2,55 @@
 
 ## Required pull-request gates
 
-Every pull request runs the component CI workflows and reports five stable final contexts suitable for branch protection:
+Every pull request triggers the component CI workflows, and each reports one of seven stable final contexts suitable for branch protection:
 
 - `Apple CI / Apple CI`
 - `Android CI / Android CI`
 - `CLI CI / CLI CI`
+- `Core Rust CI / Core Rust CI`
 - `Practice CI / Practice CI`
+- `Wake CI / Wake CI`
 - `Website CI / Website CI`
 
-The final jobs fail unless every job in their component workflow succeeds. Main-branch push triggers remain path-aware, so unaffected components are not rebuilt after merge.
+Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files through `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
+
+Each workflow's path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
+
+The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
 
 ## Android release trigger
 
-Android releases are built from committed `android/v<version>` tags by `.github/workflows/android-release.yml`. The tag version must match `versionName`, and `versionCode` must already be higher than every build previously uploaded to Play.
+Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
 
-The workflow reconstructs the existing upload keystore and Play service-account key only under `$RUNNER_TEMP`, builds a signed AAB, and uploads it directly to Google Play's `internal` track. It does not commit the AAB or attach it to a GitHub Release. `.github/workflows/android-promote-production.yml` promotes an exact tagged `versionCode` from `internal` to production without rebuilding the artifact, and verifies the Play track precondition and postcondition before reporting success.
+`.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
 
-Google Play does not expose an App Store Connect-style release webhook. `.github/workflows/android-announce.yml` therefore checks the read-only production release-summary endpoint hourly. When a version becomes `PUBLISHED`, it resolves the matching annotated `android/v<version>` tag by `versionCode`, requires its commit to be reachable from `origin/main`, uses that tag's English Play release notes, and posts the Android message to `#health-md-updates`. A successful `discord/android-production` commit status is the durable marker; an exact, bot-authored, bounded Discord history check reconciles a lost POST response before an immediate retry. The workflow also supports a dry-run manual dispatch and an optional `google-play-published` repository dispatch from a future external hook; every dispatch is revalidated against Google Play.
+After Internal Testing succeeds, dispatch `.github/workflows/android-promote-production.yml` **from the exact annotated release tag** with the semantic version and phone version code. It requires the same tag/main/version bindings, retains a pre-mutation intent, verifies that the exact code is active on `internal` and that production has no newer code, applies the reviewed English listing while promoting that artifact to `production`, and submits the single edit for review. Success requires Google Play to report `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED`. The workflow retains an attempt-qualified production receipt.
 
-The tag-restricted `google-play` environment contains:
+Both mutation workflows use the tag-restricted `google-play` environment and exchange GitHub's job-scoped OIDC assertion for a short-lived Google access token. No long-lived Google service-account key is materialized. Configure these protected `google-play` environment variables:
 
-| Secret | Used for |
+| Variable | Used for |
 | --- | --- |
-| `PLAY_CONSOLE_KEY_JSON` | Google Play Android Developer API authentication |
-| `ANDROID_RELEASE_KEYSTORE_BASE64` | Existing Play upload keystore, encoded for secret storage |
+| `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` | Fully qualified Google Workload Identity provider resource |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT` | App-scoped Play publisher service account impersonated by the provider |
+
+The separately tag-restricted `google-play-qa` environment contains the upload-signing secrets used only by the release build job. The Play-mutation job cannot read them:
+
+| `google-play-qa` secret | Used for |
+| --- | --- |
+| `ANDROID_RELEASE_KEYSTORE_BASE64` | Existing Play upload keystore |
 | `RELEASE_STORE_PASSWORD` | Upload-keystore password |
 | `RELEASE_KEY_ALIAS` | Upload-key alias |
 | `RELEASE_KEY_PASSWORD` | Upload-key password |
 
-Campaign-attribution build values are repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`. They match the deployed first-party Worker; the prior internal-testing token remains a temporary Worker-only overlap value during rotation.
+The normal execution ref is the exact `android/v<version>` release tag. If an already-created immutable release needs a workflow-infrastructure-only recovery, an administrator may add and retain an annotated, main-reachable `android/recovery/*` tag for the fixed workflow revision and pass the original `release_tag` plus a successful exact-SHA Android CI run ID/attempt. The recovery verifies every required job in that retained CI attempt instead of spending a second run on unchanged product source. It still checks out and builds only the original release tag's source. Intent and result receipts bind the release SHA, qualification run, and recovery workflow SHA. Recovery tags must never contain product or artifact changes.
 
-The `google-play-announce` environment is restricted to `main` and contains only `PLAY_CONSOLE_KEY_JSON`. Use a dedicated service account whose only Play Console permission is app-level **View app information (read-only)** (`CAN_VIEW_NON_FINANCIAL_DATA`) for `com.healthmd.android`; the Android Publisher OAuth scope itself is broad, so reusing the publishing service account would not make the credential read-only. Keeping the environment separate prevents the monitor from receiving the upload keystore or signing passwords. Apple and Android announcements suppress Discord mentions because the retired per-app roles no longer exist.
+`.github/workflows/android-google-play-access-audit.yml` is a protected diagnostic for these boundaries. Its `google-play` job retains intent, records exact Internal/generated-artifact state, inserts and immediately deletes one empty Play edit without committing it, and retains a receipt. Its `google-play-qa` job exposes only public certificate digests and proves the protected keystore matches the registered upload certificate before deleting the temporary key file. It has no artifact upload, track/listing update, edit-commit, or review-submission operation.
+
+Campaign-attribution build values remain repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`.
+
+Gradle Play Publisher remains removed, and local/browser Play mutation remains unsupported. The Wear evidence, screenshot, recovery, and paired-track workflows stay in the repository as dormant implementation work for a future release; they are not invoked by, and do not gate, the phone-only release. Before any future Wear publication, restore separate QA/production environments and complete the physical Pixel Watch/Samsung, battery, lifecycle, screenshot, signer, and independent-review contract documented under `apps/android/docs/features/`.
+
+Google Play does not expose an App Store Connect-style release webhook. `.github/workflows/android-announce.yml` checks the read-only production release-summary endpoint and announces only after the exact release is `PUBLISHED`.
 
 ## Apple release trigger
 
@@ -98,12 +116,15 @@ Required repository variable:
 `healthmd-cli/v<version>` tags run `.github/workflows/cli-release.yml`. The workflow rebuilds and
 qualifies the exact tag SHA, then pauses at the protected `cli-signing` environment before it can
 use external signing identities. It Developer ID-signs both macOS executables, notarizes and staples
-per-architecture DMGs, Authenticode-signs both Windows executables and the generated PowerShell
-installer, tests signed Keychain upgrade continuity, publishes the committed qualified signer
+per-architecture DMGs, tests signed Keychain upgrade continuity, publishes the committed signer
 ledger, regenerates all post-signing checksums, and keyless-signs `sha256.sum` with the workflow's
-GitHub OIDC identity. The tag preflight fails while `apps/cli/release-identities.json` has no
-qualified Windows publisher, and native jobs require an exact match with the protected variable. Native runners verify every
-extracted signature. The remote draft assets are then compared byte-for-byte with the qualified
+GitHub OIDC identity. Windows Authenticode is ledger-gated: while
+`apps/cli/release-identities.json` records `pending_external_certificate_provisioning`, the Windows
+signing jobs skip and the archive/installer ship unsigned with Sigstore-checksum integrity only;
+when the ledger records a `qualified` publisher, both Windows executables and the PowerShell
+installer are Authenticode-signed and native jobs require an exact match with the protected
+variable. Native runners verify every extracted macOS signature (and every Windows signature once
+qualified). The remote draft assets are then compared byte-for-byte with the qualified
 workflow artifacts before the separate protected `cli-release` environment can publish them.
 
 The repository variables, `cli-signing` environment secrets, rollback/key-compromise/crates-yank/
@@ -116,6 +137,18 @@ Profile Signer role; it does not use a client secret. Pull requests
 never receive signing credentials and produce unsigned smoke candidates only. A missing signing
 input, rejected notarization, absent timestamp, checksum mismatch, stale/extra draft asset, or
 credential-upgrade failure leaves the release in draft state.
+
+## Direct CLI wake Worker
+
+`.github/workflows/wake-ci.yml` owns the `apps/wake` source gate. It installs the component's locked
+Node dependencies, runs the cross-language-pinned HMAC and notification policy tests, type-checks
+the Worker, and builds a Wrangler dry-run bundle without credentials or deployment. Main pushes are
+path-scoped; pull requests always report the stable `Wake CI / Wake CI` context.
+
+The live Worker remains an independently deployed, notification-only service with its own D1 and
+APNs secrets. Deployment is not coupled to CLI artifact publication and must use committed, pushed
+`origin/main` source under `apps/wake`; see its component README and AGENTS file. No workflow in this
+repository routes health data through the Worker.
 
 ## Release steps
 

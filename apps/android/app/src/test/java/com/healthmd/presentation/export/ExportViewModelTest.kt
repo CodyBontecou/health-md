@@ -1,7 +1,6 @@
 package com.healthmd.presentation.export
 
 import android.net.Uri
-import com.android.billingclient.api.ProductDetails
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
@@ -12,11 +11,12 @@ import com.healthmd.data.export.APIExportUploader
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.health.HealthProviderDiagnosticsReporter
-import com.healthmd.data.health.oauth.OAuthAuthorizationManager
 import com.healthmd.data.health.providers.HealthProviderCatalog
+import com.healthmd.data.health.providers.HealthProviderConnectionManager
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.storage.FileExportManager
-import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.FormatCustomization
@@ -29,14 +29,18 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.review.ReviewPromptResult
+import com.healthmd.domain.review.ReviewPrompter
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.presentation.settings.SettingsViewModel
 import com.healthmd.rawexport.ExportMode
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -148,6 +152,37 @@ class ExportViewModelTest {
         assertThat(historyRepository.entries).hasSize(1)
         assertThat(historyRepository.entries.single().successCount).isEqualTo(7)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(7)
+    }
+
+    @Test
+    fun blockedImportedActiveProfileCannotPreviewOrExportUsingLiveSettings() = runTest {
+        val healthRepository = FakeHealthRepository(hasPermissions = true)
+        val exportRepository = FakeExportRepository()
+        val historyRepository = FakeExportHistoryRepository()
+        val profileRepository = mockk<ExportProfileRepository>()
+        coEvery { profileRepository.activeSharedSetupV2ExecutionAccess() } returns
+            SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+        val viewModel = createViewModel(
+            healthRepository = healthRepository,
+            exportRepository = exportRepository,
+            exportHistoryRepository = historyRepository,
+            exportProfileRepository = profileRepository,
+        )
+        advanceUntilIdle()
+
+        viewModel.buildPreview()
+        advanceUntilIdle()
+        viewModel.startExport()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.profileExecutionIssue)
+            .isEqualTo(ExportProfileExecutionIssue.DESTINATION_REBIND_REQUIRED)
+        assertThat(viewModel.uiState.value.preview).isNull()
+        assertThat(viewModel.uiState.value.lastResult?.isFailure).isTrue()
+        assertThat(healthRepository.fetchCalls).isEqualTo(0)
+        assertThat(exportRepository.previewCalls).isEqualTo(0)
+        assertThat(exportRepository.exportCalls).isEqualTo(0)
+        assertThat(historyRepository.entries).isEmpty()
     }
 
     @Test
@@ -278,6 +313,8 @@ class ExportViewModelTest {
         )
         var rawExportCalls = 0
         var rawPreviewCalls = 0
+        var rawExportInteractive: Boolean? = null
+        var rawPreviewInteractive: Boolean? = null
         val rawService = object : RawSnapshotService {
             override suspend fun exportRange(
                 startDate: LocalDate,
@@ -285,8 +322,10 @@ class ExportViewModelTest {
                 settings: ExportSettings,
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
+                allowInteractiveRouteConsent: Boolean,
             ): ExportResult {
                 rawExportCalls++
+                rawExportInteractive = allowInteractiveRouteConsent
                 return ExportResult(1, 1, target = target)
             }
 
@@ -294,8 +333,10 @@ class ExportViewModelTest {
                 startDate: LocalDate,
                 endDate: LocalDate,
                 settings: ExportSettings,
+                allowInteractiveRouteConsent: Boolean,
             ): ExportPreview {
                 rawPreviewCalls++
+                rawPreviewInteractive = allowInteractiveRouteConsent
                 return ExportPreview(
                     requestedDateCount = 3,
                     previewedDateCount = 3,
@@ -333,6 +374,7 @@ class ExportViewModelTest {
         assertThat(viewModel.uiState.value.folderName).isNull()
         assertThat(exportRepository.previewCalls).isEqualTo(0)
         assertThat(rawPreviewCalls).isEqualTo(1)
+        assertThat(rawPreviewInteractive).isFalse()
         assertThat(viewModel.uiState.value.preview?.totalFileCount).isEqualTo(1)
         assertThat(viewModel.uiState.value.preview?.isRangeArtifact).isTrue()
 
@@ -344,6 +386,7 @@ class ExportViewModelTest {
         advanceUntilIdle()
 
         assertThat(rawExportCalls).isEqualTo(1)
+        assertThat(rawExportInteractive).isTrue()
         assertThat(healthRepository.fetchCalls).isEqualTo(0)
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(1)
@@ -446,8 +489,10 @@ class ExportViewModelTest {
         val settingsViewModel = SettingsViewModel(
             settingsRepository,
             mockk<HealthProviderCatalog>(relaxed = true),
-            mockk<OAuthAuthorizationManager>(relaxed = true),
+            mockk<HealthProviderConnectionManager>(relaxed = true),
             mockk<HealthProviderDiagnosticsReporter>(relaxed = true),
+            FakeBillingRepository(),
+            DistributionPolicy.play(),
         )
         settingsViewModel.resetSettings()
         advanceUntilIdle()
@@ -560,11 +605,17 @@ class ExportViewModelTest {
         collector.cancel()
     }
 
+    private fun allowedProfileRepository() = mockk<ExportProfileRepository> {
+        coEvery { activeSharedSetupV2ExecutionAccess() } returns
+            SharedSetupV2ProfileExecutionAccess.Allowed
+    }
+
     private fun createViewModel(
         healthRepository: HealthRepository,
         exportRepository: ExportRepository = FakeExportRepository(),
         settingsRepository: SettingsRepository = FakeSettingsRepository(),
-        billingRepository: BillingRepository = FakeBillingRepository(),
+        exportProfileRepository: ExportProfileRepository = allowedProfileRepository(),
+        entitlementRepository: EntitlementRepository = FakeBillingRepository(),
         exportHistoryRepository: ExportHistoryRepository = FakeExportHistoryRepository(),
         apiEndpointExportRunner: APIEndpointExportRunner? = null,
         rawSnapshotService: RawSnapshotService? = null,
@@ -576,7 +627,10 @@ class ExportViewModelTest {
             healthRepository = healthRepository,
             exportRepository = exportRepository,
             settingsRepository = settingsRepository,
-            billingRepository = billingRepository,
+            exportProfileRepository = exportProfileRepository,
+            entitlementRepository = entitlementRepository,
+            distributionPolicy = DistributionPolicy.play(),
+            reviewPrompter = FakeReviewPrompter(),
             exportHistoryRepository = exportHistoryRepository,
             fileExportManager = fileExportManager,
             apiEndpointExportRunner = apiEndpointExportRunner,
@@ -777,22 +831,17 @@ private class FakeSettingsRepository(
     }
 }
 
-private class FakeBillingRepository : BillingRepository {
+private class FakeBillingRepository : EntitlementRepository {
     override val isUnlocked: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-    override val isPurchasing: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-    override val isRestoring: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-    override val purchaseError: StateFlow<BillingError?> = MutableStateFlow<BillingError?>(null).asStateFlow()
-    override val productDetails: StateFlow<ProductDetails?> = MutableStateFlow<ProductDetails?>(null).asStateFlow()
-
-    override fun startConnection() = Unit
-    override suspend fun queryProduct() = Unit
-    override suspend fun launchPurchase(activity: android.app.Activity): Boolean = true
-    override suspend fun refreshPurchaseStatus() = Unit
-    override suspend fun restorePurchase(): Boolean = false
-    override suspend fun acknowledgePurchase(purchaseToken: String) = Unit
-    override fun clearError() = Unit
+    override fun refresh() = Unit
     override fun debugSetUnlocked(unlocked: Boolean) = Unit
-    override fun debugResetPurchaseState() = Unit
+    override fun debugReset() = Unit
+}
+
+private class FakeReviewPrompter : ReviewPrompter {
+    override val isAvailable: Boolean = true
+    override suspend fun prompt(activity: android.app.Activity): ReviewPromptResult =
+        ReviewPromptResult.Completed
 }
 
 private class FakeExportHistoryRepository : ExportHistoryRepository {

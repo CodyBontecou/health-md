@@ -23,6 +23,7 @@ class LiveCliInteropTest {
             installationId = installationId,
             displayName = "Kotlin live-test Android",
             pairingCode = code,
+            pairingProtocolVersion = SHARED_PAIRING_PROTOCOL_VERSION,
         )
         connected.channel.use { channel ->
             channel.sendNegotiationHello(installationId)

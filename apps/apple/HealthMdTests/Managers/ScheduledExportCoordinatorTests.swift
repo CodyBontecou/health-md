@@ -137,6 +137,11 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(completion, .preservedPartialSuccess)
         XCTAssertEqual(retryRequest.id, request.id)
         XCTAssertEqual(retryRequest.dates, [request.dates[1]])
+        XCTAssertEqual(retryRequest.originalRequestedDates, request.dates)
+        XCTAssertEqual(
+            retryRequest.originalCalendarTimeZoneIdentifier,
+            request.originalCalendarTimeZoneIdentifier
+        )
         XCTAssertEqual(retryRequest.exportTarget, request.exportTarget)
         XCTAssertEqual(retryRequest.settingsSnapshot, frozenSnapshot)
         XCTAssertEqual(retryRequest.settingsSnapshot?.appleExportEnginePin, pin)
@@ -154,6 +159,51 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         )
         XCTAssertFalse(resumeSnapshotFactoryCalled, "Resume must not resolve mutable settings or engine flags")
         XCTAssertEqual(preparedAgain, retryRequest, "Same-occurrence preparation must not re-expand completed dates")
+    }
+
+    func testResidualRetryAndRelaunchPreserveFrozenOriginalOwnerDatesByteForByte() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fireDate)
+        let snapshot = makeFrozenSnapshot(pin: try makeSyntheticAppleExportEnginePin())
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: ExportSchedule(
+                isEnabled: true,
+                frequency: .weekly,
+                preferredHour: 8,
+                lookbackDays: 2
+            ),
+            fireDate: fireDate,
+            makeSettingsSnapshot: { snapshot }
+        )
+        let originalBytes = try JSONEncoder().encode(request.originalRequestedDates)
+        let completion = try await coordinator.completePendingScheduledExport(
+            request,
+            result: ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: 2,
+                failedDateDetails: [
+                    FailedDateDetail(date: request.dates[1], reason: .fileWriteError)
+                ],
+                completedDates: [request.dates[0]]
+            )
+        )
+        let retry = try XCTUnwrap(try store.loadAll().first)
+        let relaunched = try JSONDecoder().decode(
+            PendingExportRequest.self,
+            from: JSONEncoder().encode(retry)
+        )
+        let frozenTimeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        let identifiers = relaunched.originalRequestedDates.map {
+            HealthRollupDateFormatting.dayString($0, timeZone: frozenTimeZone)
+        }
+
+        XCTAssertEqual(completion, .preservedPartialSuccess)
+        XCTAssertEqual(try JSONEncoder().encode(retry.originalRequestedDates), originalBytes)
+        XCTAssertEqual(try JSONEncoder().encode(relaunched.originalRequestedDates), originalBytes)
+        XCTAssertEqual(identifiers, ["2026-05-16", "2026-05-17"])
+        XCTAssertEqual(relaunched.originalCalendarTimeZoneIdentifier, frozenTimeZone.identifier)
     }
 
     func testCompletePendingScheduledExport_reportedNoDataClearsCompletedRequest() async throws {
@@ -201,8 +251,11 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
-        XCTAssertEqual(scheduler.immediateRequests[request.id], request)
+        // The preserved retry is marked attempted (fireDate is the injected
+        // coordinator clock) so bulk fallback cancellation cannot destroy it.
+        let expectedRetry = request.markingAttempted(at: fireDate)
+        XCTAssertEqual(try store.loadAll(), [expectedRetry])
+        XCTAssertEqual(scheduler.immediateRequests[request.id], expectedRetry)
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
 
@@ -223,7 +276,7 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(try store.loadAll(), [request.markingAttempted(at: fireDate)])
         XCTAssertNil(scheduler.immediateRequests[request.id])
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
@@ -293,24 +346,31 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
     }
 }
 
-private final class InMemoryPendingExportStore: PendingExportStoring {
+final class InMemoryPendingExportStore: PendingExportStoring, @unchecked Sendable {
+    private let lock = NSLock()
     private var requests: [PendingExportRequest] = []
 
     func loadAll() throws -> [PendingExportRequest] {
-        requests
+        lock.withLock { requests }
     }
 
     func upsert(_ request: PendingExportRequest) throws {
-        requests.removeAll { $0.id == request.id }
-        requests.append(request)
+        lock.withLock {
+            requests.removeAll { $0.id == request.id }
+            requests.append(request)
+        }
     }
 
     func remove(id: PendingExportRequest.ID) throws {
-        requests.removeAll { $0.id == id }
+        lock.withLock {
+            requests.removeAll { $0.id == id }
+        }
     }
 
     func clearCompletedRequests(ids: Set<PendingExportRequest.ID>) throws {
-        requests.removeAll { ids.contains($0.id) }
+        lock.withLock {
+            requests.removeAll { ids.contains($0.id) }
+        }
     }
 
     func notificationIdentifier(for request: PendingExportRequest) -> String {

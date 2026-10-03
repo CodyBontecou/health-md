@@ -10,7 +10,7 @@
 
 By default, the Mac CLI asks an already-open, Mac-app-connected iPhone to read HealthKit. It can send a file-writing job, return the complete strict archival transport, or push a metric/object/detail selection down to iPhone and emit ordinary `healthmd.health_data` documents with the transport envelope removed. `healthmd.health_data` remains the single public health-data source of truth; jobs, paging, receipts, and raw-result wrappers are protocol metadata. HealthKit remains on iPhone and this backend's file writes remain in the Mac app. See [API and CLI](../reference/api-and-cli.md) and [Connected Mac–iPhone protocol](../reference/connected-mac-iphone-protocol.md) for exhaustive generated request, response, transfer, and error objects.
 
-The compatible default is `--backend mac-app`. The separate, explicit [`--backend direct` iPhone path](./cli-direct-iphone.md) supports pairing, status, canonical `extract`, strict raw, generated-file transfer to `--destination`, resume, and cancel without the SwiftUI Mac app. It never silently falls back to this backend. Mac-context query/evidence/refresh command paths remain Mac-app-only; portable `healthmd mcp serve` provides fresh typed query/evidence, catalog, visualization, and durable exports directly through iPhone protocol v3.
+The compatible default is `--backend mac-app`. The helper's separate, explicit [`--backend direct` iPhone path](./cli-direct-iphone.md) supports pairing, status, canonical `extract`, strict raw, generated-file transfer to `--destination`, resume, and cancel without the SwiftUI Mac app. It never silently falls back to this mode, and the standalone Rust CLI uses the direct path exclusively with no backend flag. Mac-context query/evidence/refresh command paths remain Mac-app-only; portable `healthmd mcp serve` provides fresh typed query/evidence, catalog, visualization, and durable exports directly through iPhone protocol v3.
 
 ## Requirements
 
@@ -74,9 +74,9 @@ The initial export POST and a resume POST are only waiters. When a resumed spool
 
 ## File mode
 
-Default `settings_policy: requested_dates_only` uses iPhone formats, paths, write mode, Daily Note Injection, and Daily Notes Only, but disables roll-ups and summary-only mode for this request. Without selectors it uses saved metrics and Lossless Health Records. Repeatable `--metric`/`--category` (or explicit `--all-metrics`) plus `--detail summary|lossless` replace those two saved choices only for this file job, before HealthKit reads; selected files still use the production exporters and v8 schema. Date selection always comes from the CLI.
+Default `settings_policy: requested_dates_only` uses iPhone formats, paths, write mode, Daily Note Injection, and Daily Notes Only, but disables roll-ups and summary-only mode for this request. Without selectors it uses saved metrics and the exact saved Data Detail policy. Repeatable `--metric`/`--category` (or explicit `--all-metrics`) plus `--detail summary|lossless` replace those two saved choices only for this file job, before HealthKit reads; selected files still use the production exporters and v8 schema. Date selection always comes from the CLI.
 
-`--use-iphone-settings` uses saved settings exactly, including roll-ups, summary-only mode, and Daily Notes Only. Effective granular capture is enabled only for standard file mode: summary-only and Daily Notes Only jobs neither fetch nor transfer a lossless archive even if the saved Lossless Health Records toggle is on.
+`--use-iphone-settings` uses saved settings exactly, including Data Detail, roll-ups, summary-only mode, and Daily Notes Only. Effective detail is enabled only for standard file mode: summary-only and Daily Notes Only jobs neither fetch compatibility series nor transfer a canonical archive even when those preferences are saved.
 
 Current peers negotiate partitioned corpus transfer plus the current `healthmd.healthkit_records` archive version. All-available-history requests require the additive all-history capability and partitioned transfer on both peers; they fail closed instead of turning into a one-day placeholder request. Older peers keep the single-payload path and its 2 GiB ceiling; they are rejected rather than accepting a lossless job that could drop the archive. Summary-only and non-granular jobs retain their legacy compatibility path.
 
@@ -92,7 +92,7 @@ This path currently exposes canonical Apple Health data. Provider sidecars are n
 
 ## Strict raw profile
 
-`--raw` requests `canonical_source_records_v1` and writes no files. It temporarily forces Lossless Health Records for the request without changing the saved `includeGranularData` preference.
+`--raw` requests `canonical_source_records_v1` and writes no files. It temporarily forces the Lossless detail policy for the request without changing the saved compatibility-detail or HealthKit-source-archive preferences.
 
 The response is `healthmd.raw_result` v1. Each retained day contains the public schema-v8 `healthmd.health_data` object, including `time_context`, summaries, diagnostics, and `healthkit_record_archive` (`healthmd.healthkit_records` v1). This strict profile currently contains canonical Apple Health data only; it does not fetch or embed connected-provider sidecars.
 

@@ -4,8 +4,15 @@ import SwiftUI
 // MARK: - Sync Settings View (iOS)
 
 struct SyncSettingsView: View {
+    private enum ConfigurationTarget: String {
+        case macDestination
+        case cli
+    }
+
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var directCLIService: IPhoneDirectCLIService
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject var directWakeManager: IPhoneDirectWakeManager
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage(IPhoneDirectCLIService.enabledKey) private var directCLIEnabled = false
     @AppStorage(IPhoneDirectCLIService.hostKey) private var directCLIHost = ""
@@ -16,7 +23,9 @@ struct SyncSettingsView: View {
     @State private var manualPairingCode = ""
     @State private var directCLIPairingCode = ""
     @State private var showDirectCLIPairingScanner = false
+    @State private var configurationTarget: ConfigurationTarget = .macDestination
     @FocusState private var focusedManualIPField: ManualIPField?
+    @FocusState private var focusedDirectCLIField: ManualIPField?
 
     private enum ManualIPField: Hashable {
         case host
@@ -38,13 +47,20 @@ struct SyncSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 syncHeader
-                syncToggleSection
-                downloadMacSection
-                connectionSection
-                manualIPSection
-                directCLISection
-                macExportFlowSection
-                errorSection
+                configurationTargetPicker
+
+                switch configurationTarget {
+                case .macDestination:
+                    syncToggleSection
+                        .configurationChangesProtected()
+                    downloadMacSection
+                    connectionSection
+                    manualIPSection
+                    macExportFlowSection
+                    errorSection
+                case .cli:
+                    directCLISection
+                }
             }
             .padding(.horizontal, Spacing.s4)
             .padding(.top, Spacing.s4)
@@ -55,11 +71,19 @@ struct SyncSettingsView: View {
         .scrollDismissesKeyboard(.interactively)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
+            if directCLIService.pendingPairingLink != nil {
+                configurationTarget = .cli
+            }
             if syncEnabled && shouldStartRuntimeServices {
                 syncService.startAdvertising()
             }
             if directCLIEnabled && shouldStartRuntimeServices {
                 directCLIService.setEnabled(true)
+            }
+        }
+        .onChange(of: directCLIService.pendingPairingLink) { _, pairingLink in
+            if pairingLink != nil {
+                configurationTarget = .cli
             }
         }
         .onChange(of: directCLIService.isConnected) { _, connected in
@@ -81,7 +105,9 @@ struct SyncSettingsView: View {
         }
         .fullScreenCover(isPresented: $showDirectCLIPairingScanner) {
             DirectCLIPairingScannerView { pairingLink in
-                directCLIService.handleScannedPairingLink(pairingLink)
+                configurationProtection.performConfigurationChange {
+                    directCLIService.handleScannedPairingLink(pairingLink)
+                }
             }
         }
     }
@@ -90,18 +116,42 @@ struct SyncSettingsView: View {
 
     private var syncHeader: some View {
         HealthMdPageHeader(
-            title: "Mac Destination",
-            subtitle: "Let Health.md on Mac receive iPhone-configured exports over your local network."
+            title: configurationTarget == .macDestination ? "Mac Destination" : "CLI",
+            subtitle: configurationTarget == .macDestination
+                ? "Let Health.md on Mac receive iPhone-configured exports over your local network."
+                : "Let the healthmd command connect while this iPhone app is open, without running the Mac app."
         ) {
             HStack(spacing: Spacing.sm) {
-                SyncStatusPill(text: syncEnabled ? String(localized: "Enabled") : String(localized: "Disabled"), tone: syncEnabled ? .success : .muted)
-                if syncEnabled {
-                    SyncStatusPill(text: connectionStatusLabel, tone: connectionTone)
+                if configurationTarget == .macDestination {
+                    SyncStatusPill(
+                        text: syncEnabled ? String(localized: "Enabled") : String(localized: "Disabled"),
+                        tone: syncEnabled ? .success : .muted
+                    )
+                    if syncEnabled {
+                        SyncStatusPill(text: connectionStatusLabel, tone: connectionTone)
+                    }
+                } else {
+                    SyncStatusPill(
+                        text: directCLIEnabled ? String(localized: "Enabled") : String(localized: "Disabled"),
+                        tone: directCLIEnabled ? .success : .muted
+                    )
+                    if let directCLIHeaderStatusLabel {
+                        SyncStatusPill(text: directCLIHeaderStatusLabel, tone: directCLIHeaderStatusTone)
+                    }
                 }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(headerAccessibilityLabel)
         }
+    }
+
+    private var configurationTargetPicker: some View {
+        Picker("Sync", selection: $configurationTarget) {
+            Text("Mac Destination").tag(ConfigurationTarget.macDestination)
+            Text("CLI").tag(ConfigurationTarget.cli)
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier(AccessibilityID.Sync.configurationTargetPicker)
     }
 
     // MARK: - Sections
@@ -254,8 +304,10 @@ struct SyncSettingsView: View {
                     .accessibilityHidden(true)
                 Text("Cancel Active Mac Export")
                     .font(.body.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
+            .frame(minWidth: 44, minHeight: 44)
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, 14)
             .contentShape(Rectangle())
@@ -280,31 +332,41 @@ struct SyncSettingsView: View {
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        HStack(spacing: Spacing.sm) {
-                            TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .keyboardType(.URL)
-                                .textFieldStyle(.roundedBorder)
-                                .focused($focusedManualIPField, equals: .host)
-                                .accessibilityLabel("Mac IP address or hostname")
+                        VStack(spacing: Spacing.sm) {
+                            ReadingConnectionEntry(
+                                title: "Mac IP address or hostname",
+                                value: manualMacHost,
+                                identifier: "reading.sync.mac-host",
+                                focusEditor: { focusedManualIPField = .host }
+                            ) {
+                                TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .keyboardType(.URL)
+                                    .focused($focusedManualIPField, equals: .host)
+                            }
 
-                            TextField("Port", text: $manualMacPort)
+                            ReadingConnectionEntry(
+                                title: "Manual IP port",
+                                value: manualMacPort,
+                                identifier: "reading.sync.mac-port",
+                                focusEditor: { focusedManualIPField = .port }
+                            ) {
+                                TextField("Port", text: $manualMacPort)
+                                    .keyboardType(.numberPad)
+                                    .focused($focusedManualIPField, equals: .port)
+                            }
+
+                            SecureField(
+                                syncService.hasSavedManualIPConnection ? "Pairing code (not required)" : "Pairing code",
+                                text: $manualPairingCode
+                            )
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
-                                .frame(width: 82)
-                                .focused($focusedManualIPField, equals: .port)
-                                .accessibilityLabel("Manual IP port")
+                                .focused($focusedManualIPField, equals: .pairingCode)
+                                .accessibilityLabel("Pairing code")
                         }
-
-                        SecureField(
-                            syncService.hasSavedManualIPConnection ? "Pairing code (not required)" : "Pairing code",
-                            text: $manualPairingCode
-                        )
-                            .keyboardType(.numberPad)
-                            .textFieldStyle(.roundedBorder)
-                            .focused($focusedManualIPField, equals: .pairingCode)
-                            .accessibilityLabel("Pairing code")
+                        .configurationChangesProtected()
 
                         if syncService.hasSavedManualIPConnection {
                             Label(
@@ -316,23 +378,18 @@ struct SyncSettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        HStack(spacing: Spacing.sm) {
-                            Button {
-                                connectByManualIP()
-                            } label: {
-                                Label(manualIPButtonTitle, systemImage: manualIPButtonIcon)
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!canAttemptManualIPConnection)
-
-                            if syncService.activeTransport == .manualIP {
-                                Button("Disconnect") {
-                                    syncService.disconnect()
+                        ReadingConnectionActions(
+                            primaryTitle: manualIPButtonTitle,
+                            primaryIcon: manualIPButtonIcon,
+                            isEnabled: canAttemptManualIPConnection,
+                            onPrimary: {
+                                configurationProtection.performConfigurationChange {
+                                    connectByManualIP()
                                 }
-                                .buttonStyle(.bordered)
-                            }
-                        }
+                            },
+                            secondaryTitle: syncService.activeTransport == .manualIP ? "Disconnect" : nil,
+                            onSecondary: { syncService.disconnect() }
+                        )
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, 14)
@@ -347,7 +404,15 @@ struct SyncSettingsView: View {
             subtitle: "Let the healthmd command connect while this iPhone app is open, without running the Mac app."
         ) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Toggle(isOn: $directCLIEnabled) {
+                Toggle(isOn: Binding(
+                    get: { directCLIEnabled },
+                    set: { enabled in
+                        configurationProtection.performConfigurationChange {
+                            directCLIEnabled = enabled
+                            directCLIService.setEnabled(enabled)
+                        }
+                    }
+                )) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Enable Direct CLI Access")
                             .font(.body.weight(.semibold))
@@ -358,8 +423,43 @@ struct SyncSettingsView: View {
                     }
                 }
                 .tint(Color.accent)
-                .onChange(of: directCLIEnabled) { _, enabled in
-                    directCLIService.setEnabled(enabled)
+                .accessibilityIdentifier(AccessibilityID.Sync.directCLIToggle)
+
+                if directCLIService.hasPairedCLI {
+                    SyncRowDivider()
+                    Toggle(isOn: Binding(
+                        get: {
+                            if case .enrolled = directWakeManager.state { return true }
+                            return false
+                        },
+                        set: { enabled in
+                            configurationProtection.performConfigurationChange {
+                                Task { @MainActor in
+                                    if enabled {
+                                        await directWakeManager.enable()
+                                    } else {
+                                        await directWakeManager.disable()
+                                    }
+                                }
+                            }
+                        }
+                    )) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Allow paired computers to send wake requests")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.textPrimary)
+                            Text("Get a notification when the CLI is waiting for this phone, so unlocking and opening Health.md finishes the same command. Requires the wake service; the CLI keeps waiting without it.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.textSecondary)
+                        }
+                    }
+                    .tint(Color.accent)
+                    .disabled(directWakeManager.state == .enrolling)
+                    if case .unavailable(let reason) = directWakeManager.state {
+                        Text(reason)
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                    }
                 }
 
                 if directCLIService.needsPairingCode,
@@ -368,10 +468,13 @@ struct SyncSettingsView: View {
 
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Button {
-                            showDirectCLIPairingScanner = true
+                            configurationProtection.performConfigurationChange {
+                                showDirectCLIPairingScanner = true
+                            }
                         } label: {
                             Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
-                                .frame(maxWidth: .infinity)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(directCLIService.isConnecting)
@@ -403,13 +506,18 @@ struct SyncSettingsView: View {
                                 directCLIService.retryPendingPairingLink()
                             } label: {
                                 Label("Retry QR pairing", systemImage: "arrow.clockwise")
-                                    .frame(maxWidth: .infinity)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
                             }
                             .buttonStyle(.borderedProminent)
                         }
 
-                        Button("Cancel", role: .cancel) {
+                        Button(role: .cancel) {
                             directCLIService.cancelPendingPairingLink()
+                        } label: {
+                            Text("Cancel")
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.bordered)
                     }
@@ -428,48 +536,73 @@ struct SyncSettingsView: View {
 
                     if directCLIService.pendingPairingLink == nil {
                         if directCLIService.needsPairingCode {
-                            Picker("Transport", selection: $directCLITransport) {
+                            Picker("Transport", selection: Binding(
+                                get: { directCLITransport },
+                                set: { value in
+                                    configurationProtection.performConfigurationChange {
+                                        directCLITransport = value
+                                        directCLIService.updateTransport(
+                                            DirectTransportKind(rawValue: value) ?? .manualIP
+                                        )
+                                    }
+                                }
+                            )) {
                                 Text("Manual IP").tag(DirectTransportKind.manualIP.rawValue)
                                 Text("Nearby").tag(DirectTransportKind.nearby.rawValue)
                             }
                             .pickerStyle(.segmented)
-                            .onChange(of: directCLITransport) { _, value in
-                                directCLIService.updateTransport(
-                                    DirectTransportKind(rawValue: value) ?? .manualIP
-                                )
-                            }
 
                             if directCLITransport == DirectTransportKind.manualIP.rawValue {
-                                HStack(spacing: Spacing.sm) {
-                                    TextField("Mac IP or Tailscale address", text: $directCLIHost)
-                                        .textInputAutocapitalization(.never)
-                                        .autocorrectionDisabled()
-                                        .keyboardType(.URL)
-                                        .textFieldStyle(.roundedBorder)
+                                VStack(alignment: .leading, spacing: Spacing.sm) {
+                                    ReadingConnectionEntry(
+                                        title: "Mac IP or Tailscale address",
+                                        value: directCLIHost,
+                                        identifier: "reading.sync.cli-host",
+                                        focusEditor: { focusedDirectCLIField = .host }
+                                    ) {
+                                        TextField("Mac IP or Tailscale address", text: $directCLIHost)
+                                            .textInputAutocapitalization(.never)
+                                            .autocorrectionDisabled()
+                                            .keyboardType(.URL)
+                                            .focused($focusedDirectCLIField, equals: .host)
+                                    }
 
-                                    TextField("Port", text: $directCLIPort)
-                                        .keyboardType(.numberPad)
-                                        .textFieldStyle(.roundedBorder)
-                                        .frame(width: 82)
+                                    ReadingConnectionEntry(
+                                        title: "Port",
+                                        value: directCLIPort,
+                                        identifier: "reading.sync.cli-port",
+                                        focusEditor: { focusedDirectCLIField = .port }
+                                    ) {
+                                        TextField("Port", text: $directCLIPort)
+                                            .keyboardType(.numberPad)
+                                            .focused($focusedDirectCLIField, equals: .port)
+                                    }
                                 }
+                                .configurationChangesProtected()
                             } else {
                                 Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
                                     .font(.footnote)
                                     .foregroundStyle(Color.textSecondary)
                             }
 
-                            SecureField("Pairing code", text: $directCLIPairingCode)
+                            SecureField("20-digit pairing code", text: $directCLIPairingCode)
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
+                                .configurationChangesProtected()
+                            Text("Current healthmd versions use one 20-digit code on iOS and Android. Six-digit entry remains available only for a legacy CLI.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.textSecondary)
 
-                            Button {
-                                connectDirectCLI()
-                            } label: {
-                                Label("Pair with healthmd", systemImage: "link")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!canConnectDirectCLI)
+                            ReadingConnectionActions(
+                                primaryTitle: "Pair with healthmd",
+                                primaryIcon: "link",
+                                isEnabled: canConnectDirectCLI,
+                                onPrimary: {
+                                    configurationProtection.performConfigurationChange {
+                                        connectDirectCLI()
+                                    }
+                                }
+                            )
                         } else {
                             Label(
                                 "Paired with \(directCLIService.pairedCLIName ?? "healthmd CLI") via \(directCLITransportLabel). Commands connect on demand while access is enabled.",
@@ -479,11 +612,12 @@ struct SyncSettingsView: View {
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                            Button("Forget Pairing", role: .destructive) {
-                                directCLIService.forgetPairedCLI()
-                                directCLIPairingCode = ""
+                            DestructiveButton(title: "Forget Pairing") {
+                                configurationProtection.performConfigurationChange {
+                                    directCLIService.forgetPairedCLI()
+                                    directCLIPairingCode = ""
+                                }
                             }
-                            .buttonStyle(.bordered)
                         }
                     }
 
@@ -538,10 +672,31 @@ struct SyncSettingsView: View {
     // MARK: - Helpers
 
     private var headerAccessibilityLabel: String {
-        if syncEnabled {
-            return "Mac destination enabled. Connection status: \(connectionStatusLabel)."
+        switch configurationTarget {
+        case .macDestination:
+            if syncEnabled {
+                return "Mac destination enabled. Connection status: \(connectionStatusLabel)."
+            }
+            return "Mac destination disabled."
+        case .cli:
+            guard directCLIEnabled else { return "Direct CLI access disabled." }
+            if directCLIService.isConnected { return "Direct CLI access enabled and connected." }
+            if directCLIService.isConnecting { return "Direct CLI access enabled and connecting." }
+            if directCLIService.hasPairedCLI { return "Direct CLI access enabled and ready." }
+            return "Direct CLI access enabled and waiting to pair."
         }
-        return "Mac destination disabled."
+    }
+
+    private var directCLIHeaderStatusLabel: String? {
+        guard directCLIEnabled else { return nil }
+        if directCLIService.isConnected { return String(localized: "Connected") }
+        if directCLIService.isConnecting { return String(localized: "Connecting…") }
+        if directCLIService.hasPairedCLI { return String(localized: "Ready") }
+        return nil
+    }
+
+    private var directCLIHeaderStatusTone: SyncStatusTone {
+        directCLIService.isConnecting ? .accent : .success
     }
 
     private var connectionStatusLabel: String {
@@ -673,7 +828,9 @@ struct SyncSettingsView: View {
 
     private var canConnectDirectCLI: Bool {
         let hasHost = !directCLIHost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasCode = !ManualIPSyncSecurity.normalizedPairingCode(directCLIPairingCode).isEmpty
+        let codeDigits = ManualIPSyncSecurity.normalizedPairingCode(directCLIPairingCode).utf8.count
+        let hasCode = codeDigits == DirectPairingSecurity.sharedPairingCodeDigits
+            || codeDigits == DirectPairingSecurity.legacyPairingCodeDigits
         let transportReady = directCLITransport == DirectTransportKind.nearby.rawValue || hasHost
         return transportReady
             && !directCLIService.isConnecting
@@ -726,7 +883,12 @@ struct SyncSettingsView: View {
         }
         if status.activeJobID != nil { return "Mac is currently writing another export." }
         if !status.destinationFolderSelected { return "Choose a destination folder in Health.md on Mac." }
-        if !status.folderAccessHealthy { return "Re-select the Mac destination folder to restore write access." }
+        if !status.folderAccessHealthy {
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it in Health.md on Mac."
+        }
         return status.lastError ?? syncService.macExportReadinessMessage
     }
 }

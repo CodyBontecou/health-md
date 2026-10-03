@@ -15,6 +15,9 @@ import XCTest
 final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
     var storage: [String: Int] = [:]
     var stringStorage: [String: String] = [:]
+    var nextReadStringError: Error?
+    var nextWriteStringError: Error?
+    var nextRemoveError: Error?
 
     func readInt(key: String) -> Int {
         storage[key] ?? 0
@@ -28,17 +31,37 @@ final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
         stringStorage[key]
     }
 
+    func readStringOrThrow(key: String) throws -> String? {
+        if let error = nextReadStringError {
+            nextReadStringError = nil
+            throw error
+        }
+        return stringStorage[key]
+    }
+
     func writeString(key: String, value: String) {
         stringStorage[key] = value
     }
 
     func writeStringOrThrow(key: String, value: String) throws {
+        if let error = nextWriteStringError {
+            nextWriteStringError = nil
+            throw error
+        }
         stringStorage[key] = value
     }
 
     func remove(key: String) {
         storage.removeValue(forKey: key)
         stringStorage.removeValue(forKey: key)
+    }
+
+    func removeOrThrow(key: String) throws {
+        if let error = nextRemoveError {
+            nextRemoveError = nil
+            throw error
+        }
+        remove(key: key)
     }
 }
 
@@ -496,6 +519,46 @@ final class ProductionAdapterTests: XCTestCase {
     func testURLSessionHTTPClient_conformsToProtocol() {
         let _: HTTPClientProtocol = URLSessionHTTPClient()
         // Compile-time conformance check
+    }
+
+    func testSystemVaultFolderIdentityProbe_returnsStableIdentityForDirectory() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("HealthMdIdentityProbeTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let probe: VaultFolderIdentityProbing = SystemVaultFolderIdentityProbe()
+        let values = try directory.resourceValues(forKeys: [
+            .isDirectoryKey,
+            .volumeSupportsPersistentIDsKey,
+            .volumeUUIDStringKey,
+            .fileIdentifierKey
+        ])
+        guard values.isDirectory == true,
+              values.volumeSupportsPersistentIDs == true,
+              values.volumeUUIDString?.isEmpty == false,
+              values.fileIdentifier != nil else {
+            throw XCTSkip("The test volume does not expose persistent directory identity")
+        }
+
+        let first = try XCTUnwrap(probe.persistentIdentity(for: directory))
+        let second = try XCTUnwrap(probe.persistentIdentity(for: directory.standardizedFileURL))
+
+        XCTAssertFalse(first.volumeUUIDString.isEmpty)
+        XCTAssertEqual(first, second)
+    }
+
+    func testSystemVaultFolderIdentityProbe_rejectsRegularFile() throws {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("HealthMdIdentityProbeTests-\(UUID().uuidString).txt")
+        try Data("test".utf8).write(to: file)
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: file)
+        }
+        let probe: VaultFolderIdentityProbing = SystemVaultFolderIdentityProbe()
+
+        XCTAssertNil(try probe.persistentIdentity(for: file))
     }
 
     func testSystemFileSystem_writeStringAtomicallyWritesFinalContent() throws {

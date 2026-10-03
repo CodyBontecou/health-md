@@ -183,6 +183,22 @@ pub enum DateSelection {
 pub enum SettingsPolicy {
     RequestedScope,
     SavedDeviceSettings,
+    /// Resolve settings from a named export profile on the Android source by
+    /// stable ID (see [`ProfileReference`]). Additive in the wire contract:
+    /// older peers that do not know this variant — or the optional
+    /// `profile_reference` field — fail closed with a decode error instead of
+    /// misinterpreting the request (export-profiles decision 10).
+    Profile,
+}
+
+/// Reference to an export profile resolved on the Android source. The stable
+/// profile ID is authoritative; `name` is a display convenience captured for
+/// errors and logs and is only used for resolution when the ID is absent.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ProfileReference {
+    pub profile_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -210,6 +226,9 @@ pub enum ExportProduct {
     },
     GeneratedFilesV1 {
         settings_policy: SettingsPolicy,
+        /// Present exactly when `settings_policy` is [`SettingsPolicy::Profile`].
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        profile_reference: Option<ProfileReference>,
     },
     AndroidDailyRecordsV1 {
         metric_ids: Vec<String>,
@@ -226,6 +245,20 @@ impl ExportProduct {
             }
             Self::GeneratedFilesV1 { .. } => ProductId::GeneratedFilesV1,
             Self::AndroidDailyRecordsV1 { .. } => ProductId::AndroidDailyRecordsV1,
+        }
+    }
+
+    /// The profile reference this product resolves settings from, when any.
+    #[must_use]
+    pub const fn profile_reference(&self) -> Option<&ProfileReference> {
+        match self {
+            Self::GeneratedFilesV1 {
+                profile_reference: reference,
+                ..
+            } => reference.as_ref(),
+            Self::AndroidProviderNativeSnapshotV1 { .. } | Self::AndroidDailyRecordsV1 { .. } => {
+                None
+            }
         }
     }
 }

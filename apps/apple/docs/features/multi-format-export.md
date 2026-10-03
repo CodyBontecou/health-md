@@ -13,18 +13,18 @@ One export action can write Markdown, Obsidian Bases, JSON, and CSV for every se
 
 | Format | Role |
 |---|---|
-| Markdown | Readable summaries plus lossless status/counts/diagnostics. |
-| Obsidian Bases | Queryable summary properties plus lossless status/counts. |
-| JSON | Authoritative complete public `healthkit_record_archive`. |
-| CSV | Same canonical records as JSON, one RFC 4180-safe JSON row per record. |
+| Markdown | Readable summaries and selected sample tables, plus archive status/counts/diagnostics. |
+| Obsidian Bases | Queryable summary properties plus archive status/counts. |
+| JSON | Summaries and selected sample arrays; Lossless additionally embeds the authoritative public `healthkit_record_archive`. |
+| CSV | Summary/sample rows; Lossless additionally emits the same canonical records as JSON as RFC 4180-safe JSON rows. |
 
-**Lossless Health Records** is off by default for new installs, so all selected formats begin on the faster summary-only path. Existing explicit on or off choices are preserved.
+Data Detail defaults to Summary. Detailed Time-Series adds selected timestamped samples without the canonical archive; Lossless Health Records adds both. Historical combined choices migrate unchanged.
 
 ## Setup
 
 1. Open **Export → Export Formats**.
 2. Enable any combination of Markdown, Obsidian Bases, JSON, and CSV.
-3. Choose metrics and review **Lossless Health Records**.
+3. Choose metrics and select Summary, Detailed Time-Series, or Lossless Health Records under **Data Detail**.
 4. Configure paths/format settings and choose iPhone Folder or Connected Mac.
 5. Preview one day, then export.
 
@@ -49,9 +49,13 @@ Bases receives `-bases` only when readable Markdown is also selected. A three-da
 
 ## Size and transport
 
-Lossless JSON/CSV can be much larger than Markdown/Bases because they include routes, waveforms, binary content, and attachments. Current Connected Mac jobs use bounded checksum-validated frames rather than an unbounded whole payload, but capture and final file serialization can still use substantial memory.
+Lossless JSON/CSV can be much larger than Markdown/Bases because they include routes, waveforms, binary content, and attachments. **Zip Export Files** packages the selected outputs with standard per-entry ZIP DEFLATE while keeping input and output buffers bounded; extracted filenames and bytes are unchanged. Tiny or incompressible entries can grow slightly because archive mode does not stage or replay an entry solely to choose store mode. Current Connected Mac jobs use bounded checksum-validated frames rather than an unbounded whole payload, but capture and final file serialization can still use substantial memory.
 
-Disable formats you do not need and export smaller date ranges for dense records.
+Preview and status use a rough text-export compression projection, not an exact promised archive size. Disable formats you do not need and export smaller date ranges for dense records.
+
+## Zipping one export run
+
+Enable **Zip Export Files** (Export tab → Output) to write the selected formats for a run into a single compressed ZIP archive (DEFLATE) instead of loose files. The toggle is disabled while Daily Notes-only mode is on. Unzip yields exactly the files the same run would have written loose.
 
 ## Tips
 

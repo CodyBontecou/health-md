@@ -4,6 +4,7 @@ struct ExternalIntegrationsView: View {
     @ObservedObject var manager: ExternalIntegrationManager
     @Environment(\.dismiss) private var dismiss
     @State private var isTroubleshootingExpanded = false
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         NavigationStack {
@@ -28,6 +29,16 @@ struct ExternalIntegrationsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }
@@ -123,7 +134,13 @@ struct ExternalIntegrationsView: View {
 
             if connected {
                 Button(role: .destructive) {
-                    Task { await manager.disconnect(provider: provider) }
+                    guard configurationProtection.performConfigurationChange({}) else { return }
+                    Task {
+                        await manager.disconnect(
+                            provider: provider,
+                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
+                        )
+                    }
                 } label: {
                     providerActionLabel(
                         title: disconnecting ? "Disconnecting…" : "Disconnect WHOOP",
@@ -136,7 +153,13 @@ struct ExternalIntegrationsView: View {
                 .disabled(actionDisabled)
             } else {
                 Button {
-                    Task { await manager.connect(provider: provider) }
+                    guard configurationProtection.performConfigurationChange({}) else { return }
+                    Task {
+                        await manager.connect(
+                            provider: provider,
+                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
+                        )
+                    }
                 } label: {
                     providerActionLabel(
                         title: connecting ? "Connecting…" : "Connect WHOOP",

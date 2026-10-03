@@ -3,6 +3,8 @@ package com.healthmd.presentation.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,8 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -36,9 +38,13 @@ import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.paywall.PaywallViewModel
 import com.healthmd.presentation.directcli.DirectCliScreen
 import com.healthmd.presentation.clinicianreport.ClinicianReportScreen
+import com.healthmd.presentation.export.ExportProfilesScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
+import com.healthmd.presentation.common.ConfigurationProtectionToast
+import com.healthmd.presentation.common.ConfigurationProtectionUi
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
@@ -48,13 +54,22 @@ import com.healthmd.presentation.schedule.ScheduleScreen
 import com.healthmd.presentation.schedule.ScheduledRecoveryUiState
 import com.healthmd.presentation.schedule.ScheduledRecoveryViewModel
 import com.healthmd.presentation.settings.*
+import com.healthmd.sharedsetup.SharedSetupCoordinator
+import com.healthmd.sharedsetup.SharedSetupScreen
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistBreakpoints
+import com.healthmd.presentation.theme.GeistAdaptiveLayout
 import com.healthmd.presentation.theme.GeistRadii
+import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -62,6 +77,7 @@ import java.util.Date
 @Composable
 fun HealthMdNavigation(
     settingsRepository: SettingsRepository,
+    sharedSetupCoordinator: SharedSetupCoordinator,
     initialRoute: String? = null,
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
@@ -85,9 +101,6 @@ fun HealthMdNavigation(
 
     // Adaptive navigation: bottom bar on compact screens, navigation rail on larger layouts.
     val showMainNav = currentRoute in NavDestination.entries.map { it.route }
-    val useNavigationRail = LocalConfiguration.current.screenWidthDp >= GeistBreakpoints.medium
-    val showBottomNav = showMainNav && !useNavigationRail
-    val showNavigationRail = showMainNav && useNavigationRail
 
     // Wait until the explicit completion state has loaded or the legacy-folder state has been
     // migrated. The saved decision survives activity recreation and remains stable for this entry.
@@ -103,6 +116,32 @@ fun HealthMdNavigation(
     // Existing users with a pre-onboarding folder still skip setup, but later folder updates
     // cannot eject a new user from an active onboarding flow.
     val shouldSkipOnboarding = requireNotNull(initialShouldSkipOnboarding)
+    LaunchedEffect(sharedSetupCoordinator) {
+        sharedSetupCoordinator.imports.filterNotNull().collect {
+            // A StateFlow resumes a suspended collector undispatched on the publisher's
+            // thread, so this body can run wherever the import was published from.
+            // Pin navigation to the main thread: mutating NavController from a
+            // background thread half-applies a back-stack entry that later crashes
+            // activity destroy ("State must be at least CREATED to move to DESTROYED").
+            withContext(Dispatchers.Main.immediate) {
+                // A retained import StateFlow can emit before NavHost installs its graph on a
+                // cold launch. Wait for the first graph-backed entry before navigating.
+                navController.currentBackStackEntryFlow.first()
+                // Reuse a retained Shared Setup back-stack entry instead of pushing a second
+                // ViewModel. The coordinator keeps the request until Finish/Cancel, so an inactive
+                // entry cannot consume a warm ACTION_VIEW before navigation observes it.
+                if (navController.currentDestination?.route != SubRoutes.SHARED_SETUP) {
+                    val revealedExisting = navController.popBackStack(
+                        route = SubRoutes.SHARED_SETUP,
+                        inclusive = false,
+                    )
+                    if (!revealedExisting) {
+                        navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true }
+                    }
+                }
+            }
+        }
+    }
     val hasCompletedSetup = hasCompletedOnboarding == true
     val releaseNotes = remember(appContext) { AndroidReleaseNotes.current(appContext) }
     var releaseNotesDismissed by remember(releaseNotes?.versionKey) { mutableStateOf(false) }
@@ -123,6 +162,7 @@ fun HealthMdNavigation(
         }
     }
 
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
     val debugStartRoutes = if (BuildConfig.DEBUG) {
         listOf(
             SubRoutes.ONBOARDING,
@@ -134,17 +174,46 @@ fun HealthMdNavigation(
             SubRoutes.ADVANCED_SETTINGS,
             SubRoutes.CLINICIAN_REPORT,
             SubRoutes.DIRECT_CLI,
+            SubRoutes.SHARED_SETUP,
+            SubRoutes.EXPORT_PROFILES,
         )
     } else {
         emptyList()
     }
-    val knownStartRoutes = NavDestination.entries.map { it.route } + PaywallEntryPoint.UPGRADE.route + debugStartRoutes
+    val paywallStartRoutes = if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+        listOf(PaywallEntryPoint.UPGRADE.route)
+    } else {
+        emptyList()
+    }
+    val knownStartRoutes = NavDestination.entries.map { it.route } + paywallStartRoutes + debugStartRoutes
     val startDestination = if (shouldSkipOnboarding) {
         initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
     } else {
         SubRoutes.ONBOARDING
     }
 
+    // One graph-scoped owner exposes the device-local protection preference, toast, and
+    // navigation request to every in-app configuration surface.
+    val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val protectionEnabled by settingsViewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
+    val blockedChangeToastId by settingsViewModel.blockedChangeToastId.collectAsStateWithLifecycle()
+    val protectionSettingsRequestId by settingsViewModel.protectionSettingsRequestId.collectAsStateWithLifecycle()
+
+    LaunchedEffect(blockedChangeToastId) {
+        val toastId = blockedChangeToastId ?: return@LaunchedEffect
+        delay(4_000)
+        if (settingsViewModel.blockedChangeToastId.value == toastId) {
+            settingsViewModel.dismissBlockedChangeToast()
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalConfigurationProtection provides ConfigurationProtectionUi(
+            // Fail closed during the brief DataStore-loading state.
+            enabled = protectionEnabled != false,
+            onBlockedChange = settingsViewModel::showBlockedChangeToast,
+        ),
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -161,19 +230,23 @@ fun HealthMdNavigation(
             },
         )
 
-        // Shared ViewModel for settings
-        val settingsViewModel: SettingsViewModel = hiltViewModel()
-        val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
-
+        AppNavigationLayout(
+            destinations = if (showMainNav) NavDestination.entries else emptyList(),
+            currentRoute = currentRoute,
+            onNavigate = { dest ->
+                navController.navigate(dest.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+        ) { contentModifier ->
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = if (showNavigationRail) 80.dp else 0.dp,
-                    bottom = if (showBottomNav) 88.dp else 0.dp,
-                ),
+            modifier = contentModifier,
         ) {
             // Onboarding
             composable(SubRoutes.ONBOARDING) {
@@ -184,6 +257,7 @@ fun HealthMdNavigation(
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
                         }
                     },
+                    onUseSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
                     initialPage = if (isDebugMarketingCapture) 1 else 0,
                     allowAutomaticAdvance = !isDebugMarketingCapture,
                 )
@@ -192,16 +266,19 @@ fun HealthMdNavigation(
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
                     onNavigateToPaywall = {
-                        navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                        }
                     },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
-                    onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
                 ScheduleScreen(
                     onNavigateToPaywall = {
-                        navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                        }
                     },
                 )
             }
@@ -209,16 +286,35 @@ fun HealthMdNavigation(
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
+                    protectionSettingsRequestId = protectionSettingsRequestId,
                     onNavigateToPaywall = {
-                        navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                        if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                            navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                        }
                     },
+                    onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
+                    onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
+                    onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
                 )
             }
 
             // Sub-screens
+            composable(SubRoutes.EXPORT_PROFILES) {
+                ExportProfilesScreen(onBack = { navController.popBackStack() })
+            }
             composable(SubRoutes.DIRECT_CLI) {
                 DirectCliScreen(onBack = { navController.popBackStack() })
+            }
+            composable(SubRoutes.SHARED_SETUP) {
+                SharedSetupScreen(
+                    onBack = { navController.popBackStack() },
+                    onFinishSetup = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(NavDestination.SETTINGS.route) { launchSingleTop = true }
+                        }
+                    },
+                )
             }
             composable(SubRoutes.CLINICIAN_REPORT) {
                 ClinicianReportScreen(onBack = { navController.popBackStack() })
@@ -230,21 +326,33 @@ fun HealthMdNavigation(
                     onNavigateToFormatCustomization = { navController.navigate(SubRoutes.FORMAT_CUSTOMIZATION) },
                     onNavigateToDailyNoteInjection = { navController.navigate(SubRoutes.DAILY_NOTE_INJECTION) },
                     onNavigateToIndividualTracking = { navController.navigate(SubRoutes.INDIVIDUAL_TRACKING) },
-                    onIncludeGranularDataChanged = { settingsViewModel.updateIncludeGranularData(it) },
+                    onIncludeGranularDataChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateIncludeGranularData(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
             composable(SubRoutes.METRIC_SELECTION) {
                 MetricSelectionScreen(
                     metricSelection = settings.metricSelection,
-                    onSelectionChanged = { settingsViewModel.updateMetricSelection(it) },
+                    onSelectionChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateMetricSelection(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
             composable(SubRoutes.FORMAT_CUSTOMIZATION) {
                 FormatCustomizationScreen(
                     customization = settings.formatCustomization,
-                    onCustomizationChanged = { settingsViewModel.updateFormatCustomization(it) },
+                    onCustomizationChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateFormatCustomization(it)
+                        }
+                    },
                     onNavigateToFrontmatter = { navController.navigate(SubRoutes.FRONTMATTER_CUSTOMIZATION) },
                     onBack = { navController.popBackStack() },
                 )
@@ -253,9 +361,11 @@ fun HealthMdNavigation(
                 FrontmatterCustomizationScreen(
                     configuration = settings.formatCustomization.frontmatterConfig,
                     onConfigurationChanged = { config ->
-                        settingsViewModel.updateFormatCustomization(
-                            settings.formatCustomization.copy(frontmatterConfig = config)
-                        )
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateFormatCustomization(
+                                settings.formatCustomization.copy(frontmatterConfig = config)
+                            )
+                        }
                     },
                     onBack = { navController.popBackStack() },
                 )
@@ -263,57 +373,70 @@ fun HealthMdNavigation(
             composable(SubRoutes.DAILY_NOTE_INJECTION) {
                 DailyNoteInjectionScreen(
                     settings = settings.dailyNoteInjection,
-                    onSettingsChanged = { settingsViewModel.updateDailyNoteInjection(it) },
+                    onSettingsChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateDailyNoteInjection(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
             composable(SubRoutes.INDIVIDUAL_TRACKING) {
                 IndividualTrackingScreen(
                     settings = settings.individualTracking,
-                    onSettingsChanged = { settingsViewModel.updateIndividualTracking(it) },
+                    onSettingsChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateIndividualTracking(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
-            PaywallEntryPoint.entries.forEach { entryPoint ->
-                composable(entryPoint.route) {
-                    val paywallViewModel: PaywallViewModel = hiltViewModel()
-                    val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
-                    val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
-                    val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
-                    val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
-                    val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
-                    val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
-                    val context = LocalContext.current
+            if (settingsViewModel.distributionPolicy.purchasesAvailable) {
+                PaywallEntryPoint.entries.forEach { entryPoint ->
+                    composable(entryPoint.route) {
+                        val paywallViewModel: PaywallViewModel = hiltViewModel()
+                        val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+                        val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
+                        val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
+                        val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
+                        val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+                        val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
+                        val context = LocalContext.current
 
-                    // Navigate back automatically if purchase is successful
-                    LaunchedEffect(isUnlocked) {
-                        if (isUnlocked) {
-                            navController.popBackStack()
-                        }
-                    }
-
-                    PaywallScreen(
-                        onPurchase = {
-                            val activity = context as? android.app.Activity
-                            if (activity != null) {
-                                paywallViewModel.launchPurchaseFlow(activity)
+                        // Navigate back automatically if purchase is successful
+                        LaunchedEffect(isUnlocked) {
+                            if (isUnlocked) {
+                                navController.popBackStack()
                             }
-                        },
-                        onRestore = { paywallViewModel.restorePurchases() },
-                        onDismiss = { navController.popBackStack() },
-                        subtitle = stringResource(entryPoint.subtitleResource),
-                        isPurchasing = isPurchasing,
-                        isRestoring = isRestoring,
-                        priceText = priceText,
-                        purchaseError = purchaseError,
-                        onClearError = { paywallViewModel.clearError() },
-                        isDebugBuild = paywallViewModel.isDebugBuild,
-                        debugUnlockOverride = debugUnlockOverride,
-                        onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
-                        onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
-                    )
+                        }
+
+                        PaywallScreen(
+                            onPurchase = {
+                                val activity = context as? android.app.Activity
+                                if (activity != null) {
+                                    paywallViewModel.launchPurchaseFlow(activity)
+                                }
+                            },
+                            onRestore = { paywallViewModel.restorePurchases() },
+                            onDismiss = { navController.popBackStack() },
+                            subtitle = stringResource(entryPoint.subtitleResource),
+                            isPurchasing = isPurchasing,
+                            isRestoring = isRestoring,
+                            priceText = priceText,
+                            purchaseError = purchaseError,
+                            onClearError = { paywallViewModel.clearError() },
+                            isDebugBuild = paywallViewModel.isDebugBuild,
+                            debugUnlockOverride = debugUnlockOverride,
+                            onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
+                            onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
+                            purchasesAvailable = paywallViewModel.purchasesAvailable,
+                            fullAccessIncluded = paywallViewModel.distributionPolicy.fullAccessIncluded,
+                        )
+                    }
                 }
             }
+        }
         }
 
         if (shouldShowReleaseNotes && releaseNotes != null) {
@@ -329,41 +452,38 @@ fun HealthMdNavigation(
             )
         }
 
-        // Navigation rail (main tabs on tablets/foldables)
-        if (showNavigationRail) {
-            AdaptiveNavigationRail(
-                destinations = NavDestination.entries,
-                currentRoute = currentRoute,
-                onNavigate = { dest ->
-                    navController.navigate(dest.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+        ConfigurationProtectionToast(
+            visible = blockedChangeToastId != null,
+            onOpenSettings = {
+                settingsViewModel.dismissBlockedChangeToast()
+                val settingsRoute = NavDestination.SETTINGS.route
+                if (navController.currentDestination?.route != settingsRoute) {
+                    val revealedExisting = navController.popBackStack(
+                        route = settingsRoute,
+                        inclusive = false,
+                    )
+                    if (!revealedExisting) {
+                        // This is an explicit settings deep-link, not ordinary tab navigation:
+                        // never restore the nested Export Profiles route we are leaving.
+                        navController.navigate(settingsRoute) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = false
+                            }
+                            launchSingleTop = true
+                            restoreState = false
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
-                },
-                modifier = Modifier.align(Alignment.CenterStart),
-            )
-        }
-
-        // Bottom navigation bar (only on compact main tabs)
-        if (showBottomNav) {
-            FloatingNavBar(
-                destinations = NavDestination.entries,
-                currentRoute = currentRoute,
-                onNavigate = { dest ->
-                    navController.navigate(dest.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
+                }
+                // StateFlow retains the request until Settings composes, then scrolls the
+                // protection section into view.
+                settingsViewModel.openProtectionSetting()
+            },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        )
+    }
     }
 }
 
@@ -510,6 +630,47 @@ private fun localizedRecoveryDate(date: LocalDate): String {
         .format(Date.from(instant))
 }
 
+/** Reserve the measured navigation size, including wrapped labels, rather than a fixed inset. */
+@Composable
+internal fun AppNavigationLayout(
+    destinations: List<NavDestination>,
+    currentRoute: String?,
+    onNavigate: (NavDestination) -> Unit,
+    content: @Composable (Modifier) -> Unit,
+) {
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize().safeDrawingPadding(),
+    ) {
+        val useNavigationRail = maxWidth >= GeistBreakpoints.medium.dp
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (destinations.isNotEmpty() && useNavigationRail) {
+                AdaptiveNavigationRail(
+                    destinations = destinations,
+                    currentRoute = currentRoute,
+                    onNavigate = onNavigate,
+                )
+            }
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                containerColor = AppColors.bgPrimary,
+                // The outer layout consumes system bars/cutouts for all routes.
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                bottomBar = {
+                    if (destinations.isNotEmpty() && !useNavigationRail) {
+                        FloatingNavBar(
+                            destinations = destinations,
+                            currentRoute = currentRoute,
+                            onNavigate = onNavigate,
+                        )
+                    }
+                },
+            ) { padding ->
+                content(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding))
+            }
+        }
+    }
+}
+
 @Composable
 private fun AdaptiveNavigationRail(
     destinations: List<NavDestination>,
@@ -523,7 +684,8 @@ private fun AdaptiveNavigationRail(
             .fillMaxHeight()
             .width(80.dp)
             .background(colors.background100)
-            .border(width = 1.dp, color = colors.grayAlpha.c400),
+            .border(width = 1.dp, color = colors.grayAlpha.c400)
+            .verticalScroll(rememberScrollState()),
         containerColor = colors.background100,
         contentColor = colors.primary,
     ) {
@@ -562,23 +724,39 @@ private fun FloatingNavBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalGeistColors.current
-    Row(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .background(colors.background100)
             .border(width = 1.dp, color = colors.grayAlpha.c400)
             .navigationBarsPadding()
             .heightIn(min = 64.dp)
-            .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(Spacing.xs),
     ) {
-        destinations.forEach { destination ->
-            NavBarTab(
-                destination = destination,
-                selected = currentRoute == destination.route,
-                onClick = { onNavigate(destination) },
-                modifier = Modifier.weight(1f),
-            )
+        val wrapTabs = GeistAdaptiveLayout.wrapNavigation(
+            maxWidth.value, LocalDensity.current.fontScale, destinations.size,
+        )
+        // Widen the reading/touch area instead of turning each label into a narrow
+        // stack of syllables. Scaffold still measures the resulting bar height.
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            val rows = if (wrapTabs) destinations.chunked(2) else listOf(destinations)
+            rows.forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    row.forEach { destination ->
+                        NavBarTab(
+                            destination = destination,
+                            selected = currentRoute == destination.route,
+                            onClick = { onNavigate(destination) },
+                            modifier = Modifier.weight(1f),
+                            textOnly = wrapTabs,
+                        )
+                    }
+                    if (wrapTabs && row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -589,6 +767,7 @@ private fun NavBarTab(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    textOnly: Boolean = false,
 ) {
     val colors = LocalGeistColors.current
     val contentColor = if (selected) colors.primary else colors.secondary
@@ -597,23 +776,32 @@ private fun NavBarTab(
 
     Column(
         modifier = modifier
-            .height(48.dp)
+            .fillMaxHeight()
+            .heightIn(min = GeistSizes.minimumTouchTarget)
             .background(background, RoundedCornerShape(GeistRadii.small))
             .selectable(
                 selected = selected,
                 onClick = onClick,
                 role = Role.Tab,
-            ),
+            )
+            .padding(vertical = Spacing.xxs),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(
-            destination.icon,
-            contentDescription = label,
-            tint = if (selected) colors.accent else contentColor,
-            modifier = Modifier.size(20.dp),
+        if (!textOnly) {
+            Icon(
+                destination.icon,
+                contentDescription = null,
+                tint = if (selected) colors.accent else contentColor,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.height(Spacing.xxs))
+        }
+        Text(
+            label,
+            color = contentColor,
+            style = GeistType.button12,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(Spacing.xxs))
-        Text(label, color = contentColor, style = GeistType.button12)
     }
 }

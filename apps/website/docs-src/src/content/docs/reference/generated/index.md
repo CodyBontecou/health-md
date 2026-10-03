@@ -18,7 +18,7 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `README.md` | 874 | `8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539` | [Open page](/docs/reference/generated/readme/) | [Download](/docs/reference/generated/README.md) |
+| `README.md` | 908 | `8b2e39ed463c2b0417ea89eb0b32d146a30fd5d3c9fe7972fd8862e312e0a3a5` | [Open page](/docs/reference/generated/readme/) | [Download](/docs/reference/generated/README.md) |
 
 ## Core generated artifacts
 
@@ -28,12 +28,12 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `core/canonical-json-fields.md` | 49042 | `190177dfd3e5923f8e786902d422a7e7408d661793c7e2e52d0f7078555e6e48` | [Open page](/docs/reference/generated/core/canonical-json-fields/) | [Download](/docs/reference/generated/core/canonical-json-fields.md) |
 | `core/csv-row-contracts.md` | 44189 | `ced67eb454ff046de7a5746bbc938e09b95a4a4814343c2f49413f1a3929fcdc` | [Open page](/docs/reference/generated/core/csv-row-contracts/) | [Download](/docs/reference/generated/core/csv-row-contracts.md) |
 | `core/daily-json-fields.md` | 120624 | `cc4af5712c431922533bba1907ff0864a03907504b693a4936f7e350df66100c` | [Open page](/docs/reference/generated/core/daily-json-fields/) | [Download](/docs/reference/generated/core/daily-json-fields.md) |
-| `core/data-dictionary.json` | 246039 | `53ed0dd9d6a7cf8731f79aee7a717b324c25ecd23bb2c6538218589d1f94b6dc` | — | [Download](/docs/reference/generated/core/data-dictionary.json) |
+| `core/data-dictionary.json` | 222265 | `1dfcfc07801878319500cc26b9ca7f03f00d4f50e378bb3eb483bf6c753d04fd` | — | [Download](/docs/reference/generated/core/data-dictionary.json) |
 | `core/lossless-day-bases.md` | 15628 | `3f9a84f98206dd7ba7b52bcaa055f774ec89ec6b60b22755abdeb6ac65a4b1e1` | — | [Download](/docs/reference/generated/core/lossless-day-bases.md) |
 | `core/lossless-day.csv` | 58802 | `c67db49ecbfd74ae200b34e7e30d65c688bc716c9bb285ec7194382d645f009f` | — | [Download](/docs/reference/generated/core/lossless-day.csv) |
 | `core/lossless-day.json` | 84633 | `0465094abb79eb74257248c11f5fa7455e800920aa177e733bfa34cd61808356` | — | [Download](/docs/reference/generated/core/lossless-day.json) |
 | `core/lossless-day.md` | 24315 | `88d6574df1bf970585590a2cc1af88115d6ca26bf803c9583490657738176387` | — | [Download](/docs/reference/generated/core/lossless-day.md) |
-| `core/manifest.json` | 3253 | `85a845e79c270f8e5627f899678150e31b23d9aa50d383c195b42a93924a78e7` | — | [Download](/docs/reference/generated/core/manifest.json) |
+| `core/manifest.json` | 3253 | `020145dc076f6c66bc4e7b0f68d31cea638635c33766b6f926e85456fbccb373` | — | [Download](/docs/reference/generated/core/manifest.json) |
 | `core/metric-catalog.md` | 49571 | `556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403` | [Open page](/docs/reference/generated/core/metric-catalog/) | [Download](/docs/reference/generated/core/metric-catalog.md) |
 | `core/metric-examples.md` | 62772 | `7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226` | [Open page](/docs/reference/generated/core/metric-examples/) | [Download](/docs/reference/generated/core/metric-examples.md) |
 | `core/provider-day-bases.md` | 2615 | `da3e5520aa73c2a12623957354596505a241ed861a5a2b2b17049a30705da559` | — | [Download](/docs/reference/generated/core/provider-day-bases.md) |
@@ -72,8 +72,12 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `rollups/aggregation-behavior.md` | 120672 | `6a39c4fae8ce914b736e9534796ed4634a157c35223de9d2c55700871eb0bbe4` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
-| `rollups/manifest.json` | 4348 | `93c8c45c8f84d905c3466a60e638eb5706c7db8f88724d21669c0b661eac1ac6` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
+| `rollups/aggregation-behavior.md` | 104834 | `22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
+| `rollups/manifest.json` | 5365 | `e1e4882b33d8b0c30b5d54d73471f36f7a382b9a07cfcd13471ef396840d1906` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
+| `rollups/range-bases.md` | 11629 | `8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec` | — | [Download](/docs/reference/generated/rollups/range-bases.md) |
+| `rollups/range.csv` | 38202 | `6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7` | — | [Download](/docs/reference/generated/rollups/range.csv) |
+| `rollups/range.json` | 39662 | `3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b` | — | [Download](/docs/reference/generated/rollups/range.json) |
+| `rollups/range.md` | 9249 | `1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4` | — | [Download](/docs/reference/generated/rollups/range.md) |
 | `rollups/weekly-bases.md` | 11564 | `fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815` | — | [Download](/docs/reference/generated/rollups/weekly-bases.md) |
 | `rollups/weekly.csv` | 29797 | `447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9` | — | [Download](/docs/reference/generated/rollups/weekly.csv) |
 | `rollups/weekly.json` | 39632 | `58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84` | — | [Download](/docs/reference/generated/rollups/weekly.json) |
@@ -102,12 +106,12 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `automation/iphone-export-progress.json` | 175 | `c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5` | — | [Download](/docs/reference/generated/automation/iphone-export-progress.json) |
 | `automation/iphone-export-request-strict-raw.json` | 328 | `fd170ee749831c1d45c1cacca4c64106bec324af91874baf54c57c513d63b722` | — | [Download](/docs/reference/generated/automation/iphone-export-request-strict-raw.json) |
 | `automation/iphone-export-request-write-files.json` | 526 | `db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b` | — | [Download](/docs/reference/generated/automation/iphone-export-request-write-files.json) |
-| `automation/mac-export-job.json` | 27662 | `3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
-| `automation/mac-export-result-partial.json` | 741 | `d210439620674c62fc1a8d117b26fa796312d77c4dbdd90340a7b0a9ef0a72bf` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
+| `automation/mac-export-job.json` | 27691 | `eb4c6c34810ec641f5abc40cb246a52d7127c48fccf7b086879de9561539fee1` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
+| `automation/mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `automation/mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `automation/manifest.json` | 5847 | `57e6e44b0942152fab77dc38204452a6cb0bc3155f79b1cc6e784b7f850cb78d` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `automation/message-fields.md` | 127238 | `585a8f66c430405c60ebfb0688567090e85f3ab12f19bc96ebaad208a97a1870` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `automation/peer-capabilities.json` | 1553 | `5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `automation/manifest.json` | 5848 | `dc1fe79020977ccbf6a77b6d84cdb94e52140bd15544a36a88dcab27b78dd547` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `automation/message-fields.md` | 128225 | `ebd628b630e5965867deb3ed3037c0041ebcf1b735c05e8e5b43d31af03d773d` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `automation/peer-capabilities.json` | 1635 | `05dc5c44551072f0b90af5b076271afb81de30f153ee6767430a8a54b2127f37` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `automation/raw-result-complete.json` | 3240 | `d82df3876394ac05761c2fdc44db41b6b4021ebc8b4becba20bf51793c25f6c6` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `automation/raw-result-partial.json` | 5280 | `311e1f6b6225226b0a3000aab2322114e47067bfc36a54cc78f7a9e3a0482d33` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `automation/transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |

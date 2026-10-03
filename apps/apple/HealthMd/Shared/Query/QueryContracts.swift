@@ -629,6 +629,18 @@ nonisolated struct HealthMdEvidenceReference: Codable, Equatable, Hashable, Send
     }
 }
 
+nonisolated enum HealthMdMetricEvidenceSelector {
+    /// Daily metric values are derived summaries. Prefer their compact summary provenance when it
+    /// exists; complete record-level evidence remains reachable through source-record listing.
+    static func preferred(_ evidence: [HealthMdContextEvidence]) -> [HealthMdContextEvidence] {
+        let ordered = evidence.sorted { $0.reference.evidenceID < $1.reference.evidenceID }
+        let summaries = ordered.filter {
+            $0.reference.sourceID == HealthMdEvidenceSourceIDs.healthMdSummary
+        }
+        return summaries.isEmpty ? ordered : summaries
+    }
+}
+
 nonisolated struct HealthMdContextEvidence: Codable, Equatable, Sendable {
     let reference: HealthMdEvidenceReference
     let value: HealthMdQueryValue?

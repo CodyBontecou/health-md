@@ -35,6 +35,7 @@ import androidx.lifecycle.viewModelScope
 import com.healthmd.R
 import com.healthmd.data.health.HealthConnectIntentLauncher
 import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.PrimaryButton
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.SectionLabel
@@ -123,6 +124,7 @@ internal fun WidgetSettingsCard(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val protection = LocalConfigurationProtection.current
     val locale = LocalConfiguration.current.locales[0]
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(Unit) { viewModel.refreshStatus() }
@@ -179,7 +181,10 @@ internal fun WidgetSettingsCard(
                 text = stringResource(R.string.widget_settings_manage_access),
                 icon = Icons.Outlined.HealthAndSafety,
                 modifier = Modifier.fillMaxWidth(),
-                onClick = { HealthConnectIntentLauncher(context).openSettings() },
+                onClick = {
+                    if (protection.enabled) protection.onBlockedChange()
+                    else HealthConnectIntentLauncher(context).openSettings()
+                },
             )
         }
     }

@@ -1,0 +1,1 @@
+Health-Connect-Daten als private Markdown-, JSON-, CSV- und Bases-Dateien

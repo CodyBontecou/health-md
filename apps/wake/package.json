@@ -1,0 +1,29 @@
+{
+  "name": "healthmd-wake",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "description": "RFC-0005 P2 wake doorbell worker for Health.md direct CLI access.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CodyBontecou/health-md.git",
+    "directory": "apps/wake"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260903.1",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.2",
+    "wrangler": "^4.0.0"
+  }
+}

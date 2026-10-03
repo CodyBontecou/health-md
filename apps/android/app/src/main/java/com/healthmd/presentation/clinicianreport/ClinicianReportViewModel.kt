@@ -29,12 +29,16 @@ data class ClinicianReportUiState(
     val selectedPreset: ReportDateRangePreset = ReportDateRangePreset.DAYS_30,
     val report: ClinicianReportData? = null,
     val pdfFile: File? = null,
+    val isConfigurationReady: Boolean = false,
     val isLoading: Boolean = false,
     val isRendering: Boolean = false,
     val errorMessage: String? = null,
     val savedMessage: String? = null,
 ) {
-    val canPreview: Boolean get() = configuration.selectedMetrics.isNotEmpty() && !isLoading && !isRendering
+    val isBusy: Boolean get() = isLoading || isRendering
+    val isConfigurationEditable: Boolean get() = isConfigurationReady && !isBusy
+    val canPreview: Boolean get() = configuration.selectedMetrics.isNotEmpty() && isConfigurationEditable
+    val canGeneratePdf: Boolean get() = report != null && isConfigurationEditable
 }
 
 @HiltViewModel
@@ -52,33 +56,51 @@ class ClinicianReportViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val unit = settingsRepository.getExportSettings().formatCustomization.unitPreference
-            updateConfiguration { it.copy(unitPreference = unit) }
+            val unit = try {
+                settingsRepository.getExportSettings().formatCustomization.unitPreference
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                _uiState.value.configuration.unitPreference
+            }
+            // Initialization is not an interactive configuration mutation. Preview and editing
+            // stay gated until this persisted preference is available, so applying it cannot
+            // cancel or race a newly started report.
+            _uiState.update {
+                it.copy(
+                    configuration = it.configuration.copy(unitPreference = unit),
+                    isConfigurationReady = true,
+                )
+            }
         }
     }
 
     fun selectPreset(preset: ReportDateRangePreset, today: LocalDate = LocalDate.now()) {
-        if (preset == ReportDateRangePreset.CUSTOM) {
-            invalidateActiveRequest()
-            clearPublishedPdf()
-            _uiState.update { it.copy(selectedPreset = preset, report = null, pdfFile = null, isLoading = false, isRendering = false) }
-        } else {
-            updateConfiguration { it.copy(dateRange = ReportDateRange.preset(preset, today)) }
-            _uiState.update { it.copy(selectedPreset = preset) }
+        updateConfiguration(selectedPreset = preset) {
+            if (preset == ReportDateRangePreset.CUSTOM) it
+            else it.copy(dateRange = ReportDateRange.preset(preset, today))
         }
     }
 
     fun setCustomRange(start: LocalDate, end: LocalDate, today: LocalDate = LocalDate.now()) {
-        updateConfiguration { it.copy(dateRange = ReportDateRange.normalized(start, end, today)) }
-        _uiState.update { it.copy(selectedPreset = ReportDateRangePreset.CUSTOM) }
+        updateConfiguration(selectedPreset = ReportDateRangePreset.CUSTOM) {
+            it.copy(dateRange = ReportDateRange.normalized(start, end, today))
+        }
     }
 
-    fun toggleMetric(metric: ReportMetric) = updateConfiguration { config ->
-        config.copy(selectedMetrics = if (metric in config.selectedMetrics) config.selectedMetrics - metric else config.selectedMetrics + metric)
+    fun toggleMetric(metric: ReportMetric) {
+        updateConfiguration { config ->
+            config.copy(selectedMetrics = if (metric in config.selectedMetrics) config.selectedMetrics - metric else config.selectedMetrics + metric)
+        }
     }
 
-    fun setDetailLevel(level: ReportDetailLevel) = updateConfiguration { it.copy(detailLevel = level) }
-    fun setDisplayName(name: String) = updateConfiguration { it.copy(displayName = name) }
+    fun setDetailLevel(level: ReportDetailLevel) {
+        updateConfiguration { it.copy(detailLevel = level) }
+    }
+
+    fun setDisplayName(name: String) {
+        updateConfiguration { it.copy(displayName = name) }
+    }
 
     fun preview() {
         val state = _uiState.value
@@ -109,6 +131,7 @@ class ClinicianReportViewModel @Inject constructor(
 
     fun generatePdf() {
         val state = _uiState.value
+        if (!state.canGeneratePdf) return
         val report = state.report ?: return
         val range = state.configuration.dateRange
         val request = beginRequest()
@@ -162,12 +185,17 @@ class ClinicianReportViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = false, isRendering = false) }
     }
 
-    private fun updateConfiguration(transform: (ReportConfiguration) -> ReportConfiguration) {
+    private fun updateConfiguration(
+        selectedPreset: ReportDateRangePreset? = null,
+        transform: (ReportConfiguration) -> ReportConfiguration,
+    ) {
+        if (!_uiState.value.isConfigurationEditable) return
         invalidateActiveRequest()
         clearPublishedPdf()
         _uiState.update {
             it.copy(
                 configuration = transform(it.configuration),
+                selectedPreset = selectedPreset ?: it.selectedPreset,
                 report = null,
                 pdfFile = null,
                 isLoading = false,

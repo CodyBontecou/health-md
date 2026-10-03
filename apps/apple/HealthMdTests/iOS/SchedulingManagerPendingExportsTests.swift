@@ -129,8 +129,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
         let retryRequest = try XCTUnwrap(try store.loadAll().first)
-        let normalizedRetryDate = Calendar.current.startOfDay(for: request.dates[1])
-        XCTAssertEqual(retryRequest.dates, [normalizedRetryDate])
+        let immutableRetryDate = request.dates[1]
+        XCTAssertEqual(retryRequest.dates, [immutableRetryDate])
         XCTAssertEqual(notificationScheduler.immediateRequests[request.id], retryRequest)
         XCTAssertFalse(notificationScheduler.canceledRequestIDs.contains(request.id))
         XCTAssertNil(manager.schedule.lastExportDate)
@@ -143,7 +143,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
-        XCTAssertEqual(runs, [request.dates, [normalizedRetryDate]])
+        XCTAssertEqual(runs, [request.dates, [immutableRetryDate]])
         XCTAssertEqual(try store.loadAll(), [])
         XCTAssertNotNil(manager.schedule.lastExportDate)
         XCTAssertEqual(remainingQuota, 0, "Retrying the same scheduled request must not consume another export")
@@ -179,7 +179,10 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
         XCTAssertEqual(exportRunCount, 0)
-        XCTAssertEqual(try store.loadAll(), [request])
+        let preserved = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(preserved.id, request.id)
+        XCTAssertEqual(preserved.dates, request.dates)
+        XCTAssertNotNil(preserved.attemptedAt, "the blocked attempt marks the request as a preserved retry")
         XCTAssertNil(manager.schedule.lastExportDate)
         guard case .failure(let reason) = manager.notificationExportResult?.status else {
             XCTFail("Expected an export-limit failure")
@@ -240,7 +243,10 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
         XCTAssertEqual(exportWorkCount, 0)
-        XCTAssertEqual(try store.loadAll(), [request])
+        let preserved = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(preserved.id, request.id)
+        XCTAssertEqual(preserved.dates, request.dates)
+        XCTAssertNotNil(preserved.attemptedAt)
         XCTAssertNil(manager.schedule.lastExportDate)
         XCTAssertEqual(
             manager.notificationExportResult?.status,
@@ -457,6 +463,96 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertTrue(notificationScheduler.canceledRequestIDs.contains(shortcut.id))
     }
 
+    func testNotificationTapWithAllSchedulingOffStillReportsSchedulingDisabled() async throws {
+        // No profile entries and the legacy schedule off: the pending
+        // notification is genuinely stale, so the tap keeps the honest
+        // "Scheduling is disabled" failure instead of running anything.
+        let request = pendingRequest(
+            id: "16161616-1616-1616-1616-161616161616",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var runs: [PendingExportRun] = []
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            schedule: ExportSchedule(isEnabled: false)
+        ) { dates, source in
+            runs.append(PendingExportRun(dates: dates, source: source))
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+
+        await manager.performPendingExport(requestId: request.id, source: .scheduled)
+
+        XCTAssertEqual(runs, [])
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(
+            manager.notificationExportResult?.status,
+            .failure(reason: String(localized: "Scheduling is disabled", comment: "Error message when scheduling is disabled"))
+        )
+    }
+
+    /// The armed +60s fallback is defused the moment a pending run starts (no
+    /// mid-run "Needs Attention"), without removing a delivered copy, and a
+    /// device-locked completion re-arms the retry notification.
+    func testPendingRunDefusesArmedFallbackButKeepsDeliveredRetrySurface() async throws {
+        let request = pendingRequest(
+            id: "17171717-1717-1717-1717-171717171717",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        // The fallback is armed (pending) for this request.
+        try await notificationScheduler.schedulePendingExportNotification(for: request)
+        XCTAssertTrue(notificationScheduler.scheduledRequests[request.id] != nil)
+
+        var observedArmedCancels: [PendingExportRequest.ID] = []
+        var continuation: CheckedContinuation<Void, Never>?
+        let manager = makeManager(store: store, notificationScheduler: notificationScheduler) { dates, _ in
+            observedArmedCancels = notificationScheduler.armedCanceledRequestIDs
+            await withCheckedContinuation { pending in
+                continuation = pending
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) }
+            )
+        }
+
+        let runTask = Task { @MainActor in
+            await manager.performPendingExport(requestId: request.id, source: .scheduled)
+        }
+        for _ in 0..<10 where continuation == nil {
+            await Task.yield()
+        }
+        XCTAssertNotNil(continuation, "pending run should suspend inside the runner")
+
+        XCTAssertTrue(
+            observedArmedCancels.contains(request.id),
+            "the armed fallback timer is defused at run start"
+        )
+        XCTAssertFalse(
+            notificationScheduler.canceledRequestIDs.contains(request.id),
+            "a delivered copy must survive as the recovery surface"
+        )
+
+        continuation?.resume()
+        await runTask.value
+
+        XCTAssertNotNil(
+            notificationScheduler.immediateRequests[request.id],
+            "device-locked completion re-arms the stable-ID retry notification"
+        )
+    }
+
     func testDeviceLockedDrainAttemptKeepsRequestAndRecoveryNotification() async throws {
         let request = pendingRequest(
             id: "77777777-7777-7777-7777-777777777777",
@@ -477,8 +573,13 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
-        XCTAssertEqual(try store.loadAll(), [request])
-        XCTAssertEqual(notificationScheduler.immediateRequests[request.id], request)
+        let preserved = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(preserved.id, request.id)
+        XCTAssertEqual(preserved.dates, request.dates)
+        XCTAssertNotNil(preserved.attemptedAt)
+        let immediate = try XCTUnwrap(notificationScheduler.immediateRequests[request.id])
+        XCTAssertEqual(immediate.id, request.id)
+        XCTAssertEqual(immediate.dates, request.dates)
         XCTAssertFalse(notificationScheduler.canceledRequestIDs.contains(request.id))
         XCTAssertEqual(manager.notificationExportResult?.status, .failure(reason: ExportFailureReason.deviceLocked.shortDescription))
     }
@@ -532,6 +633,304 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled)])
         XCTAssertEqual(try store.loadAll(), [])
+    }
+
+    func testAppActiveDrainOwnsActivityBannerInsteadOfBareAlert() async throws {
+        let request = pendingRequest(
+            id: "14141414-1414-1414-1414-141414141414",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
+        var observedStart: NotificationExportActivityTracker.Snapshot?
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler
+        ) { dates, _ in
+            observedStart = tracker.snapshot
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: [
+                    FailedDateDetail(date: dates[0], reason: .healthKitError)
+                ]
+            )
+        }
+
+        await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+
+        // A plain app-active drain (no notification tap involved) must still
+        // begin the activity banner so a failed result surfaces in the banner
+        // instead of an unexpected bare alert.
+        XCTAssertEqual(observedStart?.operationID, request.id)
+        XCTAssertEqual(observedStart?.source, .scheduled)
+        XCTAssertEqual(tracker.snapshot?.phase, .failed)
+        XCTAssertTrue(
+            manager.notificationExportResult.map(tracker.handles) ?? false,
+            "the banner must own the drain result so ContentView suppresses its alert"
+        )
+    }
+
+    func testColdLaunchDrainOutrunsNotificationTapWithoutBareAlertOrDoubleRun() async throws {
+        let request = pendingRequest(
+            id: "15151515-1515-1515-1515-151515151515",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
+        var runs: [PendingExportRun] = []
+        var continuation: CheckedContinuation<Void, Never>?
+        let manager = makeManager(store: store, notificationScheduler: notificationScheduler) { dates, source in
+            runs.append(PendingExportRun(dates: dates, source: source))
+            if runs.count == 1 {
+                await withCheckedContinuation { pendingContinuation in
+                    continuation = pendingContinuation
+                }
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+
+        // Cold launch interleave: applicationDidBecomeActive's app-active
+        // drain resumes before the notification tap response is delivered.
+        let drainTask = Task { @MainActor in
+            await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+        }
+
+        for _ in 0..<10 where continuation == nil {
+            await Task.yield()
+        }
+        guard let pendingContinuation = continuation else {
+            XCTFail("Expected pending export runner to suspend")
+            return
+        }
+        XCTAssertEqual(
+            tracker.snapshot?.operationID,
+            request.id,
+            "the drain must begin the activity banner even though the tap has not arrived"
+        )
+
+        // The notification tap handler runs while the drain still holds the
+        // in-flight guards: it must no-op instead of double-running.
+        let tapTask = Task { @MainActor in
+            await manager.performPendingExport(requestId: request.id, source: .scheduled)
+        }
+        await Task.yield()
+
+        XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled)])
+
+        pendingContinuation.resume()
+        await drainTask.value
+        await tapTask.value
+
+        XCTAssertEqual(runs, [PendingExportRun(dates: request.dates, source: .scheduled)])
+        XCTAssertEqual(try store.loadAll(), [])
+        XCTAssertEqual(tracker.snapshot?.phase, .completed)
+        XCTAssertTrue(
+            manager.notificationExportResult.map(tracker.handles) ?? false,
+            "the banner must own the drain result so the tap does not surface a bare alert"
+        )
+    }
+
+    func testForeignPendingResultCannotFinishActiveOperationBanner() async throws {
+        let scheduled = pendingRequest(
+            id: "18181818-1818-1818-1818-181818181818",
+            dates: [date(year: 2026, month: 5, day: 16)],
+            source: .scheduled
+        )
+        let shortcut = pendingRequest(
+            id: "19191919-1919-1919-1919-191919191919",
+            dates: [date(year: 2026, month: 5, day: 17)],
+            source: .shortcut
+        )
+        let store = TestPendingExportStore(requests: [scheduled, shortcut])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
+        var scheduledContinuation: CheckedContinuation<Void, Never>?
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler
+        ) { dates, source in
+            if source == .scheduled {
+                await withCheckedContinuation { continuation in
+                    scheduledContinuation = continuation
+                }
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: [],
+                completedDates: dates
+            )
+        }
+
+        let scheduledTask = Task { @MainActor in
+            await manager.performPendingExport(requestId: scheduled.id, source: .scheduled)
+        }
+        for _ in 0..<20 where scheduledContinuation == nil {
+            await Task.yield()
+        }
+        guard let pendingScheduledContinuation = scheduledContinuation else {
+            return XCTFail("Expected scheduled runner to suspend")
+        }
+        XCTAssertEqual(tracker.snapshot?.operationID, scheduled.id)
+
+        await manager.performPendingExport(requestId: shortcut.id, source: .shortcut)
+
+        let shortcutResult = try XCTUnwrap(manager.notificationExportResult)
+        XCTAssertEqual(shortcutResult.operationID, shortcut.id)
+        XCTAssertEqual(tracker.snapshot?.operationID, scheduled.id)
+        XCTAssertEqual(tracker.snapshot?.phase, .preparing)
+        XCTAssertFalse(tracker.handles(shortcutResult))
+
+        pendingScheduledContinuation.resume()
+        await scheduledTask.value
+
+        let scheduledResult = try XCTUnwrap(manager.notificationExportResult)
+        XCTAssertEqual(scheduledResult.operationID, scheduled.id)
+        XCTAssertEqual(tracker.snapshot?.operationID, scheduled.id)
+        XCTAssertEqual(tracker.snapshot?.phase, .completed)
+        XCTAssertTrue(tracker.handles(scheduledResult))
+        XCTAssertTrue(try store.loadAll().isEmpty)
+    }
+
+    func testCancellingPendingScheduledExportPreservesUnresolvedDates() async throws {
+        let request = pendingRequest(
+            id: "16161616-1616-1616-1616-161616161616",
+            dates: [
+                date(year: 2026, month: 5, day: 16),
+                date(year: 2026, month: 5, day: 17)
+            ],
+            source: .scheduled
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        var runnerStarted = false
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler
+        ) { dates, _ in
+            runnerStarted = true
+            do {
+                try await Task.sleep(nanoseconds: 30_000_000_000)
+            } catch {
+                // The cancellation is the behavior under test.
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(date: $0, reason: .unknown)
+                },
+                wasCancelled: Task.isCancelled,
+                completedDates: []
+            )
+        }
+
+        let runTask = Task { @MainActor in
+            await manager.performPendingExport(requestId: request.id, source: .scheduled)
+        }
+        for _ in 0..<20 where !runnerStarted {
+            await Task.yield()
+        }
+
+        XCTAssertTrue(runnerStarted)
+        XCTAssertTrue(manager.cancelNotificationExport(operationID: request.id))
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelling)
+        XCTAssertFalse(manager.cancelNotificationExport(operationID: request.id))
+        await runTask.value
+
+        let preserved = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(preserved.id, request.id)
+        XCTAssertEqual(preserved.dates, request.dates)
+        XCTAssertNotNil(preserved.attemptedAt)
+        XCTAssertTrue(manager.schedule.isEnabled)
+        XCTAssertNil(manager.schedule.lastExportDate)
+        XCTAssertTrue(history.history.isEmpty)
+        XCTAssertEqual(manager.notificationExportResult?.status, .cancelled)
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelled)
+        XCTAssertTrue(manager.notificationExportResult.map(tracker.handles) ?? false)
+    }
+
+    func testCancellingPendingShortcutExportKeepsRetryRequest() async throws {
+        var queueCalendar = Calendar(identifier: .gregorian)
+        queueCalendar.timeZone = TimeZone(identifier: "Pacific/Kiritimati")!
+        let queuedDates = [16, 17].map { day in
+            queueCalendar.date(from: DateComponents(
+                year: 2026,
+                month: 5,
+                day: day
+            ))!
+        }
+        let request = pendingRequest(
+            id: "17171717-1717-1717-1717-171717171717",
+            dates: queuedDates,
+            source: .shortcut,
+            requestCalendar: queueCalendar
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        let tracker = NotificationExportActivityTracker.shared
+        tracker.clear()
+        defer { tracker.clear() }
+        var runnerStarted = false
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler
+        ) { dates, _ in
+            runnerStarted = true
+            do {
+                try await Task.sleep(nanoseconds: 30_000_000_000)
+            } catch {
+                // The cancellation is the behavior under test.
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: dates.count,
+                failedDateDetails: [
+                    FailedDateDetail(date: dates[1], reason: .unknown)
+                ],
+                wasCancelled: Task.isCancelled,
+                completedDates: [dates[0]]
+            )
+        }
+
+        let runTask = Task { @MainActor in
+            await manager.performPendingExport(requestId: request.id, source: .shortcut)
+        }
+        for _ in 0..<20 where !runnerStarted {
+            await Task.yield()
+        }
+
+        XCTAssertTrue(runnerStarted)
+        XCTAssertTrue(manager.cancelNotificationExport(operationID: request.id))
+        await runTask.value
+
+        let preserved = try XCTUnwrap(try store.loadAll().first)
+        XCTAssertEqual(preserved.id, request.id)
+        XCTAssertEqual(preserved.dates, [request.dates[1]])
+        XCTAssertNotNil(preserved.attemptedAt)
+        XCTAssertEqual(manager.notificationExportResult?.status, .cancelled)
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelled)
     }
 
     func testCustomSilentPushWithoutFireDateIsRejected() async throws {
@@ -801,6 +1200,59 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(recordedQuotaJobIDs, [request.id])
     }
 
+    func testRecoveredConnectedMacCompletionRejectsInconsistentAccountingBeforeMutation() async throws {
+        let exportDate = date(year: 2026, month: 5, day: 17)
+        let request = pendingRequest(
+            id: "15151515-1515-1515-1515-151515151515",
+            dates: [exportDate],
+            source: .scheduled,
+            exportTarget: .connectedMac
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var recordedQuotaJobIDs: [UUID] = []
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            quotaRecorder: { jobID in
+                if let jobID { recordedQuotaJobIDs.append(jobID) }
+            }
+        ) { dates, _ in
+            XCTFail("Rejected completion should not rerun HealthKit export work")
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+        let payload = MacExportResultPayload(
+            jobID: request.id,
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 2,
+            failedDateDetails: [],
+            completedDates: [exportDate],
+            destinationDisplayName: "Mac Vault",
+            destinationPathForDisplay: nil,
+            completedAt: date(year: 2026, month: 5, day: 18, hour: 9)
+        )
+
+        let handled = await manager.completeRecoveredScheduledMacExport(with: payload)
+
+        XCTAssertFalse(handled)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(recordedQuotaJobIDs, [])
+        XCTAssertTrue(history.history.isEmpty)
+        XCTAssertNil(manager.schedule.lastExportDate)
+    }
+
     func testScheduledExportDependencyWaitResumesAfterAppServicesAreConfigured() async {
         let store = TestPendingExportStore()
         let notificationScheduler = InspectableExportNotificationScheduler()
@@ -958,22 +1410,34 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
     ) -> SchedulingManager {
         let resolvedSchedule = schedule ?? ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8)
         let resolvedNow = now ?? date(year: 2026, month: 5, day: 18, hour: 9)
+        // Hermetic entry store: the test host container's standard defaults can
+        // carry enabled scheduled entries from unrelated device testing, which
+        // would flip `hasEnabledProfileEntries` and change disabled-schedule
+        // semantics under test.
+        let entrySuiteName = "SchedulingManagerPendingExportsTests.entries.\(UUID().uuidString)"
+        let entryDefaults = UserDefaults(suiteName: entrySuiteName)
+        entryDefaults?.removePersistentDomain(forName: entrySuiteName)
         return SchedulingManager(
             pendingExportStore: store,
             exportNotificationScheduler: notificationScheduler,
             initialSchedule: resolvedSchedule,
             persistScheduleChanges: false,
             systemSideEffectsEnabled: false,
-            shortcutExportRunner: { dates in
+            shortcutExportRunner: { dates, requestCalendar in
                 let result = await exportRunner(dates, .shortcut)
-                return self.shortcutOutcome(from: result)
+                return self.shortcutOutcome(
+                    from: result,
+                    requestedDates: dates,
+                    calendar: requestCalendar
+                )
             },
             scheduledPendingExportRunner: { dates in
                 await exportRunner(dates, .scheduled)
             },
             scheduledExportQuotaAccess: quotaAccess,
             scheduledExportQuotaRecorder: quotaRecorder,
-            now: { resolvedNow }
+            now: { resolvedNow },
+            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: entryDefaults ?? .standard)
         )
     }
 
@@ -993,7 +1457,19 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         )
     }
 
-    private func shortcutOutcome(from result: ExportOrchestrator.ExportResult) -> ExportIntentRunner.Outcome {
+    private func shortcutOutcome(
+        from result: ExportOrchestrator.ExportResult,
+        requestedDates: [Date],
+        calendar: Calendar
+    ) -> ExportIntentRunner.Outcome {
+        if result.wasCancelled {
+            return .cancelled(
+                remainingDates: result.remainingDates(
+                    from: requestedDates,
+                    calendar: calendar
+                )
+            )
+        }
         if result.successCount > 0 {
             if result.isFullSuccess {
                 return .success(daysExported: result.successCount, formatsPerDate: result.formatsPerDate)
@@ -1015,7 +1491,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         source: PendingExportSource,
         createdAt: Date? = nil,
         scheduledFireDate: Date? = nil,
-        exportTarget: ExportTargetSelection? = nil
+        exportTarget: ExportTargetSelection? = nil,
+        requestCalendar: Calendar? = nil
     ) -> PendingExportRequest {
         PendingExportRequest(
             id: UUID(uuidString: id)!,
@@ -1025,7 +1502,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             createdAt: createdAt ?? date(year: 2026, month: 5, day: 18, hour: 9),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: exportTarget,
-            calendar: Self.calendar
+            calendar: requestCalendar ?? Self.calendar
         )
     }
 

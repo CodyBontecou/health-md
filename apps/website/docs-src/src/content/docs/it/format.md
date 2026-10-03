@@ -7,7 +7,7 @@ description: "Controlla la formattazione dell'output senza modificare i dati rac
 <div class="options">
 <div class="option"><strong>Markdown (.md)</strong><p>Formato predefinito. Un file al giorno. Frontmatter YAML (facoltativo) seguito da sezioni con intestazioni per ogni categoria.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown con frontmatter strutturato e ottimizzato per il plugin <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> di Obsidian. Le proprietà numeriche restano numeri e le date restano date.</p></div>
-<div class="option"><strong>JSON</strong><p>Un file JSON al giorno. I riepiloghi giornalieri schema-v7 possono incorporare l'archivio autorevole <code>healthmd.healthkit_records</code> v1 quando è abilitata l'opzione Dati sanitari senza perdita.</p></div>
+<div class="option"><strong>JSON</strong><p>Un file JSON al giorno. I riepiloghi giornalieri Apple schema-v8 possono incorporare l'archivio autorevole <code>healthmd.healthkit_records</code> v1 quando è abilitata l'opzione Dati sanitari senza perdita.</p></div>
 <div class="option"><strong>CSV</strong><p>Un file CSV al giorno con l'intestazione <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Le righe di riepilogo per compatibilità contengono cinque campi e omettono la colonna del timestamp; le righe con timestamp e quelle dei record canonici contengono tutti e sei i campi.</p></div>
 </div>
 
@@ -37,9 +37,16 @@ description: "Controlla la formattazione dell'output senza modificare i dati rac
 ## Anteprima
 <p>In fondo alla schermata Formato, un riquadro di anteprima in tempo reale visualizza i dati di oggi con le impostazioni correnti. È il modo più rapido per perfezionare il risultato: modifica un'opzione, controlla l'anteprima e ripeti.</p>
 
+## Dettaglio dei dati e profili
+
+Riepilogo produce proiezioni giornaliere compatte. Serie temporale dettagliata aggiunge campioni e intervalli selezionati su Apple e Android quando la metrica li supporta. Dati sanitari senza perdita aggiunge l’archivio canonico HealthKit, solo su Apple e non come compatibilità Android.
+
+Il dettaglio viene congelato con il [profilo di esportazione](/it/docs/export-profiles/). Modificarlo con un profilo attivo cambia solo quel profilo.
+
 ## Pagine correlate
 
 <div class="related">
+  <a href="/it/docs/export-profiles/"><span>Profili</span>Salva livello di dettaglio e formato per ogni flusso.</a>
   <a href="/it/docs/metrics/"><span>Cosa</span>Metriche sanitarie — scegli prima i dati.</a>
   <a href="/it/docs/individual-tracking/"><span>Granulare</span>Monitoraggio individuale — un output completamente diverso (file per ogni voce).</a>
   <a href="/it/docs/daily-notes/"><span>Obsidian</span>Inserimento nelle note giornaliere — usa gli stessi campi del frontmatter.</a>

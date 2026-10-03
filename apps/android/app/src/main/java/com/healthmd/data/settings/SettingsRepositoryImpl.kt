@@ -36,6 +36,8 @@ class SettingsRepositoryImpl(
 
     private object Keys {
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
+
+        val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
@@ -70,6 +72,32 @@ class SettingsRepositoryImpl(
     override suspend fun getExportSettings(): ExportSettings =
         exportSettings.first()
 
+    override suspend fun updateExportSettingsAtomically(
+        transform: (ExportSettings) -> ExportSettings,
+    ): ExportSettings {
+        var updated: ExportSettings? = null
+        dataStore.edit { prefs ->
+            val next = transform(storedExportSettings(prefs)).normalized()
+            prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), next)
+            updated = next
+        }
+        return checkNotNull(updated) { "Export settings atomic update did not commit." }
+    }
+
+    private fun storedExportSettings(prefs: Preferences): ExportSettings =
+        prefs[Keys.EXPORT_SETTINGS]
+            ?.let { runCatching { decodePersistedExportSettings(it).normalized() }.getOrNull() }
+            ?: ExportSettings.newInstallDefaults().normalized()
+
+    override val preventAccidentalChanges: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false
+    }
+
+    override suspend fun setPreventAccidentalChanges(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] = enabled
+        }
+    }
     override val exportFolderUri: Flow<String?> = dataStore.data.map { prefs ->
         prefs[Keys.EXPORT_FOLDER_URI]
     }

@@ -29,6 +29,52 @@ final class QueryFoundationTests: XCTestCase {
         for: HealthMdQueryValue.duration(seconds: .infinity)))
   }
 
+  func testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests() throws {
+    let dates = [
+      Date(timeIntervalSince1970: 1_700_000_000.123456789),
+      Date(timeIntervalSince1970: 1_700_000_000.0000002),
+      Date(timeIntervalSince1970: -0.123456789),
+    ]
+
+    for date in dates {
+      let value = HealthMdQueryValue.timestamp(date)
+      let encoded = try HealthMdQueryCanonicalSerializer.data(for: value)
+      let decoded = try HealthMdQueryCanonicalSerializer.decode(
+        HealthMdQueryValue.self,
+        from: encoded
+      )
+      let reencoded = try HealthMdQueryCanonicalSerializer.data(for: decoded)
+
+      XCTAssertEqual(decoded, value)
+      XCTAssertEqual(reencoded, encoded)
+      XCTAssertEqual(
+        HealthMdQueryCanonicalSerializer.sha256(data: reencoded),
+        HealthMdQueryCanonicalSerializer.sha256(data: encoded)
+      )
+    }
+
+    XCTAssertTrue(
+      String(decoding: try HealthMdQueryCanonicalSerializer.data(for: dates[0]), as: UTF8.self)
+        .contains(".123456717Z")
+    )
+  }
+
+  func testCanonicalDateDecoderRejectsNoncanonicalTimestamps() throws {
+    for timestamp in [
+      "2023-11-14T22:13:20.123Z",
+      "2023-11-14T22:13:20.123456789+00:00",
+      "2023-11-14t22:13:20.123456789z",
+      "2023-02-29T22:13:20.123456789Z",
+      "2023-11-14T22:13:20.999999999Z",
+    ] {
+      let payload = Data(#"{"type":"timestamp","value":"\#(timestamp)"}"#.utf8)
+      XCTAssertThrowsError(
+        try HealthMdQueryCanonicalSerializer.decode(HealthMdQueryValue.self, from: payload),
+        timestamp
+      )
+    }
+  }
+
   func testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields() throws {
     let decoder = JSONDecoder()
     for json in [
@@ -504,6 +550,64 @@ final class QueryFoundationTests: XCTestCase {
     XCTAssertFalse(HealthMdEvidenceResolver.allResolve([wrongLocator], in: [context]))
     let wrongSource = reference(id: "evidence", day: "2026-04-01", source: self.source("other"))
     XCTAssertFalse(HealthMdEvidenceResolver.allResolve([wrongSource], in: [context]))
+  }
+
+  func testMetricSeriesUsesCompactSummaryEvidenceForDenseLosslessDays() throws {
+    let ownerDate = "2026-04-02"
+    let source = source("dense-evidence")
+    let summaryReference = HealthMdEvidenceReference(
+      evidenceID: "steps-summary",
+      locator: .summaryKey(ownerDate: ownerDate, key: "steps"),
+      source: source,
+      sourceID: HealthMdEvidenceSourceIDs.healthMdSummary
+    )
+    let rawEvidence = (0..<2_000).map { index in
+      HealthMdContextEvidence(
+        reference: .init(
+          evidenceID: String(format: "steps-raw-%04d", index),
+          locator: .canonicalUUID(ownerDate: ownerDate, uuid: String(format: "raw-%04d", index)),
+          source: source,
+          sourceID: HealthMdEvidenceSourceIDs.appleHealth
+        ),
+        value: .count(Int64(index)),
+        metricIDs: ["steps"]
+      )
+    }
+    let evidence = [HealthMdContextEvidence(
+      reference: summaryReference,
+      value: .count(12_345),
+      metricIDs: ["steps"]
+    )] + rawEvidence
+    let context = day(
+      ownerDate,
+      metrics: [metric(
+        "steps",
+        id: "dense-summary",
+        value: .count(12_345),
+        evidenceIDs: evidence.map { $0.reference.evidenceID }
+      )],
+      evidence: evidence
+    )
+    let evaluator = try HealthMdQueryEvaluator(days: [context], cursorKey: cursorKey)
+    let pageBytes = 256 * 1_024
+
+    let response = try evaluator.evaluateBounded(
+      HealthMdQueryRequest(
+        metrics: .explicit(["steps"]),
+        dates: .exact(.init(startDate: ownerDate, endDate: ownerDate)),
+        operation: .metricSeries,
+        page: .init(maxItems: 250, maxBytes: pageBytes)
+      ),
+      evidenceScope: .init(allowedMetricIDs: ["steps"])
+    )
+
+    guard case .metric(let point) = try XCTUnwrap(response.items.first) else {
+      return XCTFail("Expected metric point")
+    }
+    XCTAssertEqual(point.evidence.map(\.evidenceID), [summaryReference.evidenceID])
+    XCTAssertEqual(response.evidence.map(\.evidenceID), [summaryReference.evidenceID])
+    XCTAssertTrue(HealthMdEvidenceResolver.allResolve(point.evidence, in: [context]))
+    XCTAssertLessThanOrEqual(try HealthMdQueryCanonicalSerializer.data(for: response).count, pageBytes)
   }
 
   func testExactOwnerDatesRespectStoredTimezoneBoundaries() throws {

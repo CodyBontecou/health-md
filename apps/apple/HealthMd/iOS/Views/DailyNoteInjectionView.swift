@@ -14,6 +14,7 @@ struct DailyNoteInjectionView: View {
     var healthSubfolder: String = ""
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
@@ -67,7 +68,7 @@ struct DailyNoteInjectionView: View {
 
     private var enableCard: some View {
         card {
-            Toggle(isOn: $settings.enabled) {
+            Toggle(isOn: configurationProtection.protecting($settings.enabled)) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Inject Into Daily Notes")
                         .font(.body.weight(.semibold))
@@ -272,7 +273,7 @@ struct DailyNoteInjectionView: View {
         accessibilityLabel: String,
         accessibilityHint: String
     ) -> some View {
-        TextField(placeholder, text: text)
+        TextField(placeholder, text: configurationProtection.protecting(text))
             .font(.footnote.monospaced())
             .foregroundStyle(Color.textPrimary)
             .multilineTextAlignment(usesAccessibilityLayout ? .leading : .trailing)
@@ -298,7 +299,7 @@ struct DailyNoteInjectionView: View {
         isOn: Binding<Bool>,
         accessibilityLabel: String
     ) -> some View {
-        Toggle(isOn: isOn) {
+        Toggle(isOn: configurationProtection.protecting(isOn)) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(LocalizedStringKey(title))
                     .font(.body.weight(.semibold))

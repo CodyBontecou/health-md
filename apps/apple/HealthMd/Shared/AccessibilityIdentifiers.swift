@@ -30,14 +30,31 @@ enum AccessibilityID {
         static let customStartDatePicker = "export.dateRange.custom.startDate"
         static let customEndDatePicker = "export.dateRange.custom.endDate"
         static let pathPreview = "export.pathPreview"
-        static let exportProgress = "export.progressView"
-        static let statusMessage = "export.statusMessage"
         static let activityBanner = "export.activityBanner"
+        static let filenameEditorButton = "export.filenameEditorButton"
+        static let outputEditorSaveButton = "export.outputEditorSaveButton"
+
+        // Large interactive export confirmation (Export tab only).
+        // SwiftUI alert titles cannot carry accessibility identifiers; the
+        // `largeExportConfirmationTitle` constant documents the alert's stable
+        // identifier while UI tests match the alert by its localized title text,
+        // matching how the other Export tab alerts are located.
+        static let largeExportConfirmationTitle = "export.confirmLargeExport.title"
+        static let largeExportConfirmationMessage = "export.confirmLargeExport.message"
+        static let largeExportConfirmationConfirmButton = "export.confirmLargeExport.confirmButton"
+        static let largeExportConfirmationCancelButton = "export.confirmLargeExport.cancelButton"
     }
 
     // MARK: - Mac Destination
     enum Mac {
         static let exportActivity = "mac.exportActivity"
+    }
+
+    // MARK: - Export Profiles Management
+    enum ExportProfiles {
+        static let entry = "export.profiles.entry"
+        static let makeActiveButton = "export.profiles.makeActive"
+        static let copyIDButton = "export.profiles.copyID"
     }
 
     // MARK: - Clinician Report
@@ -74,6 +91,7 @@ enum AccessibilityID {
     // MARK: - Notification Export Activity
     enum Notification {
         static let exportActivity = "notification.exportActivity"
+        static let cancelExportButton = "notification.cancelButton"
     }
 
     // MARK: - Export Modal
@@ -101,6 +119,13 @@ enum AccessibilityID {
         static let errorMessage = "paywall.errorMessage"
     }
 
+    // MARK: - Value Moment Prompt
+    enum UpgradePrompt {
+        static let upgrade = "upgradePrompt.upgradeButton"
+        static let notNow = "upgradePrompt.notNowButton"
+        static let title = "upgradePrompt.title"
+    }
+
     // MARK: - Schedule
     enum Schedule {
         static let enableToggle = "schedule.enableToggle"
@@ -118,10 +143,12 @@ enum AccessibilityID {
 
     // MARK: - Sync
     enum Sync {
+        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"
         static let autoSyncToggle = "sync.autoSyncToggle"
+        static let directCLIToggle = "sync.directCLIToggle"
         static let directCLIScanButton = "sync.directCLIScanButton"
     }
 
@@ -130,6 +157,26 @@ enum AccessibilityID {
         static let vaultRow = "settings.vaultRow"
         static let exportSettingsRow = "settings.exportSettingsRow"
         static let macSyncRow = "settings.macSyncRow"
+    }
+
+    // MARK: - Shared Setup
+    enum SharedSetup {
+        static let configurationCard = "sharedSetup.configurationCard"
+        static let use = "sharedSetup.use"
+        static let share = "sharedSetup.share"
+        static let review = "sharedSetup.review"
+        static let apply = "sharedSetup.apply"
+        static let success = "sharedSetup.success"
+        static let undo = "sharedSetup.undo"
+        static let finish = "sharedSetup.finish"
+    }
+
+    // MARK: - Configuration Protection
+    enum ConfigurationProtection {
+        static let toggle = "configurationProtection.toggle"
+        static let section = "configurationProtection.section"
+        static let protectedRegion = "configurationProtection.protectedRegion"
+        static let toast = "configurationProtection.toast"
     }
 
     // MARK: - Status Badge

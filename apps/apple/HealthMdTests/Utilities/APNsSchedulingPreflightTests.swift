@@ -69,7 +69,8 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             relativePath: "HealthMd/iOS/SchedulingManager.swift",
             contains: [
                 "await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()",
-                "PushRegistrationManager.shared.syncSchedule(schedule)",
+                "func refreshScheduledAutomation()",
+                "PushRegistrationManager.shared.syncSchedules(",
                 "schedule.frequency == .custom, kind == .completedDay, fireDate == nil",
             ]
         )

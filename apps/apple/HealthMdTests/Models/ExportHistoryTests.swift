@@ -325,6 +325,149 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("1 of 1 data day"))
     }
 
+    func testEntry_informationalWorkoutPlanOmissionKeepsFullSuccess() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 3,
+            partialFailures: [
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+                    isInformational: true
+                ),
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "HealthKit workout child 154B9A3E-E019-42C1-8467-BF0278B20974:workoutPlan",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+                    isInformational: true
+                )
+            ]
+        )
+
+        XCTAssertTrue(entry.isFullSuccess)
+        XCTAssertFalse(entry.isPartialSuccess)
+        XCTAssertEqual(
+            entry.summaryDescription,
+            "Exported 3 generated file(s) from 1 data day(s)"
+        )
+        // The omission stays visible in details for transparency.
+        XCTAssertEqual(entry.partialFailures.count, 2)
+    }
+
+    func testEntry_informationalNotesWithDegradingFreeOperationDetailsStayFullSuccess() {
+        // Direct iPhone→Mac transfers persist aggregate operation counts.
+        // When those counts exclude informational omissions, an entry whose
+        // only warnings are notes must stay a full success even though
+        // `operationDetails` is present (its `hasWarnings` gate remains the
+        // authority for genuinely degrading aggregates).
+        let informational = ExportPartialFailure(
+            date: Date(),
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 2,
+            partialFailures: [informational],
+            operationDetails: ExportHistoryOperationDetails(
+                kind: .generatedFiles,
+                requestID: UUID(),
+                dateSelection: "exact_range",
+                settingsPolicy: "frozen",
+                partitionCount: 1,
+                transferredBytes: 128,
+                sampleCount: 4,
+                recordCount: 4,
+                warningDayCount: 0,
+                failedDayCount: 0,
+                integrityWarningCount: 0,
+                partialFailureCount: 0
+            )
+        )
+
+        XCTAssertTrue(entry.isFullSuccess)
+        XCTAssertFalse(entry.isPartialSuccess)
+    }
+
+    func testEntry_operationDetailsWarningCountsStillBlockFullSuccess() {
+        let informational = ExportPartialFailure(
+            date: Date(),
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 2,
+            partialFailures: [informational],
+            operationDetails: ExportHistoryOperationDetails(
+                kind: .generatedFiles,
+                requestID: UUID(),
+                dateSelection: "exact_range",
+                settingsPolicy: "frozen",
+                partitionCount: 1,
+                transferredBytes: 128,
+                warningDayCount: 1,
+                failedDayCount: 0,
+                integrityWarningCount: 0,
+                partialFailureCount: 0
+            )
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+    }
+
+    func testEntry_degradingWarningStillBlocksFullSuccess() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            partialFailures: [
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+                    isInformational: true
+                ),
+                ExportPartialFailure(
+                    date: Date(),
+                    dataType: "workouts",
+                    dateRangeDescription: "2026-08-31",
+                    errorDescription: "HealthKit query failed"
+                )
+            ]
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+    }
+
     func testEntry_partialMetricFailure_isPartialAndSummarizesWarning() {
         let entry = ExportHistoryEntry(
             source: .manual,
@@ -411,6 +554,39 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(entry.summaryDescription, "Export failed: Vault access denied")
     }
 
+    func testEntry_apiEndpointNotConfiguredNamesTheActualCause() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 1,
+            failureReason: .apiEndpointNotConfigured
+        )
+
+        XCTAssertEqual(entry.summaryDescription, "Export failed: API endpoint not configured")
+        XCTAssertEqual(entry.failureReasonForDisplay, .apiEndpointNotConfigured)
+        XCTAssertTrue(entry.failureRecoverySuggestion?.contains("Export → API Endpoint") == true)
+    }
+
+    func testEntry_decodesUnknownFailureReasonRawValueAsUnknown() throws {
+        // History may be read by an older build; an unrecognized reason raw
+        // value must not make the whole history undecodable.
+        let newerReasonJSON = """
+        {"id":"8A7F3B2E-1C1C-4D4D-9E9E-111111111111","timestamp":700000000,"source":"Scheduled","success":false,"dateRangeStart":700000000,"dateRangeEnd":700000000,"successCount":0,"totalCount":1,"failureReason":"api_quota_exceeded_future_case"}
+        """
+        let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: Data(newerReasonJSON.utf8))
+
+        XCTAssertEqual(decoded.failureReason, .unknown)
+
+        let knownRawJSON = """
+        {"id":"8A7F3B2E-1C1C-4D4D-9E9E-111111111111","timestamp":700000000,"source":"Scheduled","success":false,"dateRangeStart":700000000,"dateRangeEnd":700000000,"successCount":0,"totalCount":1,"failureReason":"api_endpoint_not_configured"}
+        """
+        let known = try JSONDecoder().decode(ExportHistoryEntry.self, from: Data(knownRawJSON.utf8))
+        XCTAssertEqual(known.failureReason, .apiEndpointNotConfigured)
+    }
+
     func testEntry_failureDiagnosticDetailsAreTrimmedAndDeduplicated() {
         let entry = ExportHistoryEntry(
             source: .manual,
@@ -476,7 +652,8 @@ final class ExportHistoryTests: XCTestCase {
             targetLabel: "MacBook Pro",
             exportTarget: .connectedMac,
             fileCount: 6,
-            appleExportEnginePin: pin
+            appleExportEnginePin: pin,
+            profileName: "Morning"
         )
         let data = try JSONEncoder().encode(entry)
         let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: data)
@@ -489,15 +666,31 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.exportTarget, .connectedMac)
         XCTAssertEqual(decoded.fileCount, 6)
         XCTAssertEqual(decoded.appleExportEnginePin, pin)
+        XCTAssertEqual(decoded.profileName, "Morning")
         XCTAssertNil(decoded.operationDetails)
 
         var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         legacyObject.removeValue(forKey: "appleExportEnginePin")
+        legacyObject.removeValue(forKey: "profileName")
         let legacy = try JSONDecoder().decode(
             ExportHistoryEntry.self,
             from: JSONSerialization.data(withJSONObject: legacyObject)
         )
         XCTAssertNil(legacy.appleExportEnginePin)
+        XCTAssertNil(legacy.profileName)
+    }
+
+    func testAPIHistoryDestinationDescriptionRedactsCredentialsAndQuery() {
+        let label = APIExportSettings.redactedEndpointDescription(
+            for: "https://user:password@api.example.com:8443/v1/export?token=secret#fragment",
+            fallback: "API Endpoint"
+        )
+
+        XCTAssertEqual(label, "https://api.example.com:8443/v1/export")
+        XCTAssertFalse(label.contains("user"))
+        XCTAssertFalse(label.contains("password"))
+        XCTAssertFalse(label.contains("secret"))
+        XCTAssertFalse(label.contains("fragment"))
     }
 
     func testEntry_codablePreservesCLIOperationDetails() throws {
@@ -729,7 +922,7 @@ final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
         XCTAssertEqual(decoded.fileCount, 40)
     }
 
-    func testBreakdownRejectsNegativeAndOversizedDecodedCounts() throws {
+    func testBreakdownRejectsNegativeAndOversizedPerFieldDecodedCounts() throws {
         let valid = ExportHistoryOutputBreakdown(
             requestedDataDayCount: 1,
             successfulDataDayCount: 1,
@@ -752,15 +945,54 @@ final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
             )
         }
 
-        var excessiveAggregate = base
-        excessiveAggregate["looseAggregateFileCount"] = ExportHistoryOutputBreakdown.maximumPersistedCount
-        excessiveAggregate["individualEntryFileCount"] = 1
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ExportHistoryOutputBreakdown.self,
-                from: JSONSerialization.data(withJSONObject: excessiveAggregate)
+    }
+
+    func testLegacyPersistedArrayMigratesAggregateOverBudgetEntryWithoutErasingSiblings() throws {
+        let firstID = UUID()
+        let legacyID = UUID()
+        let entries = [firstID, legacyID].map { id in
+            ExportHistoryEntry(
+                id: id,
+                source: .scheduled,
+                success: true,
+                dateRangeStart: Date(timeIntervalSince1970: 1_700_000_000),
+                dateRangeEnd: Date(timeIntervalSince1970: 1_700_000_000),
+                successCount: 1,
+                totalCount: 1,
+                fileCount: 1,
+                outputBreakdown: ExportHistoryOutputBreakdown(
+                    requestedDataDayCount: 1,
+                    successfulDataDayCount: 1,
+                    looseAggregateFileCount: 1
+                )
             )
+        }
+        var objects = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(entries))
+                as? [[String: Any]]
         )
+        var legacyBreakdown = try XCTUnwrap(
+            objects[1]["outputBreakdown"] as? [String: Any]
+        )
+        let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+        legacyBreakdown["looseAggregateFileCount"] = budget
+        legacyBreakdown["individualEntryFileCount"] = 1
+        legacyBreakdown.removeValue(forKey: "wasTruncated")
+        legacyBreakdown.removeValue(forKey: "isFileCategoryBreakdownCompleteV2")
+        objects[1]["outputBreakdown"] = legacyBreakdown
+        objects[1]["fileCount"] = budget
+
+        let decoded = try JSONDecoder().decode(
+            [ExportHistoryEntry].self,
+            from: JSONSerialization.data(withJSONObject: objects)
+        )
+
+        XCTAssertEqual(decoded.map(\.id), [firstID, legacyID])
+        XCTAssertEqual(decoded[0].fileCount, 1)
+        XCTAssertEqual(decoded[1].outputBreakdown?.generatedFileCount, budget)
+        XCTAssertEqual(decoded[1].outputBreakdown?.individualEntryFileCount, 0)
+        XCTAssertEqual(decoded[1].outputBreakdown?.wasTruncated, true)
+        XCTAssertNil(decoded[1].fileCount)
     }
 
     func testSyncEventPreservesLowerBoundAuthorityWithoutDisplayingAnExactCount() throws {
@@ -805,4 +1037,197 @@ final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
         XCTAssertEqual(object["files_written_is_lower_bound"] as? Bool, true)
     }
     #endif
+}
+
+final class ExportHistoryOutputBreakdownBudgetTests: XCTestCase {
+    private let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+
+    func testBudgetExhaustionBeforeUnclassifiedPreservesRawIncompleteness() {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 30,
+            successfulDataDayCount: 30,
+            looseAggregateFileCount: budget - 2,
+            individualEntryFileCount: 5,
+            dataDictionaryFileCount: 4,
+            zipArchiveFileCount: 3,
+            rollupFileCount: 2,
+            providerSidecarFileCount: 1,
+            unclassifiedFileCount: 9
+        )
+
+        // Categories are funded in declaration order until the budget runs out.
+        XCTAssertEqual(breakdown.looseAggregateFileCount, budget - 2)
+        XCTAssertEqual(breakdown.individualEntryFileCount, 2)
+        XCTAssertEqual(breakdown.dataDictionaryFileCount, 0)
+        XCTAssertEqual(breakdown.zipArchiveFileCount, 0)
+        XCTAssertEqual(breakdown.rollupFileCount, 0)
+        XCTAssertEqual(breakdown.providerSidecarFileCount, 0)
+        XCTAssertEqual(breakdown.unclassifiedFileCount, 0)
+        XCTAssertEqual(breakdown.generatedFileCount, budget)
+        XCTAssertTrue(breakdown.wasTruncated)
+        // The raw positive unclassified count still makes the measured-category
+        // fact incomplete even though its last-priority allocation received zero.
+        XCTAssertFalse(breakdown.isFileCategoryBreakdownComplete)
+    }
+
+    func testPerFieldClampingReducesCountsAndFlagsTruncation() {
+        let oversized = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: budget + 5,
+            successfulDataDayCount: budget + 9,
+            looseAggregateFileCount: budget * 3
+        )
+        XCTAssertEqual(oversized.requestedDataDayCount, budget)
+        XCTAssertEqual(oversized.successfulDataDayCount, budget)
+        XCTAssertEqual(oversized.looseAggregateFileCount, budget)
+        XCTAssertEqual(oversized.generatedFileCount, budget)
+        XCTAssertTrue(oversized.wasTruncated)
+
+        let negative = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: -3,
+            successfulDataDayCount: -7,
+            looseAggregateFileCount: -1,
+            individualEntryFileCount: 2
+        )
+        XCTAssertEqual(negative.requestedDataDayCount, 0)
+        XCTAssertEqual(negative.successfulDataDayCount, 0)
+        XCTAssertEqual(negative.looseAggregateFileCount, 0)
+        XCTAssertEqual(negative.individualEntryFileCount, 2)
+        // Raw negative file counts were reduced to the persisted floor.
+        XCTAssertTrue(negative.wasTruncated)
+    }
+
+    func testWasTruncatedStaysFalseWhenBudgetIsExactlyConsumedOrUntouched() {
+        let exactFit = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget / 2,
+            individualEntryFileCount: budget / 2
+        )
+        XCTAssertFalse(exactFit.wasTruncated)
+        XCTAssertEqual(exactFit.generatedFileCount, budget)
+
+        let everyday = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 3,
+            successfulDataDayCount: 3,
+            looseAggregateFileCount: 4,
+            individualEntryFileCount: 35,
+            dataDictionaryFileCount: 1
+        )
+        XCTAssertFalse(everyday.wasTruncated)
+    }
+
+    func testTruncationDoesNotFlipFileCategoryCompleteness() {
+        let truncatedButMeasured = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget,
+            individualEntryFileCount: budget,
+            isFileCategoryBreakdownComplete: true
+        )
+        XCTAssertTrue(truncatedButMeasured.isFileCategoryBreakdownComplete)
+        XCTAssertTrue(truncatedButMeasured.wasTruncated)
+        XCTAssertEqual(truncatedButMeasured.individualEntryFileCount, 0)
+
+        // Existing completeness semantics are preserved: confirmed-but-unclassified
+        // files still flip it, independently of truncation.
+        let withUnclassified = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            unclassifiedFileCount: 2
+        )
+        XCTAssertFalse(withUnclassified.isFileCategoryBreakdownComplete)
+        XCTAssertFalse(withUnclassified.wasTruncated)
+    }
+
+    func testEncodedLegacyCompletenessIsConservativeForOlderReaders() throws {
+        let truncatedButMeasured = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget,
+            individualEntryFileCount: 1,
+            isFileCategoryBreakdownComplete: true
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(truncatedButMeasured))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(object["isFileCategoryBreakdownComplete"] as? Bool, false)
+        XCTAssertEqual(object["isFileCategoryBreakdownCompleteV2"] as? Bool, true)
+        object.removeValue(forKey: "isFileCategoryBreakdownCompleteV2")
+        object.removeValue(forKey: "wasTruncated")
+
+        let legacyReaderView = try JSONDecoder().decode(
+            ExportHistoryOutputBreakdown.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertFalse(legacyReaderView.isFileCategoryBreakdownComplete)
+        XCTAssertFalse(legacyReaderView.wasTruncated)
+    }
+
+    func testLegacyJSONWithoutWasTruncatedDecodesAsUntruncated() throws {
+        let truncated = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 2,
+            successfulDataDayCount: 2,
+            looseAggregateFileCount: budget,
+            individualEntryFileCount: budget
+        )
+        XCTAssertTrue(truncated.wasTruncated)
+
+        let encoded = try JSONEncoder().encode(truncated)
+        let roundTripped = try JSONDecoder().decode(
+            ExportHistoryOutputBreakdown.self,
+            from: encoded
+        )
+        XCTAssertEqual(roundTripped, truncated)
+        XCTAssertTrue(roundTripped.wasTruncated)
+
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        XCTAssertEqual(object["wasTruncated"] as? Bool, true)
+        object["wasTruncated"] = nil
+
+        // Entries persisted before the flag existed decode as untruncated.
+        let legacy = try JSONDecoder().decode(
+            ExportHistoryOutputBreakdown.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertFalse(legacy.wasTruncated)
+        XCTAssertEqual(legacy.looseAggregateFileCount, budget)
+        XCTAssertEqual(legacy.individualEntryFileCount, 0)
+    }
+
+    func testInitNeverPersistsABreakdownItsOwnDecoderRejects() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        let extremeInputs: [[Int]] = [
+            [budget, budget, budget, budget, budget, budget, budget],
+            [budget / 2, budget / 2, 1, 1, 1, 1, 1],
+            [-1, -2, -3, 0, Int.max, Int.min, 99],
+            [0, 0, 0, 0, 0, 0, 0]
+        ]
+
+        for counts in extremeInputs {
+            let breakdown = ExportHistoryOutputBreakdown(
+                requestedDataDayCount: Int.max,
+                successfulDataDayCount: Int.max,
+                looseAggregateFileCount: counts[0],
+                individualEntryFileCount: counts[1],
+                dataDictionaryFileCount: counts[2],
+                zipArchiveFileCount: counts[3],
+                rollupFileCount: counts[4],
+                providerSidecarFileCount: counts[5],
+                unclassifiedFileCount: counts[6],
+                isFileCategoryBreakdownComplete: false
+            )
+            XCTAssertLessThanOrEqual(breakdown.generatedFileCount, budget)
+
+            let decoded = try decoder.decode(
+                ExportHistoryOutputBreakdown.self,
+                from: encoder.encode(breakdown)
+            )
+            XCTAssertEqual(decoded, breakdown)
+        }
+    }
 }

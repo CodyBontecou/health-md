@@ -499,13 +499,14 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
                     selection: request.sources
                 ) else { continue }
 
+                let preferredEvidence = HealthMdMetricEvidenceSelector.preferred(evidence)
                 let point = HealthMdMetricPoint(
                     metricID: metric.metricID,
                     displayName: metric.displayName,
                     ownerDate: day.ownerDate,
                     value: metric.value,
                     status: metric.value == nil && metric.status == .available ? .completeEmpty : metric.status,
-                    evidence: evidence.map(\.reference).sorted { $0.evidenceID < $1.evidenceID },
+                    evidence: preferredEvidence.map(\.reference),
                     limitations: metric.limitations
                 )
                 let item = HealthMdQueryItem.metric(point)
@@ -517,7 +518,7 @@ actor EncryptedHealthContextQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
                 items.append(item)
                 references.formUnion(point.evidence)
                 sources.insert(day.source)
-                sources.formUnion(point.evidence.map(\.source))
+                sources.formUnion(preferredEvidence.map { $0.reference.source })
                 limitations.formUnion(metric.limitations)
             }
 

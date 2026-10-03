@@ -9,8 +9,9 @@ data class HealthConnectWidgetReadSelection(
     val heartRate: Boolean = false,
     val restingHeartRate: Boolean = false,
     val hrvRmssd: Boolean = false,
+    val oxygenSaturation: Boolean = false,
 ) {
     val hasAny: Boolean
         get() = steps || activeCalories || exerciseSessions || sleepSessions || heartRate ||
-            restingHeartRate || hrvRmssd
+            restingHeartRate || hrvRmssd || oxygenSaturation
 }

@@ -134,10 +134,15 @@ body::before,
   letter-spacing: -0.045em;
 }
 
-.site-title::after {
+.healthmd-site-title {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+}
+
+.healthmd-surface-label {
   border-left: 1px solid rgba(18, 18, 18, 0.18);
   color: rgba(18, 18, 18, 0.68);
-  content: "DOCS";
   font-family: var(--sl-font-mono);
   font-size: 0.56rem;
   font-weight: 650;
@@ -176,6 +181,12 @@ body::before,
 
 .healthmd-header-links a:hover,
 .healthmd-header-links a:focus-visible {
+  background: transparent;
+  border-bottom: 1px solid #121212;
+  color: #121212;
+}
+
+.healthmd-header-links a[aria-current='page'] {
   background: transparent;
   border-bottom: 1px solid #121212;
   color: #121212;
@@ -954,7 +965,7 @@ starlight-toc a[aria-current='true'] {
     --sl-content-pad-x: 1rem;
   }
 
-  .site-title::after,
+  .healthmd-surface-label,
   .healthmd-header-links {
     display: none;
   }

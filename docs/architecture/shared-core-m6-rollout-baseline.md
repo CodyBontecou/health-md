@@ -130,10 +130,12 @@ Rollback releases continue packaging Rust and both engine adapters so pinned wor
 
 ## Compatibility evidence
 
-M6 builds on immutable M5 render evidence:
+M6 builds on immutable M5 revision-1 render evidence:
 
 - render differential SHA-256 `59fee27e488f76da193d8013fba4ff82d76887fe12df45439ea7de286feb4bc3`;
 - Android native request replay SHA-256 `e989e50d2fc81cec95d938a19c40a6ce39428cfc83e45eb23b69703b656037bf`.
+
+The revision-2 managed-Markdown safety repin changes only the internal configuration revision field. Its current hashes are `1181e644cd224c8c0e4126133890830f5af9ec8c39995db6e90a471fae608c7d` for the render differential and `0f6f8ce69bf0babddff87e4e4d1990b96633a754a10043a37475dc3d29b9bfef` for the Android native request replay.
 
 Focused native tests cover mode/policy failure, pin compatibility and legacy decoding, artifact validation, every comparator dimension, shadow native authority, pure Rust summary-only roll-up authority, whole-range identity and byte comparison, planning-before-write/upload, immutable retries, no post-side-effect fallback, API failures/external records, scheduled/direct migration, and diagnostic privacy. The Apple pure-Rust suite fault-injects the native-renderer preflight, disables native profile documents at the adapter boundary, compares customized all-metric weekly/monthly/yearly bytes, checks every nonempty format subset including Bases-only paths, covers a non-UTC IANA timezone, and rejects incomplete Rust plans. New unsupported Apple Rust work becomes explicit legacy without loading the core; persisted unsupported Rust pins fail closed. API-35 instrumentation also runs the concrete daily semantic/render production adapter through the packaged library for both Android profiles and compares all four planned artifact bytes and paths to the Kotlin oracle. On both platforms, only shadow renders native and Rust candidates; admitted Rust authority never invokes a native renderer.
 

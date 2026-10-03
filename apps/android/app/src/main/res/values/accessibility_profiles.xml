@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Profile Schedules</string>
+    <string name="a11y_profiles_empty">No export profiles yet.</string>
+    <string name="a11y_profiles_add">New Profile From Current Settings</string>
+    <string name="a11y_profiles_none_enabled">No profile schedules enabled.</string>
+    <string name="a11y_profiles_edit">Edit Schedule</string>
+    <string name="a11y_profiles_edit_named">Edit schedule for %1$s</string>
+    <string name="a11y_profiles_delete">Delete</string>
+    <string name="a11y_profiles_delete_named">Delete profile %1$s</string>
+    <string name="a11y_profiles_schedule_named">Schedule %1$s</string>
+    <string name="a11y_profiles_save">Save</string>
+    <string name="a11y_profiles_delete_title">Delete “%1$s”?</string>
+    <string name="a11y_profiles_delete_body">Its saved settings and schedule are removed. The last remaining profile cannot be deleted.</string>
+    <string name="a11y_profiles_cadence_unit">Cadence unit</string>
+    <string name="a11y_profiles_days">Days</string>
+    <string name="a11y_profiles_weeks">Weeks</string>
+    <string name="a11y_profiles_months">Months</string>
+    <string name="a11y_profiles_weekday">Weekday</string>
+    <string name="a11y_profiles_hour">Hour</string>
+    <string name="a11y_profiles_minute">Minute</string>
+    <string name="a11y_profiles_lookback">Lookback days (1–30)</string>
+    <string name="a11y_profiles_every_days">Every N days</string>
+    <string name="a11y_profiles_every_weeks">Every N weeks</string>
+    <string name="a11y_profiles_every_months">Every N months</string>
+</resources>

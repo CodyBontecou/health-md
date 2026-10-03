@@ -34,7 +34,7 @@ xcodebuild test \
 - `HealthMd/Info.plist` keeps `BGTaskSchedulerPermittedIdentifiers` aligned with `SchedulingManager.backgroundTaskIdentifier`.
 - `HealthMd/iOS/SchedulingManager.swift` still registers for remote notifications, calls `PushRegistrationManager.shared.syncSchedule(schedule)` when the schedule changes, and rejects custom completed-day pushes that lack a parseable fire date.
 - `HealthMd/iOS/HealthMdApp.swift` still forwards APNs tokens and handles `scheduled-export` silent push payloads.
-- `HealthMd/Shared/Managers/PushRegistrationManager.swift` still posts device registrations to `/devices/register` and schedule upserts to `/schedules/upsert` with the worker payload fields (`userId`, `platform`, `apnsToken`, `bundleId`, `timezone`, `isEnabled`, `frequency`, `hour`, `minute`, `weekday`), including the explicit custom-to-daily wake-up fallback.
+- `HealthMd/Shared/Managers/PushRegistrationManager.swift` still posts device registrations to `/devices/register` and schedule upserts to `/schedules/upsert` with the worker payload fields (`userId`, `platform`, `apnsToken`, `bundleId`, `timezone`, `isEnabled`, `frequency`, `hour`, `minute`, `weekday`), including the explicit custom-to-daily wake-up fallback. With export profiles (phase 3), `SchedulingManager.refreshScheduledAutomation` mirrors the **coalesced** worker record through `syncSchedules(_:legacy:)` — the earliest preferred time among enabled scheduled entries and the legacy schedule — using the same single-record worker contract.
 
 ## Fixture and mock strategy
 

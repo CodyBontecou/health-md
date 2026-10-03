@@ -75,6 +75,21 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         XCTAssertEqual(average, 145)
     }
 
+    func testWorkoutPlanImportFailureDescriptionTranslatesWorkoutKitImportErrors() {
+        let importError = NSError(domain: "WorkoutKit.ImportError", code: 3)
+        let description = SystemHealthStoreAdapter.workoutPlanImportFailureDescription(for: importError)
+        XCTAssertNotNil(description)
+        XCTAssertTrue(description!.contains("WorkoutKit.ImportError error 3"),
+                      "description should preserve the raw error identity")
+        XCTAssertTrue(description!.contains("exported successfully"),
+                      "description should reassure that the workout data itself exported")
+        XCTAssertTrue(description!.contains("workout plan"),
+                      "description should name what was omitted")
+
+        let unrelatedError = NSError(domain: HKErrorDomain, code: HKError.Code.errorNoData.rawValue)
+        XCTAssertNil(SystemHealthStoreAdapter.workoutPlanImportFailureDescription(for: unrelatedError))
+    }
+
     @MainActor
     func testPausedWorkoutUsesStableHealthKitIdentityAndActualEndAcrossExports() async throws {
         let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
@@ -254,6 +269,112 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         ] {
             XCTAssertNotNil(location[key], "canonical route location missing \(key)")
         }
+    }
+
+    /// A WorkoutKit plan this device cannot decode is an optional attachment:
+    /// the workout graph still exports and the surfaced warning must be
+    /// informational so the export is not permanently degraded to Partial
+    /// (user report 2026-09-05).
+    @MainActor
+    func testUndecodableWorkoutPlanChildWarningIsInformationalAndKeepsFullSuccess() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let actualEnd = dayStart.addingTimeInterval(50 * 60)
+        let store = FakeHealthStore()
+        let planFailure = HealthKitQueryResult(
+            identifier: "\(Self.workoutUUID.uuidString):workoutPlan",
+            objectTypeIdentifier: "com.apple.health.workout-plan",
+            operation: "loadWorkoutPlan",
+            metricIDs: ["workouts"],
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            interval: HealthKitQueryInterval(startDate: dayStart, endDate: actualEnd),
+            status: .failure,
+            recordCount: 0,
+            error: HealthKitQueryError(
+                domain: "WorkoutKit.ImportError",
+                code: 3,
+                description: SystemHealthStoreAdapter.workoutPlanImportFailureDescription(
+                    for: NSError(domain: "WorkoutKit.ImportError", code: 3)
+                )!,
+                isRecoverable: true
+            ),
+            statusDescription: "workout_uuid=\(Self.workoutUUID.uuidString)"
+        )
+        store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
+            records: [
+                Self.workoutRecord(dayStart: dayStart, actualEnd: actualEnd),
+                Self.routeRecord(uuid: Self.routeUUID1, dayStart: dayStart, pointOffset: 10, simulated: false),
+            ],
+            childQueryFailures: [planFailure]
+        )
+
+        let data = try await makeManager(store: store).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: workoutSelection()
+        )
+
+        let planWarning = try XCTUnwrap(data.partialFailures.first {
+            $0.dataType.contains("HealthKit workout child")
+                && $0.dataType.contains("workoutPlan")
+        })
+        XCTAssertEqual(planWarning.isInformational, true)
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            partialFailures: data.partialFailures,
+            formatsPerDate: 1,
+            looseAggregateFileCount: 1,
+            authoritativeFileCount: 1,
+            isFileCategoryBreakdownComplete: true
+        )
+        XCTAssertTrue(result.isFullSuccess)
+    }
+
+    /// The plan *serialization* child query fails with the same opaque
+    /// WorkoutKit import error when a loaded plan cannot be re-encoded. Like
+    /// the load-path failure it only omits the optional structured plan, so it
+    /// must also be informational (identifier suffix
+    /// `:workoutPlan:dataRepresentation`).
+    @MainActor
+    func testUndecodableWorkoutPlanSerializationWarningIsInformational() async throws {
+        let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
+        let actualEnd = dayStart.addingTimeInterval(50 * 60)
+        let store = FakeHealthStore()
+        let serializeFailure = HealthKitQueryResult(
+            identifier: "\(Self.workoutUUID.uuidString):workoutPlan:dataRepresentation",
+            objectTypeIdentifier: "com.apple.health.workout-plan",
+            operation: "serializeWorkoutPlan",
+            metricIDs: ["workouts"],
+            metricAttribution: HealthKitMetricAttribution(dependencyMetricIDs: ["workouts"]),
+            interval: HealthKitQueryInterval(startDate: dayStart, endDate: actualEnd),
+            status: .failure,
+            recordCount: 0,
+            error: HealthKitQueryError(
+                domain: "WorkoutKit.ImportError",
+                code: 3,
+                description: SystemHealthStoreAdapter.workoutPlanImportFailureDescription(
+                    for: NSError(domain: "WorkoutKit.ImportError", code: 3)
+                )!,
+                isRecoverable: true
+            ),
+            statusDescription: "workout_uuid=\(Self.workoutUUID.uuidString)"
+        )
+        store.workoutRecordResult = HealthKitWorkoutRecordQueryResult(
+            records: [Self.workoutRecord(dayStart: dayStart, actualEnd: actualEnd)],
+            childQueryFailures: [serializeFailure]
+        )
+
+        let data = try await makeManager(store: store).fetchHealthData(
+            for: dayStart,
+            includeGranularData: true,
+            metricSelection: workoutSelection()
+        )
+
+        let planWarning = try XCTUnwrap(data.partialFailures.first {
+            $0.dataType.contains("workoutPlan:dataRepresentation")
+        })
+        XCTAssertEqual(planWarning.isInformational, true)
     }
 
     @MainActor

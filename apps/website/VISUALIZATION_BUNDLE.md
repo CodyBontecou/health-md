@@ -6,29 +6,31 @@ The website visualizer must use the same rendering code as the Health.md Obsidia
 
 Plugin source lives in the external [`CodyBontecou/health-md-visualizations`](https://github.com/CodyBontecou/health-md-visualizations) repository. CI pins the revision in `external-sources.json`.
 
-The website bundle is generated from that plugin source:
+The website bundle and shipped Apple onboarding preview bundle are generated from that plugin source:
 
 ```text
 apps/website/assets/healthmd-plugin-visualizations.js
+apps/apple/HealthMd/iOS/Resources/PluginVisualization/healthmd-plugin-visualizations.js
 ```
 
-Do **not** hand-edit `assets/healthmd-plugin-visualizations.js`. It is generated from the plugin's `src/canvas-utils.ts` and selected files under `src/visualizations/`.
+Do **not** hand-edit either generated bundle. They are generated from the plugin's `src/canvas-utils.ts` and selected files under `src/visualizations/`. `visualizations:sync` also regenerates the website JSON samples and matching Apple JavaScript wrappers for daily-v8 and roll-up previews.
 
-## Regenerate the website visualizer
+## Regenerate the website and Apple visualizers
 
 From `apps/website` with an explicit plugin checkout:
 
 ```bash
-HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations npm run visualizations:bundle
+HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations npm run visualizations:sync
 ```
 
-This runs:
+This runs the bundle and sample generators:
 
 ```bash
 node scripts/build-plugin-visualizations.mjs
+node scripts/sync-visualization-samples.mjs
 ```
 
-The script intentionally has no machine-specific default. Set `HEALTHMD_OBSIDIAN_PLUGIN_REPO` for every regeneration.
+The scripts intentionally have no machine-specific default. Set `HEALTHMD_OBSIDIAN_PLUGIN_REPO` for every regeneration.
 
 ## Required workflow for visualization changes
 
@@ -40,11 +42,11 @@ The script intentionally has no machine-specific default. Set `HEALTHMD_OBSIDIAN
    npm run build
    ```
 
-3. Regenerate the website bundle:
+3. Regenerate the website and Apple preview assets:
 
    ```bash
    cd /path/to/health-md/apps/website
-   HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations npm run visualizations:bundle
+   HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations npm run visualizations:sync
    ```
 
 4. Sanity-check the generated browser files:

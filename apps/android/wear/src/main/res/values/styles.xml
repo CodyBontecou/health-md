@@ -1,0 +1,1 @@
+<resources><style name="WearTheme" parent="android:style/Theme.DeviceDefault"><item name="android:windowLightStatusBar">false</item><item name="android:fontFamily">@font/geist_sans</item><item name="android:windowBackground">#000000</item></style></resources>

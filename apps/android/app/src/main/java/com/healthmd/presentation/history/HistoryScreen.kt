@@ -27,9 +27,11 @@ import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.presentation.common.ConfigurationProtectedRegion
 import com.healthmd.presentation.common.GeistBadge
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.GeistIconCircle
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.export.failureReasonLabel
 import com.healthmd.presentation.export.guidanceText
 import com.healthmd.presentation.export.toDiagnosticsSummary
@@ -49,6 +51,10 @@ fun HistoryScreen(
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val protection = LocalConfigurationProtection.current
+    val requestClear: () -> Unit = {
+        if (protection.enabled) protection.onBlockedChange() else viewModel.requestClearHistory()
+    }
     val useTwoPane = LocalConfiguration.current.screenWidthDp >= 840
 
     if (!useTwoPane) uiState.selectedEntry?.let { entry ->
@@ -67,7 +73,14 @@ fun HistoryScreen(
             title = { Text(stringResource(R.string.history_clear_title)) },
             text = { Text(stringResource(R.string.history_clear_body)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.clearHistory() }) {
+                TextButton(onClick = {
+                    if (protection.enabled) {
+                        viewModel.dismissClearHistory()
+                        protection.onBlockedChange()
+                    } else {
+                        viewModel.clearHistory()
+                    }
+                }) {
                     Text(stringResource(R.string.action_clear_history))
                 }
             },
@@ -119,7 +132,7 @@ fun HistoryScreen(
             HistoryList(
                 entries = entries,
                 retryMessage = uiState.retryMessage,
-                onClear = { viewModel.requestClearHistory() },
+                onClear = requestClear,
                 onEntryClick = { viewModel.selectEntry(it) },
                 modifier = Modifier.weight(0.42f).fillMaxHeight(),
                 bottomPadding = 0.dp,
@@ -139,7 +152,7 @@ fun HistoryScreen(
         HistoryList(
             entries = entries,
             retryMessage = uiState.retryMessage,
-            onClear = { viewModel.requestClearHistory() },
+            onClear = requestClear,
             onEntryClick = { viewModel.selectEntry(it) },
             modifier = Modifier
                 .fillMaxSize()
@@ -179,10 +192,12 @@ private fun HistoryList(
                     style = MaterialTheme.typography.headlineMedium,
                     color = AppColors.textPrimary,
                 )
-                TextButton(onClick = onClear) {
-                    Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(Spacing.xxs))
-                    Text(stringResource(R.string.action_clear_history))
+                ConfigurationProtectedRegion {
+                    TextButton(onClick = onClear) {
+                        Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(Spacing.xxs))
+                        Text(stringResource(R.string.action_clear_history))
+                    }
                 }
             }
             retryMessage?.let { message ->
@@ -263,6 +278,13 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
                 style = GeistType.copy13Mono,
                 color = AppColors.textMuted,
             )
+            entry.profileName?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    stringResource(R.string.history_profile_label, it),
+                    style = GeistType.copy13Mono,
+                    color = AppColors.textMuted,
+                )
+            }
             localizedTargetLabel(entry)?.let {
                 Text(
                     stringResource(R.string.history_target_label, it),
@@ -368,13 +390,14 @@ private fun HistoryDetailCard(
                 color = AppColors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
-            HistoryDetailContent(entry = entry, retryMessage = retryMessage)
-            Spacer(modifier = Modifier.weight(1f))
+            // Retry stays above the content so the primary recovery action
+            // is reachable without scrolling through long failure lists.
             Button(onClick = onRetry, enabled = !isRetrying) {
                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(Spacing.xxs))
                 Text(if (isRetrying) stringResource(R.string.action_retrying_export) else stringResource(R.string.action_retry_export))
             }
+            HistoryDetailContent(entry = entry, retryMessage = retryMessage)
         }
     }
 }
@@ -389,6 +412,9 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: Histor
     )
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         DetailLine(stringResource(R.string.history_detail_source), entry.source.localizedDisplayName())
+        entry.profileName?.takeIf { it.isNotBlank() }?.let {
+            DetailLine(stringResource(R.string.history_detail_profile), it)
+        }
         DetailLine(stringResource(R.string.history_detail_when), timestamp)
         DetailLine(
             stringResource(R.string.history_detail_range),
@@ -418,7 +444,16 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: Histor
             ),
         )
         localizedTargetLabel(entry)?.let {
-            DetailLine(stringResource(R.string.history_detail_target), it)
+            DetailLine(
+                stringResource(
+                    if (entry.target == ExportTarget.DEVICE_FOLDER) {
+                        R.string.export_folder_label
+                    } else {
+                        R.string.history_detail_target
+                    },
+                ),
+                it,
+            )
         }
         if (entry.target == ExportTarget.DEVICE_FOLDER) {
             DetailLine(

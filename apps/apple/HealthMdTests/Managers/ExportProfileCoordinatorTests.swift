@@ -1,0 +1,1008 @@
+import XCTest
+@testable import HealthMd
+
+/// Bookmark resolver that round-trips the path-encoded bookmark bytes the
+/// test fake creates, so each saved destination resolves back to its own URL
+/// the way real security-scoped bookmarks do.
+final class PathMappingBookmarkResolver: BookmarkResolving {
+    var resolutionsByBookmark: [Data: (url: URL, isStale: Bool)] = [:]
+    var createdBookmarksByPath: [String: Data] = [:]
+    var accessGranted = true
+    var createError: Error?
+    private(set) var resolveCalls: [Data] = []
+    private(set) var createBookmarkCalls: [URL] = []
+
+    func resolveBookmark(data: Data) throws -> (url: URL, isStale: Bool) {
+        resolveCalls.append(data)
+        if let configured = resolutionsByBookmark[data] {
+            return configured
+        }
+        let name = String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: "fake-bookmark-", with: "")
+        return (URL(fileURLWithPath: "/Users/x").appendingPathComponent(name), false)
+    }
+
+    func createBookmarkData(for url: URL) throws -> Data {
+        createBookmarkCalls.append(url)
+        if let createError { throw createError }
+        return createdBookmarksByPath[url.standardizedFileURL.path]
+            ?? Data("fake-bookmark-\(url.lastPathComponent)".utf8)
+    }
+
+    func startAccessing(_ url: URL) -> Bool { accessGranted }
+    func stopAccessing(_ url: URL) {}
+}
+
+@MainActor
+final class ExportProfileCoordinatorTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: AdvancedExportSettings and nested
+    // ObservableObjects use Combine subscriptions; existing tests retain them
+    // to avoid platform-specific deinit crashes while the process tears down.
+    private static var retainedSettings: [AdvancedExportSettings] = []
+    // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
+    // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
+    // where nested store release aborts; retain for the process lifetime.
+    private static var retainedInstances: [AnyObject] = []
+
+    private var defaults: UserDefaults!
+    private var defaultsSuiteName: String!
+    private var keychain: FakeKeychainStore!
+    private var bookmarkResolver: PathMappingBookmarkResolver!
+
+    override func setUp() {
+        super.setUp()
+        defaultsSuiteName = "ExportProfileCoordinatorTests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: defaultsSuiteName)
+        defaults.removePersistentDomain(forName: defaultsSuiteName)
+        keychain = FakeKeychainStore()
+        bookmarkResolver = PathMappingBookmarkResolver()
+    }
+
+    override func tearDown() {
+        if let defaultsSuiteName {
+            defaults.removePersistentDomain(forName: defaultsSuiteName)
+        }
+        defaults = nil
+        defaultsSuiteName = nil
+        keychain = nil
+        bookmarkResolver = nil
+        super.tearDown()
+    }
+
+    // MARK: - Helpers
+
+    private func makeSettings() -> AdvancedExportSettings {
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        return settings
+    }
+
+    private func makeVaultManager() -> VaultManager {
+        makeVaultManager(identityProbe: FakeVaultFolderIdentityProbe())
+    }
+
+    private func makeVaultManager(identityProbe: VaultFolderIdentityProbing) -> VaultManager {
+        guard let defaults else { fatalError("test defaults missing") }
+        return VaultManager(
+            defaults: SystemUserDefaults(defaults: defaults),
+            bookmarkResolver: bookmarkResolver,
+            identityProbe: identityProbe
+        )
+    }
+
+    private func makeAPIExportSettings() -> APIExportSettings {
+        APIExportSettings(userDefaults: defaults, keychain: keychain)
+    }
+
+    private func makeCoordinator(
+        settings: AdvancedExportSettings? = nil,
+        vaultManager: VaultManager? = nil,
+        apiExportSettings: APIExportSettings? = nil,
+        initialTarget: ExportTargetSelection = .localIPhoneFolder,
+        sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate? = nil,
+        sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction? = nil
+    ) -> ExportProfileCoordinator {
+        let resolvedSettings = settings ?? makeSettings()
+        let resolvedVaultManager = vaultManager ?? makeVaultManager()
+        let resolvedAPIExportSettings = apiExportSettings ?? makeAPIExportSettings()
+        let coordinator = ExportProfileCoordinator(
+            profileStore: ExportProfileStore(userDefaults: defaults),
+            destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
+            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
+            settings: resolvedSettings,
+            vaultManager: resolvedVaultManager,
+            apiExportSettings: resolvedAPIExportSettings,
+            initialTarget: initialTarget,
+            sharedSetupV2ExecutionGate: sharedSetupV2ExecutionGate,
+            sharedSetupV2ProfileTransaction: sharedSetupV2ProfileTransaction
+        )
+        Self.retainedInstances.append(coordinator)
+        Self.retainedInstances.append(resolvedVaultManager)
+        return coordinator
+    }
+
+    /// Saves a complete vault selection through VaultManager's real path so
+    /// `persistedVaultSnapshot()` has trusted metadata to read.
+    private func selectVaultFolder(in vaultManager: VaultManager, path: String) {
+        vaultManager.setVaultFolder(URL(fileURLWithPath: path))
+    }
+
+    // MARK: - Bootstrap migration
+
+    func testBootstrapCreatesDefaultProfileBoundToCurrentDestinations() throws {
+        let settings = makeSettings()
+        settings.filenameFormat = "daily-{date}"
+        let vaultManager = makeVaultManager()
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        let apiSettings = makeAPIExportSettings()
+        apiSettings.endpointURLString = "https://api.example.com"
+        apiSettings.bearerToken = "token-1"
+
+        let coordinator = makeCoordinator(
+            settings: settings,
+            vaultManager: vaultManager,
+            apiExportSettings: apiSettings,
+            initialTarget: .localIPhoneFolder
+        )
+
+        XCTAssertEqual(coordinator.profileStore.profiles.count, 1)
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        XCTAssertTrue(profile.isMigrationDefault)
+        XCTAssertEqual(profile.target, .localIPhoneFolder)
+        XCTAssertEqual(profile.settings.filenameFormat, "daily-{date}")
+
+        // Vault seeded from the persisted legacy selection.
+        let vaultBinding = try XCTUnwrap(
+            coordinator.destinationStore.vault(id: profile.folderVaultID)
+        )
+        XCTAssertEqual(vaultBinding.standardizedPath, "/Users/x/Health")
+
+        // API endpoint seeded with its Keychain token.
+        let endpointBinding = try XCTUnwrap(
+            coordinator.destinationStore.apiEndpoint(id: profile.apiEndpointID)
+        )
+        XCTAssertEqual(endpointBinding.endpointURLString, "https://api.example.com")
+        XCTAssertEqual(coordinator.destinationStore.token(for: endpointBinding.id), "token-1")
+
+        XCTAssertEqual(coordinator.activeTarget, .localIPhoneFolder)
+        XCTAssertEqual(coordinator.activeProfileName, ExportProfileStore.defaultProfileName)
+    }
+
+    func testBootstrapWithoutDestinationsLeavesBindingsNil() throws {
+        let coordinator = makeCoordinator(initialTarget: .connectedMac)
+
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        XCTAssertNil(profile.folderVaultID)
+        XCTAssertNil(profile.apiEndpointID)
+        XCTAssertEqual(profile.target, .connectedMac)
+    }
+
+    func testBootstrapIsSkippedWhenProfilesAlreadyExist() throws {
+        let first = makeCoordinator()
+        let originalProfileID = try XCTUnwrap(first.profileStore.activeProfileID)
+
+        let second = makeCoordinator()
+
+        XCTAssertEqual(second.profileStore.profiles.count, 1)
+        XCTAssertEqual(second.profileStore.activeProfileID, originalProfileID)
+    }
+
+    // MARK: - Activation swaps settings and destinations
+
+    func testActivateLoadsProfileSnapshotIntoSharedSettings() throws {
+        let settings = makeSettings()
+        let coordinator = makeCoordinator(settings: settings)
+
+        settings.filenameFormat = "weekly-{date}"
+        coordinator.flushEdits()
+
+        let weekly = try XCTUnwrap(
+            coordinator.addProfileDuplicatingActive(),
+            "duplicate creates the second profile"
+        )
+        settings.filenameFormat = "sleep-{date}"
+        coordinator.flushEdits()
+
+        // Switch back to the Default profile: its frozen snapshot wins.
+        let defaultID = try XCTUnwrap(
+            coordinator.profileStore.profiles.first(where: { $0.isMigrationDefault })?.id
+        )
+        coordinator.activate(profileID: defaultID)
+        XCTAssertEqual(settings.filenameFormat, "weekly-{date}")
+
+        coordinator.activate(profileID: weekly.id)
+        XCTAssertEqual(settings.filenameFormat, "sleep-{date}")
+        XCTAssertEqual(coordinator.activeProfileName, weekly.name)
+    }
+
+    func testUserSelectedTargetUpdatesProfileAndPublishedTarget() throws {
+        let coordinator = makeCoordinator(initialTarget: .localIPhoneFolder)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        coordinator.userSelectedTarget(.connectedMac)
+
+        XCTAssertEqual(coordinator.activeTarget, .connectedMac)
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.target, .connectedMac)
+    }
+
+    func testVaultFolderSelectionBindsActiveProfileToDestination() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        _ = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        selectVaultFolder(in: vaultManager, path: "/Users/x/WeeklyVault")
+        coordinator.vaultFolderWasSelected()
+
+        let binding = try XCTUnwrap(
+            coordinator.destinationStore.vault(
+                id: coordinator.profileStore.profile(id: activeID)?.folderVaultID
+            )
+        )
+        XCTAssertEqual(binding.standardizedPath, "/Users/x/WeeklyVault")
+
+        // Selecting the same folder while another profile is active reuses
+        // the destination row instead of duplicating it.
+        let other = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        selectVaultFolder(in: vaultManager, path: "/Users/x/WeeklyVault")
+        coordinator.vaultFolderWasSelected()
+        XCTAssertEqual(coordinator.destinationStore.vaults.count, 1)
+        XCTAssertEqual(
+            coordinator.profileStore.profile(id: other.id)?.folderVaultID,
+            binding.id
+        )
+    }
+
+    func testActivateAdoptsBoundVaultAndAPIEndpoint() throws {
+        let vaultManager = makeVaultManager()
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        let apiSettings = makeAPIExportSettings()
+        apiSettings.endpointURLString = "https://first.example.com"
+        apiSettings.bearerToken = "first-token"
+        let coordinator = makeCoordinator(
+            vaultManager: vaultManager,
+            apiExportSettings: apiSettings
+        )
+        let defaultID = try XCTUnwrap(
+            coordinator.profileStore.profiles.first(where: { $0.isMigrationDefault })?.id
+        )
+
+        // Create the second profile first, then rebind its destinations while
+        // it is active; the Default profile's bindings must stay untouched.
+        let second = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        selectVaultFolder(in: vaultManager, path: "/Users/x/SecondVault")
+        coordinator.vaultFolderWasSelected()
+        apiSettings.endpointURLString = "https://second.example.com"
+        apiSettings.bearerToken = "second-token"
+        coordinator.apiEndpointDidChange()
+
+        // Reactivating each profile adopts its own destinations.
+        coordinator.activate(profileID: defaultID)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/Health"
+        )
+        XCTAssertEqual(apiSettings.endpointURLString, "https://first.example.com")
+        XCTAssertEqual(apiSettings.bearerToken, "first-token")
+
+        coordinator.activate(profileID: second.id)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/SecondVault"
+        )
+        XCTAssertEqual(apiSettings.endpointURLString, "https://second.example.com")
+        XCTAssertEqual(apiSettings.bearerToken, "second-token")
+    }
+
+    // MARK: - Destination persistence (issues #143 and #150)
+
+    func testVaultFolderSelectionStoresIdentityEvidence() throws {
+        // Local "On My iPhone" volumes report persistent IDs; the destination
+        // row must carry that evidence so later adoptions can verify through
+        // an identity match instead of exact path matching alone.
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 7)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+
+        XCTAssertTrue(
+            coordinator.selectVaultFolder(URL(fileURLWithPath: "/Users/x/Health"))
+        )
+
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        let binding = try XCTUnwrap(coordinator.destinationStore.vault(id: profile.folderVaultID))
+        XCTAssertEqual(binding.identity, folderIdentity)
+    }
+
+    func testCloudSelectionRefreshesProfileRowAndColdStartReusesRefreshedBookmark() throws {
+        // File Provider folders such as iCloud Drive and Dropbox commonly have
+        // no persistent identity. Prove the real picker-selection pipeline
+        // binds nil identity, then persists a provider path/stale-bookmark
+        // rebind into the row that the next cold launch adopts.
+        let probe = FakeVaultFolderIdentityProbe()
+        probe.defaultIdentity = nil
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profileID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        let pickedURL = URL(fileURLWithPath: "/Picker/iCloud Drive/Health")
+        let canonicalURL = URL(fileURLWithPath: "/ProviderMount/iCloud Drive/Health")
+        let originalBookmark = Data("cloud-bookmark-original".utf8)
+        bookmarkResolver.createdBookmarksByPath[pickedURL.standardizedFileURL.path] = originalBookmark
+        bookmarkResolver.resolutionsByBookmark[originalBookmark] = (canonicalURL, false)
+
+        XCTAssertTrue(coordinator.selectVaultFolder(pickedURL))
+
+        let bindingID = try XCTUnwrap(
+            coordinator.profileStore.profile(id: profileID)?.folderVaultID
+        )
+        let selectedRow = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        XCTAssertEqual(selectedRow.standardizedPath, canonicalURL.standardizedFileURL.path)
+        XCTAssertEqual(selectedRow.bookmarkData, originalBookmark)
+        XCTAssertNil(selectedRow.identity)
+
+        let movedURL = URL(fileURLWithPath: "/private/ProviderMount/iCloud Drive/Health Cloud")
+        let refreshedBookmark = Data("cloud-bookmark-refreshed".utf8)
+        bookmarkResolver.resolutionsByBookmark[originalBookmark] = (movedURL, true)
+        bookmarkResolver.createdBookmarksByPath[movedURL.standardizedFileURL.path] = refreshedBookmark
+        bookmarkResolver.resolutionsByBookmark[refreshedBookmark] = (movedURL, false)
+
+        coordinator.activate(profileID: profileID)
+
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(vaultManager.vaultURL, movedURL)
+        let refreshedRow = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        XCTAssertEqual(refreshedRow.standardizedPath, movedURL.standardizedFileURL.path)
+        XCTAssertEqual(refreshedRow.name, "Health Cloud")
+        XCTAssertEqual(refreshedRow.bookmarkData, refreshedBookmark)
+        XCTAssertNil(refreshedRow.identity)
+
+        let reloadedStore = ProfileDestinationStore(userDefaults: defaults, keychain: keychain)
+        Self.retainedInstances.append(reloadedStore)
+        XCTAssertEqual(reloadedStore.vault(id: bindingID), refreshedRow)
+
+        // Simulate a new process: both VaultManager initialization and profile
+        // activation consume the refreshed row. Neither should create another
+        // bookmark now that path and bytes are current.
+        let createCountAfterRefresh = bookmarkResolver.createBookmarkCalls.count
+        let coldStartVaultManager = makeVaultManager(identityProbe: probe)
+        let coldStartCoordinator = makeCoordinator(vaultManager: coldStartVaultManager)
+
+        XCTAssertEqual(coldStartVaultManager.destinationState, .available)
+        XCTAssertEqual(coldStartVaultManager.vaultURL, movedURL)
+        XCTAssertEqual(
+            coldStartCoordinator.destinationStore.vault(id: bindingID),
+            refreshedRow
+        )
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls.count, createCountAfterRefresh)
+    }
+
+    func testDeniedOrFailedReplacementSelectionPreservesLiveVaultAndProfileBinding() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let originalURL = URL(fileURLWithPath: "/Users/x/OriginalVault")
+
+        XCTAssertTrue(coordinator.selectVaultFolder(originalURL))
+        let profileID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let originalBindingID = try XCTUnwrap(
+            coordinator.profileStore.profile(id: profileID)?.folderVaultID
+        )
+        let originalRow = try XCTUnwrap(
+            coordinator.destinationStore.vault(id: originalBindingID)
+        )
+        let originalSnapshot = try XCTUnwrap(vaultManager.persistedVaultSnapshot())
+
+        bookmarkResolver.accessGranted = false
+        XCTAssertFalse(
+            coordinator.selectVaultFolder(URL(fileURLWithPath: "/Users/x/DeniedVault"))
+        )
+
+        bookmarkResolver.accessGranted = true
+        bookmarkResolver.createError = CocoaError(.fileWriteUnknown)
+        XCTAssertFalse(
+            coordinator.selectVaultFolder(URL(fileURLWithPath: "/Users/x/FailedVault"))
+        )
+
+        XCTAssertEqual(
+            coordinator.profileStore.profile(id: profileID)?.folderVaultID,
+            originalBindingID
+        )
+        XCTAssertEqual(coordinator.destinationStore.vault(id: originalBindingID), originalRow)
+        XCTAssertEqual(vaultManager.vaultURL, originalURL)
+        let retainedSnapshot = try XCTUnwrap(vaultManager.persistedVaultSnapshot())
+        XCTAssertEqual(retainedSnapshot.bookmarkData, originalSnapshot.bookmarkData)
+        XCTAssertEqual(retainedSnapshot.standardizedPath, originalSnapshot.standardizedPath)
+        XCTAssertEqual(retainedSnapshot.displayName, originalSnapshot.displayName)
+        XCTAssertEqual(retainedSnapshot.identity, originalSnapshot.identity)
+    }
+
+    func testImportFolderSelectionStoresIdentityEvidence() throws {
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 9)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+
+        let imported = try XCTUnwrap(
+            coordinator.importFolderSelection(URL(fileURLWithPath: "/Users/x/EditorVault"))
+        )
+
+        let destination = try XCTUnwrap(coordinator.destinationStore.vault(id: imported))
+        XCTAssertEqual(destination.identity, folderIdentity)
+    }
+
+    func testActivationHealsLegacyDestinationRowWithoutIdentity() throws {
+        // Rows saved before identity capture carry none; activation must heal
+        // the row so identity-bearing local folders stop requiring reselection
+        // on every launch (issue #143).
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 11)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        let bindingID = try XCTUnwrap(profile.folderVaultID)
+
+        // Simulate a legacy row saved without identity evidence.
+        let legacyRow = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        coordinator.destinationStore.updateVault(
+            id: bindingID,
+            name: legacyRow.name,
+            standardizedPath: legacyRow.standardizedPath,
+            bookmarkData: legacyRow.bookmarkData,
+            identity: nil
+        )
+        XCTAssertNil(coordinator.destinationStore.vault(id: bindingID)?.identity)
+
+        coordinator.activate(profileID: profile.id)
+
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/Health"
+        )
+        XCTAssertEqual(coordinator.destinationStore.vault(id: bindingID)?.identity, folderIdentity)
+    }
+
+    func testActivationPersistsRefreshedBookmarkAndPathIntoRow() throws {
+        // When adoption resolves the row's bookmark to a moved path, the
+        // verified load refreshes the shared defaults; the destination row
+        // must receive the refreshed bookmark, path, and name too, or every
+        // launch re-adopts the stale bookmark (issue #143 review finding).
+        let probe = FakeVaultFolderIdentityProbe()
+        probe.defaultIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 13)
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+
+        // Seed a row whose stale bookmark encodes a different folder than its
+        // stored path (the state a provider move leaves behind).
+        let staleBookmark = Data("fake-bookmark-WeeklyVault".utf8)
+        coordinator.destinationStore.upsertVault(
+            name: "Health",
+            standardizedPath: "/Users/x/Health",
+            bookmarkData: staleBookmark
+        )
+        let bindingID = try XCTUnwrap(
+            coordinator.destinationStore.vault(standardizedPath: "/Users/x/Health")?.id
+        )
+        coordinator.profileStore.setFolderBinding(profileID: profile.id, destinationID: bindingID)
+
+        coordinator.activate(profileID: profile.id)
+
+        // The bookmark resolved to /Users/x/WeeklyVault — a moved path with
+        // matching identity — and the row now carries the rebind durably.
+        // (The path-mapping fake's bookmark bytes are path-deterministic, so
+        // the refreshed bookmark equals the verified folder's own encoding.)
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/WeeklyVault"
+        )
+        let row = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        XCTAssertEqual(row.standardizedPath, "/Users/x/WeeklyVault")
+        XCTAssertEqual(row.name, "WeeklyVault")
+        XCTAssertEqual(row.bookmarkData, staleBookmark)
+        XCTAssertEqual(row.identity, probe.defaultIdentity)
+    }
+
+    // MARK: - Profile management
+
+    func testDeleteProfileRefusesLastAndActivatesRemaining() throws {
+        let coordinator = makeCoordinator()
+        let firstID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        XCTAssertFalse(coordinator.deleteProfile(id: firstID), "last profile cannot be deleted")
+
+        let second = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        XCTAssertTrue(coordinator.deleteProfile(id: second.id))
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, firstID)
+        XCTAssertEqual(coordinator.profileStore.profiles.count, 1)
+    }
+
+    func testDeleteProfileCompactsSharedSetupV2SidecarEndToEnd() throws {
+        // Seed the native stores exactly as a v2 import leaves them: two
+        // profiles, both carrying retained-intent sidecar rows and blocked
+        // entries, plus a scheduled entry for the profile being deleted.
+        let seedingStore = ExportProfileStore(userDefaults: defaults)
+        let snapshot = ExportSettingsSnapshot.from(makeSettings())
+        let folderProfile = seedingStore.add(
+            name: "Imported Folder",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+        let apiProfile = seedingStore.add(
+            name: "Imported API",
+            settings: snapshot,
+            target: .apiEndpoint
+        )
+        let source = try importedSourceProfile()
+        defaults.set(
+            try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
+                .init(
+                    profileID: folderProfile.id,
+                    sourceBundleID: source.bundleID,
+                    sourceProfile: source,
+                    unsupportedSemanticIDs: []
+                ),
+                .init(
+                    profileID: apiProfile.id,
+                    sourceBundleID: source.bundleID,
+                    sourceProfile: source,
+                    unsupportedSemanticIDs: []
+                )
+            ])),
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        defaults.set(
+            try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs(
+                [folderProfile.id, apiProfile.id]
+            ),
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+        let entryStore = ScheduledExportEntryStore(userDefaults: defaults)
+        _ = entryStore.upsert(ScheduledExportEntry(profileID: apiProfile.id, isEnabled: true))
+
+        let coordinator = makeCoordinator(
+            sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults),
+            sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction(
+                userDefaults: defaults
+            )
+        )
+        XCTAssertTrue(
+            coordinator.isProfileExecutionBlocked(apiProfile.id),
+            "seeded imported profile starts blocked"
+        )
+
+        XCTAssertTrue(coordinator.deleteProfile(id: apiProfile.id))
+
+        XCTAssertEqual(coordinator.profileStore.profiles.map(\.id), [folderProfile.id])
+        XCTAssertTrue(
+            coordinator.scheduledEntryStore.entries.allSatisfy { $0.profileID != apiProfile.id },
+            "the deleted profile's scheduled entry is gone"
+        )
+        let sidecar = try JSONDecoder().decode(
+            SharedSetupV2AppleProfileState.self,
+            from: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey))
+        )
+        XCTAssertEqual(sidecar.profiles.map(\.profileID), [folderProfile.id])
+        XCTAssertEqual(
+            try SharedSetupV2ProfileTransaction.decodeBlockedProfileIDs(
+                XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey))
+            ),
+            [folderProfile.id]
+        )
+
+        // Deleting a later native profile with no sidecar reference is a
+        // clean compaction no-op: the keys stay untouched.
+        let native = coordinator.profileStore.add(
+            name: "Native",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+        let sidecarBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey)
+        let blockedBytes = defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey)
+        XCTAssertTrue(coordinator.deleteProfile(id: native.id))
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey),
+            sidecarBytes
+        )
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey),
+            blockedBytes
+        )
+    }
+
+    func testDeleteProfileStandsWhenSidecarCompactionCannotVerify() throws {
+        // Chosen failure semantics: the native deletion stands and the
+        // sidecar keeps its stale-but-inert bytes when compaction cannot
+        // verify its write. Fresh UUIDs make block inheritance impossible
+        // and every read path filters rows for missing profiles, so the
+        // remaining profile keeps working exactly as before.
+        let seedingStore = ExportProfileStore(userDefaults: defaults)
+        let snapshot = ExportSettingsSnapshot.from(makeSettings())
+        let folderProfile = seedingStore.add(
+            name: "Imported Folder",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+        let apiProfile = seedingStore.add(
+            name: "Imported API",
+            settings: snapshot,
+            target: .apiEndpoint
+        )
+        let source = try importedSourceProfile()
+        let sidecarBytes = try JSONEncoder().encode(SharedSetupV2AppleProfileState(profiles: [
+            .init(
+                profileID: folderProfile.id,
+                sourceBundleID: source.bundleID,
+                sourceProfile: source,
+                unsupportedSemanticIDs: []
+            ),
+            .init(
+                profileID: apiProfile.id,
+                sourceBundleID: source.bundleID,
+                sourceProfile: source,
+                unsupportedSemanticIDs: []
+            )
+        ]))
+        defaults.set(
+            sidecarBytes,
+            forKey: SharedSetupV2ProfileTransaction.profileStateKey
+        )
+        // Only the profile being deleted is blocked, so the survivor stays
+        // fully usable and the test observes real activation after failure.
+        let blockedBytes = try SharedSetupV2ProfileTransaction.encodeBlockedProfileIDs(
+            [apiProfile.id]
+        )
+        defaults.set(
+            blockedBytes,
+            forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        )
+
+        let coordinator = makeCoordinator(
+            sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults),
+            sharedSetupV2ProfileTransaction: SharedSetupV2ProfileTransaction(
+                userDefaults: defaults,
+                verificationOverride: { false }
+            )
+        )
+
+        XCTAssertTrue(coordinator.deleteProfile(id: apiProfile.id))
+
+        XCTAssertEqual(coordinator.profileStore.profiles.map(\.id), [folderProfile.id])
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey),
+            sidecarBytes,
+            "failed compaction leaves the exact stale bytes in place"
+        )
+        XCTAssertEqual(
+            defaults.data(forKey: SharedSetupV2ProfileTransaction.blockedProfileIDsKey),
+            blockedBytes
+        )
+        XCTAssertTrue(coordinator.isProfileExecutionBlocked(apiProfile.id),
+                      "the stale id stays inert: it names no live profile")
+        XCTAssertFalse(coordinator.isProfileExecutionBlocked(folderProfile.id))
+        XCTAssertTrue(coordinator.activate(profileID: folderProfile.id))
+        XCTAssertEqual(coordinator.activeProfileName, "Imported Folder")
+    }
+
+    /// Decodes a contract-fixture source profile for seeding sidecar rows
+    /// without driving the full mapper pipeline.
+    private func importedSourceProfile() throws -> SharedSetupV2.Profile {
+        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while directory.path != "/" {
+            let candidate = directory.appendingPathComponent(
+                "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json"
+            )
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                let document = try SharedSetupV2Codec.decode(Data(contentsOf: candidate))
+                return document.profiles[1]
+            }
+            directory.deleteLastPathComponent()
+        }
+        throw XCTSkip("Could not locate the Shared Setup v2 Apple fixture")
+    }
+
+    func testRenameUpdatesPublishedActiveName() throws {
+        let coordinator = makeCoordinator()
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        XCTAssertEqual(coordinator.renameProfile(id: activeID, to: "  Weekly Sleep  "), "Weekly Sleep")
+        XCTAssertEqual(coordinator.activeProfileName, "Weekly Sleep")
+        XCTAssertEqual(coordinator.profileStore.profile(id: activeID)?.name, "Weekly Sleep")
+    }
+
+    func testFlushEditsFreezesSharedSettingsIntoActiveProfile() throws {
+        let settings = makeSettings()
+        let coordinator = makeCoordinator(settings: settings)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        settings.filenameFormat = "flushed-{date}"
+        coordinator.flushEdits()
+
+        XCTAssertEqual(
+            coordinator.profileStore.profile(id: activeID)?.settings.filenameFormat,
+            "flushed-{date}"
+        )
+    }
+
+    // MARK: - Creation form
+
+    func testCreateProfileUsesChosenNameTargetAndFolderBinding() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/FirstVault")
+        coordinator.vaultFolderWasSelected()
+
+        let destination = try XCTUnwrap(coordinator.destinationStore.vaults.first)
+        let created = try XCTUnwrap(
+            coordinator.createProfile(
+                name: "  Archive  ",
+                target: .localIPhoneFolder,
+                folderVaultID: destination.id
+            )
+        )
+
+        XCTAssertEqual(created.name, "Archive")
+        XCTAssertEqual(created.target, .localIPhoneFolder)
+        XCTAssertEqual(created.folderVaultID, destination.id)
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, created.id, "creation activates the new profile")
+        XCTAssertEqual(
+            vaultManager.pathForDisplay,
+            "/Users/x/FirstVault",
+            "an explicit binding is adopted on activation so the live vault matches the created profile"
+        )
+    }
+
+    func testSuggestedProfileNameSkipsTakenNames() throws {
+        let coordinator = makeCoordinator()
+        XCTAssertEqual(coordinator.suggestedProfileName(), "Profile")
+
+        _ = coordinator.renameProfile(
+            id: coordinator.profileStore.activeProfileID!,
+            to: "Profile"
+        )
+        XCTAssertEqual(coordinator.suggestedProfileName(), "Profile 2")
+
+        _ = coordinator.createProfile(name: "Profile 2", target: .apiEndpoint)
+        XCTAssertEqual(coordinator.suggestedProfileName(), "Profile 3")
+    }
+
+    func testOverlapPreviewNamesTrackChosenDestination() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/SharedVault")
+        coordinator.vaultFolderWasSelected()
+        let defaultName = try XCTUnwrap(coordinator.profileStore.profiles.first?.name)
+
+        // Same live vault, duplicated templates: overlap with the Default profile.
+        XCTAssertEqual(
+            coordinator.overlapPreviewNames(target: .localIPhoneFolder, folderVaultID: nil),
+            [defaultName]
+        )
+
+        // A different destination clears the overlap.
+        let other = coordinator.destinationStore.upsertVault(
+            name: "Archive",
+            standardizedPath: "/Users/x/ArchiveVault",
+            bookmarkData: Data("fake-bookmark-ArchiveVault".utf8)
+        )
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(target: .localIPhoneFolder, folderVaultID: other.id).isEmpty
+        )
+
+        // API endpoints upload rather than write files: never overlap.
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(target: .apiEndpoint, folderVaultID: nil).isEmpty
+        )
+    }
+
+    // MARK: - Profile editor
+
+    func testUpdateProfileEditsNonActiveProfileWithoutTouchingLiveState() throws {
+        let settings = makeSettings()
+        let coordinator = makeCoordinator(settings: settings)
+        let other = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        let defaultID = try XCTUnwrap(
+            coordinator.profileStore.profiles.first(where: { $0.id != other.id })?.id
+        )
+        // Re-activate Default so `other` is NOT active, then establish the
+        // live value the debounced edit flush would capture. Mutating live
+        // settings while `other` is active would (correctly) flush into the
+        // active profile and race this assertion.
+        coordinator.activate(profileID: defaultID)
+        settings.filenameFormat = "live-{date}"
+        coordinator.flushEdits()
+
+        var edited = coordinator.profileStore.profile(id: other.id)!.settings
+        edited.filenameFormat = "edited-{date}"
+        edited.exportFormats = [.json]
+        let updated = try XCTUnwrap(
+            coordinator.updateProfile(
+                id: other.id,
+                name: "  Renamed  ",
+                target: .apiEndpoint,
+                folderVaultID: nil,
+                apiEndpointID: nil,
+                settings: edited
+            )
+        )
+
+        XCTAssertEqual(updated.name, "Renamed")
+        XCTAssertEqual(updated.target, .apiEndpoint)
+        XCTAssertEqual(updated.settings.exportFormats, [.json])
+        XCTAssertEqual(updated.settings.filenameFormat, "edited-{date}")
+        XCTAssertNil(updated.folderVaultID, "non-local targets clear the folder binding")
+        XCTAssertEqual(
+            coordinator.profileStore.activeProfileID,
+            defaultID,
+            "editing never changes activation"
+        )
+        XCTAssertEqual(
+            settings.filenameFormat,
+            "live-{date}",
+            "editing a non-active profile must not touch live settings"
+        )
+        XCTAssertEqual(
+            coordinator.profileStore.profile(id: defaultID)?.settings.filenameFormat,
+            "live-{date}",
+            "the debounced flush captured the live value on the active profile"
+        )
+    }
+
+    func testUpdateProfileOnActiveProfileSyncsLiveState() throws {
+        let settings = makeSettings()
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(settings: settings, vaultManager: vaultManager)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/FirstVault")
+        coordinator.vaultFolderWasSelected()
+
+        let archiveVault = coordinator.destinationStore.upsertVault(
+            name: "Archive",
+            standardizedPath: "/Users/x/ArchiveVault",
+            bookmarkData: Data("fake-bookmark-ArchiveVault".utf8)
+        )
+
+        var edited = coordinator.profileStore.profile(id: activeID)!.settings
+        edited.filenameFormat = "synced-{date}"
+        edited.exportFormats = [.csv]
+        _ = try XCTUnwrap(
+            coordinator.updateProfile(
+                id: activeID,
+                name: "Renamed Active",
+                target: .localIPhoneFolder,
+                folderVaultID: archiveVault.id,
+                apiEndpointID: nil,
+                settings: edited
+            )
+        )
+
+        XCTAssertEqual(coordinator.activeProfileName, "Renamed Active")
+        XCTAssertEqual(settings.filenameFormat, "synced-{date}", "live settings adopt the saved snapshot")
+        XCTAssertEqual(settings.exportFormats, [.csv])
+        XCTAssertEqual(
+            vaultManager.pathForDisplay,
+            "/Users/x/ArchiveVault",
+            "the edited folder binding is adopted into live vault state"
+        )
+    }
+
+    func testImportFolderSelectionUpsertsDestinationWithoutTouchingLiveVault() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        XCTAssertNil(vaultManager.pathForDisplay, "precondition: no live vault selected")
+
+        let imported = try XCTUnwrap(
+            coordinator.importFolderSelection(URL(fileURLWithPath: "/Users/x/EditorVault"))
+        )
+
+        let destination = try XCTUnwrap(
+            coordinator.destinationStore.vaults.first { $0.id == imported }
+        )
+        XCTAssertEqual(destination.standardizedPath, "/Users/x/EditorVault")
+        XCTAssertEqual(destination.name, "EditorVault")
+        XCTAssertNil(
+            vaultManager.pathForDisplay,
+            "importing a folder must not change the live shared vault"
+        )
+        XCTAssertNil(
+            coordinator.profileStore.activeProfile?.folderVaultID,
+            "importing does not bind anything until the editor saves"
+        )
+
+        // Re-selecting the same folder reuses the destination row.
+        let again = try XCTUnwrap(
+            coordinator.importFolderSelection(URL(fileURLWithPath: "/Users/x/EditorVault"))
+        )
+        XCTAssertEqual(again, imported)
+        XCTAssertEqual(
+            coordinator.destinationStore.vaults.filter { $0.standardizedPath == "/Users/x/EditorVault" }.count,
+            1
+        )
+    }
+
+    func testImportAPIEndpointSelectionUpsertsEndpointAndTokenWithoutTouchingLiveSettings() throws {
+        let coordinator = makeCoordinator()
+        XCTAssertEqual(coordinator.apiExportSettingsForTesting.endpointURLString, "", "precondition: no live endpoint")
+
+        let imported = try XCTUnwrap(
+            coordinator.importAPIEndpointSelection(
+                name: "  Nightly Sink  ",
+                endpointURLString: "  https://example.com/hook  ",
+                bearerToken: " secret-token "
+            )
+        )
+
+        let endpoint = try XCTUnwrap(
+            coordinator.destinationStore.apiEndpoints.first { $0.id == imported }
+        )
+        XCTAssertEqual(endpoint.name, "Nightly Sink")
+        XCTAssertEqual(endpoint.endpointURLString, "https://example.com/hook")
+        XCTAssertEqual(
+            coordinator.destinationStore.token(for: imported),
+            "secret-token",
+            "the token lands in the destination store's keychain slot, trimmed"
+        )
+        XCTAssertEqual(
+            coordinator.apiExportSettingsForTesting.endpointURLString,
+            "",
+            "importing an endpoint must not change the live shared endpoint"
+        )
+
+        // Empty URL is rejected; a nil token leaves the stored value intact
+        // when re-importing the same URL, and an empty name falls back to URL.
+        XCTAssertNil(coordinator.importAPIEndpointSelection(name: "", endpointURLString: "   ", bearerToken: nil))
+        let reused = try XCTUnwrap(
+            coordinator.importAPIEndpointSelection(
+                name: "",
+                endpointURLString: "https://EXAMPLE.com/hook",
+                bearerToken: nil
+            )
+        )
+        XCTAssertEqual(reused, imported, "same URL (case-insensitive) reuses the endpoint row")
+        XCTAssertEqual(coordinator.destinationStore.apiEndpoints.count, 1)
+        XCTAssertEqual(
+            coordinator.destinationStore.token(for: reused),
+            "secret-token",
+            "re-import without a token keeps the stored token"
+        )
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoints.first?.name,
+            "Nightly Sink",
+            "re-import with an empty name keeps the existing name"
+        )
+    }
+
+    func testOverlapPreviewUsesEditorDraftSettings() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/SharedVault")
+        coordinator.vaultFolderWasSelected()
+        let defaultName = try XCTUnwrap(coordinator.profileStore.profiles.first?.name)
+
+        var draft = ExportSettingsSnapshot.from(coordinator.liveSettings)
+        XCTAssertEqual(
+            coordinator.overlapPreviewNames(
+                target: .localIPhoneFolder,
+                folderVaultID: nil,
+                settings: draft
+            ),
+            [defaultName],
+            "identical templates overlap"
+        )
+
+        draft.filenameFormat = "unique-{date}"
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(
+                target: .localIPhoneFolder,
+                folderVaultID: nil,
+                settings: draft
+            ).isEmpty,
+            "a diverging draft template clears the overlap"
+        )
+    }
+}

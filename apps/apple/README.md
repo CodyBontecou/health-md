@@ -37,15 +37,15 @@ Own a durable, searchable copy of the health history Apple Health exposes on you
 
 Make your body part of your Obsidian vault. Export daily notes directly into an Obsidian folder, use date placeholders in paths, customize Markdown templates, inject health sections into existing daily notes, optionally make those daily notes the only generated output, and emit Obsidian Bases frontmatter so sleep, HRV, workouts, weight, and more become queryable properties.
 
-### Schema v7 and Lossless Health Records
+### Data Detail and Lossless Health Records
 
-Daily summaries remain stable and readable. With Lossless Health Records on, each schema-v7 day also captures original UUIDs, exact timestamps and quantities, source/device provenance, typed recursive metadata, raw category values, relationships, metric attribution, query outcomes, warnings, and partial failures. Schema v7 carries forward v6 lossless capture, corrects `vo2_max` roll-ups to select the latest daily measurement, restores canonical units in extended CSV summary rows, and keeps roll-up date labels in the period's calendar timezone.
+Daily summaries remain stable and readable. Detailed Time-Series adds selected timestamped samples for charts and intraday analysis without the canonical archive. Lossless Health Records adds those readable series plus original UUIDs, exact timestamps and quantities, source/device provenance, typed recursive metadata, raw category values, relationships, metric attribution, query outcomes, warnings, and partial failures.
 
 - **JSON** embeds the authoritative `healthmd.healthkit_records` v1 archive.
 - **CSV** carries the same canonical objects as RFC 4180-safe JSON rows.
 - **Markdown** and **Obsidian Bases** intentionally show summaries plus archive status/counts/diagnostics, not every source object.
 
-New installs default lossless capture on. Existing explicit off choices remain summary-only; the compatibility setting key is still `includeGranularData`.
+New installs default to Summary. Historical combined choices migrate unchanged: on becomes Lossless (time-series plus archive), while off or missing becomes Summary.
 
 ### Multiple File Formats
 

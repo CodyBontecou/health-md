@@ -235,6 +235,35 @@ final class PricingAnalyticsFunnelTests: XCTestCase {
         })
     }
 
+    func testUpgradePromptFunnelCarriesQuotaDerivedMilestone() async {
+        let transport = RecordingPricingAnalyticsTransport()
+        let client = PricingAnalyticsClient(
+            transport: transport,
+            defaults: FakeUserDefaults(),
+            queueKey: "pricing.analytics.test.value-moment",
+            maxQueueSize: 6,
+            isEnabled: true
+        )
+        let quota = PricingAnalyticsQuotaState(freeExportsUsed: 3, freeExportsRemaining: 7)
+
+        client.trackUpgradePromptShown(quotaState: quota)
+        client.trackUpgradePromptTapped(quotaState: quota)
+        client.trackUpgradePromptDismissed(quotaState: quota)
+        await client.flushAndWait()
+
+        let payloads = await transport.payloadsValue()
+        XCTAssertEqual(payloads.map(\.eventName), [
+            "pricing_upgrade_prompt_shown",
+            "pricing_upgrade_prompt_tapped",
+            "pricing_upgrade_prompt_dismissed",
+        ])
+        for payload in payloads {
+            XCTAssertEqual(payload.properties[.paywallContext], .string("upgrade_prompt"))
+            XCTAssertEqual(payload.properties[.freeExportsUsed], .int(3))
+            XCTAssertEqual(payload.properties[.freeExportsRemaining], .int(7))
+        }
+    }
+
     func testPurchaseAndRestoreLifecycleRetainSourceContext() async {
         let transport = RecordingPricingAnalyticsTransport()
         let client = PricingAnalyticsClient(

@@ -80,7 +80,10 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         accounts[provider] != nil
     }
 
-    func connect(provider: ExternalIntegrationProvider) async {
+    func connect(
+        provider: ExternalIntegrationProvider,
+        commitAllowed: @MainActor () -> Bool = { true }
+    ) async {
         guard enabledProviders.contains(provider) else {
             statusMessage = "\(provider.displayName) is not enabled for this build."
             return
@@ -115,6 +118,11 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 codeVerifier: codeVerifier
             )
             let token = try validatedToken(from: tokenResponse, provider: provider, replacing: nil)
+            guard commitAllowed() else {
+                try? await apiClient.revokeAccess(provider: provider, token: token)
+                statusMessage = "Connection not saved because settings are locked"
+                return
+            }
             do {
                 try tokenStore.save(token: token, provider: provider)
             } catch {
@@ -134,12 +142,16 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         }
     }
 
-    func disconnect(provider: ExternalIntegrationProvider) async {
+    func disconnect(
+        provider: ExternalIntegrationProvider,
+        commitAllowed: @MainActor () -> Bool = { true }
+    ) async {
         guard isDisconnectingProvider == nil, isConnectingProvider == nil else { return }
         isDisconnectingProvider = provider
         defer { isDisconnectingProvider = nil }
 
         guard var token = tokenStore.token(for: provider) else {
+            guard commitAllowed() else { return }
             do {
                 try tokenStore.disconnect(provider: provider)
                 syncAccounts()
@@ -155,10 +167,12 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
             if token.needsRefresh(), token.refreshToken != nil {
                 token = try await refreshToken(for: provider, replacing: token)
             }
+            guard commitAllowed() else { return }
             do {
                 try await apiClient.revokeAccess(provider: provider, token: token)
             } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
                 token = try await refreshToken(for: provider, replacing: token)
+                guard commitAllowed() else { return }
                 try await apiClient.revokeAccess(provider: provider, token: token)
             }
         } catch {

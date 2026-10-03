@@ -1,171 +1,109 @@
-# Google Play Store Deployment with gradle-play-publisher
+# Google Play Store deployment
 
-This project uses **gradle-play-publisher** for automated Google Play Store management.
+Health.md currently publishes the Android phone app only. The Wear OS companion is deferred to the planned `1.10.0` qualification cycle and is not included in the `1.9.1` Play upload or production promotion. See `release-scope.json`.
 
-## Quick Start
+## Protected release environment
 
-### 1. Get Google Play Service Account Credentials
+Repository administrators—not local release operators—maintain the `google-play` GitHub environment:
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or select existing)
-3. Enable the **Google Play Android Developer API**
-4. Create a **Service Account**:
-   - Go to **Service Accounts** → **Create Service Account**
-   - Do not grant a Google Cloud project role merely to use the Android Publisher API; in particular, do not grant **Editor**. Play Console permissions, configured separately below, authorize app access.
-5. Create a **JSON Key**:
-   - Click on the service account
-   - Go to **Keys** tab
-   - **Add Key** → **Create new key** → **JSON**
-   - Save it outside the repository, for example `~/.config/play-console/play-publisher-<project-id>.json`
-   - Set `PLAY_CONSOLE_KEY_PATH` when the file is not at the default path configured in `app/build.gradle.kts`
+1. Restrict both `google-play` and `google-play-qa` to annotated tags matching `android/v*`. A narrowly scoped `android/recovery/*` tag rule may be added only for a retained, main-reachable workflow-infrastructure recovery.
+2. In `google-play`, configure `GOOGLE_PLAY_WORKLOAD_IDENTITY_PROVIDER` with the fully qualified provider resource and `GOOGLE_PLAY_SERVICE_ACCOUNT` with the app-scoped publisher identity.
+3. In `google-play-qa`, store the registered upload-signing values: `ANDROID_RELEASE_KEYSTORE_BASE64`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD`. The current certificate SHA-1 is `80:5F:26:EA:FD:9E:D5:C3:7F:C7:2A:65:63:6C:FF:A4:D1:01:81:2F`.
+4. Configure the Google provider to accept only this GitHub repository, the `google-play` environment subject, and `refs/tags/android/*`; grant its principal only `roles/iam.workloadIdentityUser` on the publisher service account.
+5. Keep the service account app-scoped in Play Console and grant only the permissions required to upload bundles, update the reviewed English listing, manage testing/production releases, and submit changes for review.
+6. Never copy a Play mutation credential or upload keystore onto a developer workstation. The signed AAB, never the private key, crosses from the signing job to the mutation job through an exact-digest GitHub artifact.
 
-### 2. Link Service Account to Play Console
+The Android Publisher OAuth scope is broad. Short-lived GitHub OIDC exchange, app-level Play Console grants, the tag-restricted GitHub environment, and exact-source workflow checks provide the practical boundary. The canonical workflows do not consume a long-lived Google service-account JSON key.
 
-1. Go to [Google Play Console](https://play.google.com/console)
-2. Select your app
-3. Go to **Settings** → **Users and permissions**
-4. **Invite user** and paste the service account email from the JSON key
-5. Grant only the app-level permissions needed to upload and manage the intended tracks. Avoid account-wide **Admin** access.
-6. For `.github/workflows/android-announce.yml`, create a separate service account and grant only app-level **View app information (read-only)** (`CAN_VIEW_NON_FINANCIAL_DATA`) for `com.healthmd.android`.
+## Optional local read-only inspection
 
-### 3. Prepare Your App Metadata
+A separate app-level read-only service account may be stored outside the repository for diagnostic scripts. It must not have upload, track, review, metadata, pricing, or production permissions. Do not place a QA or production mutation key on a developer workstation.
 
-Create the `play-console` directory structure:
+## Authored Play metadata
 
-```
-play-console/
-├── listing/
-│   ├── en-US/
-│   │   ├── title.txt          # App title (max 50 chars)
-│   │   ├── short-description.txt  # 80 chars
-│   │   ├── full-description.txt   # Full description
-│   │   └── video.txt          # YouTube video URL (optional)
-│   │
-│   └── release-notes/
-│       ├── en-US/
-│       │   └── default.txt    # What's new in this version
-│
-├── screenshots/
-│   ├── en-US/
-│   │   ├── phone/
-│   │   │   ├── 1.png         # 1080x1920px (5+ recommended)
-│   │   │   ├── 2.png
-│   │   │   └── ...
-│   │   ├── sevenInch/         # 7" tablet (optional)
-│   │   ├── tenInch/           # 10" tablet (optional)
-│   │   └── wear/              # Wear OS (optional)
-│   │
-│   └── ...other languages...
-│
-├── graphics/
-│   ├── en-US/
-│   │   ├── featureGraphic.png    # 1024x500px (required)
-│   │   ├── icon.png             # 512x512px (required)
-│   │   ├── promoGraphic.png      # 180x120px (optional)
-│   │   └── tvBanner.png          # 1280x720px (optional)
-│   │
-│   └── ...other languages...
-```
+Canonical metadata lives under `play-console/`. `play-console/locales.json` determines which locales are reviewed and publishable. For the current release, `en-US` is the reviewed listing and release-note locale.
 
-## Build & Upload Commands
+### In-app product pricing (manual, Play Console)
 
-### Build Release Bundle
+In-app product prices are managed in Play Console, not in this repository — the
+release service accounts intentionally hold no pricing permission. Keep the
+`health_md_premium_lifetime` one-time price aligned with the iOS individual
+lifetime unlock (currently USD 19.99). When iOS pricing changes, update the
+Play listing manually in Play Console under Monetize → Products → In-app
+products, and update the documented price in
+`app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`.
+
+Pending as of 2026-09-17: raise `health_md_premium_lifetime` from USD 9.99 to
+USD 19.99 to match the iOS change made the same day.
+
+Completed 2026-09-17: `health_md_premium_lifetime` raised from USD 9.99 to
+USD 19.99 in Play Console, matching the iOS individual lifetime price.
+
+Validate it locally with:
 
 ```bash
-./gradlew bundleRelease
+cd apps/android
+./scripts/validate-play-listing.sh
 ```
 
-Outputs to: `app/build/outputs/bundle/release/app-release.aab`
+The reviewed full description must describe only capabilities present in the phone artifact. It must not advertise the deferred Wear OS companion.
 
-### Upload to Internal Testing Track
+## Version management
 
-```bash
-./gradlew publishReleaseBundle
-```
+Every upload requires a phone `versionCode` higher than every phone build previously uploaded to Play. Update `versionCode` and `versionName` in `app/build.gradle.kts`, then update `release-scope.json`, release notes, and readiness tests in the same commit. Do not rely on an uncommitted CI-time increment.
 
-- Uses the external service-account file selected by `PLAY_CONSOLE_KEY_PATH` or the default in `app/build.gradle.kts`
-- Publishes to **Internal Testing** track
-- Publishes the committed `versionCode`; bump it before every upload
+The deferred `:wear` module retains its independent 1,000,000+ code range, but its code is neither validated as part of phone release identity nor uploaded by the current release workflows.
 
-### Upload to Closed Testing (Beta)
+## Canonical workflow behavior
 
-```bash
-./gradlew publishReleaseBundle --track beta
-```
+`.github/workflows/android-release.yml`:
 
-### Upload to Production
+- accepts only an annotated `android/v<version>` tag whose peeled commit is reachable from `origin/main`;
+- re-runs the complete Android CI workflow for that exact commit;
+- verifies `release-scope.json` declares phone release and deferred Wear scope;
+- materializes signing inputs only under `$RUNNER_TEMP` in `google-play-qa` and rejects a certificate other than the registered Play upload key;
+- builds and inspects only `app-play-release.aab`, then deletes the private-key material;
+- transfers only the signed AAB into `google-play`, re-verifies its exact digest and signer, and retains a tag/SHA/run-attempt/AAB-digest-bound intent before requesting a short-lived Workload Identity token;
+- uploads the phone AAB and exact release notes to `internal` in one validated Play edit;
+- issues the non-idempotent commit once and reconciles exact track state if the response is lost.
 
-```bash
-./gradlew publishReleaseBundle --track production
-```
+`.github/workflows/android-promote-production.yml`:
 
-### Staged Rollout (5% → 25% → 50% → 100%)
+- must be dispatched from the exact annotated release tag;
+- verifies the requested version/code against that immutable source and `release-scope.json`;
+- retains a pre-mutation intent before materializing the Play credential;
+- requires the exact code on `internal` and rejects a newer production code;
+- applies the reviewed English listing, promotes only that phone artifact to `production`, and submits the single validated edit for review;
+- verifies an accepted review lifecycle and retains an attempt-qualified receipt.
 
-```bash
-./gradlew publishReleaseBundle --track production --user-fraction 0.05
-```
+No current workflow uploads `:wear`, writes `wear:internal`/`wear:production`, or requires physical-watch evidence. Dormant Wear workflows must remain unused until a future source change explicitly restores Wear publication and its independent evidence gates.
 
-Then increase fraction to push further:
-```bash
-./gradlew publishReleaseBundle --track production --user-fraction 0.25
-```
+## Release commands
 
-### Update Metadata Only (No Build)
+Operators use Git and GitHub Actions, not local Play mutation tools:
 
-```bash
-./gradlew publishListingBundle
-```
+1. Push a clean, qualified release commit to `main`.
+2. Create and push annotated tag `android/v<version>`.
+3. Monitor `Android Release` through the Internal Testing upload receipt.
+4. Dispatch `Android Promote production` from the same tag with the exact phone version and code.
+5. Confirm the workflow-reported Google Play lifecycle is in review, approved, or published.
 
-## Version Management
-
-Every Play upload requires a `versionCode` higher than every previously uploaded build. Update `versionCode` and `versionName` in `app/build.gradle.kts` before creating the release commit; do not rely on an uncommitted CI-time increment.
-
-Track version history:
-```bash
-git log --oneline app/build.gradle.kts | grep -i version
-```
-
-## CI/CD Integration
-
-The canonical upload workflow is [`.github/workflows/android-release.yml`](../../.github/workflows/android-release.yml). An `android/v<version>` tag builds a signed AAB and uploads it directly to Google Play's `internal` track. The AAB is never committed or attached to a GitHub Release. Production promotion uses [`.github/workflows/android-promote-production.yml`](../../.github/workflows/android-promote-production.yml) to promote an exact tagged `versionCode` from `internal` without rebuilding or re-uploading the binary. The promotion workflow verifies the source and resulting production track state through Google Play before reporting success.
-
-After production publication, [`.github/workflows/android-announce.yml`](../../.github/workflows/android-announce.yml) detects the `PUBLISHED` release through Google Play's read-only release-summary endpoint and posts the tagged release notes to the Health.md Discord updates channel. Google Play has no equivalent of the App Store Connect approval webhook, so the workflow checks hourly and can also accept a `google-play-published` repository dispatch from a future external hook. Manual runs default to a no-post dry run.
-
-The tag-restricted `google-play` environment stores the publishing service-account JSON, existing upload keystore, and signing values as environment secrets. The workflow writes them only under `$RUNNER_TEMP` and removes the temporary files in an `always()` cleanup step. Never commit or regenerate the existing Play upload key. The separate, `main`-restricted `google-play-announce` environment stores only a dedicated read-only `PLAY_CONSOLE_KEY_JSON`, so the scheduled announcement monitor cannot publish Play changes or access signing credentials. The Android Publisher OAuth scope is broad; least privilege comes from the service account's app-level Play Console grant.
+See `PLAY_STORE_COMMANDS.md` for the checklist and `PLAY_CONSOLE_BROWSER_PROMPT.md` for read-only Console auditing.
 
 ## Troubleshooting
 
-### "Service account not found"
-- Verify `PLAY_CONSOLE_KEY_PATH` points to an existing service-account JSON file, or that the external default path in `app/build.gradle.kts` exists
-- Check the service account email is invited to Play Console
+### Workload Identity or service account not authorized
 
-### "Invalid version code"
-- Ensure the committed `versionCode` is higher than every previous Play upload
+Verify the protected environment's provider/service-account variables, the provider's repository/environment/tag condition, and its `roles/iam.workloadIdentityUser` binding. In Play Console, verify the service account has app-level permission to view the app, upload bundles, release to testing tracks and production, update the store presence, and submit changes for review. Baseline track-read and empty-edit access does not prove bundle-upload authority. Also verify the `google-play-qa` keystore matches the registered upload certificate; a substitute or stale key is rejected before Play mutation. Do not create or copy a JSON mutation key locally. The uploader reports bounded authentication, exact-track, edit-creation, and bundle-upload failures without printing access tokens.
 
-### "Upload failed: Invalid localization"
-- Screenshot dimensions must be exact
-- Ensure all required files exist in listing structure
+### Invalid version code
 
-### "Health Connect permissions warning"
-- App already declares Health Connect opt-in
-- Make sure privacy policy is set in Play Console
+Confirm the committed phone code is higher than every prior Play upload and matches `release-scope.json`.
 
-## Documentation Links
+### Invalid localization
 
-- [gradle-play-publisher Docs](https://github.com/Triple-T/gradle-play-publisher)
-- [Google Play Upload Guide](https://support.google.com/googleplay/android-developer/answer/9859152)
-- [Health Connect Policies](https://developer.android.com/health-and-fitness/guides/health-connect)
+Run `./scripts/validate-play-listing.sh`; only reviewed locales are publication inputs.
 
-## Release validation
+### Release not submitted
 
-From `apps/android`:
-
-```bash
-PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/play-publisher-<project-id>.json" \
-  ./gradlew :app:bundleRelease
-
-PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/play-publisher-<project-id>.json" \
-  ./gradlew publishReleaseBundle --track internal --dry-run
-```
-
-The first command validates the release signing configuration and produces a signed AAB without uploading it. The second validates the Gradle Play Publisher task graph without opening or committing a Play edit. Verify service-account access separately before enabling an upload workflow.
+Inspect the production workflow's lifecycle query and receipt. Success requires `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED`; a merely uploaded or not-sent release is not a successful submission.

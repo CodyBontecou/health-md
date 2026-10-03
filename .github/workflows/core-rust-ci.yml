@@ -1,8 +1,10 @@
 name: Core Rust CI
 
 on:
-  # Run on every PR so the stable final gate can be a required check. Main-branch pushes
-  # remain path-aware while shared contracts still exercise their Rust implementation.
+  # Pull requests are path-filtered by the changes job so the stable final gate
+  # still reports a conclusive required context on every PR without running the
+  # heavy jobs for unrelated changes. Main-branch pushes remain path-aware at
+  # the trigger while shared contracts still exercise their Rust implementation.
   pull_request:
   push:
     branches: [main]
@@ -34,8 +36,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect shared-core-affecting changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - name: Check out source for the local composite action
+        uses: actions/checkout@v4
+      - name: Detect whether Core Rust CI must run
+        id: detect
+        uses: ./.github/actions/component-changes
+        with:
+          component: Core Rust CI
+          paths: |
+            packages/healthmd-core-rust/**
+            packages/contracts/**
+            apps/apple/HealthMd/Shared/Models/HealthMetrics.swift
+            apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift
+            apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt
+            apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt
+            apps/android/docs/export-contract/android-ios-metric-parity-ledger.md
+            apps/website/docs-src/src/content/docs/shared-metric-registry.md
+            apps/website/docs-src/public/reference/metric-registry-v1.json
+            Makefile
+            .github/workflows/core-rust-ci.yml
+
   msrv:
     name: Rust 1.85 MSRV
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -58,6 +92,8 @@ jobs:
 
   test:
     name: ${{ matrix.os }}
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -104,6 +140,8 @@ jobs:
 
   bindings:
     name: UniFFI host binding generation
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -124,15 +162,23 @@ jobs:
   gate:
     name: Core Rust CI
     if: ${{ always() }}
-    needs: [msrv, test, bindings]
+    needs: [changes, msrv, test, bindings]
     runs-on: ubuntu-24.04
     steps:
       - name: Require shared-core checks
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
           MSRV_RESULT: ${{ needs.msrv.result }}
           TEST_RESULT: ${{ needs.test.result }}
           BINDINGS_RESULT: ${{ needs.bindings.result }}
         run: |
+          set -e
+          test "$CHANGES_RESULT" = success
+          if [ "$CHANGES_RUN" != "true" ]; then
+            echo "No shared-core-affecting changes in this pull request; Core Rust CI skipped."
+            exit 0
+          fi
           test "$MSRV_RESULT" = success
           test "$TEST_RESULT" = success
           test "$BINDINGS_RESULT" = success

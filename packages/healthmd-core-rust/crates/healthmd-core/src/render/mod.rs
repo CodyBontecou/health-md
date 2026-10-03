@@ -13,11 +13,15 @@ use thiserror::Error;
 
 use crate::{
     CANONICAL_MODEL_VERSION, REGISTRY_SHA256, REGISTRY_VERSION,
-    semantic::{ExactNumber, SemanticProfile, SemanticResult, SemanticResultState, SemanticValue},
+    semantic::{
+        ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
+        SemanticValue,
+    },
 };
 
 mod android_analytical_v5;
 mod android_frozen_v4;
+mod apple_range_rollup_v9;
 mod apple_rollup_v8;
 mod apple_v8;
 pub mod artifact_plan;
@@ -37,8 +41,8 @@ pub use stream::{
 pub const RENDER_INPUT_VERSION: u32 = 1;
 /// Version of the destination-neutral artifact plan.
 pub const ARTIFACT_PLAN_VERSION: u32 = 1;
-/// Revision of all three initial shipped profile renderers.
-pub const RENDER_PROFILE_REVISION: u32 = 1;
+/// Revision of all three profile renderers, including managed-Markdown merge behavior.
+pub const RENDER_PROFILE_REVISION: u32 = 2;
 /// Maximum render configuration bytes.
 pub const MAX_RENDER_CONFIG_BYTES: usize = 256 * 1024;
 /// Maximum completed semantic-result bytes.
@@ -47,8 +51,10 @@ pub const MAX_SEMANTIC_RESULT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_RENDER_BATCH_BYTES: usize = 2 * 1024 * 1024;
 /// Maximum facts and extension payloads in one batch.
 pub const MAX_RENDER_FACTS_PER_BATCH: usize = 4_096;
-/// Maximum owner dates.
-pub const MAX_RENDER_DATES: usize = 400;
+/// Maximum owner dates accumulated by one render session (~27 years).
+pub const MAX_RENDER_DATES: usize = 10_000;
+/// Maximum owner dates in one bounded render batch.
+pub const MAX_RENDER_BATCH_DATES: usize = 400;
 /// Maximum inline artifacts in a plan.
 pub const MAX_ARTIFACTS: usize = 4_096;
 /// Maximum bytes in one inline artifact.
@@ -695,7 +701,7 @@ impl RenderSession {
             || batch.session_id != self.config.session_id
             || batch.batch_index != self.next_batch_index
             || self.final_batch_seen
-            || batch.days.len() > MAX_RENDER_DATES
+            || batch.days.len() > MAX_RENDER_BATCH_DATES
         {
             return Err(RenderError::SequenceInvalid);
         }
@@ -870,7 +876,9 @@ fn validate_config(
     if config.artifact_plan_version != ARTIFACT_PLAN_VERSION {
         return Err(RenderError::UnsupportedArtifactPlanVersion);
     }
-    if config.render_profile_revision != RENDER_PROFILE_REVISION || config.profile_revision != 1 {
+    if config.render_profile_revision != RENDER_PROFILE_REVISION
+        || !matches!(config.profile_revision, 1 | 2)
+    {
         return Err(RenderError::UnsupportedProfileRevision);
     }
     if config.schema != "healthmd.render_session_config"
@@ -911,6 +919,21 @@ fn validate_config(
             .any(|rollup| rollup.calendar_time_zone != config.calendar_time_zone)
     {
         return Err(RenderError::InvalidConfig);
+    }
+    let contains_range = semantic
+        .rollups
+        .iter()
+        .any(|rollup| rollup.period == RollupPeriod::Range);
+    if (contains_range
+        && (semantic.profile_revision != 2
+            || semantic.profile != SemanticProfile::AppleHealthDataV8))
+        || (semantic.profile_revision == 2
+            && semantic
+                .rollups
+                .iter()
+                .any(|rollup| rollup.period != RollupPeriod::Range))
+    {
+        return Err(RenderError::InvalidSemanticResult);
     }
     if config.profile != SemanticProfile::AppleHealthDataV8
         && (!semantic.rollups.is_empty() || config.rollups.is_some())
@@ -2299,7 +2322,7 @@ mod tests {
         let config = json!({
             "schema":"healthmd.render_session_config","render_input_version":1,"artifact_plan_version":1,
             "canonical_model_version":1,"registry_version":1,"registry_sha256":REGISTRY_SHA256,
-            "profile_revision":1,"render_profile_revision":1,"request_id":"render-test","session_id":"render-session",
+            "profile_revision":1,"render_profile_revision":2,"request_id":"render-test","session_id":"render-session",
             "profile":profile_name,"calendar_time_zone":"UTC","locale":"en-US",
             "formats":["csv","markdown","json","obsidian_bases"],"unit_system":"metric",
             "include_metadata":true,"group_by_category":true,"include_platform_extensions":false,

@@ -448,6 +448,7 @@ struct ExportModal: View {
 struct FilenameFormatEditor: View {
     @Binding var filenameFormat: String
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var tempFormat: String = ""
 
     private let placeholders: [(name: String, placeholder: String, description: String)] = [
@@ -615,15 +616,28 @@ struct FilenameFormatEditor: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        filenameFormat = tempFormat.isEmpty ? AdvancedExportSettings.defaultFilenameFormat : tempFormat
-                        dismiss()
+                        configurationProtection.performConfigurationChange {
+                            filenameFormat = tempFormat.isEmpty ? AdvancedExportSettings.defaultFilenameFormat : tempFormat
+                            dismiss()
+                        }
                     }
                     .foregroundStyle(Color.accent)
                     .fontWeight(.semibold)
+                    .accessibilityIdentifier(AccessibilityID.Export.outputEditorSaveButton)
                 }
             }
             .onAppear {
                 tempFormat = filenameFormat
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }
@@ -677,6 +691,7 @@ struct FolderStructureEditor: View {
     @Binding var folderStructure: String
     @Binding var organizeFormatsIntoFolders: Bool
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var tempStructure: String = ""
     @State private var tempOrganizeFormatsIntoFolders = false
 
@@ -872,9 +887,11 @@ struct FolderStructureEditor: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        folderStructure = tempStructure
-                        organizeFormatsIntoFolders = tempOrganizeFormatsIntoFolders
-                        dismiss()
+                        configurationProtection.performConfigurationChange {
+                            folderStructure = tempStructure
+                            organizeFormatsIntoFolders = tempOrganizeFormatsIntoFolders
+                            dismiss()
+                        }
                     }
                     .foregroundStyle(Color.accent)
                     .fontWeight(.semibold)
@@ -883,6 +900,16 @@ struct FolderStructureEditor: View {
             .onAppear {
                 tempStructure = folderStructure
                 tempOrganizeFormatsIntoFolders = organizeFormatsIntoFolders
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }
@@ -939,6 +966,7 @@ struct SubfolderEditor: View {
     @Binding var subfolder: String
     let onSave: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var tempSubfolder: String = ""
 
     private let presets: [(name: String, value: String, description: String)] = [
@@ -1095,9 +1123,11 @@ struct SubfolderEditor: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        subfolder = tempSubfolder
-                        onSave()
-                        dismiss()
+                        configurationProtection.performConfigurationChange {
+                            subfolder = tempSubfolder
+                            onSave()
+                            dismiss()
+                        }
                     }
                     .foregroundStyle(Color.accent)
                     .fontWeight(.semibold)
@@ -1105,6 +1135,16 @@ struct SubfolderEditor: View {
             }
             .onAppear {
                 tempSubfolder = subfolder
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }

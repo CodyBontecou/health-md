@@ -1,0 +1,52 @@
+<resources>
+    <string name="app_name">Health.md</string>
+    <string name="wear_dashboard_title">Health.md</string>
+    <string name="wear_setup">Deschide Health.md pe telefon pentru a finaliza configurarea.</string>
+    <string name="wear_phone_missing">Aplicația de telefon nu a fost găsită</string>
+    <string name="wear_unreachable">Telefonul nu este accesibil. Ultimele date salvate rămân disponibile.</string>
+    <string name="wear_permissions">Este necesar accesul Health Connect pe telefon.</string>
+    <string name="wear_version_mismatch">Actualizează Health.md pe telefon și ceas.</string>
+    <string name="wear_no_data">Nu există încă date de sănătate</string>
+    <string name="wear_expired">Datele sunt mai vechi de 24 de ore. Sincronizează pentru a afișa măsurătorile.</string>
+    <plurals name="wear_updated_hours">
+        <item quantity="one">Actualizat acum %1$d oră</item>
+        <item quantity="few">Actualizat acum %1$d ore</item>
+        <item quantity="other">Actualizat acum %1$d de ore</item>
+    </plurals>
+    <string name="wear_sync">Sincronizează datele de sănătate</string>
+    <string name="wear_syncing">Se solicită sincronizarea…</string>
+    <string name="wear_activity">Activitate zilnică</string>
+    <string name="wear_recovery">Recuperare</string>
+    <string name="wear_steps">Pași</string>
+    <string name="wear_move">Energie activă</string>
+    <string name="wear_exercise">Minute de exercițiu</string>
+    <string name="wear_sleep">Somn</string>
+    <string name="wear_resting_hr">Puls în repaus</string>
+    <string name="wear_average_hr">Puls mediu</string>
+    <string name="wear_hrv">HRV RMSSD</string>
+    <string name="wear_blood_oxygen">Oxigen în sânge</string>
+    <string name="wear_not_realtime">Ultima sincronizare cu telefonul; nu în timp real</string>
+    <string name="wear_no_data_short">--</string>
+    <string name="wear_health_connect_unavailable">Health Connect nu este disponibil pe telefon.</string>
+    <plurals name="wear_updated_minutes">
+        <item quantity="one">Actualizat acum %1$d minut</item>
+        <item quantity="few">Actualizat acum %1$d minute</item>
+        <item quantity="other">Actualizat acum %1$d de minute</item>
+    </plurals>
+    <string name="wear_value_kcal">%1$s kcal</string>
+    <string name="wear_value_minutes">%1$s min</string>
+    <string name="wear_value_hours">%1$s h</string>
+    <string name="wear_value_bpm">%1$s bpm</string>
+    <string name="wear_value_ms">%1$s ms</string>
+    <string name="wear_value_percent">%1$s%%</string>
+    <string name="wear_tile_steps">%1$s pași</string>
+    <string name="wear_tile_exercise">%1$s min</string>
+    <string name="wear_tile_sleep">%1$s h somn</string>
+    <string name="wear_tile_hrv">%1$s ms RMSSD</string>
+    <string name="wear_metric_separator"> · </string>
+    <string name="wear_tile_activity_empty">Nu există date de activitate</string>
+    <string name="wear_tile_recovery_empty">Nu există date de somn sau VFC</string>
+    <string name="wear_preview_placeholder">Previzualizare; fără valoare de sănătate</string>
+    <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
+    <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+</resources>

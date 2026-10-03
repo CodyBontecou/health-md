@@ -90,6 +90,63 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         ))
     }
 
+    func testSharedPairingV3MatchesCanonicalCrossPlatformFixture() throws {
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent(
+                "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json"
+            )
+        let fixture = try JSONDecoder().decode(
+            SharedPairingV3Fixture.self,
+            from: Data(contentsOf: fixtureURL)
+        )
+        XCTAssertEqual(fixture.pairingProtocolVersion, DirectPairingSecurity.sharedProtocolVersion)
+        let clientID = try XCTUnwrap(UUID(uuidString: fixture.clientInstallationID))
+        let serverID = try XCTUnwrap(UUID(uuidString: fixture.serverInstallationID))
+        let clientPublicKey = try Data(strictHex: fixture.clientPublicKeyHex)
+        let clientNonce = try Data(strictHex: fixture.clientNonceHex)
+        let serverPublicKey = try Data(strictHex: fixture.serverPublicKeyHex)
+        let serverNonce = try Data(strictHex: fixture.serverNonceHex)
+        let sealed = ManualIPEncryptedFrame(
+            nonce: try Data(strictHex: fixture.sealedNonceHex),
+            ciphertext: try Data(strictHex: fixture.sealedCiphertextHex),
+            tag: try Data(strictHex: fixture.sealedTagHex)
+        )
+
+        XCTAssertEqual(
+            DirectPairingSecurity.sharedPairingVerifier(
+                pairingCode: fixture.pairingCode,
+                clientInstallationID: clientID,
+                clientPublicKey: clientPublicKey,
+                clientNonce: clientNonce
+            ),
+            try Data(strictHex: fixture.pairingClientVerifierHex)
+        )
+        XCTAssertEqual(
+            DirectPairingSecurity.sharedPairingServerVerifier(
+                pairingCode: fixture.pairingCode,
+                clientInstallationID: clientID,
+                clientPublicKey: clientPublicKey,
+                clientNonce: clientNonce,
+                serverInstallationID: serverID,
+                serverPublicKey: serverPublicKey,
+                serverNonce: serverNonce,
+                sealedReconnectSecret: sealed
+            ),
+            try Data(strictHex: fixture.pairingServerVerifierHex)
+        )
+        XCTAssertEqual(
+            fixture.qrPayload,
+            "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345678901234567890"
+        )
+    }
+
     func testDirectMessageRoundTripsAndFingerprintIsDeterministic() throws {
         let request = DirectExportRequest(
             jobID: UUID(uuidString: "00000000-0000-4000-8000-000000000001")!,
@@ -257,6 +314,174 @@ final class HealthMdConnectionCoreTests: XCTestCase {
             try JSONSerialization.jsonObject(with: committed) as? NSDictionary,
             try JSONSerialization.jsonObject(with: fixtureData) as? NSDictionary
         )
+    }
+
+    func testWakeEnrollmentAndCapabilityUseExactWireShapes() throws {
+        let key = Data(repeating: 7, count: 32)
+        let enrollment = DirectWakeEnrollment(
+            wakeID: "wake-opaque-one",
+            wakeKey: key.base64EncodedString()
+        )
+        XCTAssertTrue(enrollment.isValid)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let message = try JSONSerialization.jsonObject(
+            with: encoder.encode(DirectMessage.wakeEnrollment(enrollment))
+        ) as? [String: Any]
+        let wrapped = message?["wakeEnrollment"] as? [String: Any]
+        let payload = wrapped?["_0"] as? [String: Any]
+        XCTAssertEqual(payload?.count, 2)
+        XCTAssertEqual(payload?["wakeID"] as? String, "wake-opaque-one")
+        XCTAssertEqual(payload?["wakeKey"] as? String, key.base64EncodedString())
+
+        let capabilities = DirectPeerCapabilities(
+            platform: .iOS,
+            installationID: UUID(),
+            wake: DirectWakeCapabilities(supported: true)
+        )
+        let capabilitiesData = try encoder.encode(capabilities)
+        let decoded = try JSONDecoder().decode(DirectPeerCapabilities.self, from: capabilitiesData)
+        XCTAssertEqual(decoded.wake, DirectWakeCapabilities(supported: true))
+        // A hello without the wake field decodes as unsupported — older peers stay compatible.
+        var legacy = try JSONSerialization.jsonObject(with: capabilitiesData) as! [String: Any]
+        legacy.removeValue(forKey: "wake")
+        let legacyDecoded = try JSONDecoder().decode(
+            DirectPeerCapabilities.self, from: JSONSerialization.data(withJSONObject: legacy)
+        )
+        XCTAssertNil(legacyDecoded.wake)
+    }
+
+    func testWakeEnrollmentValidityFailsClosed() {
+        let validKey = Data(repeating: 1, count: 32).base64EncodedString()
+        XCTAssertFalse(DirectWakeEnrollment(wakeID: "", wakeKey: validKey).isValid)
+        XCTAssertFalse(
+            DirectWakeEnrollment(
+                wakeID: String(repeating: "a", count: 129), wakeKey: validKey
+            ).isValid
+        )
+        XCTAssertFalse(DirectWakeEnrollment(wakeID: "bad\nkey", wakeKey: validKey).isValid)
+        XCTAssertFalse(
+            DirectWakeEnrollment(
+                wakeID: "ok", wakeKey: Data(repeating: 1, count: 31).base64EncodedString()
+            ).isValid
+        )
+        XCTAssertFalse(DirectWakeEnrollment(wakeID: "ok", wakeKey: "not base64 !!").isValid)
+    }
+
+    func testProfilePolicyMatchesSwiftReferenceFixture() throws {
+        // Export-profiles decision 10: byte-exact reference vectors for the
+        // additive settings_policy=profile request shape. Values deliberately
+        // interlock with the Rust healthmd-protocol profile_policy vectors so
+        // both suites prove the same wire bytes.
+        let request = DirectExportRequest(
+            jobID: UUID(uuidString: "00000000-0000-4000-8000-00000000000B")!,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000.987),
+            dateSelection: .exact(start: "2026-08-01", end: "2026-08-07"),
+            settingsPolicy: .profile,
+            profileReference: DirectProfileReference(
+                profileID: "11111111-2222-4333-8444-555555555555",
+                name: "Weekly Sleep"
+            ),
+            responseMode: .writeFiles
+        )
+        let unnamedReferenceRequest = DirectExportRequest(
+            jobID: request.jobID,
+            createdAt: request.createdAt,
+            dateSelection: request.dateSelection,
+            settingsPolicy: .profile,
+            profileReference: DirectProfileReference(
+                profileID: "11111111-2222-4333-8444-555555555555"
+            ),
+            responseMode: .writeFiles
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let requestBytes = try encoder.encode(request)
+        let messageBytes = try encoder.encode(DirectMessage.exportRequest(request))
+        let unnamedReferenceBytes = try encoder.encode(unnamedReferenceRequest)
+
+        // The profile policy survives a wire round trip with the reference
+        // still pinned to the profile UUID (and the name still optional).
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try decoder.decode(DirectExportRequest.self, from: requestBytes), request)
+        XCTAssertEqual(
+            try decoder.decode(DirectExportRequest.self, from: unnamedReferenceBytes),
+            unnamedReferenceRequest
+        )
+        XCTAssertEqual(request.createdAt, Date(timeIntervalSince1970: 1_700_000_000))
+
+        let fingerprint = try DirectRequestFingerprint.make(for: request)
+        let fixture: [String: Any] = [
+            "schema": "healthmd.direct_profile_policy_swift_reference",
+            "schema_version": 1,
+            "profile_request_json_base64": requestBytes.base64EncodedString(),
+            "profile_request_message_json_base64": messageBytes.base64EncodedString(),
+            "profile_request_fingerprint": fingerprint.sha256,
+            "profile_request_unnamed_reference_json_base64": unnamedReferenceBytes.base64EncodedString()
+        ]
+        let fixtureData = try JSONSerialization.data(
+            withJSONObject: fixture,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        )
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json")
+        if ProcessInfo.processInfo.environment["HEALTHMD_UPDATE_PROFILE_POLICY_FIXTURE"] == "1" {
+            try FileManager.default.createDirectory(
+                at: fixtureURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try fixtureData.write(to: fixtureURL, options: .atomic)
+        }
+        let committed = try Data(contentsOf: fixtureURL)
+        XCTAssertEqual(
+            try JSONSerialization.jsonObject(with: committed) as? NSDictionary,
+            try JSONSerialization.jsonObject(with: fixtureData) as? NSDictionary
+        )
+    }
+
+    func testLegacyPeerFailsClosedOnProfileSettingsPolicy() throws {
+        // Export-profiles decision 10, new-CLI/old-phone combination: a
+        // pre-profile Swift peer's decoder has no "profile" variant and must
+        // reject the unknown value instead of defaulting or misinterpreting
+        // the request. Mirrors the Rust old-peer combination test.
+        struct LegacyRequest: Decodable {
+            let settingsPolicy: LegacySettingsPolicy
+        }
+        enum LegacySettingsPolicy: String, Decodable {
+            case requestedDatesOnly = "requested_dates_only"
+            case currentIPhoneSettings = "current_iphone_settings"
+        }
+
+        let payload = #"{"settingsPolicy":"profile"}"#.data(using: .utf8)!
+        XCTAssertThrowsError(try JSONDecoder().decode(LegacyRequest.self, from: payload))
+    }
+
+    func testLegacyPeerIgnoresUnknownProfileReferenceField() throws {
+        // Additive struct field: a legacy decoder that knows only the old
+        // request fields skips profileReference instead of failing the whole
+        // decode. Mirrors the Rust old-peer field-ignore test.
+        struct LegacyRequest: Decodable {
+            let responseMode: String
+        }
+
+        let payload =
+            #"{"responseMode":"write_files","profileReference":{"profileID":"11111111-2222-4333-8444-555555555555"}}"#
+        let legacy = try JSONDecoder().decode(
+            LegacyRequest.self,
+            from: payload.data(using: .utf8)!
+        )
+        XCTAssertEqual(legacy.responseMode, "write_files")
     }
 
     func testReadyPacketConnectionSurvivesItsStartupTimeout() async throws {
@@ -511,6 +736,65 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         try FileManager.default.createSymbolicLink(at: symbolicLink, withDestinationURL: file)
         XCTAssertThrowsError(try DirectTransferFile.inspect(symbolicLink))
         XCTAssertThrowsError(try DirectTransferFile.inspect(directory))
+    }
+}
+
+private struct SharedPairingV3Fixture: Decodable {
+    let pairingProtocolVersion: Int
+    let pairingCode: String
+    let clientInstallationID: String
+    let clientPublicKeyHex: String
+    let clientNonceHex: String
+    let serverInstallationID: String
+    let serverPublicKeyHex: String
+    let serverNonceHex: String
+    let sealedNonceHex: String
+    let sealedCiphertextHex: String
+    let sealedTagHex: String
+    let pairingClientVerifierHex: String
+    let pairingServerVerifierHex: String
+    let qrPayload: String
+
+    enum CodingKeys: String, CodingKey {
+        case pairingProtocolVersion = "pairing_protocol_version"
+        case pairingCode = "pairing_code"
+        case clientInstallationID = "client_installation_id"
+        case clientPublicKeyHex = "client_public_key_hex"
+        case clientNonceHex = "client_nonce_hex"
+        case serverInstallationID = "server_installation_id"
+        case serverPublicKeyHex = "server_public_key_hex"
+        case serverNonceHex = "server_nonce_hex"
+        case sealedNonceHex = "sealed_nonce_hex"
+        case sealedCiphertextHex = "sealed_ciphertext_hex"
+        case sealedTagHex = "sealed_tag_hex"
+        case pairingClientVerifierHex = "pairing_client_verifier_hex"
+        case pairingServerVerifierHex = "pairing_server_verifier_hex"
+        case qrPayload = "qr_payload"
+    }
+}
+
+private enum StrictHexError: Error {
+    case invalid
+}
+
+private extension Data {
+    init(strictHex value: String) throws {
+        guard value.utf8.count.isMultiple(of: 2),
+              value.utf8.allSatisfy({
+                  (48...57).contains($0) || (97...102).contains($0)
+              }) else { throw StrictHexError.invalid }
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(value.utf8.count / 2)
+        var index = value.startIndex
+        while index < value.endIndex {
+            let next = value.index(index, offsetBy: 2)
+            guard let byte = UInt8(value[index..<next], radix: 16) else {
+                throw StrictHexError.invalid
+            }
+            bytes.append(byte)
+            index = next
+        }
+        self = Data(bytes)
     }
 }
 

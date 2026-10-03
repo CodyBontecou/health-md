@@ -20,6 +20,14 @@
   "hadTerminalRangeFailure" : false,
   "isTotalFilesWrittenAuthoritative" : false,
   "jobID" : "A1700000-0000-4000-8000-000000000001",
+  "partialFailures" : [
+    {
+      "dataType" : "Individual entries",
+      "date" : 795312000,
+      "dateRangeDescription" : "2026-03-16",
+      "errorDescription" : "Lossless records produced no individual entries for tracked metrics: weight not selected for the daily export."
+    }
+  ],
   "status" : "partialSuccess",
   "successCount" : 1,
   "totalCount" : 2,

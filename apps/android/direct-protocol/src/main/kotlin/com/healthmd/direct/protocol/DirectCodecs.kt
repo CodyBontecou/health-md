@@ -128,12 +128,22 @@ object V2Codec {
         put("include_exercise_routes", includeExerciseRoutes)
     }
 
-    fun generatedFilesProduct(settingsPolicy: SettingsPolicy): JsonObject = buildJsonObject {
+    fun generatedFilesProduct(
+        settingsPolicy: SettingsPolicy,
+        profileReference: ProfileReference? = null,
+    ): JsonObject = buildJsonObject {
         put("product_id", "generated_files_v1")
         put("settings_policy", when (settingsPolicy) {
             SettingsPolicy.REQUESTED_SCOPE -> "requested_scope"
             SettingsPolicy.SAVED_DEVICE_SETTINGS -> "saved_device_settings"
+            SettingsPolicy.PROFILE -> "profile"
         })
+        profileReference?.let { reference ->
+            put("profile_reference", buildJsonObject {
+                put("profile_id", reference.profileId)
+                reference.name?.let { name -> put("name", name) }
+            })
+        }
     }
 }
 
@@ -156,6 +166,8 @@ data class PairingResponse(
     val authenticationVerifier: ByteArray,
     val sealedReconnectSecret: CryptoFrame,
 )
+
+class PairingRejectedException(reason: String) : IllegalStateException(reason)
 
 object LegacyCodec {
     private val base64Encoder = Base64.getEncoder()
@@ -181,7 +193,9 @@ object LegacyCodec {
     fun pairingResponse(bytes: ByteArray): PairingResponse {
         val root = parse(bytes)
         root["pairingRejected"]?.jsonObject?.get("_0")?.jsonObject?.let { rejection ->
-            error(rejection["reason"]?.jsonPrimitive?.content ?: "Pairing was rejected.")
+            throw PairingRejectedException(
+                rejection["reason"]?.jsonPrimitive?.content ?: "Pairing was rejected.",
+            )
         }
         val payload = root.getValue("pairingResponse").jsonObject.getValue("_0").jsonObject
         val sealed = payload.getValue("sealedReconnectSecret").jsonObject

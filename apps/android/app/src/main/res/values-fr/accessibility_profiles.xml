@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Planifications des profils</string>
+    <string name="a11y_profiles_empty">Aucun profil d’exportation pour le moment.</string>
+    <string name="a11y_profiles_add">Nouveau profil à partir des réglages actuels</string>
+    <string name="a11y_profiles_none_enabled">Aucune planification de profil activée.</string>
+    <string name="a11y_profiles_edit">Modifier la planification</string>
+    <string name="a11y_profiles_edit_named">Modifier la planification de %1$s</string>
+    <string name="a11y_profiles_delete">Supprimer</string>
+    <string name="a11y_profiles_delete_named">Supprimer le profil %1$s</string>
+    <string name="a11y_profiles_schedule_named">Planification de %1$s</string>
+    <string name="a11y_profiles_save">Enregistrer</string>
+    <string name="a11y_profiles_delete_title">Supprimer « %1$s » ?</string>
+    <string name="a11y_profiles_delete_body">Ses réglages enregistrés et sa planification seront supprimés. Le dernier profil restant ne peut pas être supprimé.</string>
+    <string name="a11y_profiles_cadence_unit">Unité de fréquence</string>
+    <string name="a11y_profiles_days">Jours</string>
+    <string name="a11y_profiles_weeks">Semaines</string>
+    <string name="a11y_profiles_months">Mois</string>
+    <string name="a11y_profiles_weekday">Jour de la semaine</string>
+    <string name="a11y_profiles_hour">Heure</string>
+    <string name="a11y_profiles_minute">Minute</string>
+    <string name="a11y_profiles_lookback">Jours précédents (1–30)</string>
+    <string name="a11y_profiles_every_days">Tous les N jours</string>
+    <string name="a11y_profiles_every_weeks">Toutes les N semaines</string>
+    <string name="a11y_profiles_every_months">Tous les N mois</string>
+</resources>

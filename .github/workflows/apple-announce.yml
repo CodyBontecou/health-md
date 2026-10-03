@@ -42,6 +42,11 @@ on:
         required: false
         type: boolean
         default: true
+      force_promotion:
+        description: 'Promote the draft without requiring both platforms approved (escape hatch)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -58,7 +63,83 @@ env:
   BUNDLE_ID: com.codybontecou.obsidianhealth
 
 jobs:
+  promotion-gate:
+    # The draft v<version> GitHub Release is the canonical customer-facing note
+    # for BOTH platforms. Promote it only when both platforms' versions for
+    # that version string are approved, so a fast macOS approval can never
+    # publish the release while iOS is still unsubmitted.
+    runs-on: macos-26
+    timeout-minutes: 15
+    outputs:
+      promote: ${{ steps.gate.outputs.promote }}
+    steps:
+      - name: Install asc
+        run: |
+          set -euo pipefail
+          if ! command -v asc >/dev/null 2>&1; then
+            brew install asc
+          fi
+          asc --version
+
+      - name: Setup App Store Connect key
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
+
+      - name: Check both platforms approved
+        id: gate
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_promotion == true }}
+          VERSION: ${{ github.event.client_payload.version || inputs.version }}
+          PLATFORM: ${{ github.event.client_payload.platform || inputs.platform }}
+        run: |
+          set -euo pipefail
+          if [[ "$FORCE" == "true" ]]; then
+            echo "::warning::force_promotion=true — skipping both-platform approval check"
+            echo "promote=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [[ "$PLATFORM" == "MACOS" ]] && PLATFORM=MAC_OS
+          case "$PLATFORM" in
+            IOS) OTHER=MAC_OS ;;
+            MAC_OS) OTHER=IOS ;;
+            *) echo "::error::Unsupported platform: $PLATFORM"; exit 1 ;;
+          esac
+          OTHER_STATE=$(asc versions list --app "$ASC_APP_ID" --platform "$OTHER" --limit 20 --output json \
+            | jq -r --arg version "$VERSION" \
+              '[.data[] | select(.attributes.versionString == $version)][0].attributes.appStoreState // "NOT_FOUND"')
+          echo "other_platform=$OTHER state=$OTHER_STATE"
+          case "$OTHER_STATE" in
+            READY_FOR_DISTRIBUTION|READY_FOR_SALE)
+              echo "promote=true" >> "$GITHUB_OUTPUT"
+              ;;
+            NOT_FOUND)
+              echo "::notice::$OTHER has no $VERSION version; treating release as single-platform"
+              echo "promote=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::notice::$OTHER $VERSION is $OTHER_STATE — deferring draft promotion until both platforms are approved"
+              echo "promote=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
   announce:
+    needs: promotion-gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -229,7 +310,7 @@ jobs:
 
       - name: Promote draft GitHub release
         id: promote
-        if: steps.meta.outputs.dry_run != 'true' && steps.release.outputs.is_draft == 'true'
+        if: steps.meta.outputs.dry_run != 'true' && steps.release.outputs.is_draft == 'true' && needs.promotion-gate.outputs.promote == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit '${{ steps.meta.outputs.tag }}' --draft=false

@@ -32,6 +32,7 @@ final class PushRegistrationManager: @unchecked Sendable {
     /// HealthMd-related items live under the same service).
     private static let keychainService = "com.codybontecou.obsidianhealth"
     private static let userIdKeychainAccount = "pushRegistrationUserId"
+    private static let deviceTokenKeychainAccount = "pushRegistrationDeviceToken"
 
     init(
         session: URLSession = .shared,
@@ -39,6 +40,13 @@ final class PushRegistrationManager: @unchecked Sendable {
     ) {
         self.session = session
         self.baseURL = baseURL
+    }
+
+    /// The hex-encoded APNs token from the most recent successful registration, or `nil` before
+    /// the system delivers one. Consumed by features (RFC-0005 wake) that register additional
+    /// worker rows for this install.
+    var lastDeviceTokenHex: String? {
+        readKeychainString(account: Self.deviceTokenKeychainAccount)
     }
 
     // MARK: - Identity
@@ -105,6 +113,7 @@ final class PushRegistrationManager: @unchecked Sendable {
     func submitDeviceToken(_ token: Data) {
         let hex = token.map { String(format: "%02x", $0) }.joined()
         logger.info("APNs token captured: \(hex.prefix(8), privacy: .public)…")
+        writeKeychainString(account: Self.deviceTokenKeychainAccount, value: hex)
         Task { await self.postRegisterDevice(apnsToken: hex) }
     }
 
@@ -131,6 +140,44 @@ final class PushRegistrationManager: @unchecked Sendable {
     func syncSchedule(_ schedule: ExportSchedule) {
         let timezone = TimeZone.current.identifier
         Task { await self.postUpsertSchedule(schedule, timezone: timezone) }
+    }
+
+    /// Phase-3 multi-profile sync (decision 8): posts one worker record
+    /// representing the **coalesced wake-up** — the earliest preferred fire
+    /// time among enabled entries (and the legacy schedule while it remains
+    /// enabled). The worker stores one schedule per user and only uses it for
+    /// best-effort silent APNs nudges; per-entry wake-ups remain client-side
+    /// (BGTask + local recovery notifications), so no worker contract change
+    /// is needed and no profile names, profile ids, or health data leave the
+    /// device. A per-entry worker payload requires a worker-side contract
+    /// change and stays out of scope here.
+    func syncSchedules(_ entries: [ScheduledExportEntry], legacy: ExportSchedule? = nil) {
+        guard let coalesced = Self.coalescedWorkerSchedule(entries: entries, legacy: legacy) else {
+            // No enabled entries and no enabled legacy schedule: clear the
+            // worker record through the existing disabled-sync path.
+            syncSchedule(ExportSchedule())
+            return
+        }
+        syncSchedule(coalesced)
+    }
+
+    /// Pure coalescing rule shared with tests: the enabled schedule (entry
+    /// projection or legacy) with the earliest preferred time-of-day wins,
+    /// because the worker's silent push is only a nudge and the client
+    /// evaluates every entry when it wakes.
+    static func coalescedWorkerSchedule(
+        entries: [ScheduledExportEntry],
+        legacy: ExportSchedule?
+    ) -> ExportSchedule? {
+        var candidates: [ExportSchedule] = entries
+            .filter(\.isEnabled)
+            .map(\.dateMathProjection)
+        if let legacy, legacy.isEnabled {
+            candidates.append(legacy)
+        }
+        return candidates.min {
+            ($0.preferredHour, $0.preferredMinute) < ($1.preferredHour, $1.preferredMinute)
+        }
     }
 
     private func postUpsertSchedule(_ schedule: ExportSchedule, timezone: String) async {

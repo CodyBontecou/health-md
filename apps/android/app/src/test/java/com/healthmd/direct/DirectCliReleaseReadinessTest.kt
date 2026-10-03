@@ -36,6 +36,19 @@ class DirectCliReleaseReadinessTest {
     }
 
     @Test
+    fun directCliSessionReconnectsAfterNonTerminalCloses() {
+        val coordinator = read(
+            "app/src/main/java/com/healthmd/direct/DirectCliCoordinator.kt",
+        )
+        assertThat(coordinator).contains("RECONNECT_INITIAL_BACKOFF_MILLIS = 250L")
+        assertThat(coordinator).contains("RECONNECT_MAXIMUM_BACKOFF_MILLIS = 2_000L")
+        assertThat(coordinator).contains("MAXIMUM_CONSECUTIVE_RECONNECT_FAILURES = 6")
+        assertThat(coordinator).contains("DirectCliCompletion.SessionFinished")
+        assertThat(coordinator).contains("currentCoroutineContext().ensureActive()")
+        assertThat(coordinator).contains("wake preflight")
+    }
+
+    @Test
     fun keystoreGeneratesItsOwnGcmIvAndPairingRefreshesTheScreen() {
         val trustStore = read(
             "app/src/main/java/com/healthmd/direct/DirectCliTrustStore.kt",
@@ -75,6 +88,54 @@ class DirectCliReleaseReadinessTest {
         )
         assertThat(service).contains("getString(R.string.direct_cli_notification_title)")
         assertThat(service).doesNotContain("error.message")
+    }
+
+    @Test
+    fun qrPairingUsesOptionalOpenSourceCameraPathWithoutExternalDeepLinkAuthority() {
+        val manifest = read("app/src/main/AndroidManifest.xml")
+        assertThat(manifest).contains("android.permission.CAMERA")
+        assertThat(manifest).contains("android.hardware.camera.any")
+        assertThat(manifest).contains("android:required=\"false\"")
+        assertThat(manifest).doesNotContain("android:scheme=\"healthmd\"")
+
+        val build = read("app/build.gradle.kts")
+        assertThat(build).contains("libs.androidx.camera.camera2")
+        assertThat(build).contains("libs.zxing.core")
+        val scanner = read(
+            "app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingScanner.kt",
+        )
+        assertThat(scanner).contains("ProcessCameraProvider")
+        assertThat(scanner).contains("MultiFormatReader")
+    }
+
+    @Test
+    fun legacyPairingFallbackRequiresTypedRejectionAndChecksCancellation() {
+        val coordinator = read(
+            "app/src/main/java/com/healthmd/direct/DirectCliCoordinator.kt",
+        )
+        val pairingFlow = coordinator
+            .substringAfter("suspend fun pair(")
+            .substringBefore("suspend fun connectAndServe(")
+        assertThat(pairingFlow).contains("catch (sharedPairingError: PairingRejectedException)")
+        assertThat(pairingFlow).contains("currentCoroutineContext().ensureActive()")
+        assertThat(pairingFlow).doesNotContain(": Exception)")
+        assertThat(pairingFlow).doesNotContain(": IllegalStateException)")
+        assertThat(pairingFlow).doesNotContain(": Throwable)")
+    }
+
+    @Test
+    fun sharedPairingFixtureIsConsumedByRustSwiftAndKotlin() {
+        val fixture = File(
+            repoRoot(),
+            "../../packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        ).canonicalFile
+        assertThat(fixture.isFile).isTrue()
+        assertThat(fixture.readText()).contains("\"pairing_protocol_version\": 3")
+        assertThat(read("direct-protocol/build.gradle.kts"))
+            .contains("../../packages/contracts/direct-protocol/pairing-v3/fixtures")
+        assertThat(read(
+            "direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/SharedPairingV3InteropTest.kt",
+        )).contains("getResource(\"/shared-pairing-v3.json\")")
     }
 
     @Test

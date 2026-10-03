@@ -52,9 +52,11 @@ Large source archives and attachments use `CoreLosslessArtifactStream`. Raw chun
 
 ## Evidence
 
-Canonical render differential SHA-256:
+Canonical render differential SHA-256 at the original revision-1 baseline:
 
 `59fee27e488f76da193d8013fba4ff82d76887fe12df45439ea7de286feb4bc3`
+
+The revision-2 managed-Markdown safety repin changes only the internal configuration revision field; its current differential SHA-256 is `1181e644cd224c8c0e4126133890830f5af9ec8c39995db6e90a471fae608c7d`.
 
 It covers every format for all three profiles, exact path/order/content/hash/write-mode plans, Apple formatting, Android v4/v5 discriminators, update behavior, and frozen-v4 API planning. Rust replays the canonical fixture from the publishable crate mirror and compares every output byte.
 
@@ -62,7 +64,8 @@ Independent pre-cutover byte oracles are frozen directly from production native 
 
 - Apple v7: `53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a`
 - Android v4/v5: `f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1`
-- Android native request replay: `e989e50d2fc81cec95d938a19c40a6ce39428cfc83e45eb23b69703b656037bf`
+- Android native request replay at revision 1: `e989e50d2fc81cec95d938a19c40a6ce39428cfc83e45eb23b69703b656037bf`
+- Android native request replay repinned to revision 2: `0f6f8ce69bf0babddff87e4e4d1990b96633a754a10043a37475dc3d29b9bfef`
 
 The Apple corpus contains default summary, imperial, custom frontmatter/template, and lossless archive cases in all four formats. Packaged Rust output matches every byte for all three cases. The Android corpus contains frozen default, frozen alias/native granular, analytical granular, and analytical imperial cases in all four formats; a replayable Kotlin presentation-request mirror proves all 16 Rust outputs against independent native bytes on every Rust CI host. Swift/Kotlin tests call only the production legacy renderers to guard oracle bytes; Rust never generates or rewrites those expected outputs. Historical Apple and Android structural signatures remain unchanged.
 

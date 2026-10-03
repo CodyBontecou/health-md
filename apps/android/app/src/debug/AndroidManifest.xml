@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Debug/QA-only overlay: the per-profile alarm receiver is exported in debug builds so
+      `adb shell am broadcast` (running as the shell uid) can drive scheduled-profile QA the
+      way AlarmManager does in production. Release builds keep exported=false from the main
+      manifest.
+    -->
+    <application>
+        <receiver
+            android:name="com.healthmd.data.scheduler.ScheduledProfileAlarmReceiver"
+            android:exported="true"
+            tools:replace="android:exported"
+            xmlns:tools="http://schemas.android.com/tools" />
+    </application>
+
+</manifest>

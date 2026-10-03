@@ -1,191 +1,50 @@
-# gradle-play-publisher Commands Reference
+# Google Play command reference
 
-## Offline listing validation
+## Current release ownership
 
-The files under `play-console/` use an authored layout. Prepare the canonical Fastlane layout before passing metadata to `gplay` or another publisher:
+The current Google Play release scope is **phone-only**. `release-scope.json` is the machine-readable source of truth: Android `1.9.1` publishes `:app` version code `39`, while the `:wear` artifact is deferred and is not uploaded, promoted, or advertised by the phone app.
+
+Gradle Play Publisher remains removed. Do not upload, promote, submit review, or replace Play metadata with ad hoc Gradle, Fastlane, browser, or local API commands. The only supported mutation paths are:
+
+- `.github/workflows/android-release.yml` — qualifies an exact annotated, main-reachable `android/v<version>` tag, builds the signed phone AAB, retains SHA/AAB-bound intent evidence, and uploads it to `internal`.
+- `.github/workflows/android-promote-production.yml` — runs from that exact tag, promotes the same phone version code from `internal` to `production`, applies the reviewed listing in that same edit, submits it for review, and verifies the resulting lifecycle.
+
+`.github/workflows/android-google-play-access-audit.yml` is the only supported credential diagnostic. From an allowed annotated Android tag, it records exact Internal/generated-artifact state, inserts and immediately deletes one empty edit, and retains a receipt proving that no edit was committed. A separate no-upload job verifies that the protected keystore matches the registered Play upload certificate and retains only public certificate digests. The workflow cannot upload an artifact, change a track/listing, or submit review.
+
+Both release workflows use the protected, tag-restricted `google-play` environment and short-lived Google Workload Identity Federation. The release build uses the separately tag-restricted `google-play-qa` environment only for upload signing; the private key is deleted before its exact signed AAB artifact enters the `google-play` mutation job. The environments normally allow `android/v*`; a retained `android/recovery/*` tag is permitted only for a main-reachable workflow-infrastructure fix that still binds all artifact work to the original immutable release tag. `google-play` stores the Workload Identity provider/service-account variables and does not need a long-lived Play JSON key or signing material. Generated AABs remain workflow artifacts and are never committed.
+
+The Wear workflows and evidence tools remain in the repository as dormant implementation material for the planned `1.10.0` qualification cycle. They are not part of the current release sequence and must not be dispatched for `1.9.1`.
+
+## Safe local commands
+
+Run from `apps/android`.
 
 ```bash
+./gradlew :app:testPlayDebugUnitTest :app:testFdroidDebugUnitTest :direct-protocol:test
+./gradlew :app:lintPlayDebug :app:lintFdroidDebug
+./gradlew :app:assemblePlayDebug
+./gradlew :app:bundlePlayRelease
 ./scripts/validate-play-listing.sh
 ```
 
-This validates all draft locales, then prepares reviewed-only input at `build/play-metadata/reviewed/`. It does not authenticate, upload, publish or change Play Console. Do not run `gplay validate` directly against `play-console/listing/` or `play-console/screenshots/`; those custom paths can produce incomplete results.
+A release build requires externally supplied signing configuration. Local substitute signing proves only build/package behavior and is not production-signing evidence.
 
-## Localized phone screenshot generation
-
-Capture genuine localized Android UI, then run the paid `gpt-image-2` reference-swap workflow from the repository root:
+The deferred Wear implementation may still be compiled and tested without publication:
 
 ```bash
-cd apps/android
-./scripts/capture-localized-play-screenshots.py --serial emulator-5554 --locales de-DE
-cd ../..
-npm --prefix scripts/app-store-images run plan:android-localized-set -- --locale de-DE
-npm --prefix scripts/app-store-images run generate:android-localized-set -- --locale de-DE
-cd apps/android
-./scripts/finalize-ai-localized-play-screenshots.py --locales de-DE
-./scripts/validate-play-listing.sh
+./gradlew :wearable-contract:test :wear:testDebugUnitTest :wear:assembleDebug
+bundle exec fastlane android validate_wear_release
 ```
 
-Generation sends the English master, localized emulator capture and localized-copy reference to OpenAI for each slide. It makes eight paid image edits per complete locale, writes ignored working output under `app-store-output/android-ai-edits/`, and does not upload or publish to Google Play.
+## Authorized phone release sequence
 
-## Authentication
-Before using any commands, ensure `play-console-key.json` is in the project root.
+1. Commit the complete source and push it to `origin/main`.
+2. Require successful Android CI for that exact SHA.
+3. Create an annotated `android/v<version>` tag at the exact main-reachable SHA.
+4. Let `.github/workflows/android-release.yml` re-run exact-SHA qualification and upload the phone AAB to Internal Testing.
+5. Verify that workflow's signed AAB, immutable intent, and committed-upload receipt artifacts.
+6. Dispatch `.github/workflows/android-promote-production.yml` from the exact annotated release tag with the exact version name and phone version code. Use its `release_tag` recovery input only from an annotated, main-reachable `android/recovery/*` workflow tag after an infrastructure-only fix; the checked-out product source remains the original release tag. An Internal-upload recovery also requires the successful exact-SHA Android CI run ID and attempt so the workflow can reverify all retained qualification jobs without rebuilding unchanged test inputs.
+7. Require the workflow to prove `IN_REVIEW`, `APPROVED_NOT_PUBLISHED`, or `PUBLISHED` before treating the submission as successful.
+8. Monitor Play review and publish the Android announcement only after Google Play reports the production release as published.
 
-```bash
-# Validate credentials
-./gradlew validatePlayConsoleCredentials
-```
-
-## Build Commands
-
-```bash
-# Build release bundle (AAB)
-./gradlew bundleRelease
-
-# Build and immediately upload to Internal Testing
-./gradlew publishReleaseBundle
-
-# Build for debug testing
-./gradlew bundleDebug
-```
-
-## Publishing Commands
-
-### By Track
-
-```bash
-# Internal Testing (fastest feedback)
-./gradlew publishReleaseBundle
-
-# Closed Testing / Beta
-./gradlew publishReleaseBundle --play-track=beta
-
-# Production (full release)
-./gradlew publishReleaseBundle --play-track=production
-```
-
-### Staged Rollouts
-
-```bash
-# Release to 5% of users
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.05
-
-# Increase to 25%
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.25
-
-# Increase to 50%
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.50
-
-# Full rollout (100%)
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=1.0
-```
-
-## Metadata Publishing
-
-```bash
-# Update listing, screenshots, and graphics (no build)
-./gradlew publishListingBundle
-
-# Update only specific elements
-./gradlew publishListingBundle --play-no-confirm
-```
-
-## Release Notes & Version Updates
-
-```bash
-# Update release notes for current version
-# Edit: play-console/listing/en-US/release-notes/en-US/default.txt
-./gradlew publishListingBundle
-```
-
-## Version Management
-
-```bash
-# View current version
-grep versionCode app/build.gradle.kts
-
-# Before each upload, commit a versionCode higher than every build in Play Console.
-# Also update versionName when preparing a new customer-facing release.
-grep -E 'versionCode|versionName' app/build.gradle.kts
-```
-
-## Typical Release Workflow
-
-```bash
-# 1. Update and commit versionCode/versionName in app/build.gradle.kts
-# 2. Update release notes
-# nano play-console/listing/en-US/release-notes/en-US/default.txt
-
-# 3. Build release bundle
-./gradlew bundleRelease
-
-# 4. Test locally on device
-./gradlew installDebug
-
-# 5. Upload to Internal Testing
-./gradlew publishReleaseBundle
-
-# 6. Test in internal testing for 1-2 days
-
-# 7. Move to Beta
-./gradlew publishReleaseBundle --play-track=beta
-
-# 8. Beta test for 3-7 days
-
-# 9. Release to production (5% initially)
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.05
-
-# 10. Monitor crashes/reviews for 2-3 days
-
-# 11. Increase rollout
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=1.0
-```
-
-## Troubleshooting
-
-```bash
-# Enable verbose output
-./gradlew publishReleaseBundle --info
-
-# Validate without publishing
-./gradlew validatePlayConsoleCredentials
-
-# Check latest published version
-# (requires querying Play Console API)
-```
-
-## CI/CD Quick Start
-
-Save Play Console key to GitHub Secrets:
-```bash
-# 1. In GitHub repo: Settings → Secrets and variables → Actions
-# 2. New secret: PLAY_CONSOLE_KEY
-# 3. Paste contents of play-console-key.json
-```
-
-Create `.github/workflows/play-store.yml`:
-```yaml
-name: Publish to Play Store
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-      - name: Create key file
-        run: echo '${{ secrets.PLAY_CONSOLE_KEY }}' > play-console-key.json
-      - name: Publish to Play Store
-        run: ./gradlew publishReleaseBundle --play-track=beta
-```
-
-## Documentation
-
-- [gradle-play-publisher GitHub](https://github.com/Triple-T/gradle-play-publisher)
-- [Google Play Console Help](https://support.google.com/googleplay/android-developer/)
-- [Health Connect Guidelines](https://developer.android.com/health-and-fitness/guides/health-connect)
+See `PLAY_STORE_SETUP.md` for protected credential setup. See `docs/features/wear-os-completion-audit.md` for the deferred Wear qualification work; it is not a phone-release gate.

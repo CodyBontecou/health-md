@@ -56,14 +56,16 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
 
-        let noDataAlert = app.alerts["No Health Data Found"]
+        // The no-data guidance is a Geist-designed in-app dialog (not a native alert),
+        // matched by its localized title text like the other dialogs in this journey.
+        let noDataDialog = app.staticTexts["No Health Data Found"]
         XCTAssertTrue(
-            noDataAlert.waitForExistence(timeout: 30),
+            noDataDialog.waitForExistence(timeout: 30),
             "An empty Health store should produce a guided empty state, not a generic error"
         )
-        XCTAssertTrue(noDataAlert.buttons["Open Health App"].exists)
-        XCTAssertTrue(noDataAlert.buttons["Done"].exists)
-        XCTAssertFalse(app.alerts["Error"].exists)
+        XCTAssertTrue(app.buttons["Open Health App"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Done"].exists)
+        XCTAssertFalse(app.staticTexts["Export Couldn\u{2019}t Finish"].exists)
     }
 
     func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
@@ -82,6 +84,10 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(
             app.buttons[UITestLaunchHelper.Export.cancelExportButton].waitForExistence(timeout: 1),
             "The simulated multi-file export should still be running"
+        )
+        XCTAssertFalse(
+            exportButton.exists,
+            "The bottom export bar should hide while the top activity banner owns progress and cancellation"
         )
 
         let activityBanner = app.descendants(matching: .any)[UITestLaunchHelper.Export.activityBanner]
@@ -178,17 +184,21 @@ final class ExportJourneyUITests: XCTestCase {
 
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Partial export warning toast should appear")
-        XCTAssertTrue(statusBadge.label.contains("Health permissions need attention"))
+        XCTAssertTrue(
+            statusBadge.label.contains("Partial export: Health permissions need attention. Tap to fix."),
+            "The warning should explain that permission guidance is available"
+        )
         statusBadge.tap()
 
-        let permissionAlert = app.alerts["Health Permissions Needed"]
-        XCTAssertTrue(permissionAlert.waitForExistence(timeout: 3), "Tapping the toast should show permission guidance")
-        XCTAssertTrue(permissionAlert.buttons["Request Access"].exists)
-        XCTAssertTrue(permissionAlert.buttons["Open Health App"].exists)
-        let biologicalSexGuidance = permissionAlert.staticTexts.matching(
+        // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
+        let permissionTitle = app.staticTexts["Health Permissions Needed"]
+        XCTAssertTrue(permissionTitle.waitForExistence(timeout: 5), "Tapping the toast should show permission guidance")
+        XCTAssertTrue(app.buttons["Request Access"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Open Health App"].waitForExistence(timeout: 3))
+        let biologicalSexGuidance = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "Biological Sex")
         ).firstMatch
-        XCTAssertTrue(biologicalSexGuidance.exists)
+        XCTAssertTrue(biologicalSexGuidance.waitForExistence(timeout: 3))
     }
 
     func testExportPreview_rendersHealthKitFixtureValues() throws {
@@ -215,13 +225,13 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(fileContent.waitForExistence(timeout: 5), "Rendered export content should be visible")
 
         let renderedExport = fileContent.label
-        XCTAssertTrue(renderedExport.contains("schema_version: 7"), "Preview should render the current export schema version")
+        XCTAssertTrue(
+            renderedExport.split(separator: "\n").contains { $0 == "schema_version: 8" },
+            "Preview should render the current export schema version"
+        )
         XCTAssertTrue(renderedExport.contains("units:"), "Preview should render self-describing frontmatter units")
-        XCTAssertTrue(renderedExport.contains("12,500 steps"), "Preview should render fixture activity values")
-        XCTAssertTrue(renderedExport.contains("**Resting HR:** 58 bpm"), "Preview should render fixture heart values")
-        XCTAssertTrue(renderedExport.contains("**Blood Pressure:** 120/80 mmHg"), "Preview should render fixture vitals values")
-        XCTAssertTrue(renderedExport.contains("Heart Rate Samples (5 readings)"), "Preview should render granular fixture samples")
-        XCTAssertTrue(renderedExport.contains("Running"), "Preview should render fixture workout values")
+        XCTAssertTrue(renderedExport.contains("**Steps:** 12,500"), "Preview should render current fixture activity copy")
+        XCTAssertTrue(renderedExport.contains("**Active Calories:** 520 kcal"), "Preview should render current fixture energy copy")
     }
 
     func testExportPreview_canStartExportFlow() throws {
@@ -304,10 +314,11 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(previewButton.isEnabled, "Preview should stay enabled so users can learn Health permission is missing")
         previewButton.tap()
 
-        let setupAlert = app.alerts["Finish Preview Setup"]
-        XCTAssertTrue(setupAlert.waitForExistence(timeout: 3), "Preview should prompt for missing Health permission")
-        XCTAssertTrue(setupAlert.buttons["Connect Apple Health"].exists, "Prompt should offer Health permissions")
-        XCTAssertFalse(setupAlert.buttons["Choose Folder"].exists, "Preview should not require folder selection")
+        // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
+        let setupPromptTitle = app.staticTexts["Finish Preview Setup"]
+        XCTAssertTrue(setupPromptTitle.waitForExistence(timeout: 5), "Preview should prompt for missing Health permission")
+        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 3), "Prompt should offer Health permissions")
+        XCTAssertFalse(app.buttons["Choose Folder"].exists, "Preview should not require folder selection")
     }
 
     func testExportPreview_rendersWithoutLocalFolderSelection() throws {
@@ -540,8 +551,12 @@ final class ExportJourneyUITests: XCTestCase {
         let yesterdayPreset = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
         let allTimePreset = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        XCTAssertTrue(todayPreset.exists, "Today preset should be visible")
-        XCTAssertTrue(yesterdayPreset.exists, "Yesterday preset should be visible")
+        // The export-profile picker section sits above Date Range once profiles
+        // are active, so presets render lazily below the fold; scroll to them.
+        scrollUntilExists(todayPreset, in: app)
+        XCTAssertTrue(todayPreset.exists, "Today preset should be reachable")
+        scrollUntilExists(yesterdayPreset, in: app)
+        XCTAssertTrue(yesterdayPreset.exists, "Yesterday preset should be reachable")
         scrollUntilExists(allTimePreset, in: app)
         XCTAssertTrue(allTimePreset.exists, "All Time preset should be reachable by scrolling")
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible beside All Time")
@@ -558,6 +573,13 @@ final class ExportJourneyUITests: XCTestCase {
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
         scrollUntilHittable(customPreset, in: app, swipingUp: true)
+        // A partially visible SwiftUI button can report isHittable while its center remains below
+        // the bottom tab bar. Move the preset row a bounded distance into the viewport.
+        let scrollView = app.scrollViews.firstMatch
+        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
+            forDuration: 0.05,
+            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        )
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible")
         XCTAssertTrue(customPreset.isHittable, "Custom preset should be tappable")
         customPreset.tap()

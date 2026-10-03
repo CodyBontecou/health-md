@@ -1,5 +1,7 @@
 # Contract fixture hashes are byte-level and must be stable across platforms.
 packages/contracts/**/*.json text eol=lf
+packages/contracts/**/*.csv text eol=lf
+packages/contracts/**/*.md text eol=lf
 packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/*.json text eol=lf
 packages/healthmd-core-rust/crates/healthmd-core/fixtures/*.json text eol=lf
 packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/*.json text eol=lf

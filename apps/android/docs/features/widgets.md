@@ -22,7 +22,7 @@ The widgets mirror the Health Summary, Activity Rings, Heart Range, and Sleep wi
 - **HRV:** displayed as RMSSD in milliseconds. Android Health Connect RMSSD is not interchangeable with Apple HealthKit SDNN.
 - **Stand Hours:** Health Connect has no equivalent. The Android activity widget uses Steps as its third ring and never fabricates a stand value.
 
-The Apple CLI export Live Activity maps to Android’s existing ongoing Direct CLI transfer notification. Apple Watch widgets are not part of this phone feature and would require a separate Wear OS application and synchronization contract.
+The Apple CLI export Live Activity maps to Android’s existing ongoing Direct CLI transfer notification. Wear OS is implemented separately in `:wear` using the private `:wearable-contract`; it receives minimized phone-authoritative Health Connect aggregates and does not depend on Glance/AppWidget UI. See `wear-os-implementation.md`.
 
 ## Data and privacy
 
@@ -91,10 +91,10 @@ Jetpack Glance renders through `RemoteViews` and cannot reliably load bundled ap
 Run from `apps/android`:
 
 ```bash
-./gradlew :app:testDebugUnitTest
-./gradlew :app:lintDebug
-./gradlew :app:assembleDebug
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:testPlayDebugUnitTest :app:testFdroidDebugUnitTest
+./gradlew :app:lintPlayDebug :app:lintFdroidDebug
+./gradlew :app:assemblePlayDebug :app:assembleFdroidDebug
+./gradlew :app:connectedPlayDebugAndroidTest :app:connectedFdroidDebugAndroidTest
 ```
 
 Physical QA targets Pixel 7 serial `2C061FDH200CJN`. API 37 verification confirmed picker previews/setup, all four simultaneous providers, compact/wide/tall resizing, light/dark rendering, 1.3× font scaling, Arabic RTL mirroring, whole-card TalkBack focus, root taps, stale/expired/no-data/pre-unlock states, `widgetCategory=9` (`home_screen|not_keyguard`), and an exact 1,800,000 ms unique periodic work row. Removing the final physical instance deletes the private snapshot directory and leaves the widget WorkManager rows cancelled. Automated coverage verifies partial permissions, before-first-unlock behavior, refresh/removal races, stale AppWidget IDs during deletion callbacks, and cleanup retries.

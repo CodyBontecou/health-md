@@ -9,11 +9,12 @@ import SwiftUI
 
 struct FormatCustomizationView: View {
     @ObservedObject var customization: FormatCustomization
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     private var previewDate: Date { Date() }
 
     var body: some View {
-        ScrollView {
+        FormatPageScroll { _ in
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 pageHeader
                 formatBasicsCard
@@ -21,12 +22,7 @@ struct FormatCustomizationView: View {
                 previewCard
                 resetButton
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
-            .padding(.bottom, Spacing.xxl)
         }
-        .scrollIndicators(.hidden)
-        .background(Color.bgPrimary.ignoresSafeArea())
         .navigationTitle("Format Customization")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -120,26 +116,20 @@ struct FormatCustomizationView: View {
 
     private var resetButton: some View {
         Button(action: {
-            customization.reset()
-        }) {
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: "arrow.counterclockwise")
-                    .accessibilityHidden(true)
-                Text("Reset to Defaults")
-                    .font(.footnote.weight(.medium))
+            configurationProtection.performConfigurationChange {
+                customization.reset()
             }
-            .foregroundStyle(Color.error)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm + 2)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.error.opacity(0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(Color.error.opacity(0.22), lineWidth: 1)
-            )
+        }) {
+            FormatActionLabel(title: "Reset to Defaults", systemImage: "arrow.counterclockwise")
+                .foregroundStyle(Color.errorText)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.error.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.error.opacity(0.22), lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Reset to defaults")
@@ -179,15 +169,35 @@ struct FormatCustomizationView: View {
 
 struct FrontmatterCustomizationView: View {
     @ObservedObject var config: FrontmatterConfiguration
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var showAddCustomField = false
     @State private var showAddPlaceholderField = false
     @State private var newFieldKey = ""
     @State private var newFieldValue = ""
     @State private var newPlaceholderKey = ""
     @State private var searchText = ""
+    @State private var renameTargetKey: String?
+    @State private var renameTempKey = ""
+
+    private func startRenaming(originalKey: String, customKey: String) {
+        renameTempKey = customKey
+        renameTargetKey = originalKey
+    }
+
+    private func applyRename(_ newKey: String?) {
+        guard let targetKey = renameTargetKey,
+              let index = config.fields.firstIndex(where: { $0.originalKey == targetKey }) else { return }
+        configurationProtection.performConfigurationChange {
+            if let newKey, !newKey.isEmpty {
+                config.fields[index].customKey = newKey
+            } else {
+                config.fields[index].customKey = config.fields[index].originalKey
+            }
+        }
+    }
 
     var body: some View {
-        ScrollView {
+        FormatPageScroll { _ in
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 FormatPageHeader(
                     icon: "number.square",
@@ -201,32 +211,33 @@ struct FrontmatterCustomizationView: View {
                 placeholderFieldsCard
                 healthMetricFieldsCard
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
-            .padding(.bottom, Spacing.xxl)
         }
-        .scrollIndicators(.hidden)
-        .background(Color.bgPrimary.ignoresSafeArea())
         .navigationTitle("Frontmatter Fields")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button("Enable All Fields") {
-                        for index in config.fields.indices {
-                            config.fields[index].isEnabled = true
+                        configurationProtection.performConfigurationChange {
+                            for index in config.fields.indices {
+                                config.fields[index].isEnabled = true
+                            }
                         }
                     }
                     Button("Disable All Fields") {
-                        for index in config.fields.indices {
-                            config.fields[index].isEnabled = false
+                        configurationProtection.performConfigurationChange {
+                            for index in config.fields.indices {
+                                config.fields[index].isEnabled = false
+                            }
                         }
                     }
                     Divider()
                     Menu("Key Style") {
                         ForEach(FrontmatterKeyStyle.allCases, id: \.self) { style in
                             Button {
-                                config.applyKeyStyle(style)
+                                configurationProtection.performConfigurationChange {
+                                    config.applyKeyStyle(style)
+                                }
                             } label: {
                                 HStack {
                                     Text(style.displayName)
@@ -239,62 +250,105 @@ struct FrontmatterCustomizationView: View {
                         }
                     }
                     Button("Reset Names") {
-                        config.applyKeyStyle(.snakeCase)
+                        configurationProtection.performConfigurationChange {
+                            config.applyKeyStyle(.snakeCase)
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                         .accessibilityHidden(true)
                 }
                 .accessibilityLabel("Frontmatter field actions")
                 .accessibilityHint("Opens actions for frontmatter fields and key styles")
             }
         }
-        .alert("Add Custom Field", isPresented: $showAddCustomField) {
-            TextField("Field name (e.g., tags)", text: $newFieldKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            TextField("Value (e.g., health, daily)", text: $newFieldValue)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                newFieldKey = ""
-                newFieldValue = ""
-            }
-            Button("Add Field") {
-                if !newFieldKey.isEmpty {
-                    config.customFields[newFieldKey] = newFieldValue
+        .geistDialog(
+            isPresented: $showAddCustomField,
+            title: Text("Add Custom Field"),
+            message: Text("Add a custom field that will be included in every export."),
+            actions: [
+                .cancel {
+                    newFieldKey = ""
+                    newFieldValue = ""
+                },
+                .action("Add Field") {
+                    configurationProtection.performConfigurationChange {
+                        if !newFieldKey.isEmpty {
+                            config.customFields[newFieldKey] = newFieldValue
+                        }
+                        newFieldKey = ""
+                        newFieldValue = ""
+                    }
                 }
-                newFieldKey = ""
-                newFieldValue = ""
-            }
-        } message: {
-            Text("Add a custom field that will be included in every export.")
-        }
-        .alert("Add Placeholder Field", isPresented: $showAddPlaceholderField) {
-            TextField("Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                newPlaceholderKey = ""
-            }
-            Button("Add Placeholder") {
-                if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
-                    config.placeholderFields.append(newPlaceholderKey)
+            ],
+            fields: [
+                GeistDialogField(placeholder: "Field name (e.g., tags)", text: $newFieldKey),
+                GeistDialogField(placeholder: "Value (e.g., health, daily)", text: $newFieldValue)
+            ]
+        )
+        .geistDialog(
+            isPresented: $showAddPlaceholderField,
+            title: Text("Add Placeholder Field"),
+            message: Text("Add a field that will export with an empty value for manual entry."),
+            actions: [
+                .cancel {
+                    newPlaceholderKey = ""
+                },
+                .action("Add Placeholder") {
+                    configurationProtection.performConfigurationChange {
+                        if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
+                            config.placeholderFields.append(newPlaceholderKey)
+                        }
+                        newPlaceholderKey = ""
+                    }
                 }
-                newPlaceholderKey = ""
-            }
-        } message: {
-            Text("Add a field that will export with an empty value for manual entry.")
-        }
+            ],
+            fields: [
+                GeistDialogField(placeholder: "Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
+            ]
+        )
+        .geistDialog(
+            isPresented: Binding(
+                get: { renameTargetKey != nil },
+                set: { if !$0 { renameTargetKey = nil } }
+            ),
+            title: Text("Rename Field"),
+            message: renameTargetKey.map { Text("Enter a custom name for \($0).") },
+            actions: [
+                .cancel(),
+                .action("Save Name") { applyRename(renameTempKey) },
+                .action("Reset Name") { applyRename(nil) }
+            ],
+            fields: [
+                GeistDialogField(
+                    placeholder: LocalizedStringKey(renameTargetKey ?? ""),
+                    text: $renameTempKey
+                )
+            ]
+        )
     }
 
     private var frontmatterSummary: some View {
-        HStack(spacing: Spacing.md) {
-            FormatStatPill(title: "Enabled", value: "\(enabledFieldCount)/\(config.fields.count)")
-            FormatStatPill(title: "Custom", value: "\(config.customFields.count)")
-            FormatStatPill(title: "Placeholders", value: "\(config.placeholderFields.count)")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.sm) {
+                frontmatterStats
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                frontmatterStats
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(enabledFieldCount) of \(config.fields.count) health metric fields enabled, \(config.customFields.count) custom fields, \(config.placeholderFields.count) placeholder fields")
+    }
+
+    @ViewBuilder
+    private var frontmatterStats: some View {
+        FormatStatPill(title: "Enabled", value: "\(enabledFieldCount)/\(config.fields.count)")
+        FormatStatPill(title: "Custom", value: "\(config.customFields.count)")
+        FormatStatPill(title: "Placeholders", value: "\(config.placeholderFields.count)")
     }
 
     private var coreFieldsCard: some View {
@@ -434,10 +488,11 @@ struct FrontmatterCustomizationView: View {
                     )
                 } else {
                     ForEach(Array(filteredFields.enumerated()), id: \.element.originalKey) { index, field in
-                        FrontmatterFieldRow(field: binding(for: field))
+                        FrontmatterFieldRow(field: binding(for: field)) { originalKey, customKey in
+                            startRenaming(originalKey: originalKey, customKey: customKey)
+                        }
                         if index < filteredFields.count - 1 {
                             FormatDivider()
-                                .padding(.leading, 54)
                         }
                     }
                 }
@@ -458,10 +513,12 @@ struct FrontmatterCustomizationView: View {
                 .foregroundStyle(Color.textMuted)
                 .accessibilityHidden(true)
 
-            TextField("Search Fields", text: $searchText)
+            TextField("Search Fields", text: $searchText,
+                      prompt: Text("Search Fields").foregroundStyle(Color.textSecondary))
                 .textFieldStyle(.plain)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .frame(minHeight: 44)
                 .accessibilityLabel("Search frontmatter fields")
                 .accessibilityHint("Type to filter health metric field keys")
 
@@ -470,7 +527,9 @@ struct FrontmatterCustomizationView: View {
                     searchText = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                         .accessibilityHidden(true)
                 }
                 .buttonStyle(.plain)
@@ -490,64 +549,27 @@ struct FrontmatterCustomizationView: View {
     }
 
     private func customFieldRow(key: String, value: String) -> some View {
-        HStack(spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(key)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                Text(value.isEmpty ? "Empty Value" : value)
-                    .font(.footnote)
-                    .foregroundStyle(value.isEmpty ? Color.textMuted : Color.textSecondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            Button(role: .destructive) {
+        FormatFrontmatterEntry(
+            key: key,
+            value: value.isEmpty ? String(localized: "Empty Value") : value,
+            deleteLabel: String(localized: "Delete custom field \(key)")
+        ) {
+            configurationProtection.performConfigurationChange {
                 config.customFields.removeValue(forKey: key)
-            } label: {
-                Image(systemName: "trash")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.error)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.error.opacity(0.08)))
-                    .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Delete \(key)")
         }
-        .padding(.vertical, Spacing.sm)
     }
 
     private func placeholderFieldRow(key: String) -> some View {
-        HStack(spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(key)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                Text("Empty on export")
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
-            }
-
-            Spacer()
-
-            Button(role: .destructive) {
+        FormatFrontmatterEntry(
+            key: key,
+            value: String(localized: "Empty on export"),
+            deleteLabel: String(localized: "Delete placeholder field \(key)")
+        ) {
+            configurationProtection.performConfigurationChange {
                 config.placeholderFields.removeAll { $0 == key }
-            } label: {
-                Image(systemName: "trash")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.error)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.error.opacity(0.08)))
-                    .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Delete \(key)")
         }
-        .padding(.vertical, Spacing.sm)
     }
 
     private func fieldCategoryDisclosure(_ category: (name: String, fields: [CustomFrontmatterField])) -> some View {
@@ -555,10 +577,11 @@ struct FrontmatterCustomizationView: View {
             VStack(spacing: 0) {
                 ForEach(Array(category.fields.enumerated()), id: \.element.originalKey) { index, field in
                     if let fieldIndex = config.fields.firstIndex(where: { $0.originalKey == field.originalKey }) {
-                        FrontmatterFieldRow(field: $config.fields[fieldIndex])
+                        FrontmatterFieldRow(field: $config.fields[fieldIndex]) { originalKey, customKey in
+                            startRenaming(originalKey: originalKey, customKey: customKey)
+                        }
                         if index < category.fields.count - 1 {
                             FormatDivider()
-                                .padding(.leading, 54)
                         }
                     }
                 }
@@ -570,16 +593,18 @@ struct FrontmatterCustomizationView: View {
                     Text(category.name)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("\(categoryEnabledCount(for: category.fields)) of \(category.fields.count) enabled")
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    FormatValuePill(text: "\(category.fields.count)")
                 }
-
-                Spacer()
-
-                FormatValuePill(text: "\(category.fields.count)")
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.vertical, Spacing.sm)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
         .tint(Color.textSecondary)
     }
@@ -638,78 +663,20 @@ struct FrontmatterCustomizationView: View {
 
 struct FrontmatterFieldRow: View {
     @Binding var field: CustomFrontmatterField
-    @State private var isEditing = false
-    @State private var tempCustomKey = ""
-
-    private var fieldDisplayName: String {
-        if field.customKey != field.originalKey && !field.customKey.isEmpty {
-            return "\(field.originalKey) renamed to \(field.customKey)"
-        }
-        return field.originalKey
-    }
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    let onRename: (String, String) -> Void
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Toggle("", isOn: $field.isEnabled)
-                .labelsHidden()
-                .tint(Color.accent)
-                .accessibilityLabel(fieldDisplayName)
-                .accessibilityValue(field.isEnabled ? "Enabled" : "Disabled")
-                .accessibilityHint("Double tap to \(field.isEnabled ? "disable" : "enable") this field")
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(field.originalKey)
-                    .font(Typography.monoEmphasis())
-                    .foregroundStyle(field.isEnabled ? Color.textPrimary : Color.textMuted)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
-                if field.customKey != field.originalKey && !field.customKey.isEmpty {
-                    Text("Renamed to \(field.customKey)")
-                        .font(.footnote)
-                        .foregroundStyle(Color.accent)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                } else {
-                    Text(field.isEnabled ? "Included in frontmatter" : "Not exported")
-                        .font(.footnote)
-                        .foregroundStyle(Color.textMuted)
-                }
+        FormatFrontmatterFieldContent(
+            originalKey: field.originalKey,
+            customKey: field.customKey,
+            isEnabled: configurationProtection.protecting($field.isEnabled)
+        ) {
+            FormatInlineButton(title: "Rename Field", systemImage: "pencil") {
+                onRename(field.originalKey, field.customKey)
             }
-            .accessibilityHidden(true)
-
-            Spacer(minLength: Spacing.sm)
-
-            Button(action: {
-                tempCustomKey = field.customKey
-                isEditing = true
-            }) {
-                Image(systemName: "pencil")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textSecondary)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.bgSecondary))
-                    .overlay(Circle().strokeBorder(Color.borderSubtle, lineWidth: 1))
-                    .accessibilityHidden(true)
-            }
-            .buttonStyle(.plain)
             .accessibilityLabel("Rename \(field.originalKey)")
             .accessibilityHint("Double tap to enter a custom name for this field")
-        }
-        .padding(.vertical, Spacing.sm)
-        .alert("Rename Field", isPresented: $isEditing) {
-            TextField(field.originalKey, text: $tempCustomKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {}
-            Button("Save Name") {
-                field.customKey = tempCustomKey.isEmpty ? field.originalKey : tempCustomKey
-            }
-            Button("Reset Name") {
-                field.customKey = field.originalKey
-            }
-        } message: {
-            Text("Enter a custom name for \(field.originalKey).")
         }
     }
 }
@@ -718,9 +685,10 @@ struct FrontmatterFieldRow: View {
 
 struct MarkdownTemplateView: View {
     @Binding var config: MarkdownTemplateConfig
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
-        ScrollView {
+        FormatPageScroll { availableHeight in
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 FormatPageHeader(
                     icon: "doc.plaintext",
@@ -732,17 +700,15 @@ struct MarkdownTemplateView: View {
                 optionsCard
 
                 if config.style == .custom {
-                    customTemplateCard
+                    FormatTemplateEditor(
+                        text: configurationProtection.protecting($config.customTemplate),
+                        availableHeight: availableHeight
+                    )
                 }
 
                 previewCard
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
-            .padding(.bottom, Spacing.xxl)
         }
-        .scrollIndicators(.hidden)
-        .background(Color.bgPrimary.ignoresSafeArea())
         .navigationTitle("Markdown Template")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -811,42 +777,6 @@ struct MarkdownTemplateView: View {
         }
     }
 
-    private var customTemplateCard: some View {
-        FormatSectionCard(
-            title: "Custom Template",
-            subtitle: "Use placeholders to control the Markdown body."
-        ) {
-            TextEditor(text: $config.customTemplate)
-                .font(.caption.monospaced())
-                .foregroundStyle(Color.textPrimary)
-                .frame(minHeight: 220)
-                .scrollContentBackground(.hidden)
-                .padding(Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.bgSecondary)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-                .accessibilityLabel("Custom template")
-
-            FormatDivider()
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text("Available Placeholders")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textSecondary)
-                Text("{{date}}, {{#section}}...{{/section}}, {{metrics}}")
-                    .font(Typography.monoCaption())
-                    .foregroundStyle(Color.textMuted)
-                    .textSelection(.enabled)
-            }
-            .padding(.vertical, Spacing.sm)
-        }
-    }
-
     private var previewCard: some View {
         FormatSectionCard(title: "Markdown Preview") {
             FormatCodeBlock(text: previewText)
@@ -891,113 +821,23 @@ private struct FormatPageHeader: View {
     }
 }
 
-private struct FormatSectionCard<Content: View>: View {
-    let title: String
-    let subtitle: String?
-    private let content: Content
-
-    init(title: String, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.subtitle = subtitle
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(LocalizedStringKey(title))
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                if let subtitle {
-                    Text(LocalizedStringKey(subtitle))
-                        .font(.footnote)
-                        .foregroundStyle(Color.textMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            VStack(spacing: 0) {
-                content
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.bgTertiary)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.borderSubtle, lineWidth: 1)
-            )
-        }
-    }
-}
-
 private struct FormatSelectionRow<Value: Hashable>: View {
     let title: String
     let subtitle: String
     @Binding var selection: Value
     let options: [Value]
     let optionTitle: (Value) -> String
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
-        HStack(alignment: .center, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(LocalizedStringKey(title))
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                Text(LocalizedStringKey(subtitle))
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
+        FormatSelectionControl(
+            title: title, subtitle: subtitle, selection: selection,
+            options: options, optionTitle: optionTitle
+        ) { option in
+            configurationProtection.performConfigurationChange {
+                selection = option
             }
-
-            Spacer(minLength: Spacing.sm)
-
-            Menu {
-                ForEach(options, id: \.self) { option in
-                    Button {
-                        selection = option
-                    } label: {
-                        HStack {
-                            Text(optionTitle(option))
-                            if selection == option {
-                                Image(systemName: "checkmark")
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                    }
-                    .accessibilityValue(selection == option ? "Selected" : "Not selected")
-                }
-            } label: {
-                HStack(spacing: Spacing.xs) {
-                    Text(optionTitle(selection))
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.textMuted)
-                        .accessibilityHidden(true)
-                }
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xs + 2)
-                .frame(maxWidth: 190, alignment: .trailing)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.bgSecondary)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-            }
-            .accessibilityLabel(title)
-            .accessibilityValue(optionTitle(selection))
         }
-        .padding(.vertical, Spacing.sm)
     }
 }
 
@@ -1006,23 +846,14 @@ private struct FormatToggleRow: View {
     let subtitle: String
     @Binding var isOn: Bool
     let accessibilityLabel: String
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
-        Toggle(isOn: $isOn) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .tint(Color.accent)
-        .padding(.vertical, Spacing.sm)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(isOn ? "Enabled" : "Disabled")
+        FormatToggleControl(
+            title: title, subtitle: subtitle,
+            isOn: configurationProtection.protecting($isOn),
+            accessibilityLabel: accessibilityLabel
+        )
     }
 }
 
@@ -1032,197 +863,13 @@ private struct FormatTextFieldRow: View {
     @Binding var text: String
     let defaultValue: String
     let accessibilityLabel: String
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
-        HStack(spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                Text("Default: \(defaultValue)")
-                    .font(.footnote)
-                    .foregroundStyle(Color.textMuted)
-            }
-
-            Spacer(minLength: Spacing.sm)
-
-            TextField(placeholder, text: $text)
-                .font(Typography.monoCaption())
-                .foregroundStyle(Color.textPrimary)
-                .multilineTextAlignment(.trailing)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xs + 2)
-                .frame(maxWidth: 180)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.bgSecondary)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.borderSubtle, lineWidth: 1)
-                )
-                .accessibilityLabel(accessibilityLabel)
-                .accessibilityValue(text.isEmpty ? defaultValue : text)
-        }
-        .padding(.vertical, Spacing.sm)
-    }
-}
-
-private struct FormatNavigationRow: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let status: String
-
-    var body: some View {
-        HStack(spacing: Spacing.md) {
-            Image(systemName: icon)
-                .font(.body.weight(.medium))
-                .foregroundStyle(Color.accent)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill(Color.accent.opacity(0.12)))
-                .overlay(Circle().strokeBorder(Color.accent.opacity(0.18), lineWidth: 1))
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: Spacing.xs) {
-                    Text(LocalizedStringKey(title))
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.textPrimary)
-                    FormatValuePill(text: status)
-                }
-                Text(LocalizedStringKey(subtitle))
-                    .font(.footnote)
-                    .foregroundStyle(Color.textSecondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-            }
-
-            Spacer(minLength: Spacing.sm)
-
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.textMuted)
-                .accessibilityHidden(true)
-        }
-        .padding(.vertical, Spacing.sm)
-        .contentShape(Rectangle())
-    }
-}
-
-private struct FormatCodeBlock: View {
-    let text: String
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            Text(text)
-                .font(Typography.monoCaption())
-                .foregroundStyle(Color.textPrimary)
-                .padding(Spacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.bgSecondary)
+        FormatTextFieldControl(
+            title: title, placeholder: placeholder,
+            text: configurationProtection.protecting($text),
+            defaultValue: defaultValue, accessibilityLabel: accessibilityLabel
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-    }
-}
-
-private struct FormatStatPill: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.textMuted)
-            Text(value)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.textPrimary)
-                .monospacedDigit()
-        }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs + 2)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.bgTertiary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
-    }
-}
-
-private struct FormatValuePill: View {
-    let text: String
-
-    var body: some View {
-        Text(LocalizedStringKey(text))
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(Color.textSecondary)
-            .lineLimit(1)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.bgSecondary))
-            .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-    }
-}
-
-private struct FormatEmptyState: View {
-    let title: String
-    let message: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(title)
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.textSecondary)
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(Color.textMuted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.vertical, Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct FormatInlineButton: View {
-    let title: String
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: systemImage)
-                    .accessibilityHidden(true)
-                Text(title)
-                    .font(.footnote.weight(.semibold))
-            }
-            .foregroundStyle(Color.accent)
-            .padding(.vertical, Spacing.sm)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct FormatDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(Color.borderSubtle)
-            .frame(height: 1)
     }
 }

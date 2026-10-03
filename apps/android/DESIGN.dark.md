@@ -257,6 +257,11 @@ typography:
     fontSize: 20px
     fontWeight: 400
     lineHeight: 32px
+  label-20-mono:
+    fontFamily: Geist Mono
+    fontSize: 20px
+    fontWeight: 400
+    lineHeight: 32px
   label-18:
     fontFamily: Geist Sans
     fontSize: 18px
@@ -457,6 +462,23 @@ Geist Sans sets UI and prose; Geist Mono sets code, data, and tabular figures. B
 
 Spacing follows a 4px scale: 4, 8, 12, 16, 24, 32, 40, 64, 96px. Keep a three-step rhythm: 8px inside a group, 16px between groups, 32–40px between sections. Cards use 24px padding, 16px when compact and 32px for hero areas. Center content in a 1200px column with side padding that grows at wider breakpoints, and make every layout work on mobile and desktop. Breakpoints are `sm` 401px, `md` 601px, `lg` 961px, `xl` 1200px, and `2xl` 1400px.
 
+### Android text and display scaling
+
+- Respect the system font and display scale; never shrink text to make controls fit.
+- Text-bearing controls use the documented heights as minimums (at least 48 dp touch targets) and grow for wrapped labels.
+- Onboarding bodies scroll independently of one persistent primary action. Back and optional Skip live in the header; incomplete permission/folder steps show their actual setup action rather than a disabled Continue button.
+- Reading-first onboarding and paywalls apply at font scales of 1.3× or greater, or below the `sm` (401 dp) width/height breakpoint. Use 16 dp page gutters, start-aligned text without forced title line breaks, text-only informational cards with 12 dp padding, and no decorative hero illustrations. Keep all explanatory copy and its scaled type sizes. Normal layouts retain their centered hero presentation.
+- Use `gray-900` for readable helper copy and enabled secondary actions; reserve the disabled token for disabled controls.
+- Paired actions stack primary-first when available width divided by font scale is below 256 dp (128 dp per action). Compact navigation uses a two-column, text-only tab layout when a row cannot provide 64 dp per tab at the chosen font scale. Labels retain their type tokens and full text in both arrangements.
+- Schedule labels sit above their controls. Numeric fields use `label-20-mono`, size for all five supported localized digits, and grow vertically. Value/unit fields stack below the paired-action width threshold; date menus wrap their full labels. Time editors use separated 48 dp minus/plus targets with an 8 dp gap, and a single AM/PM action. Move the period action to its own row when width divided by font scale is below 336 dp; preserve locale ordering and 12/24-hour conventions.
+- Settings entry cards use the reading-first presentation when their available width divided by font scale is below 336 dp: omit decorative leading icons and give descriptions the full card width. Configuration-lock rows have one whole-row switch target, with the explanation below rather than squeezed beside the switch. These cards use 16 dp padding.
+- Metric selection keeps only compact Back/Search navigation fixed; title, search editor, bulk actions and individually scrollable rows share the list. Separate category expansion from its labeled tri-state checkbox. Each metric has one whole-row checkbox action; crowded names use full width with unit/indicator below.
+- Format and frontmatter choices expose one labeled radio/switch action, with non-interactive indicator artwork. Reflow crowded choice groups, put descriptions below controls at full width, and use 16 dp card padding. Input labels wrap outside the editing field; identifiers may scroll horizontally while editing, with a full wrapping reading surface for long values. Separate contextual Add/Delete actions from key/value fields.
+- Template editors allocate visible lines from the available height, up to 16 lines and approximately half the viewport; they never require eight visible lines in short or keyboard-open windows. Keep all input, empty-field examples, help and token references; Reset and preview remain scroll-reachable. Back may join an editor's scroll surface rather than consume scarce fixed height.
+- Profile rows give names and summaries full width, with distinct Edit Schedule, Delete and labeled enable targets. Profile dialogs use fixed header/footer plus a scrolling body when space permits. Below 401 dp of height divided by font scale, or when the padded title consumes over one third of the available height, scroll the same dialog composition as a whole so title, fields and Save/Cancel remain reachable. Preserve field focus/state, native window density/direction, safe areas and IME clearance; never shrink the title or font scale to preserve fixed chrome.
+- Date presets use growing labeled radio targets, stacking below the paired-action threshold; selection artwork must not take width from their labels. Put custom-date labels above full-width 20 sp monospaced values. Schedule history titles and the 48 dp Clear History button reflow at the detailed-control threshold, with readable secondary text and unchanged protection/confirmation behavior.
+- Keep app content inside system-bar and display-cutout insets. Measure navigation chrome rather than reserving a fixed bottom inset, so growing tab labels never cover screen content.
+
 ## Elevation & Depth
 
 Hierarchy comes from tonal surfaces and borders first, so shadows stay subtle. Apply these `box-shadow` values for the dark theme:
@@ -485,6 +507,7 @@ The `components` tokens above give ready-to-use values per element (`backgroundC
 - Error button: solid `red-800` fill with white text, for destructive actions.
 - Input: `background-100` fill, translucent border, 6px radius.
 - Dialog: `background-100` fill, translucent border, 12px radius, fixed header and footer, and a scrollable body. Keep it within the `md` breakpoint and 90% of the available height so system navigation stays clear.
+- Camera QR scanner: use the scoped, theme-independent `scanner-scrim` (`rgba(0, 0, 0, 0.7)`) and `scanner-content` (`#ffffff`) tokens over the live preview, with a 260px square frame and a 4px frame border. Camera-unavailable states return to the normal theme surface and text tokens.
 
 The variant tokens are the default medium (40px) size. Use the `button-small`/`input-small` (32px) and `button-large`/`input-large` (48px) tokens for the other sizes; large buttons step up to `button-16`. Hover and active states step up the scale: a `100` fill becomes `200` on hover and `300` on active, and borders move from `400` to `500` to `600`. Disabled uses a `gray-100` fill, `gray-700` text, and a not-allowed cursor. Focus shows a two-layer ring (`box-shadow: 0 0 0 2px #000000, 0 0 0 4px #c5add9`): a 2px gap in the surface color, then a 2px `brand-primary` ring.
 
@@ -511,6 +534,12 @@ Copy is part of the design; keep it precise and free of filler.
 - Don’t use `background-200` as a general fill; it is for subtle separation only.
 - Don’t mix rounded and sharp corners, or more than two font weights, in one view.
 - Don’t swap `gray-*` for `background-*`; they are separate scales.
+
+## Wear OS surfaces
+
+Wear OS is a scoped platform adaptation of Geist. The watch app uses Wear Compose components, rotary scrolling, edge-safe round layouts, and a black primary surface to respect OLED and ambient constraints. Named watch tokens are `WearSpacing` (4/8/12/16/24dp), `WearType` (12/14/16/20sp), `WearShape` (6/12/full), and `WearColors` (the Geist dark surface/text plus Health.md purple, green, amber, and red semantics). Bundled Geist Sans remains the app font; Tiles and complications may use host/platform typography because those remote renderers do not support bundled fonts. Tile and complication content is glanceable, local-cache-only, never described as real-time, and always pairs color with text. Health values are hidden after 24 hours; values 4–24 hours old include a localized age marker.
+
+The dashboard mirrors the watchOS dashboard composition: one row per metric rendered as an icon chip on the dark surface (`gray-100`, `WearShape.md`), with the metric tint applied to the icon only, the localized label in muted text, and the value emphasized in text-color semibold tabular figures. Per-metric tint tokens reference the existing dark accent scales and never introduce new hex values: steps `green-900`, move energy `amber-900`, exercise `amber-700`, sleep `purple-900`, resting heart rate `red-900`, average heart rate `red-700`, HRV `teal-900`, and blood oxygen `teal-700`. Icons come from the Compose Material icon set because bundled Geist has no icon glyphs; icon tint always pairs with the text label so color never carries meaning alone. Stand hours have no Health Connect equivalent and stay absent from Wear surfaces.
 
 ## Android App Widgets
 

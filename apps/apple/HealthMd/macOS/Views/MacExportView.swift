@@ -1,6 +1,146 @@
 #if os(macOS)
 import SwiftUI
 
+@MainActor
+struct MacManualDailyOutputCommitter {
+    struct Result {
+        let writeResult: DailyExportWriteResult
+        let didSucceed: Bool
+        let failedDateDetail: FailedDateDetail?
+        let completedWithoutSuccess: Bool
+    }
+
+    static func commit(
+        _ healthData: HealthData,
+        settings: AdvancedExportSettings,
+        vaultManager: VaultManager
+    ) async throws -> Result {
+        let writeResult = try await vaultManager.exportHealthData(
+            healthData,
+            settings: settings,
+            operationSurface: .localVaultRangeWithoutSideEffects
+        )
+        guard settings.dailyNotesOnlyModeEnabled else {
+            return Result(
+                writeResult: writeResult,
+                didSucceed: true,
+                failedDateDetail: nil,
+                completedWithoutSuccess: false
+            )
+        }
+
+        switch writeResult.dailyNoteResult {
+        case .updated:
+            return Result(
+                writeResult: writeResult,
+                didSucceed: true,
+                failedDateDetail: nil,
+                completedWithoutSuccess: false
+            )
+        case .skipped(let reason):
+            return Result(
+                writeResult: writeResult,
+                didSucceed: false,
+                failedDateDetail: FailedDateDetail(
+                    date: healthData.date,
+                    reason: .noHealthData,
+                    errorDetails: reason
+                ),
+                completedWithoutSuccess: true
+            )
+        case .failed(let error):
+            return Result(
+                writeResult: writeResult,
+                didSucceed: false,
+                failedDateDetail: FailedDateDetail(
+                    date: healthData.date,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                ),
+                completedWithoutSuccess: false
+            )
+        case .none:
+            return Result(
+                writeResult: writeResult,
+                didSucceed: false,
+                failedDateDetail: FailedDateDetail(
+                    date: healthData.date,
+                    reason: .fileWriteError,
+                    errorDetails: "Daily note update was not performed."
+                ),
+                completedWithoutSuccess: false
+            )
+        }
+    }
+}
+
+@MainActor
+struct MacManualRangeDerivedOutputCommitter {
+    struct Result: Equatable {
+        let rollupFileCount: Int
+        let archiveCount: Int
+    }
+
+    static func commit(
+        requestedDates: [Date],
+        capturedHealthData: [HealthData],
+        rollupHealthData: [HealthData],
+        settings: AdvancedExportSettings,
+        timeZone: TimeZone,
+        fetchHealthData: (Date) -> HealthData?,
+        vaultManager: VaultManager
+    ) async throws -> Result {
+        try Task.checkCancellation()
+
+        if settings.archiveModeEnabled {
+            guard let archiveSources = MacScheduledRangeCapture.archiveSources(
+                originalRequestedDates: requestedDates,
+                reusing: capturedHealthData,
+                timeZone: timeZone,
+                fetch: fetchHealthData
+            ) else {
+                throw ExportError.invalidExportPath(
+                    path: "original archive source days are unavailable; existing ZIP preserved"
+                )
+            }
+            try Task.checkCancellation()
+            let archiveURL = try await vaultManager.exportArchive(
+                from: archiveSources,
+                rollupHealthData: rollupHealthData,
+                settings: settings,
+                startDate: requestedDates.first ?? Date(),
+                endDate: requestedDates.last ?? requestedDates.first ?? Date()
+            )
+            // VaultManager owns the archive commit boundary: cancellation is
+            // honored before publication, while a returned URL is committed
+            // success even if cancellation arrives immediately afterward.
+            guard archiveURL != nil else { throw ExportError.noHealthData }
+            return Result(rollupFileCount: 0, archiveCount: 1)
+        }
+
+        guard !rollupHealthData.isEmpty, HealthRollupExporter.isEnabled(settings: settings) else {
+            return Result(rollupFileCount: 0, archiveCount: 0)
+        }
+        let identifiers = Set(requestedDates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: timeZone.identifier
+            )
+        })
+        let requestedRange = try HealthRollupRangeRequest(
+            ownerDateIdentifiers: identifiers,
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
+        try Task.checkCancellation()
+        let count = try vaultManager.exportRollupSummaries(
+            from: rollupHealthData,
+            requestedRange: requestedRange,
+            settings: settings
+        ).count
+        return Result(rollupFileCount: count, archiveCount: 0)
+    }
+}
+
 // MARK: - Export View — Glass Card Layout
 
 struct MacExportView: View {
@@ -83,16 +223,16 @@ struct MacExportView: View {
                     BrandLabel("Export Folder")
 
                     HStack(spacing: 10) {
-                        if let url = vaultManager.vaultURL {
-                            Image(systemName: "folder.fill")
-                                .foregroundStyle(Color.accent)
+                        if vaultManager.hasVaultSelection {
+                            Image(systemName: vaultManager.vaultURL == nil ? "folder.badge.exclamationmark" : "folder.fill")
+                                .foregroundStyle(vaultManager.vaultURL == nil ? Color.warning : Color.accent)
                                 .font(Typography.body())
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vaultManager.vaultName)
                                     .font(BrandTypography.bodyMedium())
                                     .foregroundStyle(Color.textPrimary)
-                                Text(url.path(percentEncoded: false))
+                                Text(vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
                                     .font(BrandTypography.caption())
                                     .foregroundStyle(Color.textMuted)
                                     .lineLimit(1)
@@ -100,7 +240,7 @@ struct MacExportView: View {
                             }
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("Export folder: \(vaultManager.vaultName)")
-                            .accessibilityValue(url.path(percentEncoded: false))
+                            .accessibilityValue(vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
                         } else {
                             Image(systemName: "folder")
                                 .foregroundStyle(Color.textMuted)
@@ -112,7 +252,7 @@ struct MacExportView: View {
                         }
                         Spacer()
                         Button(
-                            vaultManager.vaultURL != nil
+                            vaultManager.hasVaultSelection
                                 ? String(localized: "Change…")
                                 : String(localized: "Choose…")
                         ) {
@@ -124,7 +264,7 @@ struct MacExportView: View {
                         .tint(Color.accent)
                         .controlSize(.small)
                         .accessibilityLabel(
-                            vaultManager.vaultURL != nil
+                            vaultManager.hasVaultSelection
                                 ? String(localized: "Change export folder")
                                 : String(localized: "Choose export folder")
                         )
@@ -262,25 +402,19 @@ struct MacExportView: View {
                     Divider().background(Color.borderSubtle)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Roll-up summaries")
+                        Text("Range summary")
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
-                        Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                        Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                        Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
-                            .tint(Color.accent)
-                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                        Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
-                            .tint(Color.accent)
-                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                        Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                        Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                             .tint(Color.accent)
                             .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                         Text(
                             advancedSettings.summaryOnlyModeEnabled
-                                ? String(localized: "Only summary files will be written for the full touched week/month/year windows.")
-                                : String(localized: "Generated for every selected format using the full touched week/month/year windows.")
+                                ? String(localized: "Only the range summary will be written for the requested dates.")
+                                : String(localized: "Generated once per selected format for the requested date range.")
                         )
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
@@ -453,9 +587,9 @@ struct MacExportView: View {
                 endDate: endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
-                destinationLabel: vaultManager.vaultURL == nil
-                    ? String(localized: "Mac folder")
-                    : String(localized: "Mac: \(vaultManager.vaultName)"),
+                destinationLabel: vaultManager.hasVaultSelection
+                    ? String(localized: "Mac: \(vaultManager.vaultName)")
+                    : String(localized: "Mac folder"),
                 destinationRootName: nil,
                 dateRangePreset: dateRangePreset,
                 targetType: .localFile,
@@ -465,14 +599,12 @@ struct MacExportView: View {
             )
             .frame(minWidth: 600, minHeight: 600)
         }
-        .alert(
-            resultIsError ? String(localized: "Export Failed") : String(localized: "Export Complete"),
-            isPresented: $showResult
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(resultMessage)
-        }
+        .geistDialog(
+            isPresented: $showResult,
+            title: Text(resultIsError ? String(localized: "Export Failed") : String(localized: "Export Complete")),
+            message: Text(resultMessage),
+            actions: [.action("OK", role: .secondary)]
+        )
     }
 
     // MARK: - Helpers
@@ -488,10 +620,18 @@ struct MacExportView: View {
     }
 
     private var readinessMessage: String {
-        if healthDataStore.recordCount == 0 && vaultManager.vaultURL == nil {
+        if healthDataStore.recordCount == 0 && !vaultManager.hasVaultSelection {
             return String(localized: "Sync health data from your iPhone and choose an export folder to get started.")
         } else if healthDataStore.recordCount == 0 {
             return String(localized: "Sync health data from your iPhone to export.")
+        } else if vaultManager.isVaultDestinationUsable {
+            // Health records and an accessible folder are present, so a blocked
+            // export comes from output configuration (e.g. every file format
+            // deselected), not from folder access; do not send users to repair
+            // a healthy destination.
+            return String(localized: "Choose at least one export format to enable exporting.")
+        } else if vaultManager.hasVaultSelection {
+            return String(localized: "Reconnect or re-select \(vaultManager.vaultName) to restore export access.")
         } else {
             return String(localized: "Choose an export folder to get started.")
         }
@@ -582,14 +722,23 @@ struct MacExportView: View {
 
     // MARK: - Export Logic
 
-    private func rollupHealthData(for selectedDates: [Date], seedData: [HealthData]) -> [HealthData] {
-        guard HealthRollupExporter.isEnabled(settings: advancedSettings) else { return seedData }
-        let calendar = Calendar.current
+    private func rollupHealthData(
+        for selectedDates: [Date],
+        seedData: [HealthData],
+        settings: AdvancedExportSettings
+    ) -> [HealthData] {
+        guard HealthRollupExporter.isEnabled(settings: settings) else { return seedData }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
         var dataByDay = Dictionary(uniqueKeysWithValues: seedData.map { data in
             (calendar.startOfDay(for: data.date), data)
         })
 
-        let sourceDates = ExportOrchestrator.rollupSourceDates(for: selectedDates, settings: advancedSettings)
+        let sourceDates = ExportOrchestrator.rollupSourceDates(
+            for: selectedDates,
+            settings: settings,
+            calendar: calendar
+        )
         for date in sourceDates {
             let day = calendar.startOfDay(for: date)
             guard dataByDay[day] == nil else { continue }
@@ -615,22 +764,43 @@ struct MacExportView: View {
                 exportTask = nil
             }
 
-            let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: startDate,
+                to: endDate,
+                calendar: calendar
+            )
+            let settingsSnapshot = ExportSettingsSnapshot.from(
+                advancedSettings,
+                healthSubfolder: vaultManager.healthSubfolder,
+                appleExportEngineAuthorityIsFrozen: true,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+            let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+                settingsSnapshot,
+                requestedDates: dates,
+                calendarTimeZone: frozenTimeZone
+            )
+            let exportSettings = rangeAvailability.snapshot.makeAdvancedExportSettings()
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
 
             var successCount = 0
             let totalCount = dates.count
             var failedDateDetails: [FailedDateDetail] = []
-            var partialFailures: [ExportPartialFailure] = []
+            var partialFailures: [ExportPartialFailure] = rangeAvailability.warning.map { [$0] } ?? []
             var successfulHealthData: [HealthData] = []
             var dailyNoteUpdateCount = 0
             var dailyNoteSkipCount = 0
             var completedDates: [Date] = []
+            var wasCancelled = false
 
             do {
                 try vaultManager.preflightExportDestinations(
-                    settings: advancedSettings,
+                    settings: exportSettings,
                     dates: dates
                 )
             } catch {
@@ -645,7 +815,7 @@ struct MacExportView: View {
                     successCount: 0,
                     totalCount: totalCount,
                     failedDateDetails: details,
-                    formatsPerDate: advancedSettings.looseFormatsPerDate,
+                    formatsPerDate: exportSettings.looseFormatsPerDate,
                     completedDates: []
                 )
                 ExportOrchestrator.recordResult(
@@ -667,7 +837,7 @@ struct MacExportView: View {
                         successCount: successCount,
                         totalCount: totalCount,
                         failedDateDetails: failedDateDetails,
-                        formatsPerDate: advancedSettings.looseFormatsPerDate,
+                        formatsPerDate: exportSettings.looseFormatsPerDate,
                         dailyNoteUpdateCount: dailyNoteUpdateCount,
                         dailyNoteSkipCount: dailyNoteSkipCount,
                         wasCancelled: true,
@@ -682,7 +852,7 @@ struct MacExportView: View {
                     )
 
                     resultIsError = false
-                    if advancedSettings.dailyNotesOnlyModeEnabled {
+                    if exportSettings.dailyNotesOnlyModeEnabled {
                         resultMessage = dailyNoteUpdateCount > 0
                             ? "Daily note update stopped — \(dailyNoteUpdateCount) of \(totalCount) notes updated."
                             : "Daily note update cancelled."
@@ -696,64 +866,58 @@ struct MacExportView: View {
                 }
 
                 let dateString = dateFormatter.string(from: date)
-                exportStatusMessage = advancedSettings.summaryOnlyModeEnabled
+                exportStatusMessage = exportSettings.summaryOnlyModeEnabled
                     ? "Preparing summaries… (\(index + 1)/\(totalCount))"
-                    : (advancedSettings.dailyNotesOnlyModeEnabled
+                    : (exportSettings.dailyNotesOnlyModeEnabled
                        ? "Updating daily note \(dateString)… (\(index + 1)/\(totalCount))"
                        : "Exporting \(dateString)… (\(index + 1)/\(totalCount))")
                 exportProgress = Double(index + 1) / Double(totalCount)
 
                 guard let healthData = healthDataStore.fetchHealthData(for: date) else {
-                    if !advancedSettings.summaryOnlyModeEnabled {
+                    if !exportSettings.summaryOnlyModeEnabled {
                         failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                     }
                     continue
                 }
 
-                if advancedSettings.summaryOnlyModeEnabled {
+                if exportSettings.summaryOnlyModeEnabled || exportSettings.archiveModeEnabled {
                     successfulHealthData.append(healthData)
                     continue
                 }
 
                 do {
-                    let writeResult = try await vaultManager.exportHealthData(
+                    let committed = try await MacManualDailyOutputCommitter.commit(
                         healthData,
-                        settings: advancedSettings,
-                        operationSurface: .localVaultWithoutSideEffects
+                        settings: exportSettings,
+                        vaultManager: vaultManager
                     )
-                    dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
-                    dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
-                    if advancedSettings.dailyNotesOnlyModeEnabled {
-                        switch writeResult.dailyNoteResult {
-                        case .updated:
-                            break
-                        case .skipped(let reason):
-                            failedDateDetails.append(FailedDateDetail(
-                                date: date,
-                                reason: .noHealthData,
-                                errorDetails: reason
-                            ))
-                            completedDates.append(date)
-                            continue
-                        case .failed(let error):
-                            failedDateDetails.append(FailedDateDetail(
-                                date: date,
-                                reason: .fileWriteError,
-                                errorDetails: error.localizedDescription
-                            ))
-                            continue
-                        case .none:
-                            failedDateDetails.append(FailedDateDetail(
-                                date: date,
-                                reason: .fileWriteError,
-                                errorDetails: "Daily note update was not performed."
-                            ))
-                            continue
-                        }
+                    // `commit` returns only after the daily destination output is
+                    // authoritative. Record it before acknowledging cancellation
+                    // that may have arrived after that publication boundary.
+                    dailyNoteUpdateCount += committed.writeResult.dailyNoteUpdatedCount
+                    dailyNoteSkipCount += committed.writeResult.dailyNoteSkippedCount
+                    partialFailures.append(
+                        contentsOf: committed.writeResult.individualEntryCoverageGaps
+                    )
+                    if let failure = committed.failedDateDetail {
+                        failedDateDetails.append(failure)
                     }
-                    successfulHealthData.append(healthData)
-                    successCount += 1
-                    completedDates.append(date)
+                    if committed.completedWithoutSuccess {
+                        completedDates.append(date)
+                    }
+                    if committed.didSucceed {
+                        successfulHealthData.append(healthData)
+                        successCount += 1
+                        completedDates.append(date)
+                    }
+                    if Task.isCancelled {
+                        wasCancelled = true
+                        break
+                    }
+                    if !committed.didSucceed { continue }
+                } catch is CancellationError {
+                    wasCancelled = true
+                    break
                 } catch {
                     failedDateDetails.append(FailedDateDetail(
                         date: date, reason: .unknown, errorDetails: error.localizedDescription
@@ -761,13 +925,97 @@ struct MacExportView: View {
                 }
             }
 
+            // Cancellation after the final daily await is a hard boundary: no range-derived
+            // roll-up or archive may begin after this point.
+            if Task.isCancelled { wasCancelled = true }
+            if wasCancelled {
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: successCount,
+                    totalCount: totalCount,
+                    failedDateDetails: failedDateDetails,
+                    formatsPerDate: exportSettings.looseFormatsPerDate,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
+                    wasCancelled: true,
+                    completedDates: completedDates
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: dates.first ?? startDate,
+                    dateRangeEnd: dates.last ?? endDate
+                )
+                resultIsError = false
+                resultMessage = exportSettings.dailyNotesOnlyModeEnabled && dailyNoteUpdateCount > 0
+                    ? "Daily note update stopped — \(dailyNoteUpdateCount) of \(totalCount) notes updated."
+                    : String(localized: "Export cancelled.", comment: "Export was cancelled")
+                showResult = true
+                return
+            }
+
             var rollupFileCount = 0
-            let rollupHealthData = rollupHealthData(for: dates, seedData: successfulHealthData)
-            if !rollupHealthData.isEmpty && HealthRollupExporter.isEnabled(settings: advancedSettings) {
-                do {
-                    rollupFileCount = try vaultManager.exportRollupSummaries(from: rollupHealthData, settings: advancedSettings).count
-                } catch {
-                    let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
+            var archiveCount = 0
+            let rollupHealthData = rollupHealthData(
+                for: dates,
+                seedData: successfulHealthData,
+                settings: exportSettings
+            )
+            do {
+                let derived = try await MacManualRangeDerivedOutputCommitter.commit(
+                    requestedDates: dates,
+                    capturedHealthData: successfulHealthData,
+                    rollupHealthData: rollupHealthData,
+                    settings: exportSettings,
+                    timeZone: frozenTimeZone,
+                    fetchHealthData: healthDataStore.fetchHealthData(for:),
+                    vaultManager: vaultManager
+                )
+                // The committer returns only after its publication boundary. Do
+                // not relabel a committed archive/roll-up as cancelled afterward.
+                rollupFileCount = derived.rollupFileCount
+                archiveCount = derived.archiveCount
+                if archiveCount > 0 {
+                    // Archive mode has no loose daily commit. The ZIP is the sole success boundary.
+                    successCount = totalCount
+                    completedDates = dates
+                    failedDateDetails.removeAll()
+                } else if exportSettings.summaryOnlyModeEnabled, rollupFileCount > 0 {
+                    successCount = totalCount
+                    completedDates = dates
+                }
+            } catch is CancellationError {
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: successCount,
+                    totalCount: totalCount,
+                    failedDateDetails: failedDateDetails,
+                    formatsPerDate: exportSettings.looseFormatsPerDate,
+                    wasCancelled: true,
+                    completedDates: completedDates
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: dates.first ?? startDate,
+                    dateRangeEnd: dates.last ?? endDate
+                )
+                resultIsError = false
+                resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
+                showResult = true
+                return
+            } catch {
+                let firstDate = successfulHealthData.map(\.date).sorted().first
+                    ?? dates.first ?? Date()
+                if exportSettings.archiveModeEnabled {
+                    successCount = 0
+                    completedDates = []
+                    failedDateDetails = dates.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        )
+                    }
+                } else {
                     partialFailures.append(ExportPartialFailure(
                         date: firstDate,
                         dataType: "Roll-up summaries",
@@ -777,29 +1025,24 @@ struct MacExportView: View {
                 }
             }
 
-            if advancedSettings.summaryOnlyModeEnabled {
-                if rollupFileCount > 0 {
-                    successCount = totalCount
-                    completedDates = dates
-                } else if totalCount > 0 && failedDateDetails.isEmpty {
-                    failedDateDetails.append(FailedDateDetail(
-                        date: dates.first ?? startDate,
-                        reason: .noHealthData,
-                        errorDetails: "No roll-up summary data was available for the selected period."
-                    ))
-                }
+            let hasRenderableSummaryData = successfulHealthData.contains {
+                $0.preparedExport(settings: exportSettings).hasAnyData
             }
-
-            let result = ExportOrchestrator.ExportResult(
+            let result = MacLocalExportResultReconciliation.makeResult(
+                requestedDates: dates,
                 successCount: successCount,
-                totalCount: totalCount,
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
-                formatsPerDate: advancedSettings.looseFormatsPerDate,
+                formatsPerDate: exportSettings.looseFormatsPerDate,
                 rollupFileCount: rollupFileCount,
+                archiveCount: archiveCount,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
-                completedDates: completedDates
+                completedDates: completedDates,
+                summaryOnly: exportSettings.summaryOnlyModeEnabled,
+                capturedRequestedDates: successfulHealthData.map(\.date),
+                hasRenderableSummaryData: hasRenderableSummaryData,
+                calendar: calendar
             )
 
             ExportOrchestrator.recordResult(
@@ -811,21 +1054,25 @@ struct MacExportView: View {
 
             if result.isFullSuccess {
                 resultIsError = false
-                if advancedSettings.dailyNotesOnlyModeEnabled {
+                // Informational omissions (for example a WorkoutKit plan this
+                // device cannot decode) keep full-success status; surface them
+                // as a note rather than letting them pass unnoticed.
+                let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
+                if exportSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) daily notes.")
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))."
+                    resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription)).\(noteSuffix)"
                 } else {
-                    resultMessage = result.localizedGeneratedFileAndDataDayDescription
+                    resultMessage = result.localizedGeneratedFileAndDataDayDescription + noteSuffix
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
-                let suffix = result.hasPartialFailures
+                let suffix = result.hasDegradingPartialFailures
                     ? result.localizedPartialFailureSummary
                     : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
-                if advancedSettings.dailyNotesOnlyModeEnabled && result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {
+                if exportSettings.dailyNotesOnlyModeEnabled && result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {
                     resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created.")
-                } else if advancedSettings.dailyNotesOnlyModeEnabled {
+                } else if exportSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)")
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription)). \(suffix)"
@@ -834,7 +1081,7 @@ struct MacExportView: View {
                 }
             } else {
                 resultIsError = true
-                resultMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                resultMessage = exportSettings.dailyNotesOnlyModeEnabled
                     ? String(localized: "No daily notes were updated.")
                     : (result.primaryFailureReason?.detailedDescription ?? String(localized: "No synced data found for the selected date range.", comment: "Export failure reason"))
             }

@@ -30,6 +30,14 @@ For the intended API-complete profile:
 
 `pageSize` is an execution hint from 1 through 5000 and MUST NOT change logical contents. `includeExerciseRoutes=false` intentionally removes the entire `fields.route` member; it does not emit `route:null`.
 
+### 2.1.1 Third-party exercise route consent
+
+Health Connect returns `route.state=consent_required` for any `exercise_session` written by another app: the route is withheld behind a per-session, user-initiated consent grant (`ExerciseRouteRequestContract`) that the ordinary permission flow cannot request. The wire format is unchanged by consent handling:
+
+* Interactive, user-triggered exports from the app UI MAY launch Health Connect's per-session consent prompts and merge each granted route into the exported record exactly as if Health Connect had returned `ExerciseRouteResult.Data` inline — same `route.state=data`, same location shape, same canonical order. One manual export run is globally serialized and limited to 10 prompts across its whole date range and all artifacts, preferring the newest sessions. The pinned SDK `androidx.health.connect:connect-client:1.2.0-alpha02` has no batched flow.
+* Raw Preview never requests route consent because the grant persists precise location access and Preview has no separate disclosure/authorization step. A denied, dismissed, or skipped session, Preview, and every non-interactive consumer — scheduled exports, automation, and the direct CLI protocol, which has no Activity to host the consent contract — MUST keep exporting `route.state=consent_required` with an empty `locations` array. That state is the machine-readable truth, not an error, and MUST NOT fail or partial the snapshot.
+* Grants persist inside Health Connect per app and session: once granted in an interactive run, later reads (including non-interactive ones) return the route inline as `data` with no protocol or schema change.
+
 ### 2.1 Scope
 
 `SELECTED_RECORD_TYPES` resolves each `selectedMetricIds` value through the catalog ledger. The union of matching native descriptors is read once. One metric can select several descriptors and one descriptor can serve several metrics. Unknown metric IDs produce an issue and make the snapshot `PARTIAL`.

@@ -11,29 +11,41 @@ repository.workspace = true
 homepage.workspace = true
 publish = ["crates-io"]
 
+[features]
+default = []
+# Compatibility alias retained for alpha.6 source-install commands. Wake requests are now
+# compiled into every healthmd-client build; every failure still degrades to the P1 window.
+wake-worker = []
+
 [dependencies]
 async-trait.workspace = true
 base64.workspace = true
 cap-fs-ext.workspace = true
 cap-std.workspace = true
 chrono.workspace = true
+hmac.workspace = true
+reqwest.workspace = true
 chrono-tz.workspace = true
 directories.workspace = true
 dunce.workspace = true
 fs2.workspace = true
-healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.1" }
+healthmd-protocol = { path = "../../../../packages/healthmd-core-rust/crates/healthmd-protocol", version = "=0.1.0-alpha.7" }
 keyring.workspace = true
 same-file.workspace = true
 secrecy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+socket2 = { version = "0.6", features = ["all"] }
 thiserror.workspace = true
 sysinfo.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 unicode-casefold.workspace = true
 unicode-normalization.workspace = true
+# MSRV guard for the tinyvec 1.13 `alloc::vec` breakage; see the workspace root.
+tinyvec.workspace = true
 uuid.workspace = true
 
 [target.'cfg(unix)'.dependencies]

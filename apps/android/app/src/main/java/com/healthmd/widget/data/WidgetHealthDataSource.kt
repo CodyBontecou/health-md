@@ -5,6 +5,7 @@ import com.healthmd.data.health.HealthConnectWidgetReadSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.widget.model.HealthWidgetSnapshot
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 interface WidgetHealthDataSource {
@@ -12,6 +13,7 @@ interface WidgetHealthDataSource {
         today: LocalDate,
         selection: HealthConnectWidgetReadSelection,
         dayCount: Int = HealthWidgetSnapshot.SNAPSHOT_DAY_COUNT,
+        zoneId: ZoneId = ZoneId.systemDefault(),
     ): List<HealthData>
 
     suspend fun isAvailable(): Boolean
@@ -26,6 +28,7 @@ class HealthConnectWidgetDataSource @Inject constructor(
         today: LocalDate,
         selection: HealthConnectWidgetReadSelection,
         dayCount: Int,
+        zoneId: ZoneId,
     ): List<HealthData> {
         require(selection.hasAny) { "At least one widget health record family is required." }
         val boundedDayCount = dayCount.coerceIn(1, HealthWidgetSnapshot.SNAPSHOT_DAY_COUNT)
@@ -35,6 +38,7 @@ class HealthConnectWidgetDataSource @Inject constructor(
         val fetchedByDate = provider.fetchWidgetHealthDataRange(
             dates = dates,
             selection = selection,
+            zoneId = zoneId,
         ).associateBy(HealthData::date)
 
         // Preserve missing dates so chart positions continue to represent calendar days.

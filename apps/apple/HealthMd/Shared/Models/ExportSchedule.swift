@@ -6,7 +6,7 @@ enum ScheduledExportKind: String, Codable, Equatable, CaseIterable {
 }
 
 /// Represents the configuration for scheduled health data exports
-struct ExportSchedule: Codable {
+struct ExportSchedule: Codable, Equatable {
     /// Whether scheduled exports are enabled
     var isEnabled: Bool {
         didSet {

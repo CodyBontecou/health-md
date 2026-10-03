@@ -19,6 +19,7 @@ import org.robolectric.annotation.Config
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import kotlin.time.Duration.Companion.seconds
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -46,7 +47,7 @@ class HealthWidgetGlanceTest {
     )
 
     @Test
-    fun `compact summary renders current steps and opens the app`() = runGlanceAppWidgetUnitTest {
+    fun `compact summary renders current steps and opens the app`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Compact)
         provideComposable {
@@ -67,7 +68,7 @@ class HealthWidgetGlanceTest {
 
     @Test
     fun `large font compact summary prioritizes steps and stale status without clipping extras`() =
-        runGlanceAppWidgetUnitTest {
+        runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
             setContext(contextWithFontScale(1.3f))
             setAppWidgetSize(HealthWidgetSizes.Compact)
             provideComposable {
@@ -88,7 +89,7 @@ class HealthWidgetGlanceTest {
 
     @Test
     fun `large font compact activity switches to three textual metric lines`() =
-        runGlanceAppWidgetUnitTest {
+        runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
             setContext(contextWithFontScale(1.3f))
             setAppWidgetSize(HealthWidgetSizes.Compact)
             provideComposable {
@@ -109,7 +110,7 @@ class HealthWidgetGlanceTest {
         }
 
     @Test
-    fun `medium summary keeps activity sleep and heart sections`() = runGlanceAppWidgetUnitTest {
+    fun `medium summary keeps activity sleep and heart sections`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Medium)
         provideComposable {
@@ -129,7 +130,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `wide activity layout keeps textual labels beside ring artwork`() = runGlanceAppWidgetUnitTest {
+    fun `wide activity layout keeps textual labels beside ring artwork`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Wide)
         provideComposable {
@@ -149,7 +150,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `tall sleep layout renders summary and timing labels`() = runGlanceAppWidgetUnitTest {
+    fun `tall sleep layout renders summary and timing labels`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Large)
         provideComposable {
@@ -170,7 +171,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `wide heart layout keeps minimum and maximum word order resource controlled`() = runGlanceAppWidgetUnitTest {
+    fun `wide heart layout keeps minimum and maximum word order resource controlled`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Wide)
         provideComposable {
@@ -189,7 +190,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `large heart layout renders RMSSD value`() = runGlanceAppWidgetUnitTest {
+    fun `large heart layout renders RMSSD value`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Large)
         provideComposable {
@@ -207,7 +208,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `stale measurements retain values and show their age`() = runGlanceAppWidgetUnitTest {
+    fun `stale measurements retain values and show their age`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Compact)
         provideComposable {
@@ -227,7 +228,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `measurements older than cutoff are hidden`() = runGlanceAppWidgetUnitTest {
+    fun `measurements older than cutoff are hidden`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Compact)
         provideComposable {
@@ -246,7 +247,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `revoked kind hides cached measurements`() = runGlanceAppWidgetUnitTest {
+    fun `revoked kind hides cached measurements`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Wide)
         provideComposable {
@@ -265,7 +266,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `before-first-unlock state contains no measurements`() = runGlanceAppWidgetUnitTest {
+    fun `before-first-unlock state contains no measurements`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Wide)
         provideComposable {
@@ -295,7 +296,7 @@ class HealthWidgetGlanceTest {
     }
 
     @Test
-    fun `missing snapshot renders loading state`() = runGlanceAppWidgetUnitTest {
+    fun `missing snapshot renders loading state`() = runGlanceAppWidgetUnitTest(timeout = 10.seconds) {
         setContext(ApplicationProvider.getApplicationContext())
         setAppWidgetSize(HealthWidgetSizes.Wide)
         provideComposable {

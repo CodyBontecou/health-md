@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonObject
 const val DIRECT_PORT: Int = 17_647
 const val TRANSPORT_PROTOCOL_VERSION: Int = 1
 const val ANDROID_PAIRING_PROTOCOL_VERSION: Int = 2
+const val SHARED_PAIRING_PROTOCOL_VERSION: Int = 3
 const val ANDROID_APPLICATION_PROTOCOL_VERSION: Int = 2
 const val MAXIMUM_PACKET_BYTES: Int = 2 * 1024 * 1024
 const val MAXIMUM_CHUNK_BYTES: Int = 512 * 1024
@@ -86,6 +87,9 @@ data class NegotiationHello(
     // iOS query protocol v3 is advertised on the shared v1 hello. Android does not use the
     // capability, but must decode a current CLI hello without weakening strict unknown-key checks.
     val query: JsonObject? = null,
+    // RFC-0005 P2 wake enrollment uses the same additive hello capability. Android (P3) does not
+    // enroll yet, but must still decode a current CLI hello strictly.
+    val wake: JsonObject? = null,
 )
 
 @Serializable
@@ -113,7 +117,19 @@ enum class ArtifactFormat {
 enum class SettingsPolicy {
     @SerialName("requested_scope") REQUESTED_SCOPE,
     @SerialName("saved_device_settings") SAVED_DEVICE_SETTINGS,
+    /** Resolve settings from a named export profile on the Android source by stable ID
+     * (additive; older peers fail closed on the unknown variant). */
+    @SerialName("profile") PROFILE,
 }
+
+/** Reference to an export profile resolved on the Android source. The stable profile ID is
+ * authoritative; the name is a display convenience used for resolution only when the ID is
+ * absent. */
+@Serializable
+data class ProfileReference(
+    @SerialName("profile_id") val profileId: String,
+    val name: String? = null,
+)
 
 @Serializable
 data class ArtifactSchema(

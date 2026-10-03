@@ -63,6 +63,8 @@ data class ExportHistoryEntry(
     val exportMode: ExportMode = ExportMode.COMPATIBILITY,
     /** Internal idempotency key for one durable scheduled reconciliation attempt. */
     val reconciliationKey: String? = null,
+    /** Export profile display name when this run executed under a profile (phase 6). */
+    val profileName: String? = null,
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0
     val isPartialSuccess: Boolean get() = successCount in 1 until totalCount

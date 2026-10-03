@@ -10,8 +10,12 @@ import SwiftUI
 struct IndividualTrackingView: View {
     @ObservedObject var settings: IndividualTrackingSettings
     @ObservedObject var metricSelection: MetricSelectionState
+    /// Selection-consistent tracking mutator owned by AdvancedExportSettings.
+    /// Toggling tracking on also enables the metric for the daily export.
+    var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var expandedCategories: Set<HealthMetricCategory> = []
 
     private var usesAccessibilityLayout: Bool {
@@ -84,7 +88,7 @@ struct IndividualTrackingView: View {
 
     private var enableCard: some View {
         card {
-            Toggle(isOn: $settings.globalEnabled) {
+            Toggle(isOn: configurationProtection.protecting($settings.globalEnabled)) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Enable Individual Entry Tracking")
                         .font(.body.weight(.semibold))
@@ -125,10 +129,10 @@ struct IndividualTrackingView: View {
     private var quickActionsCard: some View {
         sectionGroup(title: "Quick Actions") {
             VStack(alignment: .leading, spacing: Spacing.md) {
-                Toggle(isOn: Binding(
+                Toggle(isOn: configurationProtection.protecting(Binding(
                     get: { tracksAllEnabledMetrics },
                     set: { setTracksAllEnabledMetrics($0) }
-                )) {
+                ))) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(LocalizedStringKey(tracksAllEnabledMetrics ? "All Enabled Metrics Tracked" : "Track All Enabled Metrics"))
                             .font(.body.weight(.semibold))
@@ -175,7 +179,9 @@ struct IndividualTrackingView: View {
         accessibilityHint: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        Button(action: {
+            configurationProtection.performConfigurationChange(action)
+        }) {
             HStack(spacing: Spacing.xs) {
                 Image(systemName: icon)
                     .font(.footnote.weight(.semibold))
@@ -222,6 +228,7 @@ struct IndividualTrackingView: View {
                             category: category,
                             settings: settings,
                             metricSelection: metricSelection,
+                            setIndividuallyTracked: setIndividuallyTracked,
                             isExpanded: expandedCategories.contains(category),
                             onToggleExpand: { toggleCategory(category) }
                         )
@@ -387,7 +394,7 @@ struct IndividualTrackingView: View {
         accessibilityLabel: String,
         accessibilityHint: String
     ) -> some View {
-        TextField(placeholder, text: text)
+        TextField(placeholder, text: configurationProtection.protecting(text))
             .font(.footnote.monospaced())
             .foregroundStyle(Color.textPrimary)
             .multilineTextAlignment(usesAccessibilityLayout ? .leading : .trailing)
@@ -413,7 +420,7 @@ struct IndividualTrackingView: View {
         isOn: Binding<Bool>,
         accessibilityLabel: String
     ) -> some View {
-        Toggle(isOn: isOn) {
+        Toggle(isOn: configurationProtection.protecting(isOn)) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.body.weight(.semibold))
@@ -573,7 +580,7 @@ struct IndividualTrackingView: View {
 
         guard shouldTrack else { return }
         for metric in individualTrackableMetrics {
-            settings.setTrackIndividually(metric.id, enabled: true)
+            setIndividuallyTracked(metric.id, true)
         }
     }
 
@@ -662,6 +669,7 @@ struct CategoryTrackingRow: View {
     let category: HealthMetricCategory
     @ObservedObject var settings: IndividualTrackingSettings
     @ObservedObject var metricSelection: MetricSelectionState
+    var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
     let isExpanded: Bool
     let onToggleExpand: () -> Void
 
@@ -717,7 +725,11 @@ struct CategoryTrackingRow: View {
 
         return VStack(spacing: 0) {
             ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
-                MetricTrackingRow(metric: metric, settings: settings)
+                MetricTrackingRow(
+                    metric: metric,
+                    settings: settings,
+                    setIndividuallyTracked: setIndividuallyTracked
+                )
 
                 if index < metrics.count - 1 {
                     rowDivider
@@ -769,12 +781,14 @@ struct CategoryTrackingRow: View {
 struct MetricTrackingRow: View {
     let metric: HealthMetricDefinition
     @ObservedObject var settings: IndividualTrackingSettings
+    var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
-        Toggle(isOn: Binding(
+        Toggle(isOn: configurationProtection.protecting(Binding(
             get: { settings.shouldTrackIndividually(metric.id) },
-            set: { settings.setTrackIndividually(metric.id, enabled: $0) }
-        )) {
+            set: { setIndividuallyTracked(metric.id, $0) }
+        ))) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: Spacing.xs) {
                     Text(metric.name)
@@ -837,4 +851,5 @@ private struct IndividualTrackingStatePill: View {
             metricSelection: MetricSelectionState()
         )
     }
+    .environmentObject(ConfigurationProtectionManager())
 }

@@ -62,6 +62,7 @@ struct DailyNoteInjector {
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
         metricSelection: MetricSelectionState,
+        calendarTimeZone: TimeZone = .current,
         fileSystem: FileSystemAccessing = SystemFileSystem(),
         fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
         destinationBinding: AppleVaultDestinationBinding? = nil,
@@ -73,11 +74,13 @@ struct DailyNoteInjector {
         let targetURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings,
-            date: healthData.date
+            date: healthData.date,
+            timeZone: calendarTimeZone
         )
         let relativePath = ExportPathPlanner.dailyNoteRelativePath(
             settings: settings,
-            date: healthData.date
+            date: healthData.date,
+            timeZone: calendarTimeZone
         )
 
         do {
@@ -118,7 +121,7 @@ struct DailyNoteInjector {
                     ) else {
                         return .skipped(reason: "No data available for enabled metrics on this date")
                     }
-                    let updatedContent = mergedContent(
+                    let updatedContent = try mergedContent(
                         existing: existingContent,
                         injectionContent: injectionContent,
                         settings: settings
@@ -156,7 +159,7 @@ struct DailyNoteInjector {
                     return .skipped(reason: "No data available for enabled metrics on this date")
                 }
 
-                let updatedContent = mergedContent(
+                let updatedContent = try mergedContent(
                     existing: existingContent,
                     injectionContent: injectionContent,
                     settings: settings
@@ -182,7 +185,8 @@ struct DailyNoteInjector {
         base: InjectionPreviewBase,
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
-        metricSelection: MetricSelectionState
+        metricSelection: MetricSelectionState,
+        calendarTimeZone: TimeZone = .current
     ) -> InjectionPreviewResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
@@ -203,16 +207,28 @@ struct DailyNoteInjector {
             existingContent = ""
         }
 
-        let content = mergedContent(
-            existing: existingContent,
-            injectionContent: injectionContent,
-            settings: settings
-        )
-        let filename = settings.formatFilename(for: healthData.date) + ".md"
+        let content: String
+        do {
+            content = try mergedContent(
+                existing: existingContent,
+                injectionContent: injectionContent,
+                settings: settings
+            )
+        } catch {
+            return .skipped(reason: error.localizedDescription)
+        }
+        let filename = settings.formatFilename(
+            for: healthData.date,
+            timeZone: calendarTimeZone
+        ) + ".md"
 
         return .preview(InjectionPreview(
             filename: filename,
-            path: ExportPathPlanner.dailyNoteRelativePath(settings: settings, date: healthData.date),
+            path: ExportPathPlanner.dailyNoteRelativePath(
+                settings: settings,
+                date: healthData.date,
+                timeZone: calendarTimeZone
+            ),
             content: content
         ))
     }
@@ -268,15 +284,20 @@ struct DailyNoteInjector {
         existing: String,
         injectionContent: InjectionContent,
         settings: DailyNoteInjectionSettings
-    ) -> String {
+    ) throws -> String {
         if settings.injectMarkdownSections {
-            return MarkdownMerger.mergePreservingPreamble(
+            switch MarkdownMerger.mergePreservingPreambleOutcome(
                 existing: existing,
                 new: injectionContent.frontmatter + injectionContent.body
-            )
+            ) {
+            case .merged(let content):
+                return content
+            case .rejected:
+                throw ExportError.markdownMergeRejected
+            }
         }
 
-        return mergeIntoContent(
+        return try mergeIntoContent(
             existing: existing,
             injectionFrontmatter: injectionContent.frontmatter
         )
@@ -302,38 +323,25 @@ struct DailyNoteInjector {
         return originalKey
     }
 
-    private static func mergeIntoContent(existing: String, injectionFrontmatter: String) -> String {
-        let lines = existing.components(separatedBy: "\n")
-        var existingFrontmatter = ""
-        var bodyStartIndex = 0
-
-        if let first = lines.first,
-           first.trimmingCharacters(in: .whitespaces) == "---" {
-            for i in 1..<lines.count {
-                if lines[i].trimmingCharacters(in: .whitespaces) == "---" {
-                    existingFrontmatter = lines[0...i].joined(separator: "\n") + "\n"
-                    bodyStartIndex = i + 1
-                    break
-                }
-            }
-        }
-
-        if existingFrontmatter.isEmpty {
+    private static func mergeIntoContent(
+        existing: String,
+        injectionFrontmatter: String
+    ) throws -> String {
+        guard let parts = MarkdownMerger.splitFrontmatter(from: existing) else {
             if existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return injectionFrontmatter
             }
             return injectionFrontmatter + "\n" + existing
         }
 
-        let mergedFrontmatter = MarkdownMerger.mergeFrontmatter(
-            existing: existingFrontmatter,
+        switch MarkdownMerger.mergeFrontmatterOutcome(
+            existing: parts.frontmatter,
             new: injectionFrontmatter
-        )
-
-        let body = lines[bodyStartIndex...].joined(separator: "\n")
-        if body.hasPrefix("\n") || body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return mergedFrontmatter + body
+        ) {
+        case .merged(let frontmatter):
+            return frontmatter + parts.body
+        case .rejected:
+            throw ExportError.markdownMergeRejected
         }
-        return mergedFrontmatter + "\n" + body
     }
 }

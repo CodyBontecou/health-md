@@ -25,10 +25,10 @@ description: "選択したApple HealthのJSONを、iPhoneから独自のHTTP(S)�
 
 ## ペイロードの構造
 
-<p>Health.mdは、エクスポート操作ごとに1回POSTします。本文は、独立してバージョン管理された<code>healthmd.api_export</code>エンベロープで、公開スキーマv7の<code>healthmd.health_data</code>日次レコードを含みます。APIエンベロープv1は日次レコードを格納します。v2では、日次レコードのスキーマを変更せずに、プロバイダのサイドカーも追加できます。</p>
+<p>Health.mdは、エクスポート操作ごとに1回POSTします。本文は、独立してバージョン管理された<code>healthmd.api_export</code>エンベロープで、公開スキーマv8の<code>healthmd.health_data</code>日次レコードを含みます。APIエンベロープv1は日次レコードを格納します。v2では、日次レコードのスキーマを変更せずに、プロバイダのサイドカーも追加できます。</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>リクエストした範囲について保持された、完全な日次スキーマv7オブジェクトです。クエリマニフェストがエビデンスとなる、完全だが空のレコードも含みます。</p></div>
+<div class="option"><strong><code>records</code></strong><p>リクエストした範囲について保持された、完全な日次スキーマv8オブジェクトです。クエリマニフェストがエビデンスとなる、完全だが空のレコードも含みます。</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>日次ドキュメントを保持できる前に処理が失敗した日付です。</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p><code>records</code>内の日次スキーマのバージョンです。APIエンベロープのバージョンとは独立して更新されます。</p></div>
 <div class="option"><strong>プロバイダサイドカー</strong><p>接続済みプロバイダが有効な場合に含まれる、独自のスキーマと識別規則を持つ条件付きのv2外部レコードです。</p></div>

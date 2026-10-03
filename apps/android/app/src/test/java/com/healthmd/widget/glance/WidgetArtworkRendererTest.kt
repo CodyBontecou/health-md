@@ -10,7 +10,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+@Config(sdk = [34])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class WidgetArtworkRendererTest {
     private val renderer = WidgetArtworkRenderer()

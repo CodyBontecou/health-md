@@ -22,28 +22,28 @@ final class ExportOrchestratorTests: XCTestCase {
 
     func testDateRange_singleDay() {
         let date = makeDate(2026, 3, 15)
-        let range = ExportOrchestrator.dateRange(from: date, to: date)
+        let range = ExportOrchestrator.dateRange(from: date, to: date, calendar: Calendar.current)
         XCTAssertEqual(range.count, 1)
     }
 
     func testDateRange_threeDays() {
         let start = makeDate(2026, 3, 15)
         let end = makeDate(2026, 3, 17)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertEqual(range.count, 3)
     }
 
     func testDateRange_crossesMonthBoundary() {
         let start = makeDate(2026, 3, 30)
         let end = makeDate(2026, 4, 2)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertEqual(range.count, 4) // Mar 30, 31, Apr 1, 2
     }
 
     func testDateRange_endBeforeStart_returnsEmpty() {
         let start = makeDate(2026, 3, 15)
         let end = makeDate(2026, 3, 14)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertTrue(range.isEmpty)
     }
 
@@ -55,7 +55,7 @@ final class ExportOrchestratorTests: XCTestCase {
         comps.hour = 14; comps.minute = 30
         let midDay = calendar.date(from: comps)!
 
-        let range = ExportOrchestrator.dateRange(from: midDay, to: midDay)
+        let range = ExportOrchestrator.dateRange(from: midDay, to: midDay, calendar: Calendar.current)
         XCTAssertEqual(range.count, 1)
         let resultComps = calendar.dateComponents([.hour, .minute], from: range[0])
         XCTAssertEqual(resultComps.hour, 0)
@@ -65,7 +65,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testDateRange_fullWeek() {
         let start = makeDate(2026, 3, 1)
         let end = makeDate(2026, 3, 7)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertEqual(range.count, 7)
     }
 
@@ -74,6 +74,7 @@ final class ExportOrchestratorTests: XCTestCase {
         let dates = ExportOrchestrator.rollupSourceDates(
             for: [selectedDate],
             periods: [.weekly],
+            calendar: Calendar.current,
             latestAllowedDate: makeDate(2026, 12, 31)
         )
 
@@ -87,6 +88,7 @@ final class ExportOrchestratorTests: XCTestCase {
         let dates = ExportOrchestrator.rollupSourceDates(
             for: [selectedDate],
             periods: [.monthly],
+            calendar: Calendar.current,
             latestAllowedDate: makeDate(2026, 12, 31)
         )
 
@@ -246,6 +248,107 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
     }
 
+    /// Post-export surfaces separate degrading warnings from informational
+    /// notes: a full-success export with notes must never announce "Warning:".
+    func testExportResultSeparatesDegradingWarningsFromInformationalNotes() {
+        let informational = ExportPartialFailure(
+            date: HealthKitFixtures.referenceDate,
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let degrading = ExportPartialFailure(
+            date: HealthKitFixtures.referenceDate,
+            dataType: "workouts",
+            dateRangeDescription: "2026-08-31",
+            errorDescription: "HealthKit query failed"
+        )
+
+        let notesOnly = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            partialFailures: [informational]
+        )
+        XCTAssertTrue(notesOnly.hasPartialFailures)
+        XCTAssertFalse(notesOnly.hasDegradingPartialFailures)
+        XCTAssertEqual(notesOnly.partialFailureSummary, "")
+        XCTAssertEqual(
+            notesOnly.informationalNoteSummary,
+            "Note: \(informational.summary)"
+        )
+        XCTAssertNotNil(notesOnly.localizedInformationalNoteSummary)
+
+        let mixed = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            partialFailures: [informational, degrading]
+        )
+        XCTAssertTrue(mixed.hasDegradingPartialFailures)
+        XCTAssertEqual(
+            mixed.partialFailureSummary,
+            "Warning: \(degrading.summary)"
+        )
+        XCTAssertEqual(
+            mixed.informationalNoteSummary,
+            "Note: \(informational.summary)"
+        )
+
+        let clean = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: []
+        )
+        XCTAssertNil(clean.informationalNoteSummary)
+        XCTAssertEqual(clean.partialFailureSummary, "")
+    }
+
+    /// Scheduled local exports must report an authoritative generated-file
+    /// count so Export History can distinguish a run that wrote files from one
+    /// that wrote none (user report 2026-09-05: scheduled runs showed the legacy
+    /// "Exported 1 of 1 data day(s)" summary while no file appeared).
+    @MainActor
+    func testExportDatesBackground_localVaultRunReportsAuthoritativeFileAccounting() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorScheduledFileAccountingVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEngineAuthorityIsFrozen: true,
+            calendarTimeZoneIdentifier: TimeZone.current.identifier
+        )
+
+        let result = await ExportOrchestrator.exportDatesBackground(
+            [date],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: snapshot.makeAdvancedExportSettings(),
+            frozenSettingsSnapshot: snapshot,
+            operationSurface: .localVaultRangeWithoutSideEffects
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        let writtenLooseFiles = fileSystem.files.keys.filter {
+            !$0.contains("/Rollups/") && !$0.hasSuffix("data_dictionary.json")
+        }
+        XCTAssertFalse(writtenLooseFiles.isEmpty, "scheduled run must write daily files")
+        XCTAssertTrue(
+            result.hasAuthoritativeFileCount,
+            "scheduled background results must carry an authoritative file count"
+        )
+        XCTAssertEqual(result.totalFilesWritten, fileSystem.files.count)
+        XCTAssertEqual(result.looseAggregateFileCount, writtenLooseFiles.count)
+    }
+
     @MainActor
     func testBackgroundExportUsesFrozenSnapshotAndAsyncEnginePlanner() async {
         let date = HealthKitFixtures.referenceDate
@@ -327,6 +430,176 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testPinnedForegroundRangeRetainsSuccessfulEmptyCaptureWithoutDailyArtifact() async throws {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+        let populatedDate = HealthKitFixtures.referenceDate
+        let emptyDate = Calendar.current.date(byAdding: .day, value: 1, to: populatedDate)!
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in
+            guard identifier == .stepCount else { return nil }
+            return store.queriedSumIdentifiers.count == 1 ? 8_642 : nil
+        }
+        let healthKitManager = HealthKitManager(
+            store: store,
+            userDefaults: makeIsolatedDefaults()
+        )
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorPinnedEmptyRangeVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.includeGranularData = false
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        settings.exportTimeZoneOverride = timezone
+        let result = await ExportOrchestrator.exportDates(
+            [populatedDate, emptyDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("/2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.hasSuffix("/2026-03-16.json") })
+        let rangeJSON = try XCTUnwrap(fileSystem.files.first { path, _ in
+            path.contains("/Rollups/Range/") && path.hasSuffix(".json")
+        }?.value)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(rangeJSON.utf8)) as? [String: Any]
+        )
+        XCTAssertEqual(object["days_counted"] as? Int, 2)
+        XCTAssertEqual(object["source_dates"] as? [String], ["2026-03-15", "2026-03-16"])
+    }
+
+    @MainActor
+    func testPinnedForegroundSummaryOnlyRangeRetainsSuccessfulEmptyCaptureWithoutDailyArtifacts() async throws {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+        let populatedDate = HealthKitFixtures.referenceDate
+        let emptyDate = Calendar.current.date(byAdding: .day, value: 1, to: populatedDate)!
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in
+            guard identifier == .stepCount else { return nil }
+            return store.queriedSumIdentifiers.count == 1 ? 8_642 : nil
+        }
+        let healthKitManager = HealthKitManager(
+            store: store,
+            userDefaults: makeIsolatedDefaults()
+        )
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorPinnedEmptySummaryOnlyRangeVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.summaryOnlyExport = true
+        settings.includeGranularData = false
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        settings.exportTimeZoneOverride = timezone
+
+        let result = await ExportOrchestrator.exportDates(
+            [populatedDate, emptyDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.hasSuffix("/2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.hasSuffix("/2026-03-16.json") })
+        let rangeJSON = try XCTUnwrap(fileSystem.files.first { path, _ in
+            path.contains("/Rollups/Range/") && path.hasSuffix(".json")
+        }?.value)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(rangeJSON.utf8)) as? [String: Any]
+        )
+        XCTAssertEqual(object["days_counted"] as? Int, 2)
+        XCTAssertEqual(object["source_dates"] as? [String], ["2026-03-15", "2026-03-16"])
+    }
+
+    @MainActor
+    func testPinnedBackgroundDailyExportContinuesWhenRangeSummaryExceedsTenThousandDays() async throws {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorRangeLimitVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.summaryOnlyExport = true
+        settings.includeGranularData = false
+        let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        settings.exportTimeZoneOverride = timezone
+        let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
+            settings,
+            healthSubfolder: "Health",
+            calendarTimeZone: timezone,
+            surface: .localVaultRangeWithoutSideEffects
+        )
+        XCTAssertNotNil(snapshot.appleExportEnginePin)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timezone
+        let originalStart = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2000,
+            month: 1,
+            day: 1
+        )))
+        let originalEnd = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2027,
+            month: 5,
+            day: 19
+        )))
+
+        let result = await ExportOrchestrator.exportDatesBackground(
+            [date],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: snapshot.makeAdvancedExportSettings(),
+            frozenSettingsSnapshot: snapshot,
+            requestedRollupDates: [originalStart, originalEnd],
+            operationSurface: .localVaultRangeWithoutSideEffects
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.rollupFileCount, 0)
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertEqual(result.partialFailures.map(\.dataType), ["Range Summary"])
+        XCTAssertTrue(result.partialFailureSummary.contains("10,000 days"))
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
+    @MainActor
     func testForegroundRangeReusesOneFrozenAuthoritySnapshotAndTimezone() async {
         let firstDate = HealthKitFixtures.referenceDate
         let secondDate = Calendar.current.date(byAdding: .day, value: 1, to: firstDate)!
@@ -400,6 +673,160 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDates_multiDayCompletesAndReportsProgressPerDay() async {
+        let baseDate = HealthKitFixtures.referenceDate
+        let calendar = Calendar.current
+        let dates = [0, 1, 2].compactMap {
+            calendar.date(byAdding: .day, value: $0, to: baseDate)
+        }
+        let store = FakeHealthStore()
+        for date in dates {
+            HealthKitFixtures.populateAllCategories(store, date: date)
+        }
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/ExportOrchestratorMultiDayProgressVault")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        var progress: [(processed: Int, total: Int, label: String)] = []
+
+        let result = await ExportOrchestrator.exportDates(
+            dates,
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings,
+            onProgress: { processed, total, label in
+                progress.append((processed, total, label))
+            }
+        )
+
+        XCTAssertEqual(result.successCount, 3)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        // Cooperative yields between days must not change onProgress delivery:
+        // one call per day plus the terminal completion call.
+        XCTAssertEqual(progress.map(\.0), [0, 1, 2, 3])
+        XCTAssertTrue(progress.allSatisfy { $0.total == 3 })
+        XCTAssertEqual(progress.dropLast().map(\.2), ["2026-03-15", "2026-03-16", "2026-03-17"])
+        XCTAssertEqual(progress.last?.processed, 3)
+        XCTAssertEqual(progress.last?.label, "2026-03-17")
+    }
+
+    @MainActor
+    func testExportDates_midLoopCancellationKeepsPartialResults() async {
+        let firstDate = HealthKitFixtures.referenceDate
+        let calendar = Calendar.current
+        let remainingDates = [1, 2].compactMap {
+            calendar.date(byAdding: .day, value: $0, to: firstDate)
+        }
+        let dates = [firstDate] + remainingDates
+        let store = FakeHealthStore()
+        for date in dates {
+            HealthKitFixtures.populateAllCategories(store, date: date)
+        }
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/ExportOrchestratorMidLoopCancelVault")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        var progressIndexes: [Int] = []
+
+        var exportTask: Task<ExportOrchestrator.ExportResult, Never>?
+        let task = Task { @MainActor in
+            await ExportOrchestrator.exportDates(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                onProgress: { processed, _, _ in
+                    progressIndexes.append(processed)
+                    if processed == 1 {
+                        exportTask?.cancel()
+                    }
+                }
+            )
+        }
+        exportTask = task
+        let result = await task.value
+
+        // Cancellation lands either in day 1's write (CancellationError) or at
+        // day 2's loop check; both paths must preserve day 0's partial output.
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(progressIndexes, [0, 1], "Progress stops at the cancelled day")
+        XCTAssertGreaterThanOrEqual(result.successCount, 1)
+        XCTAssertLessThanOrEqual(result.successCount, 2)
+        XCTAssertEqual(result.completedDates?.first, firstDate)
+        XCTAssertEqual(result.completedDates?.count, result.successCount)
+    }
+
+    @MainActor
+    func testExportDates_finalDayCancellationStopsBeforeDerivedCommit() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorFinalForegroundCancelVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.includeGranularData = false
+
+        var exportTask: Task<ExportOrchestrator.ExportResult, Never>?
+        let task = Task { @MainActor in
+            await ExportOrchestrator.exportDates(
+                [date],
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                onProgress: { processed, total, _ in
+                    if processed == total { exportTask?.cancel() }
+                }
+            )
+        }
+        exportTask = task
+        let result = await task.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(result.successCount, 1, "The committed daily file remains accounted")
+        XCTAssertEqual(result.rollupFileCount, 0)
+        XCTAssertEqual(result.completedDates, [date])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
+    @MainActor
+    func testExportDatesBackground_finalDayCancellationStopsBeforeDerivedCommit() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorFinalBackgroundCancelVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.includeGranularData = false
+
+        var exportTask: Task<ExportOrchestrator.ExportResult, Never>?
+        let task = Task { @MainActor in
+            await ExportOrchestrator.exportDatesBackground(
+                [date],
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                onProgress: { processed, total, _ in
+                    if processed == total { exportTask?.cancel() }
+                }
+            )
+        }
+        exportTask = task
+        let result = await task.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(result.successCount, 1, "The committed daily file remains accounted")
+        XCTAssertEqual(result.rollupFileCount, 0)
+        XCTAssertEqual(result.completedDates, [date])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
+    @MainActor
     func testDerivedOutputRetention_releasesLooseDaysAndStripsRollupArchives() {
         let date = HealthKitFixtures.referenceDate
         let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!
@@ -435,6 +862,50 @@ final class ExportOrchestratorTests: XCTestCase {
             settings: archiveSettings
         )
         XCTAssertNil(archiveRecord, "Archive source days are disk-backed instead of retained in memory")
+    }
+
+    @MainActor
+    func testDerivedOutputRetention_sanitizesGranularDayBeforeRollupRetention() {
+        let date = HealthKitFixtures.referenceDate
+        var healthData = HealthData(date: date)
+        healthData.activity.steps = 12_500
+        healthData.heart.heartRateSamples = [
+            TimeSample(timestamp: date, value: 72),
+            TimeSample(timestamp: date.addingTimeInterval(60), value: 75),
+        ]
+        healthData.heart.hrvSamples = [
+            TimeSample(timestamp: date, value: 42)
+        ]
+        healthData.vitals.bloodOxygenSamples = [
+            TimeSample(timestamp: date, value: 0.97)
+        ]
+        healthData.sleep.stages = [
+            SleepStageSample(
+                stage: "deep",
+                startDate: date,
+                endDate: date.addingTimeInterval(5_400)
+            )
+        ]
+
+        let rollupSettings = makeExportSettings(formats: [.json], rollupPeriods: [.weekly])
+        let retained = ExportOrchestrator.retainedHealthDataForDerivedOutputs(
+            healthData,
+            settings: rollupSettings
+        )
+
+        // Roll-ups only need daily aggregates; granular time-series must be
+        // sanitized before the day is retained for the whole-run window.
+        XCTAssertEqual(
+            retained?.activity.steps,
+            12_500,
+            "Aggregate metrics must survive retention for roll-up summaries"
+        )
+        XCTAssertTrue(retained?.heart.heartRateSamples.isEmpty == true)
+        XCTAssertTrue(retained?.heart.hrvSamples.isEmpty == true)
+        XCTAssertTrue(retained?.vitals.bloodOxygenSamples.isEmpty == true)
+        XCTAssertTrue(retained?.sleep.stages.isEmpty == true)
+        XCTAssertNil(retained?.healthKitRecordArchive)
+        XCTAssertEqual(retained?.healthKitRecordCaptureStatus, .notRequested)
     }
 
     @MainActor
@@ -507,11 +978,69 @@ final class ExportOrchestratorTests: XCTestCase {
         )
         let archiveData = try Data(contentsOf: archiveURL)
         XCTAssertNotNil(archiveData.range(of: Data("2026-03-15.md".utf8)))
-        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.md".utf8)))
-        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Range/2026-03-15_to_2026-03-15.md".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Range/2026-03-15_to_2026-03-15.json".utf8)))
         XCTAssertFalse(FileManager.default.fileExists(
-            atPath: vaultURL.appendingPathComponent("Health/Rollups/Weekly/2026-W11.md").path
+            atPath: vaultURL.appendingPathComponent("Health/Rollups/Range/2026-03-15_to_2026-03-15.md").path
         ))
+    }
+
+    @MainActor
+    func testBackgroundArchiveRetryPreservesOriginalRangeIdentity() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ExportOrchestratorOriginalArchiveRange-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let originalStart = try XCTUnwrap(utc.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 14
+        )))
+        let originalEnd = try XCTUnwrap(utc.date(from: DateComponents(
+            year: 2026,
+            month: 3,
+            day: 15
+        )))
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: originalStart)
+        HealthKitFixtures.populateAllCategories(store, date: originalEnd)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let bookmarkResolver = FakeBookmarkResolver()
+        bookmarkResolver.accessGranted = true
+        let vaultManager = VaultManager(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        vaultManager.healthSubfolder = "Health"
+        vaultManager.setVaultFolder(vaultURL)
+        Self.retainedManagers.append(vaultManager)
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.archiveExportFiles = true
+        settings.includeGranularData = false
+        settings.exportTimeZoneOverride = utc.timeZone
+
+        let result = await ExportOrchestrator.exportDatesBackground(
+            [originalEnd],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings,
+            requestedRollupDates: [originalStart, originalEnd]
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.archiveCount, 1)
+        let archiveURL = vaultURL.appendingPathComponent(
+            "Health/Health.md Export 2026-03-14_to_2026-03-15.zip"
+        )
+        let archiveData = try Data(contentsOf: archiveURL)
+        XCTAssertNotNil(archiveData.range(of: Data("2026-03-14.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("2026-03-15.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data(
+            "Rollups/Range/2026-03-14_to_2026-03-15.json".utf8
+        )))
     }
 
     @MainActor
@@ -679,35 +1208,37 @@ final class ExportOrchestratorTests: XCTestCase {
             }
         )
 
-        XCTAssertEqual(progress.count, 32)
+        XCTAssertEqual(progress.count, 2)
         XCTAssertEqual(progress.first?.processed, 1)
-        XCTAssertEqual(progress.last?.processed, 32)
+        XCTAssertEqual(progress.last?.processed, 2)
         XCTAssertEqual(progress.last?.date, "summary files")
-        XCTAssertTrue(progress.allSatisfy { $0.total == 32 })
+        XCTAssertTrue(progress.allSatisfy { $0.total == 2 })
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.formatsPerDate, 0)
         XCTAssertEqual(result.rollupFileCount, 1)
-        XCTAssertEqual(result.totalFilesWritten, 1)
+        // Range roll-up + data dictionary (asserted below).
+        XCTAssertEqual(result.totalFilesWritten, 2)
         XCTAssertTrue(result.isFullSuccess)
         XCTAssertNil(fileSystem.files.first { path, _ in
             path.hasSuffix("/Health/2026-03-15.md")
         }, "Summary-only mode must not write daily aggregate files")
 
-        let monthlyRollup = try XCTUnwrap(
+        let rangeRollup = try XCTUnwrap(
             fileSystem.files.first { path, _ in
-                path.hasSuffix("/Health/Rollups/Monthly/2026-03.md")
+                path.hasSuffix("/Health/Rollups/Range/2026-03-15_to_2026-03-15.md")
             }?.value,
-            "Expected monthly roll-up summary"
+            "Expected range-v9 summary"
         )
-        XCTAssertTrue(monthlyRollup.contains("schema: healthmd.rollup_summary"))
-        XCTAssertTrue(monthlyRollup.contains("rollup_period: monthly"))
+        XCTAssertTrue(rangeRollup.contains("schema: healthmd.rollup_summary"))
+        XCTAssertTrue(rangeRollup.contains("schema_version: 9"))
+        XCTAssertTrue(rangeRollup.contains("rollup_period: range"))
         XCTAssertNotNil(fileSystem.files.first { path, _ in
             path.hasSuffix("/Health/_healthmd_data_dictionary.json")
         }, "Summary-only roll-up exports should still write the data dictionary")
         XCTAssertEqual(
             vaultManager.lastExportPresentationTarget,
             ExportPresentationTarget(
-                fileURL: URL(fileURLWithPath: "/tmp/SummaryOnlyVault/Health/Rollups/Monthly/2026-03.md"),
+                fileURL: URL(fileURLWithPath: "/tmp/SummaryOnlyVault/Health/Rollups/Range/2026-03-15_to_2026-03-15.md"),
                 securityScopedRootURL: URL(fileURLWithPath: "/tmp/SummaryOnlyVault")
             )
         )
@@ -744,7 +1275,8 @@ final class ExportOrchestratorTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 0)
-        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
+        XCTAssertEqual(result.failedDateDetails.map(\.date), dates)
         XCTAssertEqual(Set(result.completedDates ?? []), Set(dates))
         XCTAssertTrue(result.didCompleteAllRequestedDates)
     }
@@ -780,9 +1312,9 @@ final class ExportOrchestratorTests: XCTestCase {
             }
         )
 
-        XCTAssertEqual(progress.count, 8)
-        XCTAssertTrue(progress.allSatisfy { $0.total == 8 })
-        XCTAssertEqual(progress.last?.processed, 8)
+        XCTAssertEqual(progress.count, 2)
+        XCTAssertTrue(progress.allSatisfy { $0.total == 2 })
+        XCTAssertEqual(progress.last?.processed, 2)
         XCTAssertEqual(progress.last?.label, "summary files")
     }
 
@@ -825,10 +1357,8 @@ final class ExportOrchestratorTests: XCTestCase {
         let archiveURL = vaultURL.appendingPathComponent("Health/Health.md Export 2026-03-15.zip")
         XCTAssertTrue(FileManager.default.fileExists(atPath: archiveURL.path))
         let archiveData = try Data(contentsOf: archiveURL)
-        XCTAssertNil(archiveData.range(of: Data("2026-03-15.md".utf8)))
-        XCTAssertNil(archiveData.range(of: Data("2026-03-15.json".utf8)))
-        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.md".utf8)))
-        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Weekly/2026-W11.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Range/2026-03-15_to_2026-03-15.md".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Range/2026-03-15_to_2026-03-15.json".utf8)))
     }
 
     @MainActor
@@ -850,7 +1380,8 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.totalCount, 1)
         XCTAssertEqual(result.rollupFileCount, 1)
-        XCTAssertEqual(result.totalFilesWritten, 2)
+        // Markdown daily file + data dictionary + range roll-up.
+        XCTAssertEqual(result.totalFilesWritten, 3)
         XCTAssertTrue(result.failedDateDetails.isEmpty)
         XCTAssertTrue(result.isPartialSuccess)
         XCTAssertFalse(result.isFullSuccess)
@@ -872,15 +1403,16 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertTrue(aggregateOutput.contains("Heart"), "Heart data should still export after a sleep fetch failure")
         XCTAssertTrue(aggregateOutput.contains("Average HR"), "Successful heart values should be written to the export file")
 
-        let weeklyRollup = try XCTUnwrap(
+        let rangeRollup = try XCTUnwrap(
             fileSystem.files.first { path, _ in
-                path.hasSuffix("/Health/Rollups/Weekly/2026-W11.md")
+                path.hasSuffix("/Health/Rollups/Range/2026-03-15_to_2026-03-15.md")
             }?.value,
-            "Expected weekly roll-up summary for the successful daily export"
+            "Expected range-v9 summary for the successful daily export"
         )
-        XCTAssertTrue(weeklyRollup.contains("schema: healthmd.rollup_summary"))
-        XCTAssertTrue(weeklyRollup.contains("days_counted: 7"))
-        XCTAssertTrue(weeklyRollup.contains("| Steps | `steps` | 87,500 | steps | 7/7 | sum |"))
+        XCTAssertTrue(rangeRollup.contains("schema: healthmd.rollup_summary"))
+        XCTAssertTrue(rangeRollup.contains("schema_version: 9"))
+        XCTAssertTrue(rangeRollup.contains("days_counted: 1"))
+        XCTAssertTrue(rangeRollup.contains("| Steps | `steps` | 12,500 | steps | 1/1 | sum |"))
     }
 
     func testExportResult_cancelled_withSomeSuccess() {
@@ -945,6 +1477,7 @@ final class ExportOrchestratorTests: XCTestCase {
             defaults: defaults,
             fileSystem: fileSystem,
             bookmarkResolver: bookmarkResolver,
+            identityProbe: FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         manager.healthSubfolder = "Health"
@@ -960,9 +1493,8 @@ final class ExportOrchestratorTests: XCTestCase {
     ) -> AdvancedExportSettings {
         let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
         settings.exportFormats = formats
-        settings.generateWeeklyRollups = rollupPeriods.contains(.weekly)
-        settings.generateMonthlyRollups = rollupPeriods.contains(.monthly)
-        settings.generateYearlyRollups = rollupPeriods.contains(.yearly)
+        settings.generateRangeSummary = !rollupPeriods.isEmpty
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
         Self.retainedSettings.append(settings)
         return settings
     }

@@ -9,9 +9,9 @@
 
 ## What it does
 
-Vault Folder Selection tells Health.md where to write exported health files. The folder can be an Obsidian vault, an iCloud Drive folder, or a local folder in Files. Health.md stores secure folder access so future manual, scheduled, and Shortcut exports can write to the same location.
+Vault Folder Selection tells Health.md where to write exported health files. The folder can be an Obsidian vault, an iCloud Drive folder, or a local folder in Files. Health.md stores secure folder access so future manual, scheduled, and Shortcut exports can write to the same location. The security-scoped bookmark remains the access authority. When the selected volume supports persistent IDs, Health.md also stores the folder's volume UUID and file identifier so a File Provider can move or rename the same folder without making it appear unselected.
 
-By default, exports go inside a `Health` subfolder within the selected folder.
+By default, exports go directly inside the selected folder. Add a `Health` subfolder in Output settings if you want one.
 
 ## Who it is for
 
@@ -100,17 +100,21 @@ Folder organization supports the same date placeholders except it is used as a p
 ## Tips
 
 - Select the vault root if you want Health.md files to appear in Obsidian.
-- Keep the default `Health` subfolder for a clean vault.
+- Add a `Health` subfolder if you want Health.md files grouped under one directory.
 - Use `{year}/{month}` for long-running exports so daily files do not all live in one folder.
 - Use the path preview before exporting a large date range.
-- If Files access breaks, re-select the folder to refresh the secure bookmark.
+- If Files access is temporarily unavailable, Health.md retains the saved folder name and retries once when the app becomes active. Reconnect the provider or re-select the folder if access does not recover.
+- If a bookmark resolves at a different path, Health.md accepts it when persistent identity proves it is the same folder, or when neither the saved selection nor the resolved folder offers any identity evidence — which is common for cloud file providers like iCloud Drive and Dropbox. In that case the resolved bookmark plus granted security-scoped access is the strongest same-folder evidence the provider can offer, so Health.md rebinds to the new path and refreshes the saved metadata instead of demanding re-selection on every launch. A different confirmed identity is blocked; identity evidence that appears on only one side of a move still requires review and blocks writes.
+- Export profiles store the folder's persistent identity evidence alongside the bookmark. When a profile destination is activated — at launch, on profile switch, or for Shortcuts and scheduled runs — that evidence is used for verification, and rows saved before identity capture heal their evidence through the bookmark round-trip. Local "On My iPhone" folders therefore keep working across restarts exactly like cloud folders instead of asking for re-selection every launch.
 
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---|---|---|
 | Export says no vault selected | No folder bookmark is saved | Tap the Vault badge and choose a folder. |
-| Cannot access folder | iOS security-scoped access failed or bookmark is stale | Re-select the folder from the Files picker. |
+| Saved folder unavailable | Bookmark resolution, security-scoped access, or identity lookup temporarily failed | Reconnect the location in Files, return to Health.md to retry, or re-select the folder. |
+| Saved folder needs review | The provider returned a different path, and identity evidence is available on only one side of the move | Review the folder in Files and re-select the intended destination. Health.md performs no writes while ambiguous. |
+| Saved folder changed | The resolved folder has a different persistent identity | Re-select the intended folder. Health.md fails closed and performs no writes. |
 | Files are in the wrong folder | Subfolder or folder organization setting is unexpected | Check **Export → Output** and the path preview. |
 | Obsidian does not show files | You selected a folder outside the vault | Select the vault root or move the export folder into the vault. |
 | Daily note injection writes somewhere unexpected | Daily Note Injection has its own vault/root-relative folder and filename settings | Check **Export → Daily Note Injection**. `Daily` resolves to `<vault>/Daily/...`, not `<vault>/Health/Daily/...`. |
@@ -131,9 +135,10 @@ Folder organization supports the same date placeholders except it is used as a p
 
 ## Implementation notes
 
-- `VaultManager.setVaultFolder(_:)` starts security-scoped access, saves bookmark data, and stores `vaultURL`/`vaultName`.
-- The selected folder bookmark key is `obsidianVaultBookmark`.
-- `healthSubfolder` defaults to `Health` and is persisted separately.
+- `VaultManager.setVaultFolder(_:)` starts security-scoped access, saves bookmark data, optional persistent identity evidence, and stores `vaultURL`/`vaultName`. It reports success only after bookmark and trusted-selection persistence complete, so `ExportProfileCoordinator.selectVaultFolder(_:)` binds the active profile only after a successful pick; a denied replacement leaves both the live vault and profile binding unchanged. The trusted path and identity are captured through the same bookmark round-trip that later verifies them, so picker-URL and bookmark-URL normalization differences (common with file providers) cannot cause spurious verification failures.
+- `VaultManager.adoptPersistedVault(_:standardizedPath:displayName:identity:)` loads a profile-bound destination into the shared vault keys and re-runs verified load. Its destination-store overload is the single adoption path used by profile activation, scheduled exports, and Shortcuts, and persists refreshed bookmark bytes, path, display name, and identity back into the same row. `ProfileDestinationStore` rows persist the folder's identity evidence next to the bookmark; rows saved without it heal their evidence through adoption's own bookmark round-trip.
+- The selected folder bookmark key is `obsidianVaultBookmark`; selection metadata v2 is stored separately and v1 path/name metadata migrates only after a safe same-path resolution.
+- `healthSubfolder` defaults to empty and is persisted separately.
 - `VaultManager.exportHealthData(...)` creates directories as needed before writing files.
 - Successful exports retain a transient exact file URL for the in-app Markdown viewer (or Quick Look for binary formats) and its exact parent folder for the document picker. Health.md does not use an unsupported Files-app deep link.
 - `AdvancedExportSettings.formatFolderPath(for:)` and `filename(for:format:)` apply the date placeholders used in path previews and exports.

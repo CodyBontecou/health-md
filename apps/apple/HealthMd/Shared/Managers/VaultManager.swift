@@ -508,8 +508,13 @@ nonisolated private final class AggregateFileWriter: Sendable {
                 }
             case .mergeMarkdown:
                 let existing = try fileSystem.contentsOfFile(at: request.fileURL)
-                finalContent = MarkdownMerger.merge(existing: existing, new: newContent)
-                action = "Updated"
+                switch MarkdownMerger.mergeOutcome(existing: existing, new: newContent) {
+                case .merged(let content):
+                    finalContent = content
+                    action = "Updated"
+                case .rejected:
+                    throw ExportError.markdownMergeRejected
+                }
             case .overwrite:
                 finalContent = newContent
                 action = "Exported to"
@@ -685,8 +690,23 @@ struct ExportPresentationTarget: Equatable, Sendable {
 nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     let dailyFileCount: Int
     let rollupFileCount: Int
+    /// Data-dictionary artifact written beside the planned range outputs.
+    /// Defaults to zero so stored journals and older call sites stay valid.
+    let dataDictionaryFileCount: Int
 
-    var totalFileCount: Int { dailyFileCount + rollupFileCount }
+    init(
+        dailyFileCount: Int,
+        rollupFileCount: Int,
+        dataDictionaryFileCount: Int = 0
+    ) {
+        self.dailyFileCount = max(dailyFileCount, 0)
+        self.rollupFileCount = max(rollupFileCount, 0)
+        self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+    }
+
+    var totalFileCount: Int {
+        dailyFileCount + rollupFileCount + dataDictionaryFileCount
+    }
 }
 
 nonisolated struct AppleLooseDailyMaterializedFile: Equatable, Sendable {
@@ -924,14 +944,16 @@ nonisolated enum SecureExactArtifactIO {
         data: Data,
         binding: AppleVaultDestinationBinding,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
-        afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil
+        afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
+        cancellationCheck: () throws -> Void = {}
     ) throws {
         try overwrite(
             rootURL: rootURL,
             relativePath: relativePath,
             binding: binding,
             beforeCommit: beforeCommit,
-            afterValidationBeforeRename: afterValidationBeforeRename
+            afterValidationBeforeRename: afterValidationBeforeRename,
+            cancellationCheck: cancellationCheck
         ) { descriptor in
             try writeAll(data, descriptor: descriptor)
         }
@@ -953,7 +975,8 @@ nonisolated enum SecureExactArtifactIO {
             relativePath: relativePath,
             binding: binding,
             beforeCommit: beforeCommit,
-            afterValidationBeforeRename: afterValidationBeforeRename
+            afterValidationBeforeRename: afterValidationBeforeRename,
+            cancellationCheck: cancellationCheck
         ) { descriptor in
             let input = try FileHandle(forReadingFrom: sourceFileURL)
             defer { try? input.close() }
@@ -982,6 +1005,7 @@ nonisolated enum SecureExactArtifactIO {
         binding: AppleVaultDestinationBinding,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
         afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
+        cancellationCheck: () throws -> Void = {},
         writeTemporaryFile: (Int32) throws -> Void
     ) throws {
         let rootDescriptor = try openBoundRoot(rootURL, binding: binding)
@@ -1058,6 +1082,10 @@ nonisolated enum SecureExactArtifactIO {
             openedParentDescriptor: parentDescriptor,
             filename: filename
         )
+        let temporaryPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
+            .appendingPathComponent(temporaryName).path
+        let destinationPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
+            .appendingPathComponent(filename).path
         try beforeCommit?()
         // The hook models arbitrary work and namespace changes between validation and commit.
         // Reopen from the bound root and compare the parent again immediately before rename.
@@ -1069,10 +1097,7 @@ nonisolated enum SecureExactArtifactIO {
             filename: filename
         )
         try afterValidationBeforeRename?()
-        let temporaryPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
-            .appendingPathComponent(temporaryName).path
-        let destinationPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
-            .appendingPathComponent(filename).path
+        try cancellationCheck()
         let renameResult = temporaryPath.withCString { temporaryPointer in
             destinationPath.withCString { filenamePointer in
                 Darwin.renamex_np(
@@ -1333,17 +1358,23 @@ struct DailyExportWriteResult {
     let aggregateFileCount: Int
     let individualEntryFileCount: Int
     let dataDictionaryFileCount: Int
+    /// Individually tracked metrics that could not produce entries because the
+    /// canonical archive (Lossless) structurally lacks their source records.
+    /// Surfaced so operation callers can append them to user-visible warnings.
+    let individualEntryCoverageGaps: [ExportPartialFailure]
     let dailyNoteResult: DailyNoteInjector.InjectionResult?
 
     init(
         aggregateFileCount: Int,
         individualEntryFileCount: Int,
         dataDictionaryFileCount: Int = 0,
+        individualEntryCoverageGaps: [ExportPartialFailure] = [],
         dailyNoteResult: DailyNoteInjector.InjectionResult?
     ) {
         self.aggregateFileCount = max(aggregateFileCount, 0)
         self.individualEntryFileCount = max(individualEntryFileCount, 0)
         self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+        self.individualEntryCoverageGaps = individualEntryCoverageGaps
         self.dailyNoteResult = dailyNoteResult
     }
 
@@ -1378,25 +1409,67 @@ enum VaultDestinationState: Equatable {
     case notSelected
     case available
     case temporarilyUnavailable
+    case requiresReviewIdentityUnavailable
     case requiresReselectionDestinationChanged
     case requiresReselectionMissingExpectedPath
 }
 
+/// Operation-scoped ownership of one successful security-scope acquisition.
+/// The exact URL is captured at acquisition time so destination refreshes,
+/// clearing, reselection, or overlapping operations cannot retarget the stop.
+@MainActor
+final class VaultAccessLease {
+    // Keep deallocation on the releasing thread (swiftlang/swift#85663);
+    // the captured lease is released off the main actor during teardown.
+    nonisolated deinit {}
+    private let url: URL
+    private let bookmarkResolver: BookmarkResolving
+    private var isActive = true
+
+    fileprivate init(url: URL, bookmarkResolver: BookmarkResolving) {
+        self.url = url
+        self.bookmarkResolver = bookmarkResolver
+    }
+
+    func stop() {
+        guard isActive else { return }
+        isActive = false
+        bookmarkResolver.stopAccessing(url)
+    }
+}
+
 @MainActor
 final class VaultManager: ObservableObject {
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes on older iOS runtimes when the last release happened off
+    // the main actor. Matches the AdvancedExportSettings convention.
+    nonisolated deinit {}
     static let defaultHealthSubfolder = ""
 
     private struct SavedVaultSelection: Codable, Equatable {
         let version: Int
         let standardizedPath: String
         let displayName: String
+        let identity: VaultFolderIdentity?
     }
 
     @Published var vaultURL: URL?
     @Published var vaultName: String = "No vault selected"
     @Published private(set) var destinationState: VaultDestinationState = .notSelected
     @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
-    @Published var lastExportStatus: String?
+    /// Whether `lastExportStatus` currently describes a fully successful
+    /// export. Success cannot be inferred from the status copy: the local-export
+    /// success status is the generated-file/data-day description, prefixed
+    /// sniffing breaks under localization, and destination-error statuses are
+    /// assigned directly. Assignment sites that know the outcome record it
+    /// through `recordSuccessfulExportStatus`; any other assignment resets it.
+    @Published private(set) var lastExportStatusIsSuccess = false
+    @Published var lastExportStatus: String? {
+        didSet {
+            if oldValue != lastExportStatus { lastExportStatusIsSuccess = false }
+        }
+    }
     #if DEBUG && os(macOS)
     @Published private var marketingCaptureDisplayPath: String?
     private var marketingCaptureAccessOverride = false
@@ -1406,7 +1479,7 @@ final class VaultManager: ObservableObject {
         #if DEBUG && os(macOS)
         if let marketingCaptureDisplayPath { return marketingCaptureDisplayPath }
         #endif
-        return vaultURL?.path(percentEncoded: false)
+        return vaultURL?.path(percentEncoded: false) ?? defaults.string(forKey: vaultPathKey)
     }
 
     /// Localized semantic presentation for `lastExportStatus`. The stored value remains
@@ -1444,19 +1517,28 @@ final class VaultManager: ObservableObject {
     private let bookmarkKey = "obsidianVaultBookmark"
     private let vaultNameKey = "obsidianVaultName"
     private let vaultPathKey = "obsidianVaultPath"
-    private let vaultSelectionKey = "obsidianVaultSelectionV1"
+    private let legacyVaultSelectionKey = "obsidianVaultSelectionV1"
+    private let vaultSelectionKey = "obsidianVaultSelectionV2"
     private static let subfolderKey = "healthSubfolder"
-    private static let savedSelectionVersion = 1
+    private static let savedSelectionVersion = 2
 
     private let defaults: UserDefaultsStoring
     private let fileSystem: FileSystemAccessing
     private let fileCoordinator: FileCoordinating
     private let aggregateFileWriter: AggregateFileWriter
     private let bookmarkResolver: BookmarkResolving
+    private let identityProbe: VaultFolderIdentityProbing
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
 
     #if DEBUG
     var archiveEntryWillAppendForTesting: (() -> Void)?
+    /// Runs after a daily export has returned its committed output result, allowing
+    /// callers to prove that later cancellation cannot erase that accounting.
+    var dailyExportDidCommitForTesting: (() -> Void)?
+    /// Runs after the ZIP's atomic rename has committed but before presentation
+    /// state is recorded, allowing tests to prove committed success wins over a
+    /// cancellation delivered after publication.
+    var archiveDidPublishForTesting: (() -> Void)?
     var exactDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
     var productionDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
     var productionDestinationDidValidateForTesting: (@Sendable () throws -> Void)?
@@ -1474,7 +1556,8 @@ final class VaultManager: ObservableObject {
 
     var requiresVaultReselection: Bool {
         switch destinationState {
-        case .requiresReselectionDestinationChanged,
+        case .requiresReviewIdentityUnavailable,
+             .requiresReselectionDestinationChanged,
              .requiresReselectionMissingExpectedPath:
             return true
         case .notSelected, .available, .temporarilyUnavailable:
@@ -1482,8 +1565,18 @@ final class VaultManager: ObservableObject {
         }
     }
 
+    /// True only when the retained destination can be used right now. The local
+    /// folder picker prompt is based on this (not on retained-selection metadata)
+    /// so temporarily unavailable and review/reselection states still open the
+    /// picker when their subtitle tells the user to tap to re-select.
+    var isVaultDestinationUsable: Bool {
+        destinationState == .available
+    }
+
     var vaultIssueMessage: String? {
         switch destinationState {
+        case .requiresReviewIdentityUnavailable:
+            return Self.missingExpectedPathMessage
         case .requiresReselectionDestinationChanged:
             return Self.destinationChangedMessage
         case .requiresReselectionMissingExpectedPath:
@@ -1497,7 +1590,8 @@ final class VaultManager: ObservableObject {
 
     var vaultRecoveryMessage: String? {
         switch destinationState {
-        case .requiresReselectionDestinationChanged,
+        case .requiresReviewIdentityUnavailable,
+             .requiresReselectionDestinationChanged,
              .requiresReselectionMissingExpectedPath:
             return String(localized: "Review the location in Files, then re-select the intended folder.")
         case .temporarilyUnavailable:
@@ -1512,6 +1606,7 @@ final class VaultManager: ObservableObject {
         fileSystem: FileSystemAccessing = SystemFileSystem(),
         fileCoordinator: FileCoordinating? = nil,
         bookmarkResolver: BookmarkResolving = SystemBookmarkResolver(),
+        identityProbe: VaultFolderIdentityProbing = SystemVaultFolderIdentityProbe(),
         appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
     ) {
         self.defaults = defaults
@@ -1530,6 +1625,7 @@ final class VaultManager: ObservableObject {
             fileCoordinator: resolvedFileCoordinator
         )
         self.bookmarkResolver = bookmarkResolver
+        self.identityProbe = identityProbe
         self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
         loadSavedSettings()
     }
@@ -1623,29 +1719,22 @@ final class VaultManager: ObservableObject {
         }
 
         let expectedSelection: SavedVaultSelection?
-        if let savedData = defaults.data(forKey: vaultSelectionKey),
-           let decoded = try? JSONDecoder().decode(SavedVaultSelection.self, from: savedData),
-           decoded.version == Self.savedSelectionVersion,
+        let savedSelectionData = defaults.data(forKey: vaultSelectionKey)
+            ?? defaults.data(forKey: legacyVaultSelectionKey)
+        if let savedSelectionData,
+           let decoded = try? JSONDecoder().decode(SavedVaultSelection.self, from: savedSelectionData),
+           (decoded.version == 1 || decoded.version == Self.savedSelectionVersion),
            !decoded.standardizedPath.isEmpty {
             expectedSelection = decoded
         } else if let legacyPath = defaults.string(forKey: vaultPathKey),
                   !legacyPath.isEmpty {
-            let migrated = SavedVaultSelection(
-                version: Self.savedSelectionVersion,
+            expectedSelection = SavedVaultSelection(
+                version: 1,
                 standardizedPath: URL(fileURLWithPath: legacyPath).standardizedFileURL.path,
                 displayName: defaults.string(forKey: vaultNameKey)
-                    ?? URL(fileURLWithPath: legacyPath).lastPathComponent
+                    ?? URL(fileURLWithPath: legacyPath).lastPathComponent,
+                identity: nil
             )
-            do {
-                let encoded = try JSONEncoder().encode(migrated)
-                defaults.set(encoded, forKey: vaultSelectionKey)
-                defaults.set(migrated.standardizedPath, forKey: vaultPathKey)
-                defaults.set(migrated.displayName, forKey: vaultNameKey)
-                expectedSelection = migrated
-                Self.logger.info("Legacy vault selection migrated")
-            } catch {
-                expectedSelection = nil
-            }
         } else {
             expectedSelection = nil
         }
@@ -1661,55 +1750,170 @@ final class VaultManager: ObservableObject {
 
         do {
             let (resolvedURL, isStale) = try bookmarkResolver.resolveBookmark(data: bookmarkData)
-            guard resolvedURL.standardizedFileURL.path == expectedSelection.standardizedPath else {
-                vaultURL = nil
-                vaultName = expectedSelection.displayName
-                destinationState = .requiresReselectionDestinationChanged
-                lastExportStatus = Self.destinationChangedMessage
-                clearLastExportPresentationTarget()
-                Self.logger.error("Vault destination mismatch blocked")
+            guard bookmarkResolver.startAccessing(resolvedURL) else {
+                setTemporarilyUnavailable(selection: expectedSelection)
+                Self.logger.error("Vault security-scoped access temporarily unavailable")
+                return
+            }
+            defer { bookmarkResolver.stopAccessing(resolvedURL) }
+
+            let resolvedIdentity = try identityProbe.persistentIdentity(for: resolvedURL)
+            let pathMatches = resolvedURL.standardizedFileURL.path == expectedSelection.standardizedPath
+
+            if let expectedIdentity = expectedSelection.identity,
+               let resolvedIdentity,
+               expectedIdentity != resolvedIdentity {
+                setDestinationChanged(selection: expectedSelection)
+                Self.logger.error("Vault persistent identity mismatch blocked")
                 return
             }
 
-            vaultURL = resolvedURL
-            vaultName = expectedSelection.displayName
-            destinationState = .available
-            clearTransientFolderStatusIfNeeded()
-            Self.logger.info("Vault bookmark resolution matched expected destination")
+            // Acceptance evidence for a resolved bookmark, strongest first:
+            // 1. The resolved path matches the trusted selection path.
+            // 2. Persistent identity proves the same folder across a provider
+            //    move (volumes that report persistent IDs).
+            // 3. Neither side offers identity evidence. File-provider volumes
+            //    (iCloud Drive, Dropbox, and similar) commonly never expose
+            //    persistent IDs, so a bookmark that resolves while security
+            //    scope is acquired is the strongest same-resource evidence
+            //    those providers can offer. Accepting the rebind keeps cloud
+            //    destinations usable across provider path drift instead of
+            //    demanding reselection on every launch (issue #140).
+            // A confirmed identity mismatch stays a hard fail above, and
+            // one-sided identity evidence across a moved path (evidence that
+            // appears or disappears) still requires review below.
+            let providerLacksIdentityEvidence = expectedSelection.identity == nil && resolvedIdentity == nil
 
-            if isStale, bookmarkResolver.startAccessing(resolvedURL) {
-                defer { bookmarkResolver.stopAccessing(resolvedURL) }
-                do {
-                    let refreshedBookmark = try bookmarkResolver.createBookmarkData(for: resolvedURL)
-                    defaults.set(refreshedBookmark, forKey: bookmarkKey)
-                    Self.logger.info("Stale vault bookmark refresh succeeded")
-                } catch {
-                    lastExportStatus = Self.staleBookmarkRefreshStatus
-                    Self.logger.error("Stale vault bookmark refresh failed")
+            guard pathMatches
+                || (expectedSelection.identity != nil && expectedSelection.identity == resolvedIdentity)
+                || providerLacksIdentityEvidence
+            else {
+                vaultURL = nil
+                vaultName = expectedSelection.displayName
+                destinationState = .requiresReviewIdentityUnavailable
+                lastExportStatus = Self.missingExpectedPathMessage
+                clearLastExportPresentationTarget()
+                Self.logger.error("Vault moved-path identity unavailable; review required")
+                return
+            }
+
+            let acceptedName = pathMatches
+                ? expectedSelection.displayName
+                : Self.displayName(for: resolvedURL)
+            let acceptedSelection = SavedVaultSelection(
+                version: Self.savedSelectionVersion,
+                standardizedPath: resolvedURL.standardizedFileURL.path,
+                displayName: acceptedName,
+                identity: resolvedIdentity ?? expectedSelection.identity
+            )
+            let needsSelectionUpdate = acceptedSelection != expectedSelection
+            let needsBookmarkRefresh = isStale || !pathMatches
+
+            var refreshedBookmark: Data?
+            var persistenceRefreshFailed = false
+            do {
+                if needsBookmarkRefresh {
+                    refreshedBookmark = try bookmarkResolver.createBookmarkData(for: resolvedURL)
                 }
+                if needsSelectionUpdate {
+                    let selectionData = try JSONEncoder().encode(acceptedSelection)
+                    if let refreshedBookmark { defaults.set(refreshedBookmark, forKey: bookmarkKey) }
+                    defaults.set(selectionData, forKey: vaultSelectionKey)
+                    defaults.set(acceptedSelection.standardizedPath, forKey: vaultPathKey)
+                    defaults.set(acceptedSelection.displayName, forKey: vaultNameKey)
+                    defaults.removeObject(forKey: legacyVaultSelectionKey)
+                } else if let refreshedBookmark {
+                    defaults.set(refreshedBookmark, forKey: bookmarkKey)
+                }
+            } catch {
+                persistenceRefreshFailed = true
+                lastExportStatus = Self.staleBookmarkRefreshStatus
+                Self.logger.error("Vault bookmark/selection refresh failed")
+            }
+
+            vaultURL = resolvedURL
+            vaultName = acceptedName
+            destinationState = .available
+            if !persistenceRefreshFailed {
+                clearTransientFolderStatusIfNeeded()
+            }
+            if providerLacksIdentityEvidence && !pathMatches {
+                Self.logger.info("Vault bookmark rebound across provider path drift without identity evidence")
+            } else {
+                Self.logger.info("Vault bookmark resolution accepted after identity validation")
             }
         } catch {
-            vaultURL = nil
-            vaultName = expectedSelection.displayName
-            destinationState = .temporarilyUnavailable
-            lastExportStatus = Self.savedFolderUnavailableStatus
-            clearLastExportPresentationTarget()
-            Self.logger.error("Vault bookmark resolution temporarily unavailable")
+            setTemporarilyUnavailable(selection: expectedSelection)
+            Self.logger.error("Vault bookmark or identity probe temporarily unavailable")
         }
     }
 
-    private func makeSavedSelection(for url: URL) throws -> (SavedVaultSelection, Data) {
+    /// Records a fully successful export status. Must be assigned before the
+    /// flag so the resetting `didSet` observe runs first.
+    func recordSuccessfulExportStatus(_ status: String) {
+        lastExportStatus = status
+        lastExportStatusIsSuccess = true
+    }
+
+    private func setTemporarilyUnavailable(selection: SavedVaultSelection) {
+        vaultURL = nil
+        vaultName = selection.displayName
+        destinationState = .temporarilyUnavailable
+        lastExportStatus = Self.savedFolderUnavailableStatus
+        clearLastExportPresentationTarget()
+    }
+
+    private func setDestinationChanged(selection: SavedVaultSelection) {
+        vaultURL = nil
+        vaultName = selection.displayName
+        destinationState = .requiresReselectionDestinationChanged
+        lastExportStatus = Self.destinationChangedMessage
+        clearLastExportPresentationTarget()
+    }
+
+    /// Display name for a selected/resolved vault URL. File-provider roots
+    /// report a raw provider identifier as their path name (the iCloud Drive
+    /// root is `com~apple~CloudDocs`, whose tildes render like strikethroughs
+    /// around "apple"); the localized name resource surfaces the name Files
+    /// shows the user ("iCloud Drive") instead.
+    private static func displayName(for url: URL) -> String {
+        if let localized = try? url.resourceValues(forKeys: [.localizedNameKey]).localizedName,
+           !localized.isEmpty {
+            return localized
+        }
+        return url.lastPathComponent
+    }
+
+    /// Captures the trusted selection through the same bookmark round-trip that
+    /// verifies it on later launches. File-provider destinations can normalize
+    /// the picker URL differently from the bookmark-resolved URL, so storing the
+    /// round-tripped path keeps save-time and load-time comparison symmetric and
+    /// prevents spurious verification failures on cloud folders (issue #140).
+    /// If the round-trip cannot run, the picked URL is stored; an unresolvable
+    /// bookmark at load time is already treated as transient rather than trusted.
+    private func makeSavedSelection(
+        for url: URL
+    ) throws -> (selection: SavedVaultSelection, bookmarkData: Data, selectionData: Data) {
+        let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
+        let canonicalURL: URL
+        if let (resolvedURL, _) = try? bookmarkResolver.resolveBookmark(data: bookmarkData) {
+            canonicalURL = resolvedURL
+        } else {
+            canonicalURL = url
+        }
         let selection = SavedVaultSelection(
             version: Self.savedSelectionVersion,
-            standardizedPath: url.standardizedFileURL.path,
-            displayName: url.lastPathComponent
+            standardizedPath: canonicalURL.standardizedFileURL.path,
+            displayName: Self.displayName(for: canonicalURL),
+            identity: try identityProbe.persistentIdentity(for: canonicalURL)
         )
-        return (selection, try JSONEncoder().encode(selection))
+        return (selection, bookmarkData, try JSONEncoder().encode(selection))
     }
 
     private func clearTransientFolderStatusIfNeeded() {
         switch lastExportStatus {
-        case Self.savedFolderUnavailableStatus,
+        case Self.staleBookmarkRefreshStatus,
+             Self.savedFolderUnavailableStatus,
              Self.folderAccessDeniedStatus,
              Self.destinationChangedMessage,
              Self.missingExpectedPathMessage:
@@ -1723,22 +1927,188 @@ final class VaultManager: ObservableObject {
         defaults.set(healthSubfolder, forKey: Self.subfolderKey)
     }
 
+    /// Read-only view of the currently persisted vault destination, used by
+    /// the export-profile destination store to seed or rebind profile-bound
+    /// folders without duplicating bookmark-key knowledge outside this class.
+    struct PersistedVaultSnapshot {
+        let bookmarkData: Data
+        let standardizedPath: String
+        let displayName: String
+        let identity: VaultFolderIdentity?
+    }
+
+    /// Returns the persisted bookmark and trusted selection when a complete,
+    /// current vault selection exists; nil when no folder is saved.
+    func persistedVaultSnapshot() -> PersistedVaultSnapshot? {
+        guard let bookmarkData = defaults.data(forKey: bookmarkKey) else { return nil }
+
+        if let savedData = defaults.data(forKey: vaultSelectionKey),
+           let decoded = try? JSONDecoder().decode(SavedVaultSelection.self, from: savedData),
+           decoded.version == Self.savedSelectionVersion,
+           !decoded.standardizedPath.isEmpty {
+            return PersistedVaultSnapshot(
+                bookmarkData: bookmarkData,
+                standardizedPath: decoded.standardizedPath,
+                displayName: decoded.displayName,
+                identity: decoded.identity
+            )
+        }
+
+        guard let legacyPath = defaults.string(forKey: vaultPathKey), !legacyPath.isEmpty else {
+            return nil
+        }
+        return PersistedVaultSnapshot(
+            bookmarkData: bookmarkData,
+            standardizedPath: URL(fileURLWithPath: legacyPath).standardizedFileURL.path,
+            displayName: defaults.string(forKey: vaultNameKey)
+                ?? URL(fileURLWithPath: legacyPath).lastPathComponent,
+            identity: nil
+        )
+    }
+
+    /// Loads a profile-bound folder destination as the active vault by writing
+    /// its bookmark and trusted selection into the same keys the legacy
+    /// single-vault flow uses, then re-running the verified load path. The
+    /// destination-store row is authoritative only for storage; resolution,
+    /// staleness, and expected-path verification remain VaultManager's.
+    ///
+    /// `identity` is the persistent identity evidence stored with the row.
+    /// Rows saved before identity capture (and identity-less file providers)
+    /// pass nil; the trusted identity is then re-captured through the row's
+    /// own bookmark round-trip — the same round-trip that verified it at
+    /// selection time — so identity-bearing volumes (local "On My iPhone"
+    /// folders) keep durable evidence across profile adoption and a moved
+    /// path can rebind through an identity match instead of demanding
+    /// reselection on every launch (issue #143).
+    ///
+    /// Returns the post-verification persisted snapshot — healed identity,
+    /// and the refreshed bookmark, standardized path, and display name when
+    /// verification rebound a moved or stale bookmark — so callers persist
+    /// every refreshed field back into the destination row instead of only
+    /// the identity.
+    @discardableResult
+    func adoptPersistedVault(
+        bookmarkData: Data,
+        standardizedPath: String,
+        displayName: String,
+        identity: VaultFolderIdentity? = nil
+    ) -> PersistedVaultSnapshot? {
+        let trustedIdentity = identity
+            ?? adoptableIdentity(fromBookmarkData: bookmarkData)
+        defaults.set(bookmarkData, forKey: bookmarkKey)
+        let selection = SavedVaultSelection(
+            version: Self.savedSelectionVersion,
+            standardizedPath: standardizedPath,
+            displayName: displayName,
+            identity: trustedIdentity
+        )
+        if let encoded = try? JSONEncoder().encode(selection) {
+            defaults.set(encoded, forKey: vaultSelectionKey)
+        }
+        defaults.set(displayName, forKey: vaultNameKey)
+        defaults.set(standardizedPath, forKey: vaultPathKey)
+        loadSavedSettings()
+        return persistedVaultSnapshot()
+    }
+
+    /// Adopts a profile-bound folder and writes every verified refresh back to
+    /// the same destination row. Keeping this in one path prevents profile
+    /// activation, Shortcuts, and scheduled exports from drifting on bookmark
+    /// refresh behavior, including identity-less iCloud Drive and Dropbox rows.
+    @discardableResult
+    func adoptPersistedVault(
+        destinationID: UUID?,
+        from destinationStore: ProfileDestinationStore
+    ) -> PersistedVaultSnapshot? {
+        guard let destination = destinationStore.vault(id: destinationID) else {
+            return nil
+        }
+
+        let refreshed = adoptPersistedVault(
+            bookmarkData: destination.bookmarkData,
+            standardizedPath: destination.standardizedPath,
+            displayName: destination.name,
+            identity: destination.identity
+        )
+        guard let refreshed else { return nil }
+
+        if refreshed.standardizedPath != destination.standardizedPath
+            || refreshed.displayName != destination.name
+            || refreshed.bookmarkData != destination.bookmarkData
+            || refreshed.identity != destination.identity {
+            destinationStore.updateVault(
+                id: destination.id,
+                name: refreshed.displayName,
+                standardizedPath: refreshed.standardizedPath,
+                bookmarkData: refreshed.bookmarkData,
+                identity: refreshed.identity
+            )
+        }
+        return refreshed
+    }
+
+    /// Captures identity evidence for a destination row through its own
+    /// bookmark round-trip while security scope is acquired. Mirrors
+    /// `makeSavedSelection`'s round-trip capture so adoption-time and
+    /// selection-time evidence agree. Any failure leaves the row without
+    /// identity evidence; the verified load then applies its own rules.
+    private func adoptableIdentity(fromBookmarkData bookmarkData: Data) -> VaultFolderIdentity? {
+        guard let (resolvedURL, _) = try? bookmarkResolver.resolveBookmark(data: bookmarkData),
+              bookmarkResolver.startAccessing(resolvedURL) else {
+            return nil
+        }
+        defer { bookmarkResolver.stopAccessing(resolvedURL) }
+        return try? identityProbe.persistentIdentity(for: resolvedURL)
+    }
+
     // MARK: - Folder Selection
 
-    func setVaultFolder(_ url: URL) {
+    /// Bookmark metadata for a folder picked outside the shared-vault flow
+    /// (for example the profile editor's destination picker). Creates the
+    /// security-scoped bookmark without changing the live shared vault
+    /// selection — callers own where the resulting binding is applied.
+    func selectionMetadata(
+        for url: URL
+    ) -> (bookmarkData: Data, standardizedPath: String, displayName: String, identity: VaultFolderIdentity?)? {
         guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = "Failed to access folder"
-            return
+            return nil
+        }
+        defer { bookmarkResolver.stopAccessing(url) }
+
+        do {
+            let (selection, bookmarkData, _) = try makeSavedSelection(for: url)
+            return (
+                bookmarkData,
+                selection.standardizedPath,
+                selection.displayName,
+                selection.identity
+            )
+        } catch {
+            lastExportStatus = error.localizedDescription
+            return nil
+        }
+    }
+
+    /// Saves a user-picked destination. Returns true only after the bookmark
+    /// and trusted selection metadata have both been persisted, allowing the
+    /// profile coordinator to bind the new folder without replacing a valid
+    /// profile destination when provider access or bookmark creation fails.
+    @discardableResult
+    func setVaultFolder(_ url: URL) -> Bool {
+        guard bookmarkResolver.startAccessing(url) else {
+            lastExportStatus = "Failed to access folder"
+            return false
         }
 
         defer { bookmarkResolver.stopAccessing(url) }
 
         do {
-            let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
-            let (selection, selectionData) = try makeSavedSelection(for: url)
+            let (selection, bookmarkData, selectionData) = try makeSavedSelection(for: url)
 
             defaults.set(bookmarkData, forKey: bookmarkKey)
             defaults.set(selectionData, forKey: vaultSelectionKey)
+            defaults.removeObject(forKey: legacyVaultSelectionKey)
             defaults.set(selection.displayName, forKey: vaultNameKey)
             defaults.set(selection.standardizedPath, forKey: vaultPathKey)
 
@@ -1748,8 +2118,10 @@ final class VaultManager: ObservableObject {
             lastExportStatus = nil
             clearLastExportPresentationTarget()
             Self.logger.info("User explicitly selected an export destination")
+            return true
         } catch {
             lastExportStatus = "Failed to save folder access: \(error.localizedDescription)"
+            return false
         }
     }
 
@@ -1757,6 +2129,7 @@ final class VaultManager: ObservableObject {
         defaults.removeObject(forKey: bookmarkKey)
         defaults.removeObject(forKey: vaultNameKey)
         defaults.removeObject(forKey: vaultPathKey)
+        defaults.removeObject(forKey: legacyVaultSelectionKey)
         defaults.removeObject(forKey: vaultSelectionKey)
         vaultURL = nil
         vaultName = "No vault selected"
@@ -1863,8 +2236,26 @@ final class VaultManager: ObservableObject {
         defaults.data(forKey: bookmarkKey) != nil
     }
 
+    /// True when UI should present a retained folder selection, even while its
+    /// bookmark is temporarily unavailable or requires review.
+    var hasVaultSelection: Bool {
+        destinationState != .notSelected
+    }
+
+    var vaultAvailabilityText: String {
+        switch destinationState {
+        case .notSelected: return String(localized: "Choose Folder")
+        case .available: return String(localized: "Selected")
+        case .temporarilyUnavailable: return String(localized: "Unavailable")
+        case .requiresReviewIdentityUnavailable,
+             .requiresReselectionDestinationChanged,
+             .requiresReselectionMissingExpectedPath:
+            return String(localized: "Needs Access")
+        }
+    }
+
     var isVaultConfigured: Bool {
-        hasVaultAccess || hasSavedVaultFolder || defaults.data(forKey: vaultSelectionKey) != nil
+        hasVaultSelection
     }
 
     /// Returns whether the selected vault folder can currently be accessed via
@@ -1888,24 +2279,18 @@ final class VaultManager: ObservableObject {
         loadSavedSettings()
     }
 
-    /// Start accessing the vault (for background tasks)
-    @discardableResult
-    func startVaultAccess() -> Bool {
+    /// Begin operation-scoped vault access. The returned lease owns the exact
+    /// URL that was successfully started and must be stopped by the caller.
+    func beginVaultAccess() -> VaultAccessLease? {
         guard destinationState == .available, let url = vaultURL else {
             lastExportStatus = vaultIssueMessage
-            return false
+            return nil
         }
-        let didStartAccess = bookmarkResolver.startAccessing(url)
-        if !didStartAccess {
+        guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = Self.folderAccessDeniedStatus
+            return nil
         }
-        return didStartAccess
-    }
-
-    /// Stop accessing the vault (for background tasks)
-    func stopVaultAccess() {
-        guard destinationState == .available, let url = vaultURL else { return }
-        bookmarkResolver.stopAccessing(url)
+        return VaultAccessLease(url: url, bookmarkResolver: bookmarkResolver)
     }
 
     private var unavailableExportError: ExportError {
@@ -2037,9 +2422,10 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        let result: DailyExportWriteResult
         switch planResolution {
         case .legacy:
-            return try await writeHealthDataOutputsOffMain(
+            result = try await writeHealthDataOutputsOffMain(
                 healthData,
                 date: healthData.date,
                 vaultURL: vaultURL,
@@ -2049,7 +2435,7 @@ final class VaultManager: ObservableObject {
                 preparedExport: preparedExport
             )
         case .planned(let operation):
-            return try await writePlannedLooseDailyOutputsOffMain(
+            result = try await writePlannedLooseDailyOutputsOffMain(
                 healthData,
                 date: healthData.date,
                 vaultURL: vaultURL,
@@ -2059,6 +2445,10 @@ final class VaultManager: ObservableObject {
                 operation: operation
             )
         }
+        #if DEBUG
+        dailyExportDidCommitForTesting?()
+        #endif
+        return result
     }
 
     /// Materializes a complete simple-summary range without opening or mutating the selected
@@ -2069,6 +2459,7 @@ final class VaultManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot,
         operationSurface: AppleExportOperationSurface,
         dailyOutputOwnerDates: Set<String>? = nil,
+        requestedRange: HealthRollupRangeRequest? = nil,
         operationIdentity: AppleExportOperationIdentity? = nil,
         includeDataDictionary: Bool = true
     ) async throws -> AppleLooseDailyRangeMaterialization? {
@@ -2088,6 +2479,7 @@ final class VaultManager: ObservableObject {
         let resolution = try await rangePlanner.planRange(
             healthData: healthData,
             dailyOutputOwnerDates: outputDates,
+            requestedRange: requestedRange,
             settingsSnapshot: settingsSnapshot,
             surface: operationSurface,
             operationIdentity: operationIdentity
@@ -2137,7 +2529,8 @@ final class VaultManager: ObservableObject {
             dataDictionary: dictionary,
             result: AppleLooseDailyRangeWriteResult(
                 dailyFileCount: operation.artifacts.count - rollupFileCount,
-                rollupFileCount: rollupFileCount
+                rollupFileCount: rollupFileCount,
+                dataDictionaryFileCount: dictionary != nil ? 1 : 0
             )
         )
     }
@@ -2149,6 +2542,7 @@ final class VaultManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot,
         operationSurface: AppleExportOperationSurface,
         dailyOutputOwnerDates: Set<String>? = nil,
+        requestedRange: HealthRollupRangeRequest? = nil,
         operationIdentity: AppleExportOperationIdentity? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true
     ) async throws -> AppleLooseDailyRangeWriteResult? {
@@ -2163,6 +2557,7 @@ final class VaultManager: ObservableObject {
             settingsSnapshot: settingsSnapshot,
             operationSurface: operationSurface,
             dailyOutputOwnerDates: dailyOutputOwnerDates,
+            requestedRange: requestedRange,
             operationIdentity: operationIdentity,
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
@@ -2426,8 +2821,9 @@ final class VaultManager: ObservableObject {
         destinationBinding: AppleVaultDestinationBinding?
     ) throws -> DailyExportWriteResult {
         var individualEntriesCount = 0
+        var individualEntryCoverageGaps: [ExportPartialFailure] = []
         if settings.writesIndividualEntryFiles {
-            individualEntriesCount = try exportIndividualEntries(
+            let result = try exportIndividualEntries(
                 from: healthData,
                 to: individualEntriesBaseFolderURL(
                     vaultURL: vaultURL,
@@ -2437,6 +2833,8 @@ final class VaultManager: ObservableObject {
                 ),
                 settings: settings
             )
+            individualEntriesCount = result.fileCount
+            individualEntryCoverageGaps = result.coverageGapFailures
         }
 
         #if DEBUG
@@ -2453,6 +2851,7 @@ final class VaultManager: ObservableObject {
                 settings: settings.dailyNoteInjection,
                 customization: settings.formatCustomization,
                 metricSelection: settings.metricSelection,
+                calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
                 fileSystem: fileSystem,
                 fileCoordinator: fileCoordinator,
                 destinationBinding: destinationBinding,
@@ -2501,7 +2900,8 @@ final class VaultManager: ObservableObject {
                     fileURL: ExportPathPlanner.dailyNoteURL(
                         vaultURL: vaultURL,
                         settings: settings.dailyNoteInjection,
-                        date: date
+                        date: date,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     ),
                     securityScopedRootURL: vaultURL
                 )
@@ -2517,6 +2917,7 @@ final class VaultManager: ObservableObject {
             aggregateFileCount: writtenFiles.count,
             individualEntryFileCount: individualEntriesCount,
             dataDictionaryFileCount: dataDictionaryFileCount,
+            individualEntryCoverageGaps: individualEntryCoverageGaps,
             dailyNoteResult: dailyNoteResult
         )
     }
@@ -2901,7 +3302,8 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
             sources: healthData.map(HealthDataArchiveSource.inMemory),
@@ -2909,7 +3311,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             startDate: startDate,
             endDate: endDate,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder,
+            cancellationCheck: cancellationCheck
         )
     }
 
@@ -2920,7 +3323,8 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
             sources: files.map(HealthDataArchiveSource.file),
@@ -2928,7 +3332,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             startDate: startDate,
             endDate: endDate,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder,
+            cancellationCheck: cancellationCheck
         )
     }
 
@@ -2938,8 +3343,12 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String?
+        healthSubfolder: String?,
+        cancellationCheck: @escaping @Sendable () -> Bool
     ) async throws -> URL? {
+        func checkCancellation() throws {
+            if Task.isCancelled || cancellationCheck() { throw CancellationError() }
+        }
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         defer {
@@ -2952,6 +3361,7 @@ final class VaultManager: ObservableObject {
         }
         #endif
         guard settings.archiveModeEnabled else { return nil }
+        try checkCancellation()
         let archivedFormats = settings.exportFormats
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
@@ -2964,7 +3374,32 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        let rollupEntries = rollupArchiveEntries(from: rollupHealthData, settings: settings)
+        try checkCancellation()
+        let rollupEntries: [ZipArchiveWriter.Entry]
+        if HealthRollupExporter.isEnabled(settings: settings) {
+            guard let frozenTimeZone = settings.exportTimeZoneOverride else {
+                throw ExportError.invalidExportPath(path: "missing calendar timezone")
+            }
+            do {
+                let requestedRange = try HealthRollupRangeRequest(
+                    startDate: startDate,
+                    endDate: endDate,
+                    calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                )
+                rollupEntries = rollupArchiveEntries(
+                    from: rollupHealthData,
+                    requestedRange: requestedRange,
+                    settings: settings
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // Range v9 is independently bounded. Preserve the daily archive instead of
+                // turning an unavailable supplemental summary into a total export failure.
+                rollupEntries = []
+            }
+        } else {
+            rollupEntries = []
+        }
+        try checkCancellation()
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
@@ -3053,9 +3488,10 @@ final class VaultManager: ObservableObject {
                 try await Self.performArchiveIO {
                     try writer.append(
                         dictionaryEntry,
-                        cancellationCheck: { Task.isCancelled }
+                        cancellationCheck: { Task.isCancelled || cancellationCheck() }
                     )
                 }
+                try checkCancellation()
             }
             if !settings.summaryOnlyModeEnabled {
                 let orderedSources = sources.sorted {
@@ -3063,12 +3499,12 @@ final class VaultManager: ObservableObject {
                     return $0.order < $1.order
                 }
                 for source in orderedSources {
-                    try Task.checkCancellation()
+                    try checkCancellation()
                     switch source {
                     case .inMemory(let data):
                         let preparedExport = data.preparedExport(settings: settings)
                         for format in archivedFormats {
-                            try Task.checkCancellation()
+                            try checkCancellation()
                             let content = try preparedExport.content(format: format, settings: settings)
                             guard let bytes = content.data(using: .utf8) else {
                                 throw CocoaError(.fileWriteInapplicableStringEncoding)
@@ -3082,9 +3518,14 @@ final class VaultManager: ObservableObject {
                                 data: bytes
                             )
                             try await Self.performArchiveIO {
-                                try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                                try writer.append(
+                                    entry,
+                                    cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                                )
                             }
+                            try checkCancellation()
                             await Task.yield()
+                            try checkCancellation()
                         }
                     case .file(let file):
                         try await Self.performArchiveIO {
@@ -3093,23 +3534,37 @@ final class VaultManager: ObservableObject {
                                     path: file.archivePath,
                                     sourceURL: file.url
                                 ),
-                                cancellationCheck: { Task.isCancelled }
+                                cancellationCheck: { Task.isCancelled || cancellationCheck() }
                             )
                         }
+                        try checkCancellation()
                         await Task.yield()
+                        try checkCancellation()
                     }
                 }
             }
             for entry in rollupEntries {
-                try Task.checkCancellation()
+                try checkCancellation()
                 try await Self.performArchiveIO {
-                    try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                    try writer.append(
+                        entry,
+                        cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                    )
                 }
+                try checkCancellation()
                 await Task.yield()
+                try checkCancellation()
             }
+            try checkCancellation()
             try await Self.performArchiveIO {
-                try writer.finish(cancellationCheck: { Task.isCancelled })
+                try writer.finish(cancellationCheck: { Task.isCancelled || cancellationCheck() })
             }
+            // `finish` atomically publishes the destination. Cancellation is a
+            // pre-commit concern; once it returns, committed success owns the
+            // result and presentation must not be suppressed.
+            #if DEBUG
+            archiveDidPublishForTesting?()
+            #endif
         } catch {
             try? await Self.performArchiveIO { writer.abandon() }
             if error as? FileCoordinationError == .destinationChanged
@@ -3135,9 +3590,17 @@ final class VaultManager: ObservableObject {
         return components.joined(separator: "/")
     }
 
-    private func rollupArchiveEntries(from healthData: [HealthData], settings: AdvancedExportSettings) -> [ZipArchiveWriter.Entry] {
+    private func rollupArchiveEntries(
+        from healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest,
+        settings: AdvancedExportSettings
+    ) -> [ZipArchiveWriter.Entry] {
         guard HealthRollupExporter.isEnabled(settings: settings), !healthData.isEmpty else { return [] }
-        let summaries = HealthRollupExporter.makeSummaries(from: healthData, settings: settings)
+        let summaries = HealthRollupExporter.makeSummaries(
+            from: healthData,
+            requestedRange: requestedRange,
+            settings: settings
+        )
         return HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: "",
@@ -3185,6 +3648,7 @@ final class VaultManager: ObservableObject {
     @discardableResult
     func exportRollupSummaries(
         from healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest,
         settings: AdvancedExportSettings,
         generatedAt: Date = Date(),
         healthSubfolder: String? = nil,
@@ -3201,8 +3665,10 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        try Task.checkCancellation()
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
+            requestedRange: requestedRange,
             settings: settings,
             generatedAt: generatedAt
         )
@@ -3214,9 +3680,11 @@ final class VaultManager: ObservableObject {
             settings: settings,
             healthSubfolder: effectiveHealthSubfolder,
             dates: [],
-            rollupDates: healthData.map(\.date)
+            rollupDates: healthData.map(\.date),
+            authoritativeRollupRange: requestedRange
         )
         if shouldWriteDataDictionary {
+            try Task.checkCancellation()
             try writeDataDictionary(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3231,6 +3699,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         ) {
+            try Task.checkCancellation()
             let folderURL = HealthRollupExporter.folderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3239,6 +3708,7 @@ final class VaultManager: ObservableObject {
                 settings: settings
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
+            try Task.checkCancellation()
             _ = try aggregateFileWriter.writeSynchronously(secureRequest(
                 AggregateFileWriteRequest(
                     fileURL: fileURL,
@@ -3310,9 +3780,9 @@ final class VaultManager: ObservableObject {
         try Task.checkCancellation()
         let payload = try decodeConnectedHealthDayPayload(from: sourceURL)
         guard let record = payload.record else { return false }
-        let projection = ConnectedExportGranularMode.sanitized(
+        let projection = ConnectedExportDetailPolicy.sanitized(
             record,
-            includesGranularData: false
+            detailPolicy: .summary
         )
         try JSONEncoder().encode(projection).write(to: destinationURL, options: .atomic)
         return true
@@ -3342,6 +3812,8 @@ final class VaultManager: ObservableObject {
         recordSourceDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         requestedDates: [Date],
+        rollupRequestedDates: [Date]? = nil,
+        rollupCalendarTimeZoneIdentifier: String? = nil,
         startDate: Date,
         endDate: Date,
         healthSubfolder: String? = nil,
@@ -3376,15 +3848,22 @@ final class VaultManager: ObservableObject {
         let destinationBinding = try productionDestinationBinding(for: vaultURL)
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
+        let immutableRollupDates = rollupRequestedDates ?? requestedDates
+        var sourceCalendar = Calendar.current
+        sourceCalendar.timeZone = rollupCalendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
+        let immutableArchiveDates = settings.archiveModeEnabled
+            ? immutableRollupDates
+            : requestedDates
         try preflightExportDestinations(
             settings: settings,
             healthSubfolder: healthSubfolder,
             dates: requestedDates,
-            rollupDates: requestedDates
+            rollupDates: immutableRollupDates,
+            archiveDates: immutableArchiveDates
         )
-
-        var sourceCalendar = Calendar.current
-        sourceCalendar.timeZone = settings.exportTimeZoneOverride ?? .current
         var datedFiles: [(date: Date, url: URL)] = []
         datedFiles.reserveCapacity(recordPayloadFiles.count)
         if let recordSourceDates,
@@ -3442,38 +3921,37 @@ final class VaultManager: ObservableObject {
 
         var summaries: [HealthRollupSummary] = []
         var finalizedUnits = 0
-        let estimatedUnits = max(datedFiles.count + requestedDates.count, 1)
+        let estimatedUnits = max(datedFiles.count + immutableRollupDates.count, 1)
         if HealthRollupExporter.isEnabled(settings: settings) {
-            for period in settings.enabledRollupPeriods {
-                let windows = Set(requestedDates.map {
-                    HealthRollupPeriodWindow.window(containing: $0, period: period, calendar: sourceCalendar)
-                }).sorted { $0.startDate < $1.startDate }
-                for window in windows {
-                    try checkCancellation()
-                    if unavailableRollupDates.contains(where: {
-                        $0 >= window.startDate && $0 <= window.endDate
-                    }) {
-                        finalizedUnits += 1
-                        progress?(finalizedUnits, estimatedUnits, window.endDate)
-                        await Task.yield()
-                        continue
-                    }
-                    var records: [HealthData] = []
-                    for item in rollupProjectionFiles
-                        where item.date >= window.startDate && item.date <= window.endDate {
-                        records.append(try await Self.decodeHealthData(from: item.url))
-                    }
-                    let windowSummaries = HealthRollupExporter.makeSummaries(
-                        from: records,
-                        settings: settings,
-                        periods: [period],
-                        calendar: sourceCalendar
-                    ).filter { $0.window == window }
-                    summaries.append(contentsOf: windowSummaries)
-                    finalizedUnits += 1
-                    progress?(finalizedUnits, estimatedUnits, window.endDate)
-                    await Task.yield()
+            try checkCancellation()
+            let identifiers = Set(immutableRollupDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(
+                    for: $0,
+                    calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
+                )
+            })
+            do {
+                let requestedRange = try HealthRollupRangeRequest(
+                    ownerDateIdentifiers: identifiers,
+                    calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
+                )
+                var records: [HealthData] = []
+                for item in rollupProjectionFiles
+                    where item.date >= requestedRange.startDate && item.date <= requestedRange.endDate {
+                    records.append(try await Self.decodeHealthData(from: item.url))
                 }
+                summaries = HealthRollupExporter.makeSummaries(
+                    from: records,
+                    requestedRange: requestedRange,
+                    settings: settings
+                )
+                finalizedUnits += 1
+                progress?(finalizedUnits, estimatedUnits, requestedRange.endDate)
+                await Task.yield()
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // Daily files may already be committed by the legacy receiver. Treat the bounded
+                // supplemental summary as unavailable without invalidating those daily outputs.
+                summaries = []
             }
         }
 
@@ -3481,6 +3959,18 @@ final class VaultManager: ObservableObject {
         if settings.archiveModeEnabled {
             guard !datedFiles.isEmpty || (settings.summaryOnlyModeEnabled && !summaries.isEmpty) else {
                 return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
+            }
+            let immutableArchiveDays = Set(immutableArchiveDates.map {
+                sourceCalendar.startOfDay(for: $0)
+            })
+            let availableArchiveDays = Set(datedFiles.map {
+                sourceCalendar.startOfDay(for: $0.date)
+            })
+            guard settings.summaryOnlyModeEnabled
+                    || immutableArchiveDays.isSubset(of: availableArchiveDays) else {
+                throw ExportError.invalidExportPath(
+                    path: "original archive source days are unavailable; existing ZIP preserved"
+                )
             }
             let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
                 vaultURL: vaultURL,
@@ -3490,9 +3980,9 @@ final class VaultManager: ObservableObject {
                 try ensureCoordinatedDirectoryExists(at: healthFolderURL)
             }
             let archiveName = archiveFilename(
-                startDate: startDate,
-                endDate: endDate,
-                timeZone: settings.exportTimeZoneOverride
+                startDate: immutableRollupDates.first ?? startDate,
+                endDate: immutableRollupDates.last ?? endDate,
+                timeZone: sourceCalendar.timeZone
             )
             let archiveURL = healthFolderURL.appendingPathComponent(
                 archiveName,
@@ -3569,13 +4059,20 @@ final class VaultManager: ObservableObject {
                 }
 
                 if !settings.summaryOnlyModeEnabled {
-                    let requestedDateSet = Set(requestedDates)
-                    for item in datedFiles where requestedDateSet.contains(item.date) {
+                    let requestedDateSet = Set(immutableArchiveDates.map {
+                        sourceCalendar.startOfDay(for: $0)
+                    })
+                    for item in datedFiles
+                        where requestedDateSet.contains(sourceCalendar.startOfDay(for: item.date)) {
                         try checkCancellation()
                         progress?(finalizedUnits, estimatedUnits, item.date)
                         guard let record = try await Self.decodeConnectedHealthData(
                             from: item.url
-                        ) else { continue }
+                        ) else {
+                            throw ExportError.invalidExportPath(
+                                path: "original archive source days are unavailable; existing ZIP preserved"
+                            )
+                        }
                         let preparedExport = record.preparedExport(settings: settings)
                         for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
                             let path = archiveEntryPath(
@@ -3753,7 +4250,9 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         dates: [Date],
-        rollupDates: [Date]? = nil
+        rollupDates: [Date]? = nil,
+        archiveDates: [Date]? = nil,
+        authoritativeRollupRange: HealthRollupRangeRequest? = nil
     ) throws {
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
@@ -3766,8 +4265,42 @@ final class VaultManager: ObservableObject {
             if requiresSecurityScope { bookmarkResolver.stopAccessing(vaultURL) }
         }
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        var calendar = Calendar.current
-        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+        let requestedRollupDates = rollupDates ?? dates
+        let rollupPaths: [String]
+        if HealthRollupExporter.isEnabled(settings: settings),
+           authoritativeRollupRange != nil || !requestedRollupDates.isEmpty {
+            do {
+                let request: HealthRollupRangeRequest
+                if let authoritativeRollupRange {
+                    request = authoritativeRollupRange
+                } else {
+                    guard let frozenTimeZone = settings.exportTimeZoneOverride else {
+                        throw ExportError.invalidExportPath(path: "missing calendar timezone")
+                    }
+                    let identifiers = Set(requestedRollupDates.map {
+                        HealthKitDailyOwnershipMetadata.ownerDate(
+                            for: $0,
+                            calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                        )
+                    })
+                    request = try HealthRollupRangeRequest(
+                        ownerDateIdentifiers: identifiers,
+                        calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                    )
+                }
+                rollupPaths = HealthRollupExporter.outputRelativePaths(
+                    for: request,
+                    healthSubfolder: settings.archiveModeEnabled ? "" : effectiveHealthSubfolder,
+                    settings: settings
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // The supplemental range artifact is unavailable, but daily destination
+                // collision checks must still run so the daily export can proceed safely.
+                rollupPaths = []
+            }
+        } else {
+            rollupPaths = []
+        }
 
         if !settings.archiveModeEnabled,
            settings.dailyNoteInjection.enabled,
@@ -3776,7 +4309,8 @@ final class VaultManager: ObservableObject {
                 for date in dates {
                     let dailyNotePath = ExportPathPlanner.dailyNoteRelativePath(
                         settings: settings.dailyNoteInjection,
-                        date: date
+                        date: date,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     )
                     let dailyNoteKey = try ExportPathPlanner.canonicalPortablePathKey(
                         dailyNotePath
@@ -3803,17 +4337,13 @@ final class VaultManager: ObservableObject {
         }
 
         if settings.archiveModeEnabled {
-            var entryPaths = settings.summaryOnlyModeEnabled ? [] : dates.flatMap { date in
+            let requestedArchiveDates = archiveDates ?? dates
+            var entryPaths = settings.summaryOnlyModeEnabled ? [] : requestedArchiveDates.flatMap { date in
                 settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map {
                     archiveEntryPath(for: date, format: $0, settings: settings)
                 }
             }
-            entryPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
-                for: rollupDates ?? dates,
-                healthSubfolder: "",
-                settings: settings,
-                calendar: calendar
-            ))
+            entryPaths.append(contentsOf: rollupPaths)
             if settings.writesDataDictionary {
                 entryPaths.append(HealthMdExportSchema.dataDictionaryFilename)
             }
@@ -3823,8 +4353,12 @@ final class VaultManager: ObservableObject {
                 throw invalidExportPathError(error)
             }
 
-            let startDate = dates.min() ?? rollupDates?.min() ?? Date()
-            let endDate = dates.max() ?? rollupDates?.max() ?? startDate
+            let startDate = authoritativeRollupRange?.startDate
+                ?? requestedArchiveDates.min()
+                ?? Date()
+            let endDate = authoritativeRollupRange?.endDate
+                ?? requestedArchiveDates.max()
+                ?? startDate
             let archivePath = [
                 effectiveHealthSubfolder,
                 archiveFilename(
@@ -3838,7 +4372,8 @@ final class VaultManager: ObservableObject {
                 destinationPaths.append(contentsOf: dates.map {
                     ExportPathPlanner.dailyNoteRelativePath(
                         settings: settings.dailyNoteInjection,
-                        date: $0
+                        date: $0,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     )
                 })
             }
@@ -3863,16 +4398,12 @@ final class VaultManager: ObservableObject {
             artifactPaths.append(contentsOf: dates.map {
                 ExportPathPlanner.dailyNoteRelativePath(
                     settings: settings.dailyNoteInjection,
-                    date: $0
+                    date: $0,
+                    timeZone: settings.exportTimeZoneOverride ?? .current
                 )
             })
         }
-        artifactPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
-            for: rollupDates ?? dates,
-            healthSubfolder: effectiveHealthSubfolder,
-            settings: settings,
-            calendar: calendar
-        ))
+        artifactPaths.append(contentsOf: rollupPaths)
         if settings.writesDataDictionary && !settings.dailyNotesOnlyModeEnabled {
             artifactPaths.append(
                 ExportPathPlanner.dataDictionaryRelativePath(
@@ -4092,12 +4623,17 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Individual Entry Export
 
+    private struct IndividualEntryExportOutcome {
+        let fileCount: Int
+        let coverageGapFailures: [ExportPartialFailure]
+    }
+
     /// Export individual timestamped entries for configured metrics
     private func exportIndividualEntries(
         from healthData: HealthData,
         to baseURL: URL,
         settings: AdvancedExportSettings
-    ) throws -> Int {
+    ) throws -> IndividualEntryExportOutcome {
         let trackingSettings = settings.individualTracking
 
         // Extract samples that should be tracked individually
@@ -4106,14 +4642,56 @@ final class VaultManager: ObservableObject {
             settings: trackingSettings
         )
 
-        guard !samples.isEmpty else { return 0 }
+        // While the canonical archive is authoritative, a tracked metric with
+        // no source records is silently empty by design. Surface the structural
+        // causes as one aggregated warning instead of dropping them quietly.
+        var coverageGapFailures: [ExportPartialFailure] = []
+        if healthData.healthKitRecordArchive != nil {
+            let gaps = individualExporter.coverageGaps(
+                emittedSamples: samples,
+                from: healthData,
+                settings: trackingSettings,
+                metricSelection: settings.metricSelection
+            )
+            if !gaps.isEmpty {
+                coverageGapFailures = [coverageGapFailure(gaps: gaps, for: healthData)]
+            }
+        }
+
+        guard !samples.isEmpty else { return IndividualEntryExportOutcome(
+            fileCount: 0,
+            coverageGapFailures: coverageGapFailures
+        ) }
 
         // Export the samples
-        return try individualExporter.exportIndividualEntries(
+        let fileCount = try individualExporter.exportIndividualEntries(
             samples: samples,
             to: baseURL,
             settings: trackingSettings,
             formatSettings: settings.formatCustomization
+        )
+        return IndividualEntryExportOutcome(
+            fileCount: fileCount,
+            coverageGapFailures: coverageGapFailures
+        )
+    }
+
+    /// Formats one day's coverage gaps as a single deterministic warning.
+    private func coverageGapFailure(
+        gaps: [IndividualEntryExporter.IndividualEntryCoverageGap],
+        for healthData: HealthData
+    ) -> ExportPartialFailure {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = healthData.timeContext.calendarTimeZone
+        let entries = gaps
+            .map { "\($0.metricID) \($0.localizedDescription)" }
+            .joined(separator: "; ")
+        return ExportPartialFailure(
+            date: healthData.date,
+            dataType: "Individual entries",
+            dateRangeDescription: formatter.string(from: healthData.date),
+            errorDescription: "Lossless records produced no individual entries for tracked metrics: \(entries)."
         )
     }
 }
@@ -4125,6 +4703,7 @@ enum ExportError: LocalizedError, Equatable {
     case noHealthData
     case accessDenied
     case destinationChanged
+    case markdownMergeRejected
     case noFormatsSelected
     case dailyNotePathConflict(path: String)
     case invalidExportPath(path: String)
@@ -4139,6 +4718,8 @@ enum ExportError: LocalizedError, Equatable {
             return String(localized: "Cannot access the vault folder. Reconnect it in Files or re-select it.")
         case .destinationChanged:
             return String(localized: "The saved export folder now resolves to a different location. Health.md stopped before writing any files. Review the location in Files, then re-select the intended folder.")
+        case .markdownMergeRejected:
+            return String(localized: "Health.md could not safely identify complete YAML properties in the existing Markdown file, so it left the file unchanged.")
         case .noFormatsSelected:
             return String(localized: "At least one export format must be selected")
         case .dailyNotePathConflict(let path):

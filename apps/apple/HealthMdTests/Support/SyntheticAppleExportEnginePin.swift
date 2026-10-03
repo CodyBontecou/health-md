@@ -19,7 +19,7 @@ func makeSyntheticAppleExportEnginePin(
         "registry_version": 1,
         "registry_sha256": String(repeating: "a", count: 64),
         "semantic_profile_revision": 1,
-        "render_profile_revision": 1,
+        "render_profile_revision": 2,
         "core_source_revision": "synthetic-persistence-test",
         "calendar_time_zone": calendarTimeZoneIdentifier
     ]

@@ -13,8 +13,11 @@ installers = ["shell", "powershell", "homebrew"]
 targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
 # Path that shell/PowerShell installers should place binaries in
 install-path = "~/.local/bin"
-# Publish generated formulae to the project tap after a successful release
+# Publish generated formulae to the project tap after a successful release. The tap is an
+# explicitly preview-capable channel until the first qualified stable release; prerelease formulae
+# remain visibly versioned and never weaken the stable mobile-qualification gate.
 publish-jobs = ["homebrew"]
+publish-prereleases = true
 tap = "CodyBontecou/homebrew-tap"
 # Whether to install an updater program
 install-updater = false

@@ -5,7 +5,7 @@ use healthmd_protocol::{
     encoding::SwiftUuid,
     models::{
         CanonicalSelection, DateSelection, DetailLevel, ExactDateSelection, ExportDestination,
-        ExportRequest, ResponseMode, SettingsPolicy,
+        ExportRequest, ProfileReference, ResponseMode, SettingsPolicy,
     },
 };
 use serde_json::{Map, Value};
@@ -158,7 +158,38 @@ pub struct ExtractSelection {
     pub projection_pointers: Vec<String>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RawCorpusFormat {
+    Auto,
+    Json,
+    Ndjson,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RawCorpusExportInput {
+    pub dates: DateOptions,
+    pub provider_id: Option<String>,
+    pub format: RawCorpusFormat,
+    pub include_exercise_routes: bool,
+    pub timeout: Duration,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RawArtifactReadInput {
+    pub job_id: Uuid,
+    pub offset: u64,
+    pub maximum_bytes: usize,
+}
+
 impl SelectionOptions {
+    /// True when any request-scoped selector is present.
+    pub fn is_requested(&self) -> bool {
+        self.all_metrics
+            || !self.metric_ids.is_empty()
+            || !self.categories.is_empty()
+            || !self.source_ids.is_empty()
+    }
+
     /// Normalize generated-file selection and saved-settings policy.
     ///
     /// # Errors
@@ -274,6 +305,10 @@ pub struct GeneratedFileExportInput {
     pub dates: DateOptions,
     pub selection: SelectionOptions,
     pub use_device_settings: bool,
+    /// Export profile resolved on the iPhone by stable UUID (phase 5). When
+    /// present, the request uses `SettingsPolicy::Profile`; selectors must be
+    /// empty because the profile owns the settings scope.
+    pub profile: Option<ProfileReference>,
     pub destination: String,
     pub timeout: Duration,
 }
@@ -309,17 +344,38 @@ impl GeneratedFileExportInput {
                 "destination must be an existing absolute directory",
             ));
         }
+        if let Some(profile) = &self.profile {
+            if self.use_device_settings {
+                return Err(OperationInputError::invalid(
+                    "profile policy cannot combine with device settings; the profile owns settings",
+                ));
+            }
+            if self.selection.is_requested() {
+                return Err(OperationInputError::invalid(
+                    "profile policy cannot combine with metric/category selectors; the profile owns scope",
+                ));
+            }
+            if profile.profile_id.trim().is_empty() {
+                return Err(OperationInputError::invalid(
+                    "profile reference requires a profile ID",
+                ));
+            }
+        }
+        let (settings_policy, profile_reference) = if let Some(profile) = self.profile.clone() {
+            (SettingsPolicy::Profile, Some(profile))
+        } else if self.use_device_settings {
+            (SettingsPolicy::CurrentIphoneSettings, None)
+        } else {
+            (SettingsPolicy::RequestedDatesOnly, None)
+        };
         Ok(GeneratedFileExportInvocation {
             request: ExportRequest {
                 protocol_version: 1,
                 job_id: SwiftUuid(job_id),
                 created_at,
                 date_selection: self.dates.resolve(today)?,
-                settings_policy: if self.use_device_settings {
-                    SettingsPolicy::CurrentIphoneSettings
-                } else {
-                    SettingsPolicy::RequestedDatesOnly
-                },
+                settings_policy,
+                profile_reference,
                 response_mode: ResponseMode::WriteFiles,
                 raw_profile: None,
                 canonical_selection: self.selection.generated_files(self.use_device_settings)?,
@@ -330,6 +386,145 @@ impl GeneratedFileExportInput {
             timeout: self.timeout,
         })
     }
+}
+
+/// Parse the local-MCP full public/authorized corpus request shared by iOS and Android adapters.
+///
+/// This scope is deliberately explicit: it means every public record type supported by the
+/// selected mobile source and authorized by the user, never a platform-private database.
+///
+/// # Errors
+///
+/// Fails closed for unknown keys, malformed dates/provider IDs, or out-of-range timeouts.
+pub fn raw_corpus_export_from_value(
+    arguments: &Value,
+    today: NaiveDate,
+) -> Result<RawCorpusExportInput, OperationInputError> {
+    let arguments = arguments
+        .as_object()
+        .ok_or_else(|| OperationInputError::invalid("arguments must be an object"))?;
+    ensure_keys(
+        arguments,
+        &[
+            "scope",
+            "date_selection",
+            "date_range",
+            "provider_id",
+            "format",
+            "include_exercise_routes",
+            "wait_timeout_seconds",
+        ],
+    )?;
+    if arguments.get("scope").and_then(Value::as_str) != Some("all_public_authorized") {
+        return Err(OperationInputError::invalid(
+            "scope must be all_public_authorized",
+        ));
+    }
+    let dates = match arguments.get("date_selection").and_then(Value::as_str) {
+        Some("all_available") if !arguments.contains_key("date_range") => {
+            DateOptions::all_available()
+        }
+        Some("explicit_range") => {
+            let range = arguments
+                .get("date_range")
+                .and_then(Value::as_object)
+                .ok_or_else(|| OperationInputError::invalid("date_range is required"))?;
+            ensure_keys(range, &["start", "end"])?;
+            DateOptions::exact(
+                required_string(range, "start")?.to_owned(),
+                required_string(range, "end")?.to_owned(),
+            )
+        }
+        _ => return Err(OperationInputError::invalid("invalid date_selection")),
+    };
+    // Validate now so every adapter receives the same resolved date grammar.
+    let _ = dates.resolve(today)?;
+    let provider_id = arguments
+        .get("provider_id")
+        .map(|value| {
+            value
+                .as_str()
+                .filter(|provider| valid_machine_identifier(provider))
+                .map(str::to_owned)
+                .ok_or_else(|| OperationInputError::invalid("invalid provider_id"))
+        })
+        .transpose()?;
+    let format = match arguments
+        .get("format")
+        .and_then(Value::as_str)
+        .unwrap_or("auto")
+    {
+        "auto" => RawCorpusFormat::Auto,
+        "json" => RawCorpusFormat::Json,
+        "ndjson" => RawCorpusFormat::Ndjson,
+        _ => return Err(OperationInputError::invalid("invalid raw format")),
+    };
+    let include_exercise_routes =
+        optional_bool(arguments, "include_exercise_routes")?.unwrap_or(true);
+    let timeout_seconds = arguments
+        .get("wait_timeout_seconds")
+        .map(number)
+        .transpose()?
+        .unwrap_or_else(|| Duration::from_secs(DEFAULT_EXPORT_TIMEOUT_SECONDS).as_secs_f64());
+    if !timeout_seconds.is_finite() || timeout_seconds <= 0.0 {
+        return Err(OperationInputError::invalid("invalid wait_timeout_seconds"));
+    }
+    let timeout = Duration::from_secs_f64(timeout_seconds);
+    if !(Duration::from_secs(MINIMUM_EXPORT_TIMEOUT_SECONDS)
+        ..=Duration::from_secs(MAXIMUM_EXPORT_TIMEOUT_SECONDS))
+        .contains(&timeout)
+    {
+        return Err(OperationInputError::invalid("invalid wait_timeout_seconds"));
+    }
+    Ok(RawCorpusExportInput {
+        dates,
+        provider_id,
+        format,
+        include_exercise_routes,
+        timeout,
+    })
+}
+
+/// Parse one bounded read from a completed, job-bound raw artifact.
+///
+/// # Errors
+///
+/// Fails for unknown keys, malformed identifiers, offsets, or chunk sizes.
+pub fn raw_artifact_read_from_value(
+    arguments: &Value,
+) -> Result<RawArtifactReadInput, OperationInputError> {
+    let arguments = arguments
+        .as_object()
+        .ok_or_else(|| OperationInputError::invalid("arguments must be an object"))?;
+    ensure_keys(arguments, &["job_id", "offset", "max_bytes"])?;
+    let job_id = arguments
+        .get("job_id")
+        .and_then(Value::as_str)
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .ok_or_else(|| OperationInputError::invalid("invalid job_id"))?;
+    let offset = match arguments.get("offset") {
+        Some(value) => value
+            .as_u64()
+            .ok_or_else(|| OperationInputError::invalid("invalid offset"))?,
+        None => 0,
+    };
+    let maximum_bytes = match arguments.get("max_bytes") {
+        Some(value) => usize::try_from(
+            value
+                .as_u64()
+                .ok_or_else(|| OperationInputError::invalid("invalid max_bytes"))?,
+        )
+        .unwrap_or(usize::MAX),
+        None => crate::limits::DEFAULT_RAW_ARTIFACT_CHUNK_BYTES,
+    };
+    if maximum_bytes == 0 || maximum_bytes > crate::limits::MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES {
+        return Err(OperationInputError::invalid("invalid max_bytes"));
+    }
+    Ok(RawArtifactReadInput {
+        job_id,
+        offset,
+        maximum_bytes,
+    })
 }
 
 /// Parse and normalize the structured generated-file operation used by MCP.
@@ -353,6 +548,7 @@ pub fn generated_file_export_from_value(
             "date_selection",
             "date_range",
             "settings_policy",
+            "profile_reference",
             "metric_ids",
             "categories",
             "all_metrics",
@@ -386,15 +582,42 @@ pub fn generated_file_export_from_value(
             return Err(OperationInputError::invalid("invalid date_selection"));
         }
     };
-    let use_device_settings = match arguments
+    let mut use_device_settings = false;
+    let mut profile: Option<ProfileReference> = None;
+    match arguments
         .get("settings_policy")
         .and_then(Value::as_str)
         .unwrap_or("requested_dates_only")
     {
-        "requested_dates_only" => false,
-        "current_iphone_settings" => true,
+        "requested_dates_only" => {}
+        "current_iphone_settings" => use_device_settings = true,
+        "profile" => {
+            let reference = arguments
+                .get("profile_reference")
+                .and_then(Value::as_object)
+                .ok_or_else(|| {
+                    OperationInputError::invalid(
+                        "profile_reference is required with settings_policy profile",
+                    )
+                })?;
+            ensure_keys(reference, &["profileID", "name"])?;
+            let profile_id = reference
+                .get("profileID")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .ok_or_else(|| {
+                    OperationInputError::invalid("profile_reference requires a non-empty profileID")
+                })?;
+            profile = Some(ProfileReference {
+                profile_id: profile_id.to_owned(),
+                name: reference
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+            });
+        }
         _ => return Err(OperationInputError::invalid("invalid settings_policy")),
-    };
+    }
     let timeout_seconds = arguments
         .get("wait_timeout_seconds")
         .map(number)
@@ -444,6 +667,7 @@ pub fn generated_file_export_from_value(
         dates,
         selection,
         use_device_settings,
+        profile,
         destination,
         timeout,
     }
@@ -657,9 +881,88 @@ fn number(value: &Value) -> Result<f64, OperationInputError> {
         .ok_or_else(|| OperationInputError::invalid("expected number"))
 }
 
+fn valid_machine_identifier(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'_' | b'-' | b'.')
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn full_corpus_and_artifact_reads_are_strict_and_bounded() {
+        let today = NaiveDate::from_ymd_opt(2026, 8, 1).unwrap();
+        let input = raw_corpus_export_from_value(
+            &serde_json::json!({
+                "scope": "all_public_authorized",
+                "date_selection": "all_available",
+                "provider_id": "health_connect",
+                "format": "ndjson",
+                "include_exercise_routes": true,
+                "wait_timeout_seconds": 300
+            }),
+            today,
+        )
+        .unwrap();
+        assert_eq!(input.dates, DateOptions::all_available());
+        assert_eq!(input.provider_id.as_deref(), Some("health_connect"));
+        assert_eq!(input.format, RawCorpusFormat::Ndjson);
+        assert!(input.include_exercise_routes);
+
+        let automatic = raw_corpus_export_from_value(
+            &serde_json::json!({
+                "scope": "all_public_authorized",
+                "date_selection": "all_available"
+            }),
+            today,
+        )
+        .unwrap();
+        assert_eq!(automatic.format, RawCorpusFormat::Auto);
+        assert!(automatic.include_exercise_routes);
+
+        assert!(
+            raw_corpus_export_from_value(
+                &serde_json::json!({
+                    "scope": "all_public_authorized",
+                    "date_selection": "all_available",
+                    "provider_id": "Health Connect"
+                }),
+                today,
+            )
+            .is_err()
+        );
+        assert!(
+            raw_corpus_export_from_value(
+                &serde_json::json!({
+                    "scope": "private_database",
+                    "date_selection": "all_available"
+                }),
+                today,
+            )
+            .is_err()
+        );
+
+        let job_id = Uuid::new_v4();
+        let read = raw_artifact_read_from_value(&serde_json::json!({
+            "job_id": job_id,
+            "offset": 42,
+            "max_bytes": crate::limits::MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES
+        }))
+        .unwrap();
+        assert_eq!(read.job_id, job_id);
+        assert_eq!(read.offset, 42);
+        assert!(
+            raw_artifact_read_from_value(&serde_json::json!({
+                "job_id": job_id,
+                "max_bytes": crate::limits::MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES + 1
+            }))
+            .is_err()
+        );
+    }
 
     #[test]
     fn date_options_are_exclusive_and_deterministic() {
@@ -715,6 +1018,89 @@ mod tests {
     }
 
     #[test]
+    fn profile_policy_builds_reference_and_rejects_conflicting_scopes() {
+        let destination = tempfile::tempdir().unwrap();
+        let destination_text = destination
+            .path()
+            .canonicalize()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        let base_input = GeneratedFileExportInput {
+            dates: DateOptions::exact("2026-07-01".to_owned(), "2026-07-07".to_owned()),
+            selection: SelectionOptions::default(),
+            use_device_settings: false,
+            profile: Some(ProfileReference {
+                profile_id: "11111111-2222-4333-8444-555555555555".to_owned(),
+                name: Some("Weekly Sleep".to_owned()),
+            }),
+            destination: destination_text,
+            timeout: Duration::from_secs(300),
+        };
+
+        let invocation = base_input
+            .build(
+                Uuid::new_v4(),
+                Utc::now(),
+                NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(invocation.request.settings_policy, SettingsPolicy::Profile);
+        assert_eq!(
+            invocation
+                .request
+                .profile_reference
+                .as_ref()
+                .unwrap()
+                .profile_id,
+            "11111111-2222-4333-8444-555555555555"
+        );
+        assert!(invocation.request.canonical_selection.is_none());
+
+        // Device-settings policy conflict.
+        let mut conflict = base_input.clone();
+        conflict.use_device_settings = true;
+        assert!(
+            conflict
+                .build(
+                    Uuid::new_v4(),
+                    Utc::now(),
+                    NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()
+                )
+                .is_err()
+        );
+
+        // Selector conflict.
+        let mut selectors = base_input.clone();
+        selectors.selection.categories = vec!["Sleep".to_owned()];
+        assert!(
+            selectors
+                .build(
+                    Uuid::new_v4(),
+                    Utc::now(),
+                    NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()
+                )
+                .is_err()
+        );
+
+        // Empty ID is rejected.
+        let mut empty_id = base_input;
+        empty_id.profile = Some(ProfileReference {
+            profile_id: "  ".to_owned(),
+            name: None,
+        });
+        assert!(
+            empty_id
+                .build(
+                    Uuid::new_v4(),
+                    Utc::now(),
+                    NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()
+                )
+                .is_err()
+        );
+    }
+
+    #[test]
     fn typed_cli_and_structured_mcp_export_inputs_normalize_identically() {
         let destination = tempfile::tempdir().unwrap();
         let destination = destination.path().canonicalize().unwrap();
@@ -730,6 +1116,7 @@ mod tests {
                 ..SelectionOptions::default()
             },
             use_device_settings: false,
+            profile: None,
             destination: destination_text.clone(),
             timeout: Duration::from_secs(300),
         }

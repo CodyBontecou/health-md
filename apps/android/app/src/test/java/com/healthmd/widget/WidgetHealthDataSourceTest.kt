@@ -11,6 +11,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 class WidgetHealthDataSourceTest {
     @Test
@@ -18,7 +19,7 @@ class WidgetHealthDataSourceTest {
         val provider = mockk<HealthConnectDataProvider>()
         val today = LocalDate.parse("2026-08-02")
         coEvery {
-            provider.fetchWidgetHealthDataRange(any(), any())
+            provider.fetchWidgetHealthDataRange(any(), any(), any())
         } returns listOf(HealthData(date = today))
         val source = HealthConnectWidgetDataSource(provider)
         val selection = HealthConnectWidgetReadSelection(
@@ -26,7 +27,8 @@ class WidgetHealthDataSourceTest {
             sleepSessions = true,
         )
 
-        val result = source.readRecentDays(today, selection)
+        val zone = ZoneId.of("Pacific/Auckland")
+        val result = source.readRecentDays(today, selection, zoneId = zone)
 
         assertThat(result).hasSize(14)
         assertThat(result.first().date).isEqualTo(today.minusDays(13))
@@ -35,6 +37,7 @@ class WidgetHealthDataSourceTest {
             provider.fetchWidgetHealthDataRange(
                 dates = match { it.size == 14 && it.first() == today.minusDays(13) && it.last() == today },
                 selection = selection,
+                zoneId = zone,
             )
         }
     }
