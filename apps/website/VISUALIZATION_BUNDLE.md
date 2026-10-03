@@ -56,6 +56,14 @@ The scripts intentionally have no machine-specific default. Set `HEALTHMD_OBSIDI
    node --check assets/healthmd-plugin-visualizations.js
    ```
 
+## WHOOP preview data and docs
+
+The plugin catalog supplies the four `whoop-*` types, the WHOOP category, parameters, supported export formats, and fidelity notes. Website code only adds route slugs, connection/scope help, and data requirements; it must not advertise Android Raw API Snapshot support or relabel WHOOP as HealthKit data.
+
+The daily sample generator uses the plugin's v8 mock days, then `scripts/whoop-visualization-samples.mjs` adds clearly synthetic typed WHOOP v1 records from the reviewed shared provider fixture. This demo-only layer preserves canonical Apple fields, string IDs, exact millisecond durations, signed nap adjustments, separate sessions/workouts, missingness, and resource counts. It does not turn the current body profile into a historical series. Roll-up samples remain unchanged. Matching Apple onboarding wrappers receive the same synthetic days through the existing sync workflow.
+
+The bundle generator also extracts the plugin's WHOOP coverage-note CSS. The website adapts the note to its stats grid; do not hand-edit generated CSS. User-facing explanations and four copyable blocks live in every published translation of `docs-src/src/content/docs/visualizations-roadmap.md`.
+
 ## Theme handling
 
 `apps/website/assets/visualization-customizer.js` should call the bundled plugin `resolveTheme(...)` rather than maintaining separate website-only theme logic. The customizer supplies Obsidian-like body classes and CSS variables so the plugin renderer resolves colors the same way it does inside Obsidian.

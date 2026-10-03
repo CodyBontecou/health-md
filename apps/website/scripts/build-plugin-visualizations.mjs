@@ -121,14 +121,19 @@ async function generatedPluginCss() {
   const start = source.indexOf(startMarker);
   const end = source.indexOf(endMarker, start);
   if (start < 0 || end < 0) throw new Error("Could not find plugin visualization insight CSS markers");
+  const whoopNote = source.match(/\.health-md-whoop-note\s*\{[^}]*\}/)?.[0];
+  if (!whoopNote) throw new Error("Could not find plugin WHOOP coverage-note CSS");
   return `/* Generated from health-md-visualizations/styles.css. Do not edit directly. */
-.html-preview {
+.html-preview,
+.health-md-viz-stats {
+  --font-smallest: 12px;
   --background-modifier-border: var(--color-gray-alpha-300);
   --interactive-accent: var(--color-tertiary);
   --text-muted: var(--color-secondary);
   --radius-m: var(--radius-md);
 }
-${source.slice(start, end).trim()}\n`;
+${source.slice(start, end).trim()}
+${whoopNote}\n`;
 }
 
 async function loadPluginMetadata(esbuild, tmpDir) {
