@@ -25,8 +25,9 @@ Update both peers to a version supporting this preference for Connected Mac expo
 older apps cannot honor a setting they do not know. Legacy snapshots without the key decode as on. On is omitted from encoded settings
 so existing default-on durable fingerprints remain stable; off is encoded explicitly.
 The deferred **Share My Setup v2** portable file is a separate allowlisted contract:
-it does not carry this newly staged preference. Its native-field coverage ledger
-marks the field `local_only`; setup-file imports retain the enabled default, so
+it does not carry this newly staged preference. The additive
+`apple-profile-field-coverage-v2.json` source-audit revision marks the field
+`local_only` (the original revision 1 ledger is preserved byte-for-byte); setup-file imports retain the enabled default, so
 configure suppression locally after importing. Native profile persistence and frozen
 Mac jobs do carry it. Portable adoption requires Android convergence and contract review.
 

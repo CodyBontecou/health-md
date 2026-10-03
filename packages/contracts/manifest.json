@@ -387,6 +387,7 @@
         "packages/contracts/shared-setup/v2/contract.md",
         "packages/contracts/shared-setup/v2/shared-setup.schema.json",
         "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
+        "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json",
         "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"
       ],
       "implementations": [

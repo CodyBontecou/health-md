@@ -1,6 +1,6 @@
 {
   "schema": "healthmd.shared_setup.apple_profile_field_coverage",
-  "schema_version": 1,
+  "schema_version": 2,
   "target_contract": {
     "schema": "healthmd.shared_setup",
     "schema_version": 2
@@ -109,6 +109,7 @@
     {"source_type": "MarkdownTemplateConfig", "field": "bulletStyle", "field_kind": "stored", "serialized_key": "bulletStyle", "disposition": "portable", "contract_path": "profiles[].presentation.markdown.bullet_style", "reason": "The typed bullet style is portable presentation intent."},
     {"source_type": "MarkdownTemplateConfig", "field": "customTemplate", "field_kind": "stored", "serialized_key": "customTemplate", "disposition": "portable", "contract_path": "profiles[].presentation.markdown.custom_text", "reason": "Bounded custom Markdown is copied verbatim only after disclosure, placeholder analysis, and review."},
     {"source_type": "MarkdownTemplateConfig", "field": "includeSummary", "field_kind": "stored", "serialized_key": "includeSummary", "disposition": "portable", "contract_path": "profiles[].presentation.markdown.include_summary", "reason": "Markdown summary inclusion is portable presentation intent."},
+    {"source_type": "MarkdownTemplateConfig", "field": "includeWorkoutDetailsAndMetadata", "field_kind": "stored", "serialized_key": "includeWorkoutDetailsAndMetadata", "disposition": "local_only", "contract_path": null, "reason": "The staged workout table presentation setting is preserved in native profiles and frozen Mac jobs, but is not an allowlisted Shared Setup v2 field. Shared Setup imports keep the default enabled; portable adoption requires the Android presentation convergence target and an explicit contract review."},
     {"source_type": "MarkdownTemplateConfig", "field": "sectionHeaderLevel", "field_kind": "stored", "serialized_key": "sectionHeaderLevel", "disposition": "portable", "contract_path": "profiles[].presentation.markdown.header_level", "reason": "The bounded Markdown header level is portable."},
     {"source_type": "MarkdownTemplateConfig", "field": "style", "field_kind": "stored", "serialized_key": "style", "disposition": "portable", "contract_path": "profiles[].presentation.markdown.style", "reason": "The reviewed Markdown style enum is portable."},
     {"source_type": "MarkdownTemplateConfig", "field": "useEmoji", "field_kind": "stored", "serialized_key": "useEmoji", "disposition": "portable", "contract_path": "profiles[].presentation.markdown.use_emoji", "reason": "Emoji presentation preference is portable."},
