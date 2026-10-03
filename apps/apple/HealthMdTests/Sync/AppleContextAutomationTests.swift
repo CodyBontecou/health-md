@@ -620,8 +620,11 @@ final class AppleContextAutomationTests: XCTestCase {
         jobs.contextAutomationPeerAdmission = { adapter.allows(jobID: $0, sync: $1, requiresContextAuthority: $2 == .contextStore) }
         var acquisitions: [IPhoneExportRequest] = []
         var receipts: [AppleContextReceipt] = []
+        var transportACKs: [ConnectedTransferFinalAck] = []
+        service.contextAutomationOutboundAdmission = { adapter.allowsMessage($0, sync: service, inbound: false) }
         service.testMessageSendObserver = { message in
             if case .iphoneExportRequest(let request) = message { acquisitions.append(request) }
+            if case .connectedTransferFinalAck(let acknowledgement) = message { transportACKs.append(acknowledgement) }
             if case .appleContext(.receipt(let receipt)) = message {
                 XCTAssertNotNil(jobs.contextRequest(jobID: receipt.request.id), "Job mapping must precede ack")
                 receipts.append(receipt)
@@ -689,17 +692,30 @@ final class AppleContextAutomationTests: XCTestCase {
         let transportComplete = ConnectedTransferComplete(transferID: partition.transferID, totalBytes: partition.file.totalBytes,
             totalChunks: 1, sha256: partition.file.sha256)
         guard case .ready(let ready) = receiver.receive(transportComplete) else { return XCTFail("Native partition completion rejected") }
+        var encryptedApplies = 0
         corpus.afterEncryptedContextApplyForTesting = {
+            encryptedApplies += 1
             await Task.yield()
             service.testSetAuthenticatedContextPeer(UUID()) // switch during REAL encrypted apply await
         }
-        try await corpus.applyPartition(fileURL: ready.fileURL, descriptor: partition.descriptor, vaultManager: vault)
+        let sentAfterApply = try await adapter.applyAndFinishVerifiedPartition(ready, sync: service, receiver: receiver) {
+            try await corpus.applyPartition(fileURL: ready.fileURL, descriptor: partition.descriptor, vaultManager: vault)
+        }
+        XCTAssertFalse(sentAfterApply)
+        XCTAssertTrue(transportACKs.isEmpty, "No actual outbound ACK while peer mismatches")
+        XCTAssertTrue(receiver.activeTransferIDs.isEmpty, "Verified application must not strand digestValidated/pending receiver state")
+        guard case .replay(let cachedAfterApply) = receiver.receive(transportComplete) else { return XCTFail("Verified same-ID application must be replayable even when sending is denied") }
+        XCTAssertFalse(adapter.sendVerifiedTransportAcknowledgement(cachedAfterApply, sync: service))
+        XCTAssertTrue(transportACKs.isEmpty)
         let transportFinalAck = ConnectedTransferFinalAck(transferID: partition.transferID, accepted: true, sha256: partition.file.sha256, message: nil)
         XCTAssertFalse(adapter.allowsMessage(.connectedTransferComplete(transportComplete), sync: service))
         XCTAssertFalse(adapter.allowsMessage(.connectedTransferAck(startAck), sync: service, inbound: false))
         XCTAssertFalse(adapter.allowsMessage(.connectedTransferFinalAck(transportFinalAck), sync: service, inbound: false))
         XCTAssertFalse(adapter.allowsMessage(.connectedCorpusTransferDisposition(disposition), sync: service, inbound: false))
         service.testSetAuthenticatedContextPeer(peer)
+        guard case .replay(let restoredPeerAck) = receiver.receive(transportComplete) else { return XCTFail("Same-ID completion must replay after peer restoration") }
+        XCTAssertTrue(adapter.sendVerifiedTransportAcknowledgement(restoredPeerAck, sync: service))
+        XCTAssertEqual(transportACKs, [restoredPeerAck])
         let corpusFinalAck = ConnectedCorpusTransferFinalAck(sessionID: session.sessionID, jobID: scope.id, accepted: true,
             requestFingerprint: session.requestFingerprint, finalPartitionSHA256: partition.descriptor.sha256, message: nil)
         let cancelAck = ConnectedCorpusTransferCancelAck(sessionID: session.sessionID, jobID: scope.id, accepted: true, acknowledgedAt: Date(), message: nil)
@@ -714,9 +730,17 @@ final class AppleContextAutomationTests: XCTestCase {
                     .connectedCorpusTransferDisposition(disposition), .connectedCorpusTransferFinalAck(corpusFinalAck), .connectedCorpusTransferCancelAck(cancelAck)] {
             XCTAssertFalse(adapter.allowsMessage(ack, sync: service, inbound: false))
         }
+        guard case .replay(let uncertainAck) = receiver.receive(transportComplete) else { return XCTFail("Uncertain authority must not discard verified transport replay") }
+        XCTAssertFalse(adapter.sendVerifiedTransportAcknowledgement(uncertainAck, sync: service))
+        XCTAssertEqual(transportACKs.count, 1, "No actual outbound ACK while authority is uncertain")
         adapter.journal.writeFailurePointForTesting = nil
         XCTAssertTrue(try adapter.journal.retryDurability(scope.id, expectedRequest: scope))
-        XCTAssertNotNil(receiver.finish(transferID: partition.transferID, accepted: true))
+        guard case .replay(let repairedAck) = receiver.receive(transportComplete) else { return XCTFail("Explicit same-scope repair must permit same-ID replay, not new capture") }
+        XCTAssertTrue(adapter.sendVerifiedTransportAcknowledgement(repairedAck, sync: service))
+        XCTAssertEqual(transportACKs, [restoredPeerAck, repairedAck])
+        XCTAssertEqual(repairedAck.transferID, partition.transferID)
+        XCTAssertEqual(encryptedApplies, 1, "Replay must not reapply encrypted data")
+        XCTAssertEqual(acquisitions.count, 1, "Replay must not create a new native job/capture")
         let stored = try await contextStore.loadDay(ownerDate: "2026-01-02")
         XCTAssertEqual(stored?.metrics.first(where: { $0.metricID == "steps" })?.value, .quantity(value: 4_321, unit: "steps"))
         let finalize = ConnectedCorpusTransferFinalize(sessionID: session.sessionID, jobID: scope.id,

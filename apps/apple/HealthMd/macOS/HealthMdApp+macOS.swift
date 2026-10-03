@@ -820,9 +820,9 @@ struct HealthMdApp: App {
     private func handleConnectedTransferComplete(_ complete: ConnectedTransferComplete) async {
         switch connectedTransferReceiver.receive(complete) {
         case .pending:
-            break // The original completion path will send the post-persistence final ACK.
+            break // Application is still in flight; verified finish caches replay even if outbound authority changes.
         case .replay(let acknowledgement):
-            syncService.send(.connectedTransferFinalAck(acknowledgement))
+            contextAutomationCoordinator.sendVerifiedTransportAcknowledgement(acknowledgement, sync: syncService)
             if connectedCorpusAwakeCoordinator.endTransfer(transferID: complete.transferID) {
                 syncService.isSyncing = false
             }
@@ -854,21 +854,21 @@ struct HealthMdApp: App {
                         }
                         let updatesEncryptedContext =
                             macCorpusExportSessionManager.activeExportMode == .encryptedContext
-                        try await macCorpusExportSessionManager.applyPartition(
-                            fileURL: ready.fileURL,
-                            descriptor: descriptor,
-                            vaultManager: vaultManager
-                        )
-                        if updatesEncryptedContext {
-                            await encryptedHealthContextManager.refresh()
+                        let sent = try await contextAutomationCoordinator.applyAndFinishVerifiedPartition(
+                            ready, sync: syncService, receiver: connectedTransferReceiver
+                        ) {
+                            try await macCorpusExportSessionManager.applyPartition(
+                                fileURL: ready.fileURL,
+                                descriptor: descriptor,
+                                vaultManager: vaultManager
+                            )
+                            if updatesEncryptedContext {
+                                await encryptedHealthContextManager.refresh()
+                            }
                         }
-                        guard contextAutomationCoordinator.allowsMessage(.connectedTransferComplete(complete), sync: syncService) else { return }
-                        guard let acknowledgement = connectedTransferReceiver.finish(
-                            transferID: ready.start.transferID,
-                            accepted: true
-                        ) else { return }
-                        iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: descriptor.jobID)
-                        syncService.send(.connectedTransferFinalAck(acknowledgement))
+                        if sent {
+                            iphoneExportRequestCoordinator.handleValidatedTransferProgress(jobID: descriptor.jobID)
+                        }
                     } catch {
                         logConnectedTransferFailure(error, phase: "apply_partition")
                         rejectReadyConnectedTransfer(

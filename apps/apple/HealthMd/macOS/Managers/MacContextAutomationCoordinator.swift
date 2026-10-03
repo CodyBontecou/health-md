@@ -80,6 +80,26 @@ final class MacContextAutomationCoordinator: ObservableObject {
         return receiver.receive(start)
     }
 
+    /// Verified application completes the receiver's digest-validated state even
+    /// if authority changes across the await. Its INTERNAL replay cache is not an
+    /// outbound ACK: sending still requires the current peer/proven authority.
+    func applyAndFinishVerifiedPartition(_ ready: ConnectedTransferReceiver.ReadyTransfer,
+                                        sync: SyncService, receiver: ConnectedTransferReceiver,
+                                        apply: () async throws -> Void) async throws -> Bool {
+        guard ready.start.manifest.kind == .connectedCorpusPartitionV1,
+              allowsMessage(.connectedTransferStart(ready.start), sync: sync) else { return false }
+        try await apply()
+        guard let acknowledgement = receiver.finish(transferID: ready.start.transferID, accepted: true) else { return false }
+        return sendVerifiedTransportAcknowledgement(acknowledgement, sync: sync)
+    }
+
+    @discardableResult
+    func sendVerifiedTransportAcknowledgement(_ acknowledgement: ConnectedTransferFinalAck, sync: SyncService) -> Bool {
+        guard allowsMessage(.connectedTransferFinalAck(acknowledgement), sync: sync, inbound: false) else { return false }
+        sync.send(.connectedTransferFinalAck(acknowledgement))
+        return true
+    }
+
     /// Last app-root exclusion before any ordinary file execution, including
     /// restored native context jobs whose private automation journal is unreadable.
     func executeOrdinaryFileJob(_ job: MacExportJob, sync: SyncService,
