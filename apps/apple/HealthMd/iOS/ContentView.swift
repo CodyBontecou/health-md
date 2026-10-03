@@ -36,6 +36,10 @@ struct ContentView: View {
     @AppStorage("pricing.paywall.postOnboarding.shown.v1") private var hasSeenPostOnboardingPaywall = false
     @State private var isExporting = false
     @State private var isRequestingHealthAuthorization = false
+    @State private var isAssessingHistory = false
+    @State private var executionHistoryAssessment: HealthHistoryAssessment?
+    @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyExecutionTask: Task<Void, Never>?
     @State private var exportProgress: Double = 0.0
     @State private var exportStatusMessage = ""
     @State private var partialExportNotice: PartialExportNotice?
@@ -162,7 +166,9 @@ struct ContentView: View {
                         presentFirstExportPreview: $presentFirstExportPreview,
                         onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
                         canExport: canExport,
-                        onExportTapped: exportData
+                        onExportTapped: exportData,
+                        historyProfileStore: profileCoordinator?.profileStore,
+                        executionHistoryAssessment: executionHistoryAssessment
                     )
                     .tabItem {
                         Label("Export", systemImage: "arrow.up.doc.fill")
@@ -550,23 +556,31 @@ struct ContentView: View {
             restoreInteractiveCorpusExportIfNeeded()
             await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
         }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateExecutionHistory() }
+        .onReceive(profileCoordinator?.profileStore.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in invalidateExecutionHistory() }
         .onChange(of: scenePhase) { _, newPhase in
+            invalidateExecutionHistory()
             guard newPhase == .active else { return }
             restoreInteractiveCorpusExportIfNeeded()
             vaultManager.refreshVaultAccess()
             Task { await refreshDateRangeSelectionForOpening() }
         }
         .onChange(of: dateRangePreset) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .onChange(of: startDate) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .onChange(of: endDate) { _, _ in
+            invalidateExecutionHistory()
             saveDateRangeSelection()
         }
         .healthMdReleaseNotesSheet()
         .onDisappear {
+            historyExecutionCoordinator.invalidate()
+            historyExecutionTask?.cancel()
             statusDismissTimer?.invalidate()
             releaseQuickLookAccess()
             releaseMarkdownPreviewAccess()
@@ -1080,6 +1094,7 @@ struct ContentView: View {
     }
 
     private func exportData() {
+        guard !isAssessingHistory else { return }
         // Persist any in-flight profile edits before freezing the request.
         let profiles = ensureProfileCoordinator()
         profiles.flushEdits()
@@ -1157,21 +1172,54 @@ struct ContentView: View {
             }
         }
 
-        // In UI test mode, simulate export only after the same configuration
-        // preflight checks that a release build performs.
-        if TestMode.isUITesting {
-            simulateTestExport()
-            return
+        // Assess a frozen request after normal preflight, independently of query
+        // completion. This is UI evidence only: consumer receipts need review.
+        let selection = interactiveHistorySelection
+        let requestID = historyExecutionCoordinator.beginRequest()
+        isAssessingHistory = true
+        historyExecutionTask = Task {
+            defer { isAssessingHistory = false; historyExecutionTask = nil }
+            let result = await historyExecutionCoordinator.assess(requestID: requestID, scope: selection.scope, isCurrent: {
+                selection == interactiveHistorySelection
+            }, operation: {
+                await healthKitManager.assessHistoryAccess(scope: selection.scope)
+            })
+            guard let assessment = result else {
+                exportStatusMessage = "Export selection changed. Review the range and export again."
+                return
+            }
+            executionHistoryAssessment = assessment
+            if TestMode.isUITesting {
+                simulateTestExport()
+                return
+            }
+            switch selection.target {
+            case .localIPhoneFolder: exportLocalData()
+            case .connectedMac: exportDataToConnectedMac()
+            case .apiEndpoint: exportDataToAPIEndpoint()
+            }
         }
+    }
 
-        switch exportTargetSelection {
-        case .localIPhoneFolder:
-            exportLocalData()
-        case .connectedMac:
-            exportDataToConnectedMac()
-        case .apiEndpoint:
-            exportDataToAPIEndpoint()
-        }
+    private func invalidateExecutionHistory() {
+        historyExecutionCoordinator.invalidate()
+        executionHistoryAssessment = nil
+    }
+
+    private var interactiveHistorySelection: HealthHistoryExecutionSelection {
+        HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
+            settings: ExportSettingsSnapshot.from(advancedSettings),
+            target: exportTargetSelection, preset: dateRangePreset)
+    }
+
+    private var interactiveHistoryScope: HealthHistoryScope {
+        HealthHistoryScope(
+            metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime,
+            profileID: profileCoordinator?.profileStore.activeProfileID
+        )
     }
 
     private func requestHealthAuthorizationForExport() {

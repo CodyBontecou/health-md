@@ -2292,6 +2292,68 @@ final class HealthKitManager: ObservableObject {
             || (msg.contains("protected data") && msg.contains("unavailable"))
     }
 
+    // MARK: - Historical authorization evidence (never acquisition bounds)
+
+    func assessHistoryAccess(scope: HealthHistoryScope) async -> HealthHistoryAssessment {
+        let plan = HealthKitRecordCatalog.attributedSelectionPlan(enabledMetricIDs: scope.metricIDs)
+        var results: [HealthHistoryTypeAssessment] = []
+        let plannedIDs = Set(plan.map(\.objectTypeIdentifier))
+        for entry in plan {
+            let access: HealthHistoryAccess
+            if !HealthKitRecordCatalog.isRuntimeAvailable(entry.descriptor) {
+                access = .unassessed(reason: "type_runtime_unavailable")
+            } else {
+                // Ordinary sample families first. Set<HKObjectType> does not prove
+                // eligibility of correlations, per-object selectors or snapshots.
+                switch entry.recordKind {
+                case .quantity, .category, .workout:
+                    if let type = HealthKitRecordCatalog.resolveObjectType(entry.descriptor) {
+                        let outcome = await store.historyAuthorizationDates(for: [type])
+                        switch outcome {
+                        case .boundaries(let dates):
+                            access = dates[type.identifier].map { .limited(sampleEndBoundary: $0) } ?? .unknown
+                        case .unavailable: access = .apiUnavailable
+                        case .failure: access = .assessmentFailed
+                        }
+                    } else {
+                        access = .unassessed(reason: "unresolved_object_type")
+                    }
+                case .characteristic, .activitySummary:
+                    access = .unassessed(reason: "snapshot_or_non_sample_api")
+                default:
+                    access = .unassessed(reason: "special_api_eligibility_unverified")
+                }
+            }
+            results.append(HealthHistoryTypeAssessment(
+                id: entry.objectTypeIdentifier,
+                directMetricIDs: entry.directMetricIDs,
+                dependencyMetricIDs: entry.dependencyMetricIDs,
+                dependencyReasons: plan.flatMap { parent in
+                    parent.descriptor.dependencies.filter { $0.objectTypeIdentifier == entry.objectTypeIdentifier }
+                        .map { $0.reason.rawValue }
+                }.reduce(into: Set<String>()) { $0.insert($1) }.sorted(),
+                access: access
+            ))
+        }
+        for metricID in scope.metricIDs.subtracting(Set(plan.flatMap(\.directMetricIDs))).sorted() {
+            results.append(HealthHistoryTypeAssessment(
+                id: "metric:\(metricID)", directMetricIDs: [metricID], dependencyMetricIDs: [],
+                dependencyReasons: [], access: .unassessed(reason: "unresolved_selected_metric")
+            ))
+        }
+        for identifier in Set(plan.flatMap { $0.descriptor.dependencyIdentifiers }).subtracting(plannedIDs).sorted() {
+            let parents = plan.filter { $0.descriptor.dependencyIdentifiers.contains(identifier) }
+            results.append(HealthHistoryTypeAssessment(
+                id: identifier, directMetricIDs: [],
+                dependencyMetricIDs: Set(parents.flatMap(\.metricIDs)).sorted(),
+                dependencyReasons: Set(parents.compactMap { $0.descriptor.dependencyReasons[identifier]?.rawValue }).sorted(),
+                access: .unassessed(reason: "unresolved_dependency")
+            ))
+        }
+        return HealthHistoryAssessment(id: UUID(), assessedAt: Date(), scope: scope,
+                                       types: results.sorted { $0.id < $1.id })
+    }
+
     // MARK: - Earliest Data Date
 
     /// Catalog-backed discovery for the exact selected metrics. Every ordinary
@@ -2428,6 +2490,12 @@ final class HealthKitManager: ObservableObject {
     /// jobs use `discoverEarliestHealthDataDate` to check query completion, not to
     /// prove full-history authorization. Neither helper verifies that authorization.
     func findEarliestHealthDataDate() async -> Date? {
+        #if DEBUG
+        if TestMode.isUITesting, ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] != nil {
+            // Synthetic warning navigation only; never physical history proof.
+            return Calendar.current.startOfDay(for: Date())
+        }
+        #endif
         let result = await discoverEarliestHealthDataDate(
             enabledMetricIDs: HealthKitRecordCatalog.expectedMetricIDs
         )

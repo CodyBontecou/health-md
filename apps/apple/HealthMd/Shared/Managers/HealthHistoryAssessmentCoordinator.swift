@@ -1,0 +1,41 @@
+import Foundation
+
+/// One owner per preview/execution surface. Reentrant assessments cannot publish
+/// an obsolete result even if a scope changes away and back while suspended.
+@MainActor
+final class HealthHistoryAssessmentCoordinator {
+    private var revision = UUID()
+
+    func invalidate() { revision = UUID() }
+    func beginRequest() -> UUID {
+        invalidate()
+        return revision
+    }
+
+    func assess(
+        requestID: UUID? = nil,
+        scope: HealthHistoryScope,
+        isCurrent: () -> Bool,
+        operation: () async -> HealthHistoryAssessment
+    ) async -> HealthHistoryAssessment? {
+        guard !Task.isCancelled, isCurrent() else { return nil }
+        let token = requestID ?? beginRequest()
+        guard token == revision else { return nil }
+        let result = await operation()
+        guard !Task.isCancelled, token == revision, result.scope == scope, isCurrent() else { return nil }
+        return result
+    }
+}
+
+/// Frozen UI execution identity. No persistence/serialization/wire adoption.
+struct HealthHistoryExecutionSelection: Equatable {
+    let scope: HealthHistoryScope
+    let settings: ExportSettingsSnapshot
+    let target: ExportTargetSelection
+    let preset: ExportDateRangePreset
+}
+
+nonisolated struct HealthHistoryPreviewRequest: Equatable, Hashable, Sendable {
+    let scope: HealthHistoryScope
+    let refreshID: UUID
+}

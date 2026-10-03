@@ -18,6 +18,15 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var shouldThrowOnAuthStatus: Error?
     var requestedReadTypes: Set<HKObjectType> = []
     var statusReadTypes: Set<HKObjectType> = []
+    var historyOutcome: HealthHistoryQueryOutcome = .boundaries([:])
+    var historyOutcomesByIdentifier: [String: HealthHistoryQueryOutcome] = [:]
+    var historyRequestedIdentifiers: [String] = []
+
+    func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome {
+        let identifiers = types.map(\.identifier).sorted()
+        historyRequestedIdentifiers.append(contentsOf: identifiers)
+        return identifiers.first.flatMap { historyOutcomesByIdentifier[$0] } ?? historyOutcome
+    }
 
     // Pre-configured statistics results keyed by HKQuantityTypeIdentifier raw value
     var statisticsSums: [String: Double] = [:]

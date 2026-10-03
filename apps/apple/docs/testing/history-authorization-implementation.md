@@ -1,0 +1,33 @@
+# Historical-access assessment: source-staged native implementation
+
+Refs issue #172; remains incomplete. This is not full-history permission proof.
+
+## SDK receipt and implementation boundary
+
+Required free standard `xcode-27` run [37110784638](https://github.com/CodyBontecou/health-md/actions/runs/37110784638) qualified the exact public async throwing `Set<HKObjectType> -> [HKObjectType: Date]` declaration on iPhoneSimulator, iPhoneOS and macOS SDK27. Actual image `20260928.0222.1`, arm64, Xcode27.0 build27A266a, Swift6.4; existing iOS17/macOS14 deployment floors. This initial probe is not app-target compilation or runtime authorization evidence. The prior SDK26 negative probe and investigation remain unchanged.
+
+Apple CI now requires the declaration before preparation and each native consumer. SDK27 cache/artifact namespaces are distinct, with producer head/tree/toolchain/SDK/target receipts compared by every native consumer. One producer, the complete unit/coverage suites, original UI selectors, budgets and quality guards remain; three warning selectors are additive. Native compilation and execution results must be recorded separately from the initial declaration receipt.
+
+`HealthStoreProviding.historyAuthorizationDates` returns Sendable identifier/date outcomes. The production adapter calls the actual public API only on OS27+, not a selector or compiler-version guess. The manager uses the exact selected catalog/dependency closure, initially querying quantity/category/workout types separately so one failure cannot discard siblings. Snapshot, unresolved and special types remain explicitly unassessed. No changes to acquisition predicates, sleep/day ownership, readable-date discovery or query-completion meaning.
+
+The independently versioned in-memory model retains scope, selected metrics, source, profile, bounds, logical All Time, frozen timezone, identity/time, evidence source and per-type direct/dependency attribution. It deliberately is not Codable. Returned boundaries are known limitations on **sample end**, not a start-date clamp. Omitted/empty dictionaries stay unknown; denied/full/limited-without-date cannot be distinguished. Older runtimes, failed assessment and unassessed types remain different states.
+
+## Reachable UI and execution
+
+Export's Date Range section is followed by an actionable history-warning card for All Time and explicit bounded ranges. Known limitations intersect when a requested start predates the boundary or the request is logical All Time; unknown/unavailable/failed/unassessed history is never labeled unrestricted. Authenticated expandable details include type, frozen-timezone boundary and dependency attribution. Review Health Access opens the existing Health permissions guide.
+
+One SwiftUI task owns preview assessments; scope, settings, preset, profile and foreground changes invalidate its request. The production coordinator rejects superseded/ABA/cancelled results and requires final scope identity. Interactive local/API/Connected Mac export performs independent reassessment after ordinary readiness/quota preflight, then checks the full frozen selection/settings identity before entering existing capture paths. Valid execution evidence takes display precedence over preview evidence; only that evidence carries the rechecked label. Permissions action does not change `canExport`, quota or destination behavior.
+
+This tranche provides interactive iPhone warning/reassessment, **not** receipt propagation into files/API bodies/Mac jobs or portable query/raw/file status. No history assessment enters `HealthData.partialFailures` or frozen daily/archive/raw/SharedSetup data. Ordinary Shortcuts/scheduled/headless requests, durable restart/resume and cursor pages do not gain a verified receipt from this UI assessment. Receipt adoption requires explicit owner review, independently negotiated/versioned handling, immutable job/paging binding and legacy-unverified behavior. Do not claim these consumers are complete.
+
+## Tests and remaining qualification
+
+`HealthHistoryAssessmentTests` exercises production manager/catalog/coordinator and display-selection logic: mixed boundaries/omissions, full-selected/denied/no-known ambiguity, empty reads, independent read/assessment failure, older runtime, dependencies/special types, range intersections, canonical heart/sleep original timestamps before/at/after boundary, permission changes, timezone civil days, preview-vs-execution precedence and suspended stale/ABA execution.
+
+`HistoryAuthorizationJourneyUITests` uses DEBUG-only synthetic adapter outcomes through real navigation/execution UI. Two named cases are registered in blocking iPhone smoke; large-text/unavailable/action coverage is registered beside the existing iPad no-data regression. UI fixtures never establish physical SDK authorization behavior. File registration or proposed tests are not execution receipts.
+
+Native production builds/full suites, named exact-head unit/UI receipts, changed-permission timing under real authorization, VoiceOver focus/Reduce Motion, and physical limited/full-selected/denied/no-data/mixed/overlapping samples remain separate acceptance gates until actually executed. OS equality at the sample-end boundary is not inferred from synthetic records.
+
+Cross-platform staging is recorded in [history-assessment-platform-v1.json](history-assessment-platform-v1.json), an independent platform section preserving pinned inventories. Android remains **planned**: Health Connect feature/permission/first-grant boundary adapter, Export warning and portable receipt tests. Its known history-permission failure differs from Apple's privacy-ambiguous omission.
+
+Apple nightly/release paths still require an independently reviewed SDK27 toolchain adoption before promoting this draft. No release/self-hosted workflow was dispatched here. No issue closure, merge, release or full-device acceptance is implied.

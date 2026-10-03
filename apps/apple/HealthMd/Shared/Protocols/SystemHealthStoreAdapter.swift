@@ -123,6 +123,36 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     private let canonicalQueryLimiter = BoundedHealthKitQueryLimiter(maximumConcurrentQueries: 4)
     let store: HKHealthStore
 
+    func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome {
+        #if DEBUG
+        if TestMode.isUITesting, let fixture = ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] {
+            switch fixture {
+            case "limited":
+                return .boundaries(Dictionary(uniqueKeysWithValues: types.map {
+                    ($0.identifier, Date(timeIntervalSince1970: 1_893_456_000)) // Synthetic 2030 boundary.
+                }))
+            case "unavailable": return .unavailable
+            case "failure": return .failure
+            default: return .boundaries([:])
+            }
+        }
+        #endif
+        guard isAvailable else { return .unavailable }
+        if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
+            do {
+                let dates = try await store.earliestAuthorizedSampleDate(for: types)
+                let requested = Set(types.map(\.identifier))
+                return .boundaries(Dictionary(uniqueKeysWithValues: dates.compactMap { type, date in
+                    requested.contains(type.identifier) ? (type.identifier, date) : nil
+                }))
+            } catch {
+                // No raw framework error, type/date detail or permission inference in logs.
+                return .failure
+            }
+        }
+        return .unavailable
+    }
+
     // Swift 6.2+ can corrupt the back-deployed isolated-deinit task-local scope
     // when synchronous code releases a main-actor object (swiftlang/swift#85663).
     // Final ownership makes teardown safe without an executor hop.

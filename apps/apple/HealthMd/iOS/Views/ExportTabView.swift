@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Combine
 import os.log
 
 // MARK: - Export Tab View
@@ -46,6 +47,14 @@ struct ExportTabView: View {
     var onFirstExportPreviewDismissed: (() -> Void)? = nil
     let canExport: Bool
     let onExportTapped: () -> Void
+    let historyProfileStore: ExportProfileStore?
+    let executionHistoryAssessment: HealthHistoryAssessment?
+
+    @State private var historyAssessment: HealthHistoryAssessment?
+    @State private var historyRefreshID = UUID()
+    @State private var historyProfileID: UUID?
+    @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
+    @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -91,6 +100,7 @@ struct ExportTabView: View {
                     exportTargetSection
                         .configurationChangesProtected()
                     dateRangeSection
+                    historyWarningSection
                     healthDataSection
                         .id("marketing-export-health-data")
                     formatsSection
@@ -131,6 +141,18 @@ struct ExportTabView: View {
             #endif
             }
         }
+        // Only this SwiftUI task owns preview work. Every event invalidates its
+        // identity, rather than spawning overlapping observer-owned tasks.
+        .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
+        .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
+            guard historyProfileID != id else { return }
+            historyProfileID = id
+            invalidateHistoryPreview()
+        }
+        .onChange(of: scenePhase) { _, _ in invalidateHistoryPreview() }
+        .onDisappear { historyCoordinator.invalidate() }
         .geistDialog(
             isPresented: $showHealthPermissionsGuide,
             title: Text("Adjust Health Permissions"),
@@ -422,6 +444,85 @@ struct ExportTabView: View {
             return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
+    }
+
+    // MARK: - History evidence (outside exported records)
+
+    private var historyScope: HealthHistoryScope {
+        HealthHistoryScope(
+            metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime, profileID: historyProfileID
+        )
+    }
+
+    private var historyPreviewRequest: HealthHistoryPreviewRequest {
+        HealthHistoryPreviewRequest(scope: historyScope, refreshID: historyRefreshID)
+    }
+
+    private func invalidateHistoryPreview() {
+        historyCoordinator.invalidate()
+        historyRefreshID = UUID()
+        historyAssessment = nil
+    }
+
+    private func refreshHistoryAssessment() async {
+        guard scenePhase == .active else { return }
+        let request = historyPreviewRequest
+        let result = await historyCoordinator.assess(scope: request.scope, isCurrent: {
+            request == historyPreviewRequest && scenePhase == .active
+        }, operation: {
+            await healthKitManager.assessHistoryAccess(scope: request.scope)
+        })
+        guard let result else { return }
+        historyAssessment = result
+    }
+
+    @ViewBuilder private var historyWarningSection: some View {
+        if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
+            execution: executionHistoryAssessment, scope: historyScope), assessment.needsWarning {
+            sectionCard(title: assessment.warningTitle) {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text(assessment.warningMessage)
+                        .accessibilityIdentifier("export.historyWarning.message")
+                    if assessment.id == executionHistoryAssessment?.id {
+                        Text("Rechecked for this export. Query completion is not proof of full history.")
+                            .accessibilityIdentifier("export.historyWarning.execution")
+                    }
+                    Button("Review Health Access") { showHealthPermissionsGuide = true }
+                        .accessibilityIdentifier("export.historyWarning.reviewAccess")
+                        .accessibilityHint("Shows instructions for reviewing Health.md access in Apple Health")
+                    DisclosureGroup("History access details") {
+                        ForEach(assessment.types) { type in
+                            VStack(alignment: .leading, spacing: Spacing.sm) {
+                                historyTypeDetail(type, assessment: assessment)
+                                Text("Selected metrics: \(type.directMetricIDs.joined(separator: ", ")). Dependencies for: \(type.dependencyMetricIDs.joined(separator: ", ")). Reasons: \(type.dependencyReasons.joined(separator: ", ")).")
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                    .accessibilityIdentifier("export.historyWarning.details")
+                }
+                .font(.footnote)
+            }
+            .accessibilityIdentifier("export.historyWarning")
+        }
+    }
+
+    @ViewBuilder private func historyTypeDetail(_ type: HealthHistoryTypeAssessment, assessment: HealthHistoryAssessment) -> some View {
+        switch type.access {
+        case .limited(let boundary):
+            Text("\(type.id): sample end boundary \(assessment.boundaryDescription(boundary)). Earlier starts are preserved.")
+        case .apiUnavailable:
+            Text("\(type.id): history assessment requires OS 27. This does not mean health data is unavailable.")
+        case .assessmentFailed:
+            Text("\(type.id): history assessment failed; readable data may still be available.")
+        case .unknown:
+            Text("\(type.id): no authorization boundary returned; history access is unknown.")
+        case .unassessed(let reason):
+            Text("\(type.id): not assessed (\(reason)).")
+        }
     }
 
     // MARK: - Date Range

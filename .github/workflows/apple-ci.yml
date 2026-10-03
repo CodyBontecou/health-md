@@ -56,7 +56,8 @@ jobs:
     name: Prepare shared Rust core once
     needs: changes
     if: ${{ needs.changes.outputs.run == 'true' }}
-    runs-on: macos-26
+    # Free standard public-repository SDK27 runner, never xlarge.
+    runs-on: xcode-27
     timeout-minutes: 20
     defaults:
       run:
@@ -73,11 +74,13 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
-      - name: Diagnose history-authorization SDK availability
-        # Diagnostic only: compilation does not verify on-device authorization.
-        run: bash scripts/diagnose-history-authorization-sdk.sh
+      - name: Require SDK27 public history signature and record provenance
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          mkdir -p Packages/HealthMdCoreRust/Artifacts
+          cp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - id: shared-core-cache
         name: Restore exact-source shared-core cache
@@ -87,7 +90,7 @@ jobs:
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
           key: >-
-            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
+            apple-shared-core-sdk27-27A266a-${{ runner.os }}-${{ runner.arch }}-${{
             hashFiles('packages/healthmd-core-rust/Cargo.toml',
             'packages/healthmd-core-rust/Cargo.lock',
             'packages/healthmd-core-rust/rust-toolchain.toml',
@@ -108,10 +111,11 @@ jobs:
       - name: Share the exact prepared XCFramework
         uses: actions/upload-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: |
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -119,9 +123,8 @@ jobs:
   test-ios:
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
-    # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
-    # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
-    runs-on: macos-26
+    # Public history API requires verified SDK27, unchanged deployment floors.
+    runs-on: xcode-27
     timeout-minutes: 75
     defaults:
       run:
@@ -179,13 +182,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (iOS)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -268,8 +276,8 @@ jobs:
   test-macos:
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
-    # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
-    runs-on: macos-26
+    # Same SDK27 toolchain and single prepared core as iOS.
+    runs-on: xcode-27
     timeout-minutes: 75
     defaults:
       run:
@@ -287,13 +295,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (macOS)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -348,7 +361,7 @@ jobs:
     name: iOS UI regressions
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     defaults:
       run:
@@ -366,13 +379,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (UI)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -429,6 +447,8 @@ jobs:
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename \
+            -only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide \
+            -only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
@@ -485,6 +505,7 @@ jobs:
             -destination "platform=iOS Simulator,id=${IPAD_UDID}" \
             -configuration Debug-iOS \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
+            -only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
