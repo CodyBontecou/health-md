@@ -583,6 +583,16 @@ final class ExportJourneyUITests: XCTestCase {
             forDuration: 0.05,
             thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
         )
+        if !customPreset.exists || !customPreset.isHittable {
+            // Synthetic-only public geometry; keep the exact assertions/drag
+            // and budgets. No private nodes, user data or tap substitution.
+            let buttonFrame = customPreset.exists ? String(describing: customPreset.frame) : "absent"
+            let tabs = app.tabBars.firstMatch
+            let tabFrame = tabs.exists ? String(describing: tabs.frame) : "absent"
+            let warning = app.staticTexts["export.historyWarning.message"]
+            let warningFrame = warning.exists ? String(describing: warning.frame) : "absent"
+            print("HISTORY_TAP_DIAGNOSTIC custom=\(buttonFrame) scroll=\(scrollView.frame) app=\(app.frame) tabs=\(tabFrame) warning=\(warningFrame)")
+        }
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible")
         XCTAssertTrue(customPreset.isHittable, "Custom preset should be tappable")
         customPreset.tap()

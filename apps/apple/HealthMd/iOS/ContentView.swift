@@ -39,6 +39,7 @@ struct ContentView: View {
     @State private var isAssessingHistory = false
     @State private var executionHistoryAssessment: HealthHistoryAssessment?
     @State private var historyExecutionCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyProfilePublicationObserver = HealthHistoryProfilePublicationObserver()
     @State private var historyExecutionTask: Task<Void, Never>?
     @State private var pendingHistorySelection: HealthHistoryExecutionSelection?
     @State private var pendingHistoryRequestID: UUID?
@@ -569,7 +570,9 @@ struct ContentView: View {
         .onReceive(healthKitManager.objectWillChange) { _ in invalidateExecutionHistory(reason: "health_publication") }
         .onReceive(apiExportSettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "api_publication") }
         .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory(reason: "vault_url") }
-        .onReceive(profileCoordinator?.profileStore.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in invalidateExecutionHistory(reason: "profile_publication") }
+        // Profile invalidation is still observed, but synchronously through
+        // typed execution inputs in ensureProfileCoordinator, not this store's
+        // broad pre-change/list/timestamp publication (which may be a flush).
         .onChange(of: scenePhase) { _, newPhase in
             invalidateExecutionHistory()
             guard newPhase == .active else { return }
@@ -592,6 +595,7 @@ struct ContentView: View {
         .healthMdReleaseNotesSheet()
         .onDisappear {
             invalidateExecutionHistory()
+            historyProfilePublicationObserver.unbind()
             statusDismissTimer?.invalidate()
             releaseQuickLookAccess()
             releaseMarkdownPreviewAccess()
@@ -1061,7 +1065,10 @@ struct ContentView: View {
     /// active profile thereafter.
     @discardableResult
     private func ensureProfileCoordinator() -> ExportProfileCoordinator {
-        if let profileCoordinator { return profileCoordinator }
+        if let profileCoordinator {
+            bindHistoryProfilePublications(profileCoordinator.profileStore)
+            return profileCoordinator
+        }
         let coordinator = ExportProfileCoordinator(
             profileStore: ExportProfileStore(),
             destinationStore: ProfileDestinationStore(),
@@ -1072,12 +1079,19 @@ struct ContentView: View {
             initialTarget: exportTargetSelection
         )
         profileCoordinator = coordinator
+        bindHistoryProfilePublications(coordinator.profileStore)
         // The Shared Setup v2 review flow runs above this view; register the
         // single production instance so its injected confirmation closures
         // can reach the verified rebind paths (weak — no lifetime impact, and
         // a missing registration keeps every confirmation fail-closed).
         SharedSetupV2ExportProfileBridge.register(coordinator)
         return coordinator
+    }
+
+    private func bindHistoryProfilePublications(_ store: ExportProfileStore) {
+        historyProfilePublicationObserver.bind(store) {
+            invalidateExecutionHistory(reason: "profile_semantic_change")
+        }
     }
 
     private func cancelExport() {
