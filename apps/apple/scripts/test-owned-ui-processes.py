@@ -31,6 +31,10 @@ if mode == 'late':
  time.sleep(4)
  pathlib.Path('late-result').write_text('late write')
  print('Test Case late raw write', flush=True)
+elif mode == 'anchor-loss':
+ subprocess.Popen([sys.executable, __file__, 'late'])
+ pathlib.Path('ready').touch()
+ os.kill(os.getpgrp(), signal.SIGKILL)  # Direct minted fixture anchor only, not group kill.
 elif mode in ('hold', 'orphan'):
  output = None if mode == 'hold' else subprocess.DEVNULL
  subprocess.Popen([sys.executable, __file__, 'late'], stdout=output, stderr=output)
@@ -121,10 +125,34 @@ class OwnershipControls(unittest.TestCase):
             program = f'''import importlib.util, pathlib, argparse, sys
 s=importlib.util.spec_from_file_location('owner', {str(SOURCE)!r})
 m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
-name='print' if {fault!r}=='stdout' else ('atomic' if {fault!r}.startswith('publication-') else {fault!r})
+if {fault!r}=='no-ps':
+ original_spawn=m.subprocess.Popen
+ def forbid_scan(*a,**k):
+  if pathlib.Path(a[0][0]).name=='ps': raise RuntimeError('external ps forbidden on helper critical path')
+  return original_spawn(*a,**k)
+ m.subprocess.Popen=forbid_scan
+mapping={{'members':'group_absent','EPERM':'group_absent','zombies':'group_absent','no-ps':'members','bad-owner':'Lifecycle','signal-order':'group_absent'}}
+name='print' if {fault!r}=='stdout' else ('atomic' if {fault!r}.startswith('publication-') else mapping.get({fault!r},{fault!r}))
 original=getattr(m,name,print); count=[0]; final_seen=[False]
+if {fault!r}=='signal-order':
+ original_spawn=m.subprocess.Popen; anchors={{}}; original_signal=m.os.killpg
+ def spawn(*a,**k):
+  process=original_spawn(*a,**k)
+  if '--anchor' in a[0]: anchors[process.pid]=process
+  return process
+ def numeric(group,number):
+  reaped=group in anchors and anchors[group].returncode is not None
+  with pathlib.Path('signal-order').open('a') as f: f.write(str(number)+','+str(reaped)+'\\n')
+  if number and reaped: raise RuntimeError('forbidden real signal after anchor reap')
+  return original_signal(group,number)
+ m.subprocess.Popen=spawn; m.os.killpg=numeric
 def injected(*a,**k):
  count[0]+=1
+ if {fault!r}=='no-ps': raise RuntimeError('whole-system ps forbidden on active/cleanup path')
+ if {fault!r}=='bad-owner':
+  lifecycle=original(*a,**k); lifecycle.owner='wrong-private-owner'; return lifecycle
+ if {fault!r}=='EPERM': raise PermissionError('uncertain group observation')
+ if {fault!r}=='zombies': return False
  if {fault!r}=='stdout' and str(a[0]).startswith('Owned UI lane='): raise BrokenPipeError('fixture final stdout failure')
  if {fault!r}=='publication-afterreplace' and a[1].get('eligible_to_continue') is True:
   original(*a,**k); raise RuntimeError('fixture error after positive replace')
@@ -328,6 +356,100 @@ sys.exit(result)
         self.assertEqual(tablet.returncode, 125)
         self.assertFalse((self.cwd / "calls").exists())
         self.assertIsNone(self.sentinel.poll())
+
+    def test_lifecycle_frame_schema_owner_lane_stage_EOF_and_byte_count_bounds(self):
+        valid = dict(owner="fixture-owner", lane="phone", stage=0, kind="ready")
+        variants = [b"", b"not-json\n", b"x" * 4097]
+        for key, value in (("owner", "wrong"), ("lane", "ipad"), ("stage", True), ("stage", 1), ("kind", "done")):
+            variants.append((json.dumps(dict(valid, **{key: value})) + "\n").encode())
+        variants.append((json.dumps(dict(valid, unknown="extra")) + "\n").encode())
+        for payload in variants:
+            with self.subTest(payload=payload[:80]):
+                reader, writer = os.pipe()
+                try:
+                    if payload:
+                        os.write(writer, payload)
+                    os.close(writer)
+                    writer = None
+                    lifecycle = owner.Lifecycle(reader, "fixture-owner", "phone", 0)
+                    self.assertRaises((RuntimeError, ValueError), lifecycle.frame, "ready", lambda: None)
+                finally:
+                    os.close(reader)
+                    if writer is not None:
+                        os.close(writer)
+        done = dict(valid, kind="done", admitted=True, worker=0)
+        for key, value in (("owner", "wrong"), ("lane", "ipad"), ("stage", True),
+                           ("admitted", 1), ("worker", True), ("worker", -9), ("worker", 256)):
+            reader, writer = os.pipe()
+            try:
+                os.write(writer, (json.dumps(valid) + "\n" + json.dumps(dict(done, **{key: value})) + "\n").encode())
+                lifecycle = owner.Lifecycle(reader, "fixture-owner", "phone", 0)
+                lifecycle.frame("ready", lambda: None)
+                self.assertRaises(RuntimeError, lifecycle.frame, "done", lambda: None)
+            finally:
+                os.close(reader)
+                os.close(writer)
+        reader, writer = os.pipe()
+        try:
+            os.write(writer, (json.dumps(valid) + "\n" + json.dumps(done) + "\n").encode())
+            lifecycle = owner.Lifecycle(reader, "fixture-owner", "phone", 0)
+            lifecycle.frame("ready", lambda: None)
+            lifecycle.frame("done", lambda: None)
+            self.assertRaises(RuntimeError, lifecycle.frame, "done", lambda: None)
+        finally:
+            os.close(reader)
+            os.close(writer)
+        reader, writer = os.pipe()
+        try:
+            os.write(writer, (json.dumps(valid) + "\n" + json.dumps(valid) + "\n").encode())
+            lifecycle = owner.Lifecycle(reader, "fixture-owner", "phone", 0)
+            self.assertEqual(lifecycle.frame("ready", lambda: None), valid)
+            self.assertRaises(RuntimeError, lifecycle.frame, "done", lambda: None)
+        finally:
+            os.close(reader)
+            os.close(writer)
+
+    def test_actual_native_anchor_EOF_not_held_by_worker_or_grandchild_withholds_tablet(self):
+        process = self.launch(("anchor-loss", "0"))
+        self.ready(process)
+        # Observe SUPERVISOR exit before the native grandchild's4s lifetime.
+        process.wait(timeout=2)
+        self.assertEqual(process.returncode, 125)
+        receipt = json.loads((self.cwd / "records/ui-owner-phone.json").read_text())
+        self.assertFalse(receipt["eligible_to_continue"])
+        self.assertFalse(receipt["process_clean"])
+        tablet = self.launch(("0",), lane="ipad", require="phone")
+        tablet.communicate(timeout=2)
+        self.assertEqual(tablet.returncode, 125)
+        # Natural bounded FIXTURE exit is not helper/SDK cleanup proof.
+        process.communicate(timeout=6)
+        self.assertNotIn("0", (self.cwd / "calls").read_text().splitlines())
+
+    def test_actual_owner_no_active_or_cleanup_ps_and_no_real_signal_after_reap(self):
+        for fault in ("no-ps", "signal-order"):
+            with self.subTest(fault=fault):
+                receipt = self.finish(self.launch(("0", "0"), fault=fault), 0)
+                self.assertTrue(receipt["eligible_to_continue"])
+                if fault == "signal-order":
+                    trace = (self.cwd / "signal-order").read_text().splitlines()
+                    self.assertEqual([line for line in trace if line != "0,True"],
+                                     ["15,False", "9,False", "15,False", "9,False"])
+                    self.assertIn("0,True", trace)
+                for name in ("ui-owner-phone.json", "ui-owner-phone.owner.json"):
+                    (self.cwd / "records" / name).unlink()
+                (self.cwd / "calls").unlink()
+
+    def test_actual_malformed_owner_EPERM_and_zombie_observation_fail_closed(self):
+        for fault in ("bad-owner", "EPERM", "zombies"):
+            with self.subTest(fault=fault):
+                receipt = self.finish(self.launch(("0", "0"), fault=fault), 125)
+                self.assertFalse(receipt["eligible_to_continue"])
+                self.assertRaises((RuntimeError, PermissionError), owner.prior, self.cwd / "records/ui-owner-phone.json", "phone")
+                calls = self.cwd / "calls"
+                self.assertLessEqual(calls.read_text().splitlines().count("0") if calls.exists() else 0, 1)
+                for name in ("ui-owner-phone.json", "ui-owner-phone.owner.json"):
+                    (self.cwd / "records" / name).unlink()
+                calls.unlink(missing_ok=True)
 
     def test_clean_ordinary_failed_tests_permit_actual_tablet(self):
         receipt = self.finish(self.launch(("65", "0")), 65)

@@ -35,6 +35,68 @@ def members(group):
             for p, g, state in [line.split()] if int(g) == group and not state.startswith("Z")}
 
 
+def group_absent(group):
+    # Verification ONLY: no ordinary signal, no authority to kill from a file.
+    try:
+        os.killpg(group, 0)
+    except ProcessLookupError:
+        return True
+    return False  # Includes zombies; EPERM/other errors propagate fail-closed.
+
+
+class Lifecycle:
+    """Two bounded private frames. Only anchor owns the writer, never native."""
+    def __init__(self, fd, owner, lane, stage):
+        self.fd, self.owner, self.lane, self.stage = fd, owner, lane, stage
+        self.buffer = bytearray()
+        self.count = 0
+        self.total = 0
+        self.cleanup_deadline = None
+        self.final_signal = False
+
+    def receive(self):
+        chunk = os.read(self.fd, 1024)
+        if not chunk:
+            raise RuntimeError("anchor lifecycle EOF; live ownership lost")
+        self.total += len(chunk)
+        if self.total > 4096:
+            raise RuntimeError("unbounded anchor lifecycle")
+        self.buffer.extend(chunk)
+
+    def frame(self, kind, admission):
+        if self.count >= 2:
+            raise RuntimeError("anchor lifecycle frame count exceeded")
+        while b"\n" not in self.buffer:
+            admission()
+            if select.select([self.fd], [], [], 0.03)[0]:
+                self.receive()
+        admission()
+        line, _, rest = self.buffer.partition(b"\n")
+        self.buffer = bytearray(rest)
+        value = json.loads(line)
+        expected = {"owner", "lane", "stage", "kind"} | ({"admitted", "worker"} if kind == "done" else set())
+        if (not isinstance(value, dict) or set(value) != expected or value.get("owner") != self.owner
+                or value.get("lane") != self.lane or type(value.get("stage")) is not int
+                or value.get("stage") != self.stage or value.get("kind") != kind
+                or self.count != (0 if kind == "ready" else 1)):
+            raise RuntimeError("malformed/mismatched anchor lifecycle frame")
+        if kind == "done" and (type(value["admitted"]) is not bool
+                or (value["admitted"] and (type(value["worker"]) is not int or not 0 <= value["worker"] <= 255))
+                or (not value["admitted"] and value["worker"] is not None)):
+            raise RuntimeError("malformed anchor completion")
+        self.count += 1
+        return value
+
+    def live(self):
+        # No poll/wait/reap and no subprocess/global process scan. EOF cannot be
+        # hidden by descendants: they never inherit this writer. Observation
+        # races remain; the minted anchor PID is retained until last signal.
+        if select.select([self.fd], [], [], 0)[0]:
+            self.receive()
+        if self.count == 2 and self.buffer:
+            raise RuntimeError("extra anchor lifecycle frames")
+
+
 def positive_group(value):
     return type(value) is int and value > 1
 
@@ -73,66 +135,64 @@ def prior(path, lane):
     expected_exit = next((rightmost(stage) for stage in value["stages"] if rightmost(stage)), 0)
     if type(value["exit_status"]) is not int or value["exit_status"] != expected_exit:
         raise RuntimeError("prior exit status disagrees with ordinary pipeline result")
-    if any(members(g) for g in groups):
+    if any(not group_absent(g) for g in groups):
         raise RuntimeError("prior group active; verification never authorizes a kill")
 
 
-def anchor(worker, event, abort, deadline, owner):
-    # Remains the live group leader while parent signals inherited work. Parent
-    # NEVER poll/waits/reaps this anchor until numeric group signalling is over.
+def anchor(worker, abort, deadline, owner, lane, stage, fd):
     stopped = []
     def stop(number, _frame):
         stopped.append(number)
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
+    def emit(kind, **extra):
+        value = dict(owner=owner, lane=lane, stage=stage, kind=kind, **extra)
+        os.write(fd, (json.dumps(value) + "\n").encode())
+    emit("ready")
     permission = sys.stdin.readline()
     if permission != "GO\n" or stopped or abort.exists() or time.monotonic() >= deadline:
-        atomic(event, {"owner": owner, "admitted": False})
+        emit("done", admitted=False, worker=None)
     else:
-        child = subprocess.Popen(["bash", str(worker)])
-        status = child.wait()
-        atomic(event, {"owner": owner, "admitted": True, "worker": status})
-    # A normal worker exit is NOT group settlement. Keep this anchor live until
-    # the supervisor has inspected/terminated any remaining group members.
-    sys.stdin.read()
+        # Writer inherited ONLY by anchor; Bash/native/tee/parser cannot keep
+        # lifecycle EOF open after anchor death. No heartbeat/global ps scan.
+        child = subprocess.Popen(["bash", str(worker)], close_fds=True)
+        emit("done", admitted=True, worker=child.wait())
+    sys.stdin.read()  # Retain LIVE anchor through final numeric group signal.
 
 
-def settle(process, seconds):
+def settle(process, seconds, lifecycle):
     group = process.pid
-    deadline = time.monotonic() + seconds
-    def others():
-        active = members(group)
-        if group not in active:
-            raise RuntimeError("live anchor lost; no reusable numeric-group signalling")
-        return set(active) - {group}
-    try:
-        residual = others()
-        if residual:
-            os.killpg(group, signal.SIGTERM)  # Anchor ignores/latches TERM.
-            grace = min(deadline, time.monotonic() + seconds / 2)
-            while time.monotonic() < grace and others():
-                time.sleep(0.02)
-        if others():
-            os.killpg(group, signal.SIGKILL)  # FINAL numeric signal, anchor included.
-        else:
-            process.stdin.close()  # Permit anchor to exit only after others gone.
-            try:
-                process.wait(timeout=max(0.01, min(1, deadline - time.monotonic())))
-            except subprocess.TimeoutExpired:
-                # Anchor still live; this is the final numeric signal.
-                if group not in members(group):
-                    raise RuntimeError("anchor lost before final signal")
-                os.killpg(group, signal.SIGKILL)
-        process.wait(timeout=max(0.01, min(1, deadline - time.monotonic())))
-        # No subsequent numeric signals after reaping, even on inspection error.
-        return not members(group)
-    except Exception:
-        # If still anchored, a final kill is safe to attempt before reaping.
-        # Never infer ownership from a receipt, or signal after a completed wait.
-        if process.returncode is None and group in members(group):
-            os.killpg(group, signal.SIGKILL)
-            process.wait(timeout=1)
-        raise
+    if lifecycle.cleanup_deadline is None:
+        lifecycle.cleanup_deadline = time.monotonic() + seconds
+    deadline = lifecycle.cleanup_deadline
+    def remaining():
+        value = deadline - time.monotonic()
+        if value <= 0:
+            raise TimeoutError("cleanup observation budget")
+        return value
+    if process.returncode is None:
+        if not lifecycle.final_signal:
+            # If cancellation preceded ready, establish minted live ownership
+            # inside the SAME cleanup allowance; malformed/EOF grants no kill.
+            if lifecycle.count == 0:
+                lifecycle.frame("ready", remaining)
+            lifecycle.live()
+            os.killpg(group, signal.SIGTERM)
+            grace = min(deadline, time.monotonic() + seconds / 3)
+            while time.monotonic() < grace:
+                lifecycle.live()
+                time.sleep(max(0, min(0.02, grace - time.monotonic())))
+            lifecycle.live()
+            lifecycle.final_signal = True  # Even failed last-signal attempt is uncertain.
+            os.killpg(group, signal.SIGKILL)  # LAST real signal, anchor included.
+        process.wait(timeout=remaining())  # NEVER reap before final group signal.
+    # After reaping: verification ONLY. Retained zombies/reuse/EPERM/unknown
+    # cannot authorize another kill, a second native or tablet continuation.
+    while time.monotonic() < deadline:
+        if group_absent(group):
+            return True
+        time.sleep(min(0.02, remaining()))
+    return False
 
 
 def rightmost(stages):
@@ -170,6 +230,7 @@ def run(args):
     atomic(path, record)
     atomic(path.with_suffix(".owner.json"), {"lane": args.lane, "owner": record["owner"]})
     process = None
+    lifecycle = None
     clean = True
     result = 125
     try:
@@ -198,7 +259,6 @@ def run(args):
             for index, job in enumerate(jobs):
                 admission()
                 status_file = root / (str(index) + ".status")
-                event = root / (str(index) + ".event")
                 worker = root / (str(index) + ".sh")
                 if "setup" in job:
                     if not isinstance(job["setup"], str):
@@ -223,26 +283,30 @@ def run(args):
                 env = dict(os.environ, HEALTHMD_UI_STAGE_FILE=str(status_file),
                            HEALTHMD_UI_SETUP_FILE=str(setup_file))
                 admission()
-                process = subprocess.Popen([sys.executable, __file__, "--anchor", str(worker), str(event),
-                                            str(abort.resolve()), str(deadline), record["owner"]], env=env,
-                                           stdin=subprocess.PIPE, text=True, start_new_session=True)
+                read_fd, write_fd = os.pipe()
+                lifecycle = Lifecycle(read_fd, record["owner"], args.lane, index)
+                try:
+                    process = subprocess.Popen([sys.executable, __file__, "--anchor", str(worker),
+                                                str(abort.resolve()), str(deadline), record["owner"],
+                                                args.lane, str(index), str(write_fd)], env=env,
+                                               stdin=subprocess.PIPE, text=True, start_new_session=True,
+                                               close_fds=True, pass_fds=(write_fd,))
+                finally:
+                    os.close(write_fd)  # EOF identifies anchor, not the supervisor.
                 record["groups"].append(process.pid)
                 record["state"] = "active"
                 atomic(path, record)
-                admission()  # Anchor has not admitted a native command yet.
+                lifecycle.frame("ready", admission)
+                admission()  # Native is not admitted until ready/identity validated.
                 process.stdin.write("GO\n")
                 process.stdin.flush()
-                while not event.exists():
-                    admission()
-                    if process.pid not in members(process.pid):
-                        raise RuntimeError("anchor unexpectedly exited")
-                    time.sleep(0.03)
-                event_value = json.loads(event.read_text())
-                if event_value.get("owner") != record["owner"]:
-                    raise RuntimeError("anchor event owner mismatch")
+                event_value = lifecycle.frame("done", admission)
                 admission()
-                clean = settle(process, args.cleanup_seconds)
+                clean = settle(process, args.cleanup_seconds, lifecycle)
+                process.stdin.close()
                 process = None
+                os.close(lifecycle.fd)
+                lifecycle = None
                 if not clean:
                     raise RuntimeError("owned group still live")
                 if event_value.get("admitted") is not True or event_value.get("worker") != 0:
@@ -270,10 +334,17 @@ def run(args):
     finally:
         if process is not None:
             try:
-                clean = settle(process, args.cleanup_seconds)
+                clean = settle(process, args.cleanup_seconds, lifecycle)
             except Exception as error:
                 clean = False
                 print(f"Owned UI cleanup unverified: {error}", file=sys.stderr)
+        if process is not None and process.stdin is not None:
+            try:
+                process.stdin.close()
+            except OSError:
+                clean = False
+        if lifecycle is not None:
+            os.close(lifecycle.fd)
         if signals and record["abort"] is None:
             record["abort"] = "signal"
             result = 128 + signals[0]
@@ -314,7 +385,7 @@ def run(args):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--anchor":
-        anchor(Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4]), float(sys.argv[5]), sys.argv[6])
+        anchor(Path(sys.argv[2]), Path(sys.argv[3]), float(sys.argv[4]), sys.argv[5], sys.argv[6], int(sys.argv[7]), int(sys.argv[8]))
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument("--lane", choices=("phone", "ipad"), required=True)

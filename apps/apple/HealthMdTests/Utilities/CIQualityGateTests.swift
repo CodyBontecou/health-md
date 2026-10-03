@@ -198,6 +198,127 @@ final class CIQualityGateTests: XCTestCase {
         )
     }
 
+    private enum OwnedPlanError: Error { case invalid }
+
+    private func ownedPlan(_ content: String, marker: String) throws -> [String: Any] {
+        let pieces = content.components(separatedBy: "<<'\(marker)'\n")
+        guard pieces.count == 2,
+              let end = pieces[1].range(of: "\n          \(marker)"),
+              let data = String(pieces[1][..<end.lowerBound]).data(using: .utf8),
+              let plan = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { throw OwnedPlanError.invalid }
+        return plan
+    }
+
+    private var ownedSelections: [[String]] {
+        [
+            ["HealthMdUILaunchTests/testAppLaunches",
+             "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+             "ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
+             "ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
+             "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+             "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
+             "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
+             "ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting",
+             "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
+             "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab"],
+            ["ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle",
+             "ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
+             "ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
+             "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
+             "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
+             "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
+             "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+             "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
+             "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport"],
+            ["ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError",
+             "HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
+             "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+             "HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot"]
+        ]
+    }
+
+    private func validatedOwnedUICommands(_ content: String) throws -> [[String]] {
+        let phone = try ownedPlan(content, marker: "PHONE_PLAN")
+        let tablet = try ownedPlan(content, marker: "IPAD_PLAN")
+        guard let phonePipelines = phone["pipelines"] as? [[String: Any]], phonePipelines.count == 2,
+              let tabletPipelines = tablet["pipelines"] as? [[String: Any]], tabletPipelines.count == 1,
+              content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60")
+        else { throw OwnedPlanError.invalid }
+        let phoneStep = content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
+            .components(separatedBy: "- name: Run App Review export regression (iPad)").first
+        let tabletStep = content.components(separatedBy: "- name: Run App Review export regression (iPad)").last?
+            .components(separatedBy: "- name: Check warnings (iOS UI)").first
+        guard let phoneStep, let tabletStep,
+              phoneStep.components(separatedBy: "timeout-minutes: 35\n").count == 2,
+              tabletStep.components(separatedBy: "timeout-minutes: 15\n").count == 2,
+              !phoneStep.contains("continue-on-error:"), !tabletStep.contains("continue-on-error:")
+        else { throw OwnedPlanError.invalid }
+        return try (phonePipelines + tabletPipelines).enumerated().map { index, pipeline in
+            guard let command = pipeline["command"] as? [String], Array(command.prefix(2)) == ["xcodebuild", "test"],
+                  command.filter({ $0.hasPrefix("-only-testing:") }) == ownedSelections[index].map({ "-only-testing:HealthMdUITests/" + $0 })
+            else { throw OwnedPlanError.invalid }
+            for (flag, value) in [("-test-timeouts-enabled", "YES"),
+                                  ("-default-test-execution-time-allowance", "180"),
+                                  ("-maximum-test-execution-time-allowance", "300")] {
+                guard command.filter({ $0 == flag }).count == 1,
+                      let position = command.firstIndex(of: flag), position + 1 < command.count,
+                      command[position + 1] == value else { throw OwnedPlanError.invalid }
+            }
+            return command
+        }
+    }
+
+    func testWorkflow_ownedUIActualJSONRejectsMutatedCommandsSelectorsFlagsAndBudgets() throws {
+        let content = try String(contentsOfFile: appleCIWorkflowPath, encoding: .utf8)
+        XCTAssertEqual(try validatedOwnedUICommands(content).map { $0.filter { $0.hasPrefix("-only-testing:") }.count }, [10, 9, 4])
+        for marker in ["PHONE_PLAN", "IPAD_PLAN"] {
+            let actual = try ownedPlan(content, marker: marker)
+            let pipelines = try XCTUnwrap(actual["pipelines"] as? [[String: Any]])
+            let command = try XCTUnwrap(pipelines[0]["command"] as? [String])
+            var mutants: [[[String: Any]]] = [Array(pipelines.dropLast()), pipelines + [pipelines[0]]]
+            var commandMutants: [[String]] = []
+            var wrongCommand = command; wrongCommand[0] = "not-xcodebuild"; commandMutants.append(wrongCommand)
+            var wrongOperation = command; wrongOperation[1] = "build"; commandMutants.append(wrongOperation)
+            let selection = try XCTUnwrap(command.firstIndex(where: { $0.hasPrefix("-only-testing:") }))
+            var omitted = command; omitted.remove(at: selection); commandMutants.append(omitted)
+            var duplicated = command; duplicated.append(command[selection]); commandMutants.append(duplicated)
+            var moved = command; moved.swapAt(selection, selection + 1); commandMutants.append(moved)
+            for flag in ["-test-timeouts-enabled", "-default-test-execution-time-allowance", "-maximum-test-execution-time-allowance"] {
+                let position = try XCTUnwrap(command.firstIndex(of: flag))
+                var missing = command; missing.removeSubrange(position...position + 1); commandMutants.append(missing)
+                var wrong = command; wrong[position + 1] = "0"; commandMutants.append(wrong)
+            }
+            if marker == "PHONE_PLAN" {
+                var relocated = pipelines
+                var first = try XCTUnwrap(relocated[0]["command"] as? [String])
+                var second = try XCTUnwrap(relocated[1]["command"] as? [String])
+                let firstID = try XCTUnwrap(first.firstIndex(where: { $0.hasPrefix("-only-testing:") }))
+                let secondID = try XCTUnwrap(second.firstIndex(where: { $0.hasPrefix("-only-testing:") }))
+                let saved = first[firstID]; first[firstID] = second[secondID]; second[secondID] = saved
+                relocated[0]["command"] = first; relocated[1]["command"] = second
+                mutants.append(relocated) // Same19/counts, WRONG invocation attribution.
+            }
+            for mutatedCommand in commandMutants {
+                var mutated = pipelines; mutated[0]["command"] = mutatedCommand; mutants.append(mutated)
+            }
+            for mutated in mutants {
+                var plan = actual; plan["pipelines"] = mutated
+                let json = try XCTUnwrap(String(data: JSONSerialization.data(withJSONObject: plan), encoding: .utf8))
+                let start = try XCTUnwrap(content.range(of: "<<'\(marker)'\n")).upperBound
+                let end = try XCTUnwrap(content.range(of: "\n          \(marker)", range: start..<content.endIndex)).lowerBound
+                let changed = content.replacingCharacters(in: start..<end, with: json)
+                XCTAssertThrowsError(try validatedOwnedUICommands(changed), "Actual \(marker) mutation must fail")
+            }
+        }
+        for (before, after) in [("timeout-minutes: 35", "timeout-minutes: 36"),
+                                ("timeout-minutes: 15", "timeout-minutes: 16"),
+                                ("timeout-minutes: 60", "timeout-minutes: 61"),
+                                ("- name: Run UI smoke tests (iOS)", "- name: Run UI smoke tests (iOS)\n        continue-on-error: true")] {
+            XCTAssertThrowsError(try validatedOwnedUICommands(content.replacingOccurrences(of: before, with: after)))
+        }
+    }
+
     func testWorkflow_boundsAppleTestsAndRunsMacOSSuiteOnce() throws {
         let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
@@ -220,10 +341,8 @@ final class CIQualityGateTests: XCTestCase {
             3,
             "All Xcode test jobs must consume the single prepared shared-core artifact"
         )
-        XCTAssertTrue(
-            content.contains("-test-timeouts-enabled YES"),
-            "UI tests must fail diagnostically instead of hanging indefinitely"
-        )
+        let commands = try validatedOwnedUICommands(content)
+        XCTAssertEqual(commands.count, 3, "Two phone and one tablet native invocation must remain bounded")
         let smokeStep = try XCTUnwrap(
             content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
                 .components(separatedBy: "- name: Run App Review export regression (iPad)").first
@@ -232,10 +351,10 @@ final class CIQualityGateTests: XCTestCase {
             smokeStep.contains("continue-on-error: true"),
             "Selected PR UI smoke failures must remain blocking"
         )
-        let smokeInvocations = smokeStep.components(separatedBy: "xcodebuild test").dropFirst()
+        let smokeInvocations = Array(commands.prefix(2))
         XCTAssertEqual(smokeInvocations.count, 2, "PR smoke must use two deterministic test invocations")
         for invocation in smokeInvocations {
-            let selectionCount = invocation.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
+            let selectionCount = invocation.filter { $0.hasPrefix("-only-testing:HealthMdUITests/") }.count
             XCTAssertGreaterThan(selectionCount, 0, "Each PR smoke invocation must select tests explicitly")
             XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
         }
