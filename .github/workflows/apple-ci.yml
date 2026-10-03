@@ -540,6 +540,12 @@ jobs:
         with:
           name: apple-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+      - name: Validate prepared shared Rust core
+        run: |
+          test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
       - name: Compile actual Watch app and widgets
         run: |
           set -euo pipefail

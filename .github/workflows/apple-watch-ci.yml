@@ -9,6 +9,10 @@ on:
       - 'apps/apple/HealthMd.xcodeproj/**'
       - 'apps/apple/Packages/HealthMdWatchExport/**'
       - 'packages/contracts/**'
+      - 'apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift'
+      - 'apps/apple/HealthMdTests/Utilities/CIQualityGateTests.swift'
+      - 'apps/android/app/src/test/java/com/healthmd/exportcontract/ProductCapabilityManifestTest.kt'
+      - '.github/workflows/apple-ci.yml'
       - '.github/workflows/apple-watch-ci.yml'
   workflow_dispatch:
 
@@ -53,6 +57,8 @@ jobs:
           xcode-version: latest-stable
       - name: Validate contract inventory and mirrored fixture
         run: python3 packages/contracts/validate.py
+      - name: Check planned Watch governance without native SDKs
+        run: python3 packages/contracts/test_watch_capability_governance.py
       - name: Run dependency-free capture and upload behavior tests
         if: ${{ !cancelled() }}
         run: |
