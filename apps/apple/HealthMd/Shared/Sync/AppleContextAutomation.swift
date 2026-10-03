@@ -169,7 +169,7 @@ final class AppleContextJournal {
 
     private func valid(_ record: Record) -> Bool {
         record.request.isValid && (record.receipt == nil ||
-            (record.receipt?.request == record.request && record.receipt?.version == 1 && (record.receipt?.revision ?? 0) > 0))
+            (record.receipt?.request == record.request && (record.receipt?.revision ?? 0) > 0))
     }
 
     private func valid(_ transaction: Transaction, id: UUID) -> Bool {
