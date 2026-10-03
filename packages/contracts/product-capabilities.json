@@ -799,6 +799,29 @@
       ]
     },
     {
+      "id": "export.watch-origin-manual-api",
+      "name": "Manual watch-origin API snapshot",
+      "classification": "planned",
+      "summary": "Upload bounded locally readable wearable activity directly to a trusted backend with truthful missingness and explicit manual retry, without a phone app capture or relay at sync time. The Apple source implementation is not yet device-qualified; independent installation is a separate, unchanged configuration decision.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Qualify the healthmd.watch_snapshot v1 source path with physical Watch Wi-Fi/cellular uploads while the iPhone is unavailable, interruption/authorization checks, and backend account-bound idempotency receipts before release."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Wear OS watch-origin API export milestone: add reviewed local Health Services capture, secure destination setup, direct HTTPS delivery and retry; preserve the current phone-authoritative Wear snapshot and keep non-equivalent exercise/sensor statistics distinct."
+        }
+      },
+      "evidence": [
+        "packages/contracts/watch-snapshot/v1/contract.md",
+        "apps/apple/docs/features/watch-api-sync.md",
+        "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/WatchExportCaptureTests.swift",
+        "apps/android/docs/features/wear-os.md"
+      ]
+    },
+    {
       "id": "core.shared-rust-profile-engine",
       "name": "Shared Rust output profile engine",
       "classification": "planned",

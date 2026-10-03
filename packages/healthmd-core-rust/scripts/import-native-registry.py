@@ -22,6 +22,7 @@ ANDROID_METRICS = REPO / "apps/android/app/src/main/java/com/healthmd/domain/mod
 ANDROID_FIELDS = REPO / "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt"
 SEMANTIC_CROSSWALK = WORKSPACE / "crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json"
 CAPABILITY_MANIFEST = REPO / "packages/contracts/product-capabilities.json"
+CAPABILITY_SCOPE = WORKSPACE / "scripts/fixtures/registry-capability-scope-v1.json"
 REGISTRY_DIR = WORKSPACE / "crates/healthmd-core/registry"
 REGISTRY_PATH = REGISTRY_DIR / "metric-registry-v1.json"
 APPLE_BASELINE = REGISTRY_DIR / "native-baseline-apple-v7.json"
@@ -592,17 +593,32 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
                 )
 
     capability_manifest = json.loads(CAPABILITY_MANIFEST.read_text())
+    scope = json.loads(CAPABILITY_SCOPE.read_text())
+    if (scope.get("schema"), scope.get("schema_version"), scope.get("registry_version")) != (
+        "healthmd.registry_capability_scope", 1, 1
+    ):
+        raise ValueError("invalid immutable registry capability scope")
+    known_ids = scope["known_capability_ids"]
+    if len(known_ids) != len(set(known_ids)):
+        raise ValueError("duplicate scoped registry capability")
+    capability_by_id = {capability["id"]: capability for capability in capability_manifest["capabilities"]}
+    if not set(known_ids).issubset(capability_by_id):
+        raise ValueError("scoped registry capability missing from product inventory")
+    if not {metric["capability_id"] for metric in semantic_metrics}.issubset(known_ids):
+        raise ValueError("new metric capability requires a reviewed registry scope/version change")
+    scoped_capabilities = [capability_by_id[identifier] for identifier in known_ids]
+    # Product-only additions (for example Watch networking) are not metric/profile
+    # authority changes. Preserve the v1 inventory fingerprint and immutable
+    # semantic-result fixtures instead of re-pinning every native renderer.
     return {
         "schema": "healthmd.metric_registry",
         "schema_version": 1,
         "registry_version": 1,
-        "known_capability_ids": [
-            capability["id"] for capability in capability_manifest["capabilities"]
-        ],
+        "known_capability_ids": known_ids,
         "available_capability_ids_by_platform": {
             platform: [
                 capability["id"]
-                for capability in capability_manifest["capabilities"]
+                for capability in scoped_capabilities
                 if capability["platforms"][platform]["state"] == "available"
             ]
             for platform in ("apple", "android")
