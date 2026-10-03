@@ -103,6 +103,9 @@ final class WatchExportService {
         progress("Uploading pending snapshot… Keep Health.md open.")
         try await transport.upload(pending, to: destination)
         try Task.checkCancellation()
+        // Never erase or restore configuration over a changed queue, even if a
+        // future caller introduces another service instance during an await.
+        guard try self.state() == state else { throw WatchExportError.pendingUpload }
         state.pending = nil
         // If this fails, don't report success. A matching backend ACK may have been
         // received; idempotency makes retry safe when local commit is interrupted.

@@ -9,7 +9,9 @@ final class WatchExportViewModel: ObservableObject {
     @Published var isRunning = false
     @Published var message: String?
     @Published var errorMessage: String?
-    private let service = WatchExportService(store: WatchExportKeychain(), transport: WatchExportHTTP())
+    // A navigation-away/reopen race must not create a second in-flight writer.
+    private static let sharedService = WatchExportService(store: WatchExportKeychain(), transport: WatchExportHTTP())
+    private var service: WatchExportService { Self.sharedService }
     private var task: Task<Void, Never>?
 
     func reload() {

@@ -163,6 +163,24 @@ final class WatchExportServiceTests: XCTestCase {
         XCTAssertEqual(transport.uploads.count, 1)
     }
 
+    func testStaleAcknowledgementCannotClearNewQueueOrRestoreOldDestination() async throws {
+        let store = MemoryStore()
+        let transport = RecordingTransport()
+        let service = WatchExportService(store: store, transport: transport)
+        try service.configure(endpoint: "https://example.com/watch", token: "old-synthetic")
+        let replacement = WatchExportState(
+            destination: try WatchExportDestination(endpoint: "https://other.example/watch", bearerToken: "new-synthetic"),
+            pending: WatchPendingUpload(id: UUID(), body: Data("new snapshot".utf8)))
+        transport.duringUpload = { try store.save(replacement) }
+        var messages: [String] = []
+        do {
+            try await service.sync(capture: { try self.payload() }, progress: { messages.append($0) })
+            XCTFail("Expected stale commit rejection")
+        } catch {}
+        XCTAssertEqual(store.state, replacement)
+        XCTAssertFalse(messages.contains { $0.hasPrefix("Backend acknowledged") })
+    }
+
     func testDiscardIsExplicitAndAllowsNewDestinationWithoutTouchingHealthStore() async throws {
         let store = MemoryStore()
         let transport = RecordingTransport()
