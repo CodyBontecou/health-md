@@ -281,6 +281,7 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         replace(ProfileScheduleTags.EVERY, "123456")
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
+        waitForNativeKeyboardHidden()
         tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
         compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
         assertEquals(1, dismisses)
@@ -290,10 +291,15 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         replace(ProfileScheduleTags.EVERY, "")
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
+        waitForNativeKeyboardHidden()
         captureContent("profiles-editor-cancel", ProfileScheduleTags.DIALOG)
         // Espresso selects the activity root even while this separate native dialog owns focus.
         // Inject the real system Back key without requiring the obscured activity window to focus.
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag(ProfileScheduleTags.DIALOG)
+                .fetchSemanticsNodes(atLeastOneRootRequired = false).isEmpty()
+        }
         compose.waitForIdle()
         compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
         assertEquals(2, dismisses)
