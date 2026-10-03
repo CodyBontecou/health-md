@@ -31,7 +31,9 @@ import timber.log.Timber
  * - Caches unlock state in SharedPreferences (healthmd_purchase_prefs)
  * - Supports Auto Backup for purchase state persistence
  *
- * Product: health_md_premium_lifetime (INAPP, one-time purchase, $9.99)
+ * Product: health_md_premium_lifetime (INAPP, one-time purchase, $19.99 USD —
+ * matches the iOS individual lifetime unlock price; Play Console is the
+ * source of truth, this comment is documentation only)
  */
 class BillingRepositoryImpl(
     private val context: Context,

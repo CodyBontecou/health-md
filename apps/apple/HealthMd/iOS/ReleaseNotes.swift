@@ -27,6 +27,86 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.2",
+            items: [
+                .list(
+                    title: "A faster start and gentler upgrade reminders",
+                    rows: [
+                        .init(
+                            symbolSystemName: "figure.walk.motion",
+                            title: "Shorter setup",
+                            description: "Onboarding is now five quick steps. The Obsidian plugin intro moved onto the sample-export screen, and importing a shared setup stays available as a quiet link on the first screen."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.text.magnifyingglass",
+                            title: "See your first export, then decide",
+                            description: "Nothing blocks setup anymore. After your first real export preview, a single optional screen explains unlimited exports — dismiss it and keep going with your 10 free exports."
+                        ),
+                        .init(
+                            symbolSystemName: "sparkles",
+                            title: "Gentle progress reminders",
+                            description: "After your 3rd and 7th free exports, a small reminder shows how many remain and how unlimited exports work. Your free count is unchanged."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.4.1",
+            items: [
+                .list(
+                    title: "Safer setup sharing and dependable exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "square.and.arrow.up.on.square.fill",
+                            title: "Share My Setup",
+                            description: "Move export profiles between devices in one small file, review changes before applying them, and undo once. Shared files contain no health data or credentials."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Schedules keep your full lookback",
+                            description: "Scheduled profiles now refresh the full lookback you chose on every run. Optional Today Refresh can update today’s in-progress export every 3, 6, or 12 hours."
+                        ),
+                        .init(
+                            symbolSystemName: "list.bullet.rectangle.fill",
+                            title: "Clearer Export History",
+                            description: "Generated files and outcomes are easier to understand, with retries and informational notes easier to reach."
+                        ),
+                        .init(
+                            symbolSystemName: "accessibility",
+                            title: "More accessible throughout",
+                            description: "VoiceOver, keyboard focus, touch targets, scrolling, and large-text layouts are improved across onboarding, export setup, metrics, schedules, and connection screens."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.4.0",
+            items: [
+                .list(
+                    title: "Share My Setup and truthful exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "square.and.arrow.up.on.square.fill",
+                            title: "Share My Setup",
+                            description: "Package your export profiles — metrics, formats, and naming — into one portable file under Settings → Configuration, then review and apply them on your other device as an Add or Replace with one-shot Undo. Files carry no health data or credentials, and imported profiles wait until you rebind their destination."
+                        ),
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Daily schedules run every day",
+                            description: "Scheduled daily exports no longer skip the day after a successful run — each occurrence now exports the prior day’s data, and Export History shows the true number of files every run wrote."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.seal.fill",
+                            title: "Truthful export outcomes",
+                            description: "A workout whose optional plan can’t be decoded no longer marks the whole export “Partial” — samples still export and the omission appears as a plain note. Retry Export also sits at the top of the detail sheet."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.3.0",
             items: [
                 .list(

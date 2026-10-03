@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe MCP</strong>
-<p>De afzonderlijke opzet met 19 tools via <code>healthmd mcp serve</code> voor macOS, Linux en Windows is openbaar verpakt als expliciet ongekwalificeerde preview. Het cloudvrije beginpunt <code>serve-read-only</code> biedt na lokale koppeling alleen de 13 tools voor gereedheid en queries. Installeer op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>De afzonderlijke opzet <code>healthmd mcp serve</code> voor macOS, Linux en Windows is als ongekwalificeerde preview met 19 tools gepubliceerd onder <code>0.1.0-alpha.7</code>. Het cloudvrije beginpunt <code>serve-read-only</code> biedt na lokale koppeling alleen de 13 tools voor gereedheid en queries. Installeer op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Vereisten voor de gebundelde Mac-versie
@@ -36,8 +36,9 @@ Het gebruikelijke pad is `/Applications/Health.md.app/Contents/Helpers/healthmd-
 
 - Installeer de zelfstandige preview op macOS, Linux of Windows; de Mac-app en loopbackservice zijn niet vereist.
 - Koppel eenmaal een iPhone met queryondersteuning en houd Health.md voor elke nieuwe getypeerde aanvraag op de voorgrond. Android ondersteunt geen getypeerde MCP.
+- De MCP-koppeltools onboarden alleen iPhone. Koppel Android vóór MCP expliciet via de CLI.
 - Gebruik Manual IP of Tailscale en systeemeigen opslag van inloggegevens; Linux vereist een ontgrendelde Secret Service-provider.
-- Configureer het geïnstalleerde compatibiliteitsprogramma of de stdio-server in hetzelfde binaire bestand. Beide gebruiken de gekoppelde directe backend.
+- Configureer het geïnstalleerde compatibiliteitsprogramma of de stdio-server in hetzelfde binaire bestand. Beide gebruiken de gekoppelde rechtstreekse toegang.
 
 ## Codex configureren
 
@@ -115,7 +116,7 @@ De tools blijven werken als de host MCP Apps niet ondersteunt. `healthmd_metric_
 
 ## Beschikbare tools
 
-De gebundelde Mac-server biedt 21 vaste tools: 13 voor gereedheid en query's, vier voor taken met gegenereerde bestanden en vier voor vernieuwingstaken van versleutelde context. De platformonafhankelijke preview met 19 tools behoudt de 13 gereedheids-/querytools en vier exporttools, vervangt Mac-vernieuwingstaken door twee tools voor rechtstreekse koppeling en voert getypeerde query's rechtstreeks uit op de iPhone op de voorgrond.
+De gebundelde Mac-server biedt 21 vaste tools: 13 voor gereedheid/query's, vier voor gegenereerde bestanden en vier voor versleutelde context. De gepubliceerde portable preview `0.1.0-alpha.7` heeft 19 tools. De huidige ontwikkelbron heeft er 21 na toevoeging van volledig corpus en begrensde artefactlezing; neem die twee tools niet aan vóór een latere release.
 
 ### Gereedheid en ontdekking
 
@@ -148,6 +149,12 @@ De gebundelde Mac-server biedt 21 vaste tools: 13 voor gereedheid en query's, vi
 | `healthmd_export_job_status` | De exportvoortgang en het bestemmingsbewijs bekijken |
 | `healthmd_export_job_resume` | De exacte onveranderlijke persistente exporttaak hervatten |
 | `healthmd_export_job_cancel` | De exporttaak expliciet annuleren |
+### Toegang tot het volledige ruwe corpus · alleen draagbare lokale MCP
+
+| Tool | Doel |
+|---|---|
+| `healthmd_export_raw` | Na expliciete goedkeuring een duurzame ruwe-corpusexport op iPhone of Android starten |
+| `healthmd_raw_artifact_read` | Een begrensd deel van het gevalideerde, taakgebonden artefact lezen |
 
 De tools voor exporteren, hervatten en annuleren zijn gemarkeerd als mogelijk destructieve schrijfbewerkingen. Huidige Claude-hosts vereisen daarvoor expliciete interactie, omdat ingestelde exportmodi gegenereerde bestanden kunnen bijwerken of overschrijven. De bovenstaande Codex-configuratie vraagt bij deze tools om extra bescherming.
 

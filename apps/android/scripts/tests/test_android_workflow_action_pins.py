@@ -32,28 +32,26 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])
 
-    def test_initial_qa_upload_is_exact_annotated_tag_and_retains_sha_bound_receipt(self) -> None:
+    def test_phone_upload_is_exact_annotated_tag_and_retains_sha_bound_receipt(self) -> None:
         release = (ROOT / ".github/workflows/android-release.yml").read_text()
-        evidence = (ROOT / ".github/workflows/android-wear-evidence.yml").read_text()
-        required_release = (
-            'git cat-file -t "$GITHUB_REF_NAME"',
-            'git rev-parse "$GITHUB_REF_NAME^{commit}"',
-            'healthmd-android-qa-upload-${{ steps.version.outputs.version }}-${{ github.sha }}-attempt-${{ github.run_attempt }}',
-            'phoneAabSha256:$phoneAab',
-            'wearAabSha256:$wearAab',
+        required = (
+            'git cat-file -t "$RELEASE_TAG"',
+            'git rev-parse "$RELEASE_TAG^{commit}"',
+            'healthmd-android-phone-upload-${{ needs.build-signed-phone.outputs.version }}-${{ needs.build-signed-phone.outputs.release_sha }}-attempt-${{ github.run_attempt }}',
+            'phoneAabSha256:$aab',
+            'wearIncluded:false',
             'uploadPrepared:true',
-            'Retain immutable QA upload intent receipt',
+            'Verify retained exact-SHA Android qualification',
+            'recoveryQualificationRunId:$qualificationRunId',
+            'Retain immutable phone upload intent receipt',
         )
-        required_evidence = (
+        self.assertEqual([], [needle for needle in required if needle not in release])
+
+    def test_deferred_wear_evidence_workflow_retains_its_own_provenance_guards(self) -> None:
+        evidence = (ROOT / ".github/workflows/android-wear-evidence.yml").read_text()
+        required = (
             'qa_upload_run_id:',
             'path == ".github/workflows/android-release.yml"',
-            'healthmd-android-qa-upload-${{ inputs.version }}-${{ inputs.release_sha }}-attempt-${{ steps.qa-run.outputs.attempt }}',
-            'healthmd-android-${{ inputs.version }}-attempt-${{ steps.qa-run.outputs.attempt }}',
-            'qaUploadRunId:$qaUpload',
-            'qaUploadRunAttempt:$qaAttempt',
-            'screenshotUploadRunId:$screenshotUpload',
-            'screenshotUploadRunAttempt:$screenshotAttempt',
-            'screenshotSubmissionRunAttempt:$screenshotSubmissionAttempt',
             'submission_run_attempt:',
             'path == ".github/workflows/android-wear-screenshots.yml"',
             'attempts/${run_attempt}',
@@ -63,8 +61,7 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
             'qaWearAabSha256:$wearAab',
             'qa-upload/jobs.json',
         )
-        self.assertEqual([], [needle for needle in required_release if needle not in release])
-        self.assertEqual([], [needle for needle in required_evidence if needle not in evidence])
+        self.assertEqual([], [needle for needle in required if needle not in evidence])
 
     def test_screenshot_mutation_is_protected_exact_tag_and_attempt_bound(self) -> None:
         workflow = (ROOT / ".github/workflows/android-wear-screenshots.yml").read_text()
@@ -80,28 +77,68 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])
 
-    def test_production_dispatch_runs_only_from_the_exact_annotated_release_tag(self) -> None:
+    def test_production_dispatch_uses_exact_release_source_or_constrained_recovery_tag(self) -> None:
         workflow = (ROOT / ".github/workflows/android-promote-production.yml").read_text()
         required = (
-            'test "$GITHUB_REF_NAME" = "android/v$VERSION"',
-            'git cat-file -t "$GITHUB_REF_NAME"',
-            'git rev-parse "$GITHUB_REF_NAME^{commit}"',
-            'git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main',
+            'expected_tag="android/v$VERSION"',
+            'git cat-file -t "$expected_tag"',
+            'git rev-parse "$expected_tag^{commit}"',
+            'git merge-base --is-ancestor "$tagged_sha" refs/remotes/origin/main',
+            '[[ "$GITHUB_REF_NAME" == android/recovery/* ]]',
+            'test "$(git rev-parse HEAD)" = "$tagged_sha"',
+            'workflowRecovery:$recovery',
         )
         self.assertEqual([], [needle for needle in required if needle not in workflow])
         self.assertNotIn("ops/android-production-", workflow)
 
-    def test_play_credential_is_materialized_only_after_build_and_artifact_retention(self) -> None:
+    def test_play_access_audit_is_tag_bound_and_cannot_commit_or_upload(self) -> None:
+        workflow = (ROOT / ".github/workflows/android-google-play-access-audit.yml").read_text()
+        required = (
+            "environment: google-play",
+            "environment: google-play-qa",
+            '[[ "$GITHUB_REF_NAME" == android/v* || "$GITHUB_REF_NAME" == android/recovery/* ]]',
+            'git cat-file -t "$tag"',
+            'git merge-base --is-ancestor "$release_sha" refs/remotes/origin/main',
+            "emptyEditInsertDeleteVerified:true",
+            "registeredUploadCertificateMatched:true",
+            "expected_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'",
+            "privateKeyRetained:false",
+            "noPlayEditCommit:true",
+        )
+        self.assertEqual([], [needle for needle in required if needle not in workflow])
+        self.assertNotIn(":commit", workflow)
+        self.assertNotIn("/bundles", workflow)
+        self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
+
+    def test_workload_identity_is_requested_only_after_build_and_artifact_retention(self) -> None:
         workflow = (ROOT / ".github/workflows/android-release.yml").read_text()
-        play = workflow.index("Configure ephemeral Google Play credential")
-        build = workflow.index("Build signed phone and Wear app bundles")
+        auth = workflow.index("Authenticate to Google Play with protected Workload Identity")
+        build = workflow.index("Build signed phone app bundle")
         cleanup = workflow.index("Remove ephemeral signing credentials after inspection")
-        retain = workflow.index("Retain signed bundle with native debug symbols")
-        upload = workflow.index("Upload phone/Wear bundles to their form-factor tracks")
+        retain = workflow.index("Retain signed phone bundle with native debug symbols")
+        upload = workflow.index("Upload phone bundle to Internal Testing")
         self.assertLess(build, cleanup)
         self.assertLess(cleanup, retain)
-        self.assertLess(retain, play)
-        self.assertLess(play, upload)
+        self.assertLess(retain, auth)
+        self.assertLess(auth, upload)
+        self.assertIn("environment: google-play-qa", workflow)
+        self.assertIn("environment: google-play", workflow)
+        self.assertIn("actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16", workflow)
+        self.assertIn("registered_sha1='805f26eafd9ed5c37fc72a65636cffa4d101812f'", workflow)
+        self.assertIn("id-token: write", workflow)
+        self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
+
+    def test_instrumentation_declares_a_ready_software_ime_before_accessibility_tests(self) -> None:
+        workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
+        setting = "settings put secure show_ime_with_hard_keyboard 1"
+        readiness = "settings get secure default_input_method"
+        enabled = "shell ime list -s"
+        instrumentation = ":app:connectedFdroidDebugAndroidTest"
+        for requirement in (setting, readiness, enabled, instrumentation):
+            self.assertIn(requirement, workflow)
+        self.assertLess(workflow.index(setting), workflow.index(instrumentation))
+        self.assertLess(workflow.index(readiness), workflow.index(instrumentation))
+        self.assertLess(workflow.index(enabled), workflow.index(instrumentation))
 
 
 if __name__ == "__main__":

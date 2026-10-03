@@ -9,6 +9,10 @@ pub const DEFAULT_PAGE_BYTES: usize = 262_144;
 pub const DEFAULT_EXPORT_TIMEOUT_SECONDS: u64 = 300;
 pub const MINIMUM_EXPORT_TIMEOUT_SECONDS: u64 = 5;
 pub const MAXIMUM_EXPORT_TIMEOUT_SECONDS: u64 = 900;
+/// One local MCP read from a previously validated raw artifact. The base64 result remains well
+/// below the direct/MCP packet ceilings while repeated reads can traverse the complete artifact.
+pub const DEFAULT_RAW_ARTIFACT_CHUNK_BYTES: usize = 65_536;
+pub const MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES: usize = 65_536;
 pub const DEFAULT_PAIRING_TIMEOUT_SECONDS: u64 = 180;
 pub const MINIMUM_PAIRING_TIMEOUT_SECONDS: u64 = 30;
 pub const MAXIMUM_PAIRING_TIMEOUT_SECONDS: u64 = 600;

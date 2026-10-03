@@ -101,6 +101,7 @@
       "downloadOffer": "Google Play: try 10 exports free, then make one lifetime purchase. F-Droid: Full Access is included.",
       "channelSwitchWarning": "Google Play and F-Droid use different signatures. Switching channels requires uninstalling the app and does not migrate local app state.",
       "footerNavLabel": "Footer navigation",
+      "about": "About",
       "privacy": "Privacy",
       "terms": "Terms",
       "support": "Support"

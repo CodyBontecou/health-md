@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">展开%1$s</string>
+    <string name="a11y_metrics_collapse_category">收起%1$s</string>
+    <string name="a11y_metrics_expanded">已展开</string>
+    <string name="a11y_metrics_collapsed">已收起</string>
+    <string name="a11y_metrics_category_selection">%1$s中的所有指标</string>
+</resources>

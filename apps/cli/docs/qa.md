@@ -79,7 +79,7 @@ before the wake wait, so wake expiry or local interruption there reports `direct
 same bounded stdio initialize/tools calls to both serve modes: the complete mode must expose 19
 tools, while read-only mode must expose exactly 13 tools with `readOnlyHint`, no pairing resource,
 and no pairing/export-job declarations. Guess all six omitted tool names and require `Unknown tool`
-before backend dispatch. Confirm that neither stdio mode starts an MCP HTTP listener, that the
+before command dispatch. Confirm that neither stdio mode starts an MCP HTTP listener, that the
 default release rejects `mcp serve-http`, and that every build rejects the removed
 `mcp serve-hosted` command. Separately run
 source builds with `cargo run --features streamable-http -- mcp serve-http --help` and

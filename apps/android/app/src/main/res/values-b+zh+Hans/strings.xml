@@ -5,7 +5,6 @@
     <string name="back">返回</string>
     <string name="close">关闭</string>
     <string name="refresh">刷新</string>
-    <string name="add">添加</string>
     <string name="action_cancel_export">取消导出</string>
     <string name="action_close_options">关闭选项</string>
     <string name="action_set_start_date">设置开始日期</string>
@@ -462,6 +461,12 @@
     <string name="schedule_time">时间</string>
     <string name="schedule_date_window">日期</string>
     <string name="schedule_date_window_past_complete_days">过去的完整天数</string>
+    <string name="schedule_date_window_past_complete_days_through_today">过去的完整天数 + 今天</string>
+    <string name="schedule_through_today_summary">每次运行会导出过去的完整天数以及今天的部分文件，因此白天运行也能记录昨晚的睡眠。结合每小时的频率可在全天保持两个文件最新。使用覆盖或更新写入模式，避免同一天内容重复。</string>
+    <string name="profile_schedule_today_refresh">刷新今天的导出</string>
+    <string name="profile_schedule_refresh_interval">刷新间隔</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d 小时</string>
+    <string name="profile_schedule_refresh_summary">今天每 %1$d 小时刷新一次</string>
     <string name="schedule_date_window_today">今天</string>
     <string name="schedule_export_past_days">导出过去几天</string>
     <string name="schedule_today_summary">每次运行都会导出今天的数据，以便您当前的每日文件可以保持最新。使用覆盖或更新写入模式以避免重复的当天内容。</string>
@@ -497,7 +502,7 @@
     <string name="release_notes_highlight_feedback">Direct CLI 会话在桌面短暂断开后会自动重新连接，因此导出能够可靠完成。</string>
     <string name="release_notes_highlight_export_parity">桌面唤醒窗口命令最多等待 120 秒，供您打开应用并连接，不使用任何推送通知。</string>
     <string name="release_notes_highlight_templates">通过地址、端口和 20 位配对码手动配对仍然可用，旧版 CLI 同样支持。</string>
-    <string name="release_notes_highlight_workouts">包含适用于手机和 Wear OS 的可靠性与兼容性修复。</string>
+    <string name="release_notes_highlight_workouts">包含针对设置、导出、计划和连接的可靠性与兼容性修复。</string>
     <string name="notification_channel_scheduled_exports_name">计划导出</string>
     <string name="notification_channel_scheduled_exports_description">计划的健康导出完成或失败时的通知</string>
     <string name="export_notification_title_complete">导出完成</string>

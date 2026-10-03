@@ -5,6 +5,15 @@ on:
     branches:
       - main
       - testing
+    # Path-aware pushes keep unrelated merges off the scarce macOS runner pool;
+    # pull requests are path-filtered by the changes job so the stable gate
+    # still reports a conclusive context on every PR.
+    paths:
+      - 'apps/apple/**'
+      - 'packages/contracts/**'
+      - 'packages/healthmd-core-rust/**'
+      - 'Makefile'
+      - '.github/workflows/apple-ci.yml'
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -19,8 +28,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Apple-affecting changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - name: Check out source for the local composite action
+        uses: actions/checkout@v6
+      - name: Detect whether Apple CI must run
+        id: detect
+        uses: ./.github/actions/component-changes
+        with:
+          component: Apple CI
+          paths: |
+            apps/apple/**
+            packages/contracts/**
+            packages/healthmd-core-rust/**
+            Makefile
+            .github/workflows/apple-ci.yml
+
   prepare-shared-core:
     name: Prepare shared Rust core once
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: macos-26
     timeout-minutes: 20
     defaults:
@@ -78,7 +113,8 @@ jobs:
           retention-days: 1
 
   test-ios:
-    needs: prepare-shared-core
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.run == 'true' }}
     # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
     # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
     runs-on: macos-26
@@ -154,44 +190,16 @@ jobs:
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
-      - name: Select iOS Simulator
+      - name: Test iOS simulator selection policy
+        run: python3 scripts/tests/test_select_ios_simulator.py
+
+      - name: Select newest compatible iOS Simulator
         id: simulator
         shell: bash
         run: |
           set -euo pipefail
-
-          IOS_DEVICE_LINE=$(
-            xcrun simctl list devices available iOS \
-              | grep -E "iPhone (17 Pro|17|16 Pro|16|15 Pro|15)" \
-              | head -n 1 \
-              || true
-          )
-
-          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
-            IOS_DEVICE_LINE=$(
-              xcrun simctl list devices available iOS \
-                | grep -E "iPhone" \
-                | head -n 1 \
-                || true
-            )
-          fi
-
-          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
-            echo "::error::No available iOS Simulator device found"
-            exit 1
-          fi
-
-          IOS_DEVICE=$(echo "${IOS_DEVICE_LINE}" | sed -E 's/^[[:space:]]*([^()]*) .*/\1/' | xargs)
-          IOS_UDID=$(echo "${IOS_DEVICE_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
-          SIM_ARCH=$(uname -m)
-          [[ "${SIM_ARCH}" == "aarch64" ]] && SIM_ARCH="arm64"
-
-          IOS_DESTINATION="platform=iOS Simulator,name=${IOS_DEVICE},arch=${SIM_ARCH}"
-          if [[ -n "${IOS_UDID}" ]]; then
-            IOS_DESTINATION="platform=iOS Simulator,id=${IOS_UDID},arch=${SIM_ARCH}"
-          fi
-
-          echo "Using simulator: ${IOS_DEVICE} (${IOS_UDID:-no-udid}), arch=${SIM_ARCH}"
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
 
       - name: Run iOS unit tests
@@ -254,7 +262,8 @@ jobs:
           retention-days: 14
 
   test-macos:
-    needs: prepare-shared-core
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.run == 'true' }}
     # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
     runs-on: macos-26
     timeout-minutes: 75
@@ -333,7 +342,8 @@ jobs:
 
   test-ios-ui:
     name: iOS UI regressions
-    needs: prepare-shared-core
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: macos-26
     timeout-minutes: 60
     defaults:
@@ -367,42 +377,13 @@ jobs:
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
-      - name: Select iOS Simulator
+      - name: Select newest compatible iOS Simulator
         id: simulator
         shell: bash
         run: |
           set -euo pipefail
-
-          IOS_DEVICE_LINE=$(
-            xcrun simctl list devices available iOS \
-              | grep -E "iPhone (17 Pro|17|16 Pro|16|15 Pro|15)" \
-              | head -n 1 \
-              || true
-          )
-          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
-            IOS_DEVICE_LINE=$(
-              xcrun simctl list devices available iOS \
-                | grep -E "iPhone" \
-                | head -n 1 \
-                || true
-            )
-          fi
-          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
-            echo "::error::No available iOS Simulator device found"
-            exit 1
-          fi
-
-          IOS_DEVICE=$(echo "${IOS_DEVICE_LINE}" | sed -E 's/^[[:space:]]*([^()]*) .*/\1/' | xargs)
-          IOS_UDID=$(echo "${IOS_DEVICE_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
-          SIM_ARCH=$(uname -m)
-          [[ "${SIM_ARCH}" == "aarch64" ]] && SIM_ARCH="arm64"
-
-          IOS_DESTINATION="platform=iOS Simulator,name=${IOS_DEVICE},arch=${SIM_ARCH}"
-          if [[ -n "${IOS_UDID}" ]]; then
-            IOS_DESTINATION="platform=iOS Simulator,id=${IOS_UDID},arch=${SIM_ARCH}"
-          fi
-
-          echo "Using simulator: ${IOS_DEVICE} (${IOS_UDID:-no-udid}), arch=${SIM_ARCH}"
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
 
       - name: Run UI smoke tests (iOS)
@@ -522,6 +503,8 @@ jobs:
 
   connectivity-package:
     name: HealthMdConnectivity package
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: macos-14
     timeout-minutes: 15
     steps:
@@ -536,17 +519,31 @@ jobs:
   gate:
     name: Apple CI
     if: ${{ always() }}
-    needs: [prepare-shared-core, test-ios, test-ios-ui, test-macos, connectivity-package]
+    needs:
+      - changes
+      - prepare-shared-core
+      - test-ios
+      - test-ios-ui
+      - test-macos
+      - connectivity-package
     runs-on: ubuntu-24.04
     steps:
       - name: Require Apple checks
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
           PREPARE_RESULT: ${{ needs.prepare-shared-core.result }}
           IOS_RESULT: ${{ needs.test-ios.result }}
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
           CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
         run: |
+          set -e
+          test "$CHANGES_RESULT" = success
+          if [ "$CHANGES_RUN" != "true" ]; then
+            echo "No Apple-affecting changes in this pull request; Apple CI skipped."
+            exit 0
+          fi
           test "$PREPARE_RESULT" = success
           test "$IOS_RESULT" = success
           test "$IOS_UI_RESULT" = success

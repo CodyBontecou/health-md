@@ -6,7 +6,6 @@
     <string name="back">ফিরে যান</string>
     <string name="close">বন্ধ করুন</string>
     <string name="refresh">রিফ্রেশ করুন</string>
-    <string name="add">যোগ করুন</string>
     <string name="action_cancel_export">রপ্তানি বাতিল করুন</string>
     <string name="action_close_options">বিকল্প বন্ধ করুন</string>
     <string name="action_set_start_date">শুরুর তারিখ সেট করুন</string>
@@ -491,6 +490,12 @@
     <string name="schedule_time">সময়</string>
     <string name="schedule_date_window">তারিখগুলি</string>
     <string name="schedule_date_window_past_complete_days">বিগত সম্পূর্ণ দিনগুলি</string>
+    <string name="schedule_date_window_past_complete_days_through_today">পূর্ববর্তী সম্পূর্ণ দিন + আজ</string>
+    <string name="schedule_through_today_summary">প্রতিটি রান পূর্ববর্তী সম্পূর্ণ দিনগুলোর সাথে আজকের আংশিক ফাইলও এক্সপোর্ট করে, তাই দিনের বেলায় চালালে গতকাল রাতের ঘুমও অন্তর্ভুক্ত হয়। সারাদিন উভয় ফাইল হালনাগাদ রাখতে ঘণ্টায় ঘণ্টায় ফ্রিকোয়েন্সির সাথে ব্যবহার করুন। একই দিনের সদৃশ কনটেন্ট এড়াতে ওভাররাইট বা আপডেট রাইট মোড ব্যবহার করুন।</string>
+    <string name="profile_schedule_today_refresh">আজকের এক্সপোর্ট রিফ্রেশ করুন</string>
+    <string name="profile_schedule_refresh_interval">রিফ্রেশ ব্যবধান</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d ঘণ্টা</string>
+    <string name="profile_schedule_refresh_summary">আজ প্রতি %1$d ঘণ্টায় রিফ্রেশ করে</string>
     <string name="schedule_date_window_today">আজ</string>
     <string name="schedule_export_past_days">বিগত দিনগুলো রপ্তানি করুন</string>
     <string name="schedule_today_summary">প্রতিবার আজকের ডেটা রপ্তানি হয়, যাতে বর্তমান দৈনিক ফাইলটি হালনাগাদ থাকে। একই দিনের কনটেন্ট দুবার যোগ হওয়া এড়াতে Overwrite বা Update লেখার মোড ব্যবহার করুন।</string>
@@ -528,7 +533,7 @@
     <string name="release_notes_highlight_feedback">ডেস্কটপ সংযোগ সংক্ষিপ্তভাবে বিচ্ছিন্ন হলে Direct CLI সেশন স্বয়ংক্রিয়ভাবে পুনরায় সংযুক্ত হয়, তাই রপ্তানি নির্ভরযোগ্যভাবে সম্পন্ন হয়।</string>
     <string name="release_notes_highlight_export_parity">ডেস্কটপের ওয়েক উইন্ডো কমান্ড আপনার অ্যাপ খুলে সংযোগ করার জন্য ১২০ সেকেন্ড পর্যন্ত অপেক্ষা করে, কোনো পুশ নোটিফিকেশন ছাড়াই।</string>
     <string name="release_notes_highlight_templates">ঠিকানা, পোর্ট এবং ২০-সংখ্যার কোড দিয়ে ম্যানুয়াল জুড়ি এখনও কাজ করে, পুরোনো CLI সংস্করণেও।</string>
-    <string name="release_notes_highlight_workouts">ফোন ও Wear OS-এর নির্ভরযোগ্যতা এবং সামঞ্জস্যের সংশোধন অন্তর্ভুক্ত।</string>
+    <string name="release_notes_highlight_workouts">সেটআপ, এক্সপোর্ট, সময়সূচি ও সংযোগজুড়ে নির্ভরযোগ্যতা এবং সামঞ্জস্যের সংশোধন অন্তর্ভুক্ত।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">নির্ধারিত রপ্তানি</string>
     <string name="notification_channel_scheduled_exports_description">নির্ধারিত স্বাস্থ্য রপ্তানি সম্পূর্ণ বা ব্যর্থ হলে বিজ্ঞপ্তি</string>

@@ -1,0 +1,128 @@
+{
+  "head": "16a925e72730c4de34dc65f56d2685050236fadb",
+  "sources": [
+    {
+      "path": "HealthMd/iOS/Components/StatusIndicator.swift",
+      "sha256": "41f8117a8a30d74cec7657adfc2843495042062146d9b50d8d54d6a5ca87d4cb",
+      "mode": "prefix",
+      "startLine": 1,
+      "endLine": 300,
+      "excerptSha256": "47c4c6133841b2696df26da30d272f8602cc7a135fdb101b054f736655c69c9e"
+    },
+    {
+      "path": "HealthMd/Shared/AccessibilityIdentifiers.swift",
+      "sha256": "76bc0cbb3c60a2407f83053ef48e663797640e319896deb9f111ef62edf840b8",
+      "mode": "Status enum with namespace wrapper",
+      "startLine": 176,
+      "endLine": 178,
+      "excerptSha256": "d429c8a49ddc74c9eefe045bdb2a8ea2cb5cb41ed92dafaa314b581feae7ed6b"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/DesignSystem.swift",
+      "sha256": "0ee0c01ba6fa8ceaa1d988434243da0c6adff772089f733cd7cda2810c66d2ac",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Views/A11yFoundationTests.swift",
+      "sha256": "ce03071a91f71d9752775839da98c0a8e2893f4f4d9e3b09dc42270dc779589b",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMdTests/Support/A11yHosting.swift",
+      "sha256": "00a2b23fbf4251ce2da60b8f30c7f98c1533b1ea603189c33ca4238aabda9897",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_medium.ttf",
+      "sha256": "3a3b36f0d0b981f4857f7f00eeef4a5ee123605575d362ab31ee7c19e3d11f2f",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_mono_medium.ttf",
+      "sha256": "6fa6a795c17a11bcbef410f52a853e8503f8e25d92762d202d907c54f5c0c0fb",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_mono_regular.ttf",
+      "sha256": "5a0de4b3d54ab272f76a1d8c84b7fb24c67bbec6591d5300e61c7bc10094b6c8",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_regular.ttf",
+      "sha256": "85a1c6b18a6b0a06dfe9fd4f6d6a5d4979f74ec861eaef4bc7868b5492b8a117",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/Shared/Theme/Fonts/geist_semibold.ttf",
+      "sha256": "b9f52322d6d20a7ff1e7fe1310ff12ec851aebb83d24f8b4f1d4149298f489b2",
+      "mode": "direct"
+    },
+    {
+      "path": "HealthMd/iOS/Components/AnimatedButton.swift",
+      "sha256": "32e68dc37cc5f91bf41a8fd81bef944c08506501712c900aa8affb794b08a9aa",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/Host/A11ySyntheticApp.swift",
+      "sha256": "9e1d614465217e54e9d46700b990409198a1ad62aa92ca2cf47f68382236e4c8",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/A11yFoundationUITests.swift",
+      "sha256": "078857c9d7f0212253f8dfa5c084a39e129d439b6431d39e70a8c96ac56b8ef4",
+      "mode": "direct"
+    },
+    {
+      "path": "AccessibilityTests/UITests/A11yUITestSupport.swift",
+      "sha256": "8aedf0298c7520e85e1f6760726d012691a28dde5d3fc4271141733db7bbd353",
+      "mode": "direct"
+    }
+  ],
+  "sourceState": "Foundation implementation bytes before commit; exact hashes below, audit base is not the implementation revision.",
+  "runtime": {
+    "simulator": "BD07FC16-9F6F-43A5-A42A-59949A553A20",
+    "type": "NEW owned iPhone SE (3rd generation)",
+    "OS": "iOS 26.5 (23F77)",
+    "Xcode": "26.6 (17F113)"
+  },
+  "testResults": {
+    "foundation-ios-final": {
+      "result": "Passed",
+      "passedTests": 11,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    "foundation-mac-final": {
+      "result": "Passed",
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    }
+  },
+  "captures": [
+    {
+      "path": "production-buttons-accessibility5-dark.png",
+      "sha256": "4d1741ffa9a36febe54566fd303e8fe4b2d928a4a65fc69271be8168a9a5acb7",
+      "test": "A11yFoundationUITests/testLargestTextActionsRemainReachableWithFullLabels()",
+      "scope": "Synthetic host, current production controls. Scroll viewport, not full-app certification."
+    },
+    {
+      "path": "foundation-accessibility5-dark.png",
+      "sha256": "7fe155810c54caf872e2fe39a5c325af4d3f1ad34e1591459a5e5b52314d5036",
+      "test": "A11yFoundationUITests/testProductionRendersAtDefaultStandardAX1AX5InBothThemes()",
+      "scope": "Synthetic host, current production controls. Scroll viewport, not full-app certification."
+    },
+    {
+      "path": "foundation-accessibility5-light.png",
+      "sha256": "bdf4d99de1b2aaf33a3a69117c76e775104bb47ab635900d02016fb2e96d049e",
+      "test": "A11yFoundationUITests/testProductionRendersAtDefaultStandardAX1AX5InBothThemes()",
+      "scope": "Synthetic host, current production controls. Scroll viewport, not full-app certification."
+    },
+    {
+      "path": "foundation-large-light.png",
+      "sha256": "06112c1d631a653e60096faa090c5c1de0540450afe711eee22b8be6a1a6ea81",
+      "test": "A11yFoundationUITests/testProductionRendersAtDefaultStandardAX1AX5InBothThemes()",
+      "scope": "Synthetic host, current production controls. Scroll viewport, not full-app certification."
+    }
+  ]
+}

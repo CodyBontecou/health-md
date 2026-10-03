@@ -690,8 +690,23 @@ struct ExportPresentationTarget: Equatable, Sendable {
 nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     let dailyFileCount: Int
     let rollupFileCount: Int
+    /// Data-dictionary artifact written beside the planned range outputs.
+    /// Defaults to zero so stored journals and older call sites stay valid.
+    let dataDictionaryFileCount: Int
 
-    var totalFileCount: Int { dailyFileCount + rollupFileCount }
+    init(
+        dailyFileCount: Int,
+        rollupFileCount: Int,
+        dataDictionaryFileCount: Int = 0
+    ) {
+        self.dailyFileCount = max(dailyFileCount, 0)
+        self.rollupFileCount = max(rollupFileCount, 0)
+        self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+    }
+
+    var totalFileCount: Int {
+        dailyFileCount + rollupFileCount + dataDictionaryFileCount
+    }
 }
 
 nonisolated struct AppleLooseDailyMaterializedFile: Equatable, Sendable {
@@ -2514,7 +2529,8 @@ final class VaultManager: ObservableObject {
             dataDictionary: dictionary,
             result: AppleLooseDailyRangeWriteResult(
                 dailyFileCount: operation.artifacts.count - rollupFileCount,
-                rollupFileCount: rollupFileCount
+                rollupFileCount: rollupFileCount,
+                dataDictionaryFileCount: dictionary != nil ? 1 : 0
             )
         )
     }

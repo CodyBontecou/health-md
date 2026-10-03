@@ -12,6 +12,8 @@ description: Ce que Health.md offre sur iPhone, iPad, Mac, Android, Wear OS et l
   </div>
 </div>
 
+**Les entrées Wear OS sont des fonctions prévues, absentes de la version Google Play actuelle.**
+
 Légende : ✓ disponible · ◐ disponible avec des différences de plateforme indiquées dans la ligne · △ prévu ou en phase de tests · ? disponibilité non revendiquée · — indisponible sur cette plateforme.
 
 La CLI n’est pas une colonne de plateforme de données de santé distincte : les fonctions de la CLI apparaissent dans les lignes d’automatisation et conservent la sémantique de leur source iPhone ou Android.
@@ -72,7 +74,7 @@ Certaines données ne sont volontairement **pas traitées comme équivalentes** 
 |---|---|---|---|---|
 | Widgets d’écran d’accueil | ✓ résumé, anneaux d’activité, plage cardiaque, sommeil | — | ✓ résumé, activité, plage cardiaque, sommeil (les pas remplacent les heures debout) | — |
 | Progression de l’export en Activité en direct | ✓ | — | — | — |
-| Surfaces de la montre | ✓ app montre + 10 complications | — | — | ✓ tuiles + 10 complications |
+| Surfaces de la montre | ✓ app montre + 10 complications | — | — | △ prévu pour 1.10.0 |
 | Mac comme destination d’export (transfert local chiffré) | ✓ l’iPhone envoie | ✓ reçoit | — | — |
 
 ## Achat et confidentialité
@@ -81,7 +83,7 @@ Certaines données ne sont volontairement **pas traitées comme équivalentes** 
 |---|---|---|---|---|
 | Offre gratuite | ✓ 10 actions d’export manuelles ou planifiées | — | ✓ 10 actions d’export manuelles | — |
 | Déverrouillage | ✓ achat à vie unique (individuel / familial) | ◐ même déverrouillage Apple | ✓ achat à vie unique, planification incluse | — |
-| Confidentialité à traitement local | ✓ aucun cloud de données de santé Health.md | ✓ | ✓ | ✓ |
+| Confidentialité à traitement local | ✓ aucun cloud de données de santé Health.md | ✓ | ✓ | △ prévu |
 | Rapport clinicien (un PDF pour les rendez-vous) | ✓ | — | ✓ | — |
 
 Health.md n’exploite aucun cloud de données de santé. Les données de santé peuvent exister dans les destinations de votre choix, dans un contexte local chiffré et dans un état de transfert privé limité. Chaque dossier, Mac, point de terminaison API ou destination CLI est configuré explicitement. Les profils et planifications restent locaux à l’appareil où ils ont été créés. Pour le déroulé de chaque plateforme, voir les [profils d’export](/fr/docs/export-profiles/), le [guide Android](/fr/docs/android/) et le [guide d’export iPhone](/fr/docs/export/).

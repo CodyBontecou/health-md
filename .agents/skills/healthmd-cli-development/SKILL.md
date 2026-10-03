@@ -64,13 +64,13 @@ Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do 
 
 ## Invariants
 
-- Direct is standalone default. `mac-app` is reserved/unimplemented and never an implicit fallback.
+- Direct is the only execution path; the CLI has no backend option and never depends on the Mac app or localhost.
 - Manual IP/Tailscale is portable. Nearby must return `transport_unsupported` in Rust.
 - Structured outcomes and argument failures share one canonical JSON model. Interactive terminals render it as readable text; pipes and `--json` emit JSON, while `--human` forces text. Help/version are text, exact artifacts bypass rendering, and pairing instructions or health-free progress may use stderr.
 - Never place health payloads in logs, diagnostics, fixtures, panic text, telemetry, or test reports.
 - Direct CLI Access is opt-in. Pairing, idle reconnect, and new work need foreground iPhone. Only an already-connected export gets finite iOS background time; expiration pauses durable work.
 - Direct trust is separate from Mac sync trust. Credentials use Keychain, Secret Service, or Windows Credential Manager. Never fall back to plaintext.
-- Preserve explicit device and port. Never switch peer, port, backend, or transport silently.
+- Preserve explicit device and port. Never switch peer, port, or transport silently.
 - Peer/install binding, dates, destination, settings, request fingerprint, manifests, partition chain, and committed frontier are immutable across resume.
 - Timeout, Ctrl-C, process death, disconnect, background expiry, or local wake-wait cancellation never means phone-side cancellation. Only mobile acknowledgement is terminal.
 - RFC-0005 keeps unavailable query/export/resume/cancel requests in one shared 120-second wake window (`--wake-timeout`; MCP `HEALTHMD_WAKE_TIMEOUT`) with 250 ms to 2 s retries. It emits only health-free progress. Wake enrollment is reported truthfully per selected device from the stored wake credential: `unavailable`/`wait_only` when absent, `available`/`enrolled` when the paired phone enrolled.
@@ -135,7 +135,7 @@ Never update one side of a wire change and call it complete.
    privacy-safe `healthmd.cli_error/1`; never embed rejected values or escaped Clap output.
 6. Update parser/client/protocol/iPhone tests, help, README, operator guidance, and QA.
 
-Do not add `--iphone` or require `--backend direct`; standalone already means direct iPhone.
+Do not add `--iphone`; standalone already means direct iPhone.
 
 ### Pairing/reconnect
 

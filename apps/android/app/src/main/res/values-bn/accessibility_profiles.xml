@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">প্রোফাইলের সময়সূচি</string>
+    <string name="a11y_profiles_empty">এখনও কোনো এক্সপোর্ট প্রোফাইল নেই।</string>
+    <string name="a11y_profiles_add">বর্তমান সেটিংস থেকে নতুন প্রোফাইল</string>
+    <string name="a11y_profiles_none_enabled">কোনো প্রোফাইলের সময়সূচি চালু নেই।</string>
+    <string name="a11y_profiles_edit">সময়সূচি সম্পাদনা করুন</string>
+    <string name="a11y_profiles_edit_named">%1$s-এর সময়সূচি সম্পাদনা করুন</string>
+    <string name="a11y_profiles_delete">মুছুন</string>
+    <string name="a11y_profiles_delete_named">প্রোফাইল %1$s মুছুন</string>
+    <string name="a11y_profiles_schedule_named">%1$s-এর সময়সূচি</string>
+    <string name="a11y_profiles_save">সংরক্ষণ করুন</string>
+    <string name="a11y_profiles_delete_title">“%1$s” মুছবেন?</string>
+    <string name="a11y_profiles_delete_body">এর সংরক্ষিত সেটিংস ও সময়সূচি সরানো হবে। শেষ অবশিষ্ট প্রোফাইলটি মুছে ফেলা যাবে না।</string>
+    <string name="a11y_profiles_cadence_unit">পুনরাবৃত্তির একক</string>
+    <string name="a11y_profiles_days">দিন</string>
+    <string name="a11y_profiles_weeks">সপ্তাহ</string>
+    <string name="a11y_profiles_months">মাস</string>
+    <string name="a11y_profiles_weekday">সপ্তাহের দিন</string>
+    <string name="a11y_profiles_hour">ঘণ্টা</string>
+    <string name="a11y_profiles_minute">মিনিট</string>
+    <string name="a11y_profiles_lookback">পূর্ববর্তী দিন (1–30)</string>
+    <string name="a11y_profiles_every_days">প্রতি N দিন</string>
+    <string name="a11y_profiles_every_weeks">প্রতি N সপ্তাহ</string>
+    <string name="a11y_profiles_every_months">প্রতি N মাস</string>
+</resources>

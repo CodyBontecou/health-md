@@ -40,6 +40,7 @@
 | Export history & retry | ✅ `export-history-retry.md` | ✅ `export-history-retry.md` | shared | Room-backed history on Android. |
 | Roll-up summaries | ✅ `rollup-summaries.md` | — | planned | Android adopts `rollup-summary` v9 range semantics in the first v9 writer; frozen v4 / analytical v5 stay byte-immutable (`export.range-summary`). |
 | Scheduled exports | ✅ `scheduled-exports.md` | ✅ `scheduled-exports.md` | platform-distinct | APNs-preflighted local notifications vs WorkManager + optional exact alarm, boot recovery, missed-date recovery. |
+| Scheduled Today Refresh | ✅ `scheduled-exports.md` | ✅ `scheduled-exports.md` | shared | Completed-day runs can also refresh today's partial file (`export.scheduled-today-refresh`): Apple runs best-effort same-day refresh occurrences (3/6/12 h), Android profile schedules mirror those slots, and the Android single schedule offers a "past complete days + today" window paired with its sub-day cadence. |
 | Automated triggers | ✅ `apple-shortcuts.md` (App Intents, 9 intents) | ✅ `automation-intents.md` (Tasker/adb broadcasts, launcher shortcuts) | platform-distinct | OS automation surfaces differ by design. |
 | API endpoint export | ✅ `api-endpoint-export.md` | ✅ `api-endpoint-export.md` | shared | Both POST a JSON envelope to a user endpoint; Android adds encrypted header storage and stricter framing/proxy-header rules. |
 

@@ -382,7 +382,6 @@
     <string name="bullet_display_plus">علامة زائد (+)</string>
 
     <!-- Complete canonical localization -->
-    <string name="add">أضف</string>
     <string name="action_cancel_export">إلغاء التصدير</string>
     <string name="action_close_options">إغلاق الخيارات</string>
     <string name="action_set_start_date">ضبط تاريخ البدء</string>
@@ -639,6 +638,12 @@
     <string name="schedule_time">الوقت</string>
     <string name="schedule_date_window">التواريخ</string>
     <string name="schedule_date_window_past_complete_days">الأيام السابقة المكتملة</string>
+    <string name="schedule_date_window_past_complete_days_through_today">الأيام الكاملة السابقة + اليوم</string>
+    <string name="schedule_through_today_summary">كل عملية تشغيل تصدّر الأيام الكاملة السابقة بالإضافة إلى ملف اليوم الجزئي، لذا فإن التشغيل أثناء النهار يلتقط أيضًا نوم الليلة الماضية. ادمجها مع تكرار كل ساعة لتحديث الملفين طوال اليوم. استخدم وضع الكتابة «استبدال» أو «تحديث» لتجنب تكرار محتوى اليوم نفسه.</string>
+    <string name="profile_schedule_today_refresh">تحديث تصدير اليوم</string>
+    <string name="profile_schedule_refresh_interval">فاصل التحديث</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d س</string>
+    <string name="profile_schedule_refresh_summary">يحدّث اليوم كل %1$d س</string>
     <string name="schedule_date_window_today">اليوم</string>
     <string name="schedule_export_past_days">تصدير الأيام الماضية</string>
     <string name="schedule_today_summary">يصدّر كل تشغيل بيانات اليوم ليظل ملفك اليومي الحالي محدّثًا. استخدم وضع «الاستبدال» أو «التحديث» لتجنّب تكرار محتوى اليوم نفسه.</string>
@@ -675,7 +680,7 @@
     <string name="release_notes_highlight_feedback">تعيد جلسات Direct CLI الاتصال تلقائيًا بعد انقطاعات قصيرة لسطح المكتب، فتكتمل عمليات التصدير بموثوقية.</string>
     <string name="release_notes_highlight_export_parity">تنتظر أوامر نافذة الاستيقاظ من سطح المكتب حتى 120 ثانية لتفتح التطبيق وتتصل، دون أي إشعارات فورية.</string>
     <string name="release_notes_highlight_templates">لا يزال الربط اليدوي عبر العنوان والمنفذ والرمز المكوّن من 20 رقمًا يعمل، بما في ذلك مع إصدارات CLI الأقدم.</string>
-    <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق على الهاتف وWear OS.</string>
+    <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق في الإعداد والتصدير والجداول والاتصالات.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
     <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
     <string name="paywall_purchasing">جارٍ إتمام الشراء\u2026</string>

@@ -71,6 +71,55 @@ class ScheduledExportPendingRequestsTest {
     }
 
     @Test
+    fun scheduledRunDates_throughTodayAppendsRunDayAndNeverClaimsTodayAsPending() {
+        val runDay = LocalDate.parse("2026-06-10")
+        val settings = ExportSettings(
+            scheduleLookbackDays = 2,
+            scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY,
+            // A same-day failed request must not be claimed as a pending retry by this run;
+            // today re-exports unconditionally as part of the window.
+            pendingScheduledExportRequests = listOf(
+                PendingScheduledExportRequest(
+                    date = runDay,
+                    firstFailedAtMillis = 100L,
+                    attemptCount = 1,
+                ),
+            ),
+        )
+
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(settings, runDay)
+
+        assertThat(dates).containsExactly(
+            LocalDate.parse("2026-06-08"),
+            LocalDate.parse("2026-06-09"),
+            runDay,
+        ).inOrder()
+    }
+
+    @Test
+    fun scheduledRunDates_throughTodayWithHourlyOccurrencesDeduplicatesCompletedDays() {
+        val settings = ExportSettings(
+            scheduleLookbackDays = 1,
+            scheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY,
+        )
+
+        // Three same-day occurrences (hourly cadence coalesced by intended run date).
+        val dates = ScheduledExportPendingRequests.scheduledRunDates(
+            settings = settings,
+            intendedRunDates = listOf(
+                LocalDate.parse("2026-06-10"),
+                LocalDate.parse("2026-06-10"),
+                LocalDate.parse("2026-06-10"),
+            ),
+        )
+
+        assertThat(dates).containsExactly(
+            LocalDate.parse("2026-06-09"),
+            LocalDate.parse("2026-06-10"),
+        ).inOrder()
+    }
+
+    @Test
     fun scheduledRunDates_multipleMissedOccurrencesUnionsTheirWindows() {
         val settings = ExportSettings(scheduleLookbackDays = 1)
 

@@ -6,7 +6,6 @@
     <string name="back">वापस</string>
     <string name="close">बंद करें</string>
     <string name="refresh">ताज़ा करें</string>
-    <string name="add">जोड़ें</string>
     <string name="action_cancel_export">निर्यात रद्द करें</string>
     <string name="action_close_options">विकल्प बंद करें</string>
     <string name="action_set_start_date">आरंभ तिथि निर्धारित करें</string>
@@ -491,6 +490,12 @@
     <string name="schedule_time">समय</string>
     <string name="schedule_date_window">तारीखें</string>
     <string name="schedule_date_window_past_complete_days">पिछले पूरे दिन</string>
+    <string name="schedule_date_window_past_complete_days_through_today">पिछले पूरे दिन + आज</string>
+    <string name="schedule_through_today_summary">हर रन पिछले पूरे दिनों के साथ आज की आंशिक फ़ाइल भी निर्यात करता है, इसलिए दिन के समय चलने पर पिछली रात की नींद भी शामिल हो जाती है। दोनों फ़ाइलों को पूरे दिन ताज़ा रखने के लिए इसे प्रति घंटे आवृत्ति के साथ जोड़ें। उसी दिन की डुप्लिकेट सामग्री से बचने के लिए ओवरराइट या अपडेट राइट मोड का उपयोग करें।</string>
+    <string name="profile_schedule_today_refresh">आज का निर्यात रिफ्रेश करें</string>
+    <string name="profile_schedule_refresh_interval">रिफ्रेश अंतराल</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d घंटे</string>
+    <string name="profile_schedule_refresh_summary">आज हर %1$d घंटे में रिफ्रेश करता है</string>
     <string name="schedule_date_window_today">आज</string>
     <string name="schedule_export_past_days">पिछले दिनों निर्यात करें</string>
     <string name="schedule_today_summary">हर बार आज का डेटा निर्यात होता है, ताकि मौजूदा दैनिक फ़ाइल अप-टू-डेट रहे। एक ही दिन की सामग्री दो बार जुड़ने से बचाने के लिए Overwrite या Update लेखन मोड का उपयोग करें।</string>
@@ -528,7 +533,7 @@
     <string name="release_notes_highlight_feedback">डेस्कटॉप के छोटे कनेक्शन टूटने के बाद Direct CLI सेशन अपने आप फिर जुड़ जाते हैं, इसलिए निर्यात भरोसेमंद ढंग से पूरे होते हैं।</string>
     <string name="release_notes_highlight_export_parity">डेस्कटॉप की वेक विंडो कमांड आपके ऐप खोलकर कनेक्ट होने तक 120 सेकंड तक प्रतीक्षा करती हैं, बिना किसी पुश नोटिफिकेशन के।</string>
     <string name="release_notes_highlight_templates">पता, पोर्ट और 20-अंकों वाले कोड से मैनुअल पेयरिंग अब भी काम करती है, पुराने CLI वर्शन के साथ भी।</string>
-    <string name="release_notes_highlight_workouts">फ़ोन और Wear OS के लिए विश्वसनीयता और अनुकूलता सुधार शामिल हैं।</string>
+    <string name="release_notes_highlight_workouts">सेटअप, एक्सपोर्ट, शेड्यूल और कनेक्शन में विश्वसनीयता और संगतता सुधार शामिल हैं।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">निर्धारित निर्यात</string>
     <string name="notification_channel_scheduled_exports_description">जब निर्धारित स्वास्थ्य निर्यात पूरे हों या विफल हों तो सूचनाएं</string>

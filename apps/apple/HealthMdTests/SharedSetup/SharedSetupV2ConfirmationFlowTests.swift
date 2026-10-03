@@ -17,13 +17,11 @@ import XCTest
 final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
     // back-deployed task path on older simulator runtimes (CI's iOS 26.2
-    // simulator) where nested store release aborts; retain for the process
-    // lifetime. See docs/testing/lifecycle-audit.md.
-    private static var retainedSettings: [AdvancedExportSettings] = []
-    // STATIC RETENTION JUSTIFICATION: same deinit-crash workaround as above
-    // for the nested ObservableObject instances the real-coordinator test
-    // constructs (ExportProfileCoordinator + VaultManager).
-    private static var retainedInstances: [AnyObject] = []
+    // simulator) where ObservableObject and nested-store release aborts with
+    // `malloc: pointer being freed was not allocated` /
+    // `swift_task_deinitOnExecutorMainActorBackDeploy`; every ObservableObject
+    // this suite constructs is retained for the process lifetime through
+    // LifecycleHarness. See docs/testing/lifecycle-audit.md.
 
     private var defaults: UserDefaults!
     private var suiteName: String!
@@ -460,7 +458,9 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     }
 
     func testCredentialEntryModelGatesAndResetsAfterSuccessAndFailure() {
-        let entry = SharedSetupV2CredentialEntryModel()
+        // STATIC RETENTION JUSTIFICATION: ObservableObject deinit aborts on
+        // CI's older iOS 26.2 simulator runtime (lifecycle-audit.md).
+        let entry = LifecycleHarness.retain(SharedSetupV2CredentialEntryModel())
         XCTAssertTrue(entry.authorization.isEmpty)
         XCTAssertFalse(entry.canConfirm)
 
@@ -485,28 +485,7 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     // MARK: - Full production loop over the real export profile coordinator
 
     func testFullProductionLoopConfirmsEndpointWithRealExportProfileCoordinator() throws {
-        let keychain = FakeKeychainStore()
-        let vaultManager = VaultManager(
-            defaults: SystemUserDefaults(defaults: defaults),
-            bookmarkResolver: PathMappingBookmarkResolver(),
-            identityProbe: FakeVaultFolderIdentityProbe()
-        )
-        let settings = AdvancedExportSettings(userDefaults: defaults)
-        Self.retainedSettings.append(settings)
-        let apiExportSettings = APIExportSettings(userDefaults: defaults, keychain: keychain)
-        let exportProfiles = ExportProfileCoordinator(
-            profileStore: ExportProfileStore(userDefaults: defaults),
-            destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
-            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
-            settings: settings,
-            vaultManager: vaultManager,
-            apiExportSettings: apiExportSettings,
-            initialTarget: .localIPhoneFolder,
-            sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults)
-        )
-        Self.retainedInstances.append(exportProfiles)
-        Self.retainedInstances.append(vaultManager)
-
+        let exportProfiles = makeRetainedExportProfileCoordinator()
         let service = makeService(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
         let adapter = SharedSetupV2CoordinatorAdapter.production(
             service,
@@ -1108,30 +1087,34 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     func testProductionConnectedMacFactChangesFireOnlyOnDisplayedFacts() throws {
         // The production signal derives purely from the shared sync service's
         // published facts the review rows display — no transport work.
-        let syncService = SyncService()
-        Self.retainedInstances.append(syncService)
+        // STATIC RETENTION JUSTIFICATION: both the ObservableObject and the
+        // subscription's AnyCancellable must survive the test: releasing the
+        // cancellable tears down the CombineLatest4 subscription chain over
+        // the service's @Published projections, which aborts CI's older
+        // iOS 26.2 simulator runtime (lifecycle-audit.md).
+        let syncService = LifecycleHarness.retain(SyncService())
         let signalCount = SignalCounter()
-        let cancellable = SharedSetupV2CoordinatorAdapter
-            .connectedMacFactChanges(syncService: syncService)
-            .sink { _ in signalCount.value += 1 }
+        let cancellable = LifecycleHarness.retain(
+            SharedSetupV2CoordinatorAdapter
+                .connectedMacFactChanges(syncService: syncService)
+                .sink { _ in signalCount.value += 1 }
+        )
 
-        withExtendedLifetime(cancellable) {
-            // No initial replay of current values fires a signal.
-            XCTAssertEqual(signalCount.value, 0)
+        // No initial replay of current values fires a signal.
+        XCTAssertEqual(signalCount.value, 0)
 
-            syncService.connectionState = .connecting
-            XCTAssertEqual(signalCount.value, 1)
-            syncService.connectionState = .connected
-            XCTAssertEqual(signalCount.value, 2)
-            syncService.connectedPeerName = "Test Mac"
-            XCTAssertEqual(signalCount.value, 3)
+        syncService.connectionState = .connecting
+        XCTAssertEqual(signalCount.value, 1)
+        syncService.connectionState = .connected
+        XCTAssertEqual(signalCount.value, 2)
+        syncService.connectedPeerName = "Test Mac"
+        XCTAssertEqual(signalCount.value, 3)
 
-            // Unrelated published sync-service state never re-renders the
-            // review rows.
-            syncService.lastError = "unrelated"
-            syncService.discoveredPeers = []
-            XCTAssertEqual(signalCount.value, 3)
-        }
+        // Unrelated published sync-service state never re-renders the
+        // review rows.
+        syncService.lastError = "unrelated"
+        syncService.discoveredPeers = []
+        XCTAssertEqual(signalCount.value, 3)
 
         let snapshot = SharedSetupV2ConnectedMacState(syncService: syncService)
         XCTAssertEqual(snapshot.liveConnectionCaption, "Mac connection active (Test Mac)")
@@ -1163,30 +1146,36 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
     }
 
     /// The real production export-profile coordinator over this test's
-    /// isolated suite — the exact editor path, retained for the process
-    /// lifetime per the sanitizer-gate lifecycle audit.
+    /// isolated suite — the exact editor path. Every ObservableObject in
+    /// the nested graph is retained for the process lifetime per the
+    /// sanitizer-gate lifecycle audit (docs/testing/lifecycle-audit.md):
+    /// unreleased-in-time ObservableObject deinits abort CI's iOS 26.2
+    /// simulator with `pointer being freed was not allocated`.
     private func makeRetainedExportProfileCoordinator() -> ExportProfileCoordinator {
         let keychain = FakeKeychainStore()
-        let vaultManager = VaultManager(
+        let vaultManager = LifecycleHarness.retain(VaultManager(
             defaults: SystemUserDefaults(defaults: defaults),
             bookmarkResolver: PathMappingBookmarkResolver(),
             identityProbe: FakeVaultFolderIdentityProbe()
+        ))
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        let apiExportSettings = LifecycleHarness.retain(
+            APIExportSettings(userDefaults: defaults, keychain: keychain)
         )
-        let settings = AdvancedExportSettings(userDefaults: defaults)
-        Self.retainedSettings.append(settings)
-        let exportProfiles = ExportProfileCoordinator(
-            profileStore: ExportProfileStore(userDefaults: defaults),
-            destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
-            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
+        return LifecycleHarness.retain(ExportProfileCoordinator(
+            profileStore: LifecycleHarness.retain(ExportProfileStore(userDefaults: defaults)),
+            destinationStore: LifecycleHarness.retain(
+                ProfileDestinationStore(userDefaults: defaults, keychain: keychain)
+            ),
+            scheduledEntryStore: LifecycleHarness.retain(
+                ScheduledExportEntryStore(userDefaults: defaults)
+            ),
             settings: settings,
             vaultManager: vaultManager,
-            apiExportSettings: APIExportSettings(userDefaults: defaults, keychain: keychain),
+            apiExportSettings: apiExportSettings,
             initialTarget: .localIPhoneFolder,
             sharedSetupV2ExecutionGate: SharedSetupV2ExecutionGate(userDefaults: defaults)
-        )
-        Self.retainedInstances.append(exportProfiles)
-        Self.retainedInstances.append(vaultManager)
-        return exportProfiles
+        ))
     }
 
     private func makeService(
@@ -1202,21 +1191,28 @@ final class SharedSetupV2ConfirmationFlowTests: XCTestCase {
             makeProfileID: { profileIterator.next() ?? self.uuid(8_001) },
             makeScheduleID: { scheduleIterator.next() ?? self.uuid(8_002) }
         )
-        return SharedSetupV2TransactionAdapter(
+        // STATIC RETENTION JUSTIFICATION: the adapter (and its transaction
+        // + execution gate) participates in the coordinator graph whose
+        // ObservableObject deinits abort CI's iOS 26.2 simulator runtime
+        // (lifecycle-audit.md); retain for the process lifetime.
+        return LifecycleHarness.retain(SharedSetupV2TransactionAdapter(
             transaction: transaction,
             executionGate: SharedSetupV2ExecutionGate(userDefaults: defaults)
-        )
+        ))
     }
 
     private func makeCoordinator(
         adapter: SharedSetupV2CoordinatorAdapter?,
         announcer: @escaping @MainActor @Sendable (String) -> Void = { _ in }
     ) -> SharedSetupCoordinator {
-        SharedSetupCoordinator(
+        // STATIC RETENTION JUSTIFICATION: the coordinator is an
+        // ObservableObject whose deinit aborts CI's iOS 26.2 simulator
+        // runtime (lifecycle-audit.md); retain for the process lifetime.
+        LifecycleHarness.retain(SharedSetupCoordinator(
             registry: fixtureRegistry(),
             accessibilityAnnouncer: announcer,
             v2Adapter: adapter
-        )
+        ))
     }
 
     private func storedBlockedIDs() throws -> [UUID] {

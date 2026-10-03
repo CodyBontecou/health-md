@@ -1,33 +1,29 @@
 ---
-title: "Full Access en betaalmuur"
-description: "Full Access is een eenmalige aankoop zonder abonnement. Hef de gedeelde limiet van 10 exports op en ontgrendel Mac-bestemmingsworkflows en Opdrachten."
+title: "Ontgrendelen en paywall"
+description: "Lees over 10 gratis acties, vrijblijvende herinneringen, Lifetime-aankopen en StoreKit-herstel."
 ---
 
-## Prijs
-<ul>
-<li>Full Access is een eenmalige StoreKit-aankoop via het aankoopscherm van de App Store.</li>
-<li>Er is geen abonnement of terugkerende betaling.</li>
-<li>Apple toont vóór de aankoop de actuele lokale prijs.</li>
-<li>Er is geen serveraccount. De ontgrendeling is gekoppeld aan de StoreKit-transactie van je Apple ID.</li>
-<li>Vóór ontgrendeling geldt dezelfde ruimte van 10 acties voor handmatige en geplande exports.</li>
-</ul>
+Health.md bevat 10 voltooide exportacties voordat Full Access nodig is. Eén actie kan meerdere dagen en formaten schrijven. Handmatige, geplande, Opdrachten- en directe exports delen de teller wanneer ze meetellen.
 
-## Wat Full Access ontgrendelt
-<ul>
-<li>Onbeperkte handmatige en geplande exportacties na de gedeelde gratis ruimte.</li>
-<li>Workflows met een Mac-bestemming.</li>
-<li>Shortcuts-intenties.</li>
-</ul>
+## Wanneer verschijnt een aanbod?
 
-## Een eerdere aankoop herstellen
-<p>Tik op de betaalmuur op <em>Aankoop herstellen</em>. De app vraagt StoreKit naar eerdere aankopen die aan de ingelogde Apple ID zijn gekoppeld. Gebruik deze optie nadat je de app opnieuw hebt geïnstalleerd of naar een nieuw apparaat bent overgestapt.</p>
+- Onboarding bevat geen paywall.
+- Na de eerste echte preview kan één wegklikbaar aanbod verschijnen.
+- Na de 3e en 7e gratis export kan een herinnering verschijnen.
+- Na 10 acties wordt de volgende meetellende export geblokkeerd.
 
-## Terugbetalingen en ondersteuning
-<p>Terugbetalingen lopen via Apple. Dien een verzoek in op <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>. Stuur voor ondersteuning bij de app een e-mail naar <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>.</p>
+Het sluiten van eerdere aanbiedingen verbruikt geen actie.
 
-## Gerelateerde documentatie
+## Lifetime-opties
 
-<div class="related">
-  <a href="/nl/docs/onboarding/"><span>Configuratie</span>Onboarding: hier verschijnt de ontgrendelingsstap voor het eerst.</a>
-  <a href="/nl/docs/export/"><span>Gebruik</span>Exporteren: bekijk wat onbeperkte toegang inhoudt.</a>
-</div>
+StoreKit 2 biedt eenmalige aankopen zonder abonnement: **Individual Lifetime**, **Family Lifetime** en een gezinsupgrade voor geschikte eigenaars. De gelokaliseerde prijs van Apple is leidend. Family Lifetime hangt af van Apple Aankopen delen.
+
+**Herstel aankoop** vernieuwt transacties van de Apple ID. Controleer voor Gezin de ID, Aankopen delen en zichtbaarheid van Health.md in de aankoopgeschiedenis.
+
+| Probleem | Actie |
+|---|---|
+| Geen prijs | Controleer netwerk/App Store en open opnieuw. |
+| Aanbod vóór actie 10 | Vrijblijvende herinnering, niet de eindblokkade. |
+| Planning gepauzeerd | Koop of herstel en gebruik normaal herstel. |
+
+<div class="related"><a href="/nl/docs/onboarding/"><span>Start</span>Vijf stappen.</a><a href="/nl/docs/scheduling/"><span>Automatisering</span>Gedeeld tegoed.</a></div>

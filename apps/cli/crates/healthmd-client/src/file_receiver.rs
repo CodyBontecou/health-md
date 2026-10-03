@@ -1756,7 +1756,6 @@ fn make_receipt(
     let object = value
         .as_object_mut()
         .ok_or_else(|| invalid("receipt is not an object"))?;
-    object.insert("backend".into(), json!("direct"));
     object.insert(
         "message".into(),
         json!("iPhone export files were committed to the explicit destination."),

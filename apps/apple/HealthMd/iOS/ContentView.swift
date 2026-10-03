@@ -30,6 +30,11 @@ struct ContentView: View {
     @State private var showFolderPicker = false
     @State private var showDestinationChangedAlert = false
     @State private var presentFirstExportPreview = false
+    /// One-time post-onboarding paywall: armed when onboarding completes
+    /// (unlocked users skip it), fired when the first export preview closes.
+    @State private var awaitingFirstPreviewCloseAfterOnboarding = false
+    @State private var showPostOnboardingPaywall = false
+    @AppStorage("pricing.paywall.postOnboarding.shown.v1") private var hasSeenPostOnboardingPaywall = false
     @State private var isExporting = false
     @State private var isRequestingHealthAuthorization = false
     @State private var exportProgress: Double = 0.0
@@ -48,6 +53,8 @@ struct ContentView: View {
     @State private var browsedFileURL: URL?
     @State private var showExportFolderBrowser = false
     @State private var showPaywall = false
+    @State private var showUpgradePromptPaywall = false
+    @State private var presentPaywallAfterUpgradePrompt = false
     @State private var showExportProfiles = false
     @State private var showClinicianReport = false
     @State private var showMarketingMetricSelection = false
@@ -106,6 +113,7 @@ struct ContentView: View {
                         selectedTab = .export
                         presentFirstExportPreview = true
                         hasCompletedOnboarding = true
+                        awaitingFirstPreviewCloseAfterOnboarding = shouldOfferPostOnboardingUnlock
                     }
                 }
             )
@@ -154,6 +162,7 @@ struct ContentView: View {
                         exportStatusMessage: $exportStatusMessage,
                         showFolderPicker: $showFolderPicker,
                         presentFirstExportPreview: $presentFirstExportPreview,
+                        onFirstExportPreviewDismissed: { handleFirstExportPreviewClosed() },
                         canExport: canExport,
                         onExportTapped: exportData
                     )
@@ -314,6 +323,52 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: currentPaywallContext)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showPostOnboardingPaywall, onDismiss: {
+            if !TestMode.isUITesting {
+                hasSeenPostOnboardingPaywall = true
+            }
+            PricingAnalyticsClient.shared.trackOnboardingContinueFreeTapped(
+                quotaState: purchaseManager.analyticsQuotaState
+            )
+        }) {
+            PaywallView(context: .onboarding)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { purchaseManager.pendingUpgradePrompt != nil },
+                set: { presented in
+                    if !presented { handleUpgradePromptSwipeDismissIfNeeded() }
+                }
+            ),
+            onDismiss: {
+                if presentPaywallAfterUpgradePrompt {
+                    presentPaywallAfterUpgradePrompt = false
+                    showUpgradePromptPaywall = true
+                }
+            }
+        ) {
+            ExportUpgradePrompt(
+                milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                onUpgrade: {
+                    let quotaState = purchaseManager.analyticsQuotaState
+                    purchaseManager.consumeUpgradePrompt()
+                    PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                    presentPaywallAfterUpgradePrompt = true
+                },
+                onDismiss: {
+                    let quotaState = purchaseManager.analyticsQuotaState
+                    purchaseManager.consumeUpgradePrompt()
+                    PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
+                }
+            )
+        }
+        .sheet(isPresented: $showUpgradePromptPaywall) {
+            PaywallView(context: .upgradePrompt)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -876,6 +931,42 @@ struct ContentView: View {
         showPaywall = true
     }
 
+    /// Post-onboarding unlock offer. Onboarding no longer gates on a paywall
+    /// step; instead, after the user sees their first real export preview, a
+    /// single non-blocking paywall is offered once per install.
+    private var shouldOfferPostOnboardingUnlock: Bool {
+        // UI tests control the offer through the launch environment and need
+        // launch-to-launch determinism, so persisted state is ignored there.
+        if TestMode.isUITesting {
+            return TestMode.showsPostOnboardingPaywall
+        }
+        guard !purchaseManager.isUnlocked,
+              !hasSeenPostOnboardingPaywall else { return false }
+        return true
+    }
+
+    private func handleFirstExportPreviewClosed() {
+        guard awaitingFirstPreviewCloseAfterOnboarding else { return }
+        awaitingFirstPreviewCloseAfterOnboarding = false
+        guard shouldOfferPostOnboardingUnlock else { return }
+        // Presenting a sheet directly inside another sheet's onDismiss can be
+        // dropped by SwiftUI; hop out of the dismissal transaction first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            showPostOnboardingPaywall = true
+        }
+    }
+
+    /// Swipe-to-dismiss on the value-moment prompt bypasses the button
+    /// actions, so the binding's `set(false)` finishes the funnel: consume the
+    /// pending milestone and record a dismissal. Button paths have already
+    /// consumed the milestone by the time this runs, making this a no-op.
+    private func handleUpgradePromptSwipeDismissIfNeeded() {
+        guard purchaseManager.pendingUpgradePrompt != nil else { return }
+        let quotaState = purchaseManager.analyticsQuotaState
+        purchaseManager.consumeUpgradePrompt()
+        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
+    }
+
     private func trackSuccessfulExport(
         targetType: PricingAnalyticsExportTargetType,
         startDate: Date,
@@ -1231,15 +1322,19 @@ struct ContentView: View {
                 }
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
+                // An informational omission (for example a WorkoutKit plan this
+                // device cannot decode) keeps the full-success status; surface
+                // it as a note rather than letting it pass unnoticed.
+                let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
                     vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))"
+                    exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))\(noteSuffix)"
                     vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
                 } else {
-                    exportStatusMessage = result.localizedGeneratedFileAndDataDayDescription
-                    vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
+                    exportStatusMessage = result.localizedGeneratedFileAndDataDayDescription + noteSuffix
+                    vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
                 }
                 startStatusDismissTimer()
 
@@ -1254,7 +1349,7 @@ struct ContentView: View {
                 if !isCompletedDailyNoteSkip {
                     partialExportNotice = PartialExportNotice(result: result)
                 }
-                let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
+                let warning = result.hasDegradingPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
                 if isCompletedDailyNoteSkip {
@@ -1386,7 +1481,7 @@ struct ContentView: View {
                 }
             } else if result.isPartialSuccess {
                 partialExportNotice = PartialExportNotice(result: result)
-                let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
+                let warning = result.hasDegradingPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
                 exportStatusMessage = "Uploaded \(result.successCount)/\(totalDays) days\(providerRecordDescription) to API. \(suffix)"
@@ -2265,8 +2360,10 @@ struct ContentView: View {
         case .success:
             // Write-side warnings (individual-entry coverage gaps) do not fail
             // the export, so surface them alongside the success message.
-            let warningSuffix = exportResult.hasPartialFailures
-                ? " " + exportResult.partialFailureSummary : ""
+            // Informational omissions read as a note, not a warning.
+            let warningSuffix = exportResult.hasDegradingPartialFailures
+                ? " " + exportResult.partialFailureSummary
+                : (exportResult.informationalNoteSummary.map { " \($0)" } ?? "")
             if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)\(warningSuffix)"
                 vaultManager.lastExportStatus = exportStatusMessage
@@ -2294,7 +2391,7 @@ struct ContentView: View {
                 partialExportNotice = PartialExportNotice(result: exportResult)
             }
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-            let warning = exportResult.hasPartialFailures
+            let warning = exportResult.hasDegradingPartialFailures
                 ? exportResult.partialFailureSummary : nil
             let suffix = warning ?? "Failed: \(failedDatesStr)"
             if isCompletedDailyNoteSkip {
@@ -2685,6 +2782,7 @@ struct SettingsTabView: View {
     @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
         @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @Binding var showExportProfiles: Bool
@@ -2815,13 +2913,26 @@ struct SettingsTabView: View {
             title: "Settings",
             subtitle: "Manage access, storage, and support for Health.md."
         ) {
-            HStack(spacing: Spacing.sm) {
-                SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
-                SettingsStatusPill(text: vaultManager.vaultAvailabilityText, tone: vaultManager.vaultURL == nil ? .warning : .success)
+            Group {
+                if dynamicTypeSize >= .xxxLarge {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        settingsHeaderStatusPills
+                    }
+                } else {
+                    HStack(spacing: Spacing.sm) {
+                        settingsHeaderStatusPills
+                    }
+                }
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Purchase status: \(purchaseManager.isUnlocked ? "full access" : "free plan"). Vault status: \(vaultStatusLabel.lowercased()).")
         }
+    }
+
+    @ViewBuilder
+    private var settingsHeaderStatusPills: some View {
+        SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
+        SettingsStatusPill(text: vaultManager.vaultAvailabilityText, tone: vaultManager.vaultURL == nil ? .warning : .success)
     }
 
     private var configurationProtectionSection: some View {
@@ -2829,29 +2940,13 @@ struct SettingsTabView: View {
             title: "Prevent Accidental Changes",
             subtitle: "Keep your saved configuration from being changed by mistake. Manual exports and syncs remain available."
         ) {
-            Toggle(isOn: Binding(
-                get: { configurationProtection.isEnabled },
-                set: { configurationProtection.setEnabled($0) }
-            )) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Lock Configuration Changes")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.textPrimary)
-                    Text(configurationProtection.isEnabled
-                         ? "Configuration changes are blocked on this device."
-                         : "Configuration can be edited normally.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .tint(Color.accent)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, 14)
-            .accessibilityLabel("Prevent Accidental Changes")
-            .accessibilityValue(configurationProtection.isEnabled ? "On" : "Off")
-            .accessibilityHint("Double tap to \(configurationProtection.isEnabled ? "allow" : "prevent") configuration changes")
-            .accessibilityIdentifier(AccessibilityID.ConfigurationProtection.toggle)
+            ReadingProtectionRow(
+                isEnabled: Binding(
+                    get: { configurationProtection.isEnabled },
+                    set: { configurationProtection.setEnabled($0) }
+                ),
+                accessibilityIdentifier: AccessibilityID.ConfigurationProtection.toggle
+            )
         }
         .id(AccessibilityID.ConfigurationProtection.section)
     }
@@ -3078,7 +3173,7 @@ private struct SettingsSectionCard<Content: View>: View {
                 if let subtitle {
                     Text(subtitle)
                         .font(.footnote)
-                        .foregroundStyle(Color.textMuted)
+                        .foregroundStyle(Color.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -3100,179 +3195,17 @@ private struct SettingsSectionCard<Content: View>: View {
 }
 
 private struct SettingsRowDivider: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         Divider()
             .overlay(Color.borderSubtle)
-            .padding(.leading, 64)
+            .padding(.leading, dynamicTypeSize >= .xxxLarge ? Spacing.md : Spacing.s16)
+            .padding(.trailing, dynamicTypeSize >= .xxxLarge ? Spacing.md : 0)
     }
 }
 
-private enum SettingsStatusTone {
-    case accent
-    case success
-    case warning
-    case muted
-
-    var foreground: Color {
-        switch self {
-        case .accent: return Color.accent
-        case .success: return Color.success
-        case .warning: return Color.warning
-        case .muted: return Color.textMuted
-        }
-    }
-
-    var background: Color {
-        switch self {
-        case .accent: return Color.accent.opacity(0.12)
-        case .success: return Color.success.opacity(0.12)
-        case .warning: return Color.warning.opacity(0.14)
-        case .muted: return Color.bgSecondary
-        }
-    }
-
-    var border: Color {
-        switch self {
-        case .accent: return Color.accent.opacity(0.24)
-        case .success: return Color.success.opacity(0.22)
-        case .warning: return Color.warning.opacity(0.25)
-        case .muted: return Color.borderSubtle
-        }
-    }
-}
-
-private struct SettingsStatusPill: View {
-    let text: String
-    let tone: SettingsStatusTone
-
-    var body: some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(tone.foreground)
-            .lineLimit(1)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(tone.background))
-            .overlay(Capsule().strokeBorder(tone.border, lineWidth: 1))
-    }
-}
-
-private struct SettingsRow: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    let icon: String
-    let title: String
-    let subtitle: String
-    let status: String?
-    let statusTone: SettingsStatusTone
-    let isActive: Bool
-    let accessibilityHint: String
-    let accessibilityIdentifier: String?
-    let action: () -> Void
-
-    @State private var isPressed = false
-
-    init(
-        icon: String,
-        title: String,
-        subtitle: String,
-        status: String? = nil,
-        statusTone: SettingsStatusTone = .muted,
-        isActive: Bool,
-        accessibilityHint: String? = nil,
-        accessibilityIdentifier: String? = nil,
-        action: @escaping () -> Void
-    ) {
-        self.icon = icon
-        self.title = title
-        self.subtitle = subtitle
-        self.status = status
-        self.statusTone = statusTone
-        self.isActive = isActive
-        self.accessibilityHint = accessibilityHint ?? "Double tap to open \(title)"
-        self.accessibilityIdentifier = accessibilityIdentifier
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.md) {
-                Image(systemName: icon)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Color.primary)
-                    .frame(width: 36, height: 36)
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text(LocalizedStringKey(title))
-                        .font(Typography.headline())
-                        .foregroundStyle(Color.textPrimary)
-
-                    Text(LocalizedStringKey(subtitle))
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-                .layoutPriority(1)
-
-                Spacer(minLength: Spacing.sm)
-
-                if let status {
-                    SettingsStatusPill(text: status, tone: statusTone)
-                }
-
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textMuted)
-                    .accessibilityHidden(true)
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isPressed ? Color.bgSecondary : Color.clear)
-            )
-            .scaleEffect(reduceMotion ? 1.0 : (isPressed ? 0.99 : 1.0))
-        }
-        .buttonStyle(.plain)
-        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
-            withOptionalMotionAnimation {
-                isPressed = pressing
-            }
-        }, perform: {})
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), \(subtitle)")
-        .accessibilityValue(status ?? (isActive ? "Configured" : "Not configured"))
-        .accessibilityHint(accessibilityHint)
-        .accessibilityAddTraits(.isButton)
-        .modifier(SettingsRowIdentifier(identifier: accessibilityIdentifier))
-    }
-
-    private func withOptionalMotionAnimation(_ updates: () -> Void) {
-        if reduceMotion {
-            updates()
-        } else {
-            withAnimation(.easeInOut(duration: 0.15), updates)
-        }
-    }
-}
-
-/// Applies an accessibility identifier only when one is provided, so rows
-/// without stable identifiers keep their default accessibility element.
-private struct SettingsRowIdentifier: ViewModifier {
-    let identifier: String?
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let identifier {
-            content.accessibilityIdentifier(identifier)
-        } else {
-            content
-        }
-    }
-}
+// SettingsRow and its production label/status views live in ReadingA11yComponents.
 
 /// Export Profiles entry row. Isolated from `SettingsTabView` to keep the
 /// profile-management entry's layout independent from the surrounding section.

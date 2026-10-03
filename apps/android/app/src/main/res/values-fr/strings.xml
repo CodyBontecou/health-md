@@ -450,7 +450,6 @@
     <string name="bullet_display_plus">Plus (+)</string>
 
     <!-- Complete localization resources -->
-    <string name="add">Ajouter</string>
     <string name="action_cancel_export">Annuler l\'exportation</string>
     <string name="action_close_options">Fermer les options</string>
     <string name="action_set_start_date">Définir la date de début</string>
@@ -609,6 +608,12 @@
     <string name="schedule_time">Heure</string>
     <string name="schedule_date_window">Dates</string>
     <string name="schedule_date_window_past_complete_days">Jours complets passés</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Jours complets passés + aujourd’hui</string>
+    <string name="schedule_through_today_summary">Chaque exécution exporte les derniers jours complets ainsi que le fichier partiel d’aujourd’hui, de sorte qu’une exécution en journée capture aussi le sommeil de la nuit dernière. Combinée à une fréquence horaire, elle garde les deux fichiers à jour toute la journée. Utilisez le mode d’écriture Écraser ou Mettre à jour pour éviter le contenu dupliqué d’une même journée.</string>
+    <string name="profile_schedule_today_refresh">Actualiser l’export du jour</string>
+    <string name="profile_schedule_refresh_interval">Intervalle d’actualisation</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
+    <string name="profile_schedule_refresh_summary">Actualise aujourd’hui toutes les %1$d h</string>
     <string name="schedule_date_window_today">Aujourd\'hui</string>
     <string name="schedule_export_past_days">Exporter les jours passés</string>
     <string name="schedule_today_summary">Chaque exécution exporte les données du jour afin que votre fichier quotidien actuel reste à jour. Utilisez le mode d\'écriture Remplacer ou Mettre à jour pour éviter de dupliquer le contenu du jour même.</string>
@@ -642,7 +647,7 @@
     <string name="release_notes_highlight_feedback">Les sessions CLI direct se reconnectent automatiquement après de brèves déconnexions du bureau ; les exports se terminent donc de façon fiable.</string>
     <string name="release_notes_highlight_export_parity">Les commandes à fenêtre d’éveil du bureau patientent jusqu’à 120 secondes pendant que vous ouvrez l’app et vous connectez, sans notifications push.</string>
     <string name="release_notes_highlight_templates">Le jumelage manuel avec l’adresse, le port et le code à 20 chiffres fonctionne toujours, y compris avec les anciennes versions du CLI.</string>
-    <string name="release_notes_highlight_workouts">Inclut des correctifs de fiabilité et de compatibilité pour le téléphone et Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Inclut des correctifs de fiabilité et de compatibilité pour la configuration, les exports, les planifications et les connexions.</string>
     <string name="export_notification_background_permission_required">Les exportations planifiées nécessitent un accès en arrière-plan à Health Connect. Ouvrez Health.md &gt; Planification pour l\'activer.</string>
     <string name="paywall_unlock_button_price">Déverrouiller pour %s</string>
     <string name="paywall_purchasing">Traitement\u2026</string>

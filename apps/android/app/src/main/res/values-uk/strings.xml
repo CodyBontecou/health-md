@@ -372,7 +372,6 @@
     <string name="bullet_display_plus">Плюс (+)</string>
 
     <!-- Complete localization resources -->
-    <string name="add">Додати</string>
     <string name="action_cancel_export">Скасувати експорт</string>
     <string name="action_close_options">Закрити параметри</string>
     <string name="action_set_start_date">Установити дату початку</string>
@@ -619,6 +618,12 @@
     <string name="schedule_time">Час</string>
     <string name="schedule_date_window">Дати</string>
     <string name="schedule_date_window_past_complete_days">Повні минулі дні</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Повні минулі дні + сьогодні</string>
+    <string name="schedule_through_today_summary">Кожен запуск експортує повні минулі дні та сьогоднішній частковий файл, тому денний запуск охоплює й минулу ніч. Поєднуйте з погодинною частотою, щоб обидва файли залишалися актуальними цілий день. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту за той самий день.</string>
+    <string name="profile_schedule_today_refresh">Оновлювати сьогоднішній експорт</string>
+    <string name="profile_schedule_refresh_interval">Інтервал оновлення</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d год</string>
+    <string name="profile_schedule_refresh_summary">Оновлює сьогодні кожні %1$d год</string>
     <string name="schedule_date_window_today">Сьогодні</string>
     <string name="schedule_export_past_days">Експортувати минулі дні</string>
     <string name="schedule_today_summary">Кожен запуск експортує сьогоднішні дані, щоб ваш поточний щоденний файл залишався актуальним. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту того ж дня.</string>
@@ -653,7 +658,7 @@
     <string name="release_notes_highlight_feedback">Сесії Direct CLI автоматично перепід\'єднуються після коротких розривів зв\'язку з комп\'ютером, тому експорти надійно завершуються.</string>
     <string name="release_notes_highlight_export_parity">Команди вікна пробудження на комп\'ютері чекають до 120 секунд, поки ви відкриєте застосунок і під\'єднаєтесь, — без push-сповіщень.</string>
     <string name="release_notes_highlight_templates">Ручне з\'єднання за адресою, портом і 20-значним кодом досі працює, зокрема зі старішими версіями CLI.</string>
-    <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для телефона й Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для налаштування, експорту, розкладів і підключень.</string>
     <string name="export_notification_background_permission_required">Для запланованого експорту потрібен фоновий доступ Health Connect. Відкрийте Health.md &gt; Розклад, щоб увімкнути його.</string>
     <string name="paywall_unlock_button_price">Розблокувати за %s</string>
     <string name="paywall_purchasing">Обробка\u2026</string>

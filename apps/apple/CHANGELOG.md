@@ -4,6 +4,42 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.2] - 2026-09-17
+
+### Changed
+- Onboarding is now five steps: the Obsidian plugin promo moved onto the sample-export screen as a link card, the blocking unlock step was removed, and "Use a Shared Setup" became a quiet link on the welcome screen.
+- After the first export preview closes, a single optional paywall screen is offered once per install instead of gatekeeping setup.
+
+### Added
+- Soft upgrade reminders after the 3rd and 7th free exports, with new `pricing_upgrade_prompt_shown/tapped/dismissed` analytics events (quota-derived milestone, no schema change). The free-export limit stays at 10.
+
+## [3.4.1] - 2026-09-09
+
+### Added
+- Export-profile schedules can optionally refresh the current day's in-progress export every 3, 6, or 12 hours while keeping completed-day runs separate.
+
+### Changed
+- Improved VoiceOver semantics, keyboard focus, touch targets, scrolling, and large-text reflow throughout onboarding, export setup, metric selection, schedules, formatting, and connection screens.
+- Export history presents generated-file totals, retries, and informational workout-plan notes more clearly.
+
+### Fixed
+- Scheduled export profiles now re-export their full configured lookback on every completed-day occurrence, including API Endpoint targets. A daily 14-day lookback no longer shrinks to only the newest day after a successful run. Today Refresh remains separate; duplicate wake-ups do not repeat successful occurrences, and retries keep only unresolved dates even after schedule edits.
+
+## [3.4.0] - 2026-09-06
+
+### Added
+- Share My Setup (v2) under Settings → Configuration: package your export profiles — metric selection, formats, and naming/organization choices — into one bounded portable file (≤ 4 MiB, no health data, credentials, device pairings, or runtime state) and hand it to your other device or a friend. A v2 document can carry multiple profiles; the recipient reviews exactly what will change, applies it as a transactional Add or Replace, and can Undo once. Imported profiles land blocked until their destination is rebound locally (concrete folder, verified API endpoint, or confirmed Mac pairing), imported schedules stay off, and endpoints arrive without credentials. In-flow endpoint binding and live connected-Mac confirmation are part of the import flow, deleting a profile compacts the sidecar state, and older v1 shared-setup files are rejected as an unsupported version (the v2 codec is the only writer).
+
+### Changed
+- Export details on iPhone now show the Retry Export action at the top of the sheet, above the overview and any failure lists, so a large failed export no longer requires scrolling through every failed date to reach Retry. The failed-dates list is also capped to the first 8 rows with a "+N more" summary line, matching the Android history detail (Android's two-pane detail likewise places retry directly under the title).
+
+### Fixed
+- Daily scheduled exports driven by an export profile no longer skip the day after every successful run. Catch-up date math treated the run day itself as already exported ("nothing to catch up"), so a daily 8:00 schedule ran only every other day and the run day's data was never exported by the schedule; users had to export those days manually. Catch-up now starts at the run day — matching the legacy schedule and macOS paths — so each occurrence exports the prior day's data (user report 2026-09-05).
+- Scheduled and manual local exports now record an authoritative generated-file count in Export History. Both orchestrator paths and the pinned Rust range path dropped the per-day write counts, so every scheduled run displayed the legacy "Exported 1 of 1 data day(s)" summary with no file count — a run that wrote files was indistinguishable in history from one that wrote none. History now shows "N generated file(s) from M data day(s)" (including the data dictionary) for scheduled, Shortcut, and manual runs.
+- A workout whose attached WorkoutKit plan cannot be decoded by the device (opaque `WorkoutKit.ImportError error N`) no longer permanently degrades every export containing it to "Partial". Because the workout and all of its samples — routes included — export successfully and only the optional structured plan is omitted, the warning is now informational: the export status is Success while the omission remains visible and copyable in Export Details under an "Export Notes" section (info icons instead of warning triangles). Warnings that reduce captured data still mark the export Partial. iPad section labels now localize through the shared string catalog like iPhone and Mac.
+- The informational workout-plan fix now covers every export surface. Direct iPhone→CLI/Mac transfers no longer record "Partial" in Export History for informational-only warnings (the aggregate operation counts now exclude them, and the plan omission is listed under "Export Notes" like local exports), a full-success transfer whose only warnings are informational no longer reports the invalid `partial_success` outcome with zero failed dates that CLI receivers reject, immediate post-export status messages and the export preview show informational notes as "Note:" entries instead of warning banners, and a plan that loads but cannot be re-serialized (`:workoutPlan:dataRepresentation`) is classified identically to a plan that fails to load. Wire payloads, day-level manifest statuses, and CLI aggregate warning counts are unchanged.
+- Mac destinations receiving a pinned range transfer now count the committed data dictionary in the transfer's generated-file total; the durable journal previously recorded one file fewer than was written whenever the range included a dictionary.
+
 ## [3.3.0] - 2026-09-03
 
 ### Added

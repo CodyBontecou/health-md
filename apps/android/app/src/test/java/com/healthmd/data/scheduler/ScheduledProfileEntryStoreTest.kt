@@ -168,6 +168,40 @@ class ScheduledProfileEntryStoreTest {
     }
 
     @Test
+    fun `refresh-only success advances the refresh frontier without touching catch-up`() = runTest {
+        store.upsert(entry("alpha").copy(isEnabled = true, lastSuccessEpochMillis = 900L))
+
+        store.recordSuccess(profileId = "alpha", fireAtMillis = null)
+        store.recordRefreshSuccess(profileId = "alpha", slotMillis = 2_000L)
+
+        val stored = store.entry("alpha")!!
+        assertThat(stored.lastSuccessEpochMillis).isEqualTo(900L)
+        assertThat(stored.lastRefreshSuccessEpochMillis).isEqualTo(2_000L)
+
+        // A later, earlier refresh checkpoint never moves the frontier backwards.
+        store.recordRefreshSuccess(profileId = "alpha", slotMillis = 1_500L)
+        assertThat(store.entry("alpha")!!.lastRefreshSuccessEpochMillis).isEqualTo(2_000L)
+    }
+
+    @Test
+    fun `refresh-only retry keeps residuals empty and the frontier frozen`() = runTest {
+        store.upsert(entry("alpha").copy(isEnabled = true, lastSuccessEpochMillis = 900L))
+
+        assertThat(
+            store.recordRetry(
+                profileId = "alpha",
+                fireAtMillis = null,
+                attemptedPendingID = null,
+                replacements = emptyList(),
+            ),
+        ).isTrue()
+
+        val stored = store.entry("alpha")!!
+        assertThat(stored.lastSuccessEpochMillis).isEqualTo(900L)
+        assertThat(stored.pendingExports).isEmpty()
+    }
+
+    @Test
     fun `blocked imported profile cannot be enabled by upsert update or legacy migration`() = runTest {
         assertThat(store.upsert(entry("blocked"))).isTrue()
         dataStore.edit {

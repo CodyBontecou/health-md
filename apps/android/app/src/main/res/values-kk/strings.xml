@@ -5,7 +5,6 @@
     <string name="back">Артқа</string>
     <string name="close">Жабу</string>
     <string name="refresh">Жаңарту</string>
-    <string name="add">Қосу</string>
     <string name="action_cancel_export">Экспорттан бас тарту</string>
     <string name="action_close_options">Параметрлерді жабу</string>
     <string name="action_set_start_date">Басталу күнін орнату</string>
@@ -472,6 +471,12 @@
     <string name="schedule_time">Уақыт</string>
     <string name="schedule_date_window">Күндер</string>
     <string name="schedule_date_window_past_complete_days">Өткен толық күндер</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Өткен толық күндер + бүгін</string>
+    <string name="schedule_through_today_summary">Әр іске қосу өткен толық күндерді және бүгінгі ішінара файлды экспорттайды, сондықтан күндізгі іске қосу түнгі ұйқыны да қамтиды. Екі файлды күні бойы жаңартып тұру үшін сағаттық жиілікпен бірге қолданыңыз. Бір күндегі қайталанатын мазмұннан сақтану үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>
+    <string name="profile_schedule_today_refresh">Бүгінгі экспортты жаңарту</string>
+    <string name="profile_schedule_refresh_interval">Жаңарту аралығы</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d сағ</string>
+    <string name="profile_schedule_refresh_summary">Бүгін әр %1$d сағ сайын жаңартады</string>
     <string name="schedule_date_window_today">Бүгін</string>
     <string name="schedule_export_past_days">Өткен күндерді экспорттау</string>
     <string name="schedule_today_summary">Әрбір іске қосу бүгінгі деректерді экспорттайды, осылайша ағымдағы күнделікті файлыңыз жаңартылып отырады. Бір күндік мазмұнның қайталануын болдырмау үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>
@@ -508,7 +513,7 @@
     <string name="release_notes_highlight_feedback">Десктоптың қысқа үзілістерінен кейін Direct CLI сессиялары автоматты түрде қайта қосылады, сондықтан экспорттар сенімді аяқталады.</string>
     <string name="release_notes_highlight_export_parity">Десктоптың ояну терезесі командалары қосымшаны ашып, қосылуыңызды 120 секундқа дейін күтеді, push-хабарламаларсыз.</string>
     <string name="release_notes_highlight_templates">Мекенжай, порт және 20 таңбалы код арқылы қолмен жұптау әлі жұмыс істейді, ескі CLI нұсқаларымен де.</string>
-    <string name="release_notes_highlight_workouts">Телефон мен Wear OS үшін сенімділік және үйлесімділік түзетулері қамтылған.</string>
+    <string name="release_notes_highlight_workouts">Баптау, экспорттар, кестелер және қосылымдар үшін сенімділік пен үйлесімділік түзетулері қамтылған.</string>
     <string name="notification_channel_scheduled_exports_name">Жоспарланған экспорттар</string>
     <string name="notification_channel_scheduled_exports_description">Жоспарланған денсаулық экспорттары аяқталғанда немесе сәтсіз болғанда көрсетілетін хабарландырулар</string>
     <string name="export_notification_title_complete">Экспорт аяқталды</string>

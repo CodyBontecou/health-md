@@ -3,9 +3,9 @@ title: "Canonical health data extraction"
 description: "Use healthmd extract to acquire selected Apple Health metrics and emit canonical schema-v8 documents, source records, JSON Pointer projections, or JSONL with explicit receipts."
 ---
 
-`healthmd extract` is the source-data command for scripts and agents. It asks iPhone to acquire only the selected metrics and detail, validates the durable transfer, removes the transport envelope, and emits canonical `healthmd.health_data` v8 documents or clearly labeled projections.
+`healthmd extract` is the source-data command for scripts and agents. It asks iPhone to acquire only the selected metrics and detail. It validates the durable transfer and removes the transport envelope. It then emits canonical `healthmd.health_data` v8 documents or clearly labeled projections.
 
-Canonical extraction is an iPhone capability backed by the Mac app backend and the iOS v1 direct protocol. Android direct sources return provider-native Health Connect snapshots through [raw export](/docs/cli-direct/) instead.
+Canonical extraction is an iPhone capability backed by the iOS v1 direct protocol. Android direct sources return provider-native Health Connect snapshots through [raw export](/docs/cli-direct/) instead.
 
 Use extraction when you need original Health.md data. Use [typed queries](/docs/agent-queries/) when you need sessions, comparisons, workout alignment, coverage, or evidence packets.
 
@@ -13,8 +13,8 @@ Use extraction when you need original Health.md data. Use [typed queries](/docs/
 
 An extraction needs:
 
-1. at least one metric, category, object, or `--all-metrics` selector;
-2. one date selector;
+1. at least one metric, category, object, or `--all-metrics` selector.
+2. one date selector.
 3. optional detail, object, field, format, output, timeout, and partial-result choices.
 
 ```bash
@@ -64,10 +64,10 @@ Extraction does not fetch a saved all-metrics export and trim it afterward. The 
 
 This distinction matters for privacy, performance, and completeness:
 
-- unselected metrics are not acquired;
-- saved iPhone metric preferences do not change;
-- summary requests do not create a hidden source archive;
-- lossless requests fetch only source types needed by the selection;
+- unselected metrics are not acquired.
+- saved iPhone metric preferences do not change.
+- summary requests do not create a hidden source archive.
+- lossless requests fetch only source types needed by the selection.
 - the selection becomes part of the durable request fingerprint.
 
 Object and JSON Pointer selectors narrow emitted data after capture. Metric, category, source, and detail selectors narrow the iPhone acquisition itself.
@@ -143,25 +143,25 @@ healthmd extract --category Sleep --last 7 \
   --output selected-sleep-fields.json
 ```
 
-Pointer results are projections, not complete daily documents. They reference the source schema and day but do not carry `schema: healthmd.health_data` in a way that could make a subtree look like a full export.
+Pointer results are projections, not complete daily documents. They reference the source schema and day. They do not use `schema: healthmd.health_data` in a way that makes a subtree look like a full export.
 
 An absent selected path is reported with complete-empty or the day's incomplete status. Health.md does not convert absence into zero.
 
 ## JSON output
 
-Default JSON output contains one of these data collections:
+Default JSON output contains one data collection:
 
-- `health_data` for complete canonical daily documents; or
+- `health_data` for complete canonical daily documents
 - `projections` for object or pointer results.
 
 It also contains `healthmd.extract_receipt`, which records:
 
-- resolved selection and date range;
-- source and detail level;
-- per-day outcomes;
-- retained item and capture counts;
-- missing dates;
-- partial or failure diagnostics;
+- resolved selection and date range.
+- source and detail level.
+- per-day outcomes.
+- retained item and capture counts.
+- missing dates.
+- partial or failure diagnostics.
 - output completion status.
 
 The receipt is protocol metadata. It does not replace the source schema.
@@ -177,7 +177,7 @@ healthmd extract --category Sleep --last 30 \
 
 Each line is one data item. The receipt is not mixed into the health-data stream:
 
-- with `--output`, it is written to `OUTPUT.receipt.json`;
+- with `--output`, it is written to `OUTPUT.receipt.json`.
 - without `--output`, it is written to stderr.
 
 This makes pipelines predictable:
@@ -216,20 +216,20 @@ healthmd extract --category Sleep --last 30 \
 
 The flag changes emission and exit behavior. It does not remove diagnostics or turn partial data into complete data.
 
-## Mac app and direct backends
+## Standalone CLI and bundled Mac helper
 
-The command works through either backend:
+The standalone CLI runs extraction directly against the paired iPhone. The Swift helper bundled inside Health.md for Mac reaches the same extraction through the Mac app loopback by default. It can also bypass the Mac app with its `--backend direct` prefix:
 
 ```bash
-# Bundled helper default: Mac app loopback and connected iPhone
+# Standalone CLI (macOS, Linux, Windows): direct, no Mac app
 healthmd extract --category Sleep --last 7 --output sleep.json
 
-# Direct-capable helper: bypass the Mac app
+# Bundled Mac helper: bypass the Mac app
 healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-Both paths use the same public daily schema and strict validation. The transport, pairing, storage, and job records differ. Both paths require an iPhone source; the Android direct backend does not implement canonical extraction.
+Both paths use the same public daily schema and strict validation. The transport, pairing, storage, and job records differ. Both paths require an iPhone source. Android direct sources do not implement canonical extraction.
 
 ## Large history
 
@@ -255,7 +255,7 @@ Use JSONL or a narrower selection when a corpus is large. Available disk space a
 ## Related
 
 <div class="related">
-  <a href="/docs/cli/"><span>CLI</span>Health.md CLI: setup, backend selection, command map, and output rules.</a>
+  <a href="/docs/cli/"><span>CLI</span>Health.md CLI: install the standalone client and review the command map.</a>
   <a href="/docs/agent-queries/"><span>Derived views</span>Typed query cookbook: metric series, sleep, training, workouts, comparisons, and evidence.</a>
   <a href="/docs/reference/daily-records/"><span>Schema</span>Daily records: the complete schema-v8 daily document contract.</a>
   <a href="/docs/reference/canonical-healthkit-records/"><span>Source archive</span>Canonical Apple Health records: identity, provenance, relationships, and payloads.</a>

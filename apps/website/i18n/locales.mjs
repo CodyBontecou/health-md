@@ -1,10 +1,22 @@
 export const defaultLocale = 'en';
 
-// Every focused integration guide is authored and translated in all locales. A
-// guide whose translated editions are still pending may temporarily publish a
-// canonical English fallback route instead; fallback pages stay noindex. The
-// list is empty today and is retained for future pending guides.
+// Focused integration guides are authored and translated in all locales.
+// Exact command references and the fast-changing release-status ledger remain
+// canonical English artifacts; localized fallback routes stay noindex and point
+// to the English canonical URL.
 export const canonicalEnglishDocSlugs = Object.freeze([
+  'docs/release-status',
+  'docs/cli/installation',
+  'docs/cli-reference',
+  'docs/cli-reference/cancel',
+  'docs/cli-reference/direct',
+  'docs/cli-reference/export',
+  'docs/cli-reference/extract',
+  'docs/cli-reference/mcp',
+  'docs/cli-reference/query',
+  'docs/cli-reference/resume',
+  'docs/cli-reference/setup',
+  'docs/cli-reference/status',
 ]);
 
 // Authored user guides are translated. Generated contract/reference pages remain
@@ -20,12 +32,14 @@ export const authoredDocSlugs = Object.freeze([
   'docs/cli-direct',
   'docs/cli-extract',
   'docs/cli-jobs',
+  'docs/clinician-report',
   'docs/configuration',
   'docs/daily-notes',
   'docs/export',
   'docs/export-profiles',
   'docs/folder-vault',
   'docs/format',
+  'docs/full-corpus-export',
   'docs/guides/connect-agent',
   'docs/guides/platform-features',
   'docs/guides/raw-snapshots',
@@ -38,9 +52,12 @@ export const authoredDocSlugs = Object.freeze([
   'docs/onboarding',
   'docs/paywall',
   'docs/scheduling',
+  'docs/share-my-setup',
   'docs/shared-metric-registry',
   'docs/shortcuts',
+  'docs/sleep-date-attribution',
   'docs/sync',
+  'docs/troubleshooting',
   'docs/visualizations-roadmap',
 ]);
 

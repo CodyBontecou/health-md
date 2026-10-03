@@ -177,8 +177,8 @@ dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
 
-Distribution builds use the default local-first feature set: shipped binaries expose the 19-tool
-complete local stdio/direct-iPhone MCP entry, the separately authorized 13-tool `serve-read-only`
+Distribution builds use the default local-first feature set: shipped binaries expose the 21-tool
+complete local stdio/direct-mobile MCP entry, the separately authorized 13-tool `serve-read-only`
 stdio entry, and the bounded health-free P2 wake HTTPS client on every desktop target. They do not
 include `serve-http` or OAuth. The direct-backed MCP HTTP transport is source-build-only and is
 never added to release archives implicitly. Health.md has no synchronized remote health-data corpus

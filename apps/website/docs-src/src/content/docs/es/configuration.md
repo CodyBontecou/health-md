@@ -20,7 +20,7 @@ La aplicación publicada para Mac incluye dos herramientas auxiliares locales fi
 | Desarrollar con las estructuras exactas de solicitud y respuesta | API de loopback o contratos públicos | [API de loopback](/es/docs/agent-api/) |
 | Analizar esquemas, registros, evidencias o fixtures generados | Referencia versionada | [Contratos de datos (en inglés)](/es/docs/reference/) |
 
-Las opciones de backend y transporte son explícitas; Health.md no cambia de forma silenciosa del acceso directo al iPhone a la aplicación para Mac.
+Las opciones de transporte son explícitas; la CLI independiente nunca cambia de forma silenciosa al acceso a través de la aplicación para Mac.
 
 ## Codex con la aplicación para Mac
 

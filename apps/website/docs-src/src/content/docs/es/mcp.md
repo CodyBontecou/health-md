@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Vista previa · MCP directo y portátil</strong>
-<p>La topología independiente <code>healthmd mcp serve</code> de 19 herramientas para macOS, Linux y Windows está empaquetada públicamente como vista previa explícitamente no cualificada. Su entrada <code>serve-read-only</code> sin nube expone solo las 13 herramientas de disponibilidad y consulta después del emparejamiento local. Instala en macOS o Linux con <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>La topología independiente <code>healthmd mcp serve</code> para macOS, Linux y Windows se publica como la vista previa no cualificada de 19 herramientas <code>0.1.0-alpha.7</code>. Su entrada <code>serve-read-only</code> sin nube expone solo las 13 herramientas de disponibilidad y consulta después del emparejamiento local. Instala en macOS o Linux con <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Requisitos de la versión incluida para Mac
@@ -36,6 +36,7 @@ La ruta habitual del asistente es `/Applications/Health.md.app/Contents/Helpers/
 
 - Instala la vista previa independiente en macOS, Linux o Windows; no requiere la aplicación para Mac ni su servicio de loopback.
 - Empareja una vez un iPhone con consultas y mantén Health.md en primer plano para cada petición tipada nueva. Android no admite MCP tipado.
+- Las herramientas de emparejamiento MCP solo incorporan iPhone. Empareja Android explícitamente desde la CLI antes de iniciar MCP.
 - Usa Manual IP o Tailscale y el almacén nativo de credenciales; Linux requiere un proveedor Secret Service desbloqueado.
 - Configura el iniciador de compatibilidad instalado o el servidor stdio del mismo binario. Ambos usan el backend directo emparejado.
 
@@ -115,7 +116,7 @@ Si el host no admite aplicaciones MCP, las herramientas aún funcionan. `healthm
 
 ## Herramientas disponibles
 
-El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y consulta, cuatro de tareas de archivos generados y cuatro de tareas de actualización del contexto cifrado. La vista previa portátil de 19 herramientas conserva las 13 herramientas de disponibilidad y consulta y las cuatro de exportación, sustituye las tareas de actualización de Mac por dos herramientas de emparejamiento directo y ejecuta las consultas tipadas directamente en el iPhone en primer plano.
+El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y consulta, cuatro de tareas de archivos generados y cuatro de actualización del contexto cifrado. La vista previa portátil publicada `0.1.0-alpha.7` tiene 19 herramientas. El código de desarrollo actual tiene 21 al añadir la exportación de corpus completo y la lectura acotada de artefactos; no presupongas esas dos herramientas hasta una versión posterior.
 
 ### Disponibilidad y descubrimiento
 
@@ -148,6 +149,12 @@ El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y co
 | `healthmd_export_job_status` | Inspeccionar el progreso de la exportación y el recibo de destino |
 | `healthmd_export_job_resume` | Reanudar la tarea de exportación exacta, inmutable y persistente |
 | `healthmd_export_job_cancel` | Cancelar explícitamente la tarea de exportación |
+### Acceso al corpus bruto completo · solo MCP local portátil
+
+| Herramienta | Propósito |
+|---|---|
+| `healthmd_export_raw` | Tras aprobación explícita, iniciar una exportación duradera del corpus bruto en iPhone o Android |
+| `healthmd_raw_artifact_read` | Leer un fragmento limitado del artefacto validado y vinculado a la tarea |
 
 Las herramientas de exportación, reanudación y cancelación están marcadas como escrituras potencialmente destructivas y requieren interacción explícita en los hosts Claude actuales, porque los modos de exportación configurados pueden actualizar o sobrescribir los archivos generados. La configuración del Codex anterior solicita esas herramientas como protección adicional.
 

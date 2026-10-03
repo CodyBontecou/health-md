@@ -2,7 +2,7 @@
 
 Health.md uses a versioned connected-app protocol to request iPhone HealthKit work and deliver files or canonical results through the Mac app. The protocol is transport/lifecycle metadata; `healthmd.health_data` remains the single public health-data schema.
 
-This page describes the default `mac-app` backend. The explicit [direct iPhone CLI backend](../features/cli-direct-iphone.md) reuses shared pairing/framing foundations and the same public exporters/schema, but has a separate trust domain, `DirectMessage` envelope, protected iPhone spool, CLI receiver journal, and explicit Manual IP/Nearby selection. The two backends never silently fall back to one another.
+This page describes the bundled Swift helper's default Mac loopback mode. The helper's explicit [direct iPhone access](../features/cli-direct-iphone.md) reuses shared pairing/framing foundations and the same public exporters/schema, but has a separate trust domain, `DirectMessage` envelope, protected iPhone spool, CLI receiver journal, and explicit Manual IP/Nearby selection. The standalone Rust CLI uses the direct path exclusively. The two modes never silently fall back to one another.
 
 ```text
 Mac CLI

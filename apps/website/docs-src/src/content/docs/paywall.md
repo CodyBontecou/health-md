@@ -1,33 +1,29 @@
 ---
 title: "Unlock & Paywall"
-description: "One-time Full Access purchase, no subscription. Remove the shared 10-export limit and unlock Mac destination workflows and Shortcuts support."
+description: "Understand 10 free actions, non-blocking reminders, Lifetime purchases, and StoreKit restore."
 ---
 
-## Pricing
-<ul>
-<li>Full Access is a one-time StoreKit purchase shown inside the App Store purchase sheet.</li>
-<li>No subscription and no recurring charge.</li>
-<li>The live local price is shown by Apple before purchase.</li>
-<li>No server-side account. The unlock is tied to your Apple ID StoreKit transaction.</li>
-<li>Before unlocking, the same 10-action allowance covers manual and scheduled exports.</li>
-</ul>
+Health.md includes 10 completed export actions before Full Access is required. One action can write multiple days and formats. Manual, scheduled, Shortcut, and direct exports share the counter when applicable.
 
-## What Full Access unlocks
-<ul>
-<li>Unlimited manual and scheduled export actions after the shared free allowance.</li>
-<li>Mac destination workflows.</li>
-<li>Shortcuts intents.</li>
-</ul>
+## When an offer appears
 
-## Restore a previous purchase
-<p>Tap <em>Restore Purchase</em> on the paywall. The app queries StoreKit for any prior purchases tied to the signed-in Apple ID. This is the path to use after reinstalling the app or moving to a new device.</p>
+- Onboarding has no paywall step.
+- One dismissible offer may appear after the first real preview.
+- A reminder may appear after the 3rd and 7th free exports.
+- After 10 actions, the next counted export is blocked.
 
-## Refunds &amp; support
-<p>Refunds go through Apple — open a request at <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>. For app-side support, email <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>.</p>
+Dismissing the earlier offers does not consume an action.
 
-## Related
+## Lifetime options
 
-<div class="related">
-  <a href="/docs/onboarding/"><span>Setup</span>Onboarding — where the unlock step appears for the first time.</a>
-  <a href="/docs/export/"><span>Use</span>Export — what unlimited buys you.</a>
-</div>
+StoreKit 2 offers one-time purchases with no subscription: **Individual Lifetime**, **Family Lifetime**, and a family upgrade for eligible owners. Apple's localized purchase-sheet price is authoritative. Family Lifetime depends on Apple Purchase Sharing.
+
+**Restore Purchase** refreshes Apple ID transactions. For Family, verify the Apple ID, Purchase Sharing, and that Health.md is visible in purchase history.
+
+| Problem | Action |
+|---|---|
+| Price is missing | Check the network/App Store and reopen the offer. |
+| Offer appears before action 10 | It is a dismissible reminder, not the final block. |
+| A schedule paused | Purchase or restore, then use normal recovery. |
+
+<div class="related"><a href="/docs/onboarding/"><span>Start</span>Five-step setup.</a><a href="/docs/scheduling/"><span>Automation</span>Shared allowance behavior.</a></div>

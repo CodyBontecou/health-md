@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -67,7 +68,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.presentation.common.GeistCard
-import com.healthmd.presentation.common.GeistCardClickable
+import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
@@ -186,26 +187,45 @@ private fun SharedSetupStart(
         style = MaterialTheme.typography.bodySmall,
         color = AppColors.textMuted,
     )
-    GeistCardClickable(onClick = onOpen) {
-        Icon(Icons.Outlined.FileOpen, contentDescription = null, tint = AppColors.accent)
-        Column(modifier = Modifier.padding(start = Spacing.sm)) {
-            Text(stringResource(R.string.shared_setup_use), fontWeight = FontWeight.Medium)
-            Text(stringResource(R.string.shared_setup_use_detail), color = AppColors.textMuted)
-        }
-    }
-    GeistCardClickable(onClick = onShare) {
-        Icon(Icons.Outlined.Share, contentDescription = null, tint = AppColors.accent)
-        Column(modifier = Modifier.padding(start = Spacing.sm)) {
-            Text(stringResource(R.string.shared_setup_title), fontWeight = FontWeight.Medium)
-            Text(stringResource(R.string.shared_setup_share_detail), color = AppColors.textMuted)
-        }
-    }
-    GeistCardClickable(onClick = onSave) {
-        Icon(Icons.Outlined.SaveAlt, contentDescription = null, tint = AppColors.accent)
-        Column(modifier = Modifier.padding(start = Spacing.sm)) {
-            Text(stringResource(R.string.shared_setup_save), fontWeight = FontWeight.Medium)
-            Text(stringResource(R.string.shared_setup_save_detail), color = AppColors.textMuted)
-        }
+    SharedSetupAction(
+        title = stringResource(R.string.shared_setup_use),
+        detail = stringResource(R.string.shared_setup_use_detail),
+        icon = Icons.Outlined.FileOpen,
+        onClick = onOpen,
+    )
+    SharedSetupAction(
+        title = stringResource(R.string.shared_setup_title),
+        detail = stringResource(R.string.shared_setup_share_detail),
+        icon = Icons.Outlined.Share,
+        onClick = onShare,
+    )
+    SharedSetupAction(
+        title = stringResource(R.string.shared_setup_save),
+        detail = stringResource(R.string.shared_setup_save_detail),
+        icon = Icons.Outlined.SaveAlt,
+        onClick = onSave,
+    )
+}
+
+@Composable
+private fun SharedSetupAction(
+    title: String,
+    detail: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        SecondaryButton(
+            text = title,
+            onClick = onClick,
+            icon = icon,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = detail,
+            style = MaterialTheme.typography.bodySmall,
+            color = AppColors.textMuted,
+        )
     }
 }
 

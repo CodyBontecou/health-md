@@ -510,6 +510,164 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
 
     @MainActor
+    func testTerminalReconciliationKeepsFullSuccessForInformationalOnlyDays() throws {
+        let base = try makeJournal()
+        let date = base.requestedDates[0]
+        let informational = ExportPartialFailure(
+            date: date,
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2027-01-15",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        // The wire manifest still counts the plan omission as a warning (its
+        // day-level truth stays unchanged), while the durable degrading split
+        // records that nothing was actually lost.
+        let day = IPhoneDirectCapturedDay(
+            sourceDate: date,
+            sourceDateIdentifier: "2027-01-15",
+            isRequestedDate: true,
+            relativePath: "captured-00000000.citem",
+            succeeded: true,
+            includedGranularData: true,
+            sampleCount: 12,
+            recordCount: 14,
+            partialFailureCount: 1,
+            integrityWarningCount: 0,
+            hadWarnings: true,
+            degradingFailureCount: 0,
+            hadDegradingWarnings: false,
+            informationalFailures: [informational],
+            historyFactsRecorded: true
+        )
+        let journal = IPhoneDirectFileJournal(
+            request: base.request,
+            accepted: base.accepted,
+            session: base.session,
+            settingsSnapshot: base.settingsSnapshot,
+            appleExportEnginePin: base.appleExportEnginePin,
+            appleDirectProtocolPin: base.appleDirectProtocolPin,
+            healthSubfolder: "Health",
+            requestedDates: base.requestedDates,
+            originalRequestedDates: base.requestedDates,
+            originalCalendarTimeZoneIdentifier: "America/Los_Angeles",
+            transferDates: base.requestedDates,
+            capturedDays: [day],
+            generatedFiles: [],
+            partitions: [],
+            committedPartitionCount: 0,
+            committedBytes: 0,
+            state: "completed",
+            completionRecorded: false,
+            updatedAt: date
+        )
+
+        let reconciliation = try IPhoneDirectFileExportProducer.terminalReconciliation(for: journal)
+
+        XCTAssertEqual(reconciliation.successCount, 1)
+        XCTAssertTrue(
+            reconciliation.isFullSuccess,
+            "informational-only warnings must not degrade the terminal outcome"
+        )
+        XCTAssertTrue(reconciliation.retryableFailedDateIdentifiers.isEmpty)
+    }
+
+    @MainActor
+    func testTerminalReconciliationStillDegradesForLegacyWarningDays() throws {
+        let base = try makeJournal()
+        let date = base.requestedDates[0]
+        // Legacy checkpoint written before the split: the fallback must keep
+        // treating its warnings as degrading.
+        let day = IPhoneDirectCapturedDay(
+            sourceDate: date,
+            sourceDateIdentifier: "2027-01-15",
+            isRequestedDate: true,
+            relativePath: "captured-00000000.citem",
+            succeeded: true,
+            includedGranularData: true,
+            sampleCount: 12,
+            recordCount: 14,
+            partialFailureCount: 1,
+            integrityWarningCount: 0,
+            hadWarnings: true,
+            historyFactsRecorded: true
+        )
+        XCTAssertEqual(day.resolvedDegradingFailureCount, 1)
+        XCTAssertTrue(day.resolvedHadDegradingWarnings)
+
+        let journal = IPhoneDirectFileJournal(
+            request: base.request,
+            accepted: base.accepted,
+            session: base.session,
+            settingsSnapshot: base.settingsSnapshot,
+            appleExportEnginePin: base.appleExportEnginePin,
+            appleDirectProtocolPin: base.appleDirectProtocolPin,
+            healthSubfolder: "Health",
+            requestedDates: base.requestedDates,
+            originalRequestedDates: base.requestedDates,
+            originalCalendarTimeZoneIdentifier: "America/Los_Angeles",
+            transferDates: base.requestedDates,
+            capturedDays: [day],
+            generatedFiles: [],
+            partitions: [],
+            committedPartitionCount: 0,
+            committedBytes: 0,
+            state: "completed",
+            completionRecorded: false,
+            updatedAt: date
+        )
+
+        let reconciliation = try IPhoneDirectFileExportProducer.terminalReconciliation(for: journal)
+
+        XCTAssertEqual(reconciliation.successCount, 1)
+        XCTAssertFalse(reconciliation.isFullSuccess)
+    }
+
+    func testCapturedDayRoundTripsDegradingSplitAndDecodesLegacyFallback() throws {
+        let informational = ExportPartialFailure(
+            date: Date(timeIntervalSince1970: 1_800_000_000),
+            dataType: "HealthKit workout child 5F0741E3-68B1-4545-8549-48F6127F7F1F:workoutPlan",
+            dateRangeDescription: "2027-01-15",
+            errorDescription: "WorkoutKit could not decode the workout plan attached to this workout (WorkoutKit.ImportError error 3).",
+            isInformational: true
+        )
+        let day = IPhoneDirectCapturedDay(
+            sourceDate: Date(timeIntervalSince1970: 1_800_000_000),
+            sourceDateIdentifier: "2027-01-15",
+            isRequestedDate: true,
+            relativePath: "captured-00000000.json",
+            succeeded: true,
+            includedGranularData: true,
+            partialFailureCount: 2,
+            integrityWarningCount: 0,
+            hadWarnings: true,
+            degradingFailureCount: 1,
+            hadDegradingWarnings: true,
+            informationalFailures: [informational]
+        )
+        let data = try JSONEncoder().encode(day)
+        let decoded = try JSONDecoder().decode(IPhoneDirectCapturedDay.self, from: data)
+        XCTAssertEqual(decoded, day)
+        XCTAssertEqual(decoded.resolvedDegradingFailureCount, 1)
+        XCTAssertTrue(decoded.resolvedHadDegradingWarnings)
+        XCTAssertEqual(decoded.informationalFailures, [informational])
+
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        for key in ["degradingFailureCount", "hadDegradingWarnings", "informationalFailures"] {
+            legacyObject.removeValue(forKey: key)
+        }
+        let legacy = try JSONDecoder().decode(
+            IPhoneDirectCapturedDay.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+        XCTAssertNil(legacy.degradingFailureCount)
+        XCTAssertNil(legacy.hadDegradingWarnings)
+        XCTAssertNil(legacy.informationalFailures)
+        XCTAssertEqual(legacy.resolvedDegradingFailureCount, 2)
+        XCTAssertTrue(legacy.resolvedHadDegradingWarnings)
+    }
+
+    @MainActor
     func testCanonicalDirectSelectionCannotProduceProviderSidecars() {
         let defaults = UserDefaults(suiteName: "IPhoneDirectFileJournalTests.Selection.\(UUID().uuidString)")!
         let settings = AdvancedExportSettings(userDefaults: defaults)

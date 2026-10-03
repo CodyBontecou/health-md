@@ -96,7 +96,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "6a1e847f2cc6d93ddfe275747140fbcdb9d964461de299cba71e7efb853ca5ec",
-        "line": 63
+        "line": 68
       },
       "assertions": [
         {
@@ -104,84 +104,84 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "2ea5b825740d27ebf3c1680c986f9c29c3c0042d607c7537c05c38e605b7ff17",
           "excerpt": "expect(script).toContain('schema: \"practice.synthetic.provenance/3\"')",
-          "line": 65
+          "line": 70
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "7985ec1e4f20e2945e0dbfab7defc80d961c34b4794ce94aa7e9edb40785cdbd",
           "excerpt": "expect(script).toContain(\"productionEnabled: false\")",
-          "line": 66
+          "line": 71
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-003",
           "kind": "expect-matcher",
           "normalizedAstSha256": "0fe38776e34013dc78eb8bda2b3e8bbf6300ace5fab64030b6622f10d13a6372",
           "excerpt": "expect(script).toContain(\"syntheticBoundaryFiles(root, repositoryRoot, { includeDist: false })\")",
-          "line": 67
+          "line": 72
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-004",
           "kind": "expect-matcher",
           "normalizedAstSha256": "3aac508f5c17f54515b2a346094a2da535f272c9e5e76544b0d06425b2f68235",
           "excerpt": "expect(script).toContain(\"candidateCommit: dirty ? null : sourceHeadCommit\")",
-          "line": 68
+          "line": 73
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-006",
           "kind": "expect-matcher",
           "normalizedAstSha256": "bcd10bdef02b0fd7043ad0ef26d2735010c1b412b035eb79c34c70cdd128f893",
           "excerpt": "expect(script).toContain(\"safeProvenanceMetadataPath\")",
-          "line": 69
+          "line": 74
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-007",
           "kind": "expect-matcher",
           "normalizedAstSha256": "116b97c84b3b2e8dabef48861d4ab31fdf81a91f9e6181eb3542c556caa64f79",
           "excerpt": "expect(script).toContain(\"statusDigest\")",
-          "line": 70
+          "line": 75
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-009",
           "kind": "expect-matcher",
           "normalizedAstSha256": "5de5f2d381591a37953a5e664e2a05d3429f08a7780f19fbc88d6b0f36a2ff07",
           "excerpt": "expect(script).toContain(\"pathSha256: digest(item.display)\")",
-          "line": 71
+          "line": 76
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-008",
           "kind": "expect-matcher",
           "normalizedAstSha256": "a4a658a3975f7bf7014ef30293356f2e8cc6929fcf3742fab45ffa1c93e50180",
           "excerpt": "expect(script).not.toContain(\"status: statusLines\")",
-          "line": 72
+          "line": 77
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-010",
           "kind": "expect-matcher",
           "normalizedAstSha256": "95831c4573173f36528ce4a0f7a435bdfc9d137e0c5e460ef95569d93b8796dd",
           "excerpt": "expect(script).not.toContain(\"sourceFiles.push({ path: item.display\")",
-          "line": 73
+          "line": 78
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-005",
           "kind": "expect-matcher",
           "normalizedAstSha256": "f08af5bb45c94266dc20a42e23d40d93f77823de3731075088a52b07119fca9d",
           "excerpt": "expect(gate.operationalEvidence).toEqual([ { name: \"migration\", status: \"not_implemented\" }, { name: \"rollback\", status: \"not_implemented\" }, { name: \"backup_restore\", status: \"…",
-          "line": 75
+          "line": 80
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-011",
           "kind": "expect-matcher",
           "normalizedAstSha256": "f9126cc4637a790031211ce426d31dd75c038d73bb65af0534a3ed6595473d93",
           "excerpt": "expect(script).toContain(\"qualifiedTreeCommit: repositoryHead\")",
-          "line": 81
+          "line": 86
         },
         {
           "id": "test-observable-0b288b91c5b7eb6d-assertion-012",
           "kind": "expect-matcher",
           "normalizedAstSha256": "ec6b516659f205af89f78bd607a98a1f0650cca9dedd5720062ec213c92b543a",
           "excerpt": "expect(script).toContain(\"sourceHeadCommit\")",
-          "line": 82
+          "line": 87
         }
       ]
     },
@@ -1526,7 +1526,7 @@
       },
       "evidenceLayer": "static-policy",
       "declaration": {
-        "normalizedAstSha256": "300dcb277a618fd68ccca5cccf219a0b2376fa8d01f0a84d7714d3cb9d2acc6d",
+        "normalizedAstSha256": "4f0e7346fc7540f74ef8e2b6f17142151aa1540a1b99cf59cb183b9cc6b2614d",
         "line": 25
       },
       "assertions": [
@@ -1708,23 +1708,30 @@
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-024",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "1a7708422e469b46538f677e112f07783383ea01c94b544eaf79984b9b9ac583",
-          "excerpt": "expect(workflow).toContain(\":app:clean :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest\")",
-          "line": 52
+          "normalizedAstSha256": "db37788a81e933d318fd3cc806b98d400189227350a2594cf5d5406ade7e2eb6",
+          "excerpt": "expect(workflow).toContain(\":app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest\")",
+          "line": 56
+        },
+        {
+          "id": "test-observable-39fca66c5f1593c0-assertion-031",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "61cf6d80bd135f55c0e07b2a265f890342c59cd00cd1878489ac4325456d08e0",
+          "excerpt": "expect(workflow.match(/:app:testPlayDebugUnitTest --tests com\\.healthmd\\.domain\\.practice\\.PracticeFeaturePolicyTest/g)).toHaveLength(2)",
+          "line": 57
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-025",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "b2a426f3a4399ab9fe6d7cfef5a54471918bf9055cde2ff9c2603b64d4fe64d2",
-          "excerpt": "expect(workflow).toContain(\"needs: [validate, practice-focused-apple-policy, practice-focused-android-policy]\")",
-          "line": 53
+          "normalizedAstSha256": "02fdbd8aab715be1062719fd9024cef487b4a04584c70b1bee8ab3b7d16d6658",
+          "excerpt": "expect(workflow).toContain(\"needs: [changes, validate, practice-focused-apple-policy, practice-focused-android-policy]\")",
+          "line": 58
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-026",
           "kind": "expect-matcher",
           "normalizedAstSha256": "20c21c43e37b989e24eb6904877f9d55d39517ecb8befb5512210638d09c17b1",
           "excerpt": "expect(workflow.match(/ref: \\$\\{\\{ github\\.sha \\}\\}/g)).toHaveLength(3)",
-          "line": 54
+          "line": 59
         }
       ]
     },
@@ -3472,7 +3479,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "d9bceef84b9515e5f2f5695052a32a231acc30f75da404fdb8a2d0a4dc17f31e",
-        "line": 85
+        "line": 90
       },
       "assertions": [
         {
@@ -3480,14 +3487,14 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "e19ba82d304d5b57564859bc42f61ada9b921585f427ed34b3576ca24b95c282",
           "excerpt": "expect(safeProvenanceMetadataPath(\"src/synthetic/service.ts\")).toBe(true)",
-          "line": 86
+          "line": 91
         },
         {
           "id": "test-observable-9fcb953d48f446a1-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "e888e192a0bd07550d5a3a32d2fe85d1f12cc2f4db8361d159113b2342252143",
           "excerpt": "expect(safeProvenanceMetadataPath(path)).toBe(false)",
-          "line": 87
+          "line": 92
         }
       ]
     },
@@ -4738,7 +4745,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "4dda5f9066cd47bc0ee78bcadf20b09aa7f3930050f5e37a95e17fdc161e3a5d",
-        "line": 57
+        "line": 62
       },
       "assertions": [
         {
@@ -4746,35 +4753,35 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "9102d650f4eab94c394b6e6233154dcb7310131cefaed695bf4a5a26b515e2a5",
           "excerpt": "expect(source).not.toMatch(/(?:from|import\\s*)\\s*[\"'][^\"']*(?:apps\\/website|\\/worker\\/)/)",
-          "line": 59
+          "line": 64
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "e33d086f30cba5cbb066dbd713442f6ac73edfd3e1e011006f3b73669652fc18",
           "excerpt": "expect(wrangler).toContain('PRACTICE_RUNTIME_MODE = \"synthetic\"')",
-          "line": 60
+          "line": 65
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-003",
           "kind": "expect-matcher",
           "normalizedAstSha256": "df9674cc938348f6a278dab3f778dd650499c3aaf4457ad736a4314934c881dc",
           "excerpt": "expect(wrangler).toContain(\"workers_dev = false\")",
-          "line": 60
+          "line": 65
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-004",
           "kind": "expect-matcher",
           "normalizedAstSha256": "7ceef5f7f67ca3204a09cf32835d3760c2a131bfeb49d01761dc1d7fb9af78aa",
           "excerpt": "expect(wrangler).not.toMatch(/^routes?\\s*=/m)",
-          "line": 60
+          "line": 65
         },
         {
           "id": "test-observable-b53a0818813d7262-assertion-005",
           "kind": "expect-matcher",
           "normalizedAstSha256": "376c941c5ffe5ebbcda9b6383f00b3ab64b5b23a3c8de1381604e91bbb7d6a37",
           "excerpt": "expect(wrangler).not.toMatch(/^\\[\\[(?:d1_databases|kv_namespaces|r2_buckets|queues)\\]\\]/m)",
-          "line": 60
+          "line": 65
         }
       ]
     },
@@ -5555,7 +5562,7 @@
       "evidenceLayer": "static-policy",
       "declaration": {
         "normalizedAstSha256": "feb3441e9d684863479713fa202d5bb0b02f349f91c8fb98a29cce92401d0d2c",
-        "line": 90
+        "line": 95
       },
       "assertions": [
         {
@@ -5563,21 +5570,21 @@
           "kind": "expect-matcher",
           "normalizedAstSha256": "e63101a64398f9d0d6eef0e99fdbe383b04aa4f9b6c37f585a4929aaf7f6ed9b",
           "excerpt": "expect(gate).toMatchObject({ designation: \"synthetic-qualification-only-not-production-ready\", productionEnabled: false, productionReady: false, syntheticRuntimeRequired: true })",
-          "line": 92
+          "line": 97
         },
         {
           "id": "test-observable-c8db8d065d24e568-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "dd71f5ecc7db34f6b47f4d6ddc0909369bd3019ce5f214aa48db51521fcd1811",
           "excerpt": "expect(gate.mandatoryProductionGates.every(item => item.approved === false && item.status === \"pending\")).toBe(true)",
-          "line": 93
+          "line": 98
         },
         {
           "id": "test-observable-c8db8d065d24e568-assertion-003",
           "kind": "expect-matcher",
           "normalizedAstSha256": "e56a5bdddee9337f2d6d7a0fbc6f839c0893aa96940eb655fa5e158524545ce6",
           "excerpt": "expect(gate.operationalEvidence.every(item => item.status === \"not_implemented\")).toBe(true)",
-          "line": 93
+          "line": 98
         }
       ]
     },

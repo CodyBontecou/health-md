@@ -367,7 +367,6 @@
     <string name="bullet_display_plus">Plus (+)</string>
 
     <!-- Complete canonical localization -->
-    <string name="add">Adăugați</string>
     <string name="action_cancel_export">Anulați exportul</string>
     <string name="action_close_options">Închideți opțiunile</string>
     <string name="action_set_start_date">Stabiliți data de începere</string>
@@ -609,6 +608,12 @@
     <string name="schedule_time">Ora</string>
     <string name="schedule_date_window">Date</string>
     <string name="schedule_date_window_past_complete_days">Ultimele zile complete</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Zile complete anterioare + astăzi</string>
+    <string name="schedule_through_today_summary">Fiecare rulare exportă zilele complete anterioare plus fișierul parțial de astăzi, astfel încât o rulare în timpul zilei capturează și somnul de aseară. Combină cu o frecvență orară pentru a actualiza ambele fișiere toată ziua. Folosește modul de scriere Suprascriere sau Actualizare pentru a evita duplicarea conținutului din aceeași zi.</string>
+    <string name="profile_schedule_today_refresh">Reîmprospătează exportul de astăzi</string>
+    <string name="profile_schedule_refresh_interval">Interval de reîmprospătare</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
+    <string name="profile_schedule_refresh_summary">Reîmprospătează astăzi la fiecare %1$d h</string>
     <string name="schedule_date_window_today">Astăzi</string>
     <string name="schedule_export_past_days">Exportați zilele trecute</string>
     <string name="schedule_today_summary">Fiecare executare exportă datele de astăzi, astfel încât fișierul zilnic curent să rămână actualizat. Utilizați modul de scriere Suprascriere sau Actualizare pentru a evita conținutul duplicat din aceeași zi.</string>
@@ -642,7 +647,7 @@
     <string name="release_notes_highlight_feedback">Sesiunile CLI direct se reconectează automat după deconectări scurte ale desktopului, astfel încât exporturile se finalizează fiabil.</string>
     <string name="release_notes_highlight_export_parity">Comenzile cu fereastră de activare de pe desktop așteaptă până la 120 de secunde să deschizi aplicația și să te conectezi, fără notificări push.</string>
     <string name="release_notes_highlight_templates">Asocierea manuală cu adresă, port și cod din 20 de cifre funcționează în continuare, inclusiv cu versiuni CLI mai vechi.</string>
-    <string name="release_notes_highlight_workouts">Include remedieri de fiabilitate și compatibilitate pentru telefon și Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Include remedieri de fiabilitate și compatibilitate pentru configurare, exporturi, programări și conexiuni.</string>
     <string name="export_notification_background_permission_required">Exporturile programate necesită acces în fundal la Health Connect. Deschideți Health.md &gt; Programare pentru a-l activa.</string>
     <string name="paywall_unlock_button_price">Deblocați pentru %s</string>
     <string name="paywall_purchasing">Se procesează\u2026</string>

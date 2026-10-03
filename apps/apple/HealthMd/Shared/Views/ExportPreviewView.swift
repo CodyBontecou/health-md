@@ -441,10 +441,26 @@ struct ExportPreviewView: View {
         partialFailures.filter { ExportPermissionGuidance(failure: $0) == nil }
     }
 
+    /// Warnings that reduce capture completeness. Informational omissions of
+    /// optional attachments (for example a WorkoutKit plan this device cannot
+    /// decode) are excluded; they render as notes below the warnings.
+    private var degradingNonPermissionFailures: [ExportPartialFailure] {
+        nonPermissionFailures.filter(\.degradesSuccess)
+    }
+
+    private var informationalFailures: [ExportPartialFailure] {
+        partialFailures.filter { $0.isInformational == true }
+    }
+
     @ViewBuilder
     private var partialFailuresSection: some View {
         if !partialFailures.isEmpty {
-            Section("Warnings") {
+            Section(
+                degradingNonPermissionFailures.isEmpty
+                    && bloodPressurePermissionFailures.isEmpty
+                    && additionalPermissionFailures.isEmpty
+                    ? "Export Notes" : "Warnings"
+            ) {
                 if !bloodPressurePermissionFailures.isEmpty {
                     bloodPressurePermissionRecoveryCard
                 }
@@ -453,9 +469,23 @@ struct ExportPreviewView: View {
                     additionalHealthPermissionRecoveryCard(guidance)
                 }
 
-                ForEach(Array(nonPermissionFailures.enumerated()), id: \.offset) { _, failure in
+                ForEach(Array(degradingNonPermissionFailures.enumerated()), id: \.offset) { _, failure in
                     HStack(alignment: .top, spacing: Spacing.sm) {
                         warningGlyph
+                            .frame(width: 44, height: 44)
+                            .accessibilityHidden(true)
+
+                        Text(failure.localizedSummary)
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, Spacing.s2)
+                    }
+                }
+
+                ForEach(Array(informationalFailures.enumerated()), id: \.offset) { _, failure in
+                    HStack(alignment: .top, spacing: Spacing.sm) {
+                        infoGlyph
                             .frame(width: 44, height: 44)
                             .accessibilityHidden(true)
 
@@ -545,6 +575,12 @@ struct ExportPreviewView: View {
         Image(systemName: "exclamationmark.triangle.fill")
             .font(.title3)
             .foregroundStyle(Color.orange)
+    }
+
+    private var infoGlyph: some View {
+        Image(systemName: "info.circle")
+            .font(.title3)
+            .foregroundStyle(Color.textSecondary)
     }
 
     private func fileRow(_ file: FilePreview) -> some View {

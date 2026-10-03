@@ -17,6 +17,13 @@ struct StatusPill: View {
             }
         }
 
+        var textColor: Color {
+            switch self {
+            case .connected: return .successText
+            case .disconnected, .pending: return .textSecondary
+            }
+        }
+
         var label: String {
             switch self {
             case .connected: return "Connected"
@@ -37,8 +44,9 @@ struct StatusPill: View {
                 .accessibilityHidden(true)
 
             Text(status.label)
-                .font(.system(size: 12, weight: .medium, design: .default))
-                .foregroundStyle(status.color)
+                .font(Typography.label())
+                .foregroundStyle(status.textColor)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, Spacing.s3)
         .padding(.vertical, Spacing.s2)
@@ -54,11 +62,12 @@ struct StatusPill: View {
 
 struct PulsingHeartIcon: View {
     let isConnected: Bool
+    @ScaledMetric(relativeTo: .title2) private var glyphSize: CGFloat = 20
     @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
         Image(systemName: "heart.fill")
-            .font(.system(size: 20, weight: .medium, design: .default))
+            .font(.system(size: glyphSize, weight: .medium, design: .default))
             .foregroundStyle(Color.primary)
             .frame(width: iconContainerSize, height: iconContainerSize)
             .accessibilityElement(children: .ignore)
@@ -69,11 +78,12 @@ struct PulsingHeartIcon: View {
 
 struct VaultIcon: View {
     let isSelected: Bool
+    @ScaledMetric(relativeTo: .title2) private var glyphSize: CGFloat = 20
     @ScaledMetric(relativeTo: .title2) private var iconContainerSize: CGFloat = 48
 
     var body: some View {
         Image(systemName: "folder.fill")
-            .font(.system(size: 20, weight: .medium, design: .default))
+            .font(.system(size: glyphSize, weight: .medium, design: .default))
             .foregroundStyle(Color.primary)
             .frame(width: iconContainerSize, height: iconContainerSize)
             .accessibilityElement(children: .ignore)
@@ -109,12 +119,24 @@ struct ExportStatusBadge: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            Image(systemName: statusIcon)
-                .font(.system(size: 18, weight: .semibold, design: .default))
-                .foregroundStyle(statusColor)
-                .frame(width: 24)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            HStack {
+                Image(systemName: statusIcon)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(statusColor)
+                    .accessibilityHidden(true)
+                Spacer(minLength: Spacing.s2)
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.textSecondary)
+                        .padding(Spacing.s2)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss export status")
+            }
 
             VStack(alignment: .leading, spacing: Spacing.s2) {
                 statusMessage
@@ -123,9 +145,8 @@ struct ExportStatusBadge: View {
                     if let exportFileName {
                         Text(exportFileName)
                             .font(Typography.label())
-                            .foregroundStyle(Color.textMuted)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .accessibilityLabel("Exported file: \(exportFileName)")
                     }
 
@@ -140,17 +161,6 @@ struct ExportStatusBadge: View {
                 }
             }
 
-            Spacer(minLength: Spacing.s2)
-
-            Button(action: dismiss) {
-                Image(systemName: "xmark")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.textMuted)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Dismiss export status")
         }
         .padding(Spacing.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -184,6 +194,8 @@ struct ExportStatusBadge: View {
                 onTap()
             } label: {
                 statusMessageText
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier(AccessibilityID.Status.exportStatusBadge)
@@ -200,7 +212,7 @@ struct ExportStatusBadge: View {
         Text(message)
             .font(Typography.bodyEmphasis())
             .foregroundStyle(Color.textPrimary)
-            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
             .multilineTextAlignment(.leading)
     }
 
@@ -210,11 +222,12 @@ struct ExportStatusBadge: View {
             Button(action: onPreview) {
                 Label("View Exported File", systemImage: "doc.text.magnifyingglass")
                     .font(Typography.label())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Color.success)
-            .frame(minHeight: 44, alignment: .leading)
-            .contentShape(Rectangle())
+            .foregroundStyle(Color.successText)
             .accessibilityIdentifier("export.preview-file")
         }
 
@@ -222,11 +235,12 @@ struct ExportStatusBadge: View {
             Button(action: onBrowseFolder) {
                 Label("Browse Export Folder", systemImage: "folder")
                     .font(Typography.label())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.textSecondary)
-            .frame(minHeight: 44, alignment: .leading)
-            .contentShape(Rectangle())
             .accessibilityIdentifier("export.browse-folder")
         }
     }

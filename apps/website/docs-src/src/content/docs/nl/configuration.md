@@ -20,7 +20,7 @@ De uitgebrachte Mac-app bevat twee ondertekende lokale hulpprogramma's: `healthm
 | Ontwikkel met exacte API-enveloppen voor verzoeken en antwoorden | Loopback-API of openbare contracten | [Loopback-API](/nl/docs/agent-api/) |
 | Verwerk schema's, records, bewijs of gegenereerde fixtures | Referentie met versiebeheer | [Datacontracten](/nl/docs/reference/) |
 
-Je kiest de backend en het transport expliciet. Health.md schakelt niet ongemerkt van rechtstreekse iPhone-toegang over op de Mac-app.
+Je kiest het transport expliciet. De zelfstandige CLI schakelt nooit ongemerkt over op toegang via de Mac-app.
 
 ## Codex met de Mac-app
 
@@ -124,7 +124,7 @@ Controleer voor een volledig resultaat niet alleen of het proces is geslaagd, ma
 ## Lees verder
 
 <div class="related">
-  <a href="/nl/docs/mcp/"><span>Toolinterface</span>Bekijk de 21 uitgebrachte Mac-tools, de platformonafhankelijke preview met 19 tools, MCP Apps, schema's, paginering, exports en sandboxgrenzen.</a>
+  <a href="/nl/docs/mcp/"><span>Toolinterface</span>Bekijk de 21 uitgebrachte Mac-tools, de platformonafhankelijke preview met 21 tools, MCP Apps, schema's, paginering, exports en sandboxgrenzen.</a>
   <a href="/nl/docs/agent-queries/"><span>Eerste vragen</span>Voer getypeerde workflows uit voor meetwaarden, slaap, work-outs, vergelijkingen, dekking en bewijs.</a>
   <a href="/nl/docs/cli-extract/"><span>Canonieke gegevens</span>Extraheer geselecteerde documenten en bronrecords uit schema v8 zonder grote gegevensblokken in een chat te plaatsen.</a>
   <a href="/nl/docs/reference/"><span>Contracten</span>Bekijk gegevensstructuren met versiebeheer, veldinventarissen, gegenereerde fixtures en integratierecepten.</a>

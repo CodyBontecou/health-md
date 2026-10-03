@@ -33,6 +33,42 @@ private enum IPhoneDirectExportError: LocalizedError {
 private struct IPhoneDirectRawDaySpool: Codable, Equatable {
     let manifest: DirectRawDayManifest
     let relativePath: String?
+    /// Warnings that reduce capture completeness. Nil identifies a checkpoint
+    /// written before the informational/degrading split was tracked; consumers
+    /// fall back to the manifest's total so legacy checkpoints keep the
+    /// behavior they were written with.
+    let degradingFailureCount: Int?
+    /// Same contract as the manifest-derived "day had warnings", excluding
+    /// informational omissions (for example a WorkoutKit plan this device
+    /// cannot decode) that do not reduce the export below full success.
+    let hadDegradingWarnings: Bool?
+    /// Informational-only warnings surfaced so Export History can show them as
+    /// export notes without degrading the entry's status.
+    let informationalFailures: [ExportPartialFailure]?
+
+    init(
+        manifest: DirectRawDayManifest,
+        relativePath: String?,
+        degradingFailureCount: Int? = nil,
+        hadDegradingWarnings: Bool? = nil,
+        informationalFailures: [ExportPartialFailure]? = nil
+    ) {
+        self.manifest = manifest
+        self.relativePath = relativePath
+        self.degradingFailureCount = degradingFailureCount.map { max($0, 0) }
+        self.hadDegradingWarnings = hadDegradingWarnings
+        self.informationalFailures = informationalFailures
+    }
+
+    var resolvedDegradingFailureCount: Int {
+        degradingFailureCount ?? manifest.partialFailureCount
+    }
+
+    var resolvedHadDegradingWarnings: Bool {
+        if let hadDegradingWarnings { return hadDegradingWarnings }
+        let manifestStatuses: Set<String> = ["partial", "complete_with_warnings"]
+        return manifestStatuses.contains(manifest.status)
+    }
 }
 
 private enum IPhoneDirectJobState: String, Codable {
@@ -382,10 +418,20 @@ final class IPhoneDirectExportCoordinator {
                     .flatMap(ExportFailureReason.init(rawValue:)) ?? .healthKitError
                 return FailedDateDetail(date: date, reason: reason)
             }
+            // Day-level informational notes ride in the recorded result so
+            // Export History shows them as export notes while the status stays
+            // a full success (they never degrade it).
+            var recordedPartialFailures: [ExportPartialFailure] = []
+            for day in current.days {
+                for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
+                    recordedPartialFailures.append(note)
+                }
+            }
             let result = ExportOrchestrator.ExportResult(
                 successCount: successCount,
                 totalCount: current.days.count,
                 failedDateDetails: failedDateDetails,
+                partialFailures: recordedPartialFailures,
                 formatsPerDate: 0
             )
             ExportOrchestrator.recordResult(
@@ -404,9 +450,13 @@ final class IPhoneDirectExportCoordinator {
         // save retries them without double charging or duplicating history.
         try saveJournal(current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
+        // Informational day notes (for example a WorkoutKit plan this device
+        // cannot decode) surface as wire day statuses the CLI must keep seeing,
+        // but they do not reduce the job below full success for the activity
+        // summary the user reads on this device.
         return !current.days.contains {
-            ["complete_with_warnings", "partial", "failed", "cancelled", "missing"]
-                .contains($0.manifest.status)
+            ["failed", "cancelled", "missing"].contains($0.manifest.status) ||
+                $0.resolvedHadDegradingWarnings
         }
     }
 
@@ -556,6 +606,24 @@ final class IPhoneDirectExportCoordinator {
             // Re-check before this task can overwrite the durable cancelled tombstone.
             try checkCancellation(jobID: journal.request.jobID)
             let result: CanonicalRawDayResult
+            // Informational omissions (a WorkoutKit plan this device cannot
+            // decode) count toward the wire manifest's day-warning totals but
+            // must not degrade history status, so the degrading split is
+            // captured beside the manifest while the wire payload stays
+            // unchanged.
+            let capturedPartialFailures = outcome.record?.partialFailures ?? []
+            let degradingFailureCount = capturedPartialFailures
+                .filter(\.degradesSuccess)
+                .count
+            let informationalFailures = capturedPartialFailures
+                .filter { $0.isInformational == true }
+            let recordArchive = outcome.record?.healthKitRecordArchive
+            let hasDegradingIncompleteQuery = recordArchive?.queryResults.contains {
+                $0.status != .success && !$0.isInformationalWorkoutPlanOmission
+            } ?? false
+            let hadDegradingWarnings = degradingFailureCount > 0
+                || !(recordArchive?.integrityWarnings.isEmpty ?? true)
+                || hasDegradingIncompleteQuery
             if let record = outcome.record {
                 do {
                     result = try CanonicalRawDayResult.captured(
@@ -572,7 +640,14 @@ final class IPhoneDirectExportCoordinator {
                     code: outcome.failure?.reason.rawValue ?? "healthkit_error"
                 )
             }
-            let spool = try spool(result, jobID: journal.request.jobID, dayIndex: index)
+            let spool = try spool(
+                result,
+                jobID: journal.request.jobID,
+                dayIndex: index,
+                degradingFailureCount: degradingFailureCount,
+                hadDegradingWarnings: hadDegradingWarnings,
+                informationalFailures: informationalFailures.isEmpty ? nil : informationalFailures
+            )
             journal.days.append(spool)
             journal.updatedAt = Date()
             try saveJournal(journal)
@@ -596,7 +671,10 @@ final class IPhoneDirectExportCoordinator {
     private func spool(
         _ day: CanonicalRawDayResult,
         jobID: UUID,
-        dayIndex: Int
+        dayIndex: Int,
+        degradingFailureCount: Int? = nil,
+        hadDegradingWarnings: Bool? = nil,
+        informationalFailures: [ExportPartialFailure]? = nil
     ) throws -> IPhoneDirectRawDaySpool {
         let data = day.canonicalDailyJSON.map { Data($0.utf8) }
         let relativePath: String?
@@ -628,7 +706,13 @@ final class IPhoneDirectExportCoordinator {
             healthDataByteCount: Int64(data?.count ?? 0),
             healthDataSHA256: data.map(DirectTransferFile.sha256Hex)
         )
-        return IPhoneDirectRawDaySpool(manifest: manifest, relativePath: relativePath)
+        return IPhoneDirectRawDaySpool(
+            manifest: manifest,
+            relativePath: relativePath,
+            degradingFailureCount: degradingFailureCount,
+            hadDegradingWarnings: hadDegradingWarnings,
+            informationalFailures: informationalFailures
+        )
     }
 
     private func buildPartitions(
@@ -962,7 +1046,6 @@ final class IPhoneDirectExportCoordinator {
         case .exact: dateSelection = "exact_range"
         case .allAvailable: dateSelection = "all_available"
         }
-        let warningStatuses = Set(["partial", "complete_with_warnings"])
         let failedStatuses = Set(["failed", "cancelled", "missing"])
 
         return ExportHistoryOperationDetails(
@@ -982,10 +1065,12 @@ final class IPhoneDirectExportCoordinator {
             transferredBytes: journal.partitions.reduce(0) { $0 + $1.byteCount },
             sampleCount: manifests.reduce(0) { $0 + $1.sampleCount },
             recordCount: manifests.reduce(0) { $0 + $1.recordCount },
-            warningDayCount: manifests.filter { warningStatuses.contains($0.status) }.count,
+            warningDayCount: journal.days.filter(\.resolvedHadDegradingWarnings).count,
             failedDayCount: manifests.filter { failedStatuses.contains($0.status) }.count,
             integrityWarningCount: manifests.reduce(0) { $0 + $1.integrityWarningCount },
-            partialFailureCount: manifests.reduce(0) { $0 + $1.partialFailureCount }
+            partialFailureCount: journal.days.reduce(0) {
+                $0 + $1.resolvedDegradingFailureCount
+            }
         )
     }
 

@@ -8,8 +8,8 @@
     "version": 7,
     "path": "/agents/skills/healthmd-cli/v7/SKILL.md",
     "media_type": "text/markdown",
-    "bytes": 17606,
-    "sha256": "07633c58a7019e4b4cd3dc817a68e0e97fc18d1bf1fd4ae85a8078e5c8d05d7f"
+    "bytes": 19046,
+    "sha256": "c25037d7f43818925769eb2093c319c0465bfa3ed1d2454287cefcd8f8261c48"
   },
   "versions": [
     {
@@ -58,8 +58,8 @@
       "version": 7,
       "path": "/agents/skills/healthmd-cli/v7/SKILL.md",
       "media_type": "text/markdown",
-      "bytes": 17606,
-      "sha256": "07633c58a7019e4b4cd3dc817a68e0e97fc18d1bf1fd4ae85a8078e5c8d05d7f"
+      "bytes": 19046,
+      "sha256": "c25037d7f43818925769eb2093c319c0465bfa3ed1d2454287cefcd8f8261c48"
     }
   ],
   "source": {

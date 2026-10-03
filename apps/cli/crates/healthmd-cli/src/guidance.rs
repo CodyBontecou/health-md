@@ -36,7 +36,6 @@ const CANONICAL_OBJECT_ALIASES: &[&str] = &[
 
 #[derive(Clone, Debug)]
 pub(super) struct ErrorContext {
-    backend: &'static str,
     command: &'static str,
     query_operation: Option<&'static str>,
     wake_window_seconds: Option<u64>,
@@ -62,7 +61,6 @@ impl ErrorContext {
             _ => None,
         };
         Self {
-            backend: cli.backend.wire_name(),
             command: command_name(&cli.command),
             query_operation,
             wake_window_seconds,
@@ -70,7 +68,7 @@ impl ErrorContext {
     }
 }
 
-pub(super) fn export(backend: &'static str, missing_dates: bool, missing_mode: bool) -> Value {
+pub(super) fn export(missing_dates: bool, missing_mode: bool) -> Value {
     let mut missing = Vec::new();
     if missing_dates {
         missing.push(json!({
@@ -93,7 +91,6 @@ pub(super) fn export(backend: &'static str, missing_dates: bool, missing_mode: b
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": "healthmd export",
         "message": message,
         "request_sent": false,
@@ -138,6 +135,7 @@ pub(super) fn export(backend: &'static str, missing_dates: bool, missing_mode: b
                 "options": [
                     "--output <FILE>",
                     "--allow-partial",
+                    "--full-corpus (all public, supported, user-authorized record types)",
                     "--provider <PROVIDER_ID> (Android)",
                     "--raw-format <json|ndjson> (Android)",
                     "--metric <METRIC_ID> (Android)",
@@ -160,8 +158,8 @@ pub(super) fn export(backend: &'static str, missing_dates: bool, missing_mode: b
                 "argv_template": ["healthmd", "export", "--last", "7", "--raw", "--output", "week.json"]
             },
             {
-                "description": "Stream all validated raw data to stdout",
-                "argv_template": ["healthmd", "export", "--all", "--raw"]
+                "description": "Stream the complete supported public and authorized corpus to stdout",
+                "argv_template": ["healthmd", "export", "--all", "--raw", "--full-corpus"]
             }
         ],
         "next_actions": [
@@ -173,7 +171,7 @@ pub(super) fn export(backend: &'static str, missing_dates: bool, missing_mode: b
     })
 }
 
-pub(super) fn extract(backend: &'static str, missing_dates: bool, missing_scope: bool) -> Value {
+pub(super) fn extract(missing_dates: bool, missing_scope: bool) -> Value {
     let mut missing = Vec::new();
     if missing_dates {
         missing.push(json!({
@@ -196,7 +194,6 @@ pub(super) fn extract(backend: &'static str, missing_dates: bool, missing_scope:
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": "healthmd extract",
         "message": message,
         "request_sent": false,
@@ -252,23 +249,19 @@ pub(super) fn extract(backend: &'static str, missing_dates: bool, missing_scope:
     })
 }
 
-pub(super) fn query(backend: &'static str, requested_operation: Option<&str>) -> Value {
+pub(super) fn query(requested_operation: Option<&str>) -> Value {
     requested_operation
         .and_then(|name| {
             definition(name).filter(|candidate| candidate.kind == OperationKind::Query)
         })
-        .map_or_else(
-            || query_catalog(backend),
-            |operation| query_operation(backend, operation),
-        )
+        .map_or_else(query_catalog, query_operation)
 }
 
-fn query_catalog(backend: &'static str) -> Value {
+fn query_catalog() -> Value {
     json!({
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": "healthmd query",
         "recognized_operation": false,
         "message": "Choose one fixed typed query operation. No device was contacted.",
@@ -302,7 +295,7 @@ fn query_catalog(backend: &'static str) -> Value {
     })
 }
 
-fn query_operation(backend: &'static str, operation: &OperationDefinition) -> Value {
+fn query_operation(operation: &OperationDefinition) -> Value {
     let tool = healthmd_cli::mcp::tool_catalog(Some(operation.name))
         .ok()
         .and_then(|catalog| catalog.get("tool").cloned())
@@ -334,7 +327,6 @@ fn query_operation(backend: &'static str, operation: &OperationDefinition) -> Va
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": format!("healthmd query {}", operation.name),
         "recognized_operation": true,
         "message": "Supply --arguments with one JSON object matching input_schema. No device was contacted.",
@@ -383,7 +375,7 @@ fn query_operation(backend: &'static str, operation: &OperationDefinition) -> Va
 /// Reference guidance for `healthmd mcp serve-data`. Mirrors `McpServeDataArgs` exactly: one of
 /// three exclusive backings, backing-specific options, the required grant, and (in builds that
 /// compile it) the Streamable HTTP transport options.
-fn serve_data(backend: &'static str) -> Value {
+fn serve_data() -> Value {
     #[allow(unused_mut)]
     let mut examples = vec![
         json!({
@@ -408,7 +400,6 @@ fn serve_data(backend: &'static str) -> Value {
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": "healthmd mcp serve-data",
         "message": "Choose exactly one Agent Data backing store and one grant; no store was opened and no listener was started.",
         "request_sent": false,
@@ -503,7 +494,7 @@ fn serve_data_transport_options() -> Vec<Value> {
     }
 }
 
-pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
+pub(super) fn group(group: &'static str) -> Value {
     let (description, commands) = match group {
         "direct" => (
             "Pair and manage direct mobile trust.",
@@ -551,7 +542,6 @@ pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": format!("healthmd {group}"),
         "message": "Choose one of the available commands below; no operation was started.",
         "description": description,
@@ -564,9 +554,8 @@ pub(super) fn group(backend: &'static str, group: &'static str) -> Value {
     })
 }
 
-pub(super) fn resume(backend: &'static str) -> Value {
+pub(super) fn resume() -> Value {
     positional(
-        backend,
         "healthmd resume",
         "JOB_ID",
         "The UUID from an interrupted durable export receipt or `healthmd status --job JOB_ID`.",
@@ -577,9 +566,8 @@ pub(super) fn resume(backend: &'static str) -> Value {
     )
 }
 
-pub(super) fn cancel(backend: &'static str) -> Value {
+pub(super) fn cancel() -> Value {
     positional(
-        backend,
         "healthmd cancel",
         "JOB_ID",
         "The UUID of the exact durable job to cancel. Cancellation is explicit and cannot be undone after the mobile source acknowledges it.",
@@ -587,9 +575,8 @@ pub(super) fn cancel(backend: &'static str) -> Value {
     )
 }
 
-pub(super) fn unpair(backend: &'static str) -> Value {
+pub(super) fn unpair() -> Value {
     positional(
-        backend,
         "healthmd direct unpair",
         "DEVICE_ID",
         "A trusted mobile installation UUID from `healthmd direct devices`.",
@@ -597,12 +584,11 @@ pub(super) fn unpair(backend: &'static str) -> Value {
     )
 }
 
-pub(super) fn reset_trust(backend: &'static str) -> Value {
+pub(super) fn reset_trust() -> Value {
     json!({
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": "healthmd direct reset-trust",
         "message": "No trust was removed. This destructive recovery command requires explicit confirmation.",
         "request_sent": false,
@@ -624,7 +610,6 @@ pub(super) fn reset_trust(backend: &'static str) -> Value {
 }
 
 fn positional(
-    backend: &'static str,
     command: &'static str,
     argument: &'static str,
     description: &'static str,
@@ -634,7 +619,6 @@ fn positional(
         "schema": GUIDANCE_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "guidance",
-        "backend": backend,
         "command": command,
         "message": "The command is incomplete. Supply the required identifier below; no device was contacted.",
         "request_sent": false,
@@ -659,7 +643,6 @@ pub(super) fn command_error(error: &CommandError, context: &ErrorContext) -> Val
         "schema": ERROR_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "failure",
-        "backend": error.backend,
         "error": public_code,
         "message": error.message,
         "command": format!("healthmd {}", context.command),
@@ -680,14 +663,14 @@ pub(super) fn command_error(error: &CommandError, context: &ErrorContext) -> Val
     }
     if error.code == "invalid_request" {
         let reference = match context.command {
-            "export" => Some(export(context.backend, false, false)),
-            "extract" => Some(extract(context.backend, false, false)),
-            "query" => Some(query(context.backend, context.query_operation)),
-            "resume" => Some(resume(context.backend)),
-            "cancel" => Some(cancel(context.backend)),
-            "direct unpair" => Some(unpair(context.backend)),
-            "direct reset-trust" => Some(reset_trust(context.backend)),
-            "direct" | "mcp" | "setup" | "data" => Some(group(context.backend, context.command)),
+            "export" => Some(export(false, false)),
+            "extract" => Some(extract(false, false)),
+            "query" => Some(query(context.query_operation)),
+            "resume" => Some(resume()),
+            "cancel" => Some(cancel()),
+            "direct unpair" => Some(unpair()),
+            "direct reset-trust" => Some(reset_trust()),
+            "direct" | "mcp" | "setup" | "data" => Some(group(context.command)),
             _ => None,
         };
         if let (Some(object), Some(reference)) = (payload.as_object_mut(), reference) {
@@ -699,23 +682,21 @@ pub(super) fn command_error(error: &CommandError, context: &ErrorContext) -> Val
 
 pub(super) fn parser_error(error: &clap::Error, arguments: &[OsString]) -> Value {
     let path = command_path(arguments);
-    let backend = requested_backend(arguments);
     let help_command = if path.is_empty() {
         "healthmd --help".to_owned()
     } else {
         format!("healthmd {path} --help")
     };
     let reference = if path == "query" {
-        query(backend, recognized_query_operation(arguments))
+        query(recognized_query_operation(arguments))
     } else {
-        command_reference(backend, path)
+        command_reference(path)
     };
     let available = available_commands(path);
     let mut payload = json!({
         "schema": ERROR_SCHEMA,
         "schema_version": SCHEMA_VERSION,
         "status": "failure",
-        "backend": backend,
         "error": "invalid_request",
         "error_kind": error_kind_name(error.kind()),
         "message": parser_message(error.kind()),
@@ -739,17 +720,17 @@ pub(super) fn parser_error(error: &clap::Error, arguments: &[OsString]) -> Value
     payload
 }
 
-fn command_reference(backend: &'static str, path: &'static str) -> Value {
+fn command_reference(path: &'static str) -> Value {
     match path {
-        "export" => export(backend, false, false),
-        "extract" => extract(backend, false, false),
-        "query" => query(backend, None),
-        "resume" => resume(backend),
-        "cancel" => cancel(backend),
-        "mcp serve-data" => serve_data(backend),
-        "direct unpair" => unpair(backend),
-        "direct reset-trust" => reset_trust(backend),
-        "direct" | "mcp" | "setup" | "data" => group(backend, path),
+        "export" => export(false, false),
+        "extract" => extract(false, false),
+        "query" => query(None),
+        "resume" => resume(),
+        "cancel" => cancel(),
+        "mcp serve-data" => serve_data(),
+        "direct unpair" => unpair(),
+        "direct reset-trust" => reset_trust(),
+        "direct" | "mcp" | "setup" | "data" => group(path),
         _ => Value::Null,
     }
 }
@@ -765,10 +746,6 @@ fn recovery_actions(code: &str, command: &str) -> Vec<Value> {
         "invalid_request" => vec![help()],
         "transport_unsupported" => vec![
             json!({"command_template": "healthmd --transport manual-ip <COMMAND> [OPTIONS]", "description": "Use the portable Manual IP/Tailscale transport."}),
-            help(),
-        ],
-        "not_implemented" => vec![
-            json!({"command_template": "healthmd --backend direct <COMMAND> [OPTIONS]", "description": "Use the implemented portable direct backend."}),
             help(),
         ],
         "direct_device_selection_required" => vec![
@@ -880,7 +857,7 @@ fn root_commands() -> Vec<Value> {
 fn available_commands(path: &'static str) -> Value {
     match path {
         "" => Value::Array(root_commands()),
-        "direct" | "mcp" | "setup" | "data" => group("direct", path)
+        "direct" | "mcp" | "setup" | "data" => group(path)
             .get("available_commands")
             .cloned()
             .unwrap_or(Value::Null),
@@ -1053,22 +1030,6 @@ fn recognized_query_operation(arguments: &[OsString]) -> Option<&'static str> {
         })
 }
 
-fn requested_backend(arguments: &[OsString]) -> &'static str {
-    let mut values = arguments.iter().filter_map(|argument| argument.to_str());
-    while let Some(value) = values.next() {
-        if value == "--backend" {
-            return match values.next() {
-                Some("mac-app") => "mac-app",
-                _ => "direct",
-            };
-        }
-        if value == "--backend=mac-app" {
-            return "mac-app";
-        }
-    }
-    "direct"
-}
-
 fn command_path(arguments: &[OsString]) -> &'static str {
     let values = arguments
         .iter()
@@ -1145,7 +1106,7 @@ mod tests {
 
     #[test]
     fn query_guidance_embeds_schema_and_executable_argv() {
-        let value = query("direct", Some("healthmd_sleep_sessions"));
+        let value = query(Some("healthmd_sleep_sessions"));
         assert_eq!(value["status"], "guidance");
         assert_eq!(value["request_sent"], false);
         assert_eq!(
@@ -1161,7 +1122,7 @@ mod tests {
     #[test]
     fn unknown_query_operation_is_not_echoed_and_lists_fixed_choices() {
         let private = "synthetic-private-health-value";
-        let encoded = serde_json::to_string(&query("direct", Some(private))).unwrap();
+        let encoded = serde_json::to_string(&query(Some(private))).unwrap();
         assert!(!encoded.contains(private));
         assert!(encoded.contains("healthmd_sleep_sessions"));
     }
@@ -1187,7 +1148,7 @@ mod tests {
 
     #[test]
     fn incomplete_export_guidance_explains_both_safe_modes() {
-        let value = export("direct", true, true);
+        let value = export(true, true);
         assert_eq!(value["status"], "guidance");
         assert_eq!(value["missing"].as_array().map(Vec::len), Some(2));
         let encoded = serde_json::to_string(&value).unwrap();
@@ -1199,13 +1160,11 @@ mod tests {
     #[test]
     fn command_error_adds_bounded_recovery_actions() {
         let context = ErrorContext {
-            backend: "direct",
             command: "query",
             query_operation: Some("healthmd_sleep_sessions"),
             wake_window_seconds: Some(120),
         };
         let error = CommandError {
-            backend: "direct",
             code: "invalid_request",
             message: "dates is required".into(),
         };
@@ -1221,13 +1180,11 @@ mod tests {
     #[test]
     fn wake_expiry_preserves_the_public_error_and_adds_the_window() {
         let context = ErrorContext {
-            backend: "direct",
             command: "query",
             query_operation: Some("healthmd_sleep_sessions"),
             wake_window_seconds: Some(37),
         };
         let error = CommandError {
-            backend: "direct",
             code: "direct_wake_window_expired",
             message: "The direct mobile source is unavailable.".into(),
         };
@@ -1239,8 +1196,6 @@ mod tests {
     #[test]
     fn direct_command_path_is_inferred_without_retaining_other_arguments() {
         let path = command_path(&[
-            OsString::from("--backend"),
-            OsString::from("direct"),
             OsString::from("direct"),
             OsString::from("unpair"),
             OsString::from("not-a-uuid"),
@@ -1275,7 +1230,7 @@ mod tests {
 
     #[test]
     fn direct_group_contains_pairing_and_trust_choices() {
-        let value = group("direct", "direct");
+        let value = group("direct");
         let commands = value["available_commands"].as_array().unwrap();
         assert_eq!(commands.len(), 4);
         assert!(
@@ -1297,7 +1252,7 @@ mod tests {
 
     #[test]
     fn reset_trust_guidance_is_non_mutating() {
-        let value = reset_trust("direct");
+        let value = reset_trust();
         assert_eq!(value["request_sent"], false);
         assert_eq!(
             value.pointer("/required/0/argument"),

@@ -32,7 +32,10 @@ use healthmd_operations::{
 };
 use healthmd_protocol::{
     encoding::SwiftUuid,
-    models::{DateSelection, ExportRequest, ProfileReference, ResponseMode, SettingsPolicy},
+    models::{
+        CanonicalSelection, DateSelection, DetailLevel, ExportRequest, ProfileReference,
+        ResponseMode, SettingsPolicy,
+    },
     v2,
     wire::RawProfile,
 };
@@ -64,10 +67,6 @@ const WELCOME_TEXT: &str = concat!(
     after_help = "TYPED HEALTH QUERIES:\n  CLI and MCP use the same fixed operation registry and canonical query service.\n  Inspect sleep arguments locally with `healthmd query healthmd_sleep_sessions`, then\n  rerun it with `--arguments <JSON>`. `healthmd extract` remains a different canonical\n  projection and is not the sleep-session query API.\n  Example dates shape:\n    {\"dates\":{\"type\":\"exact\",\"range\":{\"start_date\":\"2026-07-22\",\"end_date\":\"2026-07-28\"}}}\n\n  Inspect arguments and examples without contacting iPhone; add --json for full schemas:\n    healthmd query healthmd_sleep_sessions\n    healthmd query healthmd_metric_chart\n    healthmd mcp schema                # direct-operation catalog\n    healthmd mcp schema --data         # data-only artifact-store catalog"
 )]
 struct Cli {
-    /// Execution backend. `direct` is the portable mobile connection; `mac-app` is reserved.
-    #[arg(long, global = true, default_value = "direct")]
-    backend: Backend,
-
     /// Direct transport. Use `manual-ip` for LAN or Tailscale; Nearby is legacy-only.
     #[arg(long, global = true, default_value = "manual-ip")]
     transport: Transport,
@@ -94,23 +93,6 @@ struct Cli {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
-enum Backend {
-    #[value(name = "mac-app")]
-    MacApp,
-    #[default]
-    Direct,
-}
-
-impl Backend {
-    const fn wire_name(self) -> &'static str {
-        match self {
-            Self::MacApp => "mac-app",
-            Self::Direct => "direct",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, ValueEnum)]
 enum Transport {
     #[default]
     #[value(name = "manual-ip")]
@@ -120,7 +102,7 @@ enum Transport {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Inspect backend readiness or a durable direct job.
+    /// Inspect direct mobile readiness or a durable direct job.
     Status(StatusArgs),
     /// Request platform-native raw data or generated files from the mobile source.
     Export(ExportArgs),
@@ -418,7 +400,7 @@ struct StatusArgs {
 #[derive(Debug, Args)]
 #[command(
     long_about = "Export either a validated platform-native raw artifact or production-generated Health.md files. Every execution requires exactly one date selection. Raw mode requires --raw; generated-file mode requires an existing absolute --destination directory. Running `healthmd export` with an incomplete request returns local guidance and never contacts a device.",
-    after_help = "MODES:\n  Raw artifact:\n    healthmd export --last 7 --raw --output week.json\n    Omit --output to stream validated JSON/NDJSON to stdout.\n\n  Generated files:\n    healthmd export --yesterday --destination <EXISTING_ABSOLUTE_DIRECTORY>\n    The mobile app's production exporters create files; the host validates and binds\n    the destination before transfer.\n\nDATE SELECTION (choose exactly one):\n  --yesterday | --last DAYS | --from YYYY-MM-DD --to YYYY-MM-DD | --all\n\nDISCOVERY:\n  Run `healthmd export` without a complete mode/date selection to receive structured\n  requirements, platform constraints, and argv examples without contacting a device."
+    after_help = "MODES:\n  Raw artifact:\n    healthmd export --last 7 --raw --output week.json\n    healthmd export --all --raw --full-corpus --output corpus.json\n    Omit --output to stream validated JSON/NDJSON to stdout. --full-corpus requests\n    every public type supported by the source and authorized by the user; it cannot read\n    a platform-private database.\n\n  Generated files:\n    healthmd export --yesterday --destination <EXISTING_ABSOLUTE_DIRECTORY>\n    The mobile app's production exporters create files; the host validates and binds\n    the destination before transfer.\n\nDATE SELECTION (choose exactly one):\n  --yesterday | --last DAYS | --from YYYY-MM-DD --to YYYY-MM-DD | --all\n\nDISCOVERY:\n  Run `healthmd export` without a complete mode/date selection to receive structured\n  requirements, platform constraints, and argv examples without contacting a device."
 )]
 struct ExportArgs {
     #[command(flatten)]
@@ -427,6 +409,12 @@ struct ExportArgs {
     /// Return the source platform's native validated raw artifact instead of generated files.
     #[arg(long)]
     raw: bool,
+
+    /// Capture every public record type supported by the selected source and authorized by the
+    /// user. This is lossless Apple Health JSON on iOS and all-authorized provider-native data on
+    /// Android; it never means access to a platform-private database.
+    #[arg(long, requires = "raw")]
+    full_corpus: bool,
 
     /// Atomic output path for raw JSON/NDJSON. Omit to stream the validated artifact to stdout.
     #[arg(long)]
@@ -701,7 +689,6 @@ struct PairArgs {
 
 #[derive(Debug)]
 struct CommandError {
-    backend: &'static str,
     code: &'static str,
     message: String,
 }
@@ -822,7 +809,6 @@ fn main() -> ExitCode {
         .build()
     else {
         let error = CommandError {
-            backend: cli.backend.wire_name(),
             code: "runtime_unavailable",
             message: "The local asynchronous runtime could not start; no command was executed."
                 .into(),
@@ -946,7 +932,7 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
         _ => None,
     };
     if let Some((options, read_only)) = stdio_mcp {
-        if cli.backend != Backend::Direct || cli.transport != Transport::ManualIp {
+        if cli.transport != Transport::ManualIp {
             eprintln!("healthmd: MCP requires the direct Manual IP transport");
             return ExitCode::from(1);
         }
@@ -972,7 +958,7 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
         command: Some(McpCommand::ServeHttp(options)),
     }) = &cli.command
     {
-        if cli.backend != Backend::Direct || cli.transport != Transport::ManualIp {
+        if cli.transport != Transport::ManualIp {
             eprintln!("healthmd: direct-backed MCP HTTP requires the Manual IP transport");
             return ExitCode::from(1);
         }
@@ -1029,7 +1015,6 @@ async fn async_main(cli: Cli, output_mode: output::OutputMode) -> ExitCode {
         Ok(success) => {
             if emit_output(success.output, output_mode).is_err() {
                 let error = CommandError {
-                    backend: "direct",
                     code: "output_write_failed",
                     message: "The command result could not be written to stdout or the requested output destination."
                         .into(),
@@ -1059,7 +1044,6 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         return mcp_schema(options).map(CommandSuccess::json);
     }
     validate_platform_options(&cli)?;
-    let backend = cli.backend;
     let device = cli.device;
     let port = cli.port;
 
@@ -1081,84 +1065,67 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         }) => direct_reset_trust(confirm).await.map(CommandSuccess::json),
         Command::Data(DataArgs {
             command: Some(DataCommand::Import(options)),
-        }) if backend == Backend::Direct => data_import(options).await.map(CommandSuccess::json),
+        }) => data_import(options).await.map(CommandSuccess::json),
         Command::Data(DataArgs {
             command: Some(DataCommand::Ingest(options)),
-        }) if backend == Backend::Direct => data_ingest(options).await.map(CommandSuccess::json),
+        }) => data_ingest(options).await.map(CommandSuccess::json),
         Command::Setup(SetupArgs {
             command: Some(SetupCommand::Codex(options)),
-        }) if backend == Backend::Direct => setup_codex(options, device, port)
+        }) => setup_codex(options, device, port)
             .await
             .map(CommandSuccess::json),
-        Command::Status(options) if backend == Backend::Direct => {
-            direct_status(options, device, port)
-                .await
-                .map(CommandSuccess::json)
-        }
-        Command::Export(options) if backend == Backend::Direct => {
-            direct_export(options, device, port).await
-        }
-        Command::Extract(options) if backend == Backend::Direct => {
-            direct_extract(options, device, port).await
-        }
-        Command::Query(options) if backend == Backend::Direct => {
-            direct_query(options, device, port)
-                .await
-                .map(CommandSuccess::json)
-        }
-        Command::Resume(options) if backend == Backend::Direct => {
-            direct_resume(options, device, port).await
-        }
-        Command::Cancel(options) if backend == Backend::Direct => {
-            direct_cancel(options, device, port)
-                .await
-                .map(CommandSuccess::json)
-        }
+        Command::Status(options) => direct_status(options, device, port)
+            .await
+            .map(CommandSuccess::json),
+        Command::Export(options) => direct_export(options, device, port).await,
+        Command::Extract(options) => direct_extract(options, device, port).await,
+        Command::Query(options) => direct_query(options, device, port)
+            .await
+            .map(CommandSuccess::json),
+        Command::Resume(options) => direct_resume(options, device, port).await,
+        Command::Cancel(options) => direct_cancel(options, device, port)
+            .await
+            .map(CommandSuccess::json),
         command => Err(CommandError {
-            backend: backend.wire_name(),
-            code: "not_implemented",
+            code: "invalid_request",
             message: format!(
-                "{} with the {} backend is not implemented by this pre-release build",
+                "{} needs a complete request; run `healthmd {}` for local discovery guidance",
                 command_name(&command),
-                backend.wire_name()
+                command_name(&command)
             ),
         }),
     }
 }
 
 fn incomplete_command_guidance(cli: &Cli) -> Option<Value> {
-    let backend = cli.backend.wire_name();
     match &cli.command {
         Command::Export(options) => {
             let missing_dates = !date_selection_is_present(&options.dates);
             let missing_mode = !options.raw && options.destination.is_none();
-            (missing_dates || missing_mode)
-                .then(|| guidance::export(backend, missing_dates, missing_mode))
+            (missing_dates || missing_mode).then(|| guidance::export(missing_dates, missing_mode))
         }
         Command::Extract(options) => {
             let missing_dates = !date_selection_is_present(&options.dates);
             let missing_scope = !extract_scope_is_present(&options.selection);
             (missing_dates || missing_scope)
-                .then(|| guidance::extract(backend, missing_dates, missing_scope))
+                .then(|| guidance::extract(missing_dates, missing_scope))
         }
-        Command::Query(options) if options.operation.is_none() => {
-            Some(guidance::query(backend, None))
-        }
+        Command::Query(options) if options.operation.is_none() => Some(guidance::query(None)),
         Command::Query(options) if options.arguments.is_none() => {
-            Some(guidance::query(backend, options.operation.as_deref()))
+            Some(guidance::query(options.operation.as_deref()))
         }
-        Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume(backend)),
-        Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel(backend)),
-        Command::Direct(DirectArgs { command: None }) => Some(guidance::group(backend, "direct")),
-        Command::Data(DataArgs { command: None }) => Some(guidance::group(backend, "data")),
+        Command::Resume(options) if options.job_id.is_none() => Some(guidance::resume()),
+        Command::Cancel(options) if options.job_id.is_none() => Some(guidance::cancel()),
+        Command::Direct(DirectArgs { command: None }) => Some(guidance::group("direct")),
+        Command::Data(DataArgs { command: None }) => Some(guidance::group("data")),
         Command::Direct(DirectArgs {
             command: Some(DirectCommand::Unpair { device_id: None }),
-        }) => Some(guidance::unpair(backend)),
+        }) => Some(guidance::unpair()),
         Command::Direct(DirectArgs {
             command: Some(DirectCommand::ResetTrust { confirm: false }),
-        }) => Some(guidance::reset_trust(backend)),
-        Command::Mcp(McpArgs { command: None }) => Some(guidance::group(backend, "mcp")),
-        Command::Setup(SetupArgs { command: None }) => Some(guidance::group(backend, "setup")),
+        }) => Some(guidance::reset_trust()),
+        Command::Mcp(McpArgs { command: None }) => Some(guidance::group("mcp")),
+        Command::Setup(SetupArgs { command: None }) => Some(guidance::group("setup")),
         _ => None,
     }
 }
@@ -1185,7 +1152,6 @@ fn mcp_schema(options: &McpSchemaArgs) -> Result<Value, CommandError> {
         mcp::tool_catalog(options.tool.as_deref())
     };
     catalog.map_err(|_| CommandError {
-        backend: if options.data { "data" } else { "direct" },
         code: "invalid_request",
         message: "The requested fixed MCP tool is unavailable. Run `healthmd mcp schema` (or `healthmd mcp schema --data`) to list the supported tools."
             .into(),
@@ -1196,7 +1162,6 @@ async fn data_import(options: DataImportArgs) -> Result<Value, CommandError> {
     mcp::import_data(options.database, options.directory)
         .await
         .map_err(|error| CommandError {
-            backend: "data",
             code: "data_import_failed",
             message: error.to_string(),
         })
@@ -1206,7 +1171,6 @@ async fn data_ingest(options: DataIngestArgs) -> Result<Value, CommandError> {
     mcp::ingest_data(options.database, options.manifest, options.artifact)
         .await
         .map_err(|error| CommandError {
-            backend: "data",
             code: "data_ingest_failed",
             message: error.to_string(),
         })
@@ -1215,20 +1179,9 @@ async fn data_ingest(options: DataIngestArgs) -> Result<Value, CommandError> {
 fn validate_platform_options(cli: &Cli) -> Result<(), CommandError> {
     if cli.transport == Transport::Nearby {
         return Err(CommandError {
-            backend: cli.backend.wire_name(),
             code: "transport_unsupported",
             message: "Nearby uses Apple MultipeerConnectivity; use --transport manual-ip on the portable CLI"
                 .into(),
-        });
-    }
-
-    if cli.backend != Backend::Direct
-        && matches!(cli.command, Command::Resume(_) | Command::Cancel(_))
-    {
-        return Err(CommandError {
-            backend: cli.backend.wire_name(),
-            code: "invalid_request",
-            message: "this command requires --backend direct".into(),
         });
     }
     Ok(())
@@ -1246,10 +1199,10 @@ async fn direct_query(
     }
     validate_wake_timeout(options.wake)?;
     let Some(operation) = options.operation else {
-        return Ok(guidance::query("direct", None));
+        return Ok(guidance::query(None));
     };
     let Some(argument_text) = options.arguments else {
-        return Ok(guidance::query("direct", Some(&operation)));
+        return Ok(guidance::query(Some(&operation)));
     };
     let arguments: Value = serde_json::from_str(&argument_text)
         .map_err(|_| usage_error("--arguments must be one valid JSON object"))?;
@@ -1272,7 +1225,6 @@ async fn direct_query(
     .map_err(|error| match error {
         mcp::QueryError::InvalidArguments => usage_error("invalid typed query arguments"),
         mcp::QueryError::DirectInitialization => CommandError {
-            backend: "direct",
             code: "direct_initialization_failed",
             message: "The direct client could not initialize native trust state.".to_owned(),
         },
@@ -1283,7 +1235,6 @@ async fn direct_query(
             direct_error("direct_wait_cancelled", error.message)
         }
         mcp::QueryError::Backend(error) => CommandError {
-            backend: "direct",
             code: "healthmd_query_failed",
             message: error.message,
         },
@@ -1296,7 +1247,6 @@ async fn direct_devices() -> Result<Value, CommandError> {
     Ok(json!({
         "schema": "healthmd.direct_devices",
         "schema_version": 1,
-        "backend": "direct",
         "installation_id": client.identity.installation_id.0.to_string().to_lowercase(),
         "devices": devices.into_iter().map(|device| json!({
             "installation_id": device.installation_id.0.to_string().to_lowercase(),
@@ -1316,14 +1266,12 @@ async fn direct_unpair(device_id: Uuid) -> Result<Value, CommandError> {
     let client = DirectClient::open().map_err(client_error)?;
     if !client.unpair(device_id).await.map_err(client_error)? {
         return Err(CommandError {
-            backend: "direct",
             code: "direct_device_not_found",
             message: format!("No paired direct source has installation ID {device_id}"),
         });
     }
     Ok(json!({
         "status": "success",
-        "backend": "direct",
         "device_id": device_id.to_string().to_lowercase(),
         "message": "Direct CLI source trust was removed from this computer. Forget it in the mobile app before pairing again."
     }))
@@ -1339,7 +1287,6 @@ async fn direct_reset_trust(confirm: bool) -> Result<Value, CommandError> {
     client.reset_trust().await.map_err(client_error)?;
     Ok(json!({
         "status": "success",
-        "backend": "direct",
         "message": "All local Direct CLI trust was removed. Forget the paired CLI in each mobile app before pairing again."
     }))
 }
@@ -1395,7 +1342,6 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
         "schema": "healthmd.direct_pairing_result",
         "schema_version": 1,
         "status": "success",
-        "backend": "direct",
         "device": {
             "installation_id": result.device.installation_id.0.to_string().to_lowercase(),
             "name": result.device.display_name,
@@ -1448,7 +1394,6 @@ async fn setup_codex_pairing(
             .any(|device| device.installation_id.0 == device_id)
         {
             return Err(CommandError {
-                backend: "direct",
                 code: "direct_device_not_found",
                 message: format!(
                     "No paired iPhone has installation ID {}",
@@ -1471,7 +1416,6 @@ async fn setup_codex_pairing(
     }
     if iphone_devices.len() > 1 {
         return Err(CommandError {
-            backend: "direct",
             code: "direct_device_selection_required",
             message: "More than one iPhone is paired; rerun setup with --device UUID".into(),
         });
@@ -1489,7 +1433,6 @@ async fn setup_codex_pairing(
     .await?;
     if result.pointer("/device/platform").and_then(Value::as_str) != Some("ios") {
         return Err(CommandError {
-            backend: "direct",
             code: "direct_source_unsupported",
             message: "Codex health analysis requires a paired iPhone".into(),
         });
@@ -1499,7 +1442,6 @@ async fn setup_codex_pairing(
         .and_then(Value::as_str)
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or_else(|| CommandError {
-            backend: "direct",
             code: "invalid_direct_response",
             message: "The pairing receipt did not identify the paired iPhone".into(),
         })?;
@@ -1529,14 +1471,12 @@ async fn setup_codex(
     .await?;
 
     let executable = onboarding::current_invocation_executable().map_err(|_| CommandError {
-        backend: "direct",
         code: "codex_configuration_failed",
         message: "The installed healthmd executable path could not be resolved".into(),
     })?;
     let receipt =
         onboarding::configure_codex(&executable, pairing.device_id, port).map_err(|error| {
             CommandError {
-                backend: "direct",
                 code: "codex_configuration_failed",
                 message: error.to_string(),
             }
@@ -1546,7 +1486,6 @@ async fn setup_codex(
         "schema": "healthmd.codex_setup",
         "schema_version": 1,
         "status": "success",
-        "backend": "direct",
         "configuration": {
             "host": "codex",
             "path": receipt.config_path,
@@ -1637,7 +1576,6 @@ async fn direct_status(
         .is_empty()
     {
         return Err(CommandError {
-            backend: "direct",
             code: "direct_not_paired",
             message: "Run `healthmd direct pair`, then scan its QR from Sync > Direct CLI Access > Scan Pairing QR in the open iPhone app."
                 .into(),
@@ -1686,16 +1624,8 @@ async fn direct_status(
         }
     };
     Ok(json!({
-        "backend": "direct",
-        "mac_app": "bypassed",
         "source": source,
         "iphone": legacy_iphone,
-        "destination": {
-            "selected": false,
-            "writable": false,
-            "path": Value::Null,
-            "display_name": Value::Null
-        },
         "active_export": Value::Null,
         "wake_window": client.wake_status_value(device, WakeWindow::default()).await,
         "direct_cli": {
@@ -1741,6 +1671,7 @@ async fn direct_export(
         return Err(usage_error("--destination cannot be used with --raw"));
     }
     if options.use_device_settings
+        || options.profile_id.is_some()
         || options.selection.all_metrics
         || !options.selection.metrics.is_empty()
         || !options.selection.categories.is_empty()
@@ -1749,9 +1680,25 @@ async fn direct_export(
         || !options.selection.sources.is_empty()
     {
         return Err(usage_error(
-            "strict iOS --raw export cannot be combined with selectors or --use-device-settings",
+            "iOS --raw cannot combine with saved settings, profiles, or selectors; use --full-corpus for the complete supported public metric scope",
         ));
     }
+    let (raw_profile, canonical_selection) = if options.full_corpus {
+        (
+            RawProfile::HealthDataProjection,
+            Some(CanonicalSelection {
+                metric_ids: Vec::new(),
+                categories: Vec::new(),
+                source_ids: vec!["apple_health".to_owned()],
+                object_paths: vec!["/healthkit_record_archive".to_owned()],
+                field_pointers: Vec::new(),
+                all_metrics: true,
+                detail_level: DetailLevel::Lossless,
+            }),
+        )
+    } else {
+        (RawProfile::CanonicalSourceRecordsV1, None)
+    };
     let request = ExportRequest {
         protocol_version: 1,
         job_id: SwiftUuid(Uuid::new_v4()),
@@ -1760,8 +1707,8 @@ async fn direct_export(
         settings_policy: SettingsPolicy::RequestedDatesOnly,
         profile_reference: None,
         response_mode: ResponseMode::RawJson,
-        raw_profile: Some(RawProfile::CanonicalSourceRecordsV1),
-        canonical_selection: None,
+        raw_profile: Some(raw_profile),
+        canonical_selection,
         destination: None,
     };
     let client = DirectClient::open().map_err(client_error)?;
@@ -1797,6 +1744,7 @@ async fn direct_android_export(
             return Err(usage_error("--destination cannot be used with --raw"));
         }
         if options.use_device_settings
+            || options.profile_id.is_some()
             || !options.selection.categories.is_empty()
             || !options.selection.objects.is_empty()
             || !options.selection.fields.is_empty()
@@ -1809,6 +1757,13 @@ async fn direct_android_export(
         if options.selection.all_metrics && !options.selection.metrics.is_empty() {
             return Err(usage_error(
                 "--all-metrics cannot be combined with --metric",
+            ));
+        }
+        if options.full_corpus
+            && (options.selection.all_metrics || !options.selection.metrics.is_empty())
+        {
+            return Err(usage_error(
+                "--full-corpus already selects every supported authorized record type; remove --metric/--all-metrics",
             ));
         }
         let provider = options.provider.trim().to_lowercase();
@@ -1840,7 +1795,7 @@ async fn direct_android_export(
                     RawArtifactFormat::Ndjson => v2::RawSnapshotFormat::Ndjson,
                 },
                 scope,
-                include_exercise_routes: false,
+                include_exercise_routes: options.full_corpus,
             },
             destination: None,
         };
@@ -2054,7 +2009,6 @@ async fn direct_extract(
         .map_err(map_direct_client_error)?;
     if transfer.artifact.status == "partial_success" && !options.allow_partial {
         return Err(CommandError {
-            backend: "direct",
             code: "partial_canonical_extraction",
             message:
                 "Canonical extraction was incomplete; pass --allow-partial to emit retained data."
@@ -2100,7 +2054,7 @@ async fn direct_resume(
     }
     validate_wake_timeout(options.wake)?;
     let Some(job_id) = options.job_id else {
-        return Ok(CommandSuccess::json(guidance::resume("direct")));
+        return Ok(CommandSuccess::json(guidance::resume()));
     };
     let client = DirectClient::open().map_err(client_error)?;
     match client.v2_job_record(job_id) {
@@ -2201,7 +2155,6 @@ async fn direct_resume(
     if let Some(pointers) = projection_pointers {
         if result.artifact.status == "partial_success" && !options.allow_partial {
             return Err(CommandError {
-                backend: "direct",
                 code: "partial_canonical_extraction",
                 message: "Canonical extraction was incomplete; rerun resume with --allow-partial to emit retained data."
                     .into(),
@@ -2253,7 +2206,7 @@ async fn direct_cancel(
 ) -> Result<Value, CommandError> {
     validate_wake_timeout(options.wake)?;
     let Some(job_id) = options.job_id else {
-        return Ok(guidance::cancel("direct"));
+        return Ok(guidance::cancel());
     };
     let client = DirectClient::open().map_err(client_error)?;
     match client.v2_job_record(job_id) {
@@ -2292,7 +2245,6 @@ async fn direct_cancel(
                 .map_err(map_direct_client_error)?;
             let status = serde_json::to_value(current.state).unwrap_or_else(|_| json!("unknown"));
             Ok(json!({
-                "backend": "direct",
                 "job_id": job_id.to_string().to_lowercase(),
                 "status": status,
                 "cancellation_applied": !already_terminal
@@ -2339,7 +2291,6 @@ async fn direct_cancel(
                 .await
                 .map_err(map_direct_client_error)?;
             Ok(json!({
-                "backend": "direct",
                 "job_id": job_id.to_string().to_lowercase(),
                 "status": "cancelled"
             }))
@@ -2403,7 +2354,6 @@ fn direct_job_payload(record: &JobRecord) -> Value {
         .and_then(|value| value.as_str().map(ToOwned::to_owned))
         .unwrap_or_else(|| "unknown".into());
     let mut payload = json!({
-        "backend": "direct",
         "job_id": record.request.job_id.0.to_string().to_lowercase(),
         "status": status,
         "created_at": record.created_at.to_rfc3339_opts(SecondsFormat::Millis, true),
@@ -2447,7 +2397,6 @@ fn direct_v2_job_payload(record: &healthmd_client::v2_job::V2JobRecord) -> Value
         .and_then(|value| value.as_str().map(ToOwned::to_owned))
         .unwrap_or_else(|| "unknown".into());
     json!({
-        "backend": "direct",
         "application_protocol_version": 2,
         "platform": "android",
         "job_id": record.request.job_id.to_string().to_lowercase(),
@@ -2596,7 +2545,6 @@ fn atomic_private_copy(source: &Path, destination: &Path) -> io::Result<()> {
 
 fn generate_pairing_code(digit_count: usize) -> Result<String, CommandError> {
     healthmd_cli::pairing::generate_numeric_code(digit_count).map_err(|_| CommandError {
-        backend: "direct",
         code: "secure_random_unavailable",
         message: "the operating system could not generate a secure pairing code".into(),
     })
@@ -2618,7 +2566,6 @@ fn print_pairing_qr(addresses: &[LocalAddress], port: u16, pairing_code: &str) {
 
 fn usage_error(message: &str) -> CommandError {
     CommandError {
-        backend: "direct",
         code: "invalid_request",
         message: message.into(),
     }
@@ -2711,7 +2658,6 @@ fn direct_error(code: &'static str, _error: impl std::fmt::Display) -> CommandEr
         _ => "The direct mobile source is unavailable.",
     };
     CommandError {
-        backend: "direct",
         code,
         message: message.into(),
     }
@@ -2956,6 +2902,27 @@ mod tests {
         assert!(help.contains("healthmd query healthmd_sleep_sessions"));
         assert!(help.contains("healthmd mcp schema"));
         assert!(help.contains("is not the sleep-session query API"));
+    }
+
+    #[test]
+    fn full_corpus_requires_raw_and_parses_as_an_explicit_scope() {
+        assert!(Cli::try_parse_from(["healthmd", "export", "--all", "--full-corpus"]).is_err());
+        let parsed = Cli::try_parse_from([
+            "healthmd",
+            "export",
+            "--all",
+            "--raw",
+            "--full-corpus",
+            "--raw-format",
+            "ndjson",
+        ])
+        .unwrap();
+        let Command::Export(options) = parsed.command else {
+            panic!("expected export command");
+        };
+        assert!(options.raw);
+        assert!(options.full_corpus);
+        assert!(options.dates.all);
     }
 
     #[test]

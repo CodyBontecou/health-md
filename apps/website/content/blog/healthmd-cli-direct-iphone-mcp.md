@@ -1,9 +1,9 @@
 ---
-title: "The Health.md CLI connects your terminal — and your agents — directly to iPhone."
-description: "A standalone healthmd CLI and MCP server now pair directly with your iPhone over your own network. No Mac app, no Health.md cloud, no account."
-lead: "healthmd runs on your computer, pairs with the Health.md app on your iPhone in one scan, and gives Codex, Claude, or your shell exact, bounded access to your health data — without a Health.md cloud in the middle."
+title: "The Health.md CLI connects your terminal — and your agents — directly to your phone."
+description: "The standalone healthmd CLI and MCP server pair directly with iPhone or Android over your own network, without a Mac app, Health.md cloud, or account."
+lead: "healthmd runs on macOS, Linux, or Windows and gives your shell, Codex, or Claude an explicit path to user-authorized health data on an open phone."
 date: "2026-08-06T09:00:00.000Z"
-updated: "2026-08-30T19:55:43.000Z"
+updated: "2026-09-22T12:00:00.000Z"
 category: "Product update"
 draft: false
 tags:
@@ -13,68 +13,86 @@ tags:
   - agents
 ---
 
-Health.md started on iPhone: your health data, exported into the files and formats you choose, with no account and no Health.md cloud. The Mac app added a desktop destination. Today the bridge extends to the terminal.
+Health.md started with a simple boundary: read health data on the phone, then put the result in files the user controls. The standalone **`healthmd` CLI** extends that boundary to macOS, Linux, and Windows without routing through the Health.md Mac app or a Health.md cloud service.
 
-The standalone **`healthmd` CLI** runs on macOS, Linux, and Windows and connects directly to the Health.md app on your iPhone over your own network — your LAN or your Tailscale tailnet. No Mac app required. No Health.md server in the middle. Your iPhone keeps doing every HealthKit read; the CLI receives validated results and files.
+The paired app performs each Apple Health or Health Connect read. The CLI receives authenticated, encrypted, validated results over Manual IP or Tailscale.
 
-## One scan, and you're paired
+## Pair once
 
 ```bash
 healthmd direct pair
 ```
 
-The CLI displays a QR code. On iPhone, open Health.md → **Sync → Direct CLI Access** and tap **Scan Pairing QR**. The scan itself is the consent — the authenticated, encrypted connection starts immediately. Pairing is one-time; later commands reconnect without a code.
+The current universal flow displays a QR code and a high-entropy pairing code. Open **Health.md → Direct CLI Access** on iPhone or Android, scan or enter the handoff, verify the computer, and keep the app open while new work begins. Reconnect trust is stored in the operating system credential service.
 
-From there:
+Then start small:
 
 ```bash
-healthmd status              # exact readiness, no health values
-healthmd export --last 7 --raw --output week.json
-healthmd extract --category Sleep --last 7 --output sleep.json
-healthmd export --yesterday --destination ~/Documents/HealthVault
+healthmd status
+healthmd export --yesterday --raw --output yesterday.json
+healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 ```
 
-Exports are durable jobs. If the connection drops or you close the app mid-transfer, nothing is lost: `healthmd status --job JOB_UUID` reports the job, `healthmd resume JOB_UUID` picks it up with the exact same request, and the final result is digest-verified.
+An iPhone source also supports canonical extraction and typed queries:
 
-## Connect Codex in one command — or configure Claude
+```bash
+healthmd extract --category Sleep --last 7 --output sleep.json
+healthmd query healthmd_sleep_sessions \
+  --arguments '{"dates":{"type":"all_available"},"all_pages":true}'
+```
 
-The part we think you'll actually feel: agents.
+Android preserves provider-native Health Connect snapshots rather than pretending they are HealthKit documents.
+
+## Durable rather than disposable
+
+A terminal timeout or network drop does not silently turn accepted work into failure. Direct exports are seven-day durable jobs:
+
+```bash
+healthmd status --job JOB_UUID
+healthmd resume JOB_UUID --timeout 300 --output recovered.json
+healthmd cancel JOB_UUID
+```
+
+Resume retains the immutable source, dates, scope, destination, request fingerprint, and committed partition frontier. Cancellation becomes terminal only after the phone acknowledges it.
+
+## Connect an agent
+
+For Codex:
 
 ```bash
 healthmd setup codex
 ```
 
-For Codex, one command pairs your iPhone if needed and writes the MCP configuration — preserving your existing settings and pinning the same executable identity your credentials already trust. For Claude or another local MCP host, configure the absolute `healthmd` executable with arguments `mcp serve`; the [MCP guide](/docs/mcp/) explains the tool and security boundaries. Restart the host, call `healthmd_doctor`, and ask real questions:
+For Claude or another local MCP host, configure the absolute `healthmd` executable with arguments `mcp serve`. Call `healthmd_doctor` first, list metric IDs, and request an exact date and metric scope.
 
-- *"Compare my average resting heart rate this week with last week."*
-- *"Show sleep sessions around my running workouts."*
-- *"Which days are missing sleep data?"*
-
-The local MCP server exposes 19 fixed tools: metric catalog, typed queries, charts, sleep sessions, workouts, period comparison, coverage, evidence packets, and durable exports. Every query runs against the paired, foreground iPhone. Export, resume, and cancel tools require explicit approval. A read-only 13-tool profile exists for hosts that should have no export authority at all.
+The published `0.1.0-alpha.7` portable preview exposes 19 tools. Current development source adds two approval-gated full-corpus raw-artifact tools for a total of 21; those tools are not a released alpha.7 promise. The `serve-read-only` entry remains limited to 13 readiness and typed-query tools.
 
 ## What stays private
 
-- **HealthKit stays on iPhone.** The CLI never reads Apple Health from your computer. The app on your phone performs every read.
-- **No Health.md cloud.** The connection is device-to-device, outbound from your phone, over Manual IP or Tailscale.
-- **No account.** Pairing trust lives in your OS keychain, not on a server.
-- **Explicit scope.** Agents receive the metric, date range, detail level, or complete-corpus operation you explicitly request; export, resume, and cancel tools require approval.
+- The phone performs platform health reads.
+- There is no Health.md health-data cloud hop or account.
+- Pairing and transport are authenticated and encrypted.
+- Query requests carry explicit dates, metrics, sources, and detail.
+- Large raw bodies go to validated files or a private durable spool, not automatically into a model conversation.
+- Coverage, partial outcomes, missing dates, and unsupported types stay visible.
 
-## The honest fine print
+This is factual data access, not medical advice. Agents should preserve units, evidence, missingness, and limitations rather than diagnosing or calling a direction better or worse.
 
-This release is an explicitly unqualified **public preview** (`0.1.0-alpha.3`). Prebuilt, signed, notarized archives cover macOS, and the Homebrew/Linuxbrew tap installs the matching release binaries. Windows artifacts remain Authenticode-unsigned until the signing ledger records a qualified publisher, so verify them through the Sigstore-signed checksum closure. Your iPhone must be unlocked with Health.md open for fresh reads — this is a bridge, not headless background automation.
+## Preview status
 
-## Get started
+The portable package remains an explicitly unqualified preview. Use the exact `healthmd-cli/v<version>` release and matching mobile build named by release evidence. Do not use the repository-wide `/releases/latest` pointer; it remains reserved for Apple app releases.
 
-Install the preview from the project tap:
+Install the published preview on macOS or Linux:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
 healthmd --version
 ```
 
-For direct downloads, use the exact `healthmd-cli/v0.1.0-alpha.3` release rather than the repository-wide "latest" pointer, which stays reserved for the Apple apps. Each release publishes Sigstore-signed checksums; the [CLI docs](/docs/cli/) walk through verifying them before you run anything.
+Windows archives and the PowerShell installer are published per version. Verify the release checksums and signatures before running downloaded binaries.
 
 <div class="cta-row">
 <a class="button" href="/docs/cli/">Read the CLI docs</a>
 <a class="button secondary" href="/docs/guides/connect-agent/">Connect an agent</a>
+<a class="button secondary" href="/docs/release-status/">Check release status</a>
 </div>

@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>미리보기 · 이식 가능한 직접 MCP</strong>
-<p>macOS, Linux 및 Windows용 별도의 19개 도구 <code>healthmd mcp serve</code> 토폴로지는 명시적으로 검증되지 않은 공개 미리보기로 패키징되어 있습니다. 클라우드가 필요 없는 <code>serve-read-only</code> 진입점은 로컬 페어링 후 준비 상태/쿼리 도구 13개만 제공합니다. macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 설치합니다.</p>
+<p>macOS, Linux 및 Windows용 별도 <code>healthmd mcp serve</code> 토폴로지는 19개 도구의 미인증 미리보기 <code>0.1.0-alpha.7</code>로 게시되어 있습니다. 클라우드가 필요 없는 <code>serve-read-only</code> 진입점은 로컬 페어링 후 준비 상태/쿼리 도구 13개만 제공합니다. macOS 또는 Linux에서는 <code>brew install CodyBontecou/tap/healthmd</code>로 설치합니다.</p>
 </div>
 
 ## 번들 Mac 요구 사항
@@ -36,6 +36,7 @@ Codex / Claude / another local MCP host
 
 - macOS, Linux 또는 Windows에 독립 실행형 미리보기를 설치합니다. Mac 앱과 루프백 서비스는 필요하지 않습니다.
 - 쿼리 지원 iPhone과 한 번 페어링하고 새 타입 지정 요청마다 Health.md를 포그라운드에 유지합니다. Android 타입 지정 MCP는 지원되지 않습니다.
+- MCP 페어링 도구는 iPhone만 등록합니다. Android는 MCP 시작 전에 CLI에서 명시적으로 페어링합니다.
 - Manual IP 또는 Tailscale 연결과 운영체제 자격 증명 저장소를 사용합니다. Linux에는 잠금 해제된 Secret Service 제공자가 필요합니다.
 - 설치된 호환성 실행기 또는 동일 바이너리 stdio 서버를 구성합니다. 둘 다 페어링된 직접 백엔드를 사용합니다.
 
@@ -115,7 +116,7 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 
 ## 사용 가능한 도구
 
-번들 Mac 서버는 준비 상태/쿼리 도구 13개, 생성 파일 작업 도구 4개, 암호화 컨텍스트 업데이트 작업 도구 4개로 구성된 고정 도구 21개를 제공합니다. 19개 도구의 이식 가능한 미리보기는 준비 상태/쿼리 도구 13개와 내보내기 도구 4개를 유지하고, Mac 업데이트 작업을 직접 페어링 도구 2개로 대체하며, 포그라운드 iPhone에서 타입 지정 쿼리를 직접 실행합니다.
+번들 Mac 서버는 준비 상태/쿼리 13개, 생성 파일 4개, 암호화 컨텍스트 업데이트 4개로 고정 도구 21개를 제공합니다. 게시된 이식형 미리보기 `0.1.0-alpha.7`은 19개 도구입니다. 현재 개발 소스는 전체 데이터와 제한된 아티팩트 읽기를 더해 21개지만, 이후 릴리스 전에는 그 두 도구를 전제로 삼지 마세요.
 
 ### 준비 상태 및 검색
 
@@ -148,6 +149,12 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 | `healthmd_export_job_status` | 내보내기 진행 상황 및 대상 수신 확인 검토 |
 | `healthmd_export_job_resume` | 정확하고 변경 불가능한 영속 내보내기 작업 재개 |
 | `healthmd_export_job_cancel` | 내보내기 작업 명시적 취소 |
+### 전체 원시 코퍼스 액세스 · 휴대용 로컬 MCP 전용
+
+| 도구 | 목적 |
+|---|---|
+| `healthmd_export_raw` | 명시적 승인 후 iPhone 또는 Android에서 내구성 있는 원시 코퍼스 내보내기 시작 |
+| `healthmd_raw_artifact_read` | 검증되고 작업에 바인딩된 아티팩트를 제한된 청크로 읽기 |
 
 내보내기, 재개 및 취소 도구는 잠재적으로 파괴적인 쓰기로 표시되며 현재 Claude 호스트에서 명시적 상호 작용이 필요합니다. 구성된 내보내기 모드가 생성 파일을 업데이트하거나 덮어쓸 수 있기 때문입니다. 위 Codex 구성은 추가 보호 수단으로 해당 도구에서 확인을 요청합니다.
 

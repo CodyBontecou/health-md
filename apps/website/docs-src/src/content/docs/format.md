@@ -1,6 +1,6 @@
 ---
 title: "Format Customization"
-description: "Control output formatting without changing what's collected. Pick a file format, date / time / unit conventions, customize the YAML frontmatter, and choose a Markdown template."
+description: "Control output formatting without changing the collected data. Select a file format, conventions, YAML frontmatter, and a Markdown template."
 ---
 
 ## Output formats
@@ -8,7 +8,7 @@ description: "Control output formatting without changing what's collected. Pick 
 <div class="option"><strong>Markdown (.md)</strong><p>Default. One file per day. YAML frontmatter (optional) plus headed sections per category.</p></div>
 <div class="option"><strong>Obsidian Bases</strong><p>Markdown with structured frontmatter optimized for Obsidian's <a href="https://help.obsidian.md/Plugins/Bases">Bases</a> plugin. Numeric properties stay numeric, dates stay dates.</p></div>
 <div class="option"><strong>JSON</strong><p>One JSON file per day. Apple schema-v8 daily summaries can embed the authoritative <code>healthmd.healthkit_records</code> v1 archive when Lossless Health Records is enabled.</p></div>
-<div class="option"><strong>CSV</strong><p>One CSV file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Compatibility summary rows contain five fields and omit the timestamp column; timestamped and canonical-record rows contain all six.</p></div>
+<div class="option"><strong>CSV</strong><p>One CSV file per day with the header <code>Date,Category,Metric,Value,Unit,Timestamp</code>. Compatibility summary rows contain five fields and omit the timestamp column. Timestamped and canonical-record rows contain all six.</p></div>
 </div>
 
 <div class="callout">
@@ -20,13 +20,13 @@ description: "Control output formatting without changing what's collected. Pick 
 <p>Pickers for date format (e.g. <code>YYYY-MM-DD</code>, <code>MMM d, yyyy</code>) and time format (12-hour, 24-hour). The preview block at the bottom of the screen updates live as you change settings.</p>
 
 ## Unit system
-<p>Toggle between <em>Metric</em> and <em>Imperial</em>. Affects distance (m/km vs ft/mi), weight (kg vs lb), temperature (°C vs °F), and a few others. HealthKit always stores in canonical units; conversion happens at export time.</p>
+<p>Toggle between <em>Metric</em> and <em>Imperial</em>. Affects distance (m/km vs ft/mi), weight (kg vs lb), temperature (°C vs °F), and a few others. HealthKit always stores in canonical units. Conversion happens at export time.</p>
 
 ## Frontmatter fields
 <p>Tapping <em>Frontmatter Fields</em> opens a dedicated editor:</p>
 <ul>
 <li>Toggle individual built-in fields (date, weekday, totalSteps, etc.)</li>
-<li>Rename a field — useful if your Obsidian setup expects different keys</li>
+<li>Rename a field, useful if your Obsidian setup expects different keys</li>
 <li>Add custom fields with static values (e.g. <code>type: health</code>)</li>
 <li>Add placeholder fields that resolve at export time (e.g. <code>weather: {weather}</code>)</li>
 </ul>
@@ -35,20 +35,20 @@ description: "Control output formatting without changing what's collected. Pick 
 <p>Tapping <em>Markdown Template</em> opens a template editor with several built-in styles (Compact, Sections, Detailed) plus a fully custom mode. The preview block shows the result for today's data.</p>
 
 ## Preview
-<p>At the bottom of the Format screen, a live preview block renders today's data with your current settings. This is the fastest way to iterate — change a toggle, look at the preview, repeat.</p>
+<p>At the bottom of the Format screen, a live preview block renders today's data with your current settings. This is the fastest way to iterate, change a toggle, look at the preview, repeat.</p>
 
 ## Data Detail and profiles
 
-Summary produces compact daily projections. Detailed Time-Series adds selected timestamped samples and intervals on both Apple and Android where the metric supports them. Lossless Health Records adds the canonical HealthKit archive and is Apple-only; it is not an Android compatibility layer.
+Summary produces compact daily projections. Detailed Time-Series adds selected timestamped samples and intervals on both Apple and Android where the metric supports them. Lossless Health Records adds the canonical HealthKit archive and is Apple-only. It is not an Android compatibility layer.
 
 Data Detail is frozen with the rest of an [export profile](/docs/export-profiles/). Editing it while a profile is active changes that profile, not every profile on the device.
 
 ## Related
 
 <div class="related">
-  <a href="/docs/export-profiles/"><span>Save this setup</span>Export Profiles — keep formats and Data Detail with a destination and schedule.</a>
-  <a href="/docs/metrics/"><span>What</span>Health Metrics — pick the data first.</a>
-  <a href="/docs/individual-tracking/"><span>Granular</span>Individual Tracking — different output entirely (per-entry files).</a>
-  <a href="/docs/daily-notes/"><span>Obsidian</span>Daily Note Injection — uses the same frontmatter fields.</a>
-  <a href="/docs/reference/export-formats/"><span>Contract</span>Export Formats — exact JSON, CSV, Markdown, and Bases behavior.</a>
+  <a href="/docs/export-profiles/"><span>Save this setup</span>Export Profiles, keep formats and Data Detail with a destination and schedule.</a>
+  <a href="/docs/metrics/"><span>What</span>Health Metrics, pick the data first.</a>
+  <a href="/docs/individual-tracking/"><span>Granular</span>Individual Tracking, different output entirely (per-entry files).</a>
+  <a href="/docs/daily-notes/"><span>Obsidian</span>Daily Note Injection, uses the same frontmatter fields.</a>
+  <a href="/docs/reference/export-formats/"><span>Contract</span>Export Formats, exact JSON, CSV, Markdown, and Bases behavior.</a>
 </div>

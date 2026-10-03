@@ -34,6 +34,9 @@ const DIRECT_TOOLS: &[&str] = &[
     "healthmd_pairing_status",
     // Durable export family.
     "healthmd_export_files",
+    // Main's approval-gated public corpus and bounded job-artifact operations.
+    "healthmd_export_raw",
+    "healthmd_raw_artifact_read",
     "healthmd_export_job_status",
     "healthmd_export_job_resume",
     "healthmd_export_job_cancel",
@@ -198,22 +201,19 @@ fn data_records_schema_documents_the_bounded_page_object() {
 fn unavailable_tools_fail_with_the_documented_error_surface_without_echoing_the_name() {
     let cases = [
         (
-            "data",
             &["mcp", "schema", "--data", "healthmd_data_unknown"][..],
             "healthmd_data_unknown",
         ),
         (
-            "direct",
             &["mcp", "schema", "healthmd_data_records"][..],
             "healthmd_data_records",
         ),
         (
-            "direct",
             &["mcp", "schema", "healthmd_unknown_direct"][..],
             "healthmd_unknown_direct",
         ),
     ];
-    for (backend, arguments, requested_name) in cases {
+    for (arguments, requested_name) in cases {
         let output = run(arguments);
         assert!(!output.status.success(), "{arguments:?} should fail");
         assert!(output.stderr.is_empty(), "{arguments:?} wrote stderr");
@@ -221,7 +221,7 @@ fn unavailable_tools_fail_with_the_documented_error_surface_without_echoing_the_
         assert_eq!(value["schema"], "healthmd.cli_error");
         assert_eq!(value["status"], "failure");
         assert_eq!(value["error"], "invalid_request");
-        assert_eq!(value["backend"], backend);
+        assert!(value.get("backend").is_none());
         assert_eq!(value["request_sent"], false);
         assert_eq!(value["help_command"], "healthmd mcp schema --help");
         assert_eq!(value["message"], UNAVAILABLE_TOOL_MESSAGE);

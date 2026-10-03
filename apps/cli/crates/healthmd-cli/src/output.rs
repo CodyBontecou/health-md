@@ -102,7 +102,6 @@ fn render_guidance(value: &Value) -> String {
         "schema",
         "schema_version",
         "status",
-        "backend",
         "command",
         "message",
         "description",
@@ -839,7 +838,6 @@ mod tests {
     fn generic_results_keep_missingness_and_nested_records_visible() {
         let value = json!({
             "schema": "healthmd.direct_devices",
-            "backend": "direct",
             "selected_device": null,
             "devices": [{"name": "Test iPhone", "connected": true}]
         });

@@ -199,6 +199,24 @@ pub struct QueryResult {
     pub port: u16,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RawArtifactPlatform {
+    Ios,
+    Android,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DurableRawArtifact {
+    pub path: std::path::PathBuf,
+    pub platform: RawArtifactPlatform,
+    pub format: &'static str,
+    pub profile: String,
+    pub provider_id: Option<String>,
+    pub status: String,
+    pub byte_count: u64,
+    pub sha256: String,
+}
+
 pub struct DirectClient<C = OsCredentialStore> {
     pub identity: ClientIdentity,
     pub layout: StorageLayout,
@@ -1412,6 +1430,91 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             record.message = Some("Cancellation is pending delivery to the paired iPhone.".into());
         }
         Ok(record)
+    }
+
+    /// Reopen a completed raw artifact from either durable mobile protocol and verify its exact
+    /// byte count and SHA-256 before returning a job-bound path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the job is absent, incomplete, not a raw product, or changed on disk.
+    pub fn raw_artifact(&self, job_id: Uuid) -> Result<DurableRawArtifact, ClientError> {
+        match self.job_record(job_id) {
+            Ok(record) => {
+                if record.request.response_mode != ResponseMode::RawJson {
+                    return Err(ClientError::JobNotResumable(job_id, "not_raw".into()));
+                }
+                if record.state != JobState::Completed {
+                    return Err(ClientError::JobNotResumable(
+                        job_id,
+                        format!("{:?}", record.state).to_lowercase(),
+                    ));
+                }
+                let artifact =
+                    RawReceiver::new(self.layout.clone(), JobStore::new(self.layout.clone())?)
+                        .artifact(job_id)?;
+                let profile = match artifact.profile {
+                    healthmd_protocol::wire::RawProfile::CanonicalSourceRecordsV1 => {
+                        "canonical_source_records_v1"
+                    }
+                    healthmd_protocol::wire::RawProfile::HealthDataProjection => {
+                        "health_data_projection"
+                    }
+                };
+                Ok(DurableRawArtifact {
+                    path: artifact.path,
+                    platform: RawArtifactPlatform::Ios,
+                    format: "json",
+                    profile: profile.to_owned(),
+                    provider_id: Some("apple_health".to_owned()),
+                    status: artifact.status,
+                    byte_count: u64::try_from(artifact.byte_count)
+                        .map_err(|_| ClientError::InvalidJob)?,
+                    sha256: artifact.sha256,
+                })
+            }
+            Err(ClientError::JobNotFound) => {
+                let record = self.v2_job_record(job_id)?;
+                if record.state != JobState::Completed {
+                    return Err(ClientError::JobNotResumable(
+                        job_id,
+                        format!("{:?}", record.state).to_lowercase(),
+                    ));
+                }
+                let (format, provider_id) = match &record.request.product {
+                    v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                        provider_id,
+                        format,
+                        ..
+                    } => (
+                        match format {
+                            v2::RawSnapshotFormat::Json => "json",
+                            v2::RawSnapshotFormat::Ndjson => "ndjson",
+                        },
+                        provider_id.clone(),
+                    ),
+                    _ => {
+                        return Err(ClientError::JobNotResumable(job_id, "not_raw".into()));
+                    }
+                };
+                let receipt = V2ArtifactReceiver::new(
+                    self.layout.clone(),
+                    V2JobStore::new(self.layout.clone())?,
+                )
+                .receipt(job_id)?;
+                Ok(DurableRawArtifact {
+                    path: receipt.path,
+                    platform: RawArtifactPlatform::Android,
+                    format,
+                    profile: "android_provider_native_snapshot_v1".to_owned(),
+                    provider_id: Some(provider_id),
+                    status: receipt.status,
+                    byte_count: receipt.byte_count,
+                    sha256: receipt.sha256,
+                })
+            }
+            Err(error) => Err(error),
+        }
     }
 
     /// Materialize a completed canonical projection into the public extraction envelope.

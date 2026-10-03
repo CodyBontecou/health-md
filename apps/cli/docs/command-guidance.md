@@ -125,7 +125,6 @@ document on stdout:
   "schema": "healthmd.cli_error",
   "schema_version": 1,
   "status": "failure",
-  "backend": "direct",
   "error": "invalid_request",
   "error_kind": "argument_conflict",
   "message": "Two supplied arguments cannot be used together. Choose one documented request shape.",

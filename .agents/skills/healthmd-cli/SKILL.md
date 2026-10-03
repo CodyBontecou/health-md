@@ -1,6 +1,6 @@
 ---
 name: healthmd-cli
-description: Safely install and use the Health.md CLI and MCP server to query user-authorized health data, chart typed metrics, inspect sleep and workouts, export scoped Apple Health or Health Connect data, and recover durable jobs on macOS, Linux, or Windows. Use for consumer workflows, not Health.md development.
+description: Safely install and use the Health.md CLI and MCP server to query user-authorized health data, chart typed metrics, inspect sleep and workouts, export scoped or complete public/authorized Apple Health or Health Connect data, and recover durable jobs on macOS, Linux, or Windows. Use for consumer workflows, not Health.md development.
 compatibility: Requires matching `healthmd` and `healthmd-mcp` binaries plus an explicitly compatible Health.md mobile build. Direct typed queries and canonical extraction currently require iPhone; Android supports provider-native raw and generated-file exports. Live work requires Direct CLI Access and the selected phone to be available.
 ---
 
@@ -15,7 +15,7 @@ foreground Health.md mobile app → HealthKit or Health Connect
   → bounded typed results, canonical data, or generated files
 ```
 
-The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.6 binaries are wait-only; subsequent official builds also send one best-effort APNs notification when the selected iPhone has enrolled wake material. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. Direct is the portable default. Do not add `--backend mac-app` or `--transport nearby`.
+The CLI listens on the computer; the phone connects to the displayed address. It can keep an unavailable request waiting while the user opens Health.md. Published alpha.7 binaries send one best-effort APNs notification when the selected iPhone has enrolled wake material; alpha.6 binaries were wait-only. Android and unenrolled phones remain wait-only. A notification can restore user presence but never authorizes background health access or bypasses app activity, permissions, protected-data controls, quotas, or OS background limits. The CLI is direct-only and has no backend option; it never requires or contacts the Health.md Mac app. Do not add `--transport nearby`.
 
 ## Authorization and privacy first
 
@@ -31,13 +31,13 @@ Treat the user's request as authority only for its stated device, operation, met
 
 ## Verify release compatibility
 
-The `0.1.0-alpha.6` package is an explicitly unqualified public preview. Physical QA has confirmed basic iPhone and Android connectivity, but no public CLI/mobile pair has completed and retained the full release qualification matrix yet. Its source snapshot contains these exact counterparts:
+The `0.1.0-alpha.7` package is an explicitly unqualified public preview. Physical QA has confirmed basic iPhone and Android connectivity, but no public CLI/mobile pair has completed and retained the full release qualification matrix yet. Its source snapshot contains these exact counterparts:
 
 | Mobile source | Protocol | Exact counterpart in the release snapshot | Portable operations |
 |---|---|---|---|
-| iPhone exports | v1 | iOS 3.3.0 (build 202609032317) | status, raw, extract, files, resume, cancel |
-| iPhone typed queries | v1 + query v3 | iOS 3.3.0 (build 202609032317) | the export operations plus fixed typed query tools |
-| Android exports | v2 | Android 1.8.2 (`versionCode 31`) | status, provider-native raw, files, resume, cancel |
+| iPhone exports | v1 | iOS 3.4.0 (build 202609032318) | status, raw, extract, files, resume, cancel |
+| iPhone typed queries | v1 + query v3 | iOS 3.4.0 (build 202609032318) | the export operations plus fixed typed query tools |
+| Android exports | v2 | Android 1.9.0 (`versionCode 38`) | status, provider-native raw, files, resume, cancel |
 | Android typed queries | unavailable | not implemented | do not claim support |
 
 The unqualified protocol floors remain iOS 3.0.3 and Android 1.5.4 (`versionCode 25`), but protocol implementation and basic connectivity are not release qualification. Check the exact package and mobile build before live work. Do not claim App Store or Play Store compatibility from a marketing version alone.
@@ -64,7 +64,7 @@ Authorized preview testers may build the exact tag from source:
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
 cd health-md
-git checkout healthmd-cli/v0.1.0-alpha.6
+git checkout healthmd-cli/v0.1.0-alpha.7
 cd apps/cli
 cargo install --locked --path crates/healthmd-cli
 ```
@@ -139,8 +139,8 @@ behavior is explicitly needed. Keep any outer process timeout longer than the wa
 operation timeout.
 
 MCP uses `HEALTHMD_WAKE_TIMEOUT` (`0` disables) and may emit `notifications/progress`. Inspect the
-selected device's `wake_window`: published alpha.6 binaries do not send push, even if enrollment
-metadata exists. In a subsequent official build, `available`/`enrolled` for an enrolled iPhone means
+selected device's `wake_window`: alpha.6 binaries do not send push, even if enrollment
+metadata exists. In alpha.7 and later, `available`/`enrolled` for an enrolled iPhone means
 the wait sends one best-effort APNs notification through Health.md's health-free wake service. Only
 tell the user to expect a notification when both the build and enrollment support it. Android and
 unenrolled iPhones remain wait-only. A local timeout or MCP cancellation ends only the waiter; it is not phone-side
@@ -152,7 +152,7 @@ durable-job cancellation.
 NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 ```
 
-Require the selected phone to be authenticated, active enough for new work, and ready for the requested operation. Respect `active_job_id` and all protected-data, permission, and capability fields. `backend: direct` and `mac_app: bypassed` confirm the standalone path. Direct generated-file mode always uses the explicit `--destination`; it never uses a Mac bookmark.
+Require the selected phone to be authenticated, active enough for new work, and ready for the requested operation. Respect `active_job_id` and all protected-data, permission, and capability fields. Status contains no backend or Mac fields; the standalone path is the only path. Direct generated-file mode always uses the explicit `--destination`; it never uses a Mac bookmark.
 
 ## Query typed health data
 
@@ -162,7 +162,7 @@ Typed queries currently require a compatible foreground iPhone. For least privil
 healthmd mcp serve-read-only
 ```
 
-This local stdio profile exposes only readiness, catalog, and typed-query tools. Use full `healthmd mcp serve` only when the user also approves in-host pairing or generated-file job authority. For Codex, `healthmd setup codex` configures the full local profile and can open pairing; review that broader authority with the user first.
+This local stdio profile exposes only readiness, catalog, and typed-query tools. Use full `healthmd mcp serve` only when the user also approves in-host pairing, generated-file jobs, or full-corpus raw jobs and bounded artifact reads. For Codex, `healthmd setup codex` configures the full local profile and can open iPhone pairing; review that broader authority with the user first. Android pairing remains an explicit `healthmd direct pair` workflow.
 
 Query workflow:
 
@@ -195,6 +195,19 @@ Dates are illustrative; resolve the user's actual request. `healthmd extract` is
 ## Export or extract only approved scope
 
 Choose exactly one date range: `--yesterday`, `--last N`, `--from/--to`, or `--all`. Prefer an approved protected absolute output path so health data does not enter stdout, transcripts, or a repository. In the examples, first set `PRIVATE_HEALTH_DIR` to an existing private absolute directory selected by the user; never guess or create that location silently.
+
+### Complete public, authorized corpus
+
+Use this only after the user explicitly approves the broad scope and a protected output path:
+
+```bash
+healthmd export --all --raw --full-corpus \
+  --output "$PRIVATE_HEALTH_DIR/complete-health-corpus.json"
+```
+
+`--full-corpus` requests every public record type supported by the selected mobile source and authorized by the user. It cannot read private Apple/Google databases. Preserve the native raw envelope and its capture/authorization/unsupported/skipped/partial/read-error evidence; do not claim that inaccessible or unsupported data was exported. On Android, add `--provider health_connect` or the exact discovered provider and choose JSON/NDJSON as needed. Readable exercise routes are included in this explicit scope; interactive platform consent may still make a route unavailable.
+
+The complete local MCP profile exposes the same scope through `healthmd_export_raw`. It leaves the validated artifact in a private durable job spool. Inspect status with the shared export-job tools and read it only through `healthmd_raw_artifact_read`, one base64 chunk of at most 64 KiB at a time. Never ask MCP for the entire corpus in one model response. These tools are absent from read-only and remote profiles.
 
 ### iPhone strict raw and canonical extraction
 
@@ -264,7 +277,7 @@ When values were requested, also preserve canonical units/statistics, owner date
 2. `healthmd status --job JOB_UUID` — durable state after any started operation.
 3. `healthmd status` or `healthmd_doctor` — live readiness.
 4. Verify the selected phone, foreground state, Direct CLI Access, address/port, local-network permission, native credential storage, and LAN/Tailscale reachability.
-5. Resume the same job when appropriate; never switch peer, transport, port, or backend silently.
+5. Resume the same job when appropriate; never switch peer, transport, or port silently.
 
 Common actions:
 
@@ -282,4 +295,4 @@ Common actions:
 | `invalid_direct_file_receipt` | Do not append or merge manually; inspect and resume if allowed. |
 | `partial_canonical_extraction` | Review diagnostics; accept partial data only with explicit approval. |
 | `transport_unsupported` | Use Manual IP over LAN/Tailscale, not Nearby. |
-| `not_implemented` with `mac-app` | Remove the backend option; direct is default. |
+| `unknown_argument` after passing `--backend` | Remove it; the CLI is direct-only and has no backend option. |

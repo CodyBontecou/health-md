@@ -12,6 +12,8 @@ description: O que o Health.md oferece no iPhone, iPad, Mac, Android, Wear OS e 
   </div>
 </div>
 
+**As entradas do Wear OS são recursos planejados e não fazem parte da versão atual do Google Play.**
+
 Legenda: ✓ disponível · ◐ disponível com diferenças de plataforma indicadas na linha · △ planejado ou em QA · ? disponibilidade não declarada · — não disponível nessa plataforma.
 
 A CLI não é uma coluna separada de plataforma de dados de saúde: os recursos da CLI aparecem nas linhas de automação e mantêm a semântica da origem no iPhone ou no Android.
@@ -72,7 +74,7 @@ Alguns dados deliberadamente **não são tratados como equivalentes** entre as p
 |---|---|---|---|---|
 | Widgets da tela inicial | ✓ resumo, anéis de atividade, faixa cardíaca, sono | — | ✓ resumo, atividade, faixa cardíaca, sono (passos substituem horas em pé) | — |
 | Progresso de exportação na Atividade Ao Vivo | ✓ | — | — | — |
-| Superfícies do relógio | ✓ app de relógio + 10 complicações | — | — | ✓ blocos + 10 complicações |
+| Superfícies do relógio | ✓ app de relógio + 10 complicações | — | — | △ previsto para 1.10.0 |
 | Mac como destino de exportação (transferência local criptografada) | ✓ o iPhone envia | ✓ recebe | — | — |
 
 ## Compra e privacidade
@@ -81,7 +83,7 @@ Alguns dados deliberadamente **não são tratados como equivalentes** entre as p
 |---|---|---|---|---|
 | Nível gratuito | ✓ 10 ações de exportação manuais ou agendadas | — | ✓ 10 ações de exportação manuais | — |
 | Desbloqueio | ✓ compra única vitalícia (individual / família) | ◐ mesmo desbloqueio da Apple | ✓ compra única vitalícia, com agendamento incluído | — |
-| Privacidade com processamento local | ✓ sem nuvem de dados de saúde do Health.md | ✓ | ✓ | ✓ |
+| Privacidade com processamento local | ✓ sem nuvem de dados de saúde do Health.md | ✓ | ✓ | △ previsto |
 | Relatório para o profissional de saúde (um PDF para consultas) | ✓ | — | ✓ | — |
 
 O Health.md não opera uma nuvem de dados de saúde. Os dados de saúde podem existir em destinos que você escolher, em contexto local criptografado e em estado de transferência privada limitado. Cada pasta, Mac, endpoint de API ou destino da CLI é configurado explicitamente. Perfis e agendamentos permanecem locais ao dispositivo onde foram criados. Veja os [perfis de exportação](/pt-br/docs/export-profiles/), o [guia do Android](/pt-br/docs/android/) e o [guia de exportação do iPhone](/pt-br/docs/export/) para o fluxo de trabalho de cada plataforma.

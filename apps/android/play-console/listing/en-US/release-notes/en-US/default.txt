@@ -1,6 +1,5 @@
-v1.8.8 — Easier, more reliable desktop exports
+v1.9.1 — Safer setup sharing and dependable exports
 
-• Pair with the Health.md desktop CLI by scanning its QR code; manual address and 20-digit code entry still work.
-• Direct CLI sessions reconnect automatically after brief desktop disconnects, so exports finish instead of stalling.
-• Desktop wake-window commands wait up to 120 seconds for you to open the app and connect — no push notifications involved.
-• Includes reliability and compatibility fixes for phone and Wear OS.
+• Move export profiles between devices with Share My Setup. Review changes before applying them; shared files contain no health data or credentials.
+• Scheduled profiles now refresh the full lookback chosen on every run, with optional Today Refresh every 3, 6, or 12 hours.
+• Improved TalkBack, keyboard focus, touch targets, scrolling, and large-text layouts across setup, export, metrics, schedules, and connection screens.

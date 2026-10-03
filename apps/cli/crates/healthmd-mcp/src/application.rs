@@ -295,6 +295,8 @@ impl HealthMdSession {
             "healthmd_pairing_start" => self.start_pairing(&context, &arguments).await,
             "healthmd_pairing_status" => self.pairing_status(&context, &arguments).await,
             "healthmd_export_files" => self.start_export(&context, &arguments).await,
+            "healthmd_export_raw" => self.start_raw_export(&context, &arguments).await,
+            "healthmd_raw_artifact_read" => self.read_raw_artifact(&context, &arguments).await,
             "healthmd_export_job_status" => self.export_status(&context, &arguments).await,
             "healthmd_export_job_resume" => self.resume_export(&context, &arguments).await,
             "healthmd_export_job_cancel" => self.cancel_export(&context, &arguments).await,
@@ -438,6 +440,65 @@ impl HealthMdSession {
             is_error,
             self.ui_enabled(),
         ))
+    }
+
+    async fn start_raw_export(
+        &self,
+        context: &CallContext,
+        arguments: &Value,
+    ) -> Result<Value, ApplicationError> {
+        self.require_local_export(&context.caller)?;
+        let job_id = Uuid::new_v4();
+        let value = tokio::select! {
+            response = self.application.operations.backend().start_raw_export(context, job_id, arguments) => {
+                match response {
+                    Ok(value) => value,
+                    Err(error) if error.code == "healthmd_request_cancelled" => {
+                        result::cancelled(Some(job_id))
+                    }
+                    Err(error) => export_error_value(&error, job_id),
+                }
+            },
+            () = context.cancellation.cancelled() => result::cancelled(Some(job_id)),
+        };
+        let is_error = !matches!(
+            value.get("status").and_then(Value::as_str),
+            Some("success" | "partial_success" | "accepted" | "preparing")
+        );
+        Ok(result::export_tool_result(
+            "healthmd_export_raw",
+            value,
+            is_error,
+            self.ui_enabled(),
+        ))
+    }
+
+    async fn read_raw_artifact(
+        &self,
+        context: &CallContext,
+        arguments: &Value,
+    ) -> Result<Value, ApplicationError> {
+        self.require_local_export(&context.caller)?;
+        if context.cancellation.is_cancelled() {
+            return Ok(result::tool_result(
+                result::cancelled(None),
+                true,
+                None,
+                Vec::new(),
+            ));
+        }
+        let value = self
+            .application
+            .operations
+            .backend()
+            .read_raw_artifact(context, arguments)
+            .await;
+        Ok(match value {
+            Ok(value) => result::tool_result(value, false, None, Vec::new()),
+            Err(error) => {
+                result::tool_result(result::backend_error(&error), true, None, Vec::new())
+            }
+        })
     }
 
     async fn export_status(
@@ -631,12 +692,18 @@ fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity
         "surface_profile": application.profile().wire_name(),
         "source_kind": backend.source_kind,
         "transport": backend.transport,
-        "requires_mac_app": false,
         "iphone_must_be_foreground": backend.requires_foreground_source,
         "requires_foreground_source": backend.requires_foreground_source,
         "supports_queries": backend.supports_queries,
         "supports_local_pairing": supports_local_pairing,
         "supports_local_file_exports": supports_local_file_exports,
+        "supports_local_raw_exports": supports_local_file_exports,
+        "raw_export": {
+            "scope": "all_public_authorized",
+            "artifact_access": "job_bound_bounded_base64_chunks",
+            "arbitrary_file_read": false,
+            "remote_available": false
+        },
         "operations": application
             .list_tools_for_caller(false, caller)
             .into_iter()
@@ -808,6 +875,76 @@ mod tests {
         }
     }
 
+    struct RawFixtureBackend {
+        started: Mutex<Option<(Uuid, Value)>>,
+    }
+
+    impl RawFixtureBackend {
+        fn new() -> Arc<Self> {
+            Arc::new(Self {
+                started: Mutex::new(None),
+            })
+        }
+    }
+
+    #[async_trait]
+    impl HealthDataBackend for RawFixtureBackend {
+        fn capabilities(&self) -> BackendCapabilities {
+            BackendCapabilities {
+                source_kind: "fixture".to_owned(),
+                transport: "fixture".to_owned(),
+                supports_queries: true,
+                supports_local_file_exports: true,
+                requires_foreground_source: false,
+                instructions: "Use the fixture.".to_owned(),
+            }
+        }
+
+        async fn readiness(&self, _context: &CallContext) -> Result<Value, BackendError> {
+            Ok(json!({"ready": true}))
+        }
+
+        async fn doctor(&self, context: &CallContext) -> Result<Value, BackendError> {
+            self.readiness(context).await
+        }
+
+        async fn query_page(
+            &self,
+            _context: &CallContext,
+            _request: QueryPageRequest,
+        ) -> Result<Value, BackendError> {
+            Ok(page(0, None))
+        }
+
+        async fn start_raw_export(
+            &self,
+            _context: &CallContext,
+            job_id: Uuid,
+            arguments: &Value,
+        ) -> Result<Value, BackendError> {
+            *self.started.lock().unwrap() = Some((job_id, arguments.clone()));
+            Ok(json!({
+                "schema": "healthmd.raw_export_receipt",
+                "schema_version": 1,
+                "job_id": job_id,
+                "status": "success"
+            }))
+        }
+
+        async fn read_raw_artifact(
+            &self,
+            _context: &CallContext,
+            arguments: &Value,
+        ) -> Result<Value, BackendError> {
+            Ok(json!({
+                "schema": "healthmd.raw_artifact_chunk",
+                "schema_version": 1,
+                "job_id": arguments["job_id"],
+                "chunk": {"offset": 0, "next_offset": 2, "eof": true, "encoding": "base64", "data": "e30="}
+            }))
+        }
+    }
+
     struct PairingFixtureBackend {
         timeout: Mutex<Option<u64>>,
         pairing_session_id: Uuid,
@@ -928,10 +1065,76 @@ mod tests {
                 json!({"pairing_session_id": Uuid::new_v4()}),
             ),
             ("healthmd_export_files", json!({})),
+            ("healthmd_export_raw", json!({})),
+            ("healthmd_raw_artifact_read", json!({})),
             ("healthmd_export_job_status", json!({})),
             ("healthmd_export_job_resume", json!({})),
             ("healthmd_export_job_cancel", json!({})),
         ]
+    }
+
+    #[tokio::test]
+    async fn local_raw_export_is_approval_gated_and_artifact_reads_are_job_bound() {
+        let backend = RawFixtureBackend::new();
+        let application = Arc::new(HealthMdApplication::new(
+            backend.clone(),
+            SurfaceProfile::LocalDirect,
+        ));
+        let session = application.session(CallerIdentity::local());
+        let tools = session.list_tools();
+        assert_eq!(tools.len(), 21);
+        let export = tools
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_export_raw")
+            .unwrap();
+        assert_eq!(
+            export.pointer("/_meta/anthropic~1requiresUserInteraction"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            export.pointer("/annotations/readOnlyHint"),
+            Some(&json!(false))
+        );
+        let read = tools
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_raw_artifact_read")
+            .unwrap();
+        assert_eq!(
+            read.pointer("/annotations/readOnlyHint"),
+            Some(&json!(true))
+        );
+
+        let arguments = json!({
+            "scope": "all_public_authorized",
+            "date_selection": "all_available",
+            "format": "json"
+        });
+        let result = session
+            .call_tool(
+                "healthmd_export_raw",
+                arguments.clone(),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(result["isError"], false);
+        let (job_id, captured) = backend.started.lock().unwrap().clone().unwrap();
+        assert_eq!(captured, arguments);
+
+        let chunk = session
+            .call_tool(
+                "healthmd_raw_artifact_read",
+                json!({"job_id": job_id}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        let body: Value =
+            serde_json::from_str(chunk["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(body["schema"], "healthmd.raw_artifact_chunk");
+        assert_eq!(body["job_id"], job_id.to_string());
     }
 
     #[tokio::test]
@@ -944,7 +1147,7 @@ mod tests {
         ));
         let session = application.session(CallerIdentity::local());
         session.set_ui_enabled(true);
-        assert_eq!(session.list_tools().len(), 19);
+        assert_eq!(session.list_tools().len(), 21);
         assert_eq!(session.list_resources().len(), 2);
         let pairing_tool = session
             .list_tools()
@@ -1343,7 +1546,9 @@ mod tests {
         assert!(tools.iter().all(|tool| {
             tool.pointer("/annotations/readOnlyHint") == Some(&json!(true))
                 && !tool["name"].as_str().is_some_and(|name| {
-                    name.starts_with("healthmd_pairing_") || name.starts_with("healthmd_export_")
+                    name.starts_with("healthmd_pairing_")
+                        || name.starts_with("healthmd_export_")
+                        || name == "healthmd_raw_artifact_read"
                 })
         }));
         assert_eq!(session.list_resources().len(), 1);

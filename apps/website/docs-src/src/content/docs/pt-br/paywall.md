@@ -1,33 +1,29 @@
 ---
 title: "Desbloqueio e paywall"
-description: "Compra única do Full Access, sem assinatura. Remova o limite compartilhado de 10 exportações e libere fluxos com destino no Mac e Atalhos."
+description: "Entenda as 10 ações gratuitas, lembretes não bloqueantes, compras Lifetime e restauração pelo StoreKit."
 ---
 
-## Preço
-<ul>
-<li>Full Access é uma compra única via StoreKit, exibida na folha de compra da App Store.</li>
-<li>Sem assinatura nem cobrança recorrente.</li>
-<li>O preço local vigente é mostrado pela Apple antes da compra.</li>
-<li>Não há conta no servidor. O desbloqueio fica vinculado à transação StoreKit do seu Apple ID.</li>
-<li>Antes do desbloqueio, a mesma cota de 10 ações cobre exportações manuais e agendadas.</li>
-</ul>
+O Health.md inclui 10 ações de exportação concluídas antes de exigir Full Access. Uma ação pode gravar vários dias e formatos. Exportações manuais, agendadas, por Atalhos e diretas compartilham a contagem quando aplicável.
 
-## O que o Full Access desbloqueia
-<ul>
-<li>Ações ilimitadas de exportação manuais e agendadas após a cota gratuita compartilhada.</li>
-<li>Fluxos com destino no Mac.</li>
-<li>Intents dos Atalhos.</li>
-</ul>
+## Quando uma oferta aparece
 
-## Restaurar uma compra anterior
-<p>Toque em <em>Restaurar compra</em> no paywall. O app consulta o StoreKit em busca de compras anteriores vinculadas ao Apple ID conectado. Use essa opção depois de reinstalar o app ou migrar para outro dispositivo.</p>
+- A introdução não possui paywall.
+- Uma oferta única e dispensável pode seguir a primeira prévia real.
+- Um lembrete pode aparecer após a 3ª e a 7ª exportações gratuitas.
+- Após 10 ações, a próxima exportação contabilizada é bloqueada.
 
-## Reembolsos e suporte
-<p>Os reembolsos são processados pela Apple — abra uma solicitação em <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>. Para suporte relacionado ao app, envie um e-mail para <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>.</p>
+Dispensar as ofertas iniciais não consome uma ação.
 
-## Relacionados
+## Opções Lifetime
 
-<div class="related">
-  <a href="/pt-br/docs/onboarding/"><span>Configuração</span>Introdução — onde a etapa de desbloqueio aparece pela primeira vez.</a>
-  <a href="/pt-br/docs/export/"><span>Uso</span>Exportação — o que o acesso ilimitado oferece.</a>
-</div>
+O StoreKit 2 oferece compras únicas, sem assinatura: **Individual Lifetime**, **Family Lifetime** e upgrade familiar para proprietários elegíveis. O preço localizado mostrado pela Apple é a referência. Family Lifetime depende do Compartilhamento de Compras da Apple.
+
+**Restaurar Compra** atualiza as transações do ID Apple. Para Família, confira o ID, o compartilhamento e a visibilidade do Health.md no histórico.
+
+| Problema | Ação |
+|---|---|
+| Preço ausente | Verifique rede/App Store e reabra a oferta. |
+| Oferta antes da ação 10 | É um lembrete dispensável, não o bloqueio final. |
+| Agendamento pausou | Compre ou restaure e use a recuperação normal. |
+
+<div class="related"><a href="/pt-br/docs/onboarding/"><span>Início</span>Fluxo de cinco etapas.</a><a href="/pt-br/docs/scheduling/"><span>Automação</span>Cota compartilhada.</a></div>

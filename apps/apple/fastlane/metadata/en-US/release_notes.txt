@@ -1,8 +1,5 @@
-Health.md 3.3.0 adds wake notifications for Direct CLI Access, one shared pairing code, and a clearer Sync tab.
+Health.md 3.4.2 makes getting started faster and upgrade reminders gentler.
 
-Added
-• Wake requests: turn on “Allow paired computers to send wake requests” under Sync → Direct CLI Access, and a waiting healthmd CLI command can send one visible notification to your iPhone while its wake window holds — tap it and the command completes. Everything is opt-in, and your health data never touches the notifications worker.
-• Direct CLI QR and manual pairing now use the same high-entropy 20-digit code as Android; six-digit pairing remains only as a legacy CLI fallback.
-
-Improved
-• The Sync tab now separates Mac Destination and CLI setup with a top-level selector, so Direct CLI Access is available without scrolling through Mac configuration first.
+• Onboarding is now five quick steps. The Obsidian plugin intro moved onto the sample-export screen, and importing a shared setup stays available as a quiet link on the first screen.
+• Nothing blocks setup anymore. After your first real export preview, one optional screen explains unlimited exports — dismiss it and keep going with your 10 free exports.
+• After your 3rd and 7th free exports, a small reminder shows how many remain and how unlimited exports work. Your free count is unchanged.

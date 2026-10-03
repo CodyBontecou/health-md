@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">جداول الملفات الشخصية</string>
+    <string name="a11y_profiles_empty">لا توجد ملفات تصدير شخصية بعد.</string>
+    <string name="a11y_profiles_add">ملف شخصي جديد من الإعدادات الحالية</string>
+    <string name="a11y_profiles_none_enabled">لا توجد جداول ملفات شخصية مفعّلة.</string>
+    <string name="a11y_profiles_edit">تعديل الجدول</string>
+    <string name="a11y_profiles_edit_named">تعديل جدول %1$s</string>
+    <string name="a11y_profiles_delete">حذف</string>
+    <string name="a11y_profiles_delete_named">حذف الملف الشخصي %1$s</string>
+    <string name="a11y_profiles_schedule_named">جدول %1$s</string>
+    <string name="a11y_profiles_save">حفظ</string>
+    <string name="a11y_profiles_delete_title">حذف «%1$s»؟</string>
+    <string name="a11y_profiles_delete_body">ستُزال إعداداته المحفوظة وجدوله. لا يمكن حذف آخر ملف شخصي متبقٍ.</string>
+    <string name="a11y_profiles_cadence_unit">وحدة التكرار</string>
+    <string name="a11y_profiles_days">أيام</string>
+    <string name="a11y_profiles_weeks">أسابيع</string>
+    <string name="a11y_profiles_months">أشهر</string>
+    <string name="a11y_profiles_weekday">يوم الأسبوع</string>
+    <string name="a11y_profiles_hour">الساعة</string>
+    <string name="a11y_profiles_minute">الدقيقة</string>
+    <string name="a11y_profiles_lookback">الأيام السابقة (1–30)</string>
+    <string name="a11y_profiles_every_days">كل N أيام</string>
+    <string name="a11y_profiles_every_weeks">كل N أسابيع</string>
+    <string name="a11y_profiles_every_months">كل N أشهر</string>
+</resources>

@@ -103,7 +103,7 @@ Health.md preserves source URLs as data but never fetches them. Your receiver sh
 
 ## Scheduled API exports
 
-Scheduled API exports use the same selected metrics and Data Detail setting. Completed-day runs send the configured lookback ending yesterday; optional Today Refresh runs re-fetch and resend the current day's complete snapshot. Both preserve pending work when HealthKit is locked or upload fails.
+Scheduled API exports use the same selected metrics and Data Detail setting. Each new completed-day profile occurrence resends the full configured lookback ending the day before its scheduled fire date, even when earlier runs already exported overlapping dates. For example, a daily 08:00 profile with a 14-day lookback resends all 14 completed days every morning, across the usual bounded HTTP batches. Optional Today Refresh runs independently re-fetch and resend only the current day's complete snapshot. Both preserve pending work when HealthKit is locked or upload fails; retries keep only exact unresolved dates, even if the lookback is edited before retrying.
 
 ## Practical limits
 

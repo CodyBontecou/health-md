@@ -2,7 +2,7 @@
 
 Use this prompt only to inspect the Health.md Play Console state in a browser. Repository files are the source of truth for listing copy and release numbers.
 
-This prompt is **read-only**. Do not click Save, upload an asset or AAB, create/edit a release, change a track, promote an artifact, submit review, change production availability, or otherwise mutate Play Console—even if the browser operator gives a general approval. Return a field-by-field change plan instead. Release and screenshot mutation are owned exclusively by the protected workflows described in `PLAY_STORE_COMMANDS.md`, including `.github/workflows/android-wear-screenshots.yml`.
+This prompt is **read-only**. Do not click Save, upload an asset or AAB, create/edit a release, change a track, promote an artifact, submit review, change production availability, or otherwise mutate Play Console—even if the browser operator gives a general approval. Return a field-by-field change plan instead. Release and metadata mutation are owned exclusively by the protected phone workflows described in `PLAY_STORE_COMMANDS.md`. The Wear workflows are deferred and must not be run for the current release.
 
 ---
 
@@ -19,7 +19,7 @@ You are auditing the Google Play listing for Health.md. Work through one section
 - Contains ads: No
 - Privacy policy: <https://healthmd.app/privacy-policy.html>
 
-Read current phone/Wear `versionName` and `versionCode` values from both module build files. Do not copy an old release number from a document or screenshot.
+Read the current phone `versionName` and `versionCode` from `app/build.gradle.kts` and verify them against `release-scope.json`. The Wear values are future-development inputs, not part of the current Play release.
 
 ### Listing metadata
 
@@ -50,7 +50,7 @@ Compare `build/play-metadata/reviewed/` with Console and report differences. Do 
 
 Keep the phone screenshot order recorded in `docs/aso-screenshot-pairings.md`. Do not use old `60+`, `61/61`, or `99/99` claims; use `100+`.
 
-Wear screenshots are not generic browser assets. They must be unmodified physical-watch framebuffers from the exact Play-generated base-master APK, independently reviewed, verified by `capture-wear-play-screenshot.sh`, and committed only by `.github/workflows/android-wear-screenshots.yml`. Never upload or replace them from this browser prompt or by locally invoking its implementation script.
+Wear OS publication is deferred. Do not add Wear screenshots or run a Wear screenshot workflow for the current release. Any future Wear launch must resume its exact-build physical-watch capture and independent-review process first.
 
 ### Pricing and in-app product
 
@@ -102,7 +102,7 @@ Report whether the current evidence-video URL resolves. Do not submit the declar
 
 Release pages are inspection-only here. Never upload an AAB, create/edit a release, change a testing or production track, promote an artifact, change rollout, or submit review from the browser.
 
-The only supported AAB upload is `.github/workflows/android-release.yml`, which requires an exact annotated/main-reachable SHA and uploads phone/Wear together to `qa`/`wear:internal`. The only supported production mutation is `.github/workflows/android-promote-production.yml`, which verifies sealed evidence before credentials and moves both exact codes to `production`/`wear:production` in one edit. Recovery is non-committing rather than API-read-only: its protected workflow may create and delete a temporary edit solely to inspect screenshots, but it cannot send a track `PUT` or commit an edit. Browser operators do not run that workflow. Report current release state and stop.
+The only supported AAB upload is `.github/workflows/android-release.yml`, which requires an exact annotated/main-reachable SHA and uploads the phone artifact to Internal Testing. The only supported production mutation is `.github/workflows/android-promote-production.yml`, which promotes the exact phone version code and submits it for review. Neither workflow uploads or promotes Wear. Report current release state and stop.
 
 ### Working order
 

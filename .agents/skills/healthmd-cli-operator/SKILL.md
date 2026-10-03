@@ -10,7 +10,7 @@ Use the installed standalone `healthmd`. Do not use the monorepo's `apps/apple/s
 
 ## Rules
 
-- Direct Manual IP/Tailscale is the portable default. Never add `--backend mac-app` or `--transport nearby`.
+- Direct Manual IP/Tailscale is the only portable transport. Never add `--transport nearby`.
 - On macOS/Linux use `NO_COLOR=1 TERM=dumb`, a hard `timeout`, and stdin from `/dev/null`. Give exports longer bounds than status.
 - Parse stdout JSON or the explicit output artifact. Add global `--json` whenever automation requires a structured result; interactive terminals otherwise render readable text. Pairing instructions and health-free progress may use stderr.
 - For an unfamiliar shape, run the incomplete command first: `healthmd export`, `extract`, `resume`,
@@ -64,7 +64,7 @@ NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 
 Require:
 
-- `backend == "direct"` and `mac_app == "bypassed"`;
+- the source reports `connected` and a `platform` of `ios` or `android` with readiness fields;
 - `iphone.connected == true`;
 - `iphone.app_active == true` for new work;
 - `iphone.protected_data_available == true`;
@@ -72,7 +72,7 @@ Require:
 - `iphone.can_trigger_exports == true` for generated files;
 - no conflicting `iphone.active_job_id`.
 
-Ignore status `destination.selected`: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy plus this device's truthful wake enrollment: `unavailable`/`wait_only` without a stored wake credential (no push is sent), `available`/`enrolled` when the paired iPhone enrolled wake material. Published alpha.6 binaries are still wait-only; in subsequent official builds an enrolled locked-phone wait sends one best-effort APNs notification. Android remains wait-only until FCM ships. If status fails, report its JSON and ask for the minimum action. Never switch device, port, transport, or backend silently.
+Status reports no destination: direct file mode uses the command's explicit destination. `wake_window` reports the shared local wait policy plus this device's truthful wake enrollment: `unavailable`/`wait_only` without a stored wake credential (no push is sent), `available`/`enrolled` when the paired iPhone enrolled wake material. Published alpha.6 binaries are still wait-only; in subsequent official builds an enrolled locked-phone wait sends one best-effort APNs notification. Android remains wait-only until FCM ships. If status fails, report its JSON and ask for the minimum action. Never switch device, port, or transport silently.
 
 ## Waiting for an unavailable phone
 
@@ -207,7 +207,7 @@ Do not paste source records, routes, clinical content, measurements, or full raw
 | `invalid_direct_file_receipt` | Do not manually append/merge; inspect and resume if permitted. |
 | `job_expired` | The seven-day deadline elapsed; confirm before starting a new request. |
 | `transport_unsupported` | Use Manual IP/LAN/Tailscale, not Nearby. |
-| `not_implemented` for `mac-app` | Remove the backend option; direct is default. |
+| `unknown_argument` after passing `--backend` | Remove it; the CLI is direct-only and has no backend option. |
 
 ## Privacy
 

@@ -450,7 +450,6 @@
     <string name="bullet_display_plus">Sinal de mais (+)</string>
 
     <!-- Completed localization from canonical translatable resources -->
-    <string name="add">Adicionar</string>
     <string name="action_cancel_export">Cancelar exportação</string>
     <string name="action_close_options">Fechar opções</string>
     <string name="action_set_start_date">Definir data inicial</string>
@@ -609,6 +608,12 @@
     <string name="schedule_time">Horário</string>
     <string name="schedule_date_window">Datas</string>
     <string name="schedule_date_window_past_complete_days">Dias completos anteriores</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Dias completos anteriores + hoje</string>
+    <string name="schedule_through_today_summary">Cada execução exporta os dias completos anteriores mais o arquivo parcial de hoje, então uma execução diurna também captura o sono da última noite. Combine com uma frequência horária para atualizar os dois arquivos o dia todo. Use o modo de gravação Sobrescrever ou Atualizar para evitar conteúdo duplicado no mesmo dia.</string>
+    <string name="profile_schedule_today_refresh">Atualizar a exportação de hoje</string>
+    <string name="profile_schedule_refresh_interval">Intervalo de atualização</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
+    <string name="profile_schedule_refresh_summary">Atualiza hoje a cada %1$d h</string>
     <string name="schedule_date_window_today">Hoje</string>
     <string name="schedule_export_past_days">Exportar dias anteriores</string>
     <string name="schedule_today_summary">Cada execução exporta os dados de hoje para manter seu arquivo diário atualizado. Use o modo de gravação Sobrescrever ou Atualizar para evitar conteúdo duplicado do mesmo dia.</string>
@@ -642,7 +647,7 @@
     <string name="release_notes_highlight_feedback">As sessões de CLI direto reconectam automaticamente após quedas breves do desktop, então as exportações terminam de forma confiável.</string>
     <string name="release_notes_highlight_export_parity">Os comandos de janela de ativação do desktop esperam até 120 segundos você abrir o app e conectar, sem notificações push.</string>
     <string name="release_notes_highlight_templates">O pareamento manual com endereço, porta e código de 20 dígitos continua funcionando, inclusive com versões mais antigas da CLI.</string>
-    <string name="release_notes_highlight_workouts">Inclui correções de confiabilidade e compatibilidade para telefone e Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Inclui correções de confiabilidade e compatibilidade na configuração, nas exportações, nos agendamentos e nas conexões.</string>
     <string name="export_notification_background_permission_required">As exportações agendadas precisam de acesso em segundo plano do Health Connect. Abra Health.md &gt; Agendamento para ativá-lo.</string>
     <string name="paywall_unlock_button_price">Desbloquear por %s</string>
     <string name="paywall_purchasing">Processando…</string>

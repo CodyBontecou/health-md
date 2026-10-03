@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "releaseVersionName": "1.9.1",
+  "googlePlay": {
+    "phone": {
+      "module": ":app",
+      "status": "release_candidate",
+      "versionCode": 39,
+      "testingTrack": "internal",
+      "productionTrack": "production"
+    },
+    "wear": {
+      "module": ":wear",
+      "status": "deferred",
+      "targetVersionName": "1.10.0",
+      "published": false,
+      "runtimeAdvertisedByPhone": false,
+      "reason": "Physical Pixel Watch and Samsung Galaxy Watch qualification is not yet complete."
+    }
+  }
+}

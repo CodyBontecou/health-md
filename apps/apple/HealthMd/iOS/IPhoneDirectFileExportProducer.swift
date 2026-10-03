@@ -256,11 +256,20 @@ final class IPhoneDirectFileExportProducer {
                     errorDetails: "No roll-up summary data was available for the selected period."
                 )
             }
+            // Day-level informational notes ride alongside range-level derived
+            // warnings so Export History shows them as export notes while the
+            // status stays a full success (they never degrade it).
+            var recordedPartialFailures = current.derivedOutputPartialFailures
+            for day in current.capturedDays where day.isRequestedDate {
+                for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
+                    recordedPartialFailures.append(note)
+                }
+            }
             let result = ExportOrchestrator.ExportResult(
                 successCount: successCount,
                 totalCount: current.requestedDates.count,
                 failedDateDetails: retryableFailedDateDetails + terminalNoDataDetails,
-                partialFailures: current.derivedOutputPartialFailures,
+                partialFailures: recordedPartialFailures,
                 formatsPerDate: reconciliation.effectiveFormatsPerDate,
                 completedDates: terminalNoDataDetails.map(\.date)
             )
@@ -445,8 +454,8 @@ final class IPhoneDirectFileExportProducer {
         let successCount = journal.requestedDates.count
             - retryableFailures.count
             - terminalNoData.count
-        let hasWarningDays = requestedDays.contains(where: \.hadWarnings)
-        let hasDerivedWarnings = !journal.derivedOutputPartialFailures.isEmpty
+        let hasWarningDays = requestedDays.contains(where: \.resolvedHadDegradingWarnings)
+        let hasDerivedWarnings = journal.derivedOutputPartialFailures.contains(where: \.degradesSuccess)
         let effectiveSnapshot: ExportSettingsSnapshot
         if let timeZoneIdentifier = journal.originalCalendarTimeZoneIdentifier,
            let timeZone = TimeZone(identifier: timeZoneIdentifier) {
@@ -611,12 +620,29 @@ final class IPhoneDirectFileExportProducer {
             defer { encodedPayload.remove() }
             try protectedAtomicCopy(encodedPayload.url, to: url)
             let archive = outcome.record?.healthKitRecordArchive
-            let partialFailureCount = outcome.record?.partialFailures.count ?? 0
+            let capturedPartialFailures = outcome.record?.partialFailures ?? []
+            let partialFailureCount = capturedPartialFailures.count
             let integrityWarningCount = archive?.integrityWarnings.count ?? 0
             let hasIncompleteQuery = archive?.queryResults.contains { $0.status != .success } ?? false
             let includesCanonicalArchive = detailPolicy.includesCanonicalArchive
             let hasIncompleteArchive = includesCanonicalArchive
                 && archive?.captureStatus != .complete
+            // Informational omissions (a WorkoutKit plan this device cannot
+            // decode) surface as failed plan child queries and therefore also
+            // pollute `hasIncompleteQuery` and the archive's capture status.
+            // Exclude them from the degrading variants so an otherwise complete
+            // day keeps full-success status while its note stays visible.
+            let degradingFailureCount = capturedPartialFailures
+                .filter(\.degradesSuccess)
+                .count
+            let informationalFailures = capturedPartialFailures
+                .filter { $0.isInformational == true }
+            let hasDegradingIncompleteQuery = archive?.queryResults.contains {
+                $0.status != .success && !$0.isInformationalWorkoutPlanOmission
+            } ?? false
+            let hasDegradingIncompleteArchive = includesCanonicalArchive
+                && archive?.captureStatus != .complete
+                && hasDegradingIncompleteQuery
             journal.capturedDays.append(IPhoneDirectCapturedDay(
                 sourceDate: date,
                 sourceDateIdentifier: identifier,
@@ -633,6 +659,10 @@ final class IPhoneDirectFileExportProducer {
                 integrityWarningCount: integrityWarningCount,
                 hadWarnings: partialFailureCount > 0 || integrityWarningCount > 0 ||
                     hasIncompleteQuery || hasIncompleteArchive,
+                degradingFailureCount: degradingFailureCount,
+                hadDegradingWarnings: degradingFailureCount > 0 || integrityWarningCount > 0 ||
+                    hasDegradingIncompleteQuery || hasDegradingIncompleteArchive,
+                informationalFailures: informationalFailures.isEmpty ? nil : informationalFailures,
                 failureReason: outcome.failure?.reason,
                 historyFactsRecorded: true
             ))
@@ -893,6 +923,11 @@ final class IPhoneDirectFileExportProducer {
                             partialFailureCount: day.partialFailureCount,
                             integrityWarningCount: day.integrityWarningCount,
                             hadWarnings: true,
+                            // Write-side coverage gaps lose requested entry files,
+                            // so they are degrading warnings.
+                            degradingFailureCount: day.degradingFailureCount,
+                            hadDegradingWarnings: true,
+                            informationalFailures: day.informationalFailures,
                             failureReason: day.failureReason,
                             historyFactsRecorded: day.historyFactsRecorded
                         )
@@ -1456,10 +1491,12 @@ final class IPhoneDirectFileExportProducer {
             recordCount: requestedDays.reduce(0) {
                 $0 + $1.recordCount + $1.externalRecordCount
             },
-            warningDayCount: requestedDays.filter(\.hadWarnings).count,
+            warningDayCount: requestedDays.filter(\.resolvedHadDegradingWarnings).count,
             failedDayCount: requestedDays.filter { !$0.succeeded }.count,
             integrityWarningCount: requestedDays.reduce(0) { $0 + $1.integrityWarningCount },
-            partialFailureCount: requestedDays.reduce(0) { $0 + $1.partialFailureCount }
+            partialFailureCount: requestedDays.reduce(0) {
+                $0 + $1.resolvedDegradingFailureCount
+            }
         )
     }
 

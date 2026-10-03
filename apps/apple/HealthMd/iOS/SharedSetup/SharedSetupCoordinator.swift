@@ -1747,29 +1747,20 @@ struct SharedSetupConfigurationCard: View {
     private var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown" }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
             Label("Share My Setup", systemImage: "person.2.badge.gearshape")
                 .font(.headline)
                 .accessibilityIdentifier(AccessibilityID.SharedSetup.configurationCard)
             Text("Share export preferences—not health data, permissions, credentials, purchases, or device access. Custom Markdown, frontmatter values, and endpoint host/path are copied verbatim, so review them for personal, tenant, routing, or secret text before sending.").font(.caption).foregroundStyle(.secondary)
-            HStack {
-                Button("Use a Shared Setup") {
-                    coordinator.beginImport()
-                    isImporterPresented = true
-                }
-                .accessibilityIdentifier(AccessibilityID.SharedSetup.use)
-                .sharedSetupFileImporter(
-                    isPresented: $isImporterPresented,
-                    coordinator: coordinator
-                )
-                Spacer()
-                Menu("Share") {
-                    Button("Save to Files") { prepareExport() }
-                    Button("System Share") { prepareShare() }
-                }
-                .accessibilityIdentifier(AccessibilityID.SharedSetup.share)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Spacing.s2) { setupActions }
+                VStack(alignment: .leading, spacing: Spacing.s2) { setupActions }
             }
         }
+        .sharedSetupFileImporter(
+            isPresented: $isImporterPresented,
+            coordinator: coordinator
+        )
         .fileExporter(isPresented: $isExporterPresented, document: exportDocument, contentType: .healthMdConfiguration, defaultFilename: "Health-md-Setup.healthmdconfig") { result in
             if case .failure(let error) = result { coordinator.errorMessage = error.localizedDescription }
         }
@@ -1786,6 +1777,30 @@ struct SharedSetupConfigurationCard: View {
         }
     }
 
+    @ViewBuilder
+    private var setupActions: some View {
+        SecondaryButton("Use a Shared Setup", icon: "doc.badge.gearshape") {
+            coordinator.beginImport()
+            isImporterPresented = true
+        }
+        .accessibilityIdentifier(AccessibilityID.SharedSetup.use)
+
+        Menu {
+            Button("Save to Files") { prepareExport() }
+            Button("System Share") { prepareShare() }
+        } label: {
+            HStack(spacing: Spacing.s2) {
+                Image(systemName: "square.and.arrow.up")
+                    .accessibilityHidden(true)
+                Text("Share")
+                Image(systemName: "chevron.down")
+                    .accessibilityHidden(true)
+            }
+        }
+        .buttonStyle(SecondaryButtonStyle())
+        .accessibilityIdentifier(AccessibilityID.SharedSetup.share)
+    }
+
     private func prepareExport() { do { exportDocument = try SharedSetupDocument(data: coordinator.exportData(appVersion: appVersion)); isExporterPresented = true } catch { coordinator.errorMessage = error.localizedDescription } }
     private func prepareShare() { do { shareURL = try coordinator.makeShareArtifact(appVersion: appVersion) } catch { coordinator.errorMessage = error.localizedDescription } }
     private struct ShareURL: Identifiable { let url: URL; var id: URL { url } }
@@ -1796,6 +1811,11 @@ struct SharedSetupConfigurationCard: View {
 /// and every persistence decision live in the coordinator's verified path.
 @MainActor
 final class SharedSetupV2CredentialEntryModel: ObservableObject {
+    /// `nonisolated deinit` keeps teardown off the MainActor back-deployed
+    /// task-deinit path that aborts older simulator runtimes (see the
+    /// matching annotations on the export stores and coordinators).
+    nonisolated deinit {}
+
     @Published var authorization = ""
 
     var canConfirm: Bool {

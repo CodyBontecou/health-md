@@ -5,7 +5,6 @@
     <string name="back">戻る</string>
     <string name="close">閉じる</string>
     <string name="refresh">更新</string>
-    <string name="add">追加</string>
     <string name="action_cancel_export">エクスポートのキャンセル</string>
     <string name="action_close_options">オプションを閉じる</string>
     <string name="action_set_start_date">開始日の設定</string>
@@ -462,6 +461,12 @@
     <string name="schedule_time">時間</string>
     <string name="schedule_date_window">日付</string>
     <string name="schedule_date_window_past_complete_days">過去の丸一日</string>
+    <string name="schedule_date_window_past_complete_days_through_today">過去の丸一日 + 今日</string>
+    <string name="schedule_through_today_summary">実行ごとに、過去の丸一日に加えて今日の部分ファイルもエクスポートされるため、日中の実行で昨夜の睡眠も記録されます。毎時の頻度と組み合わせれば、両方のファイルを一日中最新に保てます。同じ日のコンテンツの重複を避けるには、上書きまたは更新の書き込みモードを使用します。</string>
+    <string name="profile_schedule_today_refresh">今日のエクスポートを更新</string>
+    <string name="profile_schedule_refresh_interval">更新間隔</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d 時間</string>
+    <string name="profile_schedule_refresh_summary">今日を %1$d 時間ごとに更新</string>
     <string name="schedule_date_window_today">今日</string>
     <string name="schedule_export_past_days">過去の日をエクスポートする</string>
     <string name="schedule_today_summary">実行ごとに今日のデータがエクスポートされるため、現在の日次ファイルを最新の状態に保つことができます。同じ日のコンテンツの重複を避けるには、上書きまたは更新書き込みモードを使用します。</string>
@@ -497,7 +502,7 @@
     <string name="release_notes_highlight_feedback">Direct CLIセッションは、デスクトップとの接続が短時間切れた後に自動的に再接続され、エクスポートが確実に完了します。</string>
     <string name="release_notes_highlight_export_parity">デスクトップのウェイクウィンドウコマンドは、アプリを開いて接続するまで最大120秒待機します。プッシュ通知は使いません。</string>
     <string name="release_notes_highlight_templates">アドレス、ポート、20桁のコードによる手動ペアリングも、以前のCLIバージョンを含めて引き続き利用できます。</string>
-    <string name="release_notes_highlight_workouts">スマートフォンとWear OSの信頼性および互換性に関する修正が含まれます。</string>
+    <string name="release_notes_highlight_workouts">セットアップ、エクスポート、スケジュール、接続の信頼性と互換性を改善しました。</string>
     <string name="notification_channel_scheduled_exports_name">スケジュール済みエクスポート</string>
     <string name="notification_channel_scheduled_exports_description">スケジュール済みヘルスエクスポートの完了または失敗時の通知</string>
     <string name="export_notification_title_complete">エクスポート完了</string>

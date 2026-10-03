@@ -20,7 +20,7 @@ description: 选择 Health.md MCP 或 CLI 接口，配置 Codex、Claude 或其�
 | 基于精确的请求和响应封装进行开发 | 环回 API 或公开契约 | [环回 API](/zh-hans/docs/agent-api/) |
 | 解析架构、记录、证据或生成的测试样例 | 版本化参考文档 | [数据契约](/zh-hans/docs/reference/) |
 
-后端和传输方式均需明确选择；Health.md 不会在 iPhone 直连失败时静默回退到 Mac 应用。
+传输方式需明确选择；独立 CLI 绝不会静默回退到经由 Mac 应用的访问。
 
 ## 通过 Mac 应用使用 Codex
 

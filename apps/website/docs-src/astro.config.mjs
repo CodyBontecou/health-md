@@ -100,6 +100,7 @@ export default defineConfig({
       },
       components: {
         Head: './src/components/Head.astro',
+        SiteTitle: './src/components/SiteTitle.astro',
         SocialIcons: './src/components/HeaderLinks.astro',
         Footer: './src/components/Footer.astro',
         LanguageSelect: './src/components/EmptyLanguageSelect.astro',

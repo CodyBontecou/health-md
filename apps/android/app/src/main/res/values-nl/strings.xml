@@ -442,7 +442,6 @@
     <string name="bullet_display_plus">Plus (+)</string>
 
     <!-- Completed localization from canonical translatable resources -->
-    <string name="add">Toevoegen</string>
     <string name="action_cancel_export">Export annuleren</string>
     <string name="action_close_options">Opties sluiten</string>
     <string name="action_set_start_date">Startdatum instellen</string>
@@ -599,6 +598,12 @@
     <string name="schedule_time">Tijd</string>
     <string name="schedule_date_window">Datums</string>
     <string name="schedule_date_window_past_complete_days">Afgelopen volledige dagen</string>
+    <string name="schedule_date_window_past_complete_days_through_today">Afgelopen volledige dagen + vandaag</string>
+    <string name="schedule_through_today_summary">Elke run exporteert de afgelopen volledige dagen plus het gedeeltelijke bestand van vandaag, zodat een run overdag ook de slaap van afgelopen nacht vastlegt. Combineer met een uurlijkse frequentie om beide bestanden de hele dag vers te houden. Gebruik de schrijfmodus Overschrijven of Bijwerken om dubbele inhoud op dezelfde dag te voorkomen.</string>
+    <string name="profile_schedule_today_refresh">Export van vandaag verversen</string>
+    <string name="profile_schedule_refresh_interval">Verversingsinterval</string>
+    <string name="profile_schedule_refresh_interval_hours">%1$d u</string>
+    <string name="profile_schedule_refresh_summary">Ververst vandaag elke %1$d u</string>
     <string name="schedule_date_window_today">Vandaag</string>
     <string name="schedule_export_past_days">Afgelopen dagen exporteren</string>
     <string name="schedule_today_summary">Bij elke uitvoering worden de gegevens van vandaag geëxporteerd, zodat je huidige dagbestand up-to-date blijft. Gebruik de schrijfmodus Overschrijven of Bijwerken om dubbele inhoud van dezelfde dag te voorkomen.</string>
@@ -631,7 +636,7 @@
     <string name="release_notes_highlight_feedback">Direct CLI-sessies maken automatisch opnieuw verbinding na korte desktoponderbrekingen, zodat exports betrouwbaar voltooid worden.</string>
     <string name="release_notes_highlight_export_parity">Wake-window-opdrachten op de desktop wachten tot 120 seconden tot je de app opent en verbindt, zonder pushmeldingen.</string>
     <string name="release_notes_highlight_templates">Handmatig koppelen met adres, poort en 20-cijferige code werkt nog steeds, ook met oudere CLI-versies.</string>
-    <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor telefoon en Wear OS.</string>
+    <string name="release_notes_highlight_workouts">Bevat betrouwbaarheids- en compatibiliteitsoplossingen voor configuratie, exports, planningen en verbindingen.</string>
     <string name="export_notification_background_permission_required">Geplande exports hebben achtergrondtoegang voor Health Connect nodig. Open Health.md &gt; Planning om dit in te schakelen.</string>
     <string name="paywall_unlock_button_price">Ontgrendel voor %s</string>
     <string name="paywall_purchasing">Verwerken\u2026</string>

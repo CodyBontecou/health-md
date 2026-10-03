@@ -137,7 +137,8 @@ enum UITestLaunchHelper {
         macExportStatus: String = "none",
         macDestinationPath: String = "/tmp/TestMacVault",
         analyticsTransport: String? = nil,
-        remoteConfig: String? = nil
+        remoteConfig: String? = nil,
+        showsPostOnboardingPaywall: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
@@ -155,6 +156,7 @@ enum UITestLaunchHelper {
             "UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES": useHealthKitExportPreviewFixtures ? "true" : "false",
             "UITEST_MAC_EXPORT_STATUS": macExportStatus,
             "UITEST_MAC_DESTINATION_PATH": macDestinationPath,
+            "UITEST_SHOW_POST_ONBOARDING_PAYWALL": showsPostOnboardingPaywall ? "true" : "false",
         ]
         if let exportResult {
             app.launchEnvironment["UITEST_EXPORT_RESULT"] = exportResult

@@ -72,6 +72,9 @@ nonisolated enum PricingAnalyticsEventName: String, CaseIterable, Sendable {
     case freeExportUsed = "pricing_free_export_used"
     case paywallShown = "pricing_paywall_shown"
     case paywallCTATapped = "pricing_paywall_cta_tapped"
+    case upgradePromptShown = "pricing_upgrade_prompt_shown"
+    case upgradePromptTapped = "pricing_upgrade_prompt_tapped"
+    case upgradePromptDismissed = "pricing_upgrade_prompt_dismissed"
     case exportBlockedByQuota = "pricing_export_blocked_by_quota"
     case purchaseStarted = "pricing_purchase_started"
     case purchaseFinished = "pricing_purchase_finished"
@@ -389,6 +392,7 @@ nonisolated enum PricingAnalyticsPaywallContext: String, CaseIterable, Sendable 
     case macTarget = "mac_target"
     case exportQuota = "export_quota"
     case restore
+    case upgradePrompt = "upgrade_prompt"
 }
 
 nonisolated enum PricingAnalyticsOnboardingStep: String, CaseIterable, Sendable, Hashable {

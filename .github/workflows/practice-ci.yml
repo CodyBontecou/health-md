@@ -1,6 +1,9 @@
 name: Practice CI
 
 on:
+  # Pull requests are path-filtered by the changes job so the stable final gate
+  # still reports a conclusive required context on every PR while unrelated
+  # changes skip the focused clinical-boundary policy jobs.
   pull_request:
   push:
     branches: [main]
@@ -30,7 +33,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect practice-affecting changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.detect.outputs.run }}
+    steps:
+      - name: Check out source for the local composite action
+        uses: actions/checkout@v4
+      - name: Detect whether Practice CI must run
+        id: detect
+        uses: ./.github/actions/component-changes
+        with:
+          component: Practice CI
+          paths: |
+            apps/practice/**
+            apps/apple/HealthMd/Shared/Practice/**
+            apps/apple/HealthMdTests/Practice/**
+            apps/apple/HealthMd.xcodeproj/**
+            apps/android/app/src/main/java/com/healthmd/domain/practice/**
+            apps/android/app/src/test/java/com/healthmd/domain/practice/**
+            apps/android/app/build.gradle.kts
+            docs/product/practice/**
+            docs/architecture/adr-0003-practice-clinical-boundary.md
+            docs/features/clinician-report-v1.md
+            AGENTS.md
+            LICENSES.md
+            Makefile
+            .github/workflows/practice-ci.yml
+
   validate:
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -51,6 +89,13 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Restore Playwright browser engines
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: practice-playwright-${{ runner.os }}-${{ hashFiles('apps/practice/package-lock.json') }}
+          restore-keys: practice-playwright-${{ runner.os }}-
 
       - name: Install exact Playwright browser engines and system dependencies
         run: npx playwright install --with-deps chromium firefox webkit
@@ -74,6 +119,8 @@ jobs:
 
   practice-focused-apple-policy:
     name: Practice focused Apple policy
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: macos-15
     timeout-minutes: 10
     steps:
@@ -184,6 +231,8 @@ jobs:
 
   practice-focused-android-policy:
     name: Practice focused Android policy
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     defaults:
@@ -246,23 +295,35 @@ jobs:
         run: ./gradlew --no-daemon :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
 
       - name: Regenerate BuildConfig and run focused included Practice policy test
+        # PRACTICE_COMPILED_IN feeds a buildConfigField, which is a tracked
+        # GenerateBuildConfig task input, so Gradle re-runs only that task and
+        # the app-module Kotlin recompile. A full :app:clean is unnecessary and
+        # would force recompiling every dependency plus the Rust core.
         env:
           JAVA_TOOL_OPTIONS: -Dhealthmd.practice.expectedCompiledIn=true
           PRACTICE_COMPILED_IN: included
-        run: ./gradlew --no-daemon :app:clean :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
+        run: ./gradlew --no-daemon :app:testPlayDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
 
   gate:
     name: Practice CI
     if: ${{ always() }}
-    needs: [validate, practice-focused-apple-policy, practice-focused-android-policy]
+    needs: [changes, validate, practice-focused-apple-policy, practice-focused-android-policy]
     runs-on: ubuntu-latest
     steps:
       - name: Require Practice and focused mobile policy checks
         env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
           VALIDATE_RESULT: ${{ needs.validate.result }}
           APPLE_RESULT: ${{ needs.practice-focused-apple-policy.result }}
           ANDROID_RESULT: ${{ needs.practice-focused-android-policy.result }}
         run: |
+          set -e
+          test "$CHANGES_RESULT" = success
+          if [ "$CHANGES_RUN" != "true" ]; then
+            echo "No practice-affecting changes in this pull request; Practice CI skipped."
+            exit 0
+          fi
           test "$VALIDATE_RESULT" = success
           test "$APPLE_RESULT" = success
           test "$ANDROID_RESULT" = success

@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>预览版 · 可移植直连 MCP</strong>
-<p>面向 macOS、Linux 和 Windows 的独立 19 工具 <code>healthmd mcp serve</code> 拓扑已作为明确未经资格验证的公开预览版打包。其不使用云服务的 <code>serve-read-only</code> 入口在本地配对后只提供 13 个就绪状态和查询工具。在 macOS 或 Linux 上使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装。</p>
+<p>面向 macOS、Linux 和 Windows 的独立 <code>healthmd mcp serve</code> 拓扑已作为 19 工具的未验证预览版 <code>0.1.0-alpha.7</code> 发布。其不使用云服务的 <code>serve-read-only</code> 入口在本地配对后只提供 13 个就绪状态和查询工具。在 macOS 或 Linux 上使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装。</p>
 </div>
 
 ## 内置 Mac 版要求
@@ -36,8 +36,9 @@ Codex / Claude / another local MCP host
 
 - 在 macOS、Linux 或 Windows 上安装独立预览版；无需 Mac 应用及其环回服务。
 - 与支持查询的 iPhone 配对一次，并在每次新的类型化请求期间保持 Health.md 前台运行。Android 不支持类型化 MCP。
+- MCP 配对工具仅用于 iPhone。启动 MCP 前，请通过 CLI 明确配对 Android。
 - 使用 Manual IP 或 Tailscale 连通性以及原生凭据存储；Linux 要求已解锁的 Secret Service 提供方。
-- 配置已安装的兼容启动器或同一二进制文件的 stdio 服务器。两者都使用已配对的直连后端。
+- 配置已安装的兼容启动器或同一二进制文件的 stdio 服务器。两者都使用已配对的直连访问。
 
 ## Codex 设置
 
@@ -115,7 +116,7 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 
 ## 可用工具
 
-内置 Mac 服务器提供 21 个固定工具：13 个就绪状态/查询工具、四个生成文件作业工具和四个加密上下文更新作业工具。包含 19 个工具的可移植预览版保留 13 个就绪状态/查询工具和四个导出工具，用两个直连配对工具替换 Mac 更新作业，并直接在前台 iPhone 上运行类型化查询。
+内置 Mac 服务器提供 21 个固定工具：13 个就绪状态/查询工具、四个生成文件工具和四个加密上下文更新工具。已发布的可移植预览版 `0.1.0-alpha.7` 有 19 个工具。当前开发源码加入完整数据集与受限构件读取后有 21 个；后续版本发布前请勿假定存在这两个工具。
 
 ### 就绪状态与发现
 
@@ -148,6 +149,12 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 | `healthmd_export_job_status` | 检查导出进度和目标位置回执 |
 | `healthmd_export_job_resume` | 恢复完全相同且不可变的持久导出作业 |
 | `healthmd_export_job_cancel` | 明确取消导出作业 |
+### 完整原始语料访问 · 仅限便携式本地 MCP
+
+| 工具 | 用途 |
+|---|---|
+| `healthmd_export_raw` | 经明确批准后，在 iPhone 或 Android 上启动持久的原始语料导出 |
+| `healthmd_raw_artifact_read` | 以受限分块读取已验证且绑定到作业的工件 |
 
 导出、恢复和取消工具被标记为可能产生破坏性影响的写入。当前 Claude 主机要求用户明确交互，因为所配置的导出模式可能更新或覆盖生成文件。上方 Codex 配置也会对这些工具发出批准提示，作为额外保护。
 

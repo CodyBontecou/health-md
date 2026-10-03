@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Vorschau · portables direktes MCP</strong>
-<p>Die separate Topologie mit 19 Tools über <code>healthmd mcp serve</code> für macOS, Linux und Windows ist als ausdrücklich unqualifizierte Vorschau öffentlich paketiert. Der cloudfreie Einstiegspunkt <code>serve-read-only</code> stellt nach der lokalen Kopplung nur die 13 Bereitschafts- und Abfragetools bereit. Installieren Sie unter macOS oder Linux mit <code>brew install CodyBontecou/tap/healthmd</code>.</p>
+<p>Die separate Topologie <code>healthmd mcp serve</code> für macOS, Linux und Windows ist als unqualifizierte Vorschau mit 19 Tools unter <code>0.1.0-alpha.7</code> veröffentlicht. Der cloudfreie Einstiegspunkt <code>serve-read-only</code> stellt nach der lokalen Kopplung nur die 13 Bereitschafts- und Abfragetools bereit. Installieren Sie unter macOS oder Linux mit <code>brew install CodyBontecou/tap/healthmd</code>.</p>
 </div>
 
 ## Voraussetzungen für den mitgelieferten Mac
@@ -36,6 +36,7 @@ Der übliche Helferpfad ist `/Applications/Health.md.app/Contents/Helpers/health
 
 - Installiere die eigenständige Vorschau unter macOS, Linux oder Windows; Mac-App und Loopback-Dienst sind nicht erforderlich.
 - Kopple einmal ein abfragefähiges iPhone und lasse Health.md für jede neue typisierte Anfrage im Vordergrund. Typisiertes MCP wird unter Android nicht unterstützt.
+- Die MCP-Kopplungswerkzeuge unterstützen nur iPhone. Kopple Android vor dem MCP-Start ausdrücklich über die CLI.
 - Nutze Manual IP oder Tailscale und den nativen Anmeldedatenspeicher; Linux erfordert einen entsperrten Secret-Service-Anbieter.
 - Konfiguriere den installierten Kompatibilitätsstarter oder den gleichen stdio-Server. Beide verwenden die gekoppelte Direktverbindung.
 
@@ -115,7 +116,7 @@ Wenn der Host MCP Apps nicht unterstützt, funktionieren die Tools trotzdem. `he
 
 ## Verfügbare Tools
 
-Der mitgelieferte Mac-Server stellt 21 feste Tools bereit: 13 für Bereitschaft und Abfragen, vier für Aufträge mit generierten Dateien und vier für Aktualisierungsaufträge des verschlüsselten Kontexts. Die portable Vorschau mit 19 Tools behält die 13 Bereitschafts-/Abfragetools und vier Exporttools bei, ersetzt Mac-Aktualisierungsaufträge durch zwei Tools zur direkten Kopplung und führt typisierte Abfragen direkt auf dem im Vordergrund geöffneten iPhone aus.
+Der mitgelieferte Mac-Server stellt 21 feste Tools bereit: 13 für Bereitschaft und Abfragen, vier für generierte Dateien und vier für Aktualisierungen des verschlüsselten Kontexts. Die veröffentlichte portable Vorschau `0.1.0-alpha.7` hat 19 Tools. Der aktuelle Entwicklungsstand hat durch vollständigen Corpus-Export und begrenztes Artefaktlesen 21; diese zwei Tools gelten erst mit einer späteren Veröffentlichung.
 
 ### Bereitschaft und Entdeckung
 
@@ -148,6 +149,12 @@ Der mitgelieferte Mac-Server stellt 21 feste Tools bereit: 13 für Bereitschaft 
 | `healthmd_export_job_status` | Überprüfen Sie den Exportfortschritt und den Zielbeleg |
 | `healthmd_export_job_resume` | Setzen Sie den exakt festgelegten unveränderlichen persistenten Exportauftrag fort |
 | `healthmd_export_job_cancel` | Den Exportauftrag explizit abbrechen |
+### Vollständiger Rohdatenzugriff · nur portables lokales MCP
+
+| Tool | Zweck |
+|---|---|
+| `healthmd_export_raw` | Nach ausdrücklicher Freigabe einen dauerhaften Rohdaten-Gesamtexport auf iPhone oder Android starten |
+| `healthmd_raw_artifact_read` | Einen begrenzten Block des validierten, auftragsgebundenen Artefakts lesen |
 
 Die Tools zum Exportieren, Fortsetzen und Abbrechen werden als potenziell destruktive Schreibvorgänge markiert und erfordern eine explizite Interaktion auf aktuellen Claude-Hosts, da konfigurierte Exportmodi generierte Dateien aktualisieren oder überschreiben können. Die obige Codex-Konfiguration weist als zusätzlichen Schutz auf diese Tools hin.
 

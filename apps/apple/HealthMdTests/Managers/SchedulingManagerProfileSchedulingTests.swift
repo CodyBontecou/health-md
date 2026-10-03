@@ -72,11 +72,12 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             now: @escaping @Sendable () -> Date,
             schedule: ExportSchedule? = nil,
             systemSideEffectsEnabled: Bool = false,
+            pendingStoreOverride: PendingExportStoring? = nil,
             isProfileBlocked: @escaping @MainActor (UUID) -> Bool = { _ in false }
         ) -> SchedulingManager {
             let harness = self
             let manager = SchedulingManager(
-                pendingExportStore: pendingStore,
+                pendingExportStore: pendingStoreOverride ?? pendingStore,
                 exportNotificationScheduler: notificationScheduler,
                 initialSchedule: schedule ?? ExportSchedule(isEnabled: false),
                 persistScheduleChanges: false,
@@ -198,6 +199,101 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         XCTAssertNotNil(entry?.lastExportDate)
         await manager.runDueProfileOccurrences()
         XCTAssertEqual(harness.runnerDates.count, 1, "entry no longer due")
+    }
+
+    func testMorningAPIProfileSendsFullLookbackAlongsideTodayRefresh() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 8)
+        _ = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) { entry in
+            entry.lookbackDays = 14
+            entry.lastExportDate = self.date(year: 2026, month: 8, day: 9, hour: 8)
+            entry.todayRefreshEnabled = true
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+
+        await manager.runDueProfileOccurrences()
+
+        let lookback = ExportOrchestrator.dateRange(
+            from: date(year: 2026, month: 7, day: 27),
+            to: date(year: 2026, month: 8, day: 9), calendar: calendar
+        )
+        XCTAssertEqual(harness.runnerDates.map(\.count).sorted(), [1, 14])
+        XCTAssertTrue(harness.runnerDates.contains(lookback))
+        XCTAssertTrue(harness.runnerDates.contains([calendar.startOfDay(for: now)]))
+        XCTAssertTrue(harness.runnerTargets.allSatisfy { $0 == .apiEndpoint })
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+        await manager.runDueProfileOccurrences()
+        XCTAssertEqual(harness.runnerDates.count, 2, "neither occurrence repeats after success")
+    }
+
+    func testProfileLookbackRetryRunsOnlyFrozenResidualDatesAfterScheduleEdit() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 8)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) { entry in
+            entry.lookbackDays = 14
+        }
+        harness.resultProvider = { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: 7, totalCount: dates.count,
+                failedDateDetails: dates.dropFirst(7).map { FailedDateDetail(date: $0, reason: .fileWriteError) },
+                completedDates: Array(dates.prefix(7))
+            )
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        await manager.runDueProfileOccurrences()
+
+        let pending = try XCTUnwrap(try harness.pendingStore.loadAll().first)
+        XCTAssertEqual(pending.dates.count, 7)
+        XCTAssertEqual(pending.originalRequestedDates.count, 14)
+        ScheduledExportEntryStore(userDefaults: defaults).update(profileID: profileID) {
+            $0.lookbackDays = 30
+        }
+        harness.resultProvider = nil
+        await manager.runDueProfileOccurrences()
+
+        XCTAssertEqual(harness.runnerDates.map(\.count), [14, 7])
+        XCTAssertEqual(harness.runnerDates.last, pending.dates)
+        XCTAssertEqual(harness.notificationScheduler.allScheduledRequests.last?.id, pending.id)
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+        await manager.runDueProfileOccurrences()
+        XCTAssertEqual(harness.runnerDates.count, 2, "a completed residual satisfies the original occurrence")
+    }
+
+    private struct UnavailablePendingStore: PendingExportStoring {
+        enum Failure: Error { case unavailable }
+        let failOnRead: Bool
+        func loadAll() throws -> [PendingExportRequest] {
+            if failOnRead { throw Failure.unavailable }
+            return []
+        }
+        func upsert(_ request: PendingExportRequest) throws { throw Failure.unavailable }
+        func remove(id: UUID) throws { throw Failure.unavailable }
+        func clearCompletedRequests(ids: Set<UUID>) throws { throw Failure.unavailable }
+        func notificationIdentifier(for request: PendingExportRequest) -> String {
+            ExportNotificationIdentifiers.pendingExport(for: request)
+        }
+    }
+
+    func testProfileOccurrenceDoesNotExpandWindowWhenPendingStorageFails() async {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 8)
+        let previousSuccess = date(year: 2026, month: 8, day: 9, hour: 8)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) { entry in
+            entry.lookbackDays = 14
+            entry.lastExportDate = previousSuccess
+        }
+        for failOnRead in [true, false] {
+            let manager = harness.makeManager(
+                defaults: defaults, keychain: keychain, now: { now },
+                pendingStoreOverride: UnavailablePendingStore(failOnRead: failOnRead)
+            )
+            await manager.runDueProfileOccurrences()
+        }
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+        XCTAssertEqual(
+            ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: profileID)?.lastExportDate,
+            previousSuccess
+        )
     }
 
     func testBlockedImportedProfileDisablesEntryBeforeDestinationOrExportWork() async throws {

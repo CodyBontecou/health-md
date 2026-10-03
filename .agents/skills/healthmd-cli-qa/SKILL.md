@@ -133,7 +133,7 @@ Pass:
 Negative smoke:
 
 - `--transport nearby` → `transport_unsupported`;
-- `--backend mac-app status` → deterministic `not_implemented` without opening/looking for the app;
+- `--backend direct status` → deterministic `unknown_argument` exit-2 parser error with no backend vocabulary; `--backend` no longer exists;
 - invalid date/selector/output combinations → `invalid_request`;
 - missing/unsafe file destination fails before network work;
 - Windows file mode → validated native absolute destination with traversal/symlink/identity protections.
@@ -209,7 +209,7 @@ Pass:
 - scanning the QR from **Sync → CLI → Direct CLI Access → Scan Pairing QR** starts pairing automatically without a second Pair tap; camera denial recovers after Settings, malformed/noncanonical private hosts and external custom-URL opens cannot pair, and manual code entry remains available;
 - negotiated local MCP Apps render the native pairing image in the inline pairing card; fallback hosts retain `image/png`, while no text or `structuredContent` contains the code, host, or pairing URI;
 - local trust records intended iPhone and reconnect needs no new code;
-- status says `backend: direct`, `mac_app: bypassed`, reports protected/readiness state, and no health values;
+- status reports protected/readiness state and no health values, with no `backend`, `mac_app`, or `destination` fields;
 - raw validates exact dates, profile/result/archive/schema, manifests, byte counts, partition chain, and final digest before atomic output;
 - extract and receipt match requested scope and empty/incomplete distinctions;
 - production file output stays under explicit destination and has valid receipt;
@@ -256,7 +256,7 @@ Pass:
 | Partial extract | No values without `--allow-partial`. |
 | Windows file destination | Generated files commit under the exact validated bound destination; raw/extract remain unaffected. |
 | Nearby | `transport_unsupported`; no hidden Manual IP fallback. |
-| Mac backend | `not_implemented`; no app/localhost dependency. |
+| Mac backend | No backend option exists; `--backend` is rejected as an unknown argument and nothing contacts the app/localhost. |
 
 ## Platform matrix
 

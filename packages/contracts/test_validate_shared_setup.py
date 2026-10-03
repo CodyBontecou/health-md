@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import tempfile
 import unittest
@@ -18,6 +19,7 @@ APPLE_V2_FIXTURE = ROOT / "packages/contracts/shared-setup/v2/fixtures/apple-sha
 ANDROID_V2_FIXTURE = ROOT / "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json"
 TRANSACTION_SCENARIO_FIXTURE = ROOT / "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json"
 METRIC_REGISTRY = ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"
+METRIC_REGISTRY_SHA256 = hashlib.sha256(METRIC_REGISTRY.read_bytes()).hexdigest()
 
 
 class SharedSetupV2ValidationTests(unittest.TestCase):
@@ -225,6 +227,7 @@ class SharedSetupV2ValidationTests(unittest.TestCase):
         self.assert_rejected(candidate)
 
         candidate = copy.deepcopy(self.android)
+        candidate["metric_registry"]["registry_sha256"] = METRIC_REGISTRY_SHA256
         candidate["metric_aliases"][0]["apple_selection_id"] = "wrong"
         self.assert_rejected(candidate)
 
@@ -475,7 +478,7 @@ class SharedSetupV2ValidationTests(unittest.TestCase):
         self.validate(candidate)
 
         current = copy.deepcopy(candidate)
-        current["metric_registry"] = copy.deepcopy(self.android["metric_registry"])
+        current["metric_registry"]["registry_sha256"] = METRIC_REGISTRY_SHA256
         self.assert_rejected(current)
 
     def test_v2_paths_and_endpoints_are_safe_components(self) -> None:

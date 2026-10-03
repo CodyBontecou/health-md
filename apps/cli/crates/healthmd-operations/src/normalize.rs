@@ -158,6 +158,29 @@ pub struct ExtractSelection {
     pub projection_pointers: Vec<String>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RawCorpusFormat {
+    Auto,
+    Json,
+    Ndjson,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RawCorpusExportInput {
+    pub dates: DateOptions,
+    pub provider_id: Option<String>,
+    pub format: RawCorpusFormat,
+    pub include_exercise_routes: bool,
+    pub timeout: Duration,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RawArtifactReadInput {
+    pub job_id: Uuid,
+    pub offset: u64,
+    pub maximum_bytes: usize,
+}
+
 impl SelectionOptions {
     /// True when any request-scoped selector is present.
     pub fn is_requested(&self) -> bool {
@@ -363,6 +386,145 @@ impl GeneratedFileExportInput {
             timeout: self.timeout,
         })
     }
+}
+
+/// Parse the local-MCP full public/authorized corpus request shared by iOS and Android adapters.
+///
+/// This scope is deliberately explicit: it means every public record type supported by the
+/// selected mobile source and authorized by the user, never a platform-private database.
+///
+/// # Errors
+///
+/// Fails closed for unknown keys, malformed dates/provider IDs, or out-of-range timeouts.
+pub fn raw_corpus_export_from_value(
+    arguments: &Value,
+    today: NaiveDate,
+) -> Result<RawCorpusExportInput, OperationInputError> {
+    let arguments = arguments
+        .as_object()
+        .ok_or_else(|| OperationInputError::invalid("arguments must be an object"))?;
+    ensure_keys(
+        arguments,
+        &[
+            "scope",
+            "date_selection",
+            "date_range",
+            "provider_id",
+            "format",
+            "include_exercise_routes",
+            "wait_timeout_seconds",
+        ],
+    )?;
+    if arguments.get("scope").and_then(Value::as_str) != Some("all_public_authorized") {
+        return Err(OperationInputError::invalid(
+            "scope must be all_public_authorized",
+        ));
+    }
+    let dates = match arguments.get("date_selection").and_then(Value::as_str) {
+        Some("all_available") if !arguments.contains_key("date_range") => {
+            DateOptions::all_available()
+        }
+        Some("explicit_range") => {
+            let range = arguments
+                .get("date_range")
+                .and_then(Value::as_object)
+                .ok_or_else(|| OperationInputError::invalid("date_range is required"))?;
+            ensure_keys(range, &["start", "end"])?;
+            DateOptions::exact(
+                required_string(range, "start")?.to_owned(),
+                required_string(range, "end")?.to_owned(),
+            )
+        }
+        _ => return Err(OperationInputError::invalid("invalid date_selection")),
+    };
+    // Validate now so every adapter receives the same resolved date grammar.
+    let _ = dates.resolve(today)?;
+    let provider_id = arguments
+        .get("provider_id")
+        .map(|value| {
+            value
+                .as_str()
+                .filter(|provider| valid_machine_identifier(provider))
+                .map(str::to_owned)
+                .ok_or_else(|| OperationInputError::invalid("invalid provider_id"))
+        })
+        .transpose()?;
+    let format = match arguments
+        .get("format")
+        .and_then(Value::as_str)
+        .unwrap_or("auto")
+    {
+        "auto" => RawCorpusFormat::Auto,
+        "json" => RawCorpusFormat::Json,
+        "ndjson" => RawCorpusFormat::Ndjson,
+        _ => return Err(OperationInputError::invalid("invalid raw format")),
+    };
+    let include_exercise_routes =
+        optional_bool(arguments, "include_exercise_routes")?.unwrap_or(true);
+    let timeout_seconds = arguments
+        .get("wait_timeout_seconds")
+        .map(number)
+        .transpose()?
+        .unwrap_or_else(|| Duration::from_secs(DEFAULT_EXPORT_TIMEOUT_SECONDS).as_secs_f64());
+    if !timeout_seconds.is_finite() || timeout_seconds <= 0.0 {
+        return Err(OperationInputError::invalid("invalid wait_timeout_seconds"));
+    }
+    let timeout = Duration::from_secs_f64(timeout_seconds);
+    if !(Duration::from_secs(MINIMUM_EXPORT_TIMEOUT_SECONDS)
+        ..=Duration::from_secs(MAXIMUM_EXPORT_TIMEOUT_SECONDS))
+        .contains(&timeout)
+    {
+        return Err(OperationInputError::invalid("invalid wait_timeout_seconds"));
+    }
+    Ok(RawCorpusExportInput {
+        dates,
+        provider_id,
+        format,
+        include_exercise_routes,
+        timeout,
+    })
+}
+
+/// Parse one bounded read from a completed, job-bound raw artifact.
+///
+/// # Errors
+///
+/// Fails for unknown keys, malformed identifiers, offsets, or chunk sizes.
+pub fn raw_artifact_read_from_value(
+    arguments: &Value,
+) -> Result<RawArtifactReadInput, OperationInputError> {
+    let arguments = arguments
+        .as_object()
+        .ok_or_else(|| OperationInputError::invalid("arguments must be an object"))?;
+    ensure_keys(arguments, &["job_id", "offset", "max_bytes"])?;
+    let job_id = arguments
+        .get("job_id")
+        .and_then(Value::as_str)
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .ok_or_else(|| OperationInputError::invalid("invalid job_id"))?;
+    let offset = match arguments.get("offset") {
+        Some(value) => value
+            .as_u64()
+            .ok_or_else(|| OperationInputError::invalid("invalid offset"))?,
+        None => 0,
+    };
+    let maximum_bytes = match arguments.get("max_bytes") {
+        Some(value) => usize::try_from(
+            value
+                .as_u64()
+                .ok_or_else(|| OperationInputError::invalid("invalid max_bytes"))?,
+        )
+        .unwrap_or(usize::MAX),
+        None => crate::limits::DEFAULT_RAW_ARTIFACT_CHUNK_BYTES,
+    };
+    if maximum_bytes == 0 || maximum_bytes > crate::limits::MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES {
+        return Err(OperationInputError::invalid("invalid max_bytes"));
+    }
+    Ok(RawArtifactReadInput {
+        job_id,
+        offset,
+        maximum_bytes,
+    })
 }
 
 /// Parse and normalize the structured generated-file operation used by MCP.
@@ -719,9 +881,88 @@ fn number(value: &Value) -> Result<f64, OperationInputError> {
         .ok_or_else(|| OperationInputError::invalid("expected number"))
 }
 
+fn valid_machine_identifier(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 64
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || matches!(byte, b'_' | b'-' | b'.')
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn full_corpus_and_artifact_reads_are_strict_and_bounded() {
+        let today = NaiveDate::from_ymd_opt(2026, 8, 1).unwrap();
+        let input = raw_corpus_export_from_value(
+            &serde_json::json!({
+                "scope": "all_public_authorized",
+                "date_selection": "all_available",
+                "provider_id": "health_connect",
+                "format": "ndjson",
+                "include_exercise_routes": true,
+                "wait_timeout_seconds": 300
+            }),
+            today,
+        )
+        .unwrap();
+        assert_eq!(input.dates, DateOptions::all_available());
+        assert_eq!(input.provider_id.as_deref(), Some("health_connect"));
+        assert_eq!(input.format, RawCorpusFormat::Ndjson);
+        assert!(input.include_exercise_routes);
+
+        let automatic = raw_corpus_export_from_value(
+            &serde_json::json!({
+                "scope": "all_public_authorized",
+                "date_selection": "all_available"
+            }),
+            today,
+        )
+        .unwrap();
+        assert_eq!(automatic.format, RawCorpusFormat::Auto);
+        assert!(automatic.include_exercise_routes);
+
+        assert!(
+            raw_corpus_export_from_value(
+                &serde_json::json!({
+                    "scope": "all_public_authorized",
+                    "date_selection": "all_available",
+                    "provider_id": "Health Connect"
+                }),
+                today,
+            )
+            .is_err()
+        );
+        assert!(
+            raw_corpus_export_from_value(
+                &serde_json::json!({
+                    "scope": "private_database",
+                    "date_selection": "all_available"
+                }),
+                today,
+            )
+            .is_err()
+        );
+
+        let job_id = Uuid::new_v4();
+        let read = raw_artifact_read_from_value(&serde_json::json!({
+            "job_id": job_id,
+            "offset": 42,
+            "max_bytes": crate::limits::MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES
+        }))
+        .unwrap();
+        assert_eq!(read.job_id, job_id);
+        assert_eq!(read.offset, 42);
+        assert!(
+            raw_artifact_read_from_value(&serde_json::json!({
+                "job_id": job_id,
+                "max_bytes": crate::limits::MAXIMUM_RAW_ARTIFACT_CHUNK_BYTES + 1
+            }))
+            .is_err()
+        );
+    }
 
     #[test]
     fn date_options_are_exclusive_and_deterministic() {

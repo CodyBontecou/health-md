@@ -1,8 +1,8 @@
 # Health.md for Android
 
-## Wear OS companion
+## Wear OS companion (deferred)
 
-The separately buildable `:wear` module ships only with the **Google Play** phone variant under the same `com.healthmd.android` Play listing and signing identity, with a non-colliding 1,000,000+ version-code range. The F-Droid variant does not include Wear Data Layer code or advertise a Wear companion. `:wearable-contract` is the pure private aggregate transport contract. The phone remains Health Connect authoritative; the watch has no direct Health Connect or Health Services sensing. Build with `./gradlew :wear:assembleDebug` and see `docs/features/wear-os-implementation.md` for privacy, validation, release, emulator, and physical battery/OEM gates.
+The separately buildable `:wear` module remains in development, but it is **not included in the current Google Play release**. The phone app does not advertise Wear capabilities, start Data Layer synchronization, or show Wear settings while publication is deferred. `release-scope.json` records the phone-only `1.9.1` boundary and targets Wear requalification for `1.10.0`. See `docs/features/wear-os-completion-audit.md` for the outstanding physical-device work.
 
 > **Health Connect to Markdown, JSON, NDJSON, CSV, and Obsidian Bases — private files you control.**
 
@@ -25,7 +25,7 @@ Both variants use the same application ID (`com.healthmd.android`), version, Hea
 | --- | --- | --- |
 | Access model | 10 free manual exports, then one-time Play purchase | Full access included; no purchase or restore UI |
 | Health sources | Health Connect plus optional direct Fitbit, Oura, WHOOP, and Withings providers | Health Connect only |
-| Wear OS companion | Included | Unavailable |
+| Wear OS companion | Deferred; not in the current Play release | Unavailable |
 | Review, attribution, onboarding telemetry | Play review and bounded first-party telemetry are available/configuration-gated | Not compiled in; no Health.md telemetry or telemetry identity/state |
 | Release artifact | Signed `app-play-release.aab` | Unsigned `app-fdroid-release-unsigned.apk`, signed by F-Droid |
 
@@ -220,14 +220,14 @@ app/
         settings/                     # Advanced settings, format, frontmatter, daily notes
         theme/                        # Design tokens and Material theme
     res/                              # Icons, strings/localizations, shortcuts, themes
-  src/play/                           # Billing, telemetry, OAuth providers, Play review, and Wear transport
+  src/play/                           # Billing, telemetry, OAuth providers, Play review, and dormant Wear code
   src/fdroid/                         # Included access and no-op/absent Play integrations
   src/test/java/com/healthmd/         # Shared unit and export-contract tests
   src/playTest/java/com/healthmd/     # Play integration tests
   src/fdroidTest/java/com/healthmd/   # F-Droid entitlement/privacy/absence tests
 
 docs/                                 # Export-contract docs, parity notes, automation, accessibility
-fastlane/                             # Non-publishing paired release validation lane
+fastlane/                             # Non-publishing local validation helpers
 play-console/                         # Play Console listing assets and screenshots
 play-store-screenshots/               # Marketing screenshot generator and rendered screenshots
 gradle/                               # Gradle wrapper and version catalog
@@ -295,14 +295,13 @@ The same names may be supplied as environment variables. Release builds require 
 
 ### Google Play release
 
-Phone, Wear, and listing-image publication is owned by protected workflows, not local Gradle, Fastlane, or script mutation commands. `.github/workflows/android-release.yml` uploads the exact annotated-tag pair atomically to `qa`/`wear:internal`; `.github/workflows/android-wear-screenshots.yml` later verifies an exact-attempt protected physical-capture submission before replacing the two Wear images with the QA-only account; `.github/workflows/android-promote-production.yml` promotes both codes in one evidence-gated edit to `production`/`wear:production` with a separate account. Local tools may build and validate both AABs without publication:
+The current release is phone-only. Play publication is owned by protected workflows, not local Gradle, Fastlane, browser, or script mutation commands. `.github/workflows/android-release.yml` builds the exact annotated-tag phone source and uploads it to Internal Testing; `.github/workflows/android-promote-production.yml` promotes that exact version code to production and submits it for review. The Wear module is not built or uploaded by either workflow.
 
 ```bash
-./gradlew :app:bundlePlayRelease :wear:bundleRelease
-bundle exec fastlane android validate_wear_release
+./gradlew :app:bundlePlayRelease
 ```
 
-See `PLAY_STORE_COMMANDS.md`, `PLAY_STORE_SETUP.md`, `GRADLE_PLAY_PUBLISHER_SETUP.md`, and `GOOGLE_PLAY_BILLING_SETUP.md` for the release and account-separation contract.
+See `release-scope.json`, `PLAY_STORE_COMMANDS.md`, `PLAY_STORE_SETUP.md`, `GRADLE_PLAY_PUBLISHER_SETUP.md`, and `GOOGLE_PLAY_BILLING_SETUP.md` for the release contract.
 
 ## Testing
 
