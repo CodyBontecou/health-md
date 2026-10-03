@@ -125,7 +125,11 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
 
     func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome {
         #if DEBUG
-        if TestMode.isUITesting, let fixture = ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] {
+        if TestMode.isUITesting {
+            // Ordinary UI journeys already use synthetic authorization/capture.
+            // Do not accidentally perform physical HealthKit metadata RPCs when
+            // they omit this new fixture. The default remains unknown, never full.
+            let fixture = ProcessInfo.processInfo.environment["UITEST_HISTORY_ASSESSMENT"] ?? "unknown"
             if fixture == "pending" {
                 // Synthetic latency path only. Production cancellation is not
                 // assumed to bound HealthKit's metadata operation.

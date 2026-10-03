@@ -3,6 +3,27 @@ import Foundation
 import WorkoutKit
 #endif
 
+#if canImport(WorkoutKit) && !os(visionOS)
+nonisolated private enum ScheduledWorkoutAuthorization: Sendable {
+    case authorized, notDetermined, restricted, denied, unknown
+}
+
+/// SDK27's authorization value is not Sendable. Translate it where the
+/// nonisolated SDK getter runs; only our immutable decision crosses to MainActor.
+/// No requestAuthorization call, mutation, or unchecked SDK conformance.
+@available(iOS 17.0, macOS 15.0, macCatalyst 18.0, watchOS 10.0, *)
+@concurrent
+nonisolated private func readScheduledWorkoutAuthorization() async -> ScheduledWorkoutAuthorization {
+    switch await WorkoutScheduler.shared.authorizationState {
+    case .authorized: return .authorized
+    case .notDetermined: return .notDetermined
+    case .restricted: return .restricted
+    case .denied: return .denied
+    @unknown default: return .unknown
+    }
+}
+#endif
+
 extension SystemHealthStoreAdapter {
     var supportsScheduledWorkoutPlans: Bool {
         #if canImport(WorkoutKit) && !os(visionOS)
@@ -32,7 +53,7 @@ extension SystemHealthStoreAdapter {
         }
 
         let scheduler = WorkoutScheduler.shared
-        switch await scheduler.authorizationState {
+        switch await readScheduledWorkoutAuthorization() {
         case .authorized:
             break
         case .notDetermined:
@@ -50,7 +71,7 @@ extension SystemHealthStoreAdapter {
                 status: .skipped,
                 statusDescription: "WorkoutKit schedule access is denied. Export did not prompt or mutate the schedule."
             )
-        @unknown default:
+        case .unknown:
             return HealthKitScheduledWorkoutPlanQueryResult(
                 status: .unsupported,
                 statusDescription: "WorkoutKit returned an unknown schedule authorization state."

@@ -2373,7 +2373,8 @@ final class HealthKitManager: ObservableObject {
             ))
         }
         return HealthHistoryAssessment(id: UUID(), assessedAt: Date(), scope: scope,
-                                       types: results.sorted { $0.id < $1.id })
+                                       types: results.sorted { $0.id < $1.id },
+                                       evidenceSource: TestMode.isUITesting ? "synthetic_ui_fixture" : "HKHealthStore.earliestAuthorizedSampleDate(for:)")
     }
 
     // MARK: - Earliest Data Date

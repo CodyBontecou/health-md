@@ -1256,15 +1256,15 @@ struct ContentView: View {
         }
         if TestMode.isUITesting { simulateTestExport(); return }
         switch selection.target {
-        case .localIPhoneFolder: exportLocalData()
-        case .connectedMac: exportDataToConnectedMac()
-        case .apiEndpoint: exportDataToAPIEndpoint()
+        case .localIPhoneFolder: exportLocalData(selection)
+        case .connectedMac: exportDataToConnectedMac(selection)
+        case .apiEndpoint: exportDataToAPIEndpoint(selection)
         }
     }
 
     private var interactiveHistorySelection: HealthHistoryExecutionSelection {
         HealthHistoryExecutionSelection(scope: interactiveHistoryScope,
-            settings: ExportSettingsSnapshot.from(advancedSettings),
+            settings: ExportSettingsSnapshot.from(advancedSettings, appleExportEngineAuthorityIsFrozen: false),
             target: exportTargetSelection, preset: dateRangePreset)
     }
 
@@ -1335,7 +1335,9 @@ struct ContentView: View {
         ExportDateRangeSelectionStore.shared.markInteractiveExportEnded()
     }
 
-    private func exportLocalData() {
+    private func exportLocalData(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
         // Set synchronously before any export work starts so a crash, kill, or
         // force quit mid-export leaves it armed for the next launch's
         // interrupted-restore downgrade. Cleared in the defer below on every
@@ -1354,7 +1356,6 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
@@ -1473,7 +1474,9 @@ struct ContentView: View {
         }
     }
 
-    private func exportDataToAPIEndpoint() {
+    private func exportDataToAPIEndpoint(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let dateRange = (startDate: selection.scope.startDate, endDate: selection.scope.endDate)
         guard purchaseManager.canExport else {
             presentExportPaywall()
             return
@@ -1495,7 +1498,6 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
@@ -1601,7 +1603,10 @@ struct ContentView: View {
         }
     }
 
-    private func exportDataToConnectedMac() {
+    private func exportDataToConnectedMac(_ selection: HealthHistoryExecutionSelection) {
+        let advancedSettings = selection.makeCaptureSettings()
+        let startDate = selection.scope.startDate
+        let endDate = selection.scope.endDate
         guard purchaseManager.canExport else {
             presentExportPaywall()
             return
@@ -1688,7 +1693,9 @@ struct ContentView: View {
                             jobID: jobID,
                             destinationName: destinationName,
                             dateFormatter: dateFormatter,
-                            externalRecordFetcher: externalRecordFetcher
+                            externalRecordFetcher: externalRecordFetcher,
+                            selection: selection,
+                            frozenSettings: advancedSettings
                         )
                     }
                     return
@@ -1842,8 +1849,13 @@ struct ContentView: View {
         jobID: UUID,
         destinationName: String,
         dateFormatter: DateFormatter,
-        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        selection: HealthHistoryExecutionSelection,
+        frozenSettings: AdvancedExportSettings
     ) async throws {
+        let advancedSettings = frozenSettings
+        let startDate = selection.scope.startDate
+        let endDate = selection.scope.endDate
         let metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
             startDate: startDate,
             endDate: endDate,

@@ -206,7 +206,16 @@ final class DialogsA11yTests: XCTestCase {
         XCTAssertEqual(values, originals)
         XCTAssertEqual(writes, 0)
         XCTAssertGreaterThan(try XCTUnwrap(after.first?.font?.pointSize), oldFontSize)
-        XCTAssertGreaterThan(scroll.contentSize.height, oldContentHeight)
+        // Root/environment updates may replace the native scroll container. Measure
+        // the currently attached real control, not a retained pre-update object.
+        // Keep the same strict content-growth assertion and record both measurements
+        // so the SDK27 failure's cause can be established by hosted execution.
+        let currentScroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
+        let diagnostic = XCTAttachment(string: "Native scroll reused=\(currentScroll === scroll); before=\(oldContentHeight); retained=\(scroll.contentSize.height); attached=\(currentScroll.contentSize.height)")
+        diagnostic.name = "live-text-size-native-scroll-measurement"
+        diagnostic.lifetime = .keepAlways
+        add(diagnostic)
+        XCTAssertGreaterThan(currentScroll.contentSize.height, oldContentHeight)
     }
 
     func testLongUnbrokenValuesGetARealWrappingReadingSurface() {

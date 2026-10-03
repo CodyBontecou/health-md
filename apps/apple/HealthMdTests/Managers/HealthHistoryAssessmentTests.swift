@@ -304,6 +304,25 @@ final class HealthHistoryAssessmentTests: XCTestCase {
         XCTAssertEqual(result?.scope, selection.scope)
     }
 
+    func testFrozenCaptureSettingsRetainMetricScopeEngineAuthorityAndCalendar() {
+        let defaults = UserDefaults(suiteName: "HistoryFrozenCaptureSettings")!
+        let live = AdvancedExportSettings(userDefaults: defaults)
+        live.metricSelection.enabledMetrics = ["steps"]
+        live.executionAppleExportEngineAuthorityIsFrozen = false
+        let snapshot = ExportSettingsSnapshot.from(live, appleExportEngineAuthorityIsFrozen: false)
+        let selection = HealthHistoryExecutionSelection(scope: scope(), settings: snapshot,
+                                                       target: .localIPhoneFolder, preset: .custom)
+        live.metricSelection.enabledMetrics = ["heart_rate_avg"]
+        let frozen = selection.makeCaptureSettings()
+        XCTAssertEqual(frozen.metricSelection.enabledMetrics, ["steps"])
+        XCTAssertEqual(frozen.exportTimeZoneOverride?.identifier, selection.scope.timeZoneIdentifier)
+        XCTAssertEqual(frozen.executionAppleExportEnginePin, snapshot.appleExportEnginePin)
+        XCTAssertEqual(frozen.executionAppleExportEngineAuthorityIsFrozen, snapshot.appleExportEngineAuthorityIsFrozen)
+        XCTAssertFalse(frozen.executionAppleExportEngineAuthorityIsFrozen, "History assessment must not freeze/repin M3 authority differently")
+        XCTAssertEqual(selection.scope.startDate, scope().startDate)
+        XCTAssertEqual(selection.scope.endDate, scope().endDate)
+    }
+
     func testContinueUnverifiedIsNotAnEmptySuccessfulAssessmentOrFullHistory() {
         let store = FakeHealthStore()
         let sut = manager(store)

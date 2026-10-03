@@ -33,6 +33,14 @@ struct HealthHistoryExecutionSelection: Equatable {
     let settings: ExportSettingsSnapshot
     let target: ExportTargetSelection
     let preset: ExportDateRangePreset
+
+    /// Use the existing request-scoped reconstruction without repinning engines,
+    /// replaying UI preferences or substituting a later selection during capture.
+    func makeCaptureSettings() -> AdvancedExportSettings {
+        let frozen = settings.makeAdvancedExportSettings()
+        frozen.exportTimeZoneOverride = TimeZone(identifier: scope.timeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)
+        return frozen
+    }
 }
 
 nonisolated struct HealthHistoryPreviewRequest: Equatable, Hashable, Sendable {

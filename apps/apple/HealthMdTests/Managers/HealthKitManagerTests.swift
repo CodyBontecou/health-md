@@ -15,7 +15,7 @@ import HealthKit
 
 @MainActor
 private func makeSUT(
-    store: FakeHealthStore = FakeHealthStore(),
+    store: FakeHealthStore? = nil,
     medicationAuthorizationRequested: Bool = false,
     visionAuthorizationRequested: Bool = false,
     healthAuthorizationRequested: Bool = false,
@@ -40,7 +40,9 @@ private func makeSUT(
     if authorizationMigrationCompleted {
         defaults.set(true, forKey: "healthKit.authorizationStateMigrationCompleted")
     }
-    return HealthKitManager(store: store, userDefaults: defaults)
+    // Construct actor-isolated test dependencies inside this MainActor helper,
+    // not in the synchronous caller-side default-argument expression.
+    return HealthKitManager(store: store ?? FakeHealthStore(), userDefaults: defaults)
 }
 
 // MARK: - Authorization & Error Mapping Tests (TODO-4fac60b8)
