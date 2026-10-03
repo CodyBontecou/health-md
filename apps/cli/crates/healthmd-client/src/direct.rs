@@ -822,6 +822,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let (max_items, max_bytes) = clamp_query_page(&mut request.query, capabilities)?;
 
         let request_id = request.request_id;
+        let history_query = request.query.clone();
         connection
             .channel
             .send(&DirectMessage::QueryRequest(Unlabeled::from(request)))
@@ -840,6 +841,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                             .len()
                             > max_bytes
                         || !query_response_is_well_formed_and_bounded(&value.response, max_items)
+                        || crate::history::validate_response(
+                            &value.response,
+                            &history_query,
+                            self.identity.installation_id.0,
+                            selected,
+                        )
+                        .is_err()
                     {
                         return Err(ClientError::MalformedPacket);
                     }
@@ -4132,6 +4140,22 @@ mod tests {
         assert_eq!(record.committed_partitions, 4);
         assert_eq!(record.committed_bytes, 4_096);
         assert_eq!(record.processed_days, 2);
+    }
+
+    #[test]
+    fn unchanged_old_query_decoder_accepts_history_only_inside_response_metadata() {
+        let response = crate::history_tests::response();
+        // This decoder body is unchanged from the pre-receipt implementation.
+        assert!(query_response_is_well_formed_and_bounded(&response, 1));
+        let mut top_level = response.clone();
+        top_level["history_assessment"] = response["metadata"]["history_assessment"].clone();
+        assert!(!query_response_is_well_formed_and_bounded(&top_level, 1));
+        let mut packet_metadata = serde_json::json!({
+            "generated_at": "2026-01-01T00:00:00Z", "producer": "Health.md"
+        });
+        assert!(query_packet_metadata_is_well_formed(&packet_metadata));
+        packet_metadata["history_assessment"] = response["metadata"]["history_assessment"].clone();
+        assert!(!query_packet_metadata_is_well_formed(&packet_metadata));
     }
 
     #[test]

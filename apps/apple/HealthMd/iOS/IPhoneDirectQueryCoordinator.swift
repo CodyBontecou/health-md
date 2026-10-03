@@ -99,7 +99,7 @@ final class IPhoneDirectQueryCaptureCache {
     private struct Entry {
         let generation: UUID
         let key: Data
-        let days: [HealthMdCompactContextDay]
+        let snapshot: HealthHistoryQueryCapture
         let expiresAt: Date
     }
 
@@ -117,23 +117,23 @@ final class IPhoneDirectQueryCaptureCache {
 
     var isEmpty: Bool { entry == nil }
 
-    func continuation(for key: Data, now: Date = Date()) -> [HealthMdCompactContextDay]? {
+    func continuation(for key: Data, now: Date = Date()) -> HealthHistoryQueryCapture? {
         guard let entry else { return nil }
         guard entry.expiresAt > now else {
             clear()
             return nil
         }
         guard entry.key == key else { return nil }
-        return entry.days
+        return entry.snapshot
     }
 
-    func store(key: Data, days: [HealthMdCompactContextDay], now: Date = Date()) {
+    func store(key: Data, snapshot: HealthHistoryQueryCapture, now: Date = Date()) {
         clear()
         let generation = UUID()
         entry = Entry(
             generation: generation,
             key: key,
-            days: days,
+            snapshot: snapshot,
             expiresAt: now.addingTimeInterval(lifetime)
         )
         let delayNanoseconds = UInt64(lifetime * 1_000_000_000)
@@ -175,19 +175,92 @@ final class IPhoneDirectQueryCoordinator {
         }
     }
 
+    nonisolated struct RequestLease: Equatable, Sendable {
+        let id: UUID
+        let epoch: UUID
+    }
+
+    private var epoch = UUID()
+    private var currentLease: RequestLease?
     private(set) var activeRequestID: UUID?
-    private let captureCache = IPhoneDirectQueryCaptureCache()
+    private let historyWorker = HealthHistoryAssessmentWorker()
+    private let captureCache: IPhoneDirectQueryCaptureCache
     var isQuerying: Bool { activeRequestID != nil }
 
-    private init() {}
+    init(captureCache: IPhoneDirectQueryCaptureCache? = nil) {
+        self.captureCache = captureCache ?? IPhoneDirectQueryCaptureCache()
+    }
+
+    func beginRequestLease() -> RequestLease {
+        let lease = RequestLease(id: UUID(), epoch: epoch)
+        currentLease = lease
+        return lease
+    }
+
+    func finishRequestLease(_ lease: RequestLease) {
+        // Obsolete cleanup must not invalidate a newer request or its snapshot.
+        if currentLease == lease { currentLease = nil }
+    }
+
+    func validateRequestLease(_ lease: RequestLease) throws {
+        guard !Task.isCancelled, lease.epoch == epoch, currentLease == lease else {
+            throw IPhoneDirectQueryError.cancelled
+        }
+    }
+
+    func captureKey(for query: HealthMdQueryRequest, detailLevel: DirectQueryDetailLevel, peerInstallationID: UUID) throws -> Data {
+        try JSONEncoder.healthMdDirectQuery.encode(CaptureKey(metrics: query.metrics, sources: query.sources,
+            dates: query.dates, detailLevel: detailLevel, peerInstallationID: peerInstallationID))
+    }
+
+    /// Shared production seam: continuation never runs capture/assessment again.
+    /// It survives authenticated reconnect, but not expiry/background clearing.
+    func snapshotForQuery(_ query: HealthMdQueryRequest, key: Data, lease: RequestLease,
+                          capture: @MainActor () async throws -> HealthHistoryQueryCapture) async throws -> HealthHistoryQueryCapture {
+        try validateRequestLease(lease)
+        if query.page.cursor != nil {
+            guard let snapshot = captureCache.continuation(for: key) else {
+                throw IPhoneDirectQueryError.invalidRequest
+            }
+            return snapshot
+        }
+        let snapshot = try await capture()
+        try validateRequestLease(lease)
+        return snapshot
+    }
+
+    func responseForQuery(_ query: HealthMdQueryRequest, snapshot: HealthHistoryQueryCapture,
+                          key: Data, cursorKey: Data, lease: RequestLease, evidenceScope: HealthMdEvidenceScope? = nil) throws -> HealthMdQueryResponse {
+        try validateRequestLease(lease)
+        guard query.dates == snapshot.logicalDates,
+              try HealthMdQueryCanonicalSerializer.data(for: query.metrics) == HealthMdQueryCanonicalSerializer.data(for: snapshot.logicalMetrics),
+              try HealthMdQueryCanonicalSerializer.data(for: query.sources) == HealthMdQueryCanonicalSerializer.data(for: snapshot.sources) else {
+            throw IPhoneDirectQueryError.invalidRequest
+        }
+        let evaluator = try HealthMdQueryEvaluator(days: snapshot.days, cursorKey: cursorKey,
+                                                  cursorBinding: snapshot.cursorBinding)
+        let response = try evaluator.evaluateBounded(query, evidenceScope: evidenceScope,
+            responseMetadata: snapshot.metadata, responseLimitations: snapshot.limitations)
+        try validateRequestLease(lease)
+        if response.nextCursor != nil {
+            captureCache.store(key: key, snapshot: snapshot)
+        } else {
+            captureCache.clear()
+        }
+        return response
+    }
 
     func clearCachedContext() {
+        epoch = UUID()
+        currentLease = nil
+        historyWorker.cancelLogicalWaiter()
         captureCache.clear()
     }
 
     func handle(
         _ request: DirectQueryRequest,
         channel: DirectSecureChannel,
+        sourceInstallationID: UUID,
         healthKitManager: HealthKitManager
     ) async {
         guard activeRequestID == nil else {
@@ -195,7 +268,9 @@ final class IPhoneDirectQueryCoordinator {
             return
         }
         activeRequestID = request.requestID
+        let lease = beginRequestLease() // Before any authorization/SDK/capture await.
         defer {
+            finishRequestLease(lease)
             if activeRequestID == request.requestID { activeRequestID = nil }
         }
         do {
@@ -203,10 +278,12 @@ final class IPhoneDirectQueryCoordinator {
                 try await execute(
                     request,
                     peerInstallationID: channel.peerInstallationID,
+                    sourceInstallationID: sourceInstallationID,
+                    lease: lease,
                     healthKitManager: healthKitManager
                 )
             }
-            guard !Task.isCancelled else { throw IPhoneDirectQueryError.cancelled }
+            try validateRequestLease(lease) // Immediately before send, not just capture.
             try await channel.send(.queryResponse(response))
         } catch {
             let safeError: IPhoneDirectQueryError
@@ -226,6 +303,8 @@ final class IPhoneDirectQueryCoordinator {
     private func execute(
         _ directRequest: DirectQueryRequest,
         peerInstallationID: UUID,
+        sourceInstallationID: UUID,
+        lease: RequestLease,
         healthKitManager: HealthKitManager
     ) async throws -> DirectQueryResponse {
         guard directRequest.protocolVersion == HealthMdDirectProtocol.queryVersion,
@@ -262,41 +341,29 @@ final class IPhoneDirectQueryCoordinator {
 
         let metricIDs = try resolveMetricIDs(query.metrics)
         try validateSources(query.sources)
-        let captureKey = try JSONEncoder.healthMdDirectQuery.encode(CaptureKey(
-            metrics: query.metrics,
-            sources: query.sources,
-            dates: query.dates,
-            detailLevel: directRequest.detailLevel,
-            peerInstallationID: peerInstallationID
-        ))
-        let continuationDays: [HealthMdCompactContextDay]?
-        if query.page.cursor != nil {
-            guard let cachedDays = captureCache.continuation(for: captureKey) else {
-                throw IPhoneDirectQueryError.invalidRequest
-            }
-            continuationDays = cachedDays
-        } else {
-            continuationDays = nil
-        }
+        let captureKey = try captureKey(for: query, detailLevel: directRequest.detailLevel, peerInstallationID: peerInstallationID)
         let authorized = try await healthKitManager.hasRecordedAuthorizationDecision(
             forMetricIDs: metricIDs
         )
         guard authorized else { throw IPhoneDirectQueryError.healthKitNotAuthorized }
 
-        if continuationDays == nil {
+        let snapshot = try await snapshotForQuery(query, key: captureKey, lease: lease) {
             await PurchaseManager.shared.refreshStatus()
             guard PurchaseManager.shared.canExport else { throw IPhoneDirectQueryError.accessUnavailable }
-        }
-
-        let timeZone = TimeZone.current
-        let settings = AdvancedExportSettings()
-        settings.exportTimeZoneOverride = timeZone
-        settings.detailPolicy = directRequest.detailLevel == .lossless ? .lossless : .summary
-        settings.metricSelection.enabledMetrics = metricIDs
-        let days: [HealthMdCompactContextDay]
-        if let continuationDays {
-            days = continuationDays
-        } else {
+            let timeZone = TimeZone.current
+            let settings = AdvancedExportSettings()
+            settings.exportTimeZoneOverride = timeZone
+            settings.detailPolicy = directRequest.detailLevel == .lossless ? .lossless : .summary
+            settings.metricSelection.enabledMetrics = metricIDs
+            let historyScope = try historyScope(for: query, metricIDs: metricIDs, timeZone: timeZone)
+            // Independent of readable-date discovery below. Never acquisition bounds.
+            let assessment = await historyWorker.assess(
+                notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: historyScope)
+            ) { await healthKitManager.assessHistoryAccess(scope: historyScope) }
+            try validateRequestLease(lease)
+            var captureCalendar = Calendar(identifier: .gregorian)
+            captureCalendar.timeZone = timeZone
+            let frozenCaptureCalendar = captureCalendar
             let dates = try await resolveDates(
                 query.dates,
                 metricIDs: metricIDs,
@@ -323,7 +390,8 @@ final class IPhoneDirectQueryCoordinator {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: timeZone
+                            timeZone: timeZone,
+                            captureCalendar: frozenCaptureCalendar
                         )
                     },
                     fetchExternalDailyRecords: nil
@@ -353,20 +421,18 @@ final class IPhoneDirectQueryCoordinator {
                 compactContextBytes += dayBytes
                 capturedDays.append(day)
             }
-            days = capturedDays
+            return try HealthHistoryQueryCapture(days: capturedDays, metricIDs: metricIDs, query: query,
+                assessment: assessment, timeZone: timeZone, ownerDates: dates.map(formatter.string(from:)),
+                peerInstallationID: peerInstallationID, sourceInstallationID: sourceInstallationID)
         }
 
         let scope = try evidenceScope(
             query: query,
-            metricIDs: metricIDs,
+            metricIDs: snapshot.metricIDs,
             detailLevel: directRequest.detailLevel
         )
-        let evaluator = try HealthMdQueryEvaluator(
-            days: days,
-            cursorKey: try IPhoneDirectQueryCursorKeyProvider.loadOrCreate(),
-            cursorBinding: peerInstallationID.uuidString.lowercased()
-        )
-        let response = try evaluator.evaluateBounded(query, evidenceScope: scope)
+        let response = try responseForQuery(query, snapshot: snapshot, key: captureKey,
+            cursorKey: IPhoneDirectQueryCursorKeyProvider.loadOrCreate(), lease: lease, evidenceScope: scope)
         let responseData = try JSONEncoder.healthMdDirectQuery.encode(response)
         guard responseData.count <= query.page.maxBytes,
               responseData.count <= DirectQueryCapabilities.current.maximumPageBytes,
@@ -374,15 +440,28 @@ final class IPhoneDirectQueryCoordinator {
             throw IPhoneDirectQueryError.responseTooLarge
         }
         let directResponse = try decoder.decode(DirectJSONValue.self, from: responseData)
-        if response.nextCursor != nil {
-            captureCache.store(key: captureKey, days: days)
-        } else {
-            captureCache.clear()
-        }
         if query.page.cursor == nil {
             try PurchaseManager.shared.recordExportUse(jobID: directRequest.requestID)
         }
         return DirectQueryResponse(requestID: directRequest.requestID, response: directResponse)
+    }
+
+    private func historyScope(for query: HealthMdQueryRequest, metricIDs: Set<String>, timeZone: TimeZone) throws -> HealthHistoryScope {
+        let start: Date
+        let end: Date
+        let allAvailable: Bool
+        switch query.dates {
+        case .allAvailable:
+            start = .distantPast; end = .distantFuture; allAvailable = true
+        case .exact(let range):
+            let formatter = Self.sourceDateFormatter(timeZone: timeZone)
+            guard let first = formatter.date(from: range.startDate), let last = formatter.date(from: range.endDate),
+                  formatter.string(from: first) == range.startDate, formatter.string(from: last) == range.endDate,
+                  first <= last else { throw IPhoneDirectQueryError.invalidRequest }
+            start = first; end = last; allAvailable = false
+        }
+        return HealthHistoryScope(metricIDs: metricIDs, startDate: start, endDate: end,
+            timeZoneIdentifier: timeZone.identifier, allAvailable: allAvailable, profileID: nil, rangeSemantics: .ownerDates)
     }
 
     private func reject(

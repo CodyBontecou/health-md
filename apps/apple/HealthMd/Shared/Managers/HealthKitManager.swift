@@ -77,19 +77,22 @@ final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
 
     nonisolated static let pinnedFetchTimeZone = TaskLocal<TimeZone?>(wrappedValue: nil)
+    nonisolated static let pinnedFetchCalendar = TaskLocal<Calendar?>(wrappedValue: nil)
+    nonisolated private static let currentCalendarProvider = TaskLocal<(@Sendable () -> Calendar)?>(wrappedValue: nil)
 
     nonisolated private static var effectiveFetchTimeZone: TimeZone {
         pinnedFetchTimeZone.wrappedValue ?? .current
     }
 
-    nonisolated private static var effectiveFetchCalendar: Calendar {
-        var calendar = Calendar.current
+    nonisolated static var effectiveFetchCalendar: Calendar {
+        var calendar = pinnedFetchCalendar.wrappedValue ?? currentCalendarProvider.wrappedValue?() ?? Calendar.current
         calendar.timeZone = effectiveFetchTimeZone
         return calendar
     }
 
     /// Abstracted health store for all data queries (tests inject FakeHealthStore).
     private let store: HealthStoreProviding
+    private let calendarProvider: @Sendable () -> Calendar
     /// Raw HealthKit store — used only for observer queries and background delivery.
     private let healthStore: HKHealthStore
     private let logger = Logger(subsystem: "com.healthexporter", category: "HealthKitManager")
@@ -103,8 +106,10 @@ final class HealthKitManager: ObservableObject {
     /// Active observer queries for background delivery
     private(set) var observerQueries: [HKObserverQuery] = []
 
-    init(store: HealthStoreProviding = SystemHealthStoreAdapter(), userDefaults: UserDefaults = .standard) {
+    init(store: HealthStoreProviding = SystemHealthStoreAdapter(), userDefaults: UserDefaults = .standard,
+         calendarProvider: @escaping @Sendable () -> Calendar = { Calendar.current }) {
         self.store = store
+        self.calendarProvider = calendarProvider
         self.healthStore = HKHealthStore()
         self.userDefaults = userDefaults
         let medicationRequested = userDefaults.bool(forKey: medicationAuthorizationRequestedKey)
@@ -899,10 +904,15 @@ final class HealthKitManager: ObservableObject {
         for date: Date,
         detailPolicy: AppleExportDetailPolicy,
         metricSelection: MetricSelectionState? = nil,
-        timeZone: TimeZone? = nil
+        timeZone: TimeZone? = nil,
+        captureCalendar: Calendar? = nil
     ) async throws -> HealthData {
-        try await Self.pinnedFetchTimeZone.withValue(timeZone) {
-            try await HealthKitQueryExecutionController.withController {
+        // Query callers provide an immutable Gregorian context. Nil retains the
+        // original dynamically read Calendar.current behavior for other callers.
+        try await Self.pinnedFetchCalendar.withValue(captureCalendar) {
+            try await Self.currentCalendarProvider.withValue(calendarProvider) {
+                try await Self.pinnedFetchTimeZone.withValue(timeZone) {
+                    try await HealthKitQueryExecutionController.withController {
                 #if DEBUG
                 let capturePhase: String
                 if detailPolicy.includesCanonicalArchive {
@@ -931,6 +941,8 @@ final class HealthKitManager: ObservableObject {
                     metricSelection: metricSelection
                 )
                 #endif
+                    }
+                }
             }
         }
     }

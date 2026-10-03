@@ -33,6 +33,16 @@ struct HealthHistoryExecutionSelection: Equatable {
     let settings: ExportSettingsSnapshot
     let target: ExportTargetSelection
     let preset: ExportDateRangePreset
+    let localDestinationURL: URL?
+
+    init(scope: HealthHistoryScope, settings: ExportSettingsSnapshot, target: ExportTargetSelection,
+         preset: ExportDateRangePreset, localDestinationURL: URL? = nil) {
+        self.scope = scope
+        self.settings = settings
+        self.target = target
+        self.preset = preset
+        self.localDestinationURL = localDestinationURL
+    }
 
     /// Use the existing request-scoped reconstruction without repinning engines,
     /// replaying UI preferences or substituting a later selection during capture.

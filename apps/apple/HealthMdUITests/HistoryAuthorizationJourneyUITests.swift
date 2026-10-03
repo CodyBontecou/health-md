@@ -52,6 +52,21 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["View Exported File"].exists)
     }
 
+    func testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unknown"
+        app.launch()
+        let message = app.staticTexts["export.historyWarning.message"]
+        reveal(message, in: app)
+        XCTAssertTrue(message.label.contains("Empty data and completed queries do not prove full history"))
+        XCTAssertFalse(app.staticTexts["export.historyWarning.execution"].exists)
+        let action = app.buttons["export.historyWarning.reviewAccess"]
+        reveal(action, in: app)
+        action.tap()
+        XCTAssertTrue(app.staticTexts["Adjust Health Permissions"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Open Health App"].exists)
+    }
+
     func testUnavailableHistoryAtLargeTextHasAccessibleAction() throws {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_HISTORY_ASSESSMENT"] = "unavailable"

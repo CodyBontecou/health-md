@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import UIKit
 import os.log
 
@@ -24,6 +25,18 @@ struct iPadExportView: View {
     /// Called when the user taps "Export Now". The parent decides whether to export
     /// immediately or show the paywall.
     var onExportTapped: (() -> Void)?
+    let historyProfileStore: ExportProfileStore?
+    let executionHistoryAssessment: HealthHistoryAssessment?
+    let isAssessingHistory: Bool
+    let historyPreviewWorker: HealthHistoryAssessmentWorker
+    let onContinueWithoutHistoryVerification: () -> Void
+    let onCancelHistoryVerification: () -> Void
+
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var historyAssessment: HealthHistoryAssessment?
+    @State private var historyRefreshID = UUID()
+    @State private var historyProfileID: UUID?
+    @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -32,6 +45,64 @@ struct iPadExportView: View {
     @State private var showPreview = false
     @State private var showFormatHelp = false
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
+
+    private var historyScope: HealthHistoryScope {
+        HealthHistoryScope(metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime, profileID: historyProfileID, rangeSemantics: .ownerDates)
+    }
+
+    private var historyPreviewRequest: HealthHistoryPreviewRequest {
+        HealthHistoryPreviewRequest(scope: historyScope, refreshID: historyRefreshID)
+    }
+
+    private func invalidateHistoryPreview() {
+        historyCoordinator.invalidate()
+        historyPreviewWorker.cancelLogicalWaiter()
+        historyRefreshID = UUID()
+        historyAssessment = nil
+    }
+
+    private func refreshHistoryAssessment() async {
+        guard scenePhase == .active else { return }
+        let request = historyPreviewRequest
+        let result = await historyCoordinator.assess(scope: request.scope, isCurrent: {
+            request == historyPreviewRequest && scenePhase == .active
+        }, operation: {
+            await historyPreviewWorker.assess(notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope)) {
+                await healthKitManager.assessHistoryAccess(scope: request.scope)
+            }
+        })
+        guard let result else { return }
+        historyAssessment = result
+    }
+
+    @ViewBuilder private var historyWarningSection: some View {
+        if isAssessingHistory {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                iPadBrandLabel("Checking history access")
+                HealthHistoryPendingContent(continueUnverified: onContinueWithoutHistoryVerification,
+                                            cancel: onCancelHistoryVerification)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.s4)
+            .iPadLiquidGlass()
+        }
+        if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
+            execution: executionHistoryAssessment, scope: historyScope), assessment.needsWarning {
+            VStack(alignment: .leading, spacing: Spacing.s3) {
+                iPadBrandLabel(LocalizedStringKey(assessment.warningTitle))
+                HealthHistoryDisclosureContent(assessment: assessment,
+                    isExecution: assessment.id == executionHistoryAssessment?.id,
+                    reviewAccess: { showHealthPermissionsGuide = true })
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.s4)
+            .iPadLiquidGlass()
+            .accessibilityIdentifier("export.historyWarning")
+        }
+    }
 
     private var headerActions: some View {
         HStack(spacing: Spacing.s2) {
@@ -239,6 +310,10 @@ struct iPadExportView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+
+                // Advisory evidence is near the top, in the actual tablet route,
+                // not a phone-layout substitute. Native text/actions can wrap.
+                historyWarningSection
 
                 // MARK: - Date Range
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -702,6 +777,17 @@ struct iPadExportView: View {
         .iPadPageBackground()
         .navigationTitle("Export")
         .iPadHiddenSystemNavigationTitle()
+        .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
+        .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onChange(of: healthKitManager.isAuthorized) { _, _ in invalidateHistoryPreview() }
+        .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
+            guard historyProfileID != id else { return }
+            historyProfileID = id
+            invalidateHistoryPreview()
+        }
+        .onChange(of: scenePhase) { _, _ in invalidateHistoryPreview() }
+        .onDisappear { historyCoordinator.invalidate(); historyPreviewWorker.cancelLogicalWaiter() }
         .sheet(isPresented: $showMetricSelection) {
             iPadMetricSelectionView(
                 selectionState: advancedSettings.metricSelection,

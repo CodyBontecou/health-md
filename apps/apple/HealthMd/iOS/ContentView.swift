@@ -565,11 +565,11 @@ struct ContentView: View {
             restoreInteractiveCorpusExportIfNeeded()
             await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
         }
-        .onReceive(advancedSettings.objectWillChange) { _ in invalidateExecutionHistory() }
-        .onReceive(healthKitManager.objectWillChange) { _ in invalidateExecutionHistory() }
-        .onReceive(apiExportSettings.objectWillChange) { _ in invalidateExecutionHistory() }
-        .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory() }
-        .onReceive(profileCoordinator?.profileStore.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in invalidateExecutionHistory() }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "settings_publication") }
+        .onReceive(healthKitManager.objectWillChange) { _ in invalidateExecutionHistory(reason: "health_publication") }
+        .onReceive(apiExportSettings.objectWillChange) { _ in invalidateExecutionHistory(reason: "api_publication") }
+        .onChange(of: vaultManager.vaultURL) { _, _ in invalidateExecutionHistory(reason: "vault_url") }
+        .onReceive(profileCoordinator?.profileStore.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in invalidateExecutionHistory(reason: "profile_publication") }
         .onChange(of: scenePhase) { _, newPhase in
             invalidateExecutionHistory()
             guard newPhase == .active else { return }
@@ -1220,10 +1220,19 @@ struct ContentView: View {
     }
 
     private func invalidateExecutionHistory() {
+        invalidateExecutionHistory(reason: "selection_or_lifecycle")
+    }
+
+    private func invalidateExecutionHistory(reason: String) {
         historyExecutionCoordinator.invalidate()
         executionHistoryAssessment = nil
         historyExecutionTask?.cancel()
-        if isAssessingHistory { exportStatusMessage = "History check cancelled. Review the selection and export again." }
+        if isAssessingHistory {
+            exportStatusMessage = "History check cancelled. Review the selection and export again."
+            #if DEBUG
+            if TestMode.isUITesting { exportStatusMessage += " Synthetic invalidation source: \(reason)." }
+            #endif
+        }
         clearPendingHistoryCheck()
     }
 

@@ -312,10 +312,55 @@ fn render_document(value: &Value) -> String {
                 if ["schema", "schema_version", "message"].contains(&key.as_str()) {
                     continue;
                 }
+                if key == "pages" && value.get("schema").and_then(Value::as_str) == Some("healthmd.mcp_query_pages") {
+                    if let Some(pages) = item.as_array() {
+                        let visible: Vec<_> = pages.iter().map(|page| {
+                            let mut page = page.clone();
+                            if page.get("schema").and_then(Value::as_str) == Some("healthmd.query_response") {
+                                if let Some(metadata) = page.get_mut("metadata").and_then(Value::as_object_mut) {
+                                    metadata.remove("history_assessment");
+                                }
+                            }
+                            page
+                        }).collect();
+                        render_field(&mut output, key, &Value::Array(visible), 0);
+                        continue;
+                    }
+                }
+                if key == "metadata" && value.get("schema").and_then(Value::as_str) == Some("healthmd.query_response") {
+                    if let Some(metadata) = item.as_object() {
+                        let mut visible = metadata.clone();
+                        // Human summary below is bounded; machine JSON retains
+                        // the entire receipt and every existing metadata entry.
+                        visible.remove("history_assessment");
+                        if !visible.is_empty() {
+                            render_field(&mut output, key, &Value::Object(visible), 0);
+                        }
+                        continue;
+                    }
+                }
                 render_field(&mut output, key, item, 0);
             }
         }
         _ => render_value(&mut output, value, 0),
+    }
+    let pages = match value.get("schema").and_then(Value::as_str) {
+        Some("healthmd.query_response") => vec![value],
+        Some("healthmd.mcp_query_pages") => value
+            .get("pages")
+            .and_then(Value::as_array)
+            .map_or_else(Vec::new, |pages| pages.iter().collect()),
+        _ => Vec::new(),
+    };
+    let mut disclosures = BTreeSet::new();
+    for page in pages {
+        disclosures.insert(healthmd_client::history::disclosure_message(page));
+    }
+    if !disclosures.is_empty() {
+        section_heading(&mut output, "Historical access (separate from capture coverage)");
+        for disclosure in disclosures {
+            push_wrapped(&mut output, &disclosure, 2);
+        }
     }
     finish(output)
 }
@@ -770,6 +815,61 @@ mod tests {
             "message": "The request is incomplete."
         });
         assert!(render(&value, true).starts_with(&format!("{ERROR_STYLE}Error:")));
+    }
+
+    #[test]
+    fn query_history_disclosure_does_not_follow_complete_empty_capture_status() {
+        let value = serde_json::json!({
+            "schema": "healthmd.query_response", "schema_version": 1,
+            "items": [], "coverage": {"status": "complete_empty"}, "limitations": []
+        });
+        let rendered = render(&value, false);
+        assert!(rendered.contains("Historical access (separate from capture coverage)"));
+        assert!(rendered.contains("legacy/unassessed"));
+        assert!(rendered.contains("do not prove full history"));
+        let mut future = value.clone();
+        future["metadata"] = serde_json::json!({"history_assessment": {
+            "schema": "healthmd.history_assessment", "schema_version": 9
+        }});
+        assert!(render(&future, false).contains("unsupported assessment semantics"));
+        assert!(value.get("metadata").is_none());
+    }
+
+    #[test]
+    fn actual_query_renderer_shows_frozen_clock_sample_end_cutoffs_and_overflow_without_json_truncation() {
+        let mut value: Value = serde_json::from_str(include_str!("../../../../../packages/contracts/query-history/v1/synthetic-response.json")).unwrap();
+        let mut row = value["metadata"]["history_assessment"]["types"][0].clone();
+        row["outcome"] = json!("limited");
+        row["intersection"] = json!("potential");
+        row["sample_end_boundary"] = json!("2026-01-01T00:00:00.123456789Z");
+        let rows: Vec<_> = (0..9).map(|index| {
+            let mut row = row.clone();
+            row["type_id"] = json!(format!("synthetic_type_{index}"));
+            row
+        }).collect();
+        value["metadata"]["history_assessment"]["types"] = json!(rows);
+        let query = json!({"metrics": {"type": "explicit", "metric_ids": ["steps"]}, "dates": {"type": "all_available"}});
+        assert!(healthmd_client::history::validate_response(&value, &query,
+            uuid::Uuid::parse_str("00000000-0000-4000-8000-000000000001").unwrap(),
+            uuid::Uuid::parse_str("00000000-0000-4000-8000-000000000002").unwrap()).is_ok());
+        let original = value.clone();
+        let rendered = render(&value, false).split_whitespace().collect::<Vec<_>>().join(" ");
+        assert!(rendered.contains("2026-01-01T00:00:00.123456789Z"));
+        assert!(rendered.contains("America/Los_Angeles"));
+        assert!(rendered.contains("sample END, UTC"));
+        assert!(rendered.contains("synthetic_type_7"));
+        assert!(!rendered.contains("synthetic_type_8"));
+        assert!(rendered.contains("see complete JSON metadata"));
+        assert!(rendered.contains("retained"));
+        assert_eq!(value, original);
+        let mut malformed = value.clone();
+        malformed["metadata"]["history_assessment"]["types"] = json!([{"outcome": "limited", "sample_end_boundary": "bad"}]);
+        let grouped = json!({"schema": "healthmd.mcp_query_pages", "schema_version": 1, "pages": [value, malformed]});
+        let rendered = render(&grouped, false).split_whitespace().collect::<Vec<_>>().join(" ");
+        assert!(rendered.contains("invalid assessment evidence"));
+        assert!(rendered.contains("sample END, UTC"));
+        assert!(!rendered.contains("synthetic_type_8"));
+        assert_eq!(grouped["pages"][0]["metadata"]["history_assessment"]["types"].as_array().unwrap().len(), 9);
     }
 
     #[test]

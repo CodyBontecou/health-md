@@ -302,6 +302,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     ) async -> Void)?
     var cancelHandler: ((UUID) -> Bool)?
     var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel) async -> Void)?
+    // Query receipt identity only; pairing, raw/file bindings and wires unchanged.
+    var querySourceInstallationID: UUID { installationID }
 
     private let defaults: UserDefaults
     private let trustStore: ManualIPTrustStore

@@ -21,10 +21,13 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var historyOutcome: HealthHistoryQueryOutcome = .boundaries([:])
     var historyOutcomesByIdentifier: [String: HealthHistoryQueryOutcome] = [:]
     var historyRequestedIdentifiers: [String] = []
+    /// Checked-continuation controls can intentionally ignore task cancellation.
+    var historySuspension: (@Sendable () async -> Void)?
 
     func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome {
         let identifiers = types.map(\.identifier).sorted()
         historyRequestedIdentifiers.append(contentsOf: identifiers)
+        await historySuspension?()
         return identifiers.first.flatMap { historyOutcomesByIdentifier[$0] } ?? historyOutcome
     }
 
@@ -35,6 +38,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var statisticsMaxes: [String: Double] = [:]
     var statisticsMostRecent: [String: Double] = [:]
     var querySumResult: ((HKQuantityTypeIdentifier, NSPredicate?) -> Double?)?
+    var querySumSuspension: (@Sendable () async -> Void)?
 
     // Pre-configured category sample results
     var categorySampleResults: [String: [CategorySampleValue]] = [:]
@@ -216,6 +220,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
         queriedSumIdentifiers.append(identifier.rawValue)
         if let error = errorsForSum[identifier.rawValue] { throw error }
+        await querySumSuspension?()
         if let querySumResult { return querySumResult(identifier, predicate) }
         return statisticsSums[identifier.rawValue]
     }

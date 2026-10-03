@@ -32,7 +32,10 @@ final class ExportJourneyUITests: XCTestCase {
         // After the simulated export, the status badge should appear
         // ExportStatusBadge is a complex view — use descendants query
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
-        XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export status badge should appear after export")
+        let completed = statusBadge.waitForExistence(timeout: 10)
+        let diagnostic = app.staticTexts["export.synthetic.statusMessage"]
+        let syntheticStatus = diagnostic.exists ? diagnostic.label : "no synthetic stage element"
+        XCTAssertTrue(completed, "Export status badge should appear after export. Synthetic stage: \(syntheticStatus)")
         XCTAssertTrue(
             app.buttons["View Exported File"].exists,
             "A successful local export should offer an exact-file viewer"

@@ -199,6 +199,8 @@ final class DialogsA11yTests: XCTestCase {
         let oldFontSize = try XCTUnwrap(before.first?.font?.pointSize)
         let scroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
         let oldContentHeight = scroll.contentSize.height
+        let beforeNative = before.map { "font=\($0.font?.pointSize ?? -1),frame=\($0.frame),intrinsic=\($0.intrinsicContentSize),traits=\($0.traitCollection.preferredContentSizeCategory.rawValue)" }
+        let beforeScroll = "frame=\(scroll.frame),bounds=\(scroll.bounds),content=\(scroll.contentSize),traits=\(scroll.traitCollection.preferredContentSizeCategory.rawValue)"
         host.update(view(.accessibility5))
         _ = host.measured()
         let after = subviews(of: host.controller.view).compactMap { $0 as? UITextField }
@@ -215,6 +217,15 @@ final class DialogsA11yTests: XCTestCase {
         diagnostic.name = "live-text-size-native-scroll-measurement"
         diagnostic.lifetime = .keepAlways
         add(diagnostic)
+        if currentScroll.contentSize.height <= oldContentHeight {
+            // Tiny synthetic-fixture-only public UIKit geometry receipt. No view
+            // hierarchy, private SwiftUI node types, health values or user strings.
+            print("Health172 synthetic a11y before fields: \(beforeNative.joined(separator: "; "))")
+            print("Health172 synthetic a11y before scroll: \(beforeScroll)")
+            let afterNative = after.map { "font=\($0.font?.pointSize ?? -1),frame=\($0.frame),intrinsic=\($0.intrinsicContentSize),traits=\($0.traitCollection.preferredContentSizeCategory.rawValue)" }
+            print("Health172 synthetic a11y after fields: \(afterNative.joined(separator: "; "))")
+            print("Health172 synthetic a11y after scroll: reused=\(currentScroll === scroll),attached=\(currentScroll.isDescendant(of: host.controller.view)),frame=\(currentScroll.frame),bounds=\(currentScroll.bounds),content=\(currentScroll.contentSize),traits=\(currentScroll.traitCollection.preferredContentSizeCategory.rawValue),windowTraits=\(host.window.traitCollection.preferredContentSizeCategory.rawValue),fieldCount=\(after.count)")
+        }
         XCTAssertGreaterThan(currentScroll.contentSize.height, oldContentHeight)
     }
 

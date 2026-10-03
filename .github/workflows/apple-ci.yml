@@ -253,6 +253,10 @@ jobs:
                     f"{summary.get('skippedTests', 0)} skipped")
           PY
 
+      - name: Preserve tiny synthetic native failure diagnostics
+        if: ${{ !cancelled() }}
+        run: grep -F 'Health172 synthetic' build/logs/xcodebuild-ios-raw.log || true
+
       - name: Check warnings (iOS)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log
@@ -507,6 +511,8 @@ jobs:
             -configuration Debug-iOS \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
             -only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction \
+            -only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide \
+            -only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
