@@ -97,6 +97,11 @@
       "description": "Responsive dataset summary with totals, averages, sleep, and vitals.",
       "defaultLast": 30,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "html"
     },
     {
@@ -165,6 +170,11 @@
           "defaultValue": "week"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "html"
     },
     {
@@ -228,6 +238,11 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "html"
     },
     {
@@ -263,6 +278,11 @@
           "validation": "positive-number"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -273,6 +293,11 @@
       "defaultLast": 30,
       "defaultHeight": 280,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -333,6 +358,11 @@
           "defaultValue": true
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -365,6 +395,11 @@
           "defaultValue": "steps"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -375,6 +410,11 @@
       "defaultLast": 30,
       "defaultHeight": 300,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -436,6 +476,11 @@
           "defaultValue": "monday"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -446,6 +491,11 @@
       "defaultLast": 7,
       "defaultHeight": 220,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
+      "exportNote": "Needs granular sample rows — daily JSON and CSV exports include them; Markdown/Bases frontmatter does not.",
       "renderer": "canvas"
     },
     {
@@ -478,6 +528,11 @@
           "defaultValue": "heart-rate"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -488,6 +543,12 @@
       "defaultLast": 30,
       "defaultHeight": 180,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
+      "exportNote": "HRV samples come from JSON/CSV; Markdown/Bases render the daily HRV summary fallback.",
       "renderer": "canvas"
     },
     {
@@ -498,6 +559,11 @@
       "defaultLast": 1,
       "defaultHeight": 120,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
+      "exportNote": "Needs granular sample rows — daily JSON and CSV exports include them; Markdown/Bases frontmatter does not.",
       "renderer": "canvas"
     },
     {
@@ -526,6 +592,11 @@
           "defaultValue": "blood-oxygen"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -536,6 +607,11 @@
       "defaultLast": 1,
       "defaultHeight": 120,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
+      "exportNote": "Needs granular sample rows — daily JSON and CSV exports include them; Markdown/Bases frontmatter does not.",
       "renderer": "canvas"
     },
     {
@@ -571,6 +647,12 @@
           "validation": "time"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
+      "exportNote": "Markdown/Bases use bedtime/wake summary keys; JSON/CSV add stage-level timing.",
       "renderer": "canvas"
     },
     {
@@ -581,6 +663,11 @@
       "defaultLast": 30,
       "defaultHeight": 240,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -591,6 +678,11 @@
       "defaultLast": 7,
       "defaultHeight": 160,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
+      "exportNote": "Needs granular sample rows — daily JSON and CSV exports include them; Markdown/Bases frontmatter does not.",
       "renderer": "canvas"
     },
     {
@@ -601,6 +693,11 @@
       "defaultLast": 14,
       "defaultHeight": 280,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
+      "exportNote": "Needs granular sample rows — daily JSON and CSV exports include them; Markdown/Bases frontmatter does not.",
       "renderer": "canvas"
     },
     {
@@ -619,6 +716,11 @@
           "defaultValue": true
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -629,6 +731,11 @@
       "defaultLast": 120,
       "defaultHeight": 220,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -639,6 +746,11 @@
       "defaultLast": 60,
       "defaultHeight": 280,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -657,6 +769,11 @@
           "defaultValue": "21",
           "validation": "positive-integer"
         }
+      ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
       ],
       "renderer": "canvas"
     },
@@ -677,6 +794,11 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -696,6 +818,11 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -706,6 +833,11 @@
       "defaultLast": 45,
       "defaultHeight": 260,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -716,6 +848,11 @@
       "defaultLast": 45,
       "defaultHeight": 260,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -726,6 +863,11 @@
       "defaultLast": 90,
       "defaultHeight": 320,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -736,6 +878,11 @@
       "defaultLast": 30,
       "defaultHeight": 280,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -763,6 +910,11 @@
           ],
           "defaultValue": "valence"
         }
+      ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
       ],
       "renderer": "canvas"
     },
@@ -807,6 +959,10 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
       "renderer": "html"
     },
     {
@@ -816,6 +972,10 @@
       "description": "Standalone inventory totals with active, archived, scheduled, and unscheduled medication rows.",
       "defaultLast": 30,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
       "renderer": "html"
     },
     {
@@ -825,6 +985,10 @@
       "description": "Standalone taken/skipped/other counts and adherence percentage for the selected range.",
       "defaultLast": 30,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
       "renderer": "html"
     },
     {
@@ -834,6 +998,10 @@
       "description": "Standalone dose-status breakdown and adherence rate for each medication.",
       "defaultLast": 30,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
       "renderer": "html"
     },
     {
@@ -869,6 +1037,10 @@
           "defaultValue": "daily"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
       "renderer": "html"
     },
     {
@@ -887,6 +1059,10 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
       "renderer": "html"
     },
     {
@@ -897,6 +1073,11 @@
       "defaultLast": 30,
       "defaultHeight": 180,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -907,6 +1088,12 @@
       "defaultLast": 30,
       "defaultHeight": 240,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown",
+        "workout-notes"
+      ],
       "renderer": "canvas"
     },
     {
@@ -944,6 +1131,13 @@
           "validation": "positive-number"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown",
+        "workout-notes"
+      ],
+      "exportNote": "Prefers workout heart-rate series (JSON), then daily samples in the workout window, then min/avg/max summaries from any daily format.",
       "renderer": "canvas"
     },
     {
@@ -981,6 +1175,12 @@
           "validation": "positive-number"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "workout-notes"
+      ],
+      "exportNote": "Needs workout zone exports (JSON) or sample-derived zones (JSON/CSV); Markdown/Bases summaries are not enough.",
       "renderer": "canvas"
     },
     {
@@ -1024,6 +1224,12 @@
           ],
           "defaultValue": "all"
         }
+      ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown",
+        "workout-notes"
       ],
       "renderer": "canvas"
     },
@@ -1073,6 +1279,12 @@
           "defaultValue": "auto"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "workout-notes"
+      ],
+      "exportNote": "Laps/splits come from JSON/CSV workout rows or detailed workout notes.",
       "renderer": "html"
     },
     {
@@ -1118,6 +1330,10 @@
           "defaultValue": "speed"
         }
       ],
+      "exportSources": [
+        "daily-json"
+      ],
+      "exportNote": "GPS route coordinates are only included in daily JSON exports.",
       "renderer": "html"
     },
     {
@@ -1152,6 +1368,11 @@
           "validation": "positive-number"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1162,6 +1383,11 @@
       "defaultLast": 180,
       "defaultHeight": 280,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1223,6 +1449,10 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "rollups"
+      ],
+      "exportNote": "Reads Health/Rollups/ historical weekly/monthly/yearly roll-ups and v9 range summaries in every format.",
       "renderer": "html"
     },
     {
@@ -1233,6 +1463,11 @@
       "defaultLast": 180,
       "defaultHeight": 220,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1243,6 +1478,11 @@
       "defaultLast": 90,
       "defaultHeight": 300,
       "params": [],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1270,6 +1510,11 @@
           "validation": "positive-number"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1287,6 +1532,11 @@
           "desc": "Optional comma-separated canonical keys.",
           "optional": true
         }
+      ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
       ],
       "renderer": "canvas"
     },
@@ -1306,6 +1556,11 @@
           "optional": true
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1323,6 +1578,11 @@
           "desc": "Optional comma-separated canonical keys.",
           "optional": true
         }
+      ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
       ],
       "renderer": "canvas"
     },
@@ -1342,6 +1602,11 @@
           "optional": true,
           "validation": "positive-number"
         }
+      ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
       ],
       "renderer": "canvas"
     },
@@ -1387,6 +1652,11 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1423,6 +1693,11 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1448,6 +1723,11 @@
           "defaultValue": false
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv",
+        "daily-markdown"
+      ],
       "renderer": "canvas"
     },
     {
@@ -1466,6 +1746,10 @@
           "validation": "positive-integer"
         }
       ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
+      ],
       "renderer": "html"
     },
     {
@@ -1483,6 +1767,10 @@
           "defaultValue": "20",
           "validation": "positive-integer"
         }
+      ],
+      "exportSources": [
+        "daily-json",
+        "daily-csv"
       ],
       "renderer": "html"
     }

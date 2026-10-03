@@ -5,11 +5,11 @@
 - **Docs status:** draft
 - **Video priority:** medium
 - **Primary screen:** Settings → Health sources
-- **Source files:** `app/src/main/java/com/healthmd/presentation/oauth/OAuthCallbackActivity.kt`, `app/src/main/java/com/healthmd/rawexport/CloudRawHealthDataProvider.kt`, `app/src/main/java/com/healthmd/data/health/providers/cloud/` (adapters), `docs/health-provider-support.md`
+- **Source files:** `app/src/play/java/com/healthmd/presentation/oauth/OAuthCallbackActivity.kt`, `app/src/play/java/com/healthmd/rawexport/CloudRawHealthDataProvider.kt`, `app/src/play/java/com/healthmd/data/health/providers/cloud/` (adapters), `docs/health-provider-support.md`
 
 ## What it does
 
-Health Connect is the default export source, but Health.md can also connect Fitbit, Oura, WHOOP, and Withings accounts through their public cloud APIs. After a browser OAuth sign-in, both compatibility exports and Raw API Snapshots can read from the connected provider — snapshots capture each provider's exact response bytes.
+Health Connect is the default export source in both channels. The Google Play build can also connect Fitbit, Oura, WHOOP, and Withings accounts through their public cloud APIs. After a browser OAuth sign-in, both compatibility exports and Raw API Snapshots can read from the connected provider—snapshots capture each provider's exact response bytes. The F-Droid build contains only Health Connect; cloud-provider catalog entries, adapters, OAuth callbacks, credentials, and token state are absent.
 
 ## Who it is for
 

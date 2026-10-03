@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.model.ExportTarget
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -109,6 +110,112 @@ class ScheduledProfileEntryStoreTest {
         val stored = store.entry("alpha")!!
         assertThat(stored.hour).isEqualTo(10)
         assertThat(stored.lastSuccessEpochMillis).isEqualTo(5678L)
+    }
+
+    @Test
+    fun `backoff retry checkpoint survives configuration upsert and clears individually`() = runTest {
+        store.upsert(entry("alpha").copy(isEnabled = true))
+        val first = ScheduledProfilePendingExport(
+            id = "pending-first",
+            ownerEpochDays = listOf(20_001L),
+            fireAtMillis = 1_000L,
+            settingsSnapshotJson = "snapshot-a",
+            target = ExportTarget.DEVICE_FOLDER,
+            profileName = "Alpha",
+        )
+        val second = first.copy(id = "pending-second", ownerEpochDays = listOf(20_002L))
+
+        store.recordRetry(
+            profileId = "alpha",
+            fireAtMillis = 1_000L,
+            attemptedPendingID = null,
+            replacements = listOf(first, second),
+        )
+        // A stale settings draft must not erase worker-owned retry state.
+        store.upsert(entry("alpha", hour = 10))
+
+        val checkpoint = store.entry("alpha")!!
+        assertThat(checkpoint.lastSuccessEpochMillis).isEqualTo(1_000L)
+        assertThat(checkpoint.pendingExports).containsExactly(first, second).inOrder()
+
+        store.recordSuccess(
+            profileId = "alpha",
+            fireAtMillis = 1_000L,
+            completedPendingID = first.id,
+        )
+        assertThat(store.entry("alpha")!!.pendingExports).containsExactly(second)
+    }
+
+    @Test
+    fun `cancellation checkpoint fails closed when the profile row is missing`() = runTest {
+        val residual = ScheduledProfilePendingExport(
+            id = "missing-residual",
+            ownerEpochDays = listOf(20_001L),
+            fireAtMillis = 1_000L,
+            settingsSnapshotJson = "snapshot",
+            target = ExportTarget.DEVICE_FOLDER,
+            profileName = "Missing",
+        )
+
+        assertThat(
+            store.recordCancellation(
+                profileId = "missing",
+                fireAtMillis = 1_000L,
+                attemptedPendingID = null,
+                replacements = listOf(residual),
+            ),
+        ).isFalse()
+    }
+
+    @Test
+    fun `refresh-only success advances the refresh frontier without touching catch-up`() = runTest {
+        store.upsert(entry("alpha").copy(isEnabled = true, lastSuccessEpochMillis = 900L))
+
+        store.recordSuccess(profileId = "alpha", fireAtMillis = null)
+        store.recordRefreshSuccess(profileId = "alpha", slotMillis = 2_000L)
+
+        val stored = store.entry("alpha")!!
+        assertThat(stored.lastSuccessEpochMillis).isEqualTo(900L)
+        assertThat(stored.lastRefreshSuccessEpochMillis).isEqualTo(2_000L)
+
+        // A later, earlier refresh checkpoint never moves the frontier backwards.
+        store.recordRefreshSuccess(profileId = "alpha", slotMillis = 1_500L)
+        assertThat(store.entry("alpha")!!.lastRefreshSuccessEpochMillis).isEqualTo(2_000L)
+    }
+
+    @Test
+    fun `refresh-only retry keeps residuals empty and the frontier frozen`() = runTest {
+        store.upsert(entry("alpha").copy(isEnabled = true, lastSuccessEpochMillis = 900L))
+
+        assertThat(
+            store.recordRetry(
+                profileId = "alpha",
+                fireAtMillis = null,
+                attemptedPendingID = null,
+                replacements = emptyList(),
+            ),
+        ).isTrue()
+
+        val stored = store.entry("alpha")!!
+        assertThat(stored.lastSuccessEpochMillis).isEqualTo(900L)
+        assertThat(stored.pendingExports).isEmpty()
+    }
+
+    @Test
+    fun `blocked imported profile cannot be enabled by upsert update or legacy migration`() = runTest {
+        assertThat(store.upsert(entry("blocked"))).isTrue()
+        dataStore.edit {
+            it[com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence.blockedProfileIdsKey] =
+                setOf("blocked")
+        }
+
+        assertThat(store.upsert(entry("blocked").copy(isEnabled = true))).isFalse()
+        assertThat(store.update("blocked") { it.copy(isEnabled = true) }).isFalse()
+        assertThat(store.entry("blocked")!!.isEnabled).isFalse()
+
+        store.delete("blocked")
+        assertThat(store.beginLegacyMigration(entry("blocked").copy(isEnabled = true))).isFalse()
+        assertThat(store.getEntries()).isEmpty()
     }
 
     @Test

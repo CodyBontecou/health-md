@@ -1,7 +1,5 @@
-Health.md 3.1.1 fixes export reliability issues.
+Health.md 3.4.2 makes getting started faster and upgrade reminders gentler.
 
-Fixed
-• Export folders on iCloud Drive, Dropbox, and similar cloud locations no longer lose their selection when the app restarts. Previously the folder had to be re-selected before automatic exports and Shortcuts would run again.
-• A completed export no longer shows a red error toast — the success toast is back, with its Preview and Browse actions.
-• Choosing the iCloud Drive root now shows it as "iCloud Drive" instead of a technical folder name.
-• Scheduled exports targeting an API endpoint with no configured URL now explain exactly what to fix, instead of a generic unknown error.
+• Onboarding is now five quick steps. The Obsidian plugin intro moved onto the sample-export screen, and importing a shared setup stays available as a quiet link on the first screen.
+• Nothing blocks setup anymore. After your first real export preview, one optional screen explains unlimited exports — dismiss it and keep going with your 10 free exports.
+• After your 3rd and 7th free exports, a small reminder shows how many remain and how unlimited exports work. Your free count is unchanged.

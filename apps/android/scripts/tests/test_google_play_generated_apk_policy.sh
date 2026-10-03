@@ -58,7 +58,7 @@ grep -q 'EXPECTED_VERSION_NAME' "$verifier" || fail 'retained APK verifier versi
 for stale_default in \
   '${EXPECTED_PHONE_VERSION_CODE:-29}' \
   '${EXPECTED_WEAR_VERSION_CODE:-1000029}' \
-  '${EXPECTED_VERSION_NAME:-1.7.1}'; do
+  '${EXPECTED_VERSION_NAME:-1.8.0}'; do
   if grep -Fq "$stale_default" "$verifier"; then
     fail "retained APK verifier has stale release default: $stale_default"
   fi
@@ -90,7 +90,7 @@ grep -q 'availability only' "$(dirname "$report")/check-wear-adb-pair-readiness.
 if grep -Fq 'block "$readiness"' "$report"; then
   fail 'current ADB presence is still treated as completion evidence'
 fi
-grep -q 'Play exact qa/wear:qa pair is currently observable' "$report" \
+grep -q 'Play exact qa/wear:internal pair is currently observable' "$report" \
   || fail 'diagnostic blocker report lost the exact live QA track gate'
 grep -q 'signer-bound retained base-master APK evidence remains the completion gate' "$report" \
   || fail 'generated inventory counts are still mislabeled as completion proof'

@@ -25,10 +25,10 @@ description: "Envoyez les données JSON Apple Health sélectionnées directement
 
 ## Structure de la charge utile
 
-<p>Health.md envoie une requête POST par export. Le corps est une enveloppe d’API <code>healthmd.api_export</code>, dont la version évolue indépendamment, contenant des enregistrements quotidiens publics <code>healthmd.health_data</code> au schéma v7. L’enveloppe d’API v1 transporte les enregistrements quotidiens ; la v2 peut aussi transporter des fichiers annexes de fournisseurs sans modifier le schéma des enregistrements quotidiens.</p>
+<p>Health.md envoie une requête POST par export. Le corps est une enveloppe d’API <code>healthmd.api_export</code>, dont la version évolue indépendamment, contenant des enregistrements quotidiens publics <code>healthmd.health_data</code> au schéma v8. L’enveloppe d’API v1 transporte les enregistrements quotidiens ; la v2 peut aussi transporter des fichiers annexes de fournisseurs sans modifier le schéma des enregistrements quotidiens.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Objets quotidiens complets au schéma v7 conservés pour la plage demandée, y compris les enregistrements complets mais vides dont le manifeste de requête sert de preuve.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Objets quotidiens complets au schéma v8 conservés pour la plage demandée, y compris les enregistrements complets mais vides dont le manifeste de requête sert de preuve.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>Dates ayant échoué avant qu’un document quotidien puisse être conservé.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p>Version du schéma quotidien contenu dans <code>records</code>. Elle évolue indépendamment de la version de l’enveloppe d’API.</p></div>
 <div class="option"><strong>Fichiers annexes de fournisseurs</strong><p>Enregistrements externes v2 facultatifs, avec leurs propres règles de schéma et d’identité, lorsqu’un fournisseur connecté est activé.</p></div>

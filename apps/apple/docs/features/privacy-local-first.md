@@ -166,7 +166,7 @@ POST https://api.example.com/healthmd/ingest
 | Support message includes diagnostics | Feedback intentionally includes bounded app/platform information | Delete the diagnostics block before sending. |
 | API endpoint stores health data | Exports are sent directly to the configured service | Review that service's logs, retention, access, and deletion controls. |
 | A metric appears that you do not want | The metric is enabled in Health Metrics | Disable it and re-export or delete prior destination files. |
-| API payload contains clinical or binary details | Lossless Health Records is enabled | Disable it for summary-only exports or secure the receiving service. |
+| API payload contains clinical or binary details | Data Detail is set to Lossless Health Records | Choose Detailed Time-Series or Summary to omit the canonical archive, or secure the receiving service. |
 | Query is empty despite known data | HealthKit may hide denied read access | Review Apple Health permissions. |
 | Connected-provider data is missing | Data, scope, authorization, or provider rate limits may be unavailable | Review the sidecar error or reconnect the provider. |
 | Phone locked blocks automation | iOS protects HealthKit data while locked | Unlock before retrying or review Export History. |

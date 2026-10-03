@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
+import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -58,6 +59,12 @@ class ScheduledProfileEntryStore @Inject constructor(
             // A corrupt persisted list must never be rewritten from a failed read;
             // that would silently wipe every other entry. Skip the mutation instead.
             val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+            if (
+                entry.isEnabled &&
+                entry.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            ) {
+                return@edit
+            }
             val previous = existing.firstOrNull { it.profileId == entry.profileId }
             // UI drafts may have been opened before a worker recorded success. Configuration
             // saves must never move the durable catch-up frontier backwards.
@@ -70,6 +77,9 @@ class ScheduledProfileEntryStore @Inject constructor(
                     previous?.lastRefreshSuccessEpochMillis,
                     entry.lastRefreshSuccessEpochMillis,
                 ),
+                // A configuration draft may predate a worker's cancellation checkpoint. Preserve
+                // exact residual groups until the worker clears them individually.
+                pendingExports = previous?.pendingExports ?: entry.pendingExports,
             )
             val updated = existing.filterNot { it.profileId == entry.profileId } + merged
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
@@ -89,6 +99,12 @@ class ScheduledProfileEntryStore @Inject constructor(
             if (index < 0) return@edit
             val changed = change(existing[index])
             require(changed.profileId == profileId) { "Scheduled profile update cannot change identity." }
+            if (
+                changed.isEnabled &&
+                profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            ) {
+                return@edit
+            }
             val updated = existing.toMutableList().apply { set(index, changed) }
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
             persisted = true
@@ -106,13 +122,95 @@ class ScheduledProfileEntryStore @Inject constructor(
         }
     }
 
-    /** Records a successful occurrence for catch-up math; no-op when the entry is unknown. */
-    suspend fun recordSuccess(profileId: String, fireAtMillis: Long) {
+    /** Records a successful occurrence and clears only the residual group it completed.
+     *
+     * A null [fireAtMillis] records a Today Refresh-only success: the completed-day catch-up
+     * frontier must not move, because that run exported only today's partial file.
+     */
+    suspend fun recordSuccess(
+        profileId: String,
+        fireAtMillis: Long?,
+        completedPendingID: String? = null,
+    ) {
         update(profileId) { current ->
             current.copy(
-                lastSuccessEpochMillis = latest(current.lastSuccessEpochMillis, fireAtMillis),
+                lastSuccessEpochMillis = fireAtMillis?.let { latest(current.lastSuccessEpochMillis, it) }
+                    ?: current.lastSuccessEpochMillis,
+                pendingExports = completedPendingID?.let { completedID ->
+                    current.pendingExports.filterNot { it.id == completedID }
+                } ?: current.pendingExports,
             )
         }
+    }
+
+    /**
+     * Records a successful same-day refresh slot so its occurrence is not re-run. Refresh
+     * success is independent of the completed-day frontier: a merged run may satisfy its slot
+     * while other dates still fail and stay retryable.
+     */
+    suspend fun recordRefreshSuccess(profileId: String, slotMillis: Long) {
+        update(profileId) { current ->
+            current.copy(
+                lastRefreshSuccessEpochMillis = latest(
+                    current.lastRefreshSuccessEpochMillis,
+                    slotMillis,
+                ),
+            )
+        }
+    }
+
+    /**
+     * Advances the occurrence frontier while replacing only the attempted residual group with the
+     * exact unresolved owner-date groups. Cancellation and backoff retries share this checkpoint
+     * so completed dates are not repeated and later profile edits cannot rewrite in-flight work.
+     */
+    suspend fun recordCancellation(
+        profileId: String,
+        fireAtMillis: Long?,
+        attemptedPendingID: String?,
+        replacements: List<ScheduledProfilePendingExport>,
+    ): Boolean = recordResiduals(
+        profileId = profileId,
+        fireAtMillis = fireAtMillis,
+        attemptedPendingID = attemptedPendingID,
+        replacements = replacements,
+    )
+
+    /** Freezes unresolved work before a WorkManager backoff retry can observe profile edits. */
+    suspend fun recordRetry(
+        profileId: String,
+        fireAtMillis: Long?,
+        attemptedPendingID: String?,
+        replacements: List<ScheduledProfilePendingExport>,
+    ): Boolean = recordResiduals(
+        profileId = profileId,
+        fireAtMillis = fireAtMillis,
+        attemptedPendingID = attemptedPendingID,
+        replacements = replacements,
+    )
+
+    private suspend fun recordResiduals(
+        profileId: String,
+        fireAtMillis: Long?,
+        attemptedPendingID: String?,
+        replacements: List<ScheduledProfilePendingExport>,
+    ): Boolean = update(profileId) { current ->
+        val retained = attemptedPendingID?.let { attemptedID ->
+            current.pendingExports.filterNot { it.id == attemptedID }
+        } ?: current.pendingExports
+        val normalized = (retained + replacements)
+            .filter { it.ownerEpochDays.isNotEmpty() }
+            .distinctBy { it.id }
+            .sortedWith(
+                compareBy<ScheduledProfilePendingExport> { it.fireAtMillis }
+                    .thenBy { it.ownerEpochDays.minOrNull() ?: Long.MAX_VALUE }
+                    .thenBy { it.id },
+            )
+        current.copy(
+            lastSuccessEpochMillis = fireAtMillis?.let { latest(current.lastSuccessEpochMillis, it) }
+                ?: current.lastSuccessEpochMillis,
+            pendingExports = normalized,
+        )
     }
 
     /** Atomically writes the migrated entry plus a durable completion marker. */
@@ -120,7 +218,12 @@ class ScheduledProfileEntryStore @Inject constructor(
         var persisted = false
         dataStore.edit { prefs ->
             val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
-            if (existing.isNotEmpty()) return@edit
+            if (
+                existing.isNotEmpty() ||
+                entry.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
+            ) {
+                return@edit
+            }
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, listOf(entry))
             prefs[Keys.LEGACY_MIGRATION_PENDING_PROFILE_ID] = entry.profileId
             persisted = true

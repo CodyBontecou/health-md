@@ -17,6 +17,7 @@ import com.healthmd.direct.protocol.MAXIMUM_PACKET_BYTES
 import com.healthmd.direct.protocol.MAXIMUM_PARTITION_BYTES
 import com.healthmd.direct.protocol.MINIMUM_PARTITION_BYTES
 import com.healthmd.direct.protocol.PREFERRED_PARTITION_BYTES
+import com.healthmd.direct.protocol.SHARED_PAIRING_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.TRANSPORT_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.TransferCapabilities
 import com.healthmd.direct.protocol.TransferNegotiation
@@ -247,6 +248,7 @@ class AndroidDirectProtocolAuthority internal constructor(
         rustCore.value.buildInfo().coreApiVersion == HealthMdCoreService.EXPECTED_CORE_API_VERSION &&
             info.protocolApiRevision == EXPECTED_PROTOCOL_API_REVISION &&
             ANDROID_PAIRING_PROTOCOL_VERSION.toUInt() in info.supportedPairingProtocolVersions &&
+            SHARED_PAIRING_PROTOCOL_VERSION.toUInt() in info.supportedPairingProtocolVersions &&
             info.androidApplicationProtocolVersion == ANDROID_APPLICATION_PROTOCOL_VERSION.toUInt() &&
             info.manualIpPort == DIRECT_PORT.toUInt() &&
             info.maximumControlJsonBytes == MAXIMUM_PACKET_BYTES.toULong() &&

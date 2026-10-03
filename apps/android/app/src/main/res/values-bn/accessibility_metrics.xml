@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">%1$s প্রসারিত করুন</string>
+    <string name="a11y_metrics_collapse_category">%1$s সংকুচিত করুন</string>
+    <string name="a11y_metrics_expanded">প্রসারিত</string>
+    <string name="a11y_metrics_collapsed">সংকুচিত</string>
+    <string name="a11y_metrics_category_selection">%1$s-এর সব মেট্রিক</string>
+</resources>

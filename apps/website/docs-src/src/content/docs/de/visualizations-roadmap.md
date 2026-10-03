@@ -10,6 +10,18 @@ Health.md exportiert einen lokal gespeicherten, versionierten Datensatz für Mar
 <p style="margin-top:6px;">Diese Seite folgt dem Exportschema und Datenwörterbuch von Health.md: Aktivität, Schlaf, Herz, Vitalwerte, Körper, Ernährung, Achtsamkeit, Medikamente, Trainingseinheiten, reproduktive Gesundheit, Symptome, Hören sowie Lebensstil- und Umweltmetriken.</p>
 </div>
 
+## Einheiten pro Visualisierung überschreiben
+
+Füge `units` in einen einzelnen `health-viz`-Block ein, wenn ein Diagramm ein anderes Anzeigesystem als die globale Plugin-Einstellung verwenden soll:
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+Verwende `auto`, um dem im Export angegebenen Einheitensystem zu folgen, `metric`, um Kilometer, Kilogramm, Meter und Celsius anzuzeigen, oder `imperial`, um Meilen, Pfund, Fuß und Fahrenheit anzuzeigen. Die Überschreibung gilt nur für diese Visualisierung und hat Vorrang vor der globalen Einstellung Units. Sie ändert nur die angezeigten Werte; exportierte Health.md-Dateien bleiben unverändert. Nicht konvertierbare Metriken wie Schritte, BPM, Prozentwerte und Kalorien bleiben unverändert.
+
 ## Aktuelle Visualisierungsabdeckung
 <div class="reference-stats">
 <div><strong>43</strong><span>aktuelle Plugin-Renderer</span></div>

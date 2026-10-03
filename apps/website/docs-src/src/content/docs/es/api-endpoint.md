@@ -25,10 +25,10 @@ description: "Envía el JSON de Apple Health seleccionado directamente desde el 
 
 ## Estructura de la carga útil
 
-<p>Health.md envía una solicitud POST por cada acción de exportación. El cuerpo es un contenedor <code>healthmd.api_export</code> con una versión independiente que contiene registros diarios <code>healthmd.health_data</code> de esquema público v7. El contenedor de API v1 incluye los registros diarios; v2 también puede incluir datos auxiliares del proveedor sin cambiar el esquema de registro diario.</p>
+<p>Health.md envía una solicitud POST por cada acción de exportación. El cuerpo es un contenedor <code>healthmd.api_export</code> con una versión independiente que contiene registros diarios <code>healthmd.health_data</code> de esquema público v8. El contenedor de API v1 incluye los registros diarios; v2 también puede incluir datos auxiliares del proveedor sin cambiar el esquema de registro diario.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Objetos completos del esquema diario v7 retenidos para el rango solicitado, incluidos los registros completamente vacíos cuyo manifiesto de consulta sirve de evidencia.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Objetos completos del esquema diario v8 retenidos para el rango solicitado, incluidos los registros completamente vacíos cuyo manifiesto de consulta sirve de evidencia.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>Fechas que fallaron antes de que se pudiera conservar un documento diario.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p>La versión del esquema diario dentro de <code>records</code>. Avanza independientemente de la versión del sobre API.</p></div>
 <div class="option"><strong>Datos auxiliares del proveedor</strong><p>Registros externos condicionales de v2, con su propio esquema y sus propias reglas de identidad, cuando hay un proveedor conectado habilitado.</p></div>

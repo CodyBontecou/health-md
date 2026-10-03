@@ -25,6 +25,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.organizeFormatsIntoFolders)
         XCTAssertTrue(snapshot.includeDataDictionary)
         XCTAssertEqual(snapshot.writeMode, .update)
+        XCTAssertEqual(snapshot.detailPolicy, .lossless)
         XCTAssertTrue(snapshot.includeGranularData)
         XCTAssertTrue(snapshot.generateRangeSummary)
         XCTAssertTrue(snapshot.summaryOnlyExport)
@@ -83,6 +84,8 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data)
 
         XCTAssertEqual(encodedObject["includeGranularData"] as? Bool, true)
+        XCTAssertEqual(encodedObject["compatibilityDetail"] as? String, "selected_time_series")
+        XCTAssertEqual(encodedObject["healthKitSourceArchivePolicy"] as? String, "canonical_v1")
         XCTAssertNil(
             encodedObject["includeDataDictionary"],
             "Default-on snapshots must preserve the legacy canonical encoding for durable fingerprints"
@@ -116,13 +119,60 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let data = try JSONEncoder().encode(snapshot)
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "includeGranularData")
+        object.removeValue(forKey: "compatibilityDetail")
+        object.removeValue(forKey: "healthKitSourceArchivePolicy")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
 
+        XCTAssertEqual(decoded.detailPolicy, .summary)
         XCTAssertFalse(decoded.includeGranularData)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
         XCTAssertEqual(decoded.metricSelection, snapshot.metricSelection)
+    }
+
+    func testSnapshot_decodesLegacyCombinedTrueAsLosslessPolicy() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "compatibilityDetail")
+        object.removeValue(forKey: "healthKitSourceArchivePolicy")
+        object["includeGranularData"] = true
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
+
+        XCTAssertEqual(decoded.detailPolicy, .lossless)
+        XCTAssertTrue(decoded.includeGranularData)
+    }
+
+    func testSnapshot_exactSplitPolicyWinsOverLegacyBridge() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object["compatibilityDetail"] = "selected_time_series"
+        object["healthKitSourceArchivePolicy"] = "none"
+        object["includeGranularData"] = true
+        let exactData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: exactData)
+        let reencoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? [String: Any]
+        )
+
+        XCTAssertEqual(decoded.detailPolicy, .detailedTimeSeries)
+        XCTAssertFalse(decoded.includeGranularData)
+        XCTAssertEqual(reencoded["includeGranularData"] as? Bool, false)
+    }
+
+    func testDetailPolicyHistoryTokensCoverAllFourStates() {
+        XCTAssertEqual(AppleExportDetailPolicy.summary.historyDetailLevelToken, "summary")
+        XCTAssertEqual(
+            AppleExportDetailPolicy.detailedTimeSeries.historyDetailLevelToken,
+            "detailed_time_series"
+        )
+        XCTAssertEqual(AppleExportDetailPolicy.archiveOnly.historyDetailLevelToken, "archive_only")
+        XCTAssertEqual(AppleExportDetailPolicy.lossless.historyDetailLevelToken, "lossless")
     }
 
     func testSnapshot_decodesLegacyDailyNoteSettingsWithoutDailyNotesOnly() throws {

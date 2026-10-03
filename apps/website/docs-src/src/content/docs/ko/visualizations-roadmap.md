@@ -10,6 +10,18 @@ Health.md는 Markdown, Obsidian Bases, JSON 및 CSV용으로 스키마 버전이
 <p style="margin-top:6px;">이 페이지는 Health.md의 내보내기 스키마와 데이터 사전을 기준으로 활동, 수면, 심장, 활력 징후, 신체, 영양, 마음 챙김, 투여약, 운동, 생식 건강, 증상, 청각 및 생활 방식/환경 측정 항목을 정리합니다.</p>
 </div>
 
+## 시각화별 단위 재정의
+
+플러그인 전체 설정과 다른 표시 단위를 하나의 차트에서 사용하려면 개별 `units` 설정을 `health-viz` 블록에 추가하세요.
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+`auto`는 내보내기에서 선언한 단위 체계를 따르고, `metric`은 킬로미터·킬로그램·미터·섭씨로 표시하며, `imperial`은 마일·파운드·피트·화씨로 표시합니다. 재정의는 해당 시각화에만 적용되며 전역 Units 설정보다 우선합니다. 표시 값만 바뀌고 내보낸 Health.md 파일은 변경되지 않습니다. 걸음 수, BPM, 백분율, 칼로리처럼 변환할 수 없는 지표는 그대로 유지됩니다.
+
 ## 현재 시각화 지원 범위
 
 <div class="reference-stats">

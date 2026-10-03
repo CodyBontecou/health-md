@@ -33,6 +33,8 @@ struct iPadContentView: View {
     @State private var errorReason: ExportFailureReason?
     @State private var exportTask: Task<Void, Never>?
     @State private var showPaywall = false
+    @State private var showUpgradePromptPaywall = false
+    @State private var presentPaywallAfterUpgradePrompt = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -175,6 +177,40 @@ struct iPadContentView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+            .sheet(
+                isPresented: Binding(
+                    get: { purchaseManager.pendingUpgradePrompt != nil },
+                    set: { presented in
+                        if !presented { handleUpgradePromptSwipeDismissIfNeeded() }
+                    }
+                ),
+                onDismiss: {
+                    if presentPaywallAfterUpgradePrompt {
+                        presentPaywallAfterUpgradePrompt = false
+                        showUpgradePromptPaywall = true
+                    }
+                }
+            ) {
+                ExportUpgradePrompt(
+                    milestone: purchaseManager.pendingUpgradePrompt ?? 0,
+                    onUpgrade: {
+                        let quotaState = purchaseManager.analyticsQuotaState
+                        purchaseManager.consumeUpgradePrompt()
+                        PricingAnalyticsClient.shared.trackUpgradePromptTapped(quotaState: quotaState)
+                        presentPaywallAfterUpgradePrompt = true
+                    },
+                    onDismiss: {
+                        let quotaState = purchaseManager.analyticsQuotaState
+                        purchaseManager.consumeUpgradePrompt()
+                        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
+                    }
+                )
+            }
+            .sheet(isPresented: $showUpgradePromptPaywall) {
+                PaywallView(context: .upgradePrompt)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
             .geistDialog(
                 isPresented: $showDestinationChangedAlert,
                 title: Text("Export Folder Changed"),
@@ -226,7 +262,7 @@ struct iPadContentView: View {
                     }
                     if TestMode.useHealthKitExportPreviewFixtures {
                         advancedSettings.exportFormats = [.markdown]
-                        advancedSettings.includeGranularData = true
+                        advancedSettings.detailPolicy = .lossless
                         advancedSettings.metricSelection.selectAll()
                         advancedSettings.generateWeeklyRollups = true
                         advancedSettings.generateMonthlyRollups = true
@@ -362,6 +398,16 @@ struct iPadContentView: View {
             quotaState: purchaseManager.analyticsQuotaState
         )
         showPaywall = true
+    }
+
+    /// Swipe-to-dismiss on the value-moment prompt bypasses the button
+    /// actions, so the binding's `set(false)` finishes the funnel. Button
+    /// paths have already consumed the milestone by then, making this a no-op.
+    private func handleUpgradePromptSwipeDismissIfNeeded() {
+        guard purchaseManager.pendingUpgradePrompt != nil else { return }
+        let quotaState = purchaseManager.analyticsQuotaState
+        purchaseManager.consumeUpgradePrompt()
+        PricingAnalyticsClient.shared.trackUpgradePromptDismissed(quotaState: quotaState)
     }
 
     private func trackSuccessfulExport(startDate: Date, endDate: Date) {
@@ -534,9 +580,10 @@ struct iPadContentView: View {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
+                let noteSuffix = result.localizedInformationalNoteSummary.map { " \($0)" } ?? ""
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    : result.localizedGeneratedFileAndDataDayDescription
+                    : result.localizedGeneratedFileAndDataDayDescription + noteSuffix
             } else if result.isPartialSuccess {
                 let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
                     && result.dailyNoteSkipCount > 0
@@ -545,7 +592,7 @@ struct iPadContentView: View {
                     partialExportNotice = PartialExportNotice(result: result)
                 }
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                let suffix = result.hasPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
+                let suffix = result.hasDegradingPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
                 if isCompletedDailyNoteSkip {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
                 } else {

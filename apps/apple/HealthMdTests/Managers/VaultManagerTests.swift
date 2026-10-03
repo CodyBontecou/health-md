@@ -1379,7 +1379,7 @@ final class VaultManagerTests: XCTestCase {
         bookmarkResolver.accessGranted = true
         let manager = makeManager()
 
-        manager.setVaultFolder(vaultURL)
+        XCTAssertTrue(manager.setVaultFolder(vaultURL))
 
         XCTAssertEqual(manager.vaultURL, vaultURL)
         XCTAssertEqual(manager.vaultName, "NewVault")
@@ -1447,7 +1447,7 @@ final class VaultManagerTests: XCTestCase {
         bookmarkResolver.accessGranted = false
         let manager = makeManager()
 
-        manager.setVaultFolder(URL(fileURLWithPath: "/tmp/Denied"))
+        XCTAssertFalse(manager.setVaultFolder(URL(fileURLWithPath: "/tmp/Denied")))
 
         XCTAssertNil(manager.vaultURL)
         XCTAssertEqual(manager.lastExportStatus, "Failed to access folder")

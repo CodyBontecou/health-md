@@ -27,7 +27,7 @@ It does not introduce an exporter, health-data schema, direct-protocol message, 
 1. Install a current Debug build on the physical iPhone.
 2. Grant the intended HealthKit and local-network permissions.
 3. Keep Health.md foregrounded, the iPhone powered, and Auto-Lock disabled only during supervised runs.
-4. Enable **Settings → Mac Sync → Direct CLI Access → Manual IP**.
+4. Open **Sync → CLI**, enable **Direct CLI Access**, and select **Manual IP**.
 5. Keep the configured CLI port fixed. The local lab configuration defaults to `17648`.
 
 ### 2. Dedicated destinations

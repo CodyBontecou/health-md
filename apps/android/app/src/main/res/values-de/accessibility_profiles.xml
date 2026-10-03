@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Profilzeitpläne</string>
+    <string name="a11y_profiles_empty">Noch keine Exportprofile.</string>
+    <string name="a11y_profiles_add">Neues Profil aus aktuellen Einstellungen</string>
+    <string name="a11y_profiles_none_enabled">Keine Profilzeitpläne aktiviert.</string>
+    <string name="a11y_profiles_edit">Zeitplan bearbeiten</string>
+    <string name="a11y_profiles_edit_named">Zeitplan für %1$s bearbeiten</string>
+    <string name="a11y_profiles_delete">Löschen</string>
+    <string name="a11y_profiles_delete_named">Profil %1$s löschen</string>
+    <string name="a11y_profiles_schedule_named">Zeitplan für %1$s</string>
+    <string name="a11y_profiles_save">Speichern</string>
+    <string name="a11y_profiles_delete_title">„%1$s“ löschen?</string>
+    <string name="a11y_profiles_delete_body">Die gespeicherten Einstellungen und der Zeitplan werden entfernt. Das letzte verbleibende Profil kann nicht gelöscht werden.</string>
+    <string name="a11y_profiles_cadence_unit">Intervalleinheit</string>
+    <string name="a11y_profiles_days">Tage</string>
+    <string name="a11y_profiles_weeks">Wochen</string>
+    <string name="a11y_profiles_months">Monate</string>
+    <string name="a11y_profiles_weekday">Wochentag</string>
+    <string name="a11y_profiles_hour">Stunde</string>
+    <string name="a11y_profiles_minute">Minute</string>
+    <string name="a11y_profiles_lookback">Vergangene Tage (1–30)</string>
+    <string name="a11y_profiles_every_days">Alle N Tage</string>
+    <string name="a11y_profiles_every_weeks">Alle N Wochen</string>
+    <string name="a11y_profiles_every_months">Alle N Monate</string>
+</resources>

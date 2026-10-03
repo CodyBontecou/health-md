@@ -239,9 +239,8 @@ final class ScheduledExportEntryStore: ObservableObject {
         return true
     }
 
-    /// Records a successful occurrence so catch-up math skips it, mirroring
-    /// `ExportSchedule.updateLastExport`. Returns false when the entry is
-    /// unknown.
+    /// Records a successful occurrence without rewinding progress when an
+    /// older pending request finishes later. Returns false for unknown entries.
     @discardableResult
     func recordSuccess(
         profileID: UUID,
@@ -251,9 +250,9 @@ final class ScheduledExportEntryStore: ObservableObject {
         update(profileID: profileID) { entry in
             switch kind {
             case .completedDay:
-                entry.lastExportDate = occurrenceDate
+                entry.lastExportDate = max(entry.lastExportDate ?? occurrenceDate, occurrenceDate)
             case .todayRefresh:
-                entry.lastTodayRefreshDate = occurrenceDate
+                entry.lastTodayRefreshDate = max(entry.lastTodayRefreshDate ?? occurrenceDate, occurrenceDate)
             }
         }
     }
@@ -300,10 +299,10 @@ final class ScheduledExportEntryStore: ObservableObject {
     /// `dueOccurrences`, then launches each result concurrently (decision 6)
     /// with per-entry in-flight identity.
     ///
-    /// Mirrors the shipped two-layer semantics: a completed-day occurrence is
-    /// only actionable when the entry also has unexported data days
-    /// (`ScheduleDateMath.catchUpDatesNeeded`), and a Today Refresh occurrence
-    /// is actionable when its slot boundary passed after the last refresh.
+    /// Each new completed-day occurrence re-exports its entire lookback, even
+    /// when those data days were exported by an earlier occurrence. Success
+    /// deduplicates occurrence boundaries, not overlapping data days. Today
+    /// Refresh remains independently due after its last successful slot.
     struct DueEntryOccurrence: Equatable {
         let entryID: UUID
         let profileID: UUID
@@ -314,10 +313,9 @@ final class ScheduledExportEntryStore: ObservableObject {
         let exportDates: [Date]
     }
 
-    /// Evaluates every enabled entry against `now` using the shipped
-    /// occurrence and catch-up rules. Occurrence boundaries that carry no
-    /// work (for example a daily boundary after today's run already covered
-    /// yesterday) are not returned.
+    /// Evaluates enabled entries against `now`, excluding already-satisfied
+    /// occurrence boundaries. Windows are anchored to the scheduled fire day,
+    /// so a delayed wake-up cannot shift a completed-day request after midnight.
     func dueOccurrences(
         now: Date,
         calendar: Calendar = .current
@@ -336,9 +334,12 @@ final class ScheduledExportEntryStore: ObservableObject {
                     let exportDates: [Date]
                     switch occurrence.kind {
                     case .completedDay:
-                        let dates = ScheduleDateMath.catchUpDatesNeeded(
+                        if let lastSuccess = entry.lastExportDate, lastSuccess >= occurrence.fireDate {
+                            return nil
+                        }
+                        let dates = ScheduleDateMath.scheduledExportDates(
                             schedule: projection,
-                            now: now,
+                            fireDate: occurrence.fireDate,
                             calendar: calendar
                         )
                         guard !dates.isEmpty else { return nil }
@@ -364,71 +365,5 @@ final class ScheduledExportEntryStore: ObservableObject {
         if let encoded = try? JSONEncoder().encode(entries) {
             userDefaults.set(encoded, forKey: Self.storageKey)
         }
-    }
-}
-
-/// Projected monthly quota burn across scheduled entries (decision 4's
-/// surfaced usage). Every exporting request — completed-day runs *and*
-/// Today Refreshes — consumes one free export action, so both are counted.
-enum ScheduledUsageProjection {
-    /// Per-entry projection with the assumptions documented on `monthlyTotal`.
-    struct EntryProjection: Equatable {
-        let entryID: UUID
-        let profileID: UUID
-        /// Approximate exporting requests per 30-day month for this entry.
-        let monthlyTotal: Int
-        /// Requests per day implied by the cadence (main run + refreshes).
-        let requestsPerDay: Double
-    }
-
-    /// 30-day month approximation. Daily cadence → 30 runs; weekly → 30/7;
-    /// custom every N nominal days → 30/N. Today Refresh adds one request per
-    /// scheduled refresh slot between the preferred time and midnight.
-    static func projectedMonthlyActions(
-        entries: [ScheduledExportEntry],
-        calendar: Calendar = .current
-    ) -> [EntryProjection] {
-        entries.map { entry in
-            let cadenceDays: Double
-            switch entry.frequency {
-            case .daily:
-                cadenceDays = 1
-            case .weekly:
-                cadenceDays = 7
-            case .custom:
-                cadenceDays = Double(
-                    max(entry.customInterval, 1) * entry.customUnit.nominalDayCount
-                )
-            }
-
-            let mainRunsPerDay = 1.0 / cadenceDays
-            var refreshesPerDay = 0.0
-            if entry.todayRefreshEnabled {
-                let interval = ExportSchedule.clampedTodayRefreshIntervalHours(
-                    entry.todayRefreshIntervalHours
-                )
-                var hour = entry.preferredHour
-                while hour < 24 {
-                    refreshesPerDay += 1
-                    hour += interval
-                }
-            }
-
-            let requestsPerDay = mainRunsPerDay + refreshesPerDay
-            return EntryProjection(
-                entryID: entry.id,
-                profileID: entry.profileID,
-                monthlyTotal: Int((requestsPerDay * 30).rounded(.up)),
-                requestsPerDay: requestsPerDay
-            )
-        }
-    }
-
-    /// Aggregate monthly request count across enabled entries only.
-    static func projectedMonthlyTotal(
-        entries: [ScheduledExportEntry]
-    ) -> Int {
-        projectedMonthlyActions(entries: entries.filter(\.isEnabled))
-            .reduce(0) { $0 + $1.monthlyTotal }
     }
 }

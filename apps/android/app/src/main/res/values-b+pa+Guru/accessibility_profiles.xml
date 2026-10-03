@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">ਪ੍ਰੋਫਾਈਲ ਸਮਾਂ-ਸਾਰਣੀਆਂ</string>
+    <string name="a11y_profiles_empty">ਹਾਲੇ ਕੋਈ ਐਕਸਪੋਰਟ ਪ੍ਰੋਫਾਈਲ ਨਹੀਂ ਹੈ।</string>
+    <string name="a11y_profiles_add">ਮੌਜੂਦਾ ਸੈਟਿੰਗਾਂ ਤੋਂ ਨਵੀਂ ਪ੍ਰੋਫਾਈਲ</string>
+    <string name="a11y_profiles_none_enabled">ਕੋਈ ਪ੍ਰੋਫਾਈਲ ਸਮਾਂ-ਸਾਰਣੀ ਚਾਲੂ ਨਹੀਂ ਹੈ।</string>
+    <string name="a11y_profiles_edit">ਸਮਾਂ-ਸਾਰਣੀ ਸੋਧੋ</string>
+    <string name="a11y_profiles_edit_named">%1$s ਦੀ ਸਮਾਂ-ਸਾਰਣੀ ਸੋਧੋ</string>
+    <string name="a11y_profiles_delete">ਮਿਟਾਓ</string>
+    <string name="a11y_profiles_delete_named">ਪ੍ਰੋਫਾਈਲ %1$s ਮਿਟਾਓ</string>
+    <string name="a11y_profiles_schedule_named">%1$s ਦੀ ਸਮਾਂ-ਸਾਰਣੀ</string>
+    <string name="a11y_profiles_save">ਸੰਭਾਲੋ</string>
+    <string name="a11y_profiles_delete_title">“%1$s” ਮਿਟਾਉਣੀ ਹੈ?</string>
+    <string name="a11y_profiles_delete_body">ਇਸ ਦੀਆਂ ਸੰਭਾਲੀਆਂ ਸੈਟਿੰਗਾਂ ਅਤੇ ਸਮਾਂ-ਸਾਰਣੀ ਹਟਾ ਦਿੱਤੀਆਂ ਜਾਣਗੀਆਂ। ਆਖਰੀ ਬਚੀ ਪ੍ਰੋਫਾਈਲ ਮਿਟਾਈ ਨਹੀਂ ਜਾ ਸਕਦੀ।</string>
+    <string name="a11y_profiles_cadence_unit">ਦੁਹਰਾਓ ਦੀ ਇਕਾਈ</string>
+    <string name="a11y_profiles_days">ਦਿਨ</string>
+    <string name="a11y_profiles_weeks">ਹਫ਼ਤੇ</string>
+    <string name="a11y_profiles_months">ਮਹੀਨੇ</string>
+    <string name="a11y_profiles_weekday">ਹਫ਼ਤੇ ਦਾ ਦਿਨ</string>
+    <string name="a11y_profiles_hour">ਘੰਟਾ</string>
+    <string name="a11y_profiles_minute">ਮਿੰਟ</string>
+    <string name="a11y_profiles_lookback">ਪਿਛਲੇ ਦਿਨ (1–30)</string>
+    <string name="a11y_profiles_every_days">ਹਰ N ਦਿਨ</string>
+    <string name="a11y_profiles_every_weeks">ਹਰ N ਹਫ਼ਤੇ</string>
+    <string name="a11y_profiles_every_months">ਹਰ N ਮਹੀਨੇ</string>
+</resources>

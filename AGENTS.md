@@ -6,6 +6,7 @@
 - `apps/android`: Android app and Kotlin direct protocol implementation.
 - `apps/cli`: standalone Rust CLI and client crates.
 - `apps/practice`: separately governed clinician portal and future clinical service boundary.
+- `apps/wake`: notification-only Direct CLI wake Worker and isolated D1 service; never a health-data path.
 - `apps/website`: website and generated product documentation.
 - `packages/contracts`: language-neutral schemas and interoperability fixtures.
 - `packages/healthmd-core-rust`: shared Rust core, UniFFI tooling, and direct-protocol crate.
@@ -59,6 +60,7 @@ For Apple App Store releases, follow the complete synchronization contract in `a
 - Use explicit component working directories and component-prefixed cache/artifact paths.
 - Keep `apps/cli` and `packages/healthmd-core-rust` as independent Cargo workspaces with independent lockfiles and target directories.
 - Keep `apps/practice` isolated from the static website and existing non-PHI Workers; its lockfile, build, tests, deployment configuration, and clinical data boundary remain component-scoped.
+- Keep `apps/wake` notification-only, with its own lockfile, D1 migrations, secrets, CI, and deployment configuration; no health payload or request contents may enter the Worker.
 - Contract changes must trigger every affected component. Shared-core changes must trigger the core, Apple, Android, CLI, and website consumer gates.
 - Avoid introducing a repository-wide build framework unless it provides concrete value across Swift, Kotlin, Rust, and Node.js.
 

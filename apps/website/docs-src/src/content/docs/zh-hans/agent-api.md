@@ -28,7 +28,7 @@ Health.md Mac 版在 `/v1/agent/` 下提供版本化本地 API，用于加密上
 
 原有的 `/v1/agent/profiles` 和 `/v1/agent/activity/query` 路由会返回 `410 removed_endpoint`。
 
-iPhone 直连后端不提供这些 HTTP 路由。独立的 `healthmd` 命令通过直连后端执行规范提取和导出；`healthmd mcp serve` 则直接通过 iPhone 查询协议 v3 提供全新类型化查询、证据、指标目录、就绪状态、可视化和持久导出工具。配对和 MCP 使用同一可执行文件身份；刷新和 Mac 加密上下文仍是此 HTTP API 独有的功能。
+iPhone 直连访问不提供这些 HTTP 路由。独立的 `healthmd` 命令通过直连访问执行规范提取和导出；`healthmd mcp serve` 则直接通过 iPhone 查询协议 v3 提供全新类型化查询、证据、指标目录、就绪状态、可视化和持久导出工具。配对和 MCP 使用同一可执行文件身份；刷新和 Mac 加密上下文仍是此 HTTP API 独有的功能。
 
 ## 首选 CLI 适配器
 
@@ -292,6 +292,6 @@ curl --fail-with-body --max-time 30 \
   <a href="/zh-hans/docs/agents/"><span>概览</span>本地智能体与健康上下文：设置、加密存储、范围和结果报告规则。</a>
   <a href="/zh-hans/docs/agent-queries/"><span>高级</span>类型化查询手册：常见指标、睡眠、锻炼和证据问题的已验证命令。</a>
   <a href="/zh-hans/docs/mcp/"><span>工具</span>本地 MCP 服务器：stdio 配置、类型化工具、分页和沙盒限制。</a>
-  <a href="/zh-hans/docs/reference/api-and-cli/"><span>参考</span>API 与 CLI 契约：导出、提取、查询、直连后端和操作限制。</a>
+  <a href="/zh-hans/docs/reference/api-and-cli/"><span>参考</span>API 与 CLI 契约：导出、提取、查询、直连访问和操作限制。</a>
   <a href="/zh-hans/docs/reference/evidence-packets/"><span>数据契约</span>精简查询与证据包：类型、游标、操作和确定性证据包 ID。</a>
 </div>

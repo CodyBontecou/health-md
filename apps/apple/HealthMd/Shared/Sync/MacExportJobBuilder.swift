@@ -1,40 +1,42 @@
 import Foundation
 
-/// Request-scoped connected-export mode. Summary-only jobs may retain the saved
-/// Lossless Health Records toggle, but they must never fetch or transfer archives.
-enum ConnectedExportGranularMode {
-    static func isEnabled(for settings: AdvancedExportSettings) -> Bool {
-        settings.effectiveGranularDataEnabled
+/// Request-scoped connected-export detail. Summary-only and Daily Notes Only
+/// jobs may retain saved preferences, but they never fetch or transfer detail.
+enum ConnectedExportDetailPolicy {
+    static func effective(for settings: AdvancedExportSettings) -> AppleExportDetailPolicy {
+        settings.effectiveDetailPolicy
     }
 
-    static func isEnabled(for snapshot: ExportSettingsSnapshot) -> Bool {
-        let hasRollups = snapshot.generateWeeklyRollups
-            || snapshot.generateMonthlyRollups
-            || snapshot.generateYearlyRollups
+    static func effective(for snapshot: ExportSettingsSnapshot) -> AppleExportDetailPolicy {
+        let hasRollups = snapshot.generateRangeSummary
         let summaryOnlyModeEnabled = snapshot.summaryOnlyExport
             && hasRollups
             && !snapshot.exportFormats.isEmpty
-        return snapshot.includeGranularData
-            && !summaryOnlyModeEnabled
-            && !snapshot.dailyNotesOnlyModeEnabled
+        guard !summaryOnlyModeEnabled, !snapshot.dailyNotesOnlyModeEnabled else {
+            return .summary
+        }
+        return snapshot.detailPolicy
     }
 
     nonisolated static func sanitized(
         _ record: HealthData,
-        includesGranularData: Bool
+        detailPolicy: AppleExportDetailPolicy
     ) -> HealthData {
-        guard !includesGranularData else { return record }
         var sanitized = record
-        sanitized.sleep.stages = []
-        sanitized.heart.heartRateSamples = []
-        sanitized.heart.hrvSamples = []
-        sanitized.vitals.bloodOxygenSamples = []
-        sanitized.vitals.bloodGlucoseSamples = []
-        sanitized.vitals.respiratoryRateSamples = []
-        sanitized.vitals.bloodPressureSamples = []
-        sanitized.workouts = sanitized.workouts.map(summaryOnlyWorkout)
-        sanitized.healthKitRecordArchive = nil
-        sanitized.healthKitRecordCaptureStatus = .notRequested
+        if !detailPolicy.includesSelectedTimeSeries {
+            sanitized.sleep.stages = []
+            sanitized.heart.heartRateSamples = []
+            sanitized.heart.hrvSamples = []
+            sanitized.vitals.bloodOxygenSamples = []
+            sanitized.vitals.bloodGlucoseSamples = []
+            sanitized.vitals.respiratoryRateSamples = []
+            sanitized.vitals.bloodPressureSamples = []
+            sanitized.workouts = sanitized.workouts.map(summaryOnlyWorkout)
+        }
+        if !detailPolicy.includesCanonicalArchive {
+            sanitized.healthKitRecordArchive = nil
+            sanitized.healthKitRecordCaptureStatus = .notRequested
+        }
         return sanitized
     }
 
@@ -74,11 +76,36 @@ enum ConnectedExportGranularMode {
     }
 }
 
+/// Historical source compatibility for callers and tests that still express
+/// only Summary versus legacy Lossless.
+enum ConnectedExportGranularMode {
+    static func isEnabled(for settings: AdvancedExportSettings) -> Bool {
+        ConnectedExportDetailPolicy.effective(for: settings) == .lossless
+    }
+
+    static func isEnabled(for snapshot: ExportSettingsSnapshot) -> Bool {
+        ConnectedExportDetailPolicy.effective(for: snapshot) == .lossless
+    }
+
+    nonisolated static func sanitized(
+        _ record: HealthData,
+        includesGranularData: Bool
+    ) -> HealthData {
+        ConnectedExportDetailPolicy.sanitized(
+            record,
+            detailPolicy: includesGranularData ? .lossless : .summary
+        )
+    }
+}
+
 /// Builds iOS-originated Mac export jobs by capturing the current export settings
 /// and fetching one HealthKit record for each requested date.
 @MainActor
 struct MacExportJobBuilder {
-    typealias HealthDataFetcher = (_ date: Date, _ includeGranularData: Bool) async throws -> HealthData
+    typealias HealthDataFetcher = (
+        _ date: Date,
+        _ detailPolicy: AppleExportDetailPolicy
+    ) async throws -> HealthData
     typealias ExternalDailyRecordFetcher = (_ date: Date) async -> [ExternalDailyRecord]
 
     /// Captures connected renderer authority before HealthKit/provider acquisition. Unsupported or
@@ -167,7 +194,9 @@ struct MacExportJobBuilder {
                     && fetchExternalDailyRecords != nil
             )
         }
-        let includeGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
+        let operationDetailPolicy = ConnectedExportDetailPolicy.effective(
+            for: settingsSnapshot
+        )
         let dailySourceDays = settings.archiveModeEnabled
             ? Set(immutableRollupDates.map { sourceCalendar.startOfDay(for: $0) })
             : requestedDays
@@ -177,11 +206,13 @@ struct MacExportJobBuilder {
         for (index, date) in transferDates.enumerated() {
             try Task.checkCancellation()
             let day = sourceCalendar.startOfDay(for: date)
-            let shouldIncludeGranularData = dailySourceDays.contains(day) && includeGranularData
-            let fetchedRecord = try await fetchHealthData(date, shouldIncludeGranularData)
-            var record = ConnectedExportGranularMode.sanitized(
+            let detailPolicy = dailySourceDays.contains(day)
+                ? operationDetailPolicy
+                : .summary
+            let fetchedRecord = try await fetchHealthData(date, detailPolicy)
+            var record = ConnectedExportDetailPolicy.sanitized(
                 fetchedRecord,
-                includesGranularData: shouldIncludeGranularData
+                detailPolicy: detailPolicy
             )
 
             if record.hasAnyData,
@@ -365,11 +396,11 @@ struct MacExportStreamingJobBuilder {
         }
     }
 
-    static func shouldIncludeGranularData(
+    static func detailPolicy(
         for date: Date,
         metadata: Metadata,
         settings: AdvancedExportSettings
-    ) -> Bool {
+    ) -> AppleExportDetailPolicy {
         let sourceTimeZone = metadata.settingsSnapshot.calendarTimeZoneIdentifier
             .flatMap(TimeZone.init(identifier:))
             ?? settings.exportTimeZoneOverride
@@ -381,6 +412,16 @@ struct MacExportStreamingJobBuilder {
             ? metadata.originalRequestedDays
             : metadata.requestedDays
         return dailySourceDays.contains(day)
-            && ConnectedExportGranularMode.isEnabled(for: settings)
+            ? ConnectedExportDetailPolicy.effective(for: metadata.settingsSnapshot)
+            : .summary
+    }
+
+    /// Historical source-compatible helper.
+    static func shouldIncludeGranularData(
+        for date: Date,
+        metadata: Metadata,
+        settings: AdvancedExportSettings
+    ) -> Bool {
+        detailPolicy(for: date, metadata: metadata, settings: settings) == .lossless
     }
 }

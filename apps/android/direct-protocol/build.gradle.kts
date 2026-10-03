@@ -9,9 +9,12 @@ kotlin {
 
 sourceSets {
     test {
-        resources.srcDir(
+        resources.srcDirs(
             rootProject.layout.projectDirectory.dir(
                 "../../packages/contracts/direct-protocol/v2/fixtures",
+            ),
+            rootProject.layout.projectDirectory.dir(
+                "../../packages/contracts/direct-protocol/pairing-v3/fixtures",
             ),
         )
     }

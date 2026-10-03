@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">কাস্টম ফিল্ড যোগ করুন</string>
+    <string name="a11y_frontmatter_add_placeholder_field">প্লেসহোল্ডার ফিল্ড যোগ করুন</string>
+    <string name="a11y_frontmatter_delete_custom_field">কাস্টম ফিল্ড %1$s মুছুন</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">প্লেসহোল্ডার ফিল্ড %1$s মুছুন</string>
+</resources>

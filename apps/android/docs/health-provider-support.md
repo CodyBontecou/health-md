@@ -2,21 +2,21 @@
 
 Health.md uses Health Connect as the default Android export path because it keeps reads local to the device and matches the app's no-account, no-cloud workflow.
 
-The app now has a provider catalog and export-provider abstraction so additional ecosystems can be surfaced in the UI and wired into the same `HealthData` export pipeline without changing exporters.
+The Play build has a provider catalog and export-provider abstraction so additional ecosystems can be surfaced in the UI and wired into the same `HealthData` export pipeline without changing exporters. The F-Droid catalog intentionally contains only Health Connect; direct cloud-provider definitions, package queries, OAuth callback components, token stores, credentials, and adapters are not part of that variant.
 
 ## Supported catalog
 
-| Provider | Current path | Direct-import status |
+| Provider | Current path | Channel / direct-import status |
 |---|---|---|
-| Health Connect | Android system/on-device API | Export-ready |
-| Samsung Health | Prefer Samsung Health → Health Connect sharing | Direct Samsung Health Data SDK requires vendor approval/configuration |
-| Huawei Health | HMS Health Kit / Huawei ecosystem | Requires HMS app configuration and likely separate build/distribution setup |
-| Fitbit | Fitbit Web API | OAuth adapter scaffolded; uses public PKCE with `FITBIT_CLIENT_ID` or `FITBIT_TOKEN_BROKER_URL` for confidential clients |
-| Garmin Connect | Garmin Health API | Partner-approval scaffold; usually requires backend/webhook sync |
-| Withings | Withings public API | OAuth adapter scaffolded; uses public PKCE with `WITHINGS_CLIENT_ID` or `WITHINGS_TOKEN_BROKER_URL` for confidential clients |
-| Oura | Oura Cloud API | OAuth adapter scaffolded; uses public PKCE with `OURA_CLIENT_ID` or `OURA_TOKEN_BROKER_URL` for confidential clients |
-| Polar Flow | Polar AccessLink | OAuth/token scaffolded; AccessLink transaction cache still required for production history sync |
-| WHOOP | WHOOP API | OAuth adapter scaffolded; uses public PKCE with `WHOOP_CLIENT_ID` or `WHOOP_TOKEN_BROKER_URL` for confidential clients |
+| Health Connect | Android system/on-device API | Export-ready in Play and F-Droid |
+| Samsung Health | Prefer Samsung Health → Health Connect sharing | Play catalog guidance only; direct SDK requires vendor approval/configuration |
+| Huawei Health | HMS Health Kit / Huawei ecosystem | Play catalog guidance only; requires HMS setup |
+| Fitbit | Fitbit Web API | Play only; OAuth adapter uses public PKCE with `FITBIT_CLIENT_ID` or `FITBIT_TOKEN_BROKER_URL` |
+| Garmin Connect | Garmin Health API | Play catalog only; partner approval/backend sync required |
+| Withings | Withings public API | Play only; OAuth adapter uses public PKCE with `WITHINGS_CLIENT_ID` or `WITHINGS_TOKEN_BROKER_URL` |
+| Oura | Oura Cloud API | Play only; OAuth adapter uses public PKCE with `OURA_CLIENT_ID` or `OURA_TOKEN_BROKER_URL` |
+| Polar Flow | Polar AccessLink | Play catalog only; AccessLink transaction cache still required |
+| WHOOP | WHOOP API | Play only; OAuth adapter uses public PKCE with `WHOOP_CLIENT_ID` or `WHOOP_TOKEN_BROKER_URL` |
 
 Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecated and Health Connect is the preferred Android path.
 
@@ -25,7 +25,7 @@ Google Fit is intentionally excluded because Google Fit APIs are legacy/deprecat
 - `HealthDataProvider` is the normalized export contract.
 - `HealthConnectDataProvider` wraps the existing `HealthConnectManager`.
 - `HealthProviderRegistry` keeps Health Connect as the primary export provider by default and can route exports to selected direct providers.
-- `HealthProviderCatalog` powers Settings → Health sources and detects installed vendor apps via manifest package queries.
+- `HealthProviderCatalog` powers Settings → Health sources. `PlayHealthProviderDefinitions` and the Play manifest own direct definitions and vendor package queries; F-Droid constructs the catalog from the shared Health Connect definition only.
 - `OAuthAuthorizationManager` implements browser OAuth, PKCE, token exchange/refresh, and encrypted token storage via `EncryptedOAuthTokenStore`.
 - OAuth client secrets are intentionally not exposed through `BuildConfig`; mobile builds use public PKCE client IDs or a provider-specific token broker URL.
 - Compatibility exports still let `FitbitCloudDataProvider`, `WithingsCloudDataProvider`, `OuraCloudDataProvider`, and `WhoopCloudDataProvider` map cloud responses into normalized `HealthData`.
@@ -49,15 +49,17 @@ The in-app diagnostics and JVM test harness verify the pieces that do not requir
 - `OAuthCredentialSafetyTest` guards against adding provider client-secret fields to the Android APK.
 - `HealthProviderDiagnosticsReportTest` guards the redacted share-text format.
 
-Run them with:
+Run Play provider tests with:
 
 ```bash
-./gradlew testDebugUnitTest --tests com.healthmd.data.health.oauth.OAuthAuthorizationManagerTest --tests com.healthmd.data.health.oauth.OAuthCredentialSafetyTest --tests com.healthmd.data.health.HealthProviderDiagnosticsReportTest --tests com.healthmd.data.health.providers.cloud.CloudProviderFixtureMappingTest --tests com.healthmd.data.health.providers.HealthProviderCatalogTest
+./gradlew :app:testPlayDebugUnitTest --tests com.healthmd.data.health.oauth.OAuthAuthorizationManagerTest --tests com.healthmd.data.health.oauth.OAuthCredentialSafetyTest --tests com.healthmd.data.health.HealthProviderDiagnosticsReportTest --tests com.healthmd.data.health.providers.cloud.CloudProviderFixtureMappingTest --tests com.healthmd.data.health.providers.HealthProviderCatalogTest
 ```
+
+Run the F-Droid catalog/absence contract with `./gradlew :app:testFdroidDebugUnitTest --tests com.healthmd.distribution.FdroidDistributionPolicyTest`.
 
 ## Direct-provider prerequisites
 
-Before enabling live cloud/direct reads in production:
+Before enabling live cloud/direct reads in the Play build:
 
 1. Register OAuth public clients or complete SDK/partner setup.
 2. Add the relevant client-id Gradle properties (`OURA_CLIENT_ID`, `WITHINGS_CLIENT_ID`, etc.) and matching redirect URI: `healthmd://oauth2redirect`.

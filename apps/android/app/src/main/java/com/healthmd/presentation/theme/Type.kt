@@ -61,6 +61,7 @@ object GeistType {
     val button12 = geistSans(12, 16, FontWeight.Medium)
 
     val label20 = geistSans(20, 32)
+    val label20Mono = geistMono(20, 32)
     val label18 = geistSans(18, 20)
     val label16 = geistSans(16, 20)
     val label14 = geistSans(14, 20)

@@ -5,6 +5,17 @@ struct ScheduleRetryExportPolicy {
         currentFileCount == 0
     }
 
+    static func canRetry(_ entry: ExportHistoryEntry) -> Bool {
+        guard !entry.isFullSuccess,
+              entry.source != .macAgent,
+              entry.operationDetails == nil else { return false }
+        if entry.exportTarget == .localIPhoneFolder { return true }
+        // Legacy local-folder entries predate the typed target. They either
+        // had no label or used the established iPhone prefix.
+        return entry.exportTarget == nil
+            && (entry.targetLabel == nil || entry.targetLabel?.hasPrefix("iPhone: ") == true)
+    }
+
     static func failedDateDetail(for date: Date, exportError: ExportError) -> FailedDateDetail {
         let reason: ExportFailureReason
         let details: String?
@@ -356,7 +367,7 @@ struct ScheduleSettingsView: View {
             title: "Scheduled Exports",
             subtitle: "Keep your Health.md destinations updated with recurring Apple Health exports."
         ) {
-            HStack(spacing: Spacing.s2) {
+            SchedulingAdaptiveStack {
                 statusPill(
                     label: schedulingManager.isSchedulingActive ? String(localized: "On") : String(localized: "Off"),
                     icon: schedulingManager.isSchedulingActive ? "checkmark" : "pause",
@@ -405,9 +416,7 @@ struct ScheduleSettingsView: View {
     }
 
     private var automaticExportRow: some View {
-        HStack(alignment: .center, spacing: Spacing.s3) {
-            inlineIcon("arrow.triangle.2.circlepath", isActive: schedulingManager.isSchedulingActive)
-
+        VStack(alignment: .leading, spacing: Spacing.s2) {
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text("Automatic Export")
                     .font(Typography.bodyEmphasis())
@@ -419,8 +428,6 @@ struct ScheduleSettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Spacer(minLength: Spacing.s2)
-
             statusPill(
                 label: schedulingManager.isSchedulingActive ? String(localized: "Enabled") : String(localized: "Disabled"),
                 icon: schedulingManager.isSchedulingActive ? "checkmark" : "circle",
@@ -428,8 +435,12 @@ struct ScheduleSettingsView: View {
             )
             .accessibilityHidden(true)
 
-            Toggle("Enable Scheduled Exports", isOn: isEnabledBinding)
-                .labelsHidden()
+            Toggle(isOn: isEnabledBinding) {
+                Text("Enable Scheduled Exports")
+                    .font(Typography.body())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(minHeight: 44)
+            }
                 .tint(Color.accent)
                 .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
                 .accessibilityLabel("Automatic export schedule")
@@ -499,21 +510,17 @@ struct ScheduleSettingsView: View {
                 message: "Choose how often Health.md prepares an export."
             )
 
-            Picker("Frequency", selection: frequencyBinding) {
-                ForEach(ScheduleFrequency.allCases, id: \.self) { freq in
-                    Text(freq.description).tag(freq)
-                }
-            }
-            .pickerStyle(.segmented)
-            .tint(Color.accent)
-            .padding(.leading, 40)
+            SchedulingChoicePicker(
+                title: "Frequency",
+                choices: ScheduleFrequency.allCases.map { SchedulingChoice(value: $0, title: $0.description) },
+                selection: frequencyBinding
+            )
             .accessibilityIdentifier(AccessibilityID.Schedule.frequencyPicker)
             .accessibilityLabel("Export frequency")
             .accessibilityValue(schedulingManager.schedule.frequency.description)
 
             if schedulingManager.schedule.frequency == .custom {
                 customFrequencyControls
-                    .padding(.leading, 40)
             }
         }
         .padding(.vertical, Spacing.s3)
@@ -521,57 +528,31 @@ struct ScheduleSettingsView: View {
 
     private var customFrequencyControls: some View {
         VStack(alignment: .leading, spacing: Spacing.s3) {
-            HStack(spacing: Spacing.s2) {
-                Text("Every")
-                    .font(Typography.body())
-                    .foregroundStyle(Color.textSecondary)
-
-                Stepper(
-                    value: customIntervalBinding,
-                    in: ExportSchedule.minimumCustomInterval...ExportSchedule.maximumCustomInterval
-                ) {
-                    Text("\(schedulingManager.schedule.customInterval)")
-                        .font(Typography.monoEmphasis())
-                        .foregroundStyle(Color.textPrimary)
-                        .frame(minWidth: 28)
-                }
-                .fixedSize()
-                .accessibilityIdentifier(AccessibilityID.Schedule.customIntervalStepper)
-                .accessibilityLabel("Custom frequency interval")
-                .accessibilityValue("\(schedulingManager.schedule.customInterval)")
-
-                Menu {
-                    ForEach(ScheduleIntervalUnit.allCases, id: \.self) { unit in
-                        Button(unit.label(for: 2).capitalized) {
-                            customUnitBinding.wrappedValue = unit
-                        }
-                    }
-                } label: {
-                    timeMenuLabel(
-                        text: schedulingManager.schedule.customUnit
-                            .label(for: schedulingManager.schedule.customInterval)
-                            .capitalized
-                    )
-                }
-                .accessibilityIdentifier(AccessibilityID.Schedule.customUnitPicker)
-                .accessibilityLabel("Custom frequency unit")
-                .accessibilityValue(
-                    schedulingManager.schedule.customUnit
-                        .label(for: schedulingManager.schedule.customInterval)
-                )
-
-                Spacer(minLength: 0)
-            }
-
-            DatePicker(
-                "Starting",
-                selection: customAnchorDateBinding,
-                displayedComponents: .date
+            SchedulingNumberControl(
+                title: "Custom frequency interval", value: customIntervalBinding,
+                bounds: ExportSchedule.minimumCustomInterval...ExportSchedule.maximumCustomInterval,
+                identifier: AccessibilityID.Schedule.customIntervalStepper,
+                valueDescription: "Every"
             )
-            .datePickerStyle(.compact)
-            .tint(Color.accent)
-            .accessibilityIdentifier(AccessibilityID.Schedule.customStartDatePicker)
-            .accessibilityHint("Sets the first day and repeating phase of the custom schedule")
+
+            SchedulingValueMenu(
+                title: "Custom frequency unit",
+                choices: ScheduleIntervalUnit.allCases.map { SchedulingChoice(value: $0, title: $0.label(for: 2).capitalized) },
+                selection: customUnitBinding,
+                selectedTitle: schedulingManager.schedule.customUnit.label(for: schedulingManager.schedule.customInterval).capitalized
+            )
+            .accessibilityIdentifier(AccessibilityID.Schedule.customUnitPicker)
+
+            SchedulingLabeledControl(title: "Starting", value: Text(schedulingManager.schedule.customAnchorDate, style: .date)) {
+                DatePicker(
+                    "Starting",
+                    selection: customAnchorDateBinding,
+                    displayedComponents: .date
+                )
+                .tint(Color.accent)
+                .accessibilityIdentifier(AccessibilityID.Schedule.customStartDatePicker)
+                .accessibilityHint("Sets the first day and repeating phase of the custom schedule")
+            }
 
             Text(customCadenceSummary)
                 .font(Typography.caption())
@@ -631,88 +612,19 @@ struct ScheduleSettingsView: View {
                 message: "iOS uses this as the target time for notifications and background scheduling."
             )
 
-            HStack(spacing: Spacing.s2) {
-                hourMenu
-                Text(":")
-                    .font(Typography.headline())
-                    .foregroundStyle(Color.textSecondary)
-                minuteMenu
-                periodMenu
-                Spacer(minLength: 0)
-            }
-            .padding(.leading, 40)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Preferred time")
-            .accessibilityValue(preferredTimeText)
+            SchedulingTimeControls(
+                hour: Binding(get: { displayHour12 }, set: { setHour12($0, period: displayPeriod) }),
+                minute: minuteBinding,
+                period: Binding(
+                    get: { displayPeriod.rawValue },
+                    set: { if let period = DayPeriod(rawValue: $0) { setHour12(displayHour12, period: period) } }
+                ),
+                hourIdentifier: AccessibilityID.Schedule.hourPicker,
+                minuteIdentifier: AccessibilityID.Schedule.minutePicker,
+                periodIdentifier: AccessibilityID.Schedule.periodPicker
+            )
         }
         .padding(.vertical, Spacing.s3)
-    }
-
-    private var hourMenu: some View {
-        Menu {
-            ForEach(1...12, id: \.self) { hour in
-                Button(String(format: "%d", hour)) {
-                    setHour12(hour, period: displayPeriod)
-                }
-            }
-        } label: {
-            timeMenuLabel(text: String(format: "%d", displayHour12))
-        }
-        .accessibilityIdentifier(AccessibilityID.Schedule.hourPicker)
-        .accessibilityLabel("Hour")
-        .accessibilityValue(String(format: "%d", displayHour12))
-        .accessibilityHint("Double tap to select hour")
-    }
-
-    private var minuteMenu: some View {
-        Menu {
-            ForEach(Array(stride(from: 0, to: 60, by: 5)), id: \.self) { minute in
-                Button(String(format: "%02d", minute)) {
-                    minuteBinding.wrappedValue = minute
-                }
-            }
-        } label: {
-            timeMenuLabel(text: String(format: "%02d", schedulingManager.schedule.preferredMinute))
-        }
-        .accessibilityIdentifier(AccessibilityID.Schedule.minutePicker)
-        .accessibilityLabel("Minute")
-        .accessibilityValue(String(format: "%02d", schedulingManager.schedule.preferredMinute))
-        .accessibilityHint("Double tap to select minute")
-    }
-
-    private var periodMenu: some View {
-        Menu {
-            Button("AM") { setHour12(displayHour12, period: .am) }
-            Button("PM") { setHour12(displayHour12, period: .pm) }
-        } label: {
-            timeMenuLabel(text: displayPeriod.rawValue)
-        }
-        .accessibilityIdentifier(AccessibilityID.Schedule.periodPicker)
-        .accessibilityLabel("Period")
-        .accessibilityValue(displayPeriod.rawValue)
-        .accessibilityHint("Double tap to switch between AM and PM")
-    }
-
-    private func timeMenuLabel(text: String) -> some View {
-        HStack(spacing: Spacing.s2) {
-            Text(text)
-                .font(Typography.monoEmphasis())
-                .foregroundStyle(Color.textPrimary)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.textMuted)
-                .accessibilityHidden(true)
-        }
-        .padding(.horizontal, Spacing.s3)
-        .padding(.vertical, Spacing.s2)
-        .background(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .fill(Color.bgSecondary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                .strokeBorder(Color.borderSubtle, lineWidth: 1)
-        )
     }
 
     private var preferredTimeText: String {
@@ -734,65 +646,43 @@ struct ScheduleSettingsView: View {
     }
 
     private var lookbackRow: some View {
-        Stepper(
-            value: lookbackDaysBinding,
-            in: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays
-        ) {
-            HStack(alignment: .top, spacing: Spacing.s3) {
-                inlineIcon("calendar.badge.minus")
-
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    HStack(spacing: Spacing.s2) {
-                        Text("Lookback Window")
-                            .font(Typography.bodyEmphasis())
-                            .foregroundStyle(Color.textPrimary)
-
-                        statusPill(
-                            label: lookbackDayLabel,
-                            icon: "number",
-                            tint: Color.textMuted
-                        )
-                    }
-
-                    Text(lookbackDescription)
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            controlHeader(icon: "calendar.badge.minus", title: "Lookback Window", message: lookbackDescription)
+            SchedulingNumberControl(
+                title: "Lookback window", value: lookbackDaysBinding,
+                bounds: ExportSchedule.minimumLookbackDays...ExportSchedule.maximumLookbackDays,
+                identifier: "schedule.lookback", valueDescription: lookbackDayLabel
+            )
+            .accessibilityHint("Adjusts how many past days each scheduled export includes")
         }
-        .tint(Color.accent)
         .padding(.vertical, Spacing.s3)
-        .accessibilityLabel("Lookback window")
-        .accessibilityValue(lookbackDayLabel)
-        .accessibilityHint("Adjusts how many past days each scheduled export includes")
     }
 
     private var todayRefreshRow: some View {
         VStack(alignment: .leading, spacing: Spacing.s3) {
-            HStack(alignment: .center, spacing: Spacing.s3) {
-                inlineIcon("arrow.clockwise.heart", isActive: schedulingManager.schedule.todayRefreshEnabled)
-
-                HStack(spacing: Spacing.s2) {
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                SchedulingAdaptiveStack {
                     Text("Today Refresh")
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
-
+                        .fixedSize(horizontal: false, vertical: true)
                     todayRefreshInfoButton
-
-                    if schedulingManager.schedule.todayRefreshEnabled {
-                        statusPill(
-                            label: "Every \(schedulingManager.schedule.todayRefreshIntervalHours)h",
-                            icon: "clock.arrow.circlepath",
-                            tint: Color.accent
-                        )
-                    }
                 }
 
-                Spacer(minLength: Spacing.s2)
+                if schedulingManager.schedule.todayRefreshEnabled {
+                    statusPill(
+                        label: "Every \(schedulingManager.schedule.todayRefreshIntervalHours)h",
+                        icon: "clock.arrow.circlepath",
+                        tint: Color.accent
+                    )
+                }
 
-                Toggle("Refresh today's export", isOn: todayRefreshEnabledBinding)
-                    .labelsHidden()
+                Toggle(isOn: todayRefreshEnabledBinding) {
+                    Text("Refresh today's export")
+                        .font(Typography.body())
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: 44)
+                }
                     .configurationChangesProtected()
                     .tint(Color.accent)
                     .accessibilityIdentifier("schedule.todayRefresh.toggle")
@@ -803,14 +693,13 @@ struct ScheduleSettingsView: View {
             .accessibilityElement(children: .contain)
 
             if schedulingManager.schedule.todayRefreshEnabled {
-                Picker("Today Refresh interval", selection: todayRefreshIntervalBinding) {
-                    ForEach(ExportSchedule.todayRefreshIntervalOptions, id: \.self) { hours in
-                        Text("Every \(hours) hours").tag(hours)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .tint(Color.accent)
-                .padding(.leading, 40)
+                SchedulingChoicePicker(
+                    title: "Today Refresh interval",
+                    choices: ExportSchedule.todayRefreshIntervalOptions.map {
+                        SchedulingChoice(value: $0, title: String(localized: "Every \($0) hours"))
+                    },
+                    selection: todayRefreshIntervalBinding
+                )
                 .accessibilityIdentifier("schedule.todayRefresh.interval")
                 .configurationChangesProtected()
 
@@ -825,7 +714,6 @@ struct ScheduleSettingsView: View {
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.leading, 40)
                 } else {
                     VStack(alignment: .leading, spacing: Spacing.s2) {
                         VStack(alignment: .leading, spacing: 3) {
@@ -839,18 +727,15 @@ struct ScheduleSettingsView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
-                        Picker("Write Mode", selection: $advancedSettings.writeMode) {
-                            ForEach(WriteMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .tint(Color.accent)
+                        SchedulingChoicePicker(
+                            title: "Write Mode",
+                            choices: WriteMode.allCases.map { SchedulingChoice(value: $0, title: $0.rawValue) },
+                            selection: $advancedSettings.writeMode
+                        )
                         .accessibilityLabel("File handling mode")
                         .accessibilityValue(advancedSettings.writeMode.rawValue)
                         .configurationChangesProtected()
                     }
-                    .padding(.leading, 40)
                 }
             }
         }
@@ -858,18 +743,7 @@ struct ScheduleSettingsView: View {
     }
 
     private var todayRefreshInfoButton: some View {
-        Button {
-            showTodayRefreshInfo = true
-        } label: {
-            Image(systemName: "info.circle")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.textSecondary)
-                .frame(width: 24, height: 24)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("About Today Refresh")
-        .accessibilityHint("Explains how the refresh interval is scheduled")
+        SchedulingInfoButton { showTodayRefreshInfo = true }
     }
 
     private var todayRefreshInfoMessage: String {
@@ -992,24 +866,9 @@ struct ScheduleSettingsView: View {
 
     private var exportHistoryCard: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
-            HStack(alignment: .center, spacing: Spacing.s3) {
-                sectionLabel("Export History")
-
-                Spacer()
-
-                if !exportHistory.history.isEmpty {
-                    Button("Clear History") {
-                        configurationProtection.performConfigurationChange {
-                            exportHistory.clearHistory()
-                        }
-                    }
-                    .font(Typography.label())
-                    .foregroundStyle(Color.textSecondary)
-                    .padding(.horizontal, Spacing.s3)
-                    .padding(.vertical, Spacing.s2)
-                    .background(Color.bgPrimary, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.borderSubtle, lineWidth: 1))
-                    .accessibilityLabel("Clear export history")
+            SchedulingHistoryHeading(showsClear: !exportHistory.history.isEmpty) {
+                configurationProtection.performConfigurationChange {
+                    exportHistory.clearHistory()
                 }
             }
 
@@ -1034,10 +893,10 @@ struct ScheduleSettingsView: View {
                         rowDivider(leading: 40)
                         Text("\(exportHistory.history.count - 10) more entries…")
                             .font(Typography.caption())
-                            .foregroundStyle(Color.textMuted)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, Spacing.s3)
-                            .padding(.leading, 40)
                     }
                 }
             }
@@ -1099,7 +958,8 @@ struct ScheduleSettingsView: View {
     private func sectionLabel(_ text: String) -> some View {
         Text(LocalizedStringKey(text))
             .font(Typography.caption())
-            .foregroundStyle(Color.textMuted)
+            .foregroundStyle(Color.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -1110,28 +970,17 @@ struct ScheduleSettingsView: View {
             .padding(.leading, leading)
     }
 
-    private func inlineIcon(_ systemName: String, isActive: Bool = false) -> some View {
-        Image(systemName: systemName)
-            .font(.body.weight(.medium))
-            .foregroundStyle(Color.primary)
-            .frame(width: 28, height: 28)
-            .accessibilityHidden(true)
-    }
-
     private func controlHeader(icon: String, title: String, message: String) -> some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            inlineIcon(icon)
+        VStack(alignment: .leading, spacing: Spacing.s1) {
+            Label(LocalizedStringKey(title), systemImage: icon)
+                .font(Typography.bodyEmphasis())
+                .foregroundStyle(Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                Text(LocalizedStringKey(title))
-                    .font(Typography.bodyEmphasis())
-                    .foregroundStyle(Color.textPrimary)
-
-                Text(LocalizedStringKey(message))
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(LocalizedStringKey(message))
+                .font(Typography.caption())
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -1140,28 +989,11 @@ struct ScheduleSettingsView: View {
         title: String,
         message: String,
         status: String,
-        statusTint: Color,
-        isActive: Bool = false
+        statusTint: Color
     ) -> some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            inlineIcon(icon, isActive: isActive)
-
-            VStack(alignment: .leading, spacing: Spacing.s1) {
-                HStack(spacing: Spacing.s2) {
-                    Text(LocalizedStringKey(title))
-                        .font(Typography.bodyEmphasis())
-                        .foregroundStyle(Color.textPrimary)
-
-                    statusPill(label: status, icon: nil, tint: statusTint)
-                }
-
-                Text(LocalizedStringKey(message))
-                    .font(Typography.caption())
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            controlHeader(icon: icon, title: title, message: message)
+            statusPill(label: status, icon: nil, tint: statusTint)
         }
         .padding(.vertical, Spacing.s3)
         .accessibilityElement(children: .combine)
@@ -1176,19 +1008,16 @@ struct ScheduleSettingsView: View {
             }
 
             if let value {
-                HStack(spacing: 0) {
-                    Text(LocalizedStringKey(label))
-                    Text(": \(value)")
-                }
-                .font(.caption2.weight(.semibold))
-                .lineLimit(1)
+                (Text(LocalizedStringKey(label)) + Text(": \(value)"))
+                    .font(.caption2.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text(LocalizedStringKey(label))
                     .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .foregroundStyle(tint)
+        .foregroundStyle(tint == Color.success ? Color.successText : Color.textSecondary)
         .padding(.horizontal, Spacing.s2)
         .padding(.vertical, 4)
         .background(tint.opacity(0.10), in: Capsule())
@@ -1310,7 +1139,7 @@ struct ScheduleSettingsView: View {
             do {
                 healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: advancedSettings.effectiveGranularDataEnabled,
+                    detailPolicy: advancedSettings.effectiveDetailPolicy,
                     metricSelection: advancedSettings.metricSelection
                 )
             } catch {
@@ -1408,6 +1237,7 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
+                    exportTarget: .localIPhoneFolder,
                     fileCount: generatedFileCount,
                     outputBreakdown: outputBreakdown,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
@@ -1428,6 +1258,7 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
+                    exportTarget: .localIPhoneFolder,
                     fileCount: generatedFileCount,
                     outputBreakdown: outputBreakdown,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
@@ -1570,14 +1401,30 @@ struct ExportHistoryRow: View {
                         .labelStyle(.titleAndIcon)
 
                     Text(formatTimestamp(entry.timestamp))
-
-                    if let targetLabel = entry.targetLabel {
-                        Text("→ \(targetLabel)")
-                            .lineLimit(1)
-                    }
                 }
                 .font(Typography.caption())
                 .foregroundStyle(Color.textMuted)
+
+                if let profileName = entry.profileName, !profileName.isEmpty {
+                    Label {
+                        Text("Export Profile") + Text(verbatim: ": \(profileName)")
+                    } icon: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
+                    .lineLimit(1)
+                }
+
+                if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+                    Label(
+                        targetLabel,
+                        systemImage: entry.exportTarget == .localIPhoneFolder ? "folder" : "arrow.right"
+                    )
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
+                    .lineLimit(1)
+                }
             }
 
             Spacer(minLength: Spacing.s2)
@@ -1591,7 +1438,7 @@ struct ExportHistoryRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
-        .accessibilityValue("\(entry.sourceLabelForDisplay), \(formatTimestamp(entry.timestamp))")
+        .accessibilityValue(accessibilityMetadataDescription)
         .accessibilityHint("Double tap to view details")
         .accessibilityAddTraits(.isButton)
     }
@@ -1600,6 +1447,20 @@ struct ExportHistoryRow: View {
         let status = "\(entry.localizedStatusDescription): \(entry.summaryDescription)"
         guard let message = entry.failureListMessage else { return status }
         return "\(status). \(message)"
+    }
+
+    private var accessibilityMetadataDescription: String {
+        var parts = [entry.sourceLabelForDisplay, formatTimestamp(entry.timestamp)]
+        if let profileName = entry.profileName, !profileName.isEmpty {
+            parts.append("\(String(localized: "Export Profile")): \(profileName)")
+        }
+        if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+            let title = entry.exportTarget == .localIPhoneFolder
+                ? String(localized: "Export Folder")
+                : String(localized: "Target")
+            parts.append("\(title): \(targetLabel)")
+        }
+        return parts.joined(separator: ", ")
     }
 
     private func formatTimestamp(_ date: Date) -> String {
@@ -1623,7 +1484,7 @@ struct ExportHistoryDetailView: View {
     }
 
     private var canRetry: Bool {
-        !entry.isFullSuccess && entry.source != .macAgent && entry.operationDetails == nil
+        ScheduleRetryExportPolicy.canRetry(entry)
     }
 
     private var statusColor: Color {
@@ -1639,6 +1500,35 @@ struct ExportHistoryDetailView: View {
     var body: some View {
         NavigationStack {
             List {
+                // Retry Section (top placement: keep the primary recovery
+                // action reachable without scrolling through long failure lists)
+                if canRetry, let onRetry = onRetry {
+                    Section {
+                        Button(action: {
+                            dismiss()
+                            onRetry(entry)
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Retry Export")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .foregroundStyle(Color.accent)
+                        }
+                        .accessibilityLabel("Retry export")
+                        .accessibilityHint(entry.failedDateDetails.isEmpty
+                            ? "Double tap to retry export for all dates"
+                            : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
+                    } footer: {
+                        Text(entry.failedDateDetails.isEmpty
+                            ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
+                            : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
+                        )
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
                 // Status Section
                 Section {
                     HStack {
@@ -1661,13 +1551,15 @@ struct ExportHistoryDetailView: View {
                         .foregroundStyle(Color.textPrimary)
                     }
 
-                    if let targetLabel = entry.targetLabel {
-                        HStack {
-                            Text("Target")
-                                .foregroundStyle(Color.textSecondary)
-                            Spacer()
-                            Text(targetLabel)
-                                .foregroundStyle(Color.textPrimary)
+                    if let profileName = entry.profileName, !profileName.isEmpty {
+                        historyValueRow("Export Profile", value: profileName)
+                    }
+
+                    if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+                        if entry.exportTarget == .localIPhoneFolder {
+                            historyValueRow("Export Folder", value: targetLabel)
+                        } else {
+                            historyValueRow("Target", value: targetLabel)
                         }
                     }
 
@@ -1883,8 +1775,12 @@ struct ExportHistoryDetailView: View {
                     Section {
                         ForEach(Array(entry.partialFailures.enumerated()), id: \.offset) { _, failure in
                             HStack(alignment: .top) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(Color.warning)
+                                Image(systemName: failure.isInformational == true
+                                    ? "info.circle"
+                                    : "exclamationmark.triangle.fill")
+                                    .foregroundStyle(failure.isInformational == true
+                                        ? Color.textSecondary
+                                        : Color.warning)
                                 Text(failure.summary)
                                     .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
@@ -1893,16 +1789,24 @@ struct ExportHistoryDetailView: View {
                             }
                         }
                     } header: {
-                        Text("Partial Export Warnings")
+                        // Informational omissions (for example an optional
+                        // WorkoutKit plan this device cannot decode) do not
+                        // reduce the export below full success, so the section
+                        // reads as notes rather than warnings.
+                        Text(LocalizedStringKey(
+                            entry.isFullSuccess ? "Export Notes" : "Partial Export Warnings"
+                        ))
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
                     }
                 }
 
-                // Failed Dates Section (if applicable)
+                // Failed Dates Section (if applicable). Capped like the
+                // Android history detail so large failures stay scrollable;
+                // retry counts and actions still reflect the full list.
                 if !entry.failedDateDetails.isEmpty {
                     Section {
-                        ForEach(entry.failedDateDetails, id: \.date) { detail in
+                        ForEach(entry.failedDateDetails.prefix(8), id: \.date) { detail in
                             HStack {
                                 Text(detail.dateString)
                                     .foregroundStyle(Color.textPrimary)
@@ -1913,38 +1817,15 @@ struct ExportHistoryDetailView: View {
                                     .foregroundStyle(Color.error)
                             }
                         }
+                        if entry.failedDateDetails.count > 8 {
+                            Text("+\(entry.failedDateDetails.count - 8) more")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
                     } header: {
                         Text("Failed Dates")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
-                    }
-                }
-
-                // Retry Section (for failed or partial exports)
-                if canRetry, let onRetry = onRetry {
-                    Section {
-                        Button(action: {
-                            dismiss()
-                            onRetry(entry)
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                Text("Retry Export")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .foregroundStyle(Color.accent)
-                        }
-                        .accessibilityLabel("Retry export")
-                        .accessibilityHint(entry.failedDateDetails.isEmpty
-                            ? "Double tap to retry export for all dates"
-                            : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
-                    } footer: {
-                        Text(entry.failedDateDetails.isEmpty
-                            ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
-                            : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
-                        )
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
                     }
                 }
             }
@@ -2033,6 +1914,8 @@ struct ExportHistoryDetailView: View {
     private func detailLevelLabel(_ value: String) -> String {
         switch value {
         case "summary": return String(localized: "Summary")
+        case "detailed_time_series": return String(localized: "Detailed Time-Series")
+        case "archive_only": return String(localized: "HealthKit Archive Only")
         case "lossless": return String(localized: "Lossless")
         default: return displayToken(value)
         }

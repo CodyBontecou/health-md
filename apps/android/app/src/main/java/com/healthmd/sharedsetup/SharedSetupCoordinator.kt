@@ -103,7 +103,7 @@ class SharedSetupCoordinator internal constructor(
     }
 
     fun restoreExternalBytes(bytes: ByteArray) {
-        require(bytes.size <= SHARED_SETUP_MAX_BYTES)
+        require(bytes.size <= SHARED_SETUP_V2_MAX_BYTES) { "Shared setup exceeds 4 MiB." }
         synchronized(externalLock) {
             externalRequestID += 1
             activeExternalRead?.cancel()
@@ -144,7 +144,7 @@ class SharedSetupCoordinator internal constructor(
     }
 
     private fun publishExternalBytes(requestID: Long, bytes: ByteArray) {
-        require(bytes.size <= SHARED_SETUP_MAX_BYTES)
+        require(bytes.size <= SHARED_SETUP_V2_MAX_BYTES) { "Shared setup exceeds 4 MiB." }
         synchronized(externalLock) {
             if (externalRequestID != requestID) return
             latestExternalBytes = bytes.copyOf()

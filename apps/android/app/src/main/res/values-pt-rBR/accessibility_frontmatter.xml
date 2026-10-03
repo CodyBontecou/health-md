@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_frontmatter_add_custom_field">Adicionar campo personalizado</string>
+    <string name="a11y_frontmatter_add_placeholder_field">Adicionar campo de espaço reservado</string>
+    <string name="a11y_frontmatter_delete_custom_field">Excluir campo personalizado %1$s</string>
+    <string name="a11y_frontmatter_delete_placeholder_field">Excluir campo de espaço reservado %1$s</string>
+</resources>

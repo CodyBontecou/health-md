@@ -1,33 +1,29 @@
 ---
 title: "Sblocco e paywall"
-description: "Acquisto una tantum di Full Access, senza abbonamento. Sblocca esportazioni illimitate, programmazione, flussi di lavoro con destinazione Mac e supporto per Comandi Rapidi."
+description: "Comprendi le 10 azioni gratuite, i promemoria non bloccanti, gli acquisti Lifetime e il ripristino StoreKit."
 ---
 
-## Prezzi
-<ul>
-<li>Full Access è un acquisto una tantum tramite StoreKit, mostrato nel foglio di acquisto dell’App Store.</li>
-<li>Nessun abbonamento e nessun addebito ricorrente.</li>
-<li>Apple mostra il prezzo locale aggiornato prima dell’acquisto.</li>
-<li>Nessun account lato server. Lo sblocco è associato alla transazione StoreKit del tuo Apple ID.</li>
-</ul>
+Health.md include 10 azioni di esportazione completate prima di richiedere Full Access. Un’azione può scrivere più giorni e formati. Esportazioni manuali, pianificate, Comandi rapidi e dirette condividono il contatore quando previsto.
 
-## Cosa sblocca Full Access
-<ul>
-<li>Esportazioni illimitate.</li>
-<li>Esportazioni programmate in background.</li>
-<li>Flussi di lavoro con destinazione Mac.</li>
-<li>Intent di Comandi Rapidi.</li>
-</ul>
+## Quando appare un’offerta
 
-## Ripristinare un acquisto precedente
-<p>Tocca <em>Ripristina acquisto</em> nel paywall. L’app interroga StoreKit per verificare la presenza di acquisti precedenti associati all’Apple ID con cui hai effettuato l’accesso. Questa è la procedura da usare dopo aver reinstallato l’app o essere passati a un nuovo dispositivo.</p>
+- La configurazione iniziale non include un paywall.
+- Dopo la prima anteprima reale può apparire una sola offerta ignorabile.
+- Può comparire un promemoria dopo la 3ª e 7ª esportazione gratuita.
+- Dopo 10 azioni, la successiva esportazione conteggiata è bloccata.
 
-## Rimborsi e assistenza
-<p>I rimborsi vengono gestiti tramite Apple: invia una richiesta su <a href="https://reportaproblem.apple.com">reportaproblem.apple.com</a>. Per ricevere assistenza relativa all’app, scrivi a <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>.</p>
+Ignorare le prime offerte non consuma azioni.
 
-## Contenuti correlati
+## Opzioni Lifetime
 
-<div class="related">
-  <a href="/it/docs/onboarding/"><span>Configurazione</span>Onboarding — dove viene mostrato per la prima volta il passaggio di sblocco.</a>
-  <a href="/it/docs/export/"><span>Utilizzo</span>Esportazione — cosa offre l’accesso illimitato.</a>
-</div>
+StoreKit 2 offre acquisti una tantum senza abbonamento: **Individual Lifetime**, **Family Lifetime** e upgrade famiglia per proprietari idonei. Fa fede il prezzo localizzato mostrato da Apple. Family Lifetime dipende dalla Condivisione acquisti Apple.
+
+**Ripristina acquisto** aggiorna le transazioni dell’Apple ID. Per Famiglia verifica ID, condivisione acquisti e visibilità di Health.md nella cronologia.
+
+| Problema | Azione |
+|---|---|
+| Prezzo assente | Verifica rete/App Store e riapri l’offerta. |
+| Offerta prima dell’azione 10 | È un promemoria ignorabile, non il blocco finale. |
+| Pianificazione in pausa | Acquista o ripristina e usa il normale recupero. |
+
+<div class="related"><a href="/it/docs/onboarding/"><span>Inizio</span>Percorso in cinque passaggi.</a><a href="/it/docs/scheduling/"><span>Automazione</span>Quota condivisa.</a></div>

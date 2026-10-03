@@ -314,9 +314,11 @@ class HealthConnectManager(
      * The goal is to keep 30/90/all-time exports away from the old N days x N categories
      * call pattern. Aggregatable metrics are normally read as daily period groups;
      * high-cardinality records are read once per chunk with pagination and then grouped into
-     * [HealthData]. Health Connect period aggregation accepts local date-times but no [ZoneId].
-     * When [pinnedCalendarDays] is true, report metrics instead come from instant-filtered granular
-     * reads, except steps, which use one deduplicating aggregate over each exact zoned local day.
+     * [HealthData]. Health Connect period aggregation accepts local date-times but no [ZoneId],
+     * and its day groups do not reproduce Health Connect's merged daily total when multiple apps
+     * contribute overlapping step records, so steps always use one deduplicating aggregate over
+     * each exact zoned local day. When [pinnedCalendarDays] is true, other report metrics instead
+     * come from instant-filtered granular reads.
      * [zoneId] is captured by the caller so every instant boundary and day grouping in one operation
      * uses the same timezone even if the device timezone changes mid-read.
      */
@@ -349,9 +351,12 @@ class HealthConnectManager(
             )
             val chunkDates = chunk.toSet()
 
-            if (pinnedCalendarDays) {
-                applyPinnedStepAggregates(dataByDate, chunkDates, selection, zoneId)
-            } else {
+            // Steps always use one exact zoned local-day deduplicating aggregate per day so
+            // exported totals match Health Connect's own daily total across multiple
+            // contributing sources; period aggregation cannot honor the captured zone and has
+            // been observed to undercount multi-source days (#148).
+            applyExactDayStepAggregates(dataByDate, chunkDates, selection, zoneId)
+            if (!pinnedCalendarDays) {
                 applyActivityAggregates(dataByDate, chunkDates, localRange, selection)
                 applyHeartAggregates(dataByDate, chunkDates, localRange, selection)
                 applyVitalsAggregates(dataByDate, chunkDates, localRange, selection)
@@ -604,7 +609,13 @@ class HealthConnectManager(
         }
     }
 
-    private suspend fun applyPinnedStepAggregates(
+    /**
+     * Daily steps use one strict instant-bounded aggregate per requested local day. This matches
+     * the total Health Connect itself reports for a calendar day when several sources (for
+     * example Samsung Health and the on-device step counter) contribute overlapping records,
+     * and it honors [zone] across 23/25-hour DST days, which period aggregation cannot do (#148).
+     */
+    private suspend fun applyExactDayStepAggregates(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         selection: DataTypeSelection,
@@ -638,7 +649,8 @@ class HealthConnectManager(
         if (!selection.activity) return
 
         val metrics = buildSet<AggregateMetric<*>> {
-            add(StepsRecord.COUNT_TOTAL)
+            // Steps intentionally come from [applyExactDayStepAggregates]; this mapping must not
+            // overwrite that exact local-day total.
             add(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)
             add(TotalCaloriesBurnedRecord.ENERGY_TOTAL)
             add(BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL)
@@ -657,7 +669,6 @@ class HealthConnectManager(
             dataByDate.update(date) { current ->
                 current.copy(
                     activity = current.activity.copy(
-                        steps = result[StepsRecord.COUNT_TOTAL]?.toInt(),
                         activeCalories = result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories,
                         totalCalories = result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories,
                         basalEnergyBurned = result[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories,

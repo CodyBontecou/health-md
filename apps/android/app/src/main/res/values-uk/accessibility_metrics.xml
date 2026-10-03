@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_metrics_expand_category">Розгорнути %1$s</string>
+    <string name="a11y_metrics_collapse_category">Згорнути %1$s</string>
+    <string name="a11y_metrics_expanded">Розгорнуто</string>
+    <string name="a11y_metrics_collapsed">Згорнуто</string>
+    <string name="a11y_metrics_category_selection">Усі показники в категорії «%1$s»</string>
+</resources>

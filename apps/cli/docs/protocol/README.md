@@ -5,10 +5,11 @@ and the portable CLI.
 
 [Version 1](v1.md) documents the deployed Swift/iOS export application protocol exactly.
 [Version 2](v2.md) is the platform-neutral Android application protocol. It reuses the audited v1
-pairing, encrypted transport, and binary frame while replacing application messages with explicit
-tagged envelopes. [Version 3](v3.md) is the capability-gated iPhone query extension used by the
-portable MCP server; it retains selector 1 and v1 transport and never changes export requests from
-protocol version 1. A client must not advertise a version until the normative fixtures for that
+encrypted transport, and binary frame while replacing application messages with explicit tagged
+envelopes. [Shared pairing profile v3](../../../../packages/contracts/direct-protocol/pairing-v3/protocol.md)
+adds one 20-digit iOS/Android QR/code while retaining legacy selectors 1/2. [Query version 3](v3.md)
+is the independent capability-gated iPhone query extension used by the portable MCP server and
+never changes export requests from application protocol version 1. A client must not advertise a version until the normative fixtures for that
 version pass in every participating language.
 
 Normative areas:

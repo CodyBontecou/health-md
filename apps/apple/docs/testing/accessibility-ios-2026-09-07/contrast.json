@@ -1,0 +1,38 @@
+[
+  {
+    "label": "textMuted on light bgPrimary",
+    "foreground": "8F8F8F",
+    "background": "FFFFFF",
+    "contrast": 3.234
+  },
+  {
+    "label": "textMuted on light bgSecondary",
+    "foreground": "8F8F8F",
+    "background": "FAFAFA",
+    "contrast": 3.098
+  },
+  {
+    "label": "textMuted on dark bgPrimary",
+    "foreground": "8F8F8F",
+    "background": "000000",
+    "contrast": 6.494
+  },
+  {
+    "label": "textSecondary on light bgPrimary",
+    "foreground": "4D4D4D",
+    "background": "FFFFFF",
+    "contrast": 8.453
+  },
+  {
+    "label": "success on light bgPrimary",
+    "foreground": "28A948",
+    "background": "FFFFFF",
+    "contrast": 3.062
+  },
+  {
+    "label": "success on dark bgPrimary",
+    "foreground": "00AC3A",
+    "background": "000000",
+    "contrast": 6.962
+  }
+]

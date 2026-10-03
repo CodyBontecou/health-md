@@ -59,7 +59,7 @@ healthmd extract --category Sleep --yesterday --output sleep.json
 healthmd query --category Sleep --yesterday
 ```
 
-Lees [Health.md-CLI](/nl/docs/cli/) voor backendselectie en [Lokale agents](/nl/docs/agents/) voor de queryarchitectuur.
+Lees [Health.md-CLI](/nl/docs/cli/) voor de zelfstandige client en [Lokale agents](/nl/docs/agents/) voor de queryarchitectuur.
 
 ## Versleutelde gezondheidscontext
 
@@ -92,7 +92,7 @@ De rechtstreekse modus gebruikt de versleutelde querycontext van de Mac-app niet
 
 <div class="related">
   <a href="/nl/docs/sync/"><span>Bestemming</span>Mac-synchronisatie: koppel iPhone en Mac voor lokale bestandsexports.</a>
-  <a href="/nl/docs/cli/"><span>Terminal</span>Health.md-CLI: installeer hulpprogramma's, selecteer een backend en voer opdrachten uit.</a>
+  <a href="/nl/docs/cli/"><span>Terminal</span>Health.md-CLI: installeer de zelfstandige client en voer opdrachten uit.</a>
   <a href="/nl/docs/agents/"><span>Lokale context</span>Agents: afgebakende gegevensophaling, versleutelde opslag, bewijs en bewaren.</a>
   <a href="/nl/docs/mcp/"><span>Tools</span>Lokale MCP-server: configuratie, toolcatalogus en sandboxgrenzen.</a>
   <a href="/nl/docs/scheduling/"><span>Werkwijze</span>Planning: automatiseer terugkerende exports.</a>

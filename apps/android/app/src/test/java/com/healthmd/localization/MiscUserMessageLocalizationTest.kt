@@ -54,8 +54,14 @@ class MiscUserMessageLocalizationTest {
         assertThat(source).doesNotContain("localizedWarningSummary")
     }
 
-    private fun readSource(relativePath: String): String =
-        File(repoRoot(), "app/src/main/java/com/healthmd/$relativePath").readText()
+    private fun readSource(relativePath: String): String {
+        val root = repoRoot()
+        return listOf(
+            File(root, "app/src/main/java/com/healthmd/$relativePath"),
+            File(root, "app/src/play/java/com/healthmd/$relativePath"),
+        ).firstOrNull(File::isFile)?.readText()
+            ?: error("Missing production source: $relativePath")
+    }
 
     private fun repoRoot(): File {
         var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile

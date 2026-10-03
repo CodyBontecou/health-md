@@ -311,6 +311,8 @@ class ExportProfilesViewModel @Inject constructor(
                     apiEndpointUrl = source.apiEndpointUrl,
                     folderUri = source.folderUri,
                     folderDisplayName = source.folderDisplayName,
+                    // A blocked imported source must not become executable merely by duplication.
+                    derivedFromProfileId = source.id,
                 )
                 openDetail(copy.id)
             }.onFailure { Timber.e(it, "Could not duplicate profile") }
@@ -325,9 +327,10 @@ class ExportProfilesViewModel @Inject constructor(
     fun bindProfileFolder(profileId: String, uri: Uri, displayName: String?) {
         viewModelScope.launch {
             runCatching {
-                profileRepository.bindFolder(profileId, uri.toString(), displayName)
                 if (uiState.value.rows.firstOrNull { it.isActive }?.profile?.id == profileId) {
-                    profileCoordinator.activate(profileId)
+                    profileCoordinator.folderWasSelected(uri.toString(), displayName)
+                } else {
+                    profileRepository.bindFolder(profileId, uri.toString(), displayName)
                 }
             }.onFailure { Timber.e(it, "Could not bind profile folder") }
         }

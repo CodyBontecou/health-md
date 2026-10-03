@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -165,7 +166,8 @@ class SharedSetupIntentCoordinatorTest {
     @Test
     fun `share artifacts use unique uris survive recipient handoff and are pruned`() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val store = SharedSetupDocumentStore(context)
+        val store = SharedSetupDocumentStore(context, SharedSetupV2Codec(PermissiveRegistry))
+        val validBytes = fixtureFile().readBytes()
         val directory = File(context.cacheDir, "shared-setup")
         store.clearShareArtifacts()
         val provider = context.packageManager.resolveContentProvider(
@@ -174,10 +176,26 @@ class SharedSetupIntentCoordinatorTest {
         )
         assertThat(provider?.name).isEqualTo(SharedSetupFileProvider::class.java.name)
 
-        val first = store.shareIntent(byteArrayOf(1, 2, 3))
+        assertThrows(IllegalArgumentException::class.java) {
+            store.shareIntent(byteArrayOf(1, 2, 3))
+        }
+        assertThat(directory.exists()).isFalse()
+        val oversizedV2 = ByteArray(SHARED_SETUP_V2_MAX_BYTES + 1) { ' '.code.toByte() }.also {
+            validBytes.copyInto(it)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            store.shareIntent(oversizedV2)
+        }
+        assertThat(directory.exists()).isFalse()
+
+        val first = store.shareIntent(validBytes)
         val firstUri = requireNotNull(IntentCompat.getParcelableExtra(first.intent, Intent.EXTRA_STREAM, Uri::class.java))
         val firstDirectory = requireNotNull(directory.listFiles()?.singleOrNull())
-        val second = store.shareIntent(byteArrayOf(4, 5, 6))
+        assertThrows(IllegalStateException::class.java) {
+            store.shareIntent(validBytes, first.artifactID)
+        }
+        assertThat(directory.listFiles()?.map { it.name }).containsExactly(first.artifactID)
+        val second = store.shareIntent(validBytes)
         val secondUri = requireNotNull(IntentCompat.getParcelableExtra(second.intent, Intent.EXTRA_STREAM, Uri::class.java))
         assertThat(secondUri).isNotEqualTo(firstUri)
         assertThat(directory.listFiles()?.toList()).hasSize(2)
@@ -192,15 +210,15 @@ class SharedSetupIntentCoordinatorTest {
         assertThat(directory.listFiles()?.toList()).hasSize(1)
 
         directory.listFiles()?.forEach { assertThat(it.setLastModified(0)).isTrue() }
-        val third = store.shareIntent(byteArrayOf(7, 8, 9))
+        val third = store.shareIntent(validBytes)
         val thirdUri = requireNotNull(IntentCompat.getParcelableExtra(third.intent, Intent.EXTRA_STREAM, Uri::class.java))
         assertThat(thirdUri).isNotEqualTo(firstUri)
         assertThat(thirdUri).isNotEqualTo(secondUri)
         assertThat(directory.listFiles()?.toList()).hasSize(1)
 
         val retainedUris = mutableListOf(thirdUri)
-        repeat(SHARED_SETUP_MAX_RETAINED_SHARE_ARTIFACTS - 1) { index ->
-            val share = store.shareIntent(byteArrayOf(index.toByte()))
+        repeat(SHARED_SETUP_MAX_RETAINED_SHARE_ARTIFACTS - 1) {
+            val share = store.shareIntent(validBytes)
             retainedUris += requireNotNull(
                 IntentCompat.getParcelableExtra(share.intent, Intent.EXTRA_STREAM, Uri::class.java)
             )
@@ -210,7 +228,7 @@ class SharedSetupIntentCoordinatorTest {
         retainedUris.forEach { uri ->
             assertThat(context.contentResolver.openInputStream(uri)?.use { it.readBytes() }).isNotEmpty()
         }
-        val capacityFailure = runCatching { store.shareIntent(byteArrayOf(99)) }.exceptionOrNull()
+        val capacityFailure = runCatching { store.shareIntent(validBytes) }.exceptionOrNull()
         assertThat(capacityFailure?.message).contains("earlier setup share")
         assertThat(directory.listFiles()?.toList())
             .hasSize(SHARED_SETUP_MAX_RETAINED_SHARE_ARTIFACTS)
@@ -295,5 +313,24 @@ class SharedSetupIntentCoordinatorTest {
         assertThat(external.clipData).isNotNull()
         assertThat(SharedSetupIntentExtractor.uri(Intent(Intent.ACTION_SEND).setData(uri))).isNull()
         assertThat(SharedSetupIntentExtractor.uri(null)).isNull()
+    }
+
+    private fun fixtureFile(): File {
+        var directory = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
+        while (true) {
+            val candidate = File(
+                directory,
+                "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json",
+            )
+            if (candidate.isFile) return candidate
+            directory = directory.parentFile ?: error("Could not locate shared-setup fixture")
+        }
+    }
+
+    private object PermissiveRegistry : SharedSetupMetricRegistry {
+        override val version: Int = 1
+        override val sha256: String = "0".repeat(64)
+        override val bySemanticId: Map<String, SharedSetupRegistryBinding> = emptyMap()
+        override val byAndroidSelectionId: Map<String, SharedSetupRegistryBinding> = emptyMap()
     }
 }

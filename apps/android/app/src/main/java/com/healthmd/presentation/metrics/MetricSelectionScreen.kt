@@ -1,43 +1,39 @@
 package com.healthmd.presentation.metrics
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.IndeterminateCheckBox
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.healthmd.domain.model.*
-import com.healthmd.presentation.common.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.healthmd.R
+import com.healthmd.domain.model.HealthMetrics
+import com.healthmd.domain.model.MetricSelectionState
+import com.healthmd.presentation.common.AdaptiveActionPair
+import com.healthmd.presentation.common.SecondaryButton
+import com.healthmd.presentation.i18n.displayNameRes
 import com.healthmd.presentation.theme.AppColors
+import com.healthmd.presentation.theme.GeistSizes
+import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import com.healthmd.R
-import com.healthmd.presentation.i18n.displayNameRes
-import com.healthmd.presentation.i18n.localizedDisplayName
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Callers retain configuration protection and persistence; this screen only emits selections. */
 @Composable
 fun MetricSelectionScreen(
     metricSelection: MetricSelectionState,
@@ -45,223 +41,141 @@ fun MetricSelectionScreen(
     onBack: () -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var expandedCategories by remember {
-        mutableStateOf(HealthMetrics.categories.toSet())
-    }
+    var expandedCategories by remember { mutableStateOf(HealthMetrics.categories.toSet()) }
+    var focusSearch by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val locale = context.resources.configuration.locales[0]
     val integerFormat = remember(locale) {
         NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }
     }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.bgPrimary),
-    ) {
-        // Top bar
+
+    Column(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()) {
+        // Only compact navigation stays fixed. The growing title/search/actions cannot
+        // consume the list's height, and Search brings its editor back even from the end.
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.xxs),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(GeistSizes.minimumTouchTarget).testTag(MetricSelectionTags.BACK),
+            ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
-            Text(
-                stringResource(R.string.metric_selection_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = AppColors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                "${integerFormat.format(metricSelection.enabledCount)}/${integerFormat.format(HealthMetrics.totalCount)}",
-                style = MaterialTheme.typography.labelLarge,
-                color = AppColors.accent,
-            )
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        listState.scrollToItem(SEARCH_ITEM_INDEX)
+                        focusSearch = true
+                    }
+                },
+                modifier = Modifier.size(GeistSizes.minimumTouchTarget).testTag(MetricSelectionTags.SEARCH_ACTION),
+            ) {
+                Icon(Icons.Filled.Search, stringResource(R.string.search), tint = AppColors.textPrimary)
+            }
         }
 
-        // Search bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md),
-            placeholder = { Text(stringResource(R.string.search_metrics_hint), color = AppColors.textMuted) },
-            leadingIcon = { Icon(Icons.Filled.Search, null, tint = AppColors.textMuted) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AppColors.accent,
-                unfocusedBorderColor = AppColors.borderDefault,
-                focusedTextColor = AppColors.textPrimary,
-                unfocusedTextColor = AppColors.textPrimary,
-                cursorColor = AppColors.accent,
-            ),
-            shape = RoundedCornerShape(Radii.card),
-            singleLine = true,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.xs))
-
-        // Bulk actions
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            SecondaryButton(
-                text = stringResource(R.string.select_all),
-                onClick = { onSelectionChanged(metricSelection.enableAll()) },
-                modifier = Modifier.weight(1f),
-            )
-            SecondaryButton(
-                text = stringResource(R.string.deselect_all),
-                onClick = { onSelectionChanged(metricSelection.disableAll()) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        // Progress bar
-        LinearProgressIndicator(
-            progress = { metricSelection.enabledCount.toFloat() / HealthMetrics.totalCount },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.md)
-                .height(4.dp)
-                .clip(RoundedCornerShape(Radii.badge)),
-            color = AppColors.accent,
-            trackColor = AppColors.bgSecondary,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.sm))
-
-        // Categories list
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            state = listState,
+            modifier = Modifier.fillMaxWidth().weight(1f).testTag(MetricSelectionTags.LIST),
             contentPadding = PaddingValues(horizontal = Spacing.md, vertical = Spacing.xs),
             verticalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
+            item(key = MetricSelectionTags.HEADER) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    Text(
+                        stringResource(R.string.metric_selection_title),
+                        style = GeistType.heading20, color = AppColors.textPrimary,
+                        modifier = Modifier.fillMaxWidth().semantics { heading() }.testTag(MetricSelectionTags.HEADER),
+                    )
+                    Text(
+                        "${integerFormat.format(metricSelection.enabledCount)}/${integerFormat.format(HealthMetrics.totalCount)}",
+                        style = GeistType.button14, color = AppColors.accent,
+                        modifier = Modifier.testTag(MetricSelectionTags.COUNT),
+                    )
+                    LinearProgressIndicator(
+                        progress = { metricSelection.enabledCount.toFloat() / HealthMetrics.totalCount },
+                        modifier = Modifier.fillMaxWidth().height(Spacing.xxs)
+                            .clip(RoundedCornerShape(Radii.badge)).testTag(MetricSelectionTags.PROGRESS),
+                        color = AppColors.accent,
+                        trackColor = AppColors.bgSecondary,
+                    )
+                }
+            }
+            item(key = MetricSelectionTags.SEARCH_FIELD) {
+                MetricSelectionSearchField(
+                    query = searchQuery,
+                    onQueryChanged = { searchQuery = it },
+                    requestFocus = focusSearch,
+                    onFocusRequested = { focusSearch = false },
+                )
+            }
+            item(key = MetricSelectionTags.BULK_ACTIONS) {
+                AdaptiveActionPair(
+                    primaryAction = { modifier ->
+                        SecondaryButton(
+                            stringResource(R.string.select_all),
+                            onClick = { onSelectionChanged(metricSelection.enableAll()) },
+                            modifier = modifier.testTag(MetricSelectionTags.SELECT_ALL),
+                        )
+                    },
+                    secondaryAction = { modifier ->
+                        SecondaryButton(
+                            stringResource(R.string.deselect_all),
+                            onClick = { onSelectionChanged(metricSelection.disableAll()) },
+                            modifier = modifier.testTag(MetricSelectionTags.DESELECT_ALL),
+                        )
+                    },
+                    modifier = Modifier.testTag(MetricSelectionTags.BULK_ACTIONS),
+                )
+            }
+
             HealthMetrics.categories.forEach { category ->
                 val metrics = HealthMetrics.metricsForCategory(category)
-                val filteredMetrics = if (searchQuery.isBlank()) metrics
-                else metrics.filter {
+                // Preserve the shipped localized-name, case-insensitive matching (not IDs,
+                // units or category names), including the original blank-query behavior.
+                val filteredMetrics = if (searchQuery.isBlank()) metrics else metrics.filter {
                     context.getString(it.displayNameRes()).contains(searchQuery, ignoreCase = true)
                 }
-
                 if (filteredMetrics.isEmpty() && searchQuery.isNotBlank()) return@forEach
-
                 val isExpanded = category in expandedCategories
-                val enabledCount = metricSelection.enabledCountForCategory(category)
-                val totalCategoryCount = metrics.size
 
-                // Category header
-                item(key = "category_${category.name}") {
-                    GeistCard {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    expandedCategories = if (isExpanded) {
-                                        expandedCategories - category
-                                    } else {
-                                        expandedCategories + category
-                                    }
-                                },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Category checkbox
-                            IconButton(
-                                onClick = { onSelectionChanged(metricSelection.toggleCategory(category)) },
-                                modifier = Modifier.size(40.dp),
-                            ) {
-                                Icon(
-                                    when {
-                                        metricSelection.isCategoryFullyEnabled(category) -> Icons.Filled.CheckBox
-                                        metricSelection.isCategoryPartiallyEnabled(category) -> Icons.Filled.IndeterminateCheckBox
-                                        else -> Icons.Filled.CheckBoxOutlineBlank
-                                    },
-                                    contentDescription = null,
-                                    tint = if (metricSelection.isCategoryFullyEnabled(category) || metricSelection.isCategoryPartiallyEnabled(category))
-                                        AppColors.accent else AppColors.textMuted,
-                                )
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    category.localizedDisplayName(),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = AppColors.textPrimary,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    stringResource(R.string.metrics_enabled_category, enabledCount, totalCategoryCount),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = AppColors.textMuted,
-                                )
-                            }
-
-                            Icon(
-                                if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                contentDescription = null,
-                                tint = AppColors.textMuted,
-                            )
-                        }
-
-                        // Expanded metrics
-                        AnimatedVisibility(visible = isExpanded) {
-                            Column {
-                                HorizontalDivider(
-                                    color = AppColors.borderDefault,
-                                    modifier = Modifier.padding(vertical = Spacing.xs),
-                                )
-                                filteredMetrics.forEach { metric ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                onSelectionChanged(metricSelection.toggle(metric.id))
-                                            }
-                                            .padding(vertical = Spacing.xxs, horizontal = Spacing.xxs),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Checkbox(
-                                            checked = metricSelection.isEnabled(metric.id),
-                                            onCheckedChange = {
-                                                onSelectionChanged(metricSelection.toggle(metric.id))
-                                            },
-                                            colors = CheckboxDefaults.colors(
-                                                checkedColor = AppColors.accent,
-                                                uncheckedColor = AppColors.textMuted,
-                                                checkmarkColor = AppColors.onAccent,
-                                            ),
-                                        )
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                metric.localizedDisplayName(),
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                color = AppColors.textPrimary,
-                                            )
-                                            if (metric.unit.isNotEmpty()) {
-                                                Text(
-                                                    metric.unit,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = AppColors.textMuted,
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                // Separate lazy items also keep each action scrollable in short windows.
+                item(key = MetricSelectionTags.expansion(category)) {
+                    MetricSelectionCategoryExpansion(
+                        category = category,
+                        expanded = isExpanded,
+                        enabledCount = metricSelection.enabledCountForCategory(category),
+                        totalCount = metrics.size,
+                        onExpand = {
+                            expandedCategories = if (isExpanded) expandedCategories - category
+                                else expandedCategories + category
+                        },
+                    )
+                }
+                item(key = MetricSelectionTags.categorySelection(category)) {
+                    MetricSelectionCategoryCheckbox(
+                        category = category,
+                        selection = metricSelection,
+                        onToggle = { onSelectionChanged(metricSelection.toggleCategory(category)) },
+                    )
+                }
+                if (isExpanded) {
+                    items(filteredMetrics, key = { MetricSelectionTags.metric(it.id) }) { metric ->
+                        MetricSelectionCheckbox(
+                            metric = metric,
+                            checked = metricSelection.isEnabled(metric.id),
+                            onToggle = { onSelectionChanged(metricSelection.toggle(metric.id)) },
+                        )
                     }
                 }
             }
-
-            item { Spacer(modifier = Modifier.height(Spacing.xl)) }
+            item { Spacer(Modifier.height(Spacing.xl)) }
         }
     }
 }
+
+private const val SEARCH_ITEM_INDEX = 1

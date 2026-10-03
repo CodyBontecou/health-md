@@ -52,9 +52,10 @@ existing session key from fixed 32-byte inputs. Selected Rust-owned vectors are 
 UniFFI-generated transport buffers are not guaranteed to be wiped, so production key custody stays
 native pending a dedicated secret-FFI review.
 
-This internal authority extraction does not change Apple/Android pairing selectors 1/2, Apple
-application version 1, Android application version 2, shared secure/binary framing version 1, any
-discriminator/associated-value box, or either canonical fixture. Native networking, trust,
+The foundation preserves Apple/Android legacy pairing selectors 1/2 and now also advertises and
+verifies shared high-entropy selector 3. Apple application version 1, Android application version 2,
+shared secure/binary framing version 1, and existing discriminator/associated-value bytes remain
+unchanged; selector 3 has its own canonical cross-language fixture. Native networking, trust,
 credentials, persistence,
 lifecycle, sockets, and health exporters remain untouched. Stateful secure-channel sequence,
 replay rejection, nonce/key lifecycle, seal/open, reconnect/trusted transcripts, and session

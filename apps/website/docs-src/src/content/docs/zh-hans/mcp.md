@@ -20,10 +20,10 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>预览版 · 可移植直连 MCP</strong>
-<p>面向 macOS、Linux 和 Windows 的独立 19 工具 <code>healthmd mcp serve</code> 拓扑已经实现，但尚未公开打包。其不使用云服务的 <code>serve-read-only</code> 入口在本地配对后只提供 13 个就绪状态和查询工具。本页仅适用于可移植版本的命令均标记为预览版。</p>
+<p>面向 macOS、Linux 和 Windows 的独立 <code>healthmd mcp serve</code> 拓扑已作为 19 工具的未验证预览版 <code>0.1.0-alpha.7</code> 发布。其不使用云服务的 <code>serve-read-only</code> 入口在本地配对后只提供 13 个就绪状态和查询工具。在 macOS 或 Linux 上使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装。</p>
 </div>
 
-## 要求
+## 内置 Mac 版要求
 
 - 已安装并打开 Health.md Mac 版。
 - 更新工具或导出启动新的 HealthKit 工作时，已连接 iPhone 上的 Health.md 保持打开。
@@ -31,6 +31,14 @@ Codex / Claude / another local MCP host
 - **Health.md Mac 版 → CLI** 中显示的已签名辅助程序路径。
 
 辅助程序的常规路径为 `/Applications/Health.md.app/Contents/Helpers/healthmd-mcp`。支持的 MCP 核心协议版本为 `2024-11-05`、`2025-03-26`、`2025-06-18` 和 `2025-11-25`。不要把 `healthmd-mcp` 当作普通交互式命令启动；stdin 和进程生命周期由 MCP 主机管理。
+
+## 可移植直连要求
+
+- 在 macOS、Linux 或 Windows 上安装独立预览版；无需 Mac 应用及其环回服务。
+- 与支持查询的 iPhone 配对一次，并在每次新的类型化请求期间保持 Health.md 前台运行。Android 不支持类型化 MCP。
+- MCP 配对工具仅用于 iPhone。启动 MCP 前，请通过 CLI 明确配对 Android。
+- 使用 Manual IP 或 Tailscale 连通性以及原生凭据存储；Linux 要求已解锁的 Secret Service 提供方。
+- 配置已安装的兼容启动器或同一二进制文件的 stdio 服务器。两者都使用已配对的直连访问。
 
 ## Codex 设置
 
@@ -77,9 +85,9 @@ approval_mode = "prompt"
 
 ## 可移植直连 MCP 预览版
 
-独立版本发布后，`healthmd setup codex` 会与前台运行的 iPhone 配对，并安全创建使用同一二进制文件的 `healthmd mcp serve` 条目。该拓扑通过端口 `17647` 使用经过身份验证和加密的手动 IP 或 Tailscale 传输、原生凭据存储，以及按请求明确发起的 iPhone 读取。Linux 还需要一个已解锁的 Secret Service 提供方；Windows 使用 Credential Manager。
+在公开的独立预览版中，`healthmd setup codex` 会与前台运行的 iPhone 配对，并安全创建使用同一二进制文件的 `healthmd mcp serve` 条目。该拓扑通过端口 `17647` 使用经过身份验证和加密的手动 IP 或 Tailscale 传输、原生凭据存储，以及按请求明确发起的 iPhone 读取。Linux 还需要一个已解锁的 Secret Service 提供方；Windows 使用 Credential Manager。
 
-在 `healthmd-cli/v<version>` 版本发布前，不要依赖尚未公开的软件包或安装程序 URL。分阶段配对和传输契约见 [iPhone 直连 CLI](/zh-hans/docs/cli-direct/)。
+请使用准确的 `healthmd-cli/v<version>` 预发布版本，而不是整个仓库的最新版本指针。明确未经资格验证的配对和传输契约见 [iPhone 直连 CLI](/zh-hans/docs/cli-direct/)。
 
 ## 原生 MCP App 可视化
 
@@ -108,7 +116,7 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 
 ## 可用工具
 
-内置 Mac 服务器提供 21 个固定工具：13 个就绪状态/查询工具、四个生成文件作业工具和四个加密上下文更新作业工具。包含 19 个工具的可移植预览版保留 13 个就绪状态/查询工具和四个导出工具，用两个直连配对工具替换 Mac 更新作业，并直接在前台 iPhone 上运行类型化查询。
+内置 Mac 服务器提供 21 个固定工具：13 个就绪状态/查询工具、四个生成文件工具和四个加密上下文更新工具。已发布的可移植预览版 `0.1.0-alpha.7` 有 19 个工具。当前开发源码加入完整数据集与受限构件读取后有 21 个；后续版本发布前请勿假定存在这两个工具。
 
 ### 就绪状态与发现
 
@@ -137,10 +145,16 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 
 | 工具 | 用途 |
 |---|---|
-| `healthmd_export_files` | 通过 Mac 应用执行持久导出，写入应用中选择的文件夹 |
+| `healthmd_export_files` | 执行持久生成文件导出；内置 Mac 使用已选文件夹，可移植 Direct MCP 需要明确的电脑目标 |
 | `healthmd_export_job_status` | 检查导出进度和目标位置回执 |
 | `healthmd_export_job_resume` | 恢复完全相同且不可变的持久导出作业 |
 | `healthmd_export_job_cancel` | 明确取消导出作业 |
+### 完整原始语料访问 · 仅限便携式本地 MCP
+
+| 工具 | 用途 |
+|---|---|
+| `healthmd_export_raw` | 经明确批准后，在 iPhone 或 Android 上启动持久的原始语料导出 |
+| `healthmd_raw_artifact_read` | 以受限分块读取已验证且绑定到作业的工件 |
 
 导出、恢复和取消工具被标记为可能产生破坏性影响的写入。当前 Claude 主机要求用户明确交互，因为所配置的导出模式可能更新或覆盖生成文件。上方 Codex 配置也会对这些工具发出批准提示，作为额外保护。
 
@@ -231,7 +245,7 @@ healthmd mcp schema # complete fixed catalog
 
 要获取完整历史记录，请使用 `date_selection: "all_available"`，并省略 `date_range`。可选的 `metric_ids`、`categories` 或 `all_metrics` 会缩小 iPhone 获取范围，但不会更改已保存的设置。只有提供其中一种选择时，`detail_level` 才适用。`all_metrics` 不能与明确的指标或类别列表组合。
 
-要改为运行已保存的导出配置文件，请将 `settings_policy` 设为 `"profile"`，并传入带有该配置文件稳定 UUID 的 `profile_reference`（可选的显示用 `name` 仅用于错误记录）：
+要运行已保存的配置文件，请将 `settings_policy` 设为 `"profile"`，并在 `profile_reference` 中传入稳定 UUID。在公开协议中，可选的 `name` 用于显示和错误上下文。当前手机实现可能会在 ID 查找失败后参考名称，但这种行为无法抵御重命名；自动化必须将 UUID 视为稳定身份：
 
 ```json
 {
@@ -242,7 +256,22 @@ healthmd mcp schema # complete fixed catalog
 }
 ```
 
-配置文件拥有设置范围：`profile_reference` 不能与 `metric_ids`、`categories`、`all_metrics` 或已保存设置策略组合，未知的 UUID 会以类型化错误失败，而不会回退到当前设置。
+配置文件拥有设置范围：`profile_reference` 不能与 `metric_ids`、`categories`、`all_metrics` 或已保存设置策略组合，无法解析的引用 会以类型化错误失败，而不会回退到当前设置。
+
+上面的示例使用内置 Mac 目标。对于可移植 Direct MCP，每个生成文件请求还必须在 `destination` 中指定电脑上现有的绝对文件夹；手机配置文件提供的是输出设置，而不是主机路径：
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" },
+  "destination": "/absolute/existing/HealthVault",
+  "wait_timeout_seconds": 300
+}
+```
+
+如果目标缺失、为相对路径、不存在或是符号链接，可移植 Direct MCP 会在启动手机作业前拒绝请求。
 
 请检查：
 

@@ -12,19 +12,24 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.healthmd.HealthMdApplication
 import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.distribution.DistributionPolicy
+import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
+import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
-import com.healthmd.domain.model.ExportProfile
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -34,8 +39,29 @@ import com.healthmd.presentation.navigation.NavDestination
 import com.healthmd.util.runCatchingCancellable
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import timber.log.Timber
+import java.nio.charset.StandardCharsets
+import java.time.Instant
+import java.time.LocalDate
+import java.util.UUID
+
+internal fun scheduledProfileHistoryTargetLabel(profile: ExportProfile): String =
+    when (profile.target) {
+        ExportTarget.DEVICE_FOLDER ->
+            profile.folderDisplayName?.trim()?.takeIf { it.isNotEmpty() }
+                ?: EXPORT_FOLDER_ROOT_TARGET_LABEL
+        ExportTarget.API_ENDPOINT ->
+            APIExportEndpoint.redactedDescription(profile.apiEndpointUrl.orEmpty())
+    }
+
+internal fun shouldRequireExistingProfileFolderJournal(
+    pendingOperationId: String?,
+    isPendingResidual: Boolean,
+    runAttemptCount: Int,
+): Boolean = pendingOperationId != null ||
+    (runAttemptCount > 0 && !isPendingResidual)
 
 /**
  * Executes one due occurrence for one scheduled export profile (Android phase-6 runtime).
@@ -60,9 +86,20 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
     private val folderAdoption: ProfileFolderAdoptionScope,
     private val profileScheduler: dagger.Lazy<ScheduledProfileScheduler>,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = try {
+        if (!inputData.getString(INPUT_PROFILE_ID).isNullOrBlank()) {
+            setForeground(getForegroundInfo())
+        }
+        doWorkManaged()
+    } finally {
+        ScheduledExportCancellationCoordinator.finish(id)
+    }
+
+    private suspend fun doWorkManaged(): Result {
         val profileId = inputData.getString(INPUT_PROFILE_ID)
         if (profileId.isNullOrBlank()) return Result.failure()
 
@@ -77,13 +114,15 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
+        ScheduledExportCancellationCoordinator.prepare(id)
+        val notificationID = ScheduledExportCancellationCoordinator.foregroundNotificationID(id)
         val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(MainActivity.EXTRA_START_ROUTE, NavDestination.SCHEDULE.route)
         }
         val contentIntent = PendingIntent.getActivity(
             applicationContext,
-            FOREGROUND_NOTIFICATION_ID,
+            notificationID,
             openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -96,12 +135,17 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             .setContentText(applicationContext.getString(R.string.automatic_export_subtitle))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(contentIntent)
+            .addAction(
+                0,
+                applicationContext.getString(R.string.action_cancel_export),
+                ScheduledExportCancelReceiver.pendingIntent(applicationContext, id),
+            )
             .setOngoing(true)
             .build()
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         } else 0
-        return ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification, foregroundServiceType)
+        return ForegroundInfo(notificationID, notification, foregroundServiceType)
     }
 
     private suspend fun runForProfile(profileId: String): Result {
@@ -110,17 +154,31 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             Timber.i("Profile occurrence skipped: entry missing or disabled profileId=%s", profileId)
             return Result.success()
         }
-        val profile = profileRepository.profileById(profileId)
-        if (profile == null) {
+        val storedProfile = profileRepository.profileById(profileId)
+        if (storedProfile == null) {
             // Cross-platform rule: never run the wrong profile; disable the orphaned entry.
             Timber.w("Profile occurrence profile missing, disabling entry profileId=%s", profileId)
             entryStore.update(profileId) { it.copy(isEnabled = false) }
             return Result.success()
         }
+        val blocked = runCatchingCancellable {
+            profileRepository.isSharedSetupV2Blocked(profileId)
+        }.getOrElse {
+            // An unreadable gate must never turn into permission to execute.
+            Timber.e(it, "Could not verify imported profile execution gate")
+            true
+        }
+        if (blocked) {
+            entryStore.update(profileId) { it.copy(isEnabled = false) }
+            return Result.failure(
+                workDataOf(OUTPUT_PROFILE_ERROR to PROFILE_REBIND_REQUIRED),
+            )
+        }
 
         val nowMillis = System.currentTimeMillis()
         val due = ScheduledProfileOccurrenceMath.dueOccurrence(entry, nowMillis)
             ?: return Result.success() // Nothing actionable (no boundary passed or fully caught up).
+        val profile = due.pendingExport?.asFrozenProfile(storedProfile) ?: storedProfile
 
         val current = settingsRepository.getExportSettings()
         val settings = snapshotFactory.restoreForRun(profile, current, entry.lookbackDays)
@@ -146,7 +204,16 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         val dates = due.exportDates
-        val isPurchased = settingsRepository.isPurchased.first()
+        // Today Refresh bookkeeping: the occurrence may carry today's partial file alongside
+        // completed-day catch-up. Refresh-only runs must not advance the completed-day frontier.
+        val refreshSlotMillis = due.refreshSlotMillis
+        val refreshDate = refreshSlotMillis
+            ?.let { slot -> Instant.ofEpochMilli(slot).atZone(entry.zone).toLocalDate() }
+        val hasCompletedDayWork = refreshDate == null || dates.any { it != refreshDate }
+        entitlementRepository.refresh()
+        val isPurchased = distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
         if (!isPurchased) {
             // Scheduled automation is a purchased capability on Android; record and stop.
             recordHistory(
@@ -187,9 +254,14 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        val operationId = operationId(profileId, due)
+        val logicalOperationId = operationId(profileId, due)
         val target = profile.target
         val snapshotJson = profile.settingsSnapshotJson
+        val pendingOperationId = due.pendingExport?.durableOperationId
+        val durableOperationId = pendingOperationId ?: when (target) {
+            ExportTarget.DEVICE_FOLDER -> "profile-folder-${due.pendingExport?.id ?: logicalOperationId}"
+            ExportTarget.API_ENDPOINT -> "profile-api-${due.pendingExport?.id ?: logicalOperationId}"
+        }
         // Durable folder journals require a non-legacy engine pin (mirrors ExportWorker's
         // gating); legacy-pin profiles use the plain non-durable export path instead.
         val enginePin = settings.executionEnginePin
@@ -199,36 +271,51 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
                     .supportsNonLegacy(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))
         val result = try {
-            when (target) {
-                ExportTarget.DEVICE_FOLDER ->
-                    // Per-profile folder: adopt the profile's binding around the run (the live
-                    // folder URI is process-global plumbing; see ProfileFolderAdoptionScope).
-                    folderAdoption.withProfileFolder(profile) {
-                        if (useDurableFolder) {
-                            ExportOrchestrator(healthRepository, exportRepository)
-                                .exportDatesDurably(
-                                    dates = dates,
-                                    settings = settings,
-                                    durableFolderOperationId = "profile-folder-$operationId",
-                                    durableSettingsSnapshotJson = snapshotJson,
-                                    requireExistingJournal = runAttemptCount > 0,
-                                )
-                        } else {
-                            ExportOrchestrator(healthRepository, exportRepository)
-                                .exportDates(dates, settings)
-                        }.copy(target = ExportTarget.DEVICE_FOLDER)
-                    }
+            ScheduledExportCancellationCoordinator.run(id) {
+                when (target) {
+                    ExportTarget.DEVICE_FOLDER ->
+                        // Per-profile folder: adopt the profile's binding around the run (the live
+                        // folder URI is process-global plumbing; see ProfileFolderAdoptionScope).
+                        folderAdoption.withProfileFolder(profile) {
+                            if (useDurableFolder) {
+                                ExportOrchestrator(healthRepository, exportRepository)
+                                    .exportDatesDurably(
+                                        dates = dates,
+                                        settings = settings,
+                                        durableFolderOperationId = durableOperationId,
+                                        durableSettingsSnapshotJson = snapshotJson,
+                                        requireExistingJournal = shouldRequireExistingProfileFolderJournal(
+                                            pendingOperationId = pendingOperationId,
+                                            isPendingResidual = due.pendingExport != null,
+                                            runAttemptCount = runAttemptCount,
+                                        ),
+                                    )
+                            } else {
+                                ExportOrchestrator(healthRepository, exportRepository)
+                                    .exportDates(dates, settings)
+                            }.copy(target = ExportTarget.DEVICE_FOLDER)
+                        }
 
-                ExportTarget.API_ENDPOINT ->
-                    apiEndpointExportRunner.exportDates(
-                        dates = dates,
-                        settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
-                        durableOperationId = "profile-api-$operationId",
-                        durableSettingsSnapshotJson = snapshotJson,
-                    )
+                    ExportTarget.API_ENDPOINT ->
+                        apiEndpointExportRunner.exportDates(
+                            dates = dates,
+                            settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                            durableOperationId = durableOperationId,
+                            durableSettingsSnapshotJson = snapshotJson,
+                        )
+                }
             }
-        } catch (error: kotlinx.coroutines.CancellationException) {
-            throw error
+        } catch (_: kotlinx.coroutines.CancellationException) {
+            // The notification action cancels only the exporter child. A parent WorkManager
+            // cancellation still propagates for explicit schedule disable/replacement.
+            kotlin.coroutines.coroutineContext.ensureActive()
+            ExportResult(
+                successCount = 0,
+                totalCount = dates.size,
+                wasCancelled = true,
+                target = target,
+                remainingDates = dates.toSet(),
+            )
         } catch (error: Exception) {
             Timber.e(error, "Profile scheduled export failed profileId=%s", profileId)
             ExportResult(
@@ -238,20 +325,102 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             )
         }
 
+        if (result.wasCancelled) {
+            val remainingDates = cancellationRemainingDates(dates, target, result)
+            val replacements = if (hasCompletedDayWork) {
+                residualPendingExports(
+                    profile = profile,
+                    due = due,
+                    remainingDates = remainingDates,
+                    result = result,
+                )
+            } else {
+                // Refresh-only cancellations keep no residual: the slot is still unsatisfied, so
+                // the next refresh slot (or tomorrow's completed-day run) retries naturally.
+                emptyList()
+            }
+            val cancellationPersisted = entryStore.recordCancellation(
+                profileId = profileId,
+                fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
+                attemptedPendingID = due.pendingExport?.id,
+                replacements = replacements,
+            )
+            if (!cancellationPersisted) {
+                Timber.e(
+                    "Profile cancellation residual checkpoint failed profileId=%s operationId=%s",
+                    profileId,
+                    durableOperationId,
+                )
+                return Result.retry()
+            }
+            if (refreshSlotMillis != null && refreshDate != null && refreshDate !in remainingDates) {
+                // Cancellation preserved exact unresolved dates; today's file already written
+                // before the stop satisfies its slot and must not re-run at the next one.
+                entryStore.recordRefreshSuccess(profileId, refreshSlotMillis)
+            }
+            if (result.successCount > 0) {
+                recordHistory(
+                    profile = profile,
+                    dates = dates,
+                    result = result.copy(failedDateDetails = emptyList()),
+                    failureReason = null,
+                    warning = "Export cancelled; ${remainingDates.size} date(s) remain pending",
+                    operationId = durableOperationId,
+                )
+            }
+            return Result.success()
+        }
+
         recordHistory(
             profile = profile,
             dates = dates,
             result = result,
             failureReason = result.primaryFailureReason,
             warning = result.warningSummary(),
-            operationId = operationId,
+            operationId = durableOperationId,
         )
 
         if (result.isFullSuccess) {
-            entryStore.recordSuccess(profileId, fireAtMillis = due.fireAtMillis)
+            entryStore.recordSuccess(
+                profileId = profileId,
+                fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
+                completedPendingID = due.pendingExport?.id,
+            )
+        }
+        val failedDates = result.failedDateDetails.mapTo(hashSetOf()) { it.date }
+        if (refreshSlotMillis != null && refreshDate != null && refreshDate !in failedDates) {
+            // Today's file exported (even in a partial run): the slot is satisfied. Remaining
+            // completed-day failures stay retryable through their own residual groups.
+            entryStore.recordRefreshSuccess(profileId, refreshSlotMillis)
         }
 
-        if (!result.isFullSuccess && !result.wasCancelled) {
+        if (!result.isFullSuccess) {
+            val remainingDates = cancellationRemainingDates(dates, target, result)
+            val replacements = if (hasCompletedDayWork) {
+                residualPendingExports(
+                    profile = profile,
+                    due = due,
+                    remainingDates = remainingDates,
+                    result = result,
+                    fallbackDurableOperationId = durableOperationId,
+                )
+            } else {
+                emptyList()
+            }
+            val retryPersisted = entryStore.recordRetry(
+                profileId = profileId,
+                fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
+                attemptedPendingID = due.pendingExport?.id,
+                replacements = replacements,
+            )
+            if (!retryPersisted) {
+                Timber.e(
+                    "Profile retry checkpoint failed profileId=%s operationId=%s",
+                    profileId,
+                    durableOperationId,
+                )
+                return Result.retry()
+            }
             showFailureNotification(profile.name)
             return if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
         }
@@ -268,6 +437,78 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         profileId: String,
         due: ScheduledProfileEntry.DueOccurrence,
     ): String = "$profileId-${due.fireAtMillis}"
+
+    private fun ScheduledProfilePendingExport.asFrozenProfile(
+        current: ExportProfile,
+    ): ExportProfile = current.copy(
+        name = profileName,
+        settingsSnapshotJson = settingsSnapshotJson,
+        target = target,
+        apiEndpointUrl = apiEndpointUrl,
+        folderUri = folderUri,
+        folderDisplayName = folderDisplayName,
+    )
+
+    private fun cancellationRemainingDates(
+        attemptedDates: List<LocalDate>,
+        target: ExportTarget,
+        result: ExportResult,
+    ): Set<LocalDate> {
+        val explicit = (
+            result.remainingDates +
+                result.retryOperationIds.keys +
+                result.retryFolderOperationIds.keys +
+                result.freshCaptureRetryDates
+            ).filterTo(linkedSetOf()) { it in attemptedDates }
+        if (explicit.isNotEmpty() || result.successCount >= result.totalCount) return explicit
+        if (result.successCount == 0 || target == ExportTarget.API_ENDPOINT) {
+            return attemptedDates.toSet()
+        }
+        val failedDates = result.failedDateDetails.mapTo(linkedSetOf()) { it.date }
+        val processedCount = (result.successCount + failedDates.size).coerceAtMost(attemptedDates.size)
+        val successfulDates = attemptedDates.take(processedCount).filterNotTo(linkedSetOf()) {
+            it in failedDates
+        }
+        return attemptedDates.filterNotTo(linkedSetOf()) { it in successfulDates }
+    }
+
+    private fun residualPendingExports(
+        profile: ExportProfile,
+        due: ScheduledProfileEntry.DueOccurrence,
+        remainingDates: Set<LocalDate>,
+        result: ExportResult,
+        fallbackDurableOperationId: String? = null,
+    ): List<ScheduledProfilePendingExport> {
+        val operationByDate = result.retryOperationIds + result.retryFolderOperationIds
+        val groups = remainingDates.sorted().groupBy { date ->
+            if (date in result.freshCaptureRetryDates) {
+                null
+            } else {
+                operationByDate[date] ?: fallbackDurableOperationId
+            }
+        }
+        return groups.entries.map { (operationID, dates) ->
+            val stableID = buildString {
+                append("healthmd-profile-cancel-v1\n")
+                append(due.pendingExport?.id ?: operationId(profile.id, due)).append('\n')
+                append(profile.target.name).append('\n')
+                append(operationID ?: "fresh").append('\n')
+                dates.forEach { append(it).append('\n') }
+            }
+            ScheduledProfilePendingExport(
+                id = UUID.nameUUIDFromBytes(stableID.toByteArray(StandardCharsets.UTF_8)).toString(),
+                ownerEpochDays = dates.map(LocalDate::toEpochDay),
+                fireAtMillis = due.fireAtMillis,
+                settingsSnapshotJson = profile.settingsSnapshotJson,
+                target = profile.target,
+                profileName = profile.name,
+                apiEndpointUrl = profile.apiEndpointUrl,
+                folderUri = profile.folderUri,
+                folderDisplayName = profile.folderDisplayName,
+                durableOperationId = operationID,
+            )
+        }
+    }
 
     private suspend fun recordHistory(
         profile: ExportProfile,
@@ -290,7 +531,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     failureReason = failureReason,
                     failedDateDetails = result.failedDateDetails,
                     target = profile.target,
-                    targetLabel = "${profile.name}",
+                    targetLabel = scheduledProfileHistoryTargetLabel(profile),
                     fileCount = result.artifactCount,
                     warningSummary = warning,
                     exportMode = result.exportMode,
@@ -341,8 +582,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
     companion object {
         const val INPUT_PROFILE_ID = "profile_id"
+        const val OUTPUT_PROFILE_ERROR = "profile_error"
+        const val PROFILE_REBIND_REQUIRED = "profile_rebind_required"
         const val MAX_WORKER_ATTEMPTS = 3
         private const val NOTIFICATION_REQUEST_CODE = 6_100
-        private const val FOREGROUND_NOTIFICATION_ID = 6_101
     }
 }

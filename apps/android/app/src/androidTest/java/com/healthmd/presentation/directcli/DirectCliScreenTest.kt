@@ -39,6 +39,7 @@ class DirectCliScreenTest {
     fun unpairedWorkflowValidatesFieldsAndInvokesPair() {
         val state = mutableStateOf(DirectCliUiState())
         val pairInvocations = AtomicInteger(0)
+        val scanInvocations = AtomicInteger(0)
         val backInvocations = AtomicInteger(0)
 
         compose.setContent {
@@ -60,6 +61,7 @@ class DirectCliScreenTest {
                             pairingCode = value.filter(Char::isDigit).take(20),
                         )
                     },
+                    onScanQr = { scanInvocations.incrementAndGet() },
                     onPair = { pairInvocations.incrementAndGet() },
                     onSaveEndpoint = {},
                     onConnect = {},
@@ -69,6 +71,7 @@ class DirectCliScreenTest {
             }
         }
 
+        compose.onNodeWithTag(DirectCliTestTags.SCAN_QR).performClick()
         compose.onNodeWithTag(DirectCliTestTags.PAIR)
             .performScrollTo()
             .assertIsNotEnabled()
@@ -87,6 +90,7 @@ class DirectCliScreenTest {
         compose.onNodeWithContentDescription(context.getString(R.string.back)).performClick()
 
         assertEquals("12345678901234567890", state.value.pairingCode)
+        assertEquals(1, scanInvocations.get())
         assertEquals(1, pairInvocations.get())
         assertEquals(1, backInvocations.get())
     }
@@ -109,6 +113,7 @@ class DirectCliScreenTest {
                     onHostChange = {},
                     onPortChange = {},
                     onPairingCodeChange = {},
+                    onScanQr = {},
                     onPair = {},
                     onSaveEndpoint = { actions += "save" },
                     onConnect = { actions += "connect" },
@@ -153,6 +158,7 @@ class DirectCliScreenTest {
                     onHostChange = {},
                     onPortChange = {},
                     onPairingCodeChange = {},
+                    onScanQr = {},
                     onPair = {},
                     onSaveEndpoint = {},
                     onConnect = {},

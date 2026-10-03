@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_profiles_title">Розклади профілів</string>
+    <string name="a11y_profiles_empty">Профілів експорту ще немає.</string>
+    <string name="a11y_profiles_add">Новий профіль із поточних налаштувань</string>
+    <string name="a11y_profiles_none_enabled">Немає ввімкнених розкладів профілів.</string>
+    <string name="a11y_profiles_edit">Змінити розклад</string>
+    <string name="a11y_profiles_edit_named">Змінити розклад для %1$s</string>
+    <string name="a11y_profiles_delete">Видалити</string>
+    <string name="a11y_profiles_delete_named">Видалити профіль %1$s</string>
+    <string name="a11y_profiles_schedule_named">Розклад для %1$s</string>
+    <string name="a11y_profiles_save">Зберегти</string>
+    <string name="a11y_profiles_delete_title">Видалити «%1$s»?</string>
+    <string name="a11y_profiles_delete_body">Збережені налаштування та розклад буде видалено. Останній профіль видалити не можна.</string>
+    <string name="a11y_profiles_cadence_unit">Одиниця інтервалу</string>
+    <string name="a11y_profiles_days">Дні</string>
+    <string name="a11y_profiles_weeks">Тижні</string>
+    <string name="a11y_profiles_months">Місяці</string>
+    <string name="a11y_profiles_weekday">День тижня</string>
+    <string name="a11y_profiles_hour">Година</string>
+    <string name="a11y_profiles_minute">Хвилина</string>
+    <string name="a11y_profiles_lookback">Попередні дні (1–30)</string>
+    <string name="a11y_profiles_every_days">Кожні N днів</string>
+    <string name="a11y_profiles_every_weeks">Кожні N тижнів</string>
+    <string name="a11y_profiles_every_months">Кожні N місяців</string>
+</resources>

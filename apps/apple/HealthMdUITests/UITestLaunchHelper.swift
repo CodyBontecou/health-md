@@ -37,6 +37,11 @@ enum UITestLaunchHelper {
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
     }
 
+    enum Notification {
+        static let exportActivity = "notification.exportActivity"
+        static let cancelExportButton = "notification.cancelButton"
+    }
+
     enum ExportModal {
         static let datePresetTodayButton = "exportModal.dateRange.preset.today"
         static let datePresetYesterdayButton = "exportModal.dateRange.preset.yesterday"
@@ -69,9 +74,11 @@ enum UITestLaunchHelper {
     }
 
     enum Sync {
+        static let configurationTargetPicker = "sync.configurationTargetPicker"
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"
+        static let directCLIToggle = "sync.directCLIToggle"
     }
 
     enum ConfigurationProtection {
@@ -130,7 +137,8 @@ enum UITestLaunchHelper {
         macExportStatus: String = "none",
         macDestinationPath: String = "/tmp/TestMacVault",
         analyticsTransport: String? = nil,
-        remoteConfig: String? = nil
+        remoteConfig: String? = nil,
+        showsPostOnboardingPaywall: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
@@ -148,6 +156,7 @@ enum UITestLaunchHelper {
             "UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES": useHealthKitExportPreviewFixtures ? "true" : "false",
             "UITEST_MAC_EXPORT_STATUS": macExportStatus,
             "UITEST_MAC_DESTINATION_PATH": macDestinationPath,
+            "UITEST_SHOW_POST_ONBOARDING_PAYWALL": showsPostOnboardingPaywall ? "true" : "false",
         ]
         if let exportResult {
             app.launchEnvironment["UITEST_EXPORT_RESULT"] = exportResult

@@ -1,5 +1,6 @@
 package com.healthmd.direct
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -231,8 +232,8 @@ class DirectCliForegroundService : Service() {
         DirectCliFailure.CONNECTION_FAILED -> getString(R.string.direct_cli_failure_connection)
         DirectCliFailure.SESSION_TIMEOUT -> getString(R.string.direct_cli_failure_timeout)
         DirectCliFailure.QUOTA_EXHAUSTED -> getString(R.string.direct_cli_failure_quota)
-        DirectCliFailure.FITBIT_RANGE_REQUIRED -> getString(
-            R.string.direct_cli_failure_fitbit_range,
+        DirectCliFailure.PROVIDER_RANGE_REQUIRED -> getString(
+            R.string.direct_cli_failure_provider_range,
         )
         DirectCliFailure.PROFILE_NOT_FOUND -> getString(
             R.string.direct_cli_failure_profile_not_found,
@@ -254,6 +255,8 @@ class DirectCliForegroundService : Service() {
         DirectCliFailure.EXPORT_FAILED -> getString(R.string.direct_cli_failure_export)
     }
 
+    // Declared as dataSync on DirectCliForegroundService in the shared manifest.
+    @SuppressLint("ForegroundServiceType")
     private fun startDirectForeground(notification: Notification) {
         ServiceCompat.startForeground(
             this,

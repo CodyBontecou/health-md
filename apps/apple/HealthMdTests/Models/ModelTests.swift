@@ -755,7 +755,16 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
+        XCTAssertEqual(settings.detailPolicy, .summary)
         XCTAssertFalse(settings.includeGranularData)
+        XCTAssertEqual(
+            defaults.string(forKey: "advancedExportSettings.compatibilityDetail"),
+            "summary"
+        )
+        XCTAssertEqual(
+            defaults.string(forKey: "advancedExportSettings.healthKitSourceArchivePolicy"),
+            "none"
+        )
     }
 
     func testLosslessHealthRecords_explicitFalseIsPreserved() {
@@ -765,6 +774,7 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
+        XCTAssertEqual(settings.detailPolicy, .summary)
         XCTAssertFalse(settings.includeGranularData)
         XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
@@ -776,8 +786,22 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
 
+        XCTAssertEqual(settings.detailPolicy, .lossless)
         XCTAssertTrue(settings.includeGranularData)
         XCTAssertTrue(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
+    }
+
+    func testDetailedTimeSeriesPersistsWithoutEnablingLegacyLosslessBridge() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        settings.detailPolicy = .detailedTimeSeries
+        let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertEqual(reloaded.detailPolicy, .detailedTimeSeries)
+        XCTAssertFalse(reloaded.includeGranularData)
+        XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
 
     func testLosslessHealthRecords_resetRestoresDefaultOff() {
@@ -789,6 +813,7 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
 
         settings.reset()
 
+        XCTAssertEqual(settings.detailPolicy, .summary)
         XCTAssertFalse(settings.includeGranularData)
         XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
@@ -1095,7 +1120,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertFalse(settings.writesDailyAggregateFiles)
         XCTAssertFalse(settings.writesIndividualEntryFiles)
         XCTAssertFalse(settings.writesExternalProviderSidecars)
-        XCTAssertFalse(settings.effectiveGranularDataEnabled)
+        XCTAssertEqual(settings.effectiveDetailPolicy, .summary)
         XCTAssertTrue(settings.enabledRollupPeriods.isEmpty)
         XCTAssertEqual(settings.looseFormatsPerDate, 0)
         XCTAssertEqual(settings.exportFormats, [.markdown, .json])

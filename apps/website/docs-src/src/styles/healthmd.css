@@ -321,6 +321,22 @@ summary:focus-visible,
   width: 32px !important;
 }
 
+.healthmd-site-title {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+}
+
+.healthmd-surface-label {
+  border-left: 1px solid var(--hmd-gray-alpha-300);
+  color: var(--hmd-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.75rem;
+  padding-left: 0.75rem;
+  white-space: nowrap;
+}
+
 .social-icons,
 .right-group,
 .healthmd-header-links {
@@ -350,6 +366,12 @@ summary:focus-visible,
 .healthmd-header-links a:hover {
   background: var(--hmd-gray-alpha-100);
   border-color: var(--hmd-gray-alpha-200);
+  color: var(--hmd-primary);
+}
+
+.healthmd-header-links a[aria-current='page'] {
+  background: var(--hmd-gray-alpha-100);
+  border-color: var(--hmd-gray-alpha-300);
   color: var(--hmd-primary);
 }
 

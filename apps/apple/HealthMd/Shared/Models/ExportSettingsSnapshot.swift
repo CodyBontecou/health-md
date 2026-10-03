@@ -1,5 +1,146 @@
 import Foundation
 
+/// Readable compatibility detail retained alongside daily aggregates.
+///
+/// These projections are intentionally distinct from canonical HealthKit source
+/// records: they use Health.md's established day ownership, clipping, units, and
+/// presentation semantics.
+nonisolated enum ExportCompatibilityDetail: String, Codable, CaseIterable, Sendable {
+    case summary
+    case selectedTimeSeries = "selected_time_series"
+
+    var includesSelectedTimeSeries: Bool { self == .selectedTimeSeries }
+}
+
+/// Apple-only canonical source-record archive policy.
+nonisolated enum HealthKitSourceArchivePolicy: String, Codable, CaseIterable, Sendable {
+    case none
+    case canonicalV1 = "canonical_v1"
+
+    var includesCanonicalArchive: Bool { self == .canonicalV1 }
+}
+
+/// Orthogonal detail policy for one Apple export operation.
+///
+/// The durable model deliberately supports archive-only output even though the
+/// primary UI presents Summary, Detailed Time-Series, and Lossless presets.
+nonisolated struct AppleExportDetailPolicy: Codable, Equatable, Sendable {
+    var compatibilityDetail: ExportCompatibilityDetail
+    var healthKitSourceArchive: HealthKitSourceArchivePolicy
+
+    static let summary = AppleExportDetailPolicy(
+        compatibilityDetail: .summary,
+        healthKitSourceArchive: .none
+    )
+    static let detailedTimeSeries = AppleExportDetailPolicy(
+        compatibilityDetail: .selectedTimeSeries,
+        healthKitSourceArchive: .none
+    )
+    static let archiveOnly = AppleExportDetailPolicy(
+        compatibilityDetail: .summary,
+        healthKitSourceArchive: .canonicalV1
+    )
+    static let lossless = AppleExportDetailPolicy(
+        compatibilityDetail: .selectedTimeSeries,
+        healthKitSourceArchive: .canonicalV1
+    )
+
+    var includesSelectedTimeSeries: Bool {
+        compatibilityDetail.includesSelectedTimeSeries
+    }
+
+    var includesCanonicalArchive: Bool {
+        healthKitSourceArchive.includesCanonicalArchive
+    }
+
+    var hasAnyDetail: Bool {
+        includesSelectedTimeSeries || includesCanonicalArchive
+    }
+
+    /// The historical Boolean can represent only Summary and Lossless exactly.
+    var isLegacyRepresentable: Bool {
+        self == .summary || self == .lossless
+    }
+
+    /// Safe downgrade projection. Split states become Summary instead of
+    /// unexpectedly enabling a very large archive or claiming dropped detail.
+    var legacyIncludeGranularData: Bool {
+        self == .lossless
+    }
+
+    var historyDetailLevelToken: String {
+        if self == .detailedTimeSeries {
+            return "detailed_time_series"
+        } else if self == .archiveOnly {
+            return "archive_only"
+        } else if self == .lossless {
+            return "lossless"
+        }
+        return "summary"
+    }
+}
+
+/// User-facing presets backed by the orthogonal durable policy.
+nonisolated enum AppleExportDetailPreset: String, CaseIterable, Identifiable, Sendable {
+    case summary
+    case detailedTimeSeries = "detailed_time_series"
+    case losslessHealthRecords = "lossless_health_records"
+    case archiveOnly = "archive_only"
+
+    var id: String { rawValue }
+
+    var policy: AppleExportDetailPolicy {
+        switch self {
+        case .summary: .summary
+        case .detailedTimeSeries: .detailedTimeSeries
+        case .losslessHealthRecords: .lossless
+        case .archiveOnly: .archiveOnly
+        }
+    }
+
+    var localizedTitle: String {
+        switch self {
+        case .summary:
+            String(localized: "Summary", comment: "Export data-detail preset")
+        case .detailedTimeSeries:
+            String(localized: "Detailed Time-Series", comment: "Export data-detail preset")
+        case .losslessHealthRecords:
+            String(localized: "Lossless Health Records", comment: "Export data-detail preset")
+        case .archiveOnly:
+            String(localized: "HealthKit Archive Only", comment: "Advanced export data-detail preset")
+        }
+    }
+
+    var localizedDescription: String {
+        switch self {
+        case .summary:
+            String(localized: "Daily aggregates such as averages, minimums, and maximums.", comment: "Export data-detail preset description")
+        case .detailedTimeSeries:
+            String(localized: "Adds selected timestamped samples such as heart rate, HRV, blood oxygen, respiratory rate, and sleep stages without the canonical source archive.", comment: "Export data-detail preset description")
+        case .losslessHealthRecords:
+            String(localized: "Adds detailed time-series and the canonical HealthKit source archive with identities, provenance, metadata, and relationships. Files may be much larger.", comment: "Export data-detail preset description")
+        case .archiveOnly:
+            String(localized: "Adds the canonical HealthKit source archive without duplicate compatibility time-series projections.", comment: "Advanced export data-detail preset description")
+        }
+    }
+
+    init(policy: AppleExportDetailPolicy) {
+        if policy == .summary {
+            self = .summary
+        } else if policy == .detailedTimeSeries {
+            self = .detailedTimeSeries
+        } else if policy == .lossless {
+            self = .losslessHealthRecords
+        } else if policy == .archiveOnly {
+            self = .archiveOnly
+        } else {
+            // Both dimensions are closed enums, so this is defensive against a
+            // future additive combination until the preset UI is extended.
+            self = .summary
+        }
+    }
+}
+
 /// Immutable, portable copy of every setting that affects export output.
 ///
 /// iOS sends this snapshot to macOS with a Mac export job. The Mac can then
@@ -22,7 +163,29 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var formatCustomization: FormatCustomizationSnapshot
     var individualTracking: IndividualTrackingSnapshot
     var dailyNoteInjection: DailyNoteInjectionSnapshot
-    var includeGranularData: Bool
+    var compatibilityDetail: ExportCompatibilityDetail
+    var healthKitSourceArchivePolicy: HealthKitSourceArchivePolicy
+
+    var detailPolicy: AppleExportDetailPolicy {
+        get {
+            AppleExportDetailPolicy(
+                compatibilityDetail: compatibilityDetail,
+                healthKitSourceArchive: healthKitSourceArchivePolicy
+            )
+        }
+        set {
+            compatibilityDetail = newValue.compatibilityDetail
+            healthKitSourceArchivePolicy = newValue.healthKitSourceArchive
+        }
+    }
+
+    /// Source compatibility for historical callers. New runtime decisions must
+    /// use `detailPolicy`; the legacy Boolean represents only Summary/Lossless.
+    var includeGranularData: Bool {
+        get { detailPolicy.legacyIncludeGranularData }
+        set { detailPolicy = newValue ? .lossless : .summary }
+    }
+
     /// New v9 range-summary preference. New snapshots encode only this key.
     var generateRangeSummary: Bool
     var metricSelection: MetricSelectionSnapshot
@@ -66,6 +229,8 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case formatCustomization
         case individualTracking
         case dailyNoteInjection
+        case compatibilityDetail
+        case healthKitSourceArchivePolicy
         case includeGranularData
         case generateRangeSummary
         case generateWeeklyRollups
@@ -105,6 +270,8 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         individualTracking: IndividualTrackingSnapshot,
         dailyNoteInjection: DailyNoteInjectionSnapshot,
         includeGranularData: Bool,
+        compatibilityDetail: ExportCompatibilityDetail? = nil,
+        healthKitSourceArchivePolicy: HealthKitSourceArchivePolicy? = nil,
         generateRangeSummary: Bool,
         metricSelection: MetricSelectionSnapshot,
         appleExportEnginePin: AppleExportEnginePin? = nil,
@@ -125,7 +292,10 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         self.formatCustomization = formatCustomization
         self.individualTracking = individualTracking
         self.dailyNoteInjection = dailyNoteInjection
-        self.includeGranularData = includeGranularData
+        let legacyPolicy: AppleExportDetailPolicy = includeGranularData ? .lossless : .summary
+        self.compatibilityDetail = compatibilityDetail ?? legacyPolicy.compatibilityDetail
+        self.healthKitSourceArchivePolicy = healthKitSourceArchivePolicy
+            ?? legacyPolicy.healthKitSourceArchive
         self.generateRangeSummary = generateRangeSummary
         self.metricSelection = metricSelection
         self.appleExportEnginePin = appleExportEnginePin
@@ -155,9 +325,22 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         formatCustomization = try container.decode(FormatCustomizationSnapshot.self, forKey: .formatCustomization)
         individualTracking = try container.decode(IndividualTrackingSnapshot.self, forKey: .individualTracking)
         dailyNoteInjection = try container.decode(DailyNoteInjectionSnapshot.self, forKey: .dailyNoteInjection)
-        // Older snapshots predate source-record capture. Missing means the sender
-        // supplied summary data only; current snapshots always encode this key.
-        includeGranularData = try container.decodeIfPresent(Bool.self, forKey: .includeGranularData) ?? false
+        // The historical Boolean coupled compatibility time-series with the
+        // canonical archive. Exact fields win when present; old durable work maps
+        // true to both and false/missing to neither without consulting live defaults.
+        let legacyIncludeGranularData = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .includeGranularData
+        ) ?? false
+        let legacyPolicy: AppleExportDetailPolicy = legacyIncludeGranularData ? .lossless : .summary
+        compatibilityDetail = try container.decodeIfPresent(
+            ExportCompatibilityDetail.self,
+            forKey: .compatibilityDetail
+        ) ?? legacyPolicy.compatibilityDetail
+        healthKitSourceArchivePolicy = try container.decodeIfPresent(
+            HealthKitSourceArchivePolicy.self,
+            forKey: .healthKitSourceArchivePolicy
+        ) ?? legacyPolicy.healthKitSourceArchive
         if let rangeSummary = try container.decodeIfPresent(Bool.self, forKey: .generateRangeSummary) {
             generateRangeSummary = rangeSummary
         } else {
@@ -205,7 +388,15 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         try container.encode(formatCustomization, forKey: .formatCustomization)
         try container.encode(individualTracking, forKey: .individualTracking)
         try container.encode(dailyNoteInjection, forKey: .dailyNoteInjection)
-        try container.encode(includeGranularData, forKey: .includeGranularData)
+        try container.encode(compatibilityDetail, forKey: .compatibilityDetail)
+        try container.encode(healthKitSourceArchivePolicy, forKey: .healthKitSourceArchivePolicy)
+        // Keep a safe bridge for old decoders. Connected peers reject split
+        // policies before transfer, so this field is never used to approximate
+        // a split state on an old Mac.
+        try container.encode(
+            detailPolicy.legacyIncludeGranularData,
+            forKey: .includeGranularData
+        )
         try container.encode(generateRangeSummary, forKey: .generateRangeSummary)
         try container.encode(metricSelection, forKey: .metricSelection)
         try container.encodeIfPresent(appleExportEnginePin, forKey: .appleExportEnginePin)
@@ -241,7 +432,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             formatCustomization: .from(settings.formatCustomization),
             individualTracking: .from(settings.individualTracking),
             dailyNoteInjection: .from(settings.dailyNoteInjection),
-            includeGranularData: settings.includeGranularData,
+            includeGranularData: settings.detailPolicy.legacyIncludeGranularData,
+            compatibilityDetail: settings.compatibilityDetail,
+            healthKitSourceArchivePolicy: settings.healthKitSourceArchivePolicy,
             generateRangeSummary: settings.generateRangeSummary,
             metricSelection: .from(settings.metricSelection),
             appleExportEnginePin: appleExportEnginePin ?? settings.executionAppleExportEnginePin,
@@ -351,7 +544,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         formatCustomization.apply(to: settings.formatCustomization)
         individualTracking.apply(to: settings.individualTracking)
         dailyNoteInjection.apply(to: settings.dailyNoteInjection)
-        settings.includeGranularData = includeGranularData
+        settings.detailPolicy = detailPolicy
         settings.generateRangeSummary = generateRangeSummary
         metricSelection.apply(to: settings.metricSelection)
         settings.executionAppleExportEnginePin = appleExportEnginePin

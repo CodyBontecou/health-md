@@ -4,7 +4,7 @@
 
 - **Docs status:** draft
 - **Video priority:** medium
-- **Primary screen:** Export → Export Formats; Export → Lossless Health Records
+- **Primary screen:** Export → Export Formats; Export → Data Detail
 - **Source files:** `HealthMd/Shared/Export/CSVExporter.swift`, `HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift`, `HealthMd/Shared/Managers/VaultManager.swift`
 
 ## What it does
@@ -17,7 +17,7 @@ CSV is lossless because each source object is carried as canonical JSON in the `
 
 1. Open **Export → Export Formats** and enable **CSV**.
 2. Choose metrics under **Health Metrics**.
-3. Leave **Lossless Health Records** on for canonical rows, or turn it off for summary-only rows.
+3. Under **Data Detail**, choose Summary, Detailed Time-Series for timestamped compatibility rows without the canonical archive, or Lossless Health Records for canonical source rows.
 4. Export one day first and import it with a standard RFC 4180 parser.
 
 The complete generated CSV files and exhaustive row contract are in [Export formats](../reference/export-formats.md#csv).

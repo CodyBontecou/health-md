@@ -10,8 +10,9 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
+import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.ScheduleDateWindow
-import com.healthmd.domain.repository.BillingRepository
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +31,8 @@ import timber.log.Timber
 class ScheduleViewModel @Inject constructor(
     private val exportScheduler: ExportScheduler,
     private val settingsRepository: SettingsRepository,
-    private val billingRepository: BillingRepository,
+    private val entitlementRepository: EntitlementRepository,
+    private val distributionPolicy: DistributionPolicy,
     private val apiCredentialStore: APIExportCredentialStore? = null,
 ) : ViewModel() {
 
@@ -38,21 +40,21 @@ class ScheduleViewModel @Inject constructor(
     val uiState: StateFlow<ScheduleUiState> = _uiState.asStateFlow()
 
     init {
-        billingRepository.startConnection()
+        entitlementRepository.refresh()
 
         viewModelScope.launch {
             combine(
                 settingsRepository.exportSettings,
                 settingsRepository.exportFolderUri,
                 settingsRepository.isPurchased,
-                billingRepository.isUnlocked,
+                entitlementRepository.isUnlocked,
             ) { settings, folderUri, persistedPurchased, liveUnlocked ->
                 ScheduleCombinedState(settings, folderUri, persistedPurchased, liveUnlocked)
             }.collect { combined ->
                 val settings = combined.settings
                 val persistedPurchased = combined.persistedPurchased
                 val liveUnlocked = combined.liveUnlocked
-                val purchased = persistedPurchased || liveUnlocked
+                val purchased = distributionPolicy.fullAccessIncluded || persistedPurchased || liveUnlocked
                 _uiState.update {
                     it.copy(
                         isEnabled = settings.scheduleEnabled && purchased,
@@ -70,8 +72,9 @@ class ScheduleViewModel @Inject constructor(
                     )
                 }
                 if (settings.scheduleEnabled && !purchased) {
-                    val current = settingsRepository.getExportSettings()
-                    settingsRepository.updateExportSettings(current.copy(scheduleEnabled = false))
+                    settingsRepository.updateExportSettingsAtomically { current ->
+                        current.copy(scheduleEnabled = false)
+                    }
                     exportScheduler.cancel()
                     _uiState.update { it.copy(requiresUpgrade = true) }
                 }
@@ -102,10 +105,12 @@ class ScheduleViewModel @Inject constructor(
         refreshAPIAuthorizationStatus()
         refreshSchedulingState()
 
-        viewModelScope.launch {
-            billingRepository.isUnlocked
-                .filter { it }
-                .collect { settingsRepository.setPurchased(true) }
+        if (!distributionPolicy.fullAccessIncluded) {
+            viewModelScope.launch {
+                entitlementRepository.isUnlocked
+                    .filter { it }
+                    .collect { settingsRepository.setPurchased(true) }
+            }
         }
     }
 
@@ -190,13 +195,12 @@ class ScheduleViewModel @Inject constructor(
                         configurationError = null,
                     )
                 }
-                val current = settingsRepository.getExportSettings()
-                settingsRepository.updateExportSettings(
+                settingsRepository.updateExportSettingsAtomically { current ->
                     current.copy(
                         apiEndpointUrl = normalized,
                         scheduledExportTarget = ExportTarget.API_ENDPOINT,
                     )
-                )
+                }
                 refreshAPIAuthorizationStatus()
                 persistAndRescheduleIfNeeded()
             } catch (error: IllegalArgumentException) {
@@ -285,8 +289,7 @@ class ScheduleViewModel @Inject constructor(
         updateNextExportDescription()
         viewModelScope.launch {
             val state = _uiState.value
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(
+            settingsRepository.updateExportSettingsAtomically { current ->
                 current.copy(
                     scheduleEnabled = state.isEnabled,
                     scheduleCadenceValue = state.cadenceValue,
@@ -297,7 +300,7 @@ class ScheduleViewModel @Inject constructor(
                     scheduleDateWindow = state.dateWindow,
                     scheduledExportTarget = state.selectedTarget,
                 )
-            )
+            }
 
             if (state.isEnabled) {
                 exportScheduler.reconcile()

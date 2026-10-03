@@ -1,62 +1,72 @@
-# Direct iPhone CLI backend
+# Direct iPhone CLI access
 
 ## Status
 
-- **Implementation status:** Swift direct client complete; portable Rust export protocol v1 and query protocol v3 clients implemented; cross-client physical-device release QA remains required
+- **Implementation status:** Swift direct client complete; portable Rust export protocol v1 and query protocol v3 clients implemented; basic physical connectivity confirmed, with the complete cross-client exact-build qualification matrix still required
 - **Primary surfaces:** `healthmd`, same-executable `healthmd mcp serve`, and an open Health.md iPhone app
-- **Source files:** `Packages/HealthMdConnectivity/`, `HealthMdCLI/Sources/healthmd/main.swift`, `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`, and the standalone Rust workspace at [`apps/cli`](https://github.com/CodyBontecou/health-md/tree/main/apps/cli)
+- **Source files:** `Packages/HealthMdConnectivity/`, `HealthMdCLI/Sources/healthmd/main.swift`, `HealthMd/iOS/IPhoneDirectCLIService.swift`, `HealthMd/iOS/IPhoneDirectWakeManager.swift`, `HealthMd/iOS/IPhoneDirectExportCoordinator.swift`, `HealthMd/iOS/IPhoneDirectFileExportProducer.swift`, the standalone Rust workspace at [`apps/cli`](../../../cli), and the notification-only Worker at [`apps/wake`](../../../wake)
 
 ## What it does
 
-The explicit direct backend lets the Mac `healthmd` process pair with an open iPhone and request Apple Health exports without launching the Health.md macOS SwiftUI app:
+The standalone Rust `healthmd` CLI pairs directly with an open iPhone and requests Apple Health exports. It never requires or connects through the Health.md Mac app:
 
 ```text
-healthmd --backend direct
-  ← authenticated manual-IP/Tailscale or nearby connection →
+healthmd on macOS / Linux / Windows
+  ← authenticated manual-IP/Tailscale connection →
 open Health.md iPhone app → HealthKit → protected bounded spool / typed query evaluator
   → canonical JSON, generated files, or bounded MCP query pages → desktop host
 ```
 
-The bundled macOS Swift helper keeps the compatible `--backend mac-app` default. The standalone Rust
-CLI uses the portable direct backend by default; its `mac-app` option is reserved but not yet
-implemented. Neither client silently changes backend or transport. HealthKit reads still occur on iPhone, Direct CLI Access is opt-in, and iOS foreground/protected-data constraints still apply.
+Two separate clients exist, and they are not two backends of one CLI. The standalone Rust CLI
+(`apps/cli`, macOS/Linux/Windows) is direct-only: it has no backend option, never launches the Mac
+app, and never contacts a localhost control server. The Swift helper bundled inside Health.md for
+Mac is a macOS-only companion to that app; its default talks to the Mac app's loopback server, and it
+also offers a compatible direct mode selected with `--backend direct`. Neither client silently
+changes client mode or transport. HealthKit reads still occur on iPhone, Direct CLI Access is
+opt-in, and iOS foreground/protected-data constraints still apply.
 
-Direct mode supports pairing, device inspection, status, canonical `extract`, strict raw extraction, generated-file exports, durable status/resume, and explicit cancellation. Portable `healthmd mcp serve` adds fresh typed queries, evidence, metric catalog, interactive MCP Apps, and PNG chart fallback over query protocol v3 without the Mac app. After separate local pairing, `healthmd mcp serve-read-only` exposes the same 13 readiness/query operations over stdio without pairing, export-job, HTTP, OAuth, tunnel, or cloud authority. `healthmd setup codex` configures Codex and pairs the iPhone in one flow; the compatibility `healthmd-mcp` launcher execs `healthmd` on Unix and uses an authenticated same-file helper with the fixed Credential Manager service/account on Windows. The bundled Swift helper returns deterministic `backend_unsupported` diagnostics for Mac encrypted-context query/refresh subcommands when direct is selected. Those shell commands are not part of the standalone Rust grammar; Rust uses its fixed MCP tools instead.
+Direct mode supports pairing, device inspection, status, canonical `extract`, strict raw extraction, generated-file exports, durable status/resume, and explicit cancellation. Portable `healthmd mcp serve` adds fresh typed queries, evidence, metric catalog, interactive MCP Apps, PNG chart fallback, and an approval-gated full-corpus raw job with bounded job-artifact reads. Typed operations use query protocol v3; full-corpus raw reuses the durable v1 export path without the Mac app. After separate local pairing, `healthmd mcp serve-read-only` exposes the same 13 readiness/query operations over stdio without pairing, export-job, HTTP, OAuth, tunnel, or cloud authority. `healthmd setup codex` configures Codex and pairs the iPhone in one flow; the compatibility `healthmd-mcp` launcher execs `healthmd` on Unix and uses an authenticated same-file helper with the fixed Credential Manager service/account on Windows. In the bundled Swift helper, Mac encrypted-context query/refresh subcommands return deterministic `backend_unsupported` diagnostics when direct is selected. Those shell commands are not part of the standalone Rust grammar; Rust uses its fixed MCP tools instead.
 
 ## Requirements
 
 - A current bundled Swift `healthmd` binary on macOS or the standalone Rust `healthmd` binary on
   macOS, Linux, or Windows, plus a current Health.md iOS build.
 - Health.md open on an unlocked-enough iPhone.
-- **Settings → Mac Sync → Direct CLI Access** enabled on iPhone.
+- **Sync → CLI → Direct CLI Access** enabled on iPhone.
 - HealthKit permission and export quota available.
 - For Manual IP: a reachable Mac address and TCP port `17647` by default. A Tailscale address is allowed.
 - For Nearby: both devices on a network where Multipeer discovery is permitted and local-network permission granted.
 - For file mode: an existing absolute writable desktop destination on macOS, Linux, or Windows supplied with `--destination`.
 
-Direct access is foreground-scoped for pairing and new commands. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. If an active export is already connected when Health.md enters the background, the app requests finite iOS background execution time and keeps that export running until it completes or the system expires the allowance. Expiration disconnects the channel and leaves the durable job paused for resume. Idle discovery and new connections still stop in the background, so this is not a fully unattended background or cron interface.
+Direct access is foreground-scoped for pairing and new commands. The portable CLI's RFC-0005 P1 wake window can keep an unavailable query/export/resume/cancel request open for 120 seconds while the user unlocks and foregrounds Health.md; it does not wake the suspended app itself. `--wake-timeout 0` disables this host-only wait. The P2 wake notification setting is implemented: enabling "Allow paired computers to send wake requests" under Direct CLI Access requests notification permission, registers a per-pairing wake key with the dedicated `apps/wake` Worker, and forwards the enrollment to the CLI, which can then request one visible best-effort wake push per wait. The Worker is deployed and current `main` compiles its health-free client into every desktop CLI build; the already-published alpha.6 binaries remain historical wait-only builds, and end-to-end notification qualification is still pending. A notification restores user presence but never authorizes HealthKit access or carries health scope through the Worker. During a direct CLI export, the iPhone app shows a global progress banner with capture/transfer state, completed days, transferred bytes, and paused/completed status. If an active export is already connected when Health.md enters the background, the app requests finite iOS background execution time and keeps that export running until it completes or the system expires the allowance. Expiration disconnects the channel and leaves the durable job paused for resume. Idle discovery and new connections still stop in the background, so this is not a fully unattended background or cron interface.
 
-## Backends and transports
+## Clients and transports
 
-| Choice | Default | Meaning |
-|---|---|---|
-| `--backend mac-app` | Bundled Swift default | Swift CLI uses the Mac app's loopback server and existing Mac↔iPhone connection. Reserved but not implemented in the Rust CLI. |
-| `--backend direct` | Portable Rust default | CLI connects directly to the paired open iPhone. |
-| `--transport manual-ip` | Yes in direct mode | iPhone connects to the CLI listener at an explicit LAN/Tailscale address and port. |
-| `--transport nearby` | No | iPhone discovers the explicitly advertised `healthmd-cli` Multipeer service. |
+| Choice | Applies to | Default | Meaning |
+|---|---|---|---|
+| Standalone Rust `healthmd` | macOS, Linux, Windows | Direct-only; no backend option exists | CLI connects directly to the paired open iPhone. |
+| Bundled Swift helper | macOS only | Mac app loopback server | Uses the running Mac app's connection; select its direct mode with `--backend direct`. |
+| `--transport manual-ip` | Both clients | Yes | iPhone connects to the CLI listener at an explicit LAN/Tailscale address and port. |
+| `--transport nearby` | Bundled Swift helper only | No | iPhone discovers the explicitly advertised `healthmd-cli` Multipeer service. The portable Rust CLI rejects it. |
 
-Backend and transport options are global and precede the command:
+Transport options are global and precede the command. The standalone Rust CLI has no backend flag:
 
 ```bash
-healthmd --backend direct --transport manual-ip status
+healthmd --transport manual-ip status
+healthmd export --yesterday --raw --output yesterday.json
+```
+
+The bundled Swift helper reaches the same direct path only through its explicit prefix:
+
+```bash
 healthmd --backend direct --transport nearby export --yesterday --raw --output yesterday.json
 ```
 
-No failed mode falls back to another backend, Manual IP, Nearby, or the Mac app.
+No failed mode falls back to another transport, client mode, or the Mac app.
 
 ## Pairing
 
-Pairing creates a trust relationship distinct from the Health.md Mac app's own sync trust. The six-digit code is short-lived and is never sent over the wire or persisted.
+Pairing creates a trust relationship distinct from the Health.md Mac app's own sync trust. Current Manual IP onboarding uses the same short-lived, high-entropy 20-digit code on iOS and Android; the code is never sent over the wire or persisted. The six-digit Apple profile remains only for legacy/Nearby compatibility.
 
 ### Manual IP or Tailscale
 
@@ -66,12 +76,12 @@ Pairing creates a trust relationship distinct from the Health.md Mac app's own s
    healthmd direct pair --transport manual-ip
    ```
 
-2. Keep that command running. On iPhone, open Health.md's **Sync** tab. Under **Direct CLI Access**, tap **Scan Pairing QR** and point the in-app camera at the terminal QR.
-3. The in-app scan is the explicit pairing action. Health.md accepts only a private-LAN or Tailscale IPv4 endpoint, validates the exact port and one-time code, and starts the authenticated connection automatically without a second Pair tap. External `healthmd://` opens are rejected because another app cannot prove that the user scanned the QR. If a direct operation is active, the handoff waits and starts automatically when that operation finishes. If the first connection fails, the in-app card offers Retry and Cancel without persisting the code.
-4. If in-app QR scanning is unavailable, enable Direct CLI Access, select **Manual IP**, enter the shown LAN/Tailscale address, port, and code, then tap Pair.
+2. Keep that command running. On iPhone, open Health.md's **Sync** tab, choose **CLI**, then tap **Scan Pairing QR** under **Direct CLI Access** and point the in-app camera at the terminal QR.
+3. The in-app scan is the explicit pairing action. Health.md accepts only a private-LAN or Tailscale IPv4 endpoint, validates the exact port and shared 20-digit one-time code, and starts the selector-3 authenticated connection automatically without a second Pair tap. External `healthmd://` opens are rejected because another app cannot prove that the user scanned the QR. If a direct operation is active, the handoff waits and starts automatically when that operation finishes. If the first connection fails, the in-app card offers Retry and Cancel without persisting the code.
+4. If in-app QR scanning is unavailable, open **Sync → CLI**, enable Direct CLI Access, select **Manual IP**, enter the shown LAN/Tailscale address, port, and 20-digit code, then tap Pair. Six-digit manual entry remains available only for an older CLI.
 5. The CLI prints the final machine-readable pairing result on stdout.
 
-For Codex, `healthmd setup codex` combines this pairing flow with safe, idempotent host configuration. Pairing accepts `--port PORT`, `--timeout SECONDS`, and `--pairing-code CODE` for controlled automation. If a non-default Manual IP port is saved on iPhone, pass the same global `--port PORT` before later status/export/resume/cancel commands. Avoid putting a pairing code in shell history unless necessary.
+For Codex, `healthmd setup codex` combines this pairing flow with safe, idempotent host configuration. Pairing accepts `--port PORT`, `--timeout SECONDS`, and `--shared-pairing-code CODE` for controlled automation; `--pairing-code` overrides only the six-digit legacy Apple fallback. If a non-default Manual IP port is saved on iPhone, pass the same global `--port PORT` before later status/export/resume/cancel commands. Avoid putting a pairing code in shell history unless necessary.
 
 ### Nearby (bundled Swift client only)
 
@@ -84,7 +94,7 @@ Tailscale address on every portable platform.
    healthmd direct pair --transport nearby
    ```
 
-2. On iPhone, enable Direct CLI Access, select **Nearby**, enter the displayed code, then tap Pair.
+2. On iPhone, open **Sync → CLI**, enable Direct CLI Access, select **Nearby**, enter the displayed code, then tap Pair.
 3. Keep both devices nearby and Health.md foregrounded until both report success.
 
 Pairing is one-time. A newly issued Keychain credential remains provisional until the authenticated CLI sends a valid peer hello; failed, cancelled, expired, or interrupted attempts cannot replace established trust. After success, the iPhone shows **Ready for healthmd** while Direct CLI Access is enabled. A paired Manual IP iPhone keeps a bounded foreground reconnect loop active so each one-shot CLI listener is discovered within its command window; subsequent commands do not require another code or an access toggle. A paired Nearby iPhone keeps one cancellable discovery wait active while foregrounded, so it does not cycle through timed loading states. Toggling access off cancels reconnect work without deleting trust. Use **Forget Pairing** only when the CLI should require a new code.
@@ -105,40 +115,44 @@ healthmd direct reset-trust --confirm
 When multiple devices are trusted, select one explicitly:
 
 ```bash
-healthmd --backend direct --device DEVICE_UUID status
+healthmd --device DEVICE_UUID status
 ```
+
+In the bundled Swift helper, keep the explicit `--backend direct` prefix for every direct command.
 
 ## Status
 
 ```bash
-healthmd --backend direct --transport manual-ip status
-healthmd --backend direct --transport manual-ip --port 18000 status
+healthmd --transport manual-ip status
+healthmd --transport manual-ip --port 18000 status
 healthmd --backend direct --transport nearby status
-healthmd --backend direct status --job JOB_UUID
+healthmd status --job JOB_UUID
 ```
 
-Live status authenticates the selected paired iPhone and reports direct access, protected-data, HealthKit/export readiness, and active work without exposing health values. Job status is read from the CLI's durable local record and does not require a live iPhone connection.
+The `--transport nearby` line applies to the bundled Swift helper only. Live status authenticates the selected paired iPhone and reports direct access, protected-data, HealthKit/export readiness, and active work without exposing health values. Job status is read from the CLI's durable local record and does not require a live iPhone connection.
 
 ## Strict raw export
 
-Raw mode requests the same public schema-v8 `healthmd.health_data` daily documents and strict validation used by the Mac-app backend:
+Raw mode requests the same public schema-v8 `healthmd.health_data` daily documents and strict validation used by the bundled Swift helper's Mac loopback mode:
 
 ```bash
-healthmd --backend direct export --yesterday --raw --output yesterday.json
-healthmd --backend direct --transport nearby export --last 7 --raw --output week.json
-healthmd --backend direct export --from 2026-07-01 --to 2026-07-07 --raw --output week.json
-healthmd --backend direct export --all --raw --output complete-health-corpus.json
+healthmd export --yesterday --raw --output yesterday.json
+healthmd export --last 7 --raw --output week.json
+healthmd export --from 2026-07-01 --to 2026-07-07 --raw --output week.json
+healthmd export --all --raw --full-corpus --output complete-health-corpus.json
 ```
 
-`--raw` writes no generated export files. Without `--output`, the validated JSON is streamed to stdout. Prefer an output file for sensitive or large results. `--allow-partial` changes only the exit status for a validated `partial_success`; it does not remove missing/capture diagnostics.
+`--raw` writes no generated export files. `--full-corpus` expands the request to every public HealthKit type supported by the current build and authorized by the user, requests lossless canonical records and fields independently of saved/default metric selections, and preserves capture/permission/unsupported/partial/read-error evidence. It does not and cannot read a private HealthKit database. Without `--output`, the validated JSON is streamed to stdout. Prefer an output file for sensitive or large results. `--allow-partial` changes only the exit status for a validated `partial_success`; it does not remove missing/capture diagnostics.
+
+The complete local MCP profile exposes the same scope through `healthmd_export_raw`; `healthmd_raw_artifact_read` can read only a validated completed job artifact by UUID and returns at most 64 KiB per base64 chunk. Local read-only and HTTP/OAuth profiles expose neither tool.
 
 Direct raw mode captures one logical day at a time into protected iPhone storage. The resolved settings snapshot, source timezone, exact day labels, and request fingerprint are pinned before capture so resume cannot mix changed preferences or travel boundaries. Logical days may span multiple 32–64 MiB physical partitions. The transport uses 512 KiB binary frames, SHA-256 validation, chained partition digests, durable receiver checkpoints, and disk-backed final strict-response assembly. Before acknowledging completion, the CLI runs the existing bounded strict date/profile/schema/archive validator; the iPhone then durably records completion/quota and sends a separate confirmation. A lost final message therefore remains resumable rather than producing a false terminal state. The path does not keep a complete corpus in memory or impose a 2 GiB aggregate product cap. Available storage and one unusually dense day remain practical limits.
 
 Selection-pushed canonical extraction also works directly and emits ordinary v8 documents or honest pointer projections after validating the disk-spooled transport:
 
 ```bash
-healthmd --backend direct extract --category Sleep --last 7 --output sleep.json
-healthmd --backend direct extract --metric workouts --last 14 \
+healthmd extract --category Sleep --last 7 --output sleep.json
+healthmd extract --metric workouts --last 14 \
   --object records --detail lossless --output workout-records.json
 ```
 
@@ -153,18 +167,18 @@ host filesystem before sending the request:
 
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
-healthmd --backend direct export --yesterday \
+healthmd export --yesterday \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct --transport nearby export --last 7 \
+healthmd export --last 7 \
   --category Sleep --detail summary \
   --destination "$HOME/Documents/HealthVault"
 
-healthmd --backend direct export --yesterday --use-iphone-settings \
+healthmd export --yesterday --use-iphone-settings \
   --destination "$HOME/Documents/HealthVault"
 ```
 
-The destination must already exist and be absolute. Direct mode never uses or guesses a Mac app bookmark. `--output` is for raw JSON and is separate from `--destination`.
+The destination must already exist and be absolute. Direct mode never uses or guesses a Mac app bookmark; the path is always supplied explicitly on the command line. `--output` is for raw JSON and is separate from `--destination`.
 
 Default `requested_dates_only` behavior keeps the iPhone's saved formats, Health subfolder, filenames/templates, write mode, Daily Note Injection, and Daily Notes Only, while disabling roll-ups and summary-only mode for this request. Repeatable `--metric`/`--category` or `--all-metrics` plus `--detail summary|lossless` replace saved metric/detail scope only for that job. `--use-iphone-settings` mirrors saved settings exactly, including roll-ups and summary-only mode.
 
@@ -177,10 +191,10 @@ Before committing any received file, the CLI validates its declared path, byte c
 Direct jobs are persisted before the request starts and expire at a fixed seven-day deadline. Both peers persist the exact request fingerprint, installation binding, partition chain, and committed frontier.
 
 ```bash
-healthmd --backend direct status --job JOB_UUID
-healthmd --backend direct --transport manual-ip resume JOB_UUID --timeout 300
-healthmd --backend direct resume JOB_UUID --output recovered.json --allow-partial
-healthmd --backend direct cancel JOB_UUID
+healthmd status --job JOB_UUID
+healthmd --transport manual-ip resume JOB_UUID --timeout 300
+healthmd resume JOB_UUID --output recovered.json --allow-partial
+healthmd cancel JOB_UUID
 ```
 
 A wait timeout, Ctrl-C, process exit, background-time expiration, or connection loss does not cancel work. An export that was already active may finish during brief backgrounding; otherwise, reopen Health.md on the same paired iPhone and resume the same job. Resume never changes dates, settings, destination, or peer. Transport remains an explicit per-command choice (`manual-ip` is the default); use `--transport nearby` for a Nearby resume and repeat a custom Manual IP global `--port`. A cancel command records a cross-process durable cancellation request, so an already-running export CLI can deliver it over its authenticated channel. Only the iPhone acknowledgement makes cancellation terminal; an unavailable iPhone leaves `cancellation_pending` so cancellation can be delivered on a later retry. A file job's destination is bound into the stored request; the resume command does not accept a replacement destination.
@@ -207,8 +221,8 @@ Common machine-readable errors include:
 | `direct_storage_unavailable` | Keychain/Secret Service/Credential Manager is locked, unavailable, or denies this binary. On macOS the portable CLI fails promptly rather than waiting indefinitely for authorization UI; authorize the installed signed binary in Keychain Access or explicitly remove the stale Health.md direct trust on both sides and pair again. Never use plaintext trust. |
 | `direct_device_not_paired` / `direct_device_selection_required` / `direct_unexpected_device` | The requested device is untrusted, multiple trusted devices require `--device`, or a job/connection does not match its pinned iPhone. |
 | `direct_iphone_unavailable` | The selected explicit transport could not reach/authenticate the paired iPhone. |
-| `backend_unsupported` | Bundled Swift helper only: the selected command needs its Mac backend; standalone Rust uses fixed MCP tools. |
-| `invalid_request` or an exit-2 usage error | A direct generated-file export omitted `--destination`, or a backend/option combination is invalid. |
+| `backend_unsupported` | Bundled Swift helper only: the selected command needs its Mac loopback mode; the standalone Rust CLI has no such commands and uses fixed MCP tools instead. |
+| `invalid_request` or an exit-2 usage error | A direct generated-file export omitted `--destination`, or an option combination is invalid. |
 | `invalid_direct_raw_response` | Raw manifest/body/date/schema/digest validation failed. |
 | `unvalidated_response_too_large` | A result could not be exposed under bounded strict validation. |
 | `invalid_direct_file_receipt` | Generated-file manifest/commit receipt did not validate. |

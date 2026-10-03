@@ -71,11 +71,13 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             keychain: FakeKeychainStore,
             now: @escaping @Sendable () -> Date,
             schedule: ExportSchedule? = nil,
-            systemSideEffectsEnabled: Bool = false
+            systemSideEffectsEnabled: Bool = false,
+            pendingStoreOverride: PendingExportStoring? = nil,
+            isProfileBlocked: @escaping @MainActor (UUID) -> Bool = { _ in false }
         ) -> SchedulingManager {
             let harness = self
             let manager = SchedulingManager(
-                pendingExportStore: pendingStore,
+                pendingExportStore: pendingStoreOverride ?? pendingStore,
                 exportNotificationScheduler: notificationScheduler,
                 initialSchedule: schedule ?? ExportSchedule(isEnabled: false),
                 persistScheduleChanges: false,
@@ -109,7 +111,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 ),
                 scheduledProfileDestinationAdopter: { profile in
                     harness.adoptedProfiles.append(profile?.name)
-                }
+                },
+                isSharedSetupV2ProfileBlocked: isProfileBlocked
             )
             SchedulingManagerProfileSchedulingTests.retainedInstances.append(manager)
             return manager
@@ -124,6 +127,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         now: Date,
         profileName: String = "Daily",
         target: ExportTargetSelection = .apiEndpoint,
+        folderVaultID: UUID? = nil,
         configureEntry: (inout ScheduledExportEntry) -> Void = { _ in }
     ) -> UUID {
         let profileStore = ExportProfileStore(userDefaults: defaults)
@@ -132,7 +136,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let profile = profileStore.add(
             name: profileName,
             settings: ExportSettingsSnapshot.from(settings),
-            target: target
+            target: target,
+            folderVaultID: folderVaultID
         )
         let entryStore = ScheduledExportEntryStore(userDefaults: defaults)
         var entry = ScheduledExportEntry(
@@ -194,6 +199,194 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         XCTAssertNotNil(entry?.lastExportDate)
         await manager.runDueProfileOccurrences()
         XCTAssertEqual(harness.runnerDates.count, 1, "entry no longer due")
+    }
+
+    func testMorningAPIProfileSendsFullLookbackAlongsideTodayRefresh() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 8)
+        _ = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) { entry in
+            entry.lookbackDays = 14
+            entry.lastExportDate = self.date(year: 2026, month: 8, day: 9, hour: 8)
+            entry.todayRefreshEnabled = true
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+
+        await manager.runDueProfileOccurrences()
+
+        let lookback = ExportOrchestrator.dateRange(
+            from: date(year: 2026, month: 7, day: 27),
+            to: date(year: 2026, month: 8, day: 9), calendar: calendar
+        )
+        XCTAssertEqual(harness.runnerDates.map(\.count).sorted(), [1, 14])
+        XCTAssertTrue(harness.runnerDates.contains(lookback))
+        XCTAssertTrue(harness.runnerDates.contains([calendar.startOfDay(for: now)]))
+        XCTAssertTrue(harness.runnerTargets.allSatisfy { $0 == .apiEndpoint })
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+        await manager.runDueProfileOccurrences()
+        XCTAssertEqual(harness.runnerDates.count, 2, "neither occurrence repeats after success")
+    }
+
+    func testProfileLookbackRetryRunsOnlyFrozenResidualDatesAfterScheduleEdit() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 8)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) { entry in
+            entry.lookbackDays = 14
+        }
+        harness.resultProvider = { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: 7, totalCount: dates.count,
+                failedDateDetails: dates.dropFirst(7).map { FailedDateDetail(date: $0, reason: .fileWriteError) },
+                completedDates: Array(dates.prefix(7))
+            )
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        await manager.runDueProfileOccurrences()
+
+        let pending = try XCTUnwrap(try harness.pendingStore.loadAll().first)
+        XCTAssertEqual(pending.dates.count, 7)
+        XCTAssertEqual(pending.originalRequestedDates.count, 14)
+        ScheduledExportEntryStore(userDefaults: defaults).update(profileID: profileID) {
+            $0.lookbackDays = 30
+        }
+        harness.resultProvider = nil
+        await manager.runDueProfileOccurrences()
+
+        XCTAssertEqual(harness.runnerDates.map(\.count), [14, 7])
+        XCTAssertEqual(harness.runnerDates.last, pending.dates)
+        XCTAssertEqual(harness.notificationScheduler.allScheduledRequests.last?.id, pending.id)
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+        await manager.runDueProfileOccurrences()
+        XCTAssertEqual(harness.runnerDates.count, 2, "a completed residual satisfies the original occurrence")
+    }
+
+    private struct UnavailablePendingStore: PendingExportStoring {
+        enum Failure: Error { case unavailable }
+        let failOnRead: Bool
+        func loadAll() throws -> [PendingExportRequest] {
+            if failOnRead { throw Failure.unavailable }
+            return []
+        }
+        func upsert(_ request: PendingExportRequest) throws { throw Failure.unavailable }
+        func remove(id: UUID) throws { throw Failure.unavailable }
+        func clearCompletedRequests(ids: Set<UUID>) throws { throw Failure.unavailable }
+        func notificationIdentifier(for request: PendingExportRequest) -> String {
+            ExportNotificationIdentifiers.pendingExport(for: request)
+        }
+    }
+
+    func testProfileOccurrenceDoesNotExpandWindowWhenPendingStorageFails() async {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 8)
+        let previousSuccess = date(year: 2026, month: 8, day: 9, hour: 8)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) { entry in
+            entry.lookbackDays = 14
+            entry.lastExportDate = previousSuccess
+        }
+        for failOnRead in [true, false] {
+            let manager = harness.makeManager(
+                defaults: defaults, keychain: keychain, now: { now },
+                pendingStoreOverride: UnavailablePendingStore(failOnRead: failOnRead)
+            )
+            await manager.runDueProfileOccurrences()
+        }
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+        XCTAssertEqual(
+            ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: profileID)?.lastExportDate,
+            previousSuccess
+        )
+    }
+
+    func testBlockedImportedProfileDisablesEntryBeforeDestinationOrExportWork() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(
+            defaults: defaults,
+            keychain: keychain,
+            now: now
+        )
+        let manager = harness.makeManager(
+            defaults: defaults,
+            keychain: keychain,
+            now: { now },
+            isProfileBlocked: { $0 == profileID }
+        )
+
+        await manager.runDueProfileOccurrences()
+
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+        XCTAssertTrue(harness.adoptedProfiles.isEmpty)
+        XCTAssertEqual(
+            ScheduledExportEntryStore(userDefaults: defaults)
+                .entry(profileID: profileID)?.isEnabled,
+            false
+        )
+        guard case .failure(let reason) = manager.notificationExportResult?.status else {
+            return XCTFail("Expected a blocked-profile scheduling failure")
+        }
+        XCTAssertEqual(reason, SharedSetupV2ExecutionGate.blockedExecutionMessage)
+    }
+
+    func testDueLocalProfileHistoryCapturesProfileAndRefreshedFolderName() async throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let destinationStore = ProfileDestinationStore(
+            userDefaults: defaults,
+            keychain: keychain
+        )
+        let destination = destinationStore.upsertVault(
+            name: "Old Folder Name",
+            standardizedPath: "/private/health-exports",
+            bookmarkData: Data("old-bookmark".utf8)
+        )
+        _ = seedDueDailyProfile(
+            defaults: defaults,
+            keychain: keychain,
+            now: now,
+            profileName: "Research",
+            target: .localIPhoneFolder,
+            folderVaultID: destination.id
+        )
+
+        let harness = ProfileSchedulingHarness()
+        harness.resultProvider = { dates, _ in
+            // Destination adoption can refresh a stale bookmark/name through
+            // a separate store instance while SchedulingManager is alive.
+            let refreshedStore = ProfileDestinationStore(
+                userDefaults: self.defaults,
+                keychain: self.keychain
+            )
+            refreshedStore.updateVault(
+                id: destination.id,
+                name: "Research Exports",
+                standardizedPath: "/private/health-exports",
+                bookmarkData: Data("refreshed-bookmark".utf8),
+                identity: nil
+            )
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: [],
+                completedDates: dates
+            )
+        }
+        let manager = harness.makeManager(
+            defaults: defaults,
+            keychain: keychain,
+            now: { now }
+        )
+
+        await manager.runDueProfileOccurrences()
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(entry.source, .scheduled)
+        XCTAssertEqual(entry.exportTarget, .localIPhoneFolder)
+        XCTAssertEqual(entry.profileName, "Research")
+        XCTAssertEqual(entry.targetLabel, "iPhone: Research Exports")
+        XCTAssertFalse(entry.targetLabel?.contains("/private/") == true)
+        XCTAssertFalse(entry.targetLabel?.contains("bookmark") == true)
     }
 
     func testTwoProfilesAtSameMinuteBothRun() async throws {
@@ -365,6 +558,10 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
     }
 
     func testDrainRunsPendingProfileRequestWithDestinations() async throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+
         let harness = ProfileSchedulingHarness()
         let now = date(year: 2026, month: 8, day: 10, hour: 12)
         let profileID = seedDueDailyProfile(
@@ -398,6 +595,11 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         XCTAssertEqual(harness.runnerDates.count, 1)
         XCTAssertEqual(harness.adoptedProfiles.first, "Daily")
         XCTAssertEqual(harness.adoptedProfiles.last, "Daily", "active profile restored after drain")
+        let recorded = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(recorded.profileName, "Daily")
+        XCTAssertEqual(recorded.exportTarget, .apiEndpoint)
+        XCTAssertNotNil(recorded.targetLabel)
+        XCTAssertNotEqual(recorded.targetLabel, "Daily", "target provenance is not the profile name")
     }
 
     func testManagerObservesScheduleEditsSavedThroughSeparateStoreInstance() async throws {
@@ -951,8 +1153,9 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let secondTask = Task { @MainActor in
             await manager.performPendingExport(requestId: secondRetry.id, source: .scheduled)
         }
-        await Task.yield()
-        await Task.yield()
+        for _ in 0..<20 where harness.runnerDates.count < 2 {
+            await Task.yield()
+        }
 
         XCTAssertEqual(
             harness.runnerDates.count,

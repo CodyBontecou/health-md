@@ -4,28 +4,35 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.scheduler.ProfileFolderAdoptionScope
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.distribution.DistributionPolicy
+import com.healthmd.domain.export.ExportAccountingPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
-import com.healthmd.domain.model.ExportProfile
-import com.healthmd.domain.model.ExportProfileResolution
-import com.healthmd.domain.model.ExportProfileRules
-import com.healthmd.domain.export.ExportAccountingPolicy
+import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
+import com.healthmd.domain.model.ExportProfile
+import com.healthmd.domain.model.ExportProfileResolution
+import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.sharedsetup.SharedSetupV2ProfileExecutionAccess
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,6 +41,18 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.time.LocalDate
 import javax.inject.Inject
+
+internal fun resolveAutomationProfileReference(
+    profiles: List<ExportProfile>,
+    reference: String,
+): ExportProfileResolution = ExportProfileRules.byId(profiles, reference.trim())
+    ?.let { ExportProfileResolution.Resolved(it) }
+    ?: ExportProfileRules.resolve(profiles = profiles, id = null, name = reference)
+
+internal fun hasInvalidAutomationProfileSnapshot(
+    profile: ExportProfile?,
+    restoredSettings: ExportSettings?,
+): Boolean = profile != null && restoredSettings == null
 
 /**
  * Explicit automation entrypoint for Tasker/adb/launcher shortcuts.
@@ -55,6 +74,9 @@ class AutomationReceiver : BroadcastReceiver() {
     @Inject lateinit var exportHistoryRepository: ExportHistoryRepository
     @Inject lateinit var exportProfileRepository: ExportProfileRepository
     @Inject lateinit var profileFolderAdoption: ProfileFolderAdoptionScope
+    @Inject lateinit var apiEndpointExportRunner: APIEndpointExportRunner
+    @Inject lateinit var entitlementRepository: EntitlementRepository
+    @Inject lateinit var distributionPolicy: DistributionPolicy
 
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
@@ -113,34 +135,55 @@ class AutomationReceiver : BroadcastReceiver() {
     private data class ProfileRunScope(
         val settings: ExportSettings?,
         val profile: ExportProfile?,
-    ) {
-        val profileName: String? get() = profile?.name
-    }
+    )
 
     private suspend fun resolveProfileForRun(
         profileReference: String?,
     ): ProfileRunScope {
         val reference = profileReference?.trim().orEmpty()
         if (reference.isEmpty()) {
+            val activeAccess = try {
+                exportProfileRepository.activeSharedSetupV2ExecutionAccess()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
+            }
+            if (activeAccess == SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired) {
+                throw AutomationProfileRebindRequired()
+            }
             val profiles = exportProfileRepository.getProfiles()
             if (profiles.isEmpty()) return ProfileRunScope(null, null)
             val active = exportProfileRepository.getActiveProfile()
                 ?: return ProfileRunScope(null, null)
+            requireProfileExecutable(active)
             return ProfileRunScope(resolveProfileSettings(active), active)
         }
         return when (
-            val resolution = ExportProfileRules.resolve(
+            val resolution = resolveAutomationProfileReference(
                 profiles = exportProfileRepository.getProfiles(),
-                id = null,
-                name = reference,
+                reference = reference,
             )
         ) {
-            is ExportProfileResolution.Resolved ->
+            is ExportProfileResolution.Resolved -> {
+                requireProfileExecutable(resolution.profile)
                 ProfileRunScope(resolveProfileSettings(resolution.profile), resolution.profile)
+            }
             is ExportProfileResolution.NotFound ->
                 throw AutomationProfileNotFound(reference)
             ExportProfileResolution.LegacySettings -> ProfileRunScope(null, null)
         }
+    }
+
+    private suspend fun requireProfileExecutable(profile: ExportProfile) {
+        val blocked = try {
+            exportProfileRepository.isSharedSetupV2Blocked(profile.id)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            true
+        }
+        if (blocked) throw AutomationProfileRebindRequired()
     }
 
     /** Restores the profile's frozen snapshot onto current settings, or null when undecodable. */
@@ -168,10 +211,46 @@ class AutomationReceiver : BroadcastReceiver() {
             )
             publishExportResult(result, "$PROTOCOL_PROFILE_NOT_FOUND:$profileReference")
             return
+        } catch (_: AutomationProfileRebindRequired) {
+            val result = ExportResult(
+                successCount = 0,
+                totalCount = dates.size,
+                failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN) },
+            )
+            publishExportResult(result, PROTOCOL_PROFILE_REBIND_REQUIRED)
+            return
         }
         val profile = profileSettingsAndName.profile
-        val settings = profileSettingsAndName.settings ?: settingsRepository.getExportSettings()
-        val isPurchased = settingsRepository.isPurchased.first()
+        val currentSettings = settingsRepository.getExportSettings()
+        if (hasInvalidAutomationProfileSnapshot(profile, profileSettingsAndName.settings)) {
+            val invalidProfile = requireNotNull(profile)
+            val result = ExportResult(
+                successCount = 0,
+                totalCount = dates.size,
+                failedDateDetails = dates.map {
+                    FailedDateDetail(it, ExportFailureReason.UNKNOWN)
+                },
+                target = invalidProfile.target,
+            )
+            recordHistory(
+                context,
+                dates,
+                result,
+                ExportFailureReason.UNKNOWN,
+                PROTOCOL_PROFILE_SNAPSHOT_INVALID,
+                currentSettings,
+                invalidProfile,
+                invalidProfile.target,
+            )
+            publishExportResult(result, PROTOCOL_PROFILE_SNAPSHOT_INVALID)
+            return
+        }
+        val settings = profileSettingsAndName.settings ?: currentSettings
+        val target = profile?.target ?: settings.exportTarget
+        entitlementRepository.refresh()
+        val isPurchased = distributionPolicy.fullAccessIncluded ||
+            settingsRepository.isPurchased.first() ||
+            entitlementRepository.isUnlocked.first()
         val freeExportsRemaining = settingsRepository.getFreeExportsRemaining()
         // A folder-bound profile satisfies the destination requirement on its own.
         val folderUri = settingsRepository.getExportFolderUri()
@@ -189,12 +268,15 @@ class AutomationReceiver : BroadcastReceiver() {
                 result,
                 ExportFailureReason.PAYWALL_REQUIRED,
                 PROTOCOL_SCHEDULE_UNLOCK_REQUIRED,
+                settings,
+                profile,
+                target,
             )
             publishExportResult(result, PROTOCOL_UNLOCK_REQUIRED)
             return
         }
 
-        if (folderUri.isNullOrBlank()) {
+        if (target == ExportTarget.DEVICE_FOLDER && folderUri.isNullOrBlank()) {
             val result = ExportResult(
                 successCount = 0,
                 totalCount = dates.size,
@@ -206,6 +288,9 @@ class AutomationReceiver : BroadcastReceiver() {
                 result,
                 ExportFailureReason.NO_FOLDER_SELECTED,
                 PROTOCOL_NO_EXPORT_FOLDER,
+                settings,
+                profile,
+                target,
             )
             publishExportResult(result, PROTOCOL_NO_EXPORT_FOLDER)
             return
@@ -223,23 +308,38 @@ class AutomationReceiver : BroadcastReceiver() {
                 result,
                 ExportFailureReason.ACCESS_DENIED,
                 PROTOCOL_HEALTH_PERMISSIONS_MISSING,
+                settings,
+                profile,
+                target,
             )
             publishExportResult(result, PROTOCOL_HEALTH_PERMISSIONS_MISSING)
             return
         }
 
-        val profileName = profileSettingsAndName.profileName
-        val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
-        // Per-profile folder: adopt the resolved profile's binding around the run.
-        val result = profile?.let {
-            profileFolderAdoption.withProfileFolder(it) { orchestrator.exportDates(dates, settings) }
-        } ?: orchestrator.exportDates(dates, settings)
+        val result = when (target) {
+            ExportTarget.DEVICE_FOLDER -> {
+                val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+                // Per-profile folder: adopt the resolved profile's binding around the run.
+                profile?.let {
+                    profileFolderAdoption.withProfileFolder(it) {
+                        orchestrator.exportDates(dates, settings.copy(exportTarget = target))
+                    }
+                } ?: orchestrator.exportDates(dates, settings.copy(exportTarget = target))
+            }
+            ExportTarget.API_ENDPOINT -> apiEndpointExportRunner.exportDates(
+                dates = dates,
+                settings = settings.copy(exportTarget = target),
+            )
+        }
         recordHistory(
             context,
             dates,
             result,
             result.primaryFailureReason,
             result.protocolWarningSummary(),
+            settings,
+            profile,
+            target,
         )
 
         if (ExportAccountingPolicy.shouldConsumeFreeExport(result, isPurchased)) {
@@ -277,8 +377,10 @@ class AutomationReceiver : BroadcastReceiver() {
         result: ExportResult,
         failureReason: ExportFailureReason?,
         warning: String?,
+        settings: ExportSettings,
+        profile: ExportProfile?,
+        target: ExportTarget,
     ) {
-        val settings = settingsRepository.getExportSettings()
         exportHistoryRepository.insertEntry(
             ExportHistoryEntry(
                 timestamp = System.currentTimeMillis(),
@@ -289,8 +391,21 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = result.totalCount,
                 failureReason = failureReason,
                 failedDateDetails = result.failedDateDetails,
-                targetLabel = targetLabel(settings),
-                fileCount = result.successCount * settings.selectedExportFormats.size,
+                target = target,
+                targetLabel = when (target) {
+                    ExportTarget.DEVICE_FOLDER ->
+                        profile?.folderDisplayName?.trim()?.takeIf { it.isNotEmpty() }
+                            ?: targetLabel(settings)
+                    ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(
+                        profile?.apiEndpointUrl ?: settings.apiEndpointUrl,
+                    )
+                },
+                profileName = profile?.name,
+                fileCount = if (target == ExportTarget.DEVICE_FOLDER) {
+                    result.successCount * settings.selectedExportFormats.size
+                } else {
+                    0
+                },
                 warningSummary = warning,
             )
         )
@@ -353,6 +468,9 @@ class AutomationReceiver : BroadcastReceiver() {
     /** Thrown when an explicit profile reference does not resolve; never falls back. */
     private class AutomationProfileNotFound(val reference: String) : Exception(reference)
 
+    /** Non-secret blocked-profile signal; no profile or destination text enters the error. */
+    private class AutomationProfileRebindRequired : Exception()
+
     companion object {
         const val ACTION_EXPORT_YESTERDAY = "com.healthmd.android.action.EXPORT_YESTERDAY"
         const val ACTION_EXPORT_LAST_DAYS = "com.healthmd.android.action.EXPORT_LAST_DAYS"
@@ -389,5 +507,7 @@ class AutomationReceiver : BroadcastReceiver() {
         private const val PROTOCOL_NO_EXPORT_HISTORY = "No export history"
         private const val PROTOCOL_EXPORT_CANCELLED = "Export cancelled"
         private const val PROTOCOL_PROFILE_NOT_FOUND = "profile_not_found"
+        private const val PROTOCOL_PROFILE_SNAPSHOT_INVALID = "profile_snapshot_invalid"
+        private const val PROTOCOL_PROFILE_REBIND_REQUIRED = "profile_rebind_required"
     }
 }

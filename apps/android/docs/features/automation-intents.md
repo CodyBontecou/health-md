@@ -26,7 +26,7 @@ Tasker, adb, MacroDroid, and other automation tools can trigger Health.md export
 ## Prerequisites
 
 - Android 9 / API 28+
-- Current export settings, folder, and metric selection — automation reuses exactly what the app is configured to do
+- A configured active profile or current export settings. An explicit profile ID/name can select a different saved folder or API destination for the run.
 
 ## Setup
 
@@ -40,10 +40,11 @@ Tasker, adb, MacroDroid, and other automation tools can trigger Health.md export
 adb shell am broadcast \
   -n com.healthmd.android/com.healthmd.automation.AutomationReceiver \
   -a com.healthmd.android.action.EXPORT_LAST_DAYS \
-  --ei com.healthmd.android.extra.DAYS 7
+  --ei com.healthmd.android.extra.DAYS 7 \
+  --es com.healthmd.android.extra.PROFILE "Weekly Archive"
 ```
 
-Actions: `EXPORT_YESTERDAY`, `EXPORT_LAST_DAYS` (+`DAYS` int), `EXPORT_DATE` (+`DATE` ISO), `EXPORT_RANGE` (+`START_DATE`/`END_DATE`), `GET_LAST_STATUS`.
+Actions: `EXPORT_YESTERDAY`, `EXPORT_LAST_DAYS` (+`DAYS` int), `EXPORT_DATE` (+`DATE` ISO), `EXPORT_RANGE` (+`START_DATE`/`END_DATE`), `GET_LAST_STATUS`. Export actions accept optional `PROFILE` (stable ID or trimmed, case-insensitive name); omitting it uses the active profile once profiles exist.
 
 ## Tips
 
@@ -69,4 +70,4 @@ Actions: `EXPORT_YESTERDAY`, `EXPORT_LAST_DAYS` (+`DAYS` int), `EXPORT_DATE` (+`
 
 ## Implementation notes
 
-`AutomationReceiver` routes actions into `ExportOrchestrator` with the current `ExportSettings`, profile resolution (`ExportProfileRules`, `ProfileFolderAdoptionScope`), `ExportAwakeCoordinator` for run duration, and `ExportAccountingPolicy` — identical side effects to a manual run, recorded via `ExportHistoryEntry` with `ExportSource.SHORTCUT`. Complete action/extras table and security model: [Android automation intents](../android-automation-intents.md) (canonical reference).
+`AutomationReceiver` resolves the requested profile with `ExportProfileRules`, restores its frozen settings, then dispatches folder profiles through `ExportOrchestrator` + `ProfileFolderAdoptionScope` and API profiles through `APIEndpointExportRunner`. `ExportAwakeCoordinator` owns run duration and `ExportAccountingPolicy` preserves manual-run accounting. History uses `ExportSource.SHORTCUT` and stores the resolved profile plus privacy-safe destination label. Complete action/extras table and security model: [Android automation intents](../android-automation-intents.md) (canonical reference).

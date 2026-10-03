@@ -167,7 +167,7 @@ Visualizations read the fields they need and skip files that don't have them.
 - [x] Release-readiness metadata/docs test added
 
 ### Automated validation completed
-- [x] All parity contract tests pass: `./gradlew :app:testDebugUnitTest`
+- [x] All parity contract tests pass: `./gradlew :app:testPlayDebugUnitTest :app:testFdroidDebugUnitTest`
 
 ### Pre-release validation still requiring a device/manual pass
 - [ ] Build release APK/AAB and install on Pixel 7 device (per AGENTS.md)
@@ -264,7 +264,7 @@ Ordinary tests are read-only. Candidate generation is explicit and only supports
 profile/version with no existing fixture:
 
 ```bash
-UPDATE_ANDROID_EXPORTER_SIGNATURES=1 ./gradlew :app:testDebugUnitTest \
+UPDATE_ANDROID_EXPORTER_SIGNATURES=1 ./gradlew :app:testPlayDebugUnitTest \
   --tests com.healthmd.export.ExporterSchemaSignatureTest
 ```
 

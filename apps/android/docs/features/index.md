@@ -18,6 +18,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Setup | [Onboarding](./onboarding.md) | First-run path: Health Connect setup, permissions, destination, formats, and first export. | Draft | High | `presentation/onboarding/OnboardingScreen.kt` |
 | Setup | [Health Connect permissions](./health-connect-permissions.md) | Grant only the categories you want exported, with a rationale screen for review. | Draft | High | `presentation/HealthPermissionsRationaleActivity.kt`, `data/health/` |
 | Setup | [Folder destination](./folder-destination.md) | Pick any SAF folder: local, Obsidian vault, Drive, OneDrive, Syncthing, or another provider. | Draft | High | `data/storage/`, Export screen folder UI |
+| Setup | [Share My Setup](./share-my-setup.md) | Move export preferences between devices in one reviewed, transactional `.healthmdconfig` file — no health data or credentials. | Needs QA | Medium | `sharedsetup/` |
 | Export | [Manual export](./manual-export.md) | Export one day or a range on demand; 10 free actions before unlock. | Draft | High | `presentation/export/ExportScreen.kt` |
 | Export | [Metric selection](./metric-selection.md) | Choose from 106 Health Connect metrics with search and category toggles. | Draft | High | `presentation/metrics/MetricSelectionScreen.kt` |
 | Export | [Export preview](./export-preview.md) | Inspect generated output before writing to your folder. | Draft | Medium | `presentation/export/` preview components |
@@ -30,6 +31,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Formatting | [Filename templates](./filename-templates.md) | `{date}`, `{year}`, `{month}`, `{weekday}` placeholders in filenames. | Draft | Medium | `domain/model/` path templates, `data/storage/` |
 | Formatting | [Folder organization](./folder-organization.md) | Date-based subfolders like `{year}/{month}` under your destination. | Draft | Medium | same |
 | Formatting | [Frontmatter customization](./frontmatter-customization.md) | Rename metric fields, choose casing, add static and placeholder fields. | Draft | Medium | `presentation/settings/FrontmatterCustomizationScreen.kt` |
+| Formatting | [Date, time, and unit preferences](./date-time-units.md) | Date style, 12/24-hour time, and Metric/Imperial units across every export format. | Draft | Medium | `domain/model/FormatPreferences.kt`, `presentation/settings/FormatCustomizationScreen.kt` |
 | Formatting | [Write modes](./write-modes.md) | Overwrite, append, or merge when a file already exists. | Draft | Medium | `data/export/MarkdownMerger.kt` |
 | Obsidian | [Daily note injection](./daily-note-injection.md) | Merge health sections into existing Obsidian daily notes. | Draft | High | `data/export/DailyNoteInjector.kt`, `DailyNoteInjectionScreen.kt` |
 | Advanced data | [Individual entry tracking](./individual-entry-tracking.md) | Timestamped per-record files: workouts, sleep stages, vitals. | Draft | High | `data/export/IndividualEntryExporter.kt` |
@@ -42,7 +44,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Automation | [API endpoint export](./api-endpoint-export.md) | Send the `healthmd.api_export` envelope to your HTTP(S) endpoint with encrypted auth. | Draft | Medium | `data/export/API*`, [`api-endpoint-export`](../api-endpoint-export.md) |
 | Devices | [Direct CLI](./direct-cli.md) | Pair with the standalone `healthmd` CLI over LAN or Tailscale for computer-side exports. | Draft | Medium | `presentation/directcli/`, [`android-desktop-destination`](../android-desktop-destination.md) |
 | Devices | [Home-screen widgets](./widgets.md) | Glance widgets: Health Summary, Activity, Heart Range, Sleep. | Existing | Medium | `widget/` |
-| Devices | Wear OS companion | Tiles and complications; phone stays authoritative. | Runbook only | Low | [`wear-os-implementation.md`](./wear-os-implementation.md) |
+| Devices | [Wear OS companion](./wear-os.md) | Tiles and complications; phone stays authoritative. | Needs QA (unreleased) | Low | [`wear-os.md`](./wear-os.md) + runbook [`wear-os-implementation.md`](./wear-os-implementation.md) |
 | Reports | [Clinician report](./clinician-report.md) | Turn a date range into one accessible PDF to share with a clinician. | Draft | Medium | `presentation/clinicianreport/` |
 | Purchase | [Lifetime unlock](./lifetime-unlock.md) | 10 free manual export actions; one-time lifetime unlock, no subscription. | Draft | Medium | `presentation/paywall/`, `data/billing/` |
 | Privacy | [Local-first privacy](./privacy-local-first.md) | No Health.md health-data cloud; every destination is user-directed. | Draft | High | README privacy sections, private spools |

@@ -112,6 +112,14 @@
 	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>geist_regular.ttf</string>
+		<string>geist_medium.ttf</string>
+		<string>geist_semibold.ttf</string>
+		<string>geist_mono_regular.ttf</string>
+		<string>geist_mono_medium.ttf</string>
+	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

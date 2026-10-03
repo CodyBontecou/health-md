@@ -4,17 +4,24 @@ This is the authoritative mobile compatibility ledger for the portable Rust CLI.
 show wire capability; they are not a substitute for an app version/build that completed the physical
 release matrix.
 
-## `healthmd-cli` 0.1.0-alpha.1 candidate
+## `healthmd-cli` 0.1.0-alpha.7
 
-| Mobile source and feature | Protocol | Conservative source floor | Public qualification |
+| Mobile source and feature | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Public qualification |
 |---|---|---|---|
-| iPhone status/raw/extract/generated files/resume/cancel | selector 1, application v1 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Qualified:** mobile_build=iOS 3.1.1 (App Store, build 202608100207); source_commit=3904f9cbc62c94fdf45fa5202141881fe1017fa7; device_os=iPhone 15 Pro / iOS 18.5; lan=pass; tailscale=pass; evidence_sha256=d641f54a4f1c868794199e73fb50b61be165768869ea9e8048c19a6af1372a67 |
-| iPhone portable typed MCP queries | selector 1, application v1 + query v3 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Qualified:** mobile_build=iOS 3.1.1 (App Store, build 202608100207); source_commit=3904f9cbc62c94fdf45fa5202141881fe1017fa7; device_os=iPhone 15 Pro / iOS 18.5; lan=pass; tailscale=pass; evidence_sha256=338dc989d3af302b079c7ca6d28e7f1835cb5c6c3bfa6d1897ddd9b2292fd5f8 |
-| Android status/provider-native raw/generated files/resume/cancel | selector 2, application v2 | Health.md Android 1.5.4 (`versionCode 25`) built from the exact CLI candidate SHA | **Qualified:** mobile_build=Android 1.7.0 (versionCode 28); source_commit=3904f9cbc62c94fdf45fa5202141881fe1017fa7; device_os=Google Pixel 8 / Android 15; lan=pass; tailscale=pass; evidence_sha256=b68b12e3180095379e0aeb8b16969bfc7ea1f02eeb70590d70d0aecfe7f88f1c |
+| iPhone status/raw/extract/generated files/resume/cancel | pairing selector 3 current (1 legacy), application v1 | Health.md iOS 3.4.0 (build 202609032318) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone portable typed MCP queries | pairing selector 3 current (1 legacy), application v1 + query v3 | Health.md iOS 3.4.0 (build 202609032318) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| Android status/provider-native raw/generated files/resume/cancel | pairing selector 3 current (2 legacy), application v2 | Health.md Android 1.9.0 (`versionCode 38`) / Android 1.5.4 (`versionCode 25`) | **Pending; no public CLI/mobile pair qualified yet** |
 | Android typed MCP queries | N/A | Not implemented | Unsupported |
 
-The floors above describe the current monorepo source that implements the contracts. They are not a
-claim that an App Store or Play build with the same marketing version contains the candidate code.
+The owner has physically confirmed that alpha.7 pairs and connects to both iPhone and Android. That
+connectivity smoke is recorded here without promoting it into a complete release qualification:
+the retained record still needs exact device/OS identity, LAN and Tailscale results, the full
+operation matrix, and its evidence digest before any row may use the machine-checked `Qualified`
+shape below.
+
+The exact counterparts above are the mobile versions present at the CLI tag SHA. The lower floors
+identify source versions that implement the protocol, but are not qualification claims or proof
+that an App Store or Play build with the same marketing version contains the candidate code.
 Each qualified cell must keep this exact field order and remain backed by one health-free,
 separately retained physical release record whose SHA-256 matches `evidence_sha256`. When a new
 mobile build or CLI candidate SHA is qualified, update both the record and the ledger digest
@@ -26,15 +33,24 @@ together — never reuse an old digest for new evidence:
 
 The evidence digest identifies the separately retained health-free physical release record. Do not
 put health values, owner dates, routes, credentials, user paths, or raw payloads in this ledger or
-evidence. `verify-release.py` permits pending rows for ordinary source CI but rejects every
-`healthmd-cli/v*` tag until all three supported mobile rows contain the exact qualified shape. If the
-first qualified store build has a later version/build, update this ledger and release notes before
-tagging.
+evidence. `verify-release.py` permits pending rows for ordinary source CI and explicitly labeled
+SemVer prerelease tags. A prerelease with pending rows is an unqualified preview, not evidence of a
+supported CLI/mobile pair. Stable `healthmd-cli/v*` tags remain blocked until all three supported
+mobile rows contain the exact qualified shape, and every `source_commit` must equal the tag SHA.
+Before approving the protected `cli-release` environment, the reviewer must compare every
+`evidence_sha256` with its separately retained health-free physical record. If the first qualified
+store build has a later version/build, update this ledger and release notes before tagging.
 
 ## Compatibility rules
 
-- Query v3 is additive to iPhone v1 pairing and encrypted transport. Exports remain v1.
-- Android v2 uses its own high-entropy pairing selector and never downgrades to v1.
+- RFC-0005 P1 is a host-side wait-only wake window shared by iOS and Android. It changes no pairing,
+  application-protocol, query, or transfer bytes. P2 adds opt-in APNs enrollment for iPhone; current
+  `main` compiles the health-free worker nudge into every desktop CLI build and alpha.7 archives
+  carry that default. Published alpha.6 archives remain P1-only because P2 was source-feature-gated;
+  alpha.7 and later send the best-effort nudge by default. Android FCM remains the
+  explicit P3 target, so opening Health.md manually unblocks Android in the meantime.
+- Shared pairing selector 3 is independent from iPhone query v3. It adds one 20-digit iOS/Android QR/code without changing application v1/v2 or encrypted transport.
+- Legacy Apple selector 1 and Android selector 2 remain byte-compatible. Android may retry high-entropy selector 2 for an older CLI and never downgrades its application protocol to v1.
 - An old v1-only iPhone remains usable for supported v1 operations; typed query tools report
   unsupported rather than sending an unknown message.
 - macOS, Linux, and Windows Rust clients use the deployed `macos_cli` wire role. Desktop OS changes

@@ -19,8 +19,8 @@ wear_version_code=$(sed -n 's/^[[:space:]]*versionCode = \([0-9][0-9_]*\).*/\1/p
   && pass 'isolated Wear worktree branch' || block 'not on feature/android-wear-os-widgets'
 [[ ! -e local.properties ]] && pass 'no persistent local signing configuration' || block 'local.properties exists'
 
-if [[ -f wear/build/outputs/bundle/release/wear-release.aab && -f app/build/outputs/bundle/release/app-release.aab ]]; then
-  if ./scripts/validate-wear-artifact.sh wear/build/outputs/bundle/release/wear-release.aab app/build/outputs/bundle/release/app-release.aab >/dev/null; then
+if [[ -f wear/build/outputs/bundle/release/wear-release.aab && -f app/build/outputs/bundle/playRelease/app-play-release.aab ]]; then
+  if ./scripts/validate-wear-artifact.sh wear/build/outputs/bundle/release/wear-release.aab app/build/outputs/bundle/playRelease/app-play-release.aab >/dev/null; then
     pass 'phone and Wear release AAB outputs pass packaged identity/manifest validation'
   else
     block 'phone/Wear release AAB packaged validation failed'
@@ -98,9 +98,9 @@ if [[ -n ${PLAY_CONSOLE_KEY_PATH:-} && -r ${PLAY_CONSOLE_KEY_PATH:-} ]]; then
   EXPECTED_PHONE_VERSION_CODE="$phone_version_code" EXPECTED_WEAR_VERSION_CODE="$wear_version_code" \
     ./scripts/inspect-google-play-wear-readiness.sh "$report" >/dev/null
   if jq -e '.observed.expectedPairAlreadyInternal' "$report" >/dev/null; then
-    pass 'Play exact qa/wear:qa pair is currently observable'
+    pass 'Play exact qa/wear:internal pair is currently observable'
   else
-    block 'Play exact qa/wear:qa pair is absent'
+    block 'Play exact qa/wear:internal pair is absent'
   fi
   if jq -e '.observed.expectedWearGeneratedSigningKeys > 0 and .observed.expectedWearGeneratedDownloads > 0' "$report" >/dev/null; then
     info 'Play generated inventory is available; signer-bound retained base-master APK evidence remains the completion gate'
@@ -126,7 +126,7 @@ if [[ -n ${PLAY_CONSOLE_KEY_PATH:-} && -r ${PLAY_CONSOLE_KEY_PATH:-} ]]; then
   fi
 else
   block 'PLAY_CONSOLE_KEY_PATH unavailable for current read-only Play proof'
-  block 'Play exact qa/wear:qa pair observation unavailable'
+  block 'Play exact qa/wear:internal pair observation unavailable'
   block 'Play production exact paired promotion remains unproven'
 fi
 
@@ -134,7 +134,7 @@ if [[ -n ${RELEASE_STORE_FILE:-} && -f ${RELEASE_STORE_FILE:-} && -n ${RELEASE_S
   if WEAR_REQUIRE_SIGNING_ATTESTATION=true \
       ./scripts/validate-wear-artifact.sh \
         wear/build/outputs/bundle/release/wear-release.aab \
-        app/build/outputs/bundle/release/app-release.aab >/dev/null; then
+        app/build/outputs/bundle/playRelease/app-play-release.aab >/dev/null; then
     pass 'both exact AABs match the configured authorized upload signer'
   else
     block 'release signing environment does not attest both exact AABs'

@@ -3,7 +3,7 @@ title: エージェントを設定
 description: Health.mdのMCPまたはCLIインターフェースを選択し、Codex、Claude、または別のローカルクライアントを設定して、HealthKitをクラウドサービス経由にせず、ペアリング済みのiPhoneに接続します。
 ---
 
-リリース済みのMacアプリには、型付きエージェントツール用の`healthmd-mcp`と、明示的なCLIワークフロー用の`healthmd`という、2つの署名済みローカルヘルパーが含まれています。iPhoneへの直接MCP接続に対応する別のクロスプラットフォームCLIは、最初の公開パッケージが実機リリースQAを完了するまでプレビューとして記載されています。
+リリース済みのMacアプリには、型付きエージェントツール用の`healthmd-mcp`と、明示的なCLIワークフロー用の`healthmd`という、2つの署名済みローカルヘルパーが含まれています。iPhoneへの直接MCP接続に対応する別のクロスプラットフォームCLIは、明示的に未認定の公開プレビューとして配布されています。最初の安定版には実機リリースQAが引き続き必要です。
 
 <div class="callout">
 <strong>HealthKitはiPhone内にとどまります</strong>
@@ -74,11 +74,11 @@ transport: stdio
 ## ポータブル直接接続のセットアップ
 
 <div class="availability preview">
-<strong>プレビュー · 未公開パッケージ</strong>
-<p>クロスプラットフォームRust CLI、<code>healthmd setup codex</code>、同一バイナリの<code>healthmd mcp serve</code>、Linux/Windowsの直接ペアリングは実装済みですが、最初の品質確認済み公開リリースを待っています。</p>
+<strong>公開プレビュー · 安定版としては未認定</strong>
+<p>クロスプラットフォームRust CLI、<code>healthmd setup codex</code>、同一バイナリの<code>healthmd mcp serve</code>、Linux/Windowsの直接ペアリングは、明示的に未認定の公開プレビューとして配布されています。</p>
 </div>
 
-公開後は、`healthmd setup codex`でCodexを冪等に設定し、iPhoneへの直接ペアリングを開始できるようになります。それまでは、未公開のHomebrew、crates.io、インストーラ、GitHubリリースURLに依存しないでください。[iPhoneへの直接アクセスCLI](/ja/docs/cli-direct/)のページに、段階的な転送方式とプロトコルの動作が記載されています。
+macOSまたはLinuxでは<code>brew install CodyBontecou/tap/healthmd</code>でインストールします。その後、`healthmd setup codex`がCodexを冪等に設定し、iPhoneへの直接ペアリングを開始します。リリース証拠に記載された正確なモバイルビルドを使用してください。パッケージ公開はモバイル互換性の証明ではありません。[iPhoneへの直接アクセスCLI](/ja/docs/cli-direct/)のページに転送方式とプロトコルの動作が記載されています。
 
 ## 明示的なCLIワークフロー
 
@@ -96,7 +96,7 @@ healthmd export --last 7 --destination "$HOME/Documents/HealthVault"
 
 <div class="availability preview">
 <strong>プレビュー · ポータブル直接接続ワークフロー</strong>
-<p>以下の手順は、今後公開予定のクロスプラットフォームパッケージについて説明しています。リリース済みの同梱Mac MCPパスは、Macアプリの既存のiPhone接続を使用します。</p>
+<p>以下は現在公開パッケージに含まれるポータブルワークフローです。同梱Mac MCPパスは引き続きMacアプリの既存のiPhone接続を使用します。</p>
 </div>
 
 直接MCPおよびCLIワークフローでは、iPhone版Health.mdとの信頼済みペアリングを一度行う必要があります。ペアリングには認証済みの暗号化チャネルと、macOS、Linux、またはWindowsのネイティブ認証情報ストレージを使用します。
@@ -126,6 +126,6 @@ Manual IP、Tailscale、ポート、信頼済みデバイス、前面表示、�
 <div class="related">
   <a href="/ja/docs/mcp/"><span>ツールインターフェース</span>公開済みの21個のMacツール、ポータブル版の19ツールのプレビュー、MCP Apps、スキーマ、ページング、エクスポート、サンドボックスの境界を確認します。</a>
   <a href="/ja/docs/agent-queries/"><span>最初の質問</span>型付きの指標、睡眠、ワークアウト、比較、カバレッジ、エビデンスのワークフローを実行します。</a>
-  <a href="/ja/docs/cli-extract/"><span>正規データ</span>大きな本文をチャットに含めず、選択したschema-v7ドキュメントとソースレコードを抽出します。</a>
+  <a href="/ja/docs/cli-extract/"><span>正規データ</span>大きな本文をチャットに含めず、選択したschema-v8ドキュメントとソースレコードを抽出します。</a>
   <a href="/ja/docs/reference/"><span>コントラクト</span>バージョン管理されたデータ構造、フィールド一覧、生成済みフィクスチャ、統合レシピを参照します。</a>
 </div>

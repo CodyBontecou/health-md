@@ -128,7 +128,7 @@ commit_exit_code=0
 # relabeled success, and an already-matching precondition cannot prove that this edit committed.
 set +e
 response=$(curl -sS --fail-with-body -X POST "${auth[@]}" \
-  "$api/edits/$edit_id:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW")
+  "$api/edits/$edit_id:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW")
 commit_exit_code=$?
 set -e
 if [[ $commit_exit_code -eq 0 ]]; then
