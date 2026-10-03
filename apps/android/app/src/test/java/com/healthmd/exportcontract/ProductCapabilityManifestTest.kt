@@ -127,6 +127,7 @@ class ProductCapabilityManifestTest {
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
             "direct-cli.shared-qr-pairing",
+            "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
         )
 
