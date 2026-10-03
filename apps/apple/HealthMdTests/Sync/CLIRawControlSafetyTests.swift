@@ -565,6 +565,128 @@ final class CLIRawControlSafetyTests: XCTestCase {
     }
 
     #if os(macOS)
+    /// These exercise the existing Mac-initiated backend. They do not stand
+    /// in for the missing phone-initiated Shortcut/receipt path in issue #173.
+    @MainActor
+    func testContextAcquisitionRejectsPeerMissingCapabilityWithoutSendingRequest() async throws {
+        let service = SyncService()
+        service.connectionState = .connected
+        var peer = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(SyncPeerCapabilities.current(platform: .iOS))
+        ) as? [String: Any])
+        peer.removeValue(forKey: "supportsRequestScopedContextAcquisition")
+        service.remoteCapabilities = try JSONDecoder().decode(
+            SyncPeerCapabilities.self, from: JSONSerialization.data(withJSONObject: peer)
+        )
+        var sent = false
+        service.testMessageSendObserver = { _ in sent = true }
+        let coordinator = MacIPhoneExportRequestCoordinator()
+
+        let response = await coordinator.requestExport(
+            makeContextRequest(), syncService: service, destinationStatus: makeDestinationStatus()
+        )
+
+        XCTAssertEqual(response.status, .unavailable)
+        XCTAssertEqual(response.failureReason, "unsupported_context_acquisition")
+        XCTAssertNil(response.jobID)
+        XCTAssertNil(coordinator.activeJobID)
+        XCTAssertFalse(sent, "never downgrade context acquisition into a file/raw request")
+    }
+
+    @MainActor
+    func testContextAcquisitionRejectsProjectionPointersBeforeJobCreation() async {
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        var sent = false
+        service.testMessageSendObserver = { _ in sent = true }
+        let coordinator = MacIPhoneExportRequestCoordinator()
+        let request = makeContextRequest(selection: CanonicalHealthDataSelection(
+            metricIDs: ["steps"], sourceIDs: ["apple_health"], detailLevel: .summary,
+            objectPaths: ["/activity"], fieldPointers: ["/activity/steps"]
+        ))
+
+        let response = await coordinator.requestExport(
+            request, syncService: service, destinationStatus: makeDestinationStatus()
+        )
+
+        XCTAssertEqual(response.status, .unavailable)
+        XCTAssertEqual(response.failureReason, "invalid_context_selection")
+        XCTAssertNil(coordinator.activeJobID)
+        XCTAssertFalse(sent)
+    }
+
+    @MainActor
+    func testContextAcquisitionWithoutFolderRetainsExactPendingJobAcrossRestart() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("context-pending-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let service = SyncService()
+        service.connectionState = .connected
+        service.remoteCapabilities = .current(platform: .iOS)
+        var sentRequests: [IPhoneExportRequest] = []
+        service.testMessageSendObserver = { message in
+            if case .iphoneExportRequest(let request) = message { sentRequests.append(request) }
+        }
+        let destination = MacDestinationStatus(
+            isConnected: true, isReadyForExports: false,
+            destinationFolderSelected: false, folderAccessHealthy: false,
+            destinationDisplayName: nil, destinationPathForDisplay: nil,
+            lastError: nil, activeJobID: nil, capabilities: .current(platform: .macOS)
+        )
+        let coordinator = MacIPhoneExportRequestCoordinator(rootURL: root)
+        let request = makeContextRequest()
+        let response = await coordinator.requestExport(
+            request, syncService: service, destinationStatus: destination
+        )
+        let jobID = try XCTUnwrap(response.jobID)
+
+        XCTAssertEqual(response.status, .timedOut, "waiter timeout is not completed context")
+        XCTAssertEqual(sentRequests.count, 1)
+        XCTAssertEqual(sentRequests.first?.responseMode, .contextStore)
+        XCTAssertEqual(sentRequests.first?.canonicalSelection, request.canonicalSelection)
+        XCTAssertEqual(sentRequests.first?.requestedDateIdentifiers, ["2027-01-15"])
+        coordinator.handlePeerDisconnectForResume()
+
+        let restored = MacIPhoneExportRequestCoordinator(rootURL: root)
+        let pending = restored.jobResponse(jobID: jobID)
+        XCTAssertEqual(pending.jobID, jobID)
+        XCTAssertEqual(pending.status, .preparing)
+        XCTAssertEqual(pending.durable, true)
+        XCTAssertEqual(pending.paused, true)
+        XCTAssertNil(pending.destinationPath)
+        XCTAssertNil(pending.rawData)
+        XCTAssertNil(pending.rawResult)
+
+        let changedSelection = makeContextRequest(jobID: jobID, selection: CanonicalHealthDataSelection(
+            metricIDs: ["sleep_total"], sourceIDs: ["apple_health"], detailLevel: .summary
+        ))
+        let mismatch = await restored.requestExport(
+            changedSelection, syncService: service, destinationStatus: destination
+        )
+        XCTAssertEqual(mismatch.failureReason, "job_id_request_mismatch")
+        XCTAssertEqual(mismatch.jobID, jobID)
+        XCTAssertEqual(sentRequests.count, 1, "resume cannot silently widen or change scope")
+        XCTAssertEqual(restored.jobResponse(jobID: jobID).status, .preparing)
+    }
+
+    @MainActor
+    private func makeContextRequest(
+        jobID: UUID? = nil,
+        selection: CanonicalHealthDataSelection? = nil
+    ) -> MacIPhoneExportRequestCoordinator.ExportRequest {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        return .init(
+            jobID: jobID, startDate: date, endDate: date,
+            requestedDateIdentifiers: ["2027-01-15"], requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly, responseMode: .contextStore, rawProfile: nil,
+            canonicalSelection: selection ?? CanonicalHealthDataSelection(
+                metricIDs: ["steps"], sourceIDs: ["apple_health"], detailLevel: .summary
+            ),
+            waitTimeoutSeconds: 0.02
+        )
+    }
+
     @MainActor
     func testCoordinatorAllowsMultiYearCorpusRequest() async throws {
         let service = SyncService()
