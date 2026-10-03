@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "sha256": "5e05a9f49b04824428758db1e7be7365adcf2304b04456b6395378450d6b5c22",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -26,6 +26,34 @@
     }
   ],
   "contracts": [
+    {
+      "id": "healthmd.watch_snapshot",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Bounded manual Watch-local activity snapshot with explicit missingness and purpose/account-bound backend acknowledgement; source implementation awaits physical networking and receiver qualification.",
+      "specification": "packages/contracts/watch-snapshot/v1/contract.md",
+      "authorities": ["packages/contracts/watch-snapshot/v1/contract.md"],
+      "implementations": [
+        "apps/apple/Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportContract.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportService.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Sources/HealthMdWatchExport/WatchExportHTTP.swift",
+        "apps/apple/HealthMdWatch/WatchExportCaptureProvider.swift"
+      ],
+      "consumers": [
+        "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/WatchExportCaptureTests.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/WatchExportServiceTests.swift",
+        "apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/WatchExportHTTPTests.swift"
+      ],
+      "documentation": ["apps/apple/docs/features/watch-api-sync.md"],
+      "fixtures": [
+        {
+          "path": "packages/contracts/watch-snapshot/v1/fixtures/watch-snapshot-v1.json",
+          "sha256": "4c08ecfe86c686c039e894a88c3080d0aba34148b86b07cf3e55546a8a284a4d",
+          "provenance": "Hand-authored synthetic zero/missing/failed capture; the production Swift encoder is compared structurally to the packaged mirror in WatchExportCaptureTests.",
+          "mirrors": ["apps/apple/Packages/HealthMdWatchExport/Tests/HealthMdWatchExportTests/Fixtures/watch-snapshot-v1.json"]
+        }
+      ]
+    },
     {
       "id": "healthmd.direct.ios",
       "version": 1,
