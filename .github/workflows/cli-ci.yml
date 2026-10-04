@@ -13,6 +13,7 @@ on:
       - 'packages/contracts/**'
       - 'packages/healthmd-core-rust/**'
       - '.github/workflows/cli-*.yml'
+      - '.gitattributes'
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -56,6 +57,7 @@ jobs:
             packages/contracts/**
             packages/healthmd-core-rust/**
             .github/workflows/cli-*.yml
+            .gitattributes
 
   msrv:
     name: Rust 1.85 MSRV

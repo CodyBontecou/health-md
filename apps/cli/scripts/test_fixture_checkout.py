@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import ast
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -23,6 +25,26 @@ FIXTURE_PAIRS = {
 
 
 class FixtureCheckoutTests(unittest.TestCase):
+    def test_checkout_policy_change_triggers_cli_ci(self) -> None:
+        workflow = (ROOT / ".github/workflows/cli-ci.yml").read_text(encoding="utf-8")
+        push = re.search(
+            r"^  push:\n.*?^    paths:\n((?:      - [^\n]*\n)+)",
+            workflow, re.MULTILINE | re.DOTALL,
+        )
+        changes = re.search(
+            r"^          paths: \|\n((?:            .*\n)+)",
+            workflow, re.MULTILINE,
+        )
+        self.assertIsNotNone(push, "main push path map must be present")
+        self.assertIsNotNone(changes, "PR changes-job path map must be present")
+        push_paths = [
+            ast.literal_eval(line.strip().removeprefix("- "))
+            for line in push[1].splitlines()
+        ]
+        changes_paths = [line.strip() for line in changes[1].splitlines()]
+        self.assertEqual(push_paths, changes_paths, "keep both CLI path maps synchronized")
+        self.assertIn(".gitattributes", push_paths, "checkout policy changes must run fixture tests")
+
     def test_checkout_preserves_reviewed_bytes_with_and_without_autocrlf(self) -> None:
         # Exercise Git's real index/checkout conversion on every host, including
         # Linux CI. Do not normalize the comparison or alter the working tree.
