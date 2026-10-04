@@ -5,6 +5,8 @@ description: "Install healthmd and healthmd-mcp with Homebrew, the Health.md Mac
 
 Choose one installation method. The standalone CLI is a public preview for macOS, Linux, and Windows. The Health.md Mac app also includes signed helpers for Mac users.
 
+Availability audit (2026-10-02): [alpha.6 is published](https://github.com/CodyBontecou/health-md/releases/tag/healthmd-cli/v0.1.0-alpha.6) with uploaded installers, archives, and checksum/signature assets. Alpha.7 remains an unpublished draft with no assets and is not an install target. Neither publication nor a successful pairing qualifies a stable CLI/mobile pair. See [release status](/docs/release-status/) for the separate qualification boundary.
+
 ## Homebrew
 
 Homebrew is the shortest path on macOS or Linux:
@@ -14,7 +16,7 @@ brew install CodyBontecou/tap/healthmd
 healthmd --version
 ```
 
-The formula installs both `healthmd` and the `healthmd-mcp` compatibility launcher from the same versioned CLI release.
+The formula currently serves alpha.6 and installs both `healthmd` and the `healthmd-mcp` compatibility launcher from the same versioned CLI release. Check the installed version; do not assume the tap matches development source.
 
 To upgrade later:
 
@@ -46,7 +48,7 @@ Add `~/.local/bin` to `PATH` if your shell does not already include it.
 
 ## Release installers and Cargo
 
-Each exact `healthmd-cli/v<version>` release can include checksummed installers and archives for macOS, Linux, and Windows. Follow the [release verification and installation instructions](https://github.com/CodyBontecou/health-md/tree/main/apps/cli#installation) rather than the repository-wide latest-release link, which is reserved for the Apple apps.
+Use the published `healthmd-cli/v0.1.0-alpha.6` preview for checksummed installers and archives on macOS, Linux, and Windows. Before choosing a newer version, require a non-draft release with nonempty uploaded assets, `sha256.sum`, and `sha256.sum.sigstore.json`; a tag or draft alone is insufficient. Follow the [release verification and installation instructions](https://github.com/CodyBontecou/health-md/tree/main/apps/cli#installation) rather than the repository-wide latest-release link, which is reserved for the Apple apps.
 
 After an exact version reaches crates.io, Rust users can install it with:
 

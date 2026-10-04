@@ -11,8 +11,10 @@ Health.md has independently versioned products. A version number or successful c
 |---|---|---|---|
 | iPhone, iPad, Mac, and Apple Watch apps | `v<version>` | App Store product | Each release note must name tested Apple OS versions. macOS 27 remains **not certified** until the RC and public-build physical matrix is retained. |
 | Bundled Mac `healthmd-mcp` | Same `v<version>` as the Mac app | Production component | Uses encrypted Mac context and the Mac app's authenticated iPhone connection. It is not the standalone CLI and has no separate 1.0 milestone. |
-| Standalone `healthmd` and `healthmd mcp serve` | `healthmd-cli/v<version>` | `0.1.0-alpha.7` is an explicitly unqualified preview | No CLI/mobile pair is qualified for stable 1.0 yet. Published alpha.7 has 19 MCP tools; current development has 21. |
+| Standalone `healthmd` and `healthmd mcp serve` | `healthmd-cli/v<version>` | Published `0.1.0-alpha.6` is an explicitly unqualified preview; alpha.7 is a pending unpublished draft | No CLI/mobile pair is qualified for stable 1.0 yet. Published alpha.6 has 19 MCP tools; current development has 21. |
 | Website | Commit deployment | Documentation | Describes released behavior separately from development behavior. |
+
+Availability audit (2026-10-02): [alpha.6](https://github.com/CodyBontecou/health-md/releases/tag/healthmd-cli/v0.1.0-alpha.6) is non-draft with uploaded installers, five desktop archives, archive checksums, `sha256.sum`, its Sigstore bundle, and `release-identities.json`. The Homebrew tap points to alpha.6. Alpha.7 is a draft with zero assets: it is not a download/install option. A source tag, workflow, or skill publication does not establish binary availability. Recheck the exact release before installing; verify signatures and checksums before execution.
 
 There is no committed date for standalone CLI 1.0. Stable status requires the exact retained macOS, Linux, Windows, iPhone, Android, LAN, and Tailscale matrix—not just automated tests or a pairing smoke check.
 
