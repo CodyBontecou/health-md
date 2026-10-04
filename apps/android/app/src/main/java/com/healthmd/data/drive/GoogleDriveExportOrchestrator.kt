@@ -12,6 +12,7 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.exportengine.sha256Hex
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.repository.HealthRepository
 import java.time.LocalDate
@@ -72,12 +73,35 @@ class GoogleDriveExportOrchestrator @Inject constructor(
             ExportSettings.serializer(),
             settings,
         )
-        runner.resumeIfPresent(
-            operationId = operationId,
-            expectedDestinationId = destinationId,
-            expectedSettingsSnapshotSha256 = sha256Hex(frozenSettingsSnapshotJson.encodeToByteArray()),
-        )?.let { retained ->
-            return retained.toExportResult(normalized, operationId)
+        when (val loaded = runner.recoveryJournal(operationId)) {
+            GoogleDriveJournalLoad.Corrupt -> return failed(normalized, GoogleDriveErrorId.AMBIGUOUS_COMMIT, operationId)
+            GoogleDriveJournalLoad.Missing -> Unit
+            is GoogleDriveJournalLoad.Found -> {
+                val journal = loaded.journal
+                val evidence = journal.captureEvidence
+                if (evidence?.isValid() != true || journal.ownerDates != evidence.capturedOwnerDates ||
+                    journal.destinationId != destinationId ||
+                    journal.settingsSnapshotSha256 != sha256Hex(frozenSettingsSnapshotJson.encodeToByteArray()) ||
+                    normalized.any { it.toString() !in evidence.requestedOwnerDates }
+                ) return failed(normalized, GoogleDriveErrorId.REMOTE_CONFLICT, operationId)
+                val resumed = runner.resumeIfPresent(
+                    operationId = operationId,
+                    expectedDestinationId = destinationId,
+                    expectedOwnerDates = journal.ownerDates.map(LocalDate::parse),
+                    expectedSettingsSnapshotSha256 = journal.settingsSnapshotSha256,
+                ) ?: return failed(normalized, GoogleDriveErrorId.AMBIGUOUS_COMMIT, operationId)
+                // A retry narrowed entirely to known capture failures is a new capture operation,
+                // never an alias for the prior upload. Its deterministic ID survives another crash.
+                if (resumed is GoogleDriveRunResult.Complete &&
+                    normalized.all { date -> evidence.failedDates.any { it.date == date } }
+                ) {
+                    return exportDates(
+                        normalized, settings, destinationId, profileId, source,
+                        residualOperationId(operationId, normalized), frozenSettingsSnapshotJson, onProgress,
+                    )
+                }
+                return resumed.toExportResult(normalized, operationId, evidence)
+            }
         }
         val captured = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
@@ -110,7 +134,8 @@ class GoogleDriveExportOrchestrator @Inject constructor(
             }
         }
         if (captured.isEmpty()) {
-            return ExportResult(0, normalized.size, failures, target = ExportTarget.GOOGLE_DRIVE)
+            return ExportResult(0, normalized.size, failures, target = ExportTarget.GOOGLE_DRIVE,
+                freshCaptureRetryDates = normalized.toSet())
         }
         val bundle = try {
             bundleFactory.daily(
@@ -120,6 +145,8 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 data = captured,
                 settings = settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
                 settingsSnapshotJson = frozenSettingsSnapshotJson,
+                requestedDates = normalized,
+                captureFailures = failures,
             )
         } catch (_: Exception) {
             return ExportResult(
@@ -129,55 +156,59 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 target = ExportTarget.GOOGLE_DRIVE,
             )
         }
-        return when (val result = runner.run(bundle, destinationId)) {
-            is GoogleDriveRunResult.Complete -> ExportResult(
-                successCount = captured.size,
-                totalCount = normalized.size,
-                failedDateDetails = failures,
-                target = ExportTarget.GOOGLE_DRIVE,
-                artifactCount = result.artifactCount,
-                retryDriveOperationIds = normalized.associateWith { operationId },
-            )
-            is GoogleDriveRunResult.Stopped -> ExportResult(
-                // Artifact completion cannot prove a whole date completed; remain conservative
-                // until every required artifact in the operation verifies.
-                successCount = 0,
-                totalCount = normalized.size,
-                failedDateDetails = failures + normalized.filterNot { date -> failures.any { it.date == date } }.map {
-                    FailedDateDetail(it, result.error.toFailureReason(), result.error.serialId)
-                },
-                target = ExportTarget.GOOGLE_DRIVE,
-                artifactCount = result.completedArtifactCount,
-                retryDriveOperationIds = normalized.associateWith { operationId },
-            )
-        }
+        return runner.run(bundle, destinationId).toExportResult(normalized, operationId, bundle.captureEvidence)
     }
 
     suspend fun acknowledgeAfterHistory(operationId: String): Boolean =
         runner.acknowledgeAfterHistory(operationId)
 
+    /** History has only a logical handle; residual capture uses the journal's frozen authority. */
+    suspend fun retryFromHistory(dates: List<LocalDate>, operationId: String, currentSettings: ExportSettings): ExportResult {
+        val journal = (runner.recoveryJournal(operationId) as? GoogleDriveJournalLoad.Found)?.journal
+            ?: return failed(dates, GoogleDriveErrorId.AMBIGUOUS_COMMIT, operationId)
+        val snapshotJson = journal.settingsSnapshotJson
+            ?: return failed(dates, GoogleDriveErrorId.REMOTE_CONFLICT, operationId)
+        val restored = runCatching {
+            val snapshot = runCatching { AndroidExportSettingsSnapshotCodec.decode(snapshotJson) }.getOrNull()
+            if (snapshot != null) snapshot.restoreOnto(currentSettings).copy(
+                executionEnginePin = snapshot.enginePin, executionEngineAuthorityIsFrozen = true,
+            ) else kotlinx.serialization.json.Json.decodeFromString(ExportSettings.serializer(), snapshotJson)
+        }.getOrNull() ?: return failed(dates, GoogleDriveErrorId.REMOTE_CONFLICT, operationId)
+        return exportDates(dates, restored, journal.destinationId, journal.profileId, "retry", operationId, snapshotJson)
+    }
+
     private fun GoogleDriveRunResult.toExportResult(
         dates: List<LocalDate>,
         operationId: String,
-    ): ExportResult = when (this) {
-        is GoogleDriveRunResult.Complete -> ExportResult(
-            successCount = dates.size,
+        evidence: GoogleDriveCaptureEvidence,
+    ): ExportResult {
+        val captured = dates.filter { it.toString() in evidence.capturedOwnerDates }
+        val captureFailures = evidence.failedDates.filter { it.date in dates }
+        return ExportResult(
+            // An artifact prefix cannot prove completion of any owner date.
+            successCount = if (this is GoogleDriveRunResult.Complete) captured.size else 0,
             totalCount = dates.size,
-            target = ExportTarget.GOOGLE_DRIVE,
-            artifactCount = artifactCount,
-            retryDriveOperationIds = dates.associateWith { operationId },
-        )
-        is GoogleDriveRunResult.Stopped -> ExportResult(
-            successCount = 0,
-            totalCount = dates.size,
-            failedDateDetails = dates.map {
+            failedDateDetails = captureFailures + if (this is GoogleDriveRunResult.Stopped) captured.map {
                 FailedDateDetail(it, error.toFailureReason(), error.serialId)
-            },
+            } else emptyList(),
             target = ExportTarget.GOOGLE_DRIVE,
-            artifactCount = completedArtifactCount,
-            retryDriveOperationIds = dates.associateWith { operationId },
+            artifactCount = when (this) {
+                is GoogleDriveRunResult.Complete -> artifactCount
+                is GoogleDriveRunResult.Stopped -> completedArtifactCount
+            },
+            retryDriveOperationIds = captured.associateWith { operationId },
+            freshCaptureRetryDates = captureFailures.mapTo(linkedSetOf()) { it.date },
         )
     }
+
+    private fun failed(dates: List<LocalDate>, error: GoogleDriveErrorId, operationId: String) = ExportResult(
+        0, dates.size, dates.map { FailedDateDetail(it, error.toFailureReason(), error.serialId) },
+        target = ExportTarget.GOOGLE_DRIVE, retryDriveOperationIds = dates.associateWith { operationId },
+    )
+
+    private fun residualOperationId(operationId: String, dates: List<LocalDate>): String =
+        "drive-residual-" + sha256Hex(("healthmd.drive.residual.v1\u0000$operationId\u0000" +
+            dates.joinToString("\u0000")).encodeToByteArray())
 }
 
 internal val GoogleDriveErrorId.serialId: String

@@ -2,6 +2,7 @@ package com.healthmd.data.drive
 
 import com.healthmd.BuildConfig
 import com.healthmd.domain.exportengine.sha256Hex
+import com.healthmd.domain.model.FailedDateDetail
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.nio.charset.StandardCharsets
@@ -143,6 +144,24 @@ class GeneratedExportArtifact(
     }
 }
 
+/** Local capture authority, independent of whether the staged artifacts have uploaded. */
+@Serializable
+data class GoogleDriveCaptureEvidence(
+    val requestedOwnerDates: List<String>,
+    val capturedOwnerDates: List<String>,
+    val failedDates: List<FailedDateDetail>,
+) {
+    fun isValid(): Boolean {
+        val requested = requestedOwnerDates.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val captured = capturedOwnerDates.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val failed = failedDates.map { it.date }
+        return requested.size == requestedOwnerDates.size && captured.size == capturedOwnerDates.size &&
+            requested.isNotEmpty() && requested == requested.distinct().sorted() &&
+            captured == captured.distinct().sorted() && failed == failed.distinct().sorted() &&
+            captured.intersect(failed.toSet()).isEmpty() && (captured + failed).sorted() == requested
+    }
+}
+
 class GeneratedExportBundle(
     val operationId: String,
     val profileId: String?,
@@ -151,6 +170,10 @@ class GeneratedExportBundle(
     val settingsSnapshotSha256: String,
     val rendererPin: String,
     artifacts: List<GeneratedExportArtifact>,
+    val settingsSnapshotJson: String? = null,
+    val captureEvidence: GoogleDriveCaptureEvidence = GoogleDriveCaptureEvidence(
+        dates.map(LocalDate::toString), dates.map(LocalDate::toString), emptyList(),
+    ),
 ) {
     val artifacts: List<GeneratedExportArtifact> = artifacts.sortedBy { it.relativePath }
     val digest: String
@@ -159,6 +182,8 @@ class GeneratedExportBundle(
         require(operationId.isSafeOpaqueId())
         require(source in setOf("manual", "scheduled", "retry", "raw"))
         require(dates == dates.distinct().sorted())
+        require(captureEvidence.isValid() && captureEvidence.capturedOwnerDates == dates.map(LocalDate::toString))
+        require(settingsSnapshotJson == null || sha256Hex(settingsSnapshotJson.encodeToByteArray()) == settingsSnapshotSha256)
         require(settingsSnapshotSha256.matches(Regex("[0-9a-f]{64}")))
         require(this.artifacts.isNotEmpty())
         require(this.artifacts.map { collisionKey(it.relativePath) }.distinct().size == this.artifacts.size)

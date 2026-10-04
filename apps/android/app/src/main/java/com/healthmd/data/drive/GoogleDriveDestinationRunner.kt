@@ -51,11 +51,14 @@ class GoogleDriveDestinationRunner @Inject constructor(
             is GoogleDriveJournalLoad.Found -> existing.journal.takeIf {
                 it.destinationId == destinationId &&
                     it.destinationFingerprint == destination.fingerprint &&
-                    it.bundleDigest == bundle.digest
+                    it.bundleDigest == bundle.digest && it.captureEvidence == bundle.captureEvidence
             } ?: return GoogleDriveRunResult.Stopped(GoogleDriveErrorId.REMOTE_CONFLICT)
         }
         return withDestinationLock(destinationId) { execute(journal, destination) }
     }
+
+    /** The accounting owner must inspect capture evidence before projecting upload completion. */
+    suspend fun recoveryJournal(operationId: String): GoogleDriveJournalLoad = journalStore.load(operationId)
 
     /** Returns null only when no retained operation exists, allowing capture to begin safely. */
     suspend fun resumeIfPresent(

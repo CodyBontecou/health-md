@@ -16,6 +16,7 @@ import com.healthmd.domain.exportengine.sha256Hex
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.WriteMode
 import java.io.File
 import java.time.LocalDate
@@ -81,6 +82,8 @@ class GeneratedExportBundleFactory private constructor(
         data: List<HealthData>,
         settings: ExportSettings,
         settingsSnapshotJson: String = json.encodeToString(ExportSettings.serializer(), settings.normalized()),
+        requestedDates: List<LocalDate> = data.map(HealthData::date).distinct().sorted(),
+        captureFailures: List<FailedDateDetail> = emptyList(),
     ): GeneratedExportBundle {
         require(data.isNotEmpty())
         val sorted = data.sortedBy { it.date }
@@ -103,6 +106,12 @@ class GeneratedExportBundleFactory private constructor(
             settingsSnapshotSha256 = sha256Hex(settingsSnapshotJson.encodeToByteArray()),
             rendererPin = rendererPin(settings, rendererAuthorities.single()),
             artifacts = artifacts,
+            settingsSnapshotJson = settingsSnapshotJson,
+            captureEvidence = GoogleDriveCaptureEvidence(
+                requestedDates.distinct().sorted().map(LocalDate::toString),
+                sorted.map { it.date.toString() },
+                captureFailures.sortedBy { it.date },
+            ),
         )
     }
 
@@ -145,6 +154,7 @@ class GeneratedExportBundleFactory private constructor(
             settingsSnapshotSha256 = sha256Hex(settingsSnapshotJson.encodeToByteArray()),
             rendererPin = "android-raw-snapshot-v1",
             artifacts = listOf(artifact, checksumArtifact),
+            settingsSnapshotJson = settingsSnapshotJson,
         )
     }
 

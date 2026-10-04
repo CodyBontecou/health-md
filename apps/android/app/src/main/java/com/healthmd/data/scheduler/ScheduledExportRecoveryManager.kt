@@ -10,9 +10,7 @@ import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.drive.GoogleDriveDestinationRunner
 import com.healthmd.data.drive.GoogleDriveDestinationStore
 import com.healthmd.data.drive.GoogleDriveExportOrchestrator
-import com.healthmd.data.drive.GoogleDriveRunResult
 import com.healthmd.data.drive.GoogleDriveSelectionStore
-import com.healthmd.data.drive.toFailureReason
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
@@ -237,30 +235,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 ) {
                     snapshotFailure(targetDates, target)
                 } else try {
-                    if (target == ExportTarget.GOOGLE_DRIVE &&
-                        targetSettings.exportMode != ExportMode.RAW_SNAPSHOT &&
-                        operation.driveOperationId != null
-                    ) {
-                        when (val resumed = googleDriveDestinationRunner.resume(operation.driveOperationId)) {
-                            is GoogleDriveRunResult.Complete -> ExportResult(
-                                targetDates.size,
-                                targetDates.size,
-                                target = ExportTarget.GOOGLE_DRIVE,
-                                artifactCount = resumed.artifactCount,
-                                retryDriveOperationIds = targetDates.associateWith { operation.driveOperationId },
-                                exportMode = targetSettings.exportMode,
-                            )
-                            is GoogleDriveRunResult.Stopped -> ExportResult(
-                                0,
-                                targetDates.size,
-                                targetDates.map { FailedDateDetail(it, resumed.error.toFailureReason()) },
-                                target = ExportTarget.GOOGLE_DRIVE,
-                                artifactCount = resumed.completedArtifactCount,
-                                retryDriveOperationIds = targetDates.associateWith { operation.driveOperationId },
-                                exportMode = targetSettings.exportMode,
-                            )
-                        }
-                    } else if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT) {
                         rawSnapshotService?.exportRange(
                             startDate = targetDates.first(),
                             endDate = targetDates.last(),
@@ -317,7 +292,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                                 targetSettings,
                                 destinationId,
                                 source = "retry",
-                                operationId = deterministicRecoveryOperationId(
+                                operationId = operation.driveOperationId ?: deterministicRecoveryOperationId(
                                     targetDates,
                                     destinationFingerprint,
                                     enginePin,

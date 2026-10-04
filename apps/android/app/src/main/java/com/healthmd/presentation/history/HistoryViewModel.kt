@@ -10,9 +10,8 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.drive.GoogleDriveDestinationRunner
-import com.healthmd.data.drive.GoogleDriveRunResult
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
 import com.healthmd.data.drive.GoogleDriveSelectionStore
-import com.healthmd.data.drive.toFailureReason
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
@@ -51,6 +50,7 @@ class HistoryViewModel @Inject constructor(
     private val rawSnapshotService: RawSnapshotService? = null,
     private val googleDriveDestinationRunner: GoogleDriveDestinationRunner,
     private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
 ) : ViewModel() {
 
     val entries: StateFlow<List<ExportHistoryEntry>> = exportHistoryRepository.getAllEntries()
@@ -122,28 +122,9 @@ class HistoryViewModel @Inject constructor(
                     retryDatesFor(entry)
                 }
                 val result = if (resumesDriveJournal) {
-                    when (val resumed = googleDriveDestinationRunner.resume(requireNotNull(entry.driveOperationId))) {
-                        is GoogleDriveRunResult.Complete -> ExportResult(
-                            successCount = retryDates.size,
-                            totalCount = retryDates.size,
-                            target = ExportTarget.GOOGLE_DRIVE,
-                            exportMode = entry.exportMode,
-                            artifactCount = resumed.artifactCount,
-                        )
-                        is GoogleDriveRunResult.Stopped -> ExportResult(
-                            successCount = 0,
-                            totalCount = retryDates.size,
-                            failedDateDetails = retryDates.map {
-                                FailedDateDetail(it, resumed.error.toFailureReason())
-                            },
-                            target = ExportTarget.GOOGLE_DRIVE,
-                            exportMode = entry.exportMode,
-                            artifactCount = resumed.completedArtifactCount,
-                            retryDriveOperationIds = retryDates.associateWith {
-                                requireNotNull(entry.driveOperationId)
-                            },
-                        )
-                    }
+                    googleDriveExportOrchestrator.retryFromHistory(
+                        retryDates, requireNotNull(entry.driveOperationId), settings,
+                    ).copy(exportMode = entry.exportMode)
                 } else if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                     rawSnapshotService?.exportRange(
                         startDate = retryDates.first(),
@@ -219,11 +200,14 @@ class HistoryViewModel @Inject constructor(
                         // The UI derives a localized warning from the typed result fields.
                         warningSummary = null,
                         exportMode = result.exportMode,
-                        driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
+                        driveOperationId = result.retryDriveOperationIds.values.firstOrNull()
+                            ?: entry.driveOperationId.takeIf { entry.target == ExportTarget.GOOGLE_DRIVE },
                     )
                 )
                 if (result.isFullSuccess && entry.target == ExportTarget.GOOGLE_DRIVE) {
-                    entry.driveOperationId?.let { googleDriveDestinationRunner.acknowledgeAfterHistory(it) }
+                    (result.retryDriveOperationIds.values.toSet() + listOfNotNull(entry.driveOperationId)).forEach {
+                        googleDriveDestinationRunner.acknowledgeAfterHistory(it)
+                    }
                 }
                 _uiState.update {
                     it.copy(

@@ -219,6 +219,7 @@ class GoogleDriveDestinationRunnerRecoveryTest {
             profileId = bundle.profileId,
             source = bundle.source,
             ownerDates = bundle.dates.map(LocalDate::toString),
+            captureEvidence = bundle.captureEvidence,
             destinationId = destination.id,
             destinationFingerprint = destination.fingerprint,
             bundleDigest = bundle.digest,

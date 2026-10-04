@@ -761,7 +761,9 @@ class ExportWorker @AssistedInject constructor(
             result.remainingDates +
                 result.retryOperationIds.keys +
                 result.retryFolderOperationIds.keys +
-                result.retryDriveOperationIds.keys +
+                result.retryDriveOperationIds.keys.filter { date ->
+                    result.successCount == 0 || result.failedDateDetails.any { it.date == date }
+                } +
                 result.freshCaptureRetryDates
             ).filterTo(linkedSetOf()) { it in attemptedDates }
         if (explicit.isNotEmpty() || result.successCount >= result.totalCount) return explicit

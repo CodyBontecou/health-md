@@ -28,10 +28,20 @@ class GoogleDriveExportOrchestratorTest {
             exportTarget = ExportTarget.GOOGLE_DRIVE,
         )
         val snapshot = Json.encodeToString(ExportSettings.serializer(), settings)
+        coEvery { runner.recoveryJournal("operation-retained") } returns GoogleDriveJournalLoad.Found(
+            GoogleDriveOperationJournal(
+                operationId = "operation-retained", source = "manual", ownerDates = listOf(date.toString()),
+                captureEvidence = GoogleDriveCaptureEvidence(listOf(date.toString()), listOf(date.toString()), emptyList()),
+                destinationId = "destination-1", destinationFingerprint = "fingerprint", bundleDigest = "digest",
+                settingsSnapshotSha256 = sha256Hex(snapshot.encodeToByteArray()), rendererPin = "renderer",
+                artifacts = emptyList(), createdAtEpochMillis = 1, updatedAtEpochMillis = 1,
+            ),
+        )
         coEvery {
             runner.resumeIfPresent(
                 operationId = "operation-retained",
                 expectedDestinationId = "destination-1",
+                expectedOwnerDates = listOf(date),
                 expectedSettingsSnapshotSha256 = sha256Hex(snapshot.encodeToByteArray()),
             )
         } returns GoogleDriveRunResult.Complete(artifactCount = 1)
@@ -47,6 +57,6 @@ class GoogleDriveExportOrchestratorTest {
         assertThat(result.successCount).isEqualTo(1)
         assertThat(result.artifactCount).isEqualTo(1)
         coVerify(exactly = 0) { healthRepository.isBeforeFirstUnlock() }
-        coVerify(exactly = 0) { bundleFactory.daily(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { bundleFactory.daily(any(), any(), any(), any(), any(), any(), any(), any()) }
     }
 }

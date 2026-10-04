@@ -355,6 +355,9 @@ data class GoogleDriveOperationJournal(
     val profileId: String? = null,
     val source: String,
     val ownerDates: List<String>,
+    /** v1 lacks capture-failure authority and is retained but never promoted to success. */
+    val captureEvidence: GoogleDriveCaptureEvidence? = null,
+    val settingsSnapshotJson: String? = null,
     val destinationId: String,
     val destinationFingerprint: String,
     val bundleDigest: String,
@@ -368,7 +371,7 @@ data class GoogleDriveOperationJournal(
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
 ) {
-    companion object { const val CURRENT_VERSION = 1 }
+    companion object { const val CURRENT_VERSION = 2 }
 }
 
 sealed interface GoogleDriveJournalLoad {
@@ -383,7 +386,7 @@ class GoogleDriveJournalStore @Inject constructor(
     @ApplicationContext context: Context,
 ) {
     private val root = File(context.noBackupFilesDir, "google-drive-operations")
-    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
 
     suspend fun create(
         bundle: GeneratedExportBundle,
@@ -421,6 +424,8 @@ class GoogleDriveJournalStore @Inject constructor(
             profileId = bundle.profileId,
             source = bundle.source,
             ownerDates = bundle.dates.map(LocalDate::toString),
+            captureEvidence = bundle.captureEvidence,
+            settingsSnapshotJson = bundle.settingsSnapshotJson,
             destinationId = destination.id,
             destinationFingerprint = destination.fingerprint,
             bundleDigest = bundle.digest,
@@ -520,7 +525,13 @@ class GoogleDriveJournalStore @Inject constructor(
         directory: File,
         requireJournalFile: Boolean = true,
     ): Boolean {
-        if (journal.version !in 1..GoogleDriveOperationJournal.CURRENT_VERSION ||
+        // No in-place v1 migration: requested/capture-failed dates cannot be reconstructed from
+        // staged bytes. Preserve the old journal/spool and require explicit recovery instead.
+        if (journal.version != GoogleDriveOperationJournal.CURRENT_VERSION ||
+            journal.captureEvidence?.isValid() != true ||
+            journal.captureEvidence.capturedOwnerDates != journal.ownerDates ||
+            (journal.settingsSnapshotJson != null &&
+                sha256Hex(journal.settingsSnapshotJson.encodeToByteArray()) != journal.settingsSnapshotSha256) ||
             !journal.operationId.isSafeOpaqueId() ||
             journal.artifacts.isEmpty() ||
             journal.artifacts.map { it.relativePathHash }.distinct().size != journal.artifacts.size ||
