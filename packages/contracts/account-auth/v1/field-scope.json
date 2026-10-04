@@ -1,0 +1,115 @@
+{
+  "schema": "healthmd.account_auth.profile_field_scope",
+  "schema_version": 1,
+  "status": "proposed_synthetic_only",
+  "source_base": "e9a1d8757b679ea49820893537873ef3002604fe",
+  "projection_rule": "closed_typed_sections_only_never_native_container_copy",
+  "source_ledgers": [
+    {
+      "platform": "apple",
+      "path": "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json",
+      "sha256": "2636449ec9303886a27ccfd5e8fce9c1e4355b6cc92b102219eb5b8f8a37d1d9",
+      "field_count": 116,
+      "field_key": "field",
+      "disposition_counts": {"portable": 49, "platform_extension": 7, "destination_intent": 2, "schedule_intent": 11, "derived_or_legacy": 7, "local_only": 4, "prohibited": 36}
+    },
+    {
+      "platform": "android",
+      "path": "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
+      "sha256": "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789",
+      "field_count": 213,
+      "field_key": "serialized_field",
+      "disposition_counts": {"portable": 78, "platform_extension": 35, "destination_intent": 5, "schedule_intent": 9, "derived_or_legacy": 24, "local_only": 9, "prohibited": 53}
+    }
+  ],
+  "source_schema": {
+    "path": "packages/contracts/shared-setup/v2/shared-setup.schema.json",
+    "sha256": "39e56dc54dfb56c556e2c71c734c00da4f02305a2a9b98ad795486c3e9c81f45",
+    "profile_definition": "profile",
+    "use": "field_semantics_and_security_validation_not_bundle_grammar"
+  },
+  "disposition_to_sync": {
+    "portable": "validated_content",
+    "platform_extension": "typed_preserved_content_not_foreign_execution",
+    "destination_intent": "inert_content_rebind_required",
+    "schedule_intent": "inert_content_disabled_schedule",
+    "derived_or_legacy": "excluded",
+    "local_only": "excluded",
+    "prohibited": "excluded"
+  },
+  "mapped_contract_paths": {
+    "source": "exact_union_of_source_ledgers.fields[].contract_path",
+    "strip_prefix": "profiles[].",
+    "container_rows_require_decomposition": true,
+    "foreign_provenance_read_failure": "quarantine_never_publish_empty_foreign_deletions",
+    "native_settings_json_allowed": false
+  },
+  "portable_sections": [
+    {"path": "name", "rule": "bounded_sensitive_name_not_identity"},
+    {"path": "export", "rule": "exact_common_output_preferences"},
+    {"path": "metrics", "rule": "registry_resolved_exact_semantic_ids_only"},
+    {"path": "presentation", "rule": "bounded_ordered_typed_text_and_dialect_review"},
+    {"path": "individual_entries", "rule": "semantic_id_map_and_relative_templates"},
+    {"path": "daily_notes", "rule": "typed_output_preferences_not_file_grants"},
+    {"path": "destination", "rule": "safe_component_hint_only_no_network_or_binding"},
+    {"path": "schedule", "rule": "disabled_intent_no_timezone_runtime_or_worker_identity"},
+    {"path": "platform_extensions", "rule": "closed_v2_extensions_preserved_exactly_not_approximated"}
+  ],
+  "excluded_artifact_fields": ["bundle_id", "active_profile", "created_by"],
+  "separate_sync_metadata_required": [
+    "account_scoped_cloud_profile_id", "immutable_revision", "base_revision", "content_hash",
+    "idempotent_mutation_id", "deletion_tombstone", "bounded_change_cursor", "registry_evidence"
+  ],
+  "local_mapping_not_uploaded": [
+    "issuer", "environment", "account_id", "native_profile_id", "cloud_profile_id",
+    "last_accepted_revision", "sync_selection", "apply_status", "pending_local_edits"
+  ],
+  "excluded_local_families": [
+    "active_profile", "native_profile_ids", "native_timestamps", "migration_flags",
+    "folder_bookmarks", "saf_uris_and_grants", "destination_ids_and_labels", "root_paths",
+    "endpoint_credentials_and_headers", "endpoint_fingerprints", "mac_pairing",
+    "timezone", "engine_pins", "health_permissions", "enabled_schedules", "alarms_and_workers",
+    "jobs_and_history", "retries_and_pending_work", "purchases_and_quota", "health_and_source_payloads"
+  ],
+  "excluded_app_global_families": [
+    "configuration_protection", "appearance_and_accessibility", "onboarding",
+    "review_and_release_tracking", "provider_selection_and_connections", "permission_history",
+    "account_preferences", "cloud_activation", "purchase_and_free_counter_state"
+  ],
+  "known_gaps": [
+    {
+      "id": "android_today_refresh_not_portable_in_frozen_v2",
+      "source_type": "ScheduledProfileEntry",
+      "fields": ["todayRefreshEnabled", "todayRefreshIntervalHours"],
+      "source_disposition": "local_only",
+      "rule": "preserve_apple_typed_intent_without_enabling_android_or_editing_v2",
+      "next_review": "AS05 independently versioned neutral field decision"
+    },
+    {
+      "id": "native_lowercase_vs_v2_full_casefold_names",
+      "rule": "AS05 must define deterministic Unicode conflicts without assuming current native helpers equal v2"
+    },
+    {
+      "id": "ipad_macos_profile_management_not_qualified",
+      "rule": "shared_model_code_does_not_prove_management_or_sync_availability"
+    }
+  ],
+  "activation_rules": [
+    "sign_in_transfers_zero_profiles",
+    "explicit_selected_publish_adopt_keep_both",
+    "new_native_identity_not_bundle_id",
+    "nil_bindings_and_execution_block_before_exposure",
+    "schedule_enabled_false",
+    "active_profile_unchanged",
+    "remote_revision_staged_until_local_review",
+    "execution_approval_is_revision_hash_bound_not_identity_only",
+    "foreign_provenance_failure_quarantines_publish",
+    "destination_or_schedule_change_requires_revision_bound_local_approval",
+    "no_global_destination_fallback",
+    "respect_configuration_protection",
+    "preserve_last_native_profile",
+    "preserve_bound_running_jobs",
+    "quarantine_old_account_outbox"
+  ],
+  "real_configuration_policy": null
+}
