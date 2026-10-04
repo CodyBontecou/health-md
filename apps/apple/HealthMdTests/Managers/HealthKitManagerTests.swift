@@ -1517,6 +1517,153 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         XCTAssertEqual(captured.sleep.sessionEnd, end)
     }
 
+    /// Exercise the capture projection, not only the session-boundary helper: an
+    /// unrelated InBed night in the two-day read must not hide stage-only sleep.
+    @MainActor
+    func test_sleep_morningEnds_mixedTwoDaySourcesPreserveEachOwnedNight() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let wakeDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 2))!
+        let priorDay = calendar.date(byAdding: .day, value: -1, to: wakeDay)!
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: wakeDay)!
+        let start = calendar.date(bySettingHour: 23, minute: 15, second: 0, of: priorDay)!
+        let change = calendar.date(bySettingHour: 2, minute: 0, second: 0, of: wakeDay)!
+        let end = calendar.date(bySettingHour: 6, minute: 45, second: 0, of: wakeDay)!
+        let nextStart = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: wakeDay)!
+        let nextEnd = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: nextDay)!
+        let store = FakeHealthStore()
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: change, metadata: ["source": "stage-only"]),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepREM.rawValue, startDate: change, endDate: end, metadata: ["source": "stage-only"]),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: nextStart, endDate: nextEnd, metadata: ["source": "in-bed"]),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepDeep.rawValue, startDate: nextStart, endDate: nextEnd, metadata: ["source": "in-bed"]),
+        ]
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+        let selection = sleepOnlySelection()
+
+        let first = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        XCTAssertEqual(first.sleep.totalDuration, 7.5 * 3_600, accuracy: 0.001)
+        XCTAssertEqual(first.sleep.coreSleep, 2.75 * 3_600, accuracy: 0.001)
+        XCTAssertEqual(first.sleep.remSleep, 4.75 * 3_600, accuracy: 0.001)
+        XCTAssertEqual(first.sleep.inBedTime, 0, "stage-only evidence must not fabricate InBed time")
+        XCTAssertEqual(first.sleep.sessionStart, start)
+        XCTAssertEqual(first.sleep.sessionEnd, end)
+        XCTAssertEqual(first.sleep.stages.map(\.stage), ["core", "rem"])
+        XCTAssertTrue(first.sleep.stages.allSatisfy { $0.metadata["source"] == "stage-only" })
+
+        let second = try await sut.fetchHealthData(for: nextDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        XCTAssertEqual(second.sleep.totalDuration, 9 * 3_600, accuracy: 0.001)
+        XCTAssertEqual(second.sleep.inBedTime, 9 * 3_600, accuracy: 0.001)
+        XCTAssertEqual(second.sleep.deepSleep, 9 * 3_600, accuracy: 0.001)
+        XCTAssertEqual(second.sleep.sessionStart, nextStart)
+        XCTAssertEqual(second.sleep.sessionEnd, nextEnd)
+        XCTAssertEqual(second.sleep.stages.map(\.stage), ["inBed", "deep"])
+        XCTAssertTrue(second.sleep.stages.allSatisfy { $0.metadata["source"] == "in-bed" })
+
+        let startDay = try await sut.fetchHealthData(for: priorDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        XCTAssertFalse(startDay.sleep.hasData)
+        XCTAssertNil(startDay.sleep.sessionStart)
+        XCTAssertTrue(startDay.sleep.stages.isEmpty, "neither night may be duplicated on its start date")
+    }
+
+    @MainActor
+    func test_sleep_morningEnds_inBedNightAndStageOnlyNapBothContributeOnce() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Pacific/Auckland")!
+        let wakeDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 2))!
+        let priorDay = calendar.date(byAdding: .day, value: -1, to: wakeDay)!
+        let start = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: priorDay)!
+        let end = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: wakeDay)!
+        let awakeStart = calendar.date(bySettingHour: 3, minute: 0, second: 0, of: wakeDay)!
+        let awakeEnd = awakeStart.addingTimeInterval(15 * 60)
+        let napStart = calendar.date(bySettingHour: 14, minute: 0, second: 0, of: wakeDay)!
+        let napEnd = napStart.addingTimeInterval(90 * 60)
+        let store = FakeHealthStore()
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: start, endDate: end),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.awake.rawValue, startDate: awakeStart, endDate: awakeEnd),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue, startDate: napStart, endDate: napEnd),
+        ]
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+
+        let captured = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: sleepOnlySelection(), timeZone: calendar.timeZone)
+
+        XCTAssertEqual(captured.sleep.totalDuration, (8 * 60 - 15 + 90) * 60, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.inBedTime, 8 * 3_600, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.awakeTime, 15 * 60, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.sessionStart, start)
+        XCTAssertEqual(captured.sleep.sessionEnd, napEnd)
+        XCTAssertEqual(captured.sleep.stages.count, 4, "overlapping InBed and stage evidence must not duplicate stage rows")
+        let nap = try XCTUnwrap(captured.sleep.stages.first { $0.stage == "unspecified" })
+        XCTAssertEqual(nap.startDate, napStart)
+        XCTAssertEqual(nap.endDate, napEnd)
+    }
+
+    @MainActor
+    func test_sleep_morningEnds_stageOnlyAwakeAcrossMidnightRetainsTotalsAndGranularStages() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Kathmandu")!
+        let wakeDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 2))!
+        let priorDay = calendar.date(byAdding: .day, value: -1, to: wakeDay)!
+        let start = calendar.date(bySettingHour: 22, minute: 30, second: 0, of: priorDay)!
+        let awakeStart = calendar.date(bySettingHour: 23, minute: 50, second: 0, of: priorDay)!
+        let awakeEnd = calendar.date(bySettingHour: 0, minute: 20, second: 0, of: wakeDay)!
+        let deepStart = calendar.date(bySettingHour: 4, minute: 0, second: 0, of: wakeDay)!
+        let end = calendar.date(bySettingHour: 6, minute: 45, second: 0, of: wakeDay)!
+        let samples = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: awakeStart),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.awake.rawValue, startDate: awakeStart, endDate: awakeEnd, metadata: ["source": "awake-midnight"]),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepREM.rawValue, startDate: awakeEnd, endDate: deepStart),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepDeep.rawValue, startDate: deepStart, endDate: end),
+        ]
+        let store = FakeHealthStore()
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = samples
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+        let selection = sleepOnlySelection()
+
+        let captured = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        XCTAssertEqual(captured.sleep.totalDuration, (7 * 60 + 45) * 60, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.coreSleep, 80 * 60, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.remSleep, 220 * 60, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.deepSleep, 165 * 60, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.awakeTime, 30 * 60, accuracy: 0.001)
+        XCTAssertEqual(captured.sleep.inBedTime, 0)
+        XCTAssertEqual(captured.sleep.sessionStart, start)
+        XCTAssertEqual(captured.sleep.sessionEnd, end)
+        XCTAssertEqual(captured.sleep.stages.map(\.stage), ["core", "awake", "rem", "deep"])
+        for (stage, source) in zip(captured.sleep.stages, samples) {
+            XCTAssertEqual(stage.startDate, source.startDate)
+            XCTAssertEqual(stage.endDate, source.endDate)
+            XCTAssertEqual(stage.metadata, source.metadata)
+        }
+
+        let summary = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .summary, metricSelection: selection, timeZone: calendar.timeZone)
+        XCTAssertEqual(summary.sleep.totalDuration, captured.sleep.totalDuration)
+        XCTAssertEqual(summary.sleep.awakeTime, captured.sleep.awakeTime)
+        XCTAssertTrue(summary.sleep.stages.isEmpty)
+
+        let startDay = try await sut.fetchHealthData(for: priorDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        XCTAssertEqual(startDay.sleep.totalDuration, 0, "pre-midnight sleep belongs only to the wake-day note")
+        XCTAssertEqual(startDay.sleep.awakeTime, 0)
+        XCTAssertNil(startDay.sleep.sessionStart)
+        XCTAssertTrue(startDay.sleep.stages.isEmpty)
+    }
+
+    @MainActor
+    private func sleepOnlySelection() -> MetricSelectionState {
+        let selection = MetricSelectionState()
+        selection.deselectAll()
+        selection.enabledMetrics = [
+            "sleep_total", "sleep_deep", "sleep_rem", "sleep_core", "sleep_awake",
+            "sleep_in_bed", "sleep_bedtime", "sleep_wake", "sleep_analysis",
+        ]
+        return selection
+    }
+
     // MARK: - Body Aggregation
 
     @MainActor
