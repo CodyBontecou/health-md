@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Use Apple Health with Claude, ChatGPT &amp; Codex | Health.md</title>
+  <meta name="description" content="Query Apple Health with Claude, ChatGPT, or Codex: drop in a CSV/JSON export or connect the scoped MCP server. Local-first — you control what the agent sees.">
+  <link rel="canonical" href="https://healthmd.app/health-data-for-ai/">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Use Apple Health with Claude, ChatGPT &amp; Codex">
+  <meta property="og:description" content="Two ways to bring your health data to AI: export a CSV/JSON file, or let an agent ask scoped questions through Health.md's MCP server.">
+  <meta property="og:url" content="https://healthmd.app/health-data-for-ai/">
+  <meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Use Apple Health with Claude, ChatGPT &amp; Codex">
+  <meta name="twitter:description" content="Your health data, ready for AI: file exports or scoped MCP queries. Local-first and private.">
+  <meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icon/icon_32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/app-icon/icon_192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/app-icon/icon_180x180.png">
+  <link rel="stylesheet" href="/assets/landing.css">
+  <link rel="stylesheet" href="/assets/about.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://healthmd.app/health-data-for-ai/#page",
+        "url": "https://healthmd.app/health-data-for-ai/",
+        "name": "Use Apple Health with Claude, ChatGPT & Codex",
+        "description": "Query Apple Health with Claude, ChatGPT, or Codex: drop in a CSV/JSON export or connect the scoped MCP server. Local-first — you control what the agent sees.",
+        "inLanguage": "en",
+        "publisher": { "@id": "https://healthmd.app/about/#organization" }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://healthmd.app/health-data-for-ai/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Which AI assistants work with Health.md?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Claude and Codex can query Health.md directly through its MCP server. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need the Mac app to use MCP?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "For the bundled MCP helper, yes: Health.md for Mac ships a signed healthmd-mcp helper, and it works while the Mac app is open with your iPhone connected. File exports work from the iPhone app alone."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does the agent see all of my health data?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Every request carries its own scope — you approve what the agent may ask about, and queries return bounded results with explicit coverage and missingness."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can Health.md or the AI diagnose me?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Health.md reports factual observations with units, provenance, and coverage. It does not diagnose, recommend treatment, or provide medical advice."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my health data sent to Health.md's servers for AI use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Health.md is local-first and keeps no health-data cloud. Your records go only to the destinations and clients you choose."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body class="about-page">
+  <a class="skip-link" href="#ai-content">Skip to AI guide</a>
+
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="/" aria-label="Health.md home">
+        <span class="brand-name">health.md</span>
+      </a>
+      <div class="header-nav">
+        <nav aria-label="Primary navigation">
+          <a class="header-docs-link" href="/docs/">Docs</a>
+          <a class="header-docs-link" href="/about/">About</a>
+          <a class="header-docs-link" href="/">Home</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="about-main" id="ai-content">
+    <section class="about-hero" aria-labelledby="ai-title">
+      <div class="about-hero-inner">
+        <p class="about-eyebrow">Health data × AI</p>
+        <h1 id="ai-title">Put your health data to work with AI.</h1>
+        <p class="about-value-prop"><strong>Two paths from your Apple Health records to an AI assistant: hand it a file, or let it ask scoped questions through Health.md's MCP server.</strong></p>
+        <p class="about-intro">Either way, you control what the agent sees — and Health.md never stores your health data.</p>
+        <div class="hero-actions" aria-label="Download Health.md">
+          <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <img src="/assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+          </a>
+          <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
+            <img src="/assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <div class="about-layout">
+      <article class="about-content">
+        <section class="about-section" id="two-paths">
+          <p class="section-kicker">Two paths</p>
+          <h2>File drop or agent access</h2>
+          <div class="about-card-grid">
+            <div class="about-card">
+              <h3>1. Export a file, drop it in</h3>
+              <p>Export the metrics and date range you want as CSV or JSON, then attach the file to a Claude Project, a ChatGPT conversation, or your Codex session. The assistant analyzes exactly what you gave it — nothing more.</p>
+            </div>
+            <div class="about-card">
+              <h3>2. Let an agent ask directly</h3>
+              <p>Health.md for Mac ships a signed <code>healthmd-mcp</code> helper. Codex, Claude, and other MCP hosts use it to run scoped queries — metric charts, sleep sessions, workouts, coverage — and get back factual answers with units, evidence, and explicit missingness instead of guesses.</p>
+            </div>
+          </div>
+          <p class="section-lede">File export works from the iPhone app alone. The MCP path needs Health.md for Mac open with your iPhone connected, plus a local MCP host. <a href="/docs/mcp/">Read the MCP setup guide</a></p>
+        </section>
+
+        <section class="about-section" id="per-assistant">
+          <p class="section-kicker">Per assistant</p>
+          <h2>Setup notes</h2>
+          <div class="difference-list">
+            <div>
+              <span>01</span>
+              <h3>Claude</h3>
+              <p>Add the <code>healthmd-mcp</code> helper to Claude Desktop's MCP configuration or a Claude Code <code>.mcp.json</code>. Hosts that support MCP Apps render Health.md's interactive charts inline; text-first clients get exact JSON with image fallbacks.</p>
+            </div>
+            <div>
+              <span>02</span>
+              <h3>Codex</h3>
+              <p>Register the helper under <code>mcp_servers.healthmd</code> in <code>~/.codex/config.toml</code>, restart Codex, then run <code>healthmd_doctor</code> and list metrics with <code>healthmd_metrics</code>. Export and refresh tools stay approval-gated.</p>
+            </div>
+            <div>
+              <span>03</span>
+              <h3>ChatGPT</h3>
+              <p>Use the file path: export a CSV or JSON of the metrics and dates you want analyzed, then upload or attach it to your conversation. You decide the scope by choosing what to export.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section" id="scoped">
+          <p class="section-kicker">Privacy</p>
+          <h2>Scoped by default</h2>
+          <p class="section-lede"><strong>Every request carries its own scope.</strong> An agent can only ask about what you approve — queries return bounded pages with coverage, missing intervals, and limitations spelled out, so nothing is silently extrapolated.</p>
+          <p>Generated-file writes are approval-gated operations, and Health.md reports factual observations only: units, provenance, coverage, missingness. It does not diagnose or recommend treatment — and there is no Health.md health-data cloud in the loop.</p>
+        </section>
+
+        <section class="about-section" id="keep-going">
+          <p class="section-kicker">Keep going</p>
+          <h2>From data to answers</h2>
+          <div class="about-card-grid">
+            <div class="about-card">
+              <h3>Get the file first</h3>
+              <p>CSV, JSON, Markdown, or Obsidian — export exactly what you want the AI to see. <a href="/apple-health-export/">Export Apple Health data</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Just need CSV?</h3>
+              <p>The spreadsheet-ready path for Excel, Google Sheets, and AI uploads. <a href="/apple-health-to-csv/">Apple Health to CSV</a></p>
+            </div>
+            <div class="about-card">
+              <h3>Developer docs</h3>
+              <p>MCP tools, agent architecture, typed queries, and contracts. <a href="/docs/agents/">Local agents documentation</a></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="about-section faq-section" id="frequently-asked-questions">
+          <p class="section-kicker">Common questions</p>
+          <h2>Frequently asked questions</h2>
+
+          <div class="faq-list">
+            <div>
+              <h3>Which AI assistants work with Health.md?</h3>
+              <p>Claude and Codex can query Health.md directly through its MCP server. Any assistant — including ChatGPT — can analyze exported CSV or JSON files you provide.</p>
+            </div>
+            <div>
+              <h3>Do I need the Mac app to use MCP?</h3>
+              <p>For the bundled MCP helper, yes: Health.md for Mac ships a signed <code>healthmd-mcp</code> helper, and it works while the Mac app is open with your iPhone connected. File exports work from the iPhone app alone.</p>
+            </div>
+            <div>
+              <h3>Does the agent see all of my health data?</h3>
+              <p>No. Every request carries its own scope — you approve what the agent may ask about, and queries return bounded results with explicit coverage and missingness.</p>
+            </div>
+            <div>
+              <h3>Can Health.md or the AI diagnose me?</h3>
+              <p>No. Health.md reports factual observations with units, provenance, and coverage. It does not diagnose, recommend treatment, or provide medical advice.</p>
+            </div>
+            <div>
+              <h3>Is my health data sent to Health.md's servers for AI use?</h3>
+              <p>No. Health.md is local-first and keeps no health-data cloud. Your records go only to the destinations and clients you choose.</p>
+            </div>
+          </div>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-shell about-footer-shell">
+      <a class="footer-brand" href="/" aria-label="Health.md home">health.md</a>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="/about/">About</a>
+        <a href="/docs/">Docs</a>
+        <a href="/privacy-policy.html">Privacy</a>
+        <a href="/terms-of-service.html">Terms</a>
+        <a href="mailto:cody@isolated.tech">Support</a>
+      </nav>
+      <a class="about-source-link" href="https://github.com/CodyBontecou/health-md" target="_blank" rel="noopener">Source on GitHub</a>
+    </div>
+  </footer>
+
+  <script src="/assets/analytics.js" defer></script>
+</body>
+</html>

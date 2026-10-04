@@ -50,6 +50,27 @@ async function jsonRequest(origin, path, method = "GET", body, cookie, bearer) {
   return { response, parsed, status: response.status };
 }
 
+function tarEntries(bytes) {
+  const entries = new Map();
+  let offset = 0;
+  while (offset + 512 <= bytes.length) {
+    const header = bytes.subarray(offset, offset + 512);
+    if (header.every((byte) => byte === 0)) {
+      assert(bytes.length - offset === 1024 && bytes.subarray(offset).every((byte) => byte === 0),
+        "TAR must end with two empty blocks");
+      return entries;
+    }
+    const name = Buffer.from(header.subarray(0, header.indexOf(0))).toString("utf8");
+    const size = Number.parseInt(Buffer.from(header.subarray(124, 136)).toString("ascii"), 8);
+    assert(Number.isSafeInteger(size) && size >= 0 && offset + 512 + size <= bytes.length,
+      "Invalid TAR entry size");
+    offset += 512;
+    entries.set(name, bytes.subarray(offset, offset + size));
+    offset += size + (512 - size % 512) % 512;
+  }
+  throw new Error("TAR is truncated");
+}
+
 async function waitForServer(origin) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     if (server.exitCode !== null) throw new Error("Local Wrangler exited before health check");
@@ -157,16 +178,44 @@ async function run() {
   const download = await fetch(`${origin}/api/exports/${stored.parsed.id}/download`, { headers: { Cookie: cookie } });
   assert(download.status === 200 && download.headers.get("cache-control") === "no-store", "Private download headers missing");
   assert(JSON.stringify(await download.json()) === JSON.stringify(fixture), "Exact envelope roundtrip failed");
+  const archive = await fetch(`${origin}/api/account/export/page/1`, { headers: { Cookie: cookie } });
+  assert(archive.status === 200 && archive.headers.get("content-type") === "application/x-tar" &&
+    archive.headers.get("cache-control") === "no-store", "Private TAR headers missing");
+  const entries = tarEntries(new Uint8Array(await archive.arrayBuffer()));
+  const manifest = JSON.parse(Buffer.from(entries.get("manifest.json")).toString("utf8"));
+  assert(manifest.totalExports === 4 && manifest.totalPages === 1 && manifest.nextPage === null &&
+    manifest.files.length === 4 && entries.size === 5, "TAR portability manifest failed");
+  const originals = new Map([
+    [stored.parsed.id, JSON.stringify(fixture)], [providerReceipt.parsed.id, JSON.stringify(v2)],
+    [androidReceipt.parsed.id, JSON.stringify(android)], [oldReceipt.parsed.id, JSON.stringify(older)],
+  ]);
+  for (const file of manifest.files) {
+    assert(originals.has(file.id) && Buffer.from(entries.get(file.filename)).equals(Buffer.from(originals.get(file.id))),
+      "Exact TAR envelope roundtrip failed");
+  }
+  const bearerArchive = await fetch(`${origin}/api/account/export/page/1`, {
+    headers: { Authorization: `Bearer ${ingestToken}` },
+  });
+  assert(bearerArchive.status === 401, "Write-only token must not authorize portability");
+  await bearerArchive.body.cancel();
+  const cancelledArchive = await fetch(`${origin}/api/account/export/page/1`, { headers: { Cookie: cookie } });
+  await cancelledArchive.body.cancel();
+  assert((await fetch(`${origin}/health`)).status === 200, "Worker unavailable after TAR cancellation");
   const otherCookie = await signIn("bob@example.test");
   const otherInventory = await jsonRequest(origin, "/api/exports", "GET", null, otherCookie);
   assert(otherInventory.parsed.storage.count === 0, "Account isolation failed");
   const otherDownload = await fetch(`${origin}/api/exports/${stored.parsed.id}/download`, { headers: { Cookie: otherCookie } });
   assert(otherDownload.status === 404, "Another account must not read a stored export");
+  const otherArchive = await fetch(`${origin}/api/account/export/page/1`, { headers: { Cookie: otherCookie } });
+  const otherEntries = tarEntries(new Uint8Array(await otherArchive.arrayBuffer()));
+  const otherManifest = JSON.parse(Buffer.from(otherEntries.get("manifest.json")).toString("utf8"));
+  assert(otherManifest.totalExports === 0 && otherManifest.files.length === 0 && otherEntries.size === 1,
+    "TAR account isolation failed");
   const revoke = await jsonRequest(origin, `/api/ingest-tokens/${newToken.parsed.id}`, "DELETE", null, cookie);
   checkStatus(revoke, 200, "revoke token");
   const revoked = await jsonRequest(origin, "/api/v1/exports", "POST", fixture, null, ingestToken);
   checkStatus(revoked, 401, "reject revoked token");
-  console.log("Local synthetic accounts, Apple v1/v2 and Android v4 ingestion, replacement ordering, encrypted roundtrip, tenant isolation, and revocation passed.");
+  console.log("Local synthetic accounts, Apple v1/v2 and Android v4 ingestion, replacement ordering, encrypted roundtrip, exact TAR portability/cancellation, tenant isolation, and revocation passed.");
 }
 
 try {

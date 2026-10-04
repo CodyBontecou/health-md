@@ -5,6 +5,8 @@ import { basename, join, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 
 const OBJECT_KEY = /^v1\/[a-f0-9-]{36}$/u;
+const STAGED_OBJECT = /^\.write-([a-f0-9-]{36})-[a-f0-9-]{36}$/u;
+const LEGACY_STAGED_OBJECT = /^\.write-[a-f0-9-]{36}$/u;
 const ASSETS = new Map([
   ["/login", ["login.html", "text/html; charset=utf-8"]],
   ["/dashboard", ["dashboard.html", "text/html; charset=utf-8"]],
@@ -14,6 +16,8 @@ const ASSETS = new Map([
   ["/repair", ["repair.html", "text/html; charset=utf-8"]],
   ["/repair.js", ["repair.js", "text/javascript; charset=utf-8"]],
   ["/repair-panel", ["repair-panel.html", "text/html; charset=utf-8"]],
+  ["/deletion-status", ["deletion-status.html", "text/html; charset=utf-8"]],
+  ["/deletion-status.js", ["deletion-status.js", "text/javascript; charset=utf-8"]],
   ["/style.css", ["style.css", "text/css; charset=utf-8"]],
 ]);
 
@@ -162,7 +166,9 @@ export class VmObjectStore {
     await mkdir(directory, { recursive: true, mode: vmReaderGroupId() === null ? 0o700 : 0o750 });
     this.assertSafeDirectory(this.root);
     this.assertSafeDirectory(directory);
-    const temp = join(directory, `.write-${randomUUID()}`);
+    // Bind the staging name to the durable random-key upload intent so another
+    // listener's reconciliation cannot mistake an in-flight write for an orphan.
+    const temp = join(directory, `.write-${key.slice(3)}-${randomUUID()}`);
     const file = await open(temp, "wx", vmReaderGroupId() === null ? 0o600 : 0o640);
     try {
       await file.writeFile(bytes);
@@ -232,42 +238,75 @@ export class VmObjectStore {
     try { await dir.sync(); } finally { await dir.close(); }
   }
 
-  // Call only with ingestion paused (at startup or under the VM maintenance
-  // gate). Metadata referring to a missing object is a fatal integrity error;
-  // uncommitted encrypted writes are removed after a crash/rejected request.
+  private async safeFileExists(path: string): Promise<boolean> {
+    let file;
+    try { file = await lstat(path); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+      throw error;
+    }
+    if (!file.isFile() || file.isSymbolicLink() || !safeVmMode(file, false)) {
+      throw new Error("Unsafe encrypted object file");
+    }
+    return true;
+  }
+
+  // The writer's maintenance gate is process-local; public ingestion continues
+  // independently. Every legitimate publication reserves its unique random key
+  // before touching disk. Check live references after listing, never delete from
+  // a metadata snapshot. An unreferenced listed key cannot become a new upload.
   async reconcile(db: VmDatabase): Promise<number> {
     const directory = join(this.root, "v1");
     await mkdir(directory, { recursive: true, mode: vmReaderGroupId() === null ? 0o700 : 0o750 });
     this.assertSafeDirectory(this.root);
     this.assertSafeDirectory(directory);
-    const rows = await db.prepare(`SELECT object_key AS objectKey FROM exports
-      UNION SELECT object_key AS objectKey FROM upload_intents
-      WHERE state IN ('reserved', 'object_written', 'aborting')`).all<{ objectKey: string }>();
-    const expected = new Set(rows.results.map(({ objectKey }) => {
-      this.path(objectKey);
-      return objectKey.slice(3);
-    }));
-    const names = await readdir(directory);
-    const found = new Set<string>();
-    const orphans: string[] = [];
-    for (const name of names) {
-      if (!/^[a-f0-9-]{36}$/u.test(name) && !/^\.write-[a-f0-9-]{36}$/u.test(name)) {
+    const referenced = db.prepare(`SELECT 1 FROM exports WHERE object_key = ?
+      UNION SELECT 1 FROM upload_intents WHERE object_key = ? LIMIT 1`);
+    const activeIntent = db.prepare(`SELECT 1 FROM upload_intents
+      WHERE state IN ('reserved', 'object_written', 'aborting') LIMIT 1`);
+    let removed = 0;
+    for (const name of await readdir(directory)) {
+      const staged = STAGED_OBJECT.exec(name);
+      const legacyStaged = LEGACY_STAGED_OBJECT.test(name);
+      if (!/^[a-f0-9-]{36}$/u.test(name) && !staged && !legacyStaged) {
         throw new Error("Unknown object-directory entry");
       }
-      const file = await lstat(join(directory, name));
-      if (!file.isFile() || file.isSymbolicLink() || !safeVmMode(file, false)) {
-        throw new Error("Unsafe encrypted object file");
+      const path = join(directory, name);
+      // Normal publication/abandonment may remove a listed temporary file.
+      if (!await this.safeFileExists(path)) continue;
+      if (legacyStaged) {
+        // Older staging names cannot be attributed to an exact intent. Defer
+        // their cleanup until all incomplete intents have drained or expired.
+        if (await activeIntent.first()) continue;
+      } else {
+        const key = `v1/${staged?.[1] ?? name}`;
+        if (await referenced.bind(key, key).first()) continue;
       }
-      if (expected.has(name)) found.add(name);
-      else orphans.push(name);
+      try { await unlink(path); removed += 1; }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
     }
-    if (found.size !== expected.size) throw new Error("Stored export metadata has missing ciphertext");
-    for (const name of orphans) await unlink(join(directory, name));
-    if (orphans.length > 0) {
+    if (removed > 0) {
       const dir = await open(directory, "r");
       try { await dir.sync(); } finally { await dir.close(); }
     }
-    return orphans.length;
+
+    // A reservation may precede put(), and aborting cleanup may already have
+    // unlinked its object. Only retained exports and object-written intents
+    // assert that ciphertext exists. Stat current paths, not the directory
+    // snapshot: another listener may have published since it was listed.
+    const required = db.prepare(`SELECT object_key AS objectKey FROM exports
+      UNION SELECT object_key AS objectKey FROM upload_intents WHERE state = 'object_written'`);
+    const stillRequired = db.prepare(`SELECT 1 FROM exports WHERE object_key = ?
+      UNION SELECT 1 FROM upload_intents WHERE object_key = ? AND state = 'object_written' LIMIT 1`);
+    for (const { objectKey } of (await required.all<{ objectKey: string }>()).results) {
+      if (!await this.safeFileExists(this.path(objectKey)) &&
+          await stillRequired.bind(objectKey, objectKey).first()) {
+        throw new Error("Stored export metadata has missing ciphertext");
+      }
+    }
+    return removed;
   }
 }
 
