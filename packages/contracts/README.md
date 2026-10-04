@@ -25,9 +25,12 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 | [`proposals/receiver-coverage-v1`](proposals/receiver-coverage-v1/contract.md) | Deferred opt-in scheduled API receiver coverage query, strict explicit-hole selection, correction/Today Refresh policy, and frozen-retry reference model; neither native app implements it yet |
 
 The receiver-coverage proposal is not a canonical/shipped manifest entry. Its
-behavior tests run in Core Rust CI's `Receiver coverage proposal behavior` job;
-native networking, secure binding, atomic storage, and device validation remain
-adoption gates. Existing schedules continue full-lookback exports.
+behavior tests run in Core Rust CI's `Receiver coverage proposal behavior` job.
+Query request/response v1 is separate from recovery-plan JSON v2, which retains
+bounded validated coverage to check the exact original selection; evidence-less
+v1 plans fail closed for explicit recovery. Native networking, secure binding,
+atomic storage, and device validation remain adoption gates. Existing schedules
+continue full-lookback exports.
 
 ## Typed provider contracts
 

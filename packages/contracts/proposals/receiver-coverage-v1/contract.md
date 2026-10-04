@@ -17,10 +17,11 @@ local folders, Connected Mac, and direct CLI/MCP are outside this proposal.
 Receiver coverage is neither HealthKit/Health Connect permission completeness nor
 a source deletion/correction feed.
 
-This creates an independent `healthmd.receiver_coverage` v1 contract family. It
-does not change `healthmd.api_export`, Apple daily v8, Android frozen v4/analytical
+The independent `healthmd.receiver_coverage` request/response contract stays v1;
+the proposal's recovery-plan JSON is independently versioned at v2. This does
+not change `healthmd.api_export`, Apple daily v8, Android frozen v4/analytical
 v5, range-summary v9, direct protocols, or shared-core versions. All existing
-bytes, settings, pending requests, and acknowledgement journals stay unchanged.
+shipped bytes, settings, pending requests, and acknowledgement journals stay unchanged.
 No signature regeneration or historical-fixture rewrite is appropriate.
 
 ## Configuration (proposed, not current UI)
@@ -138,8 +139,10 @@ upload envelopes may not provide that evidence for no-readable-data days.
    not receiver unavailability: preserve pending work and stop without upload.
 6. Require a 10-second total preflight deadline, no redirects, no automatic
    preflight retries in one occurrence, and a streaming 64 KiB response cap before
-   JSON decoding. Persist only a fixed safe status (`not_requested`, `valid`, or
-   `fallback_full`), not server error bodies. No response caching across occurrences.
+   JSON decoding. Persist a fixed safe status (`not_requested`, `valid`, or
+   `fallback_full`) and, only for `valid`, the bounded normalized validated response
+   as frozen selection evidence. Never retain server error bodies. This evidence
+   is for recovery of that occurrence only, not a response cache for newer ones.
 
 An empty selection after valid coverage satisfies only that completed-day
 occurrence without capture/upload; it must not clear unrelated residuals or claim
@@ -153,9 +156,35 @@ Atomically persist a versioned plan **before capture or upload**: occurrence/pro
 identity, original candidates, chosen dates, exact residual dates, intended fire
 boundary, frozen calendar, original Today Refresh owner date/slot, frozen output
 settings, policy/correction window, opaque scope/request IDs, destination binding,
-and safe coverage status. Link it to existing durable operation IDs/batch journals.
-The reference `Plan` JSON tests the date-selection/recovery subset, not native
-storage, scheduling markers, or atomic commits.
+safe coverage status, and bounded validated coverage evidence. Link it to existing
+durable operation IDs/batch journals. The reference `Plan` JSON tests the
+date-selection/recovery subset, not native storage, scheduling markers, or atomic
+commits.
+
+`healthmd.receiver_coverage.plan` v2 requires `coverage_response`: immutable JSON
+text containing only the validated response for `valid`, or `null` for
+`not_requested`/`fallback_full`; `select` normalizes it before persistence.
+The same strict response parser enforces the 64 KiB
+cap, at most 30 explicit completed dates, and echoed frozen request context on
+restore. Recompute the **original selection**, not the residual, from that saved
+evidence, original candidates, policy/correction window and Today Refresh owner
+date. The persisted `selected` must equal the result exactly. For example, coverage
+of March 7 with candidates March 6–8 and a one-day correction window selects March
+6 and March 8: dropping March 6 from both `selected` and `residual` must fail, not
+become indistinguishable from a receiver that originally retained March 6 too.
+Acknowledgements may reduce only `residual`; they preserve all selection evidence.
+A bad restore raises an error without returning an empty/fallback replacement;
+the caller must retain the pending JSON and abort capture/upload for explicit
+recovery. No current receiver query or new execution date may repair a mismatch.
+
+Saved evidence establishes internal snapshot consistency, not authenticated
+historical authority or protection against rewriting the entire journal. No
+checksum of restored/mutated fields supplies that authority. Native atomic storage,
+authenticated preflight and secure destination binding remain adoption gates.
+Evidence-less plan v1 is rejected, including valid missing-days plans; there is no
+automatic migration because its original selection cannot be proven. Retain that
+state for explicit recovery rather than invent coverage or discard pending dates.
+This is a proposal-local JSON version change, not a native journal migration.
 
 Destination binding must be an installation-keyed HMAC over an unambiguous canonical
 encoding of target type, exact normalized upload/preflight URLs, credentials/routing
@@ -228,9 +257,11 @@ source/device gates. This proposal's parity table is not a shipped parity claim.
 
 `reference.py` is standard-library executable contract logic, **not app code**.
 `test_reference.py` executes selection, strict receiver parsing, correction/Today
-Refresh policy, JSON plan round trips, and exact residual/destination rejection.
-Core Rust CI registers these tests in a separate Ubuntu-hosted bounded job that
-participates in its final gate. Run command (cloud only in this issue lane):
+Refresh policy, v2 JSON plan round trips, saved-evidence/context validation, coupled
+March 6 omission rejection, acknowledgement-only residual reduction, destination
+rejection and fail-closed v1 recovery. Core Rust CI registers these tests in a
+separate Ubuntu-hosted bounded job that participates in its final gate. Run the
+standard-library tests from the repository root:
 
 ```sh
 python3 -m unittest discover -s packages/contracts/proposals/receiver-coverage-v1 -p 'test_*.py' -v

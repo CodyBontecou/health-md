@@ -3,10 +3,12 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 import json
 import re
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 MAX_DAYS = 30
 MAX_RESPONSE_BYTES = 64 * 1024
+PLAN_SCHEMA_VERSION = 2
 
 
 def civil(value):
@@ -118,6 +120,7 @@ class Plan:
     selected: tuple[str, ...]
     residual: tuple[str, ...]
     coverage_status: str
+    coverage_response: Optional[str]
 
     def __post_init__(self):
         if not isinstance(self.destination_binding, str) or not re.fullmatch(r"[a-f0-9]{64}", self.destination_binding):
@@ -140,13 +143,17 @@ class Plan:
                 raise ValueError("plan date outside request")
         if not set(self.residual) <= set(self.selected):
             raise ValueError("residual expands selection")
-        required = correction_dates(self.request, self.refresh_recent_days)
-        if self.policy == "full_lookback" or self.coverage_status == "fallback_full":
-            required = set(self.request.candidates)
+        expected = set(self.request.candidates)
+        if self.coverage_status == "valid":
+            # Revalidate saved evidence against the frozen request, never newer coverage.
+            expected -= completed_dates(self.request, self.coverage_response)
+        elif self.coverage_response is not None:
+            raise ValueError("unexpected coverage evidence")
+        expected.update(correction_dates(self.request, self.refresh_recent_days))
         if self.today_refresh:
-            required.add(self.request.today)
-        if not required <= set(self.selected):
-            raise ValueError("plan drops required refresh dates")
+            expected.add(self.request.today)
+        if self.selected != tuple(sorted(expected)):
+            raise ValueError("selection conflicts with frozen coverage and policy")
 
     def resume(self, current_binding, acknowledged=()):
         if current_binding != self.destination_binding:
@@ -157,7 +164,7 @@ class Plan:
 
     def to_json(self):
         return json.dumps({
-            "schema": "healthmd.receiver_coverage.plan", "schema_version": 1,
+            "schema": "healthmd.receiver_coverage.plan", "schema_version": PLAN_SCHEMA_VERSION,
             "destination_binding": self.destination_binding,
             "request": {"request_id": self.request.request_id, "scope_id": self.request.scope_id,
                         "calendar_timezone": self.request.calendar_timezone,
@@ -165,14 +172,16 @@ class Plan:
             "policy": self.policy, "refresh_recent_days": self.refresh_recent_days,
             "today_refresh": self.today_refresh, "selected": list(self.selected),
             "residual": list(self.residual), "coverage_status": self.coverage_status,
+            "coverage_response": self.coverage_response,
         }, sort_keys=True, separators=(",", ":"))
 
     @classmethod
     def from_json(cls, text):
         value = strict_json(text)
         exact_object(value, {"schema", "schema_version", "destination_binding", "request", "policy",
-                             "refresh_recent_days", "today_refresh", "selected", "residual", "coverage_status"})
-        if value.pop("schema") != "healthmd.receiver_coverage.plan" or type(value["schema_version"]) is not int or value.pop("schema_version") != 1:
+                             "refresh_recent_days", "today_refresh", "selected", "residual", "coverage_status",
+                             "coverage_response"})
+        if value.pop("schema") != "healthmd.receiver_coverage.plan" or type(value["schema_version"]) is not int or value.pop("schema_version") != PLAN_SCHEMA_VERSION:
             raise ValueError("unsupported plan")
         request = exact_object(value["request"], {"request_id", "scope_id", "calendar_timezone", "candidates", "today"})
         for field in ("selected", "residual"):
@@ -194,9 +203,15 @@ def select(request, destination_binding, *, policy="full_lookback", response=Non
         raise ValueError("invalid correction window")
     selected = set(request.candidates)
     status = "not_requested"
+    coverage_response = None
     if policy == "missing_days":
         try:
-            selected -= completed_dates(request, response)
+            covered = completed_dates(request, response)
+            selected -= covered
+            # Keep only the bounded, validated fields, not whitespace or error bodies.
+            coverage_response = json.dumps({**request.wire(),
+                "schema": "healthmd.receiver_coverage.response", "completed_dates": sorted(covered)},
+                sort_keys=True, separators=(",", ":"))
             status = "valid"
         except (ValueError, TypeError, UnicodeError, RecursionError):
             status = "fallback_full"
@@ -205,4 +220,5 @@ def select(request, destination_binding, *, policy="full_lookback", response=Non
     if today_refresh:
         selected.add(request.today)
     dates = tuple(sorted(selected))
-    return Plan(destination_binding, request, policy, refresh_recent_days, today_refresh, dates, dates, status)
+    return Plan(destination_binding, request, policy, refresh_recent_days, today_refresh,
+                dates, dates, status, coverage_response)
