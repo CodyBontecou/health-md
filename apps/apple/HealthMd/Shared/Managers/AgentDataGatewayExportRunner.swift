@@ -180,7 +180,7 @@ struct AgentDataGatewayExportRunner {
         settings: AdvancedExportSettings,
         destination: AgentDataGatewayDestinationSnapshot,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
-        client: AgentDataIngestClient = AgentDataIngestClient(),
+        client: AgentDataIngestClient? = nil,
         materialize customMaterializer: Materializer? = nil,
         uploader customUploader: Uploader? = nil,
         onProgress: ProgressHandler? = nil
@@ -304,6 +304,9 @@ struct AgentDataGatewayExportRunner {
         if let customUploader {
             uploader = customUploader
         } else {
+            // Default arguments are evaluated outside this method's actor.
+            // Construct the production client here, on MainActor, instead.
+            let client = client ?? AgentDataIngestClient()
             uploader = { manifest, artifactURL, stagingDirectory in
                 await client.upload(
                     manifest: manifest,

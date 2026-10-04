@@ -213,6 +213,51 @@ final class AgentDataIngestManifestTests: XCTestCase {
         XCTAssertEqual(manifest.sha256, CryptoDigestTestHelper.sha256Hex(bytes))
     }
 
+    /// Manifest construction and its digest helpers have no actor-owned
+    /// state. Keep both byte-backed and file-backed paths usable off-main.
+    func testManifestDigestsAreCallableOffMainActor() async throws {
+        let bytes = Data(repeating: 0x0A, count: 100_000)
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("manifest-detached-\(UUID().uuidString).json")
+        try bytes.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let (memoryManifest, fileManifest, digest, fileDigest) = try await Task.detached {
+            let memoryManifest = try AgentDataIngestManifestBuilder.manifest(
+                kind: .healthDataDaily,
+                platform: "apple",
+                artifactSchema: "healthmd.health_data",
+                artifactSchemaVersion: 8,
+                ownerDate: "2026-03-15",
+                physicalFormat: .json,
+                mediaType: "application/json",
+                artifactBytes: bytes
+            )
+            let fileManifest = try AgentDataIngestManifestBuilder.manifest(
+                kind: .healthDataDaily,
+                platform: "apple",
+                artifactSchema: "healthmd.health_data",
+                artifactSchemaVersion: 8,
+                ownerDate: "2026-03-15",
+                physicalFormat: .json,
+                mediaType: "application/json",
+                artifactFileURL: url
+            )
+            return (
+                memoryManifest, fileManifest,
+                AgentDataIngestManifest.sha256(of: bytes),
+                try AgentDataIngestManifest.digestFile(at: url)
+            )
+        }.value
+
+        XCTAssertEqual(memoryManifest, fileManifest)
+        XCTAssertEqual(memoryManifest.byteCount, bytes.count)
+        XCTAssertEqual(memoryManifest.sha256, CryptoDigestTestHelper.sha256Hex(bytes))
+        XCTAssertEqual(digest, memoryManifest.sha256)
+        XCTAssertEqual(fileDigest.byteCount, bytes.count)
+        XCTAssertEqual(fileDigest.sha256, digest)
+    }
+
     // MARK: - Validation grammar
 
     func testValidationRejectsInvalidShapes() {

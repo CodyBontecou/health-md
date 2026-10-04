@@ -335,12 +335,14 @@ nonisolated enum AgentDataIngestManifestBuilder {
 }
 
 extension AgentDataIngestManifest {
-    static func sha256(of data: Data) -> String {
+    // These helpers own only local digest/file state; extensions otherwise
+    // inherit the app target's MainActor default rather than the type's opt-out.
+    nonisolated static func sha256(of data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     /// Streams the exact file bytes once, returning `(byteCount, sha256)`.
-    static func digestFile(at url: URL) throws -> (byteCount: Int, sha256: String) {
+    nonisolated static func digestFile(at url: URL) throws -> (byteCount: Int, sha256: String) {
         let descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW)
         guard descriptor >= 0 else {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
