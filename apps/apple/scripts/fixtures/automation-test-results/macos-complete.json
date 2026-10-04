@@ -1,0 +1,37 @@
+{
+  "testNodes": [
+    {
+      "name": "HealthMdTests",
+      "nodeType": "Unit test bundle",
+      "children": [
+        {
+          "name": "AppleContextAutomationTests",
+          "nodeType": "Test Suite",
+          "children": [
+            {"name": "testProductAutomationInventoryIsSeparateFromFrozenMetricAuthorityAndHasConcreteParityTargets()", "nodeIdentifier": "AppleContextAutomationTests/testProductAutomationInventoryIsSeparateFromFrozenMetricAuthorityAndHasConcreteParityTargets()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testLegacyCapabilityMissingOrFalseAndUnauthenticatedOrWrongRoleNeverSend()", "nodeIdentifier": "AppleContextAutomationTests/testLegacyCapabilityMissingOrFalseAndUnauthenticatedOrWrongRoleNeverSend()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testProductionIngressNegotiatesHelloSynchronouslyAndRejectsForeignOrDisabledFamily()", "nodeIdentifier": "AppleContextAutomationTests/testProductionIngressNegotiatesHelloSynchronouslyAndRejectsForeignOrDisabledFamily()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testRequestRejectsHostPathRawPointersUnknownFieldsAndNoncanonicalDates()", "nodeIdentifier": "AppleContextAutomationTests/testRequestRejectsHostPathRawPointersUnknownFieldsAndNoncanonicalDates()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testDurableIdentityRejectsProfilePeerDateSourceDetailMutationAndRestoresWithoutAck()", "nodeIdentifier": "AppleContextAutomationTests/testDurableIdentityRejectsProfilePeerDateSourceDetailMutationAndRestoresWithoutAck()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testReceiptsArePersistedPeerScopeRequestBoundMonotonicAndTerminal()", "nodeIdentifier": "AppleContextAutomationTests/testReceiptsArePersistedPeerScopeRequestBoundMonotonicAndTerminal()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testPostWriteFailuresNeverBecomeAuthorityByLookupOrRestartAndRetryKeepsIdentity()", "nodeIdentifier": "AppleContextAutomationTests/testPostWriteFailuresNeverBecomeAuthorityByLookupOrRestartAndRetryKeepsIdentity()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testPostWriteCompletionFailurePreservesPriorReceiptAndCorruptMarkerCannotBeAbsence()", "nodeIdentifier": "AppleContextAutomationTests/testPostWriteCompletionFailurePreservesPriorReceiptAndCorruptMarkerCannotBeAbsence()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testColdDirectoryErrorIsUnavailableNotAbsenceAndRestorationPreservesContents()", "nodeIdentifier": "AppleContextAutomationTests/testColdDirectoryErrorIsUnavailableNotAbsenceAndRestorationPreservesContents()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacFailedMappingAndJobPersistenceNeverAcknowledgeOrDispatch()", "nodeIdentifier": "AppleContextAutomationTests/testMacFailedMappingAndJobPersistenceNeverAcknowledgeOrDispatch()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacUnavailableNativeRootNeverAdmitsOrAcquiresAndSameIDRetriesAfterRecovery()", "nodeIdentifier": "AppleContextAutomationTests/testMacUnavailableNativeRootNeverAdmitsOrAcquiresAndSameIDRetriesAfterRecovery()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacNativeResolverRecoveryBeforeAdmissionUsesStableRootAcrossTemporaryPurgeAndRestart()", "nodeIdentifier": "AppleContextAutomationTests/testMacNativeResolverRecoveryBeforeAdmissionUsesStableRootAcrossTemporaryPurgeAndRestart()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacMissingPreviouslyAdmittedNativeJobRemainsUnavailableWithoutRecreation()", "nodeIdentifier": "AppleContextAutomationTests/testMacMissingPreviouslyAdmittedNativeJobRemainsUnavailableWithoutRecreation()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacRoundTripDoesNotBlockIngressAndCompletesOnlyAfterEncryptedCommitWithoutFiles()", "nodeIdentifier": "AppleContextAutomationTests/testMacRoundTripDoesNotBlockIngressAndCompletesOnlyAfterEncryptedCommitWithoutFiles()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacPostWriteMappingFailureNeverAcksOrAcquiresAndExplicitStatusRepairsSameIdentity()", "nodeIdentifier": "AppleContextAutomationTests/testMacPostWriteMappingFailureNeverAcksOrAcquiresAndExplicitStatusRepairsSameIdentity()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacPostWriteJobMappingUpdateFailureSuppressesDispatchUntilExplicitRepair()", "nodeIdentifier": "AppleContextAutomationTests/testMacPostWriteJobMappingUpdateFailureSuppressesDispatchUntilExplicitRepair()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testColdNativeSentJobStatusResumesOriginalScopeWithoutJournalRepairOrDuplicateWaiter()", "nodeIdentifier": "AppleContextAutomationTests/testColdNativeSentJobStatusResumesOriginalScopeWithoutJournalRepairOrDuplicateWaiter()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testColdUnavailableJournalAndRestoredNativeContextJobExcludeDirectAndBoundedFilesButAllowUnownedFiles()", "nodeIdentifier": "AppleContextAutomationTests/testColdUnavailableJournalAndRestoredNativeContextJobExcludeDirectAndBoundedFilesButAllowUnownedFiles()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testColdUnavailableMacAuthorityBlocksContextButNotOrdinaryFilesAndRecoversWithoutErase()", "nodeIdentifier": "AppleContextAutomationTests/testColdUnavailableMacAuthorityBlocksContextButNotOrdinaryFilesAndRecoversWithoutErase()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testMacLockedAdmissionAndForeignPeerNeverAcquireOrClaimSuccess()", "nodeIdentifier": "AppleContextAutomationTests/testMacLockedAdmissionAndForeignPeerNeverAcquireOrClaimSuccess()", "nodeType": "Test Case", "result": "Passed"}
+          ]
+        },
+        {"name": "UnrelatedTests", "nodeType": "Test Suite", "children": [{"name": "testUnrelated()", "nodeIdentifier": "UnrelatedTests/testUnrelated()", "nodeType": "Test Case", "result": "Skipped"}]}
+      ]
+    }
+  ]
+}
