@@ -14,6 +14,9 @@ on:
       - 'packages/healthmd-core-rust/**'
       - 'Makefile'
       - '.github/workflows/apple-ci.yml'
+      - '.github/workflows/release-ios.yml'
+      - '.github/workflows/release-macos.yml'
+      - '.github/scripts/**'
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -24,8 +27,11 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Reusable workflows inherit github.workflow from the release caller. Keep
+  # this namespace distinct from the parent and isolate each qualification run
+  # so a later release cannot cancel (or replace a pending) exact-SHA suite.
+  group: apple-ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.release_sha && github.run_id || 'branch' }}
+  cancel-in-progress: ${{ !inputs.release_sha }}
 
 jobs:
   changes:
@@ -51,6 +57,31 @@ jobs:
             packages/healthmd-core-rust/**
             Makefile
             .github/workflows/apple-ci.yml
+            .github/workflows/release-ios.yml
+            .github/workflows/release-macos.yml
+            .github/scripts/**
+
+  workflow-policy:
+    name: Apple release workflow policy
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Test the executing workflow revision's policy. The native jobs below
+      # qualify release_sha, including when recovery's workflow SHA differs.
+      - name: Checkout workflow policy
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - name: Test Apple release workflow policy
+        run: |
+          python3 -m venv "$RUNNER_TEMP/apple-release-policy-venv"
+          "$RUNNER_TEMP/apple-release-policy-venv/bin/pip" install --disable-pip-version-check PyYAML==6.0.3
+          "$RUNNER_TEMP/apple-release-policy-venv/bin/python" -m unittest discover \
+            -s .github/scripts/tests -p 'test_apple_*.py' -v
 
   prepare-shared-core:
     name: Prepare shared Rust core once
@@ -521,6 +552,7 @@ jobs:
     if: ${{ always() }}
     needs:
       - changes
+      - workflow-policy
       - prepare-shared-core
       - test-ios
       - test-ios-ui
@@ -532,6 +564,7 @@ jobs:
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           CHANGES_RUN: ${{ needs.changes.outputs.run }}
+          POLICY_RESULT: ${{ needs.workflow-policy.result }}
           PREPARE_RESULT: ${{ needs.prepare-shared-core.result }}
           IOS_RESULT: ${{ needs.test-ios.result }}
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
@@ -544,6 +577,7 @@ jobs:
             echo "No Apple-affecting changes in this pull request; Apple CI skipped."
             exit 0
           fi
+          test "$POLICY_RESULT" = success
           test "$PREPARE_RESULT" = success
           test "$IOS_RESULT" = success
           test "$IOS_UI_RESULT" = success

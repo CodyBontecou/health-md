@@ -61,9 +61,24 @@ The canonical release path starts from a draft GitHub Release whose tag starts w
 - `.github/workflows/release-ios.yml`
 - `.github/workflows/release-macos.yml`
 
-Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`; each workflow fails early if it does not. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it.
+Dispatch from `main` with `release_tag=v<version>`. Apple versions use `v<major>.<minor>[.<patch>]`; the tag must exist on `origin`, its commit and the workflow commit must be reachable from `origin/main`, and the tag version must match every committed `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`. The resolver also requires an existing draft GitHub Release before qualification for a non-dry-run manual submission. It never creates a source ledger after an upload.
 
-Publishing a release still triggers both workflows as a legacy fallback, but it is not the canonical path because publication must wait for ASC approval.
+Before building, each workflow resolves the tag to an immutable SHA and runs the full Apple CI suite (`apple-ci.yml`) against it. The release job checks out **that same SHA**, not the dispatch branch head. Native tests, UI regressions, coverage, warnings, the connectivity package, and the workflow-policy job must all pass; a failed, cancelled, or skipped required job blocks the release. Release callers and reusable CI have distinct concurrency namespaces. Exact-SHA qualification groups are isolated by caller and run ID and cannot cancel their parent or another release; ordinary branch CI still cancels superseded runs.
+
+Workflow-only recovery may dispatch newer `main` workflow code with the original `release_tag`. The release tag must be an ancestor of that workflow SHA, and the diff may change only `.github/workflows/`, `.github/actions/`, or `.github/scripts/`. Qualification and archives still use the original tag's product source, without an overlay from newer `main`. A product, dependency, build-script, version, or metadata fix needs a newly committed and tagged release; never move an existing release tag. Recovery can load the current workflow's source-policy script from Git into `$RUNNER_TEMP` even when the original tag predates that script.
+
+Both release jobs recheck the clean, qualified checkout and pushed tag object at checkout, immediately before and after archiving, and before publication. Staged, unstaged, and non-ignored untracked files fail closed; ignored build products are allowed. The macOS workflow does not remove package references or otherwise edit the tagged project to avoid package networking. Any required project change must be committed, qualified, and released as new source. Summaries record the archived source SHA separately from the executing workflow SHA.
+
+Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it. Human publication remains a legacy fallback, not the canonical submission path. Non-Apple tags (`healthmd-cli/v*`, `android/v*`) and bot-authored publications skip resolution, qualification, and release jobs, so they do not launch duplicate full Apple suites. Untagged branch dispatch is supported only with `dry_run=true`: it qualifies and archives the exact dispatch SHA and cannot upload or submit.
+
+The lightweight policy regressions run on Ubuntu in Apple CI and are included in its final gate. Release-workflow and `.github/scripts/**` changes are in both Apple CI path maps. To run them locally without signing or a native build (Python with `PyYAML==6.0.3`, Git, Bash, and jq):
+
+```sh
+python3 -m unittest discover -s .github/scripts/tests -p 'test_apple_*.py' -v
+actionlint .github/workflows/apple-ci.yml .github/workflows/release-ios.yml .github/workflows/release-macos.yml
+```
+
+The tests use local synthetic Git remotes and a stubbed release-record read; they never dispatch workflows, push, access signing credentials, or perform store operations.
 
 ## What the workflows do
 
