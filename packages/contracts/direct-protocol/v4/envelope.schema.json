@@ -66,15 +66,11 @@
         "rights": {
           "items": {
             "enum": [
-              "export_execute",
-              "recipe_run",
-              "host_schedule_run",
-              "native_configuration_mutate",
-              "native_schedule_mutate"
+              "export_execute"
             ],
             "type": "string"
           },
-          "maxItems": 5,
+          "maxItems": 1,
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
@@ -95,6 +91,35 @@
         "binding",
         "rights",
         "approved_at"
+      ],
+      "type": "object"
+    },
+    "approval_request": {
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.agent_approval_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "plan_id",
+        "binding"
       ],
       "type": "object"
     },
@@ -163,68 +188,201 @@
       ]
     },
     "artifact": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "artifact_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "byte_count": {
+              "maximum": 1099511627776,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "media_type": {
+              "enum": [
+                "application/json",
+                "application/x-ndjson",
+                "text/csv",
+                "text/markdown",
+                "application/zip"
+              ],
+              "type": "string"
+            },
+            "profile": {
+              "enum": [
+                "apple-v8",
+                "android-frozen-v4",
+                "android-analytical-v5",
+                "apple-healthkit-canonical-v1",
+                "android-provider-native-snapshot-v1",
+                "profile-dictionary-v1",
+                "zip-container-v1"
+              ],
+              "type": "string"
+            },
+            "relative_path": {
+              "$ref": "#/$defs/path"
+            },
+            "sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "write_mode": {
+              "enum": [
+                "overwrite",
+                "append",
+                "merge_markdown",
+                "merge_markdown_preserving_preamble"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "artifact_id",
+            "relative_path",
+            "byte_count",
+            "sha256",
+            "write_mode",
+            "media_type",
+            "profile"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "artifact_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "byte_count": {
+              "maximum": 1099511627776,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "media_type": {
+              "const": "application/json"
+            },
+            "profile": {
+              "const": "android-source-projection-v1"
+            },
+            "relative_path": {
+              "$ref": "#/$defs/path"
+            },
+            "sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "write_mode": {
+              "const": "overwrite"
+            }
+          },
+          "required": [
+            "artifact_id",
+            "relative_path",
+            "byte_count",
+            "sha256",
+            "write_mode",
+            "profile",
+            "media_type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "artifact_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "byte_count": {
+              "maximum": 1099511627776,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "media_type": {
+              "const": "application/x-ndjson"
+            },
+            "profile": {
+              "const": "android-source-projection-v1"
+            },
+            "relative_path": {
+              "$ref": "#/$defs/path"
+            },
+            "sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "write_mode": {
+              "enum": [
+                "overwrite",
+                "append"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "artifact_id",
+            "relative_path",
+            "byte_count",
+            "sha256",
+            "write_mode",
+            "profile",
+            "media_type"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "authority_reference": {
       "additionalProperties": false,
       "properties": {
-        "artifact_id": {
+        "authority_id": {
           "$ref": "#/$defs/uuid"
         },
-        "byte_count": {
-          "maximum": 1099511627776,
-          "minimum": 0,
+        "grant_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
           "type": "integer"
         },
-        "media_type": {
-          "enum": [
-            "application/json",
-            "application/x-ndjson",
-            "text/csv",
-            "text/markdown",
-            "application/zip"
-          ],
-          "type": "string"
-        },
-        "profile": {
-          "enum": [
-            "apple-v8",
-            "android-frozen-v4",
-            "android-analytical-v5",
-            "apple-healthkit-canonical-v1",
-            "android-provider-native-snapshot-v1",
-            "profile-dictionary-v1",
-            "zip-container-v1"
-          ],
-          "type": "string"
-        },
-        "relative_path": {
-          "$ref": "#/$defs/path"
-        },
-        "sha256": {
+        "grant_sha256": {
           "$ref": "#/$defs/digest"
         },
-        "write_mode": {
+        "issuer": {
           "enum": [
-            "overwrite",
-            "append",
-            "merge_markdown",
-            "merge_markdown_preserving_preamble"
+            "native_source",
+            "authorized_host"
           ],
           "type": "string"
         }
       },
       "required": [
-        "artifact_id",
-        "relative_path",
-        "media_type",
-        "byte_count",
-        "sha256",
-        "write_mode",
-        "profile"
+        "authority_id",
+        "issuer",
+        "grant_revision",
+        "grant_sha256"
+      ],
+      "type": "object"
+    },
+    "authority_references": {
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "$ref": "#/$defs/authority_reference"
+        },
+        "native": {
+          "$ref": "#/$defs/authority_reference"
+        }
+      },
+      "required": [
+        "native",
+        "host"
       ],
       "type": "object"
     },
     "binding": {
       "additionalProperties": false,
       "properties": {
+        "authority_references": {
+          "$ref": "#/$defs/authority_references"
+        },
         "capability_sha256": {
           "$ref": "#/$defs/digest"
         },
@@ -258,6 +416,7 @@
       "required": [
         "peer",
         "destination",
+        "authority_references",
         "plan_sha256",
         "settings_sha256",
         "scope_sha256",
@@ -404,7 +563,7 @@
           "$ref": "#/$defs/id"
         },
         "native_record_type": {
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/native_type_identifier"
         },
         "owner_rule": {
           "enum": [
@@ -466,7 +625,6 @@
         "registry_equivalence",
         "unit",
         "statistics",
-        "native_record_type",
         "source_statistic",
         "owner_rule",
         "availability",
@@ -628,10 +786,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
-                "peer"
+                "peer",
+                "verb"
               ],
               "type": "object"
             },
@@ -664,10 +822,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision"
               ],
@@ -676,8 +834,44 @@
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
+                "authority_id": {
                   "$ref": "#/$defs/uuid"
+                },
+                "capability_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "domain": {
+                  "const": "local_recipe"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "proposal": {
+                  "$ref": "#/$defs/local_recipe_proposal"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "plan"
+                }
+              },
+              "required": [
+                "domain",
+                "request_id",
+                "authority_id",
+                "peer",
+                "verb",
+                "capability_sha256",
+                "proposal"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -685,11 +879,21 @@
                 "domain": {
                   "const": "local_recipe"
                 },
+                "expected_revision": {
+                  "const": 0,
+                  "type": "integer"
+                },
                 "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
                   "$ref": "#/$defs/uuid"
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -703,21 +907,24 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
+                "object_id",
+                "expected_revision",
+                "value",
                 "idempotency_key",
-                "approval_id",
-                "value"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -738,6 +945,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -751,23 +961,24 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
+                "value",
                 "idempotency_key",
-                "approval_id",
-                "value"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -788,6 +999,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -798,22 +1012,23 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
                 "idempotency_key",
-                "approval_id"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -834,6 +1049,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -844,14 +1062,15 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
                 "idempotency_key",
-                "approval_id"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
@@ -876,10 +1095,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
-                "peer"
+                "peer",
+                "verb"
               ],
               "type": "object"
             },
@@ -912,10 +1131,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision"
               ],
@@ -924,8 +1143,44 @@
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
+                "authority_id": {
                   "$ref": "#/$defs/uuid"
+                },
+                "capability_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "domain": {
+                  "const": "native_profile"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "proposal": {
+                  "$ref": "#/$defs/native_profile_proposal"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "plan"
+                }
+              },
+              "required": [
+                "domain",
+                "request_id",
+                "authority_id",
+                "peer",
+                "verb",
+                "capability_sha256",
+                "proposal"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -933,11 +1188,21 @@
                 "domain": {
                   "const": "native_profile"
                 },
+                "expected_revision": {
+                  "const": 0,
+                  "type": "integer"
+                },
                 "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
                   "$ref": "#/$defs/uuid"
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -951,21 +1216,24 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
+                "object_id",
+                "expected_revision",
+                "value",
                 "idempotency_key",
-                "approval_id",
-                "value"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -986,6 +1254,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -999,23 +1270,24 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
+                "value",
                 "idempotency_key",
-                "approval_id",
-                "value"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1036,6 +1308,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -1046,22 +1321,23 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
                 "idempotency_key",
-                "approval_id"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1083,6 +1359,9 @@
                 "peer": {
                   "$ref": "#/$defs/peer"
                 },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
+                },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
                 },
@@ -1092,14 +1371,15 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
                 "idempotency_key",
-                "approval_id"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
@@ -1124,10 +1404,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
-                "peer"
+                "peer",
+                "verb"
               ],
               "type": "object"
             },
@@ -1160,10 +1440,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision"
               ],
@@ -1172,8 +1452,44 @@
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
+                "authority_id": {
                   "$ref": "#/$defs/uuid"
+                },
+                "capability_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "proposal": {
+                  "$ref": "#/$defs/host_schedule_proposal"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "plan"
+                }
+              },
+              "required": [
+                "domain",
+                "request_id",
+                "authority_id",
+                "peer",
+                "verb",
+                "capability_sha256",
+                "proposal"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1181,11 +1497,21 @@
                 "domain": {
                   "const": "host_schedule"
                 },
+                "expected_revision": {
+                  "const": 0,
+                  "type": "integer"
+                },
                 "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
                   "$ref": "#/$defs/uuid"
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -1199,21 +1525,24 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
+                "object_id",
+                "expected_revision",
+                "value",
                 "idempotency_key",
-                "approval_id",
-                "value"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1234,6 +1563,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -1247,23 +1579,24 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
+                "value",
                 "idempotency_key",
-                "approval_id",
-                "value"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1284,6 +1617,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -1294,22 +1630,23 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
                 "idempotency_key",
-                "approval_id"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1330,6 +1667,9 @@
                 },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -1340,22 +1680,23 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
                 "idempotency_key",
-                "approval_id"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1377,6 +1718,9 @@
                 "peer": {
                   "$ref": "#/$defs/peer"
                 },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
+                },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
                 },
@@ -1386,14 +1730,15 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
                 "idempotency_key",
-                "approval_id"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
@@ -1426,192 +1771,12 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision"
-              ],
-              "type": "object"
-            },
-            {
-              "additionalProperties": false,
-              "properties": {
-                "authority_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "domain": {
-                  "const": "native_schedule"
-                },
-                "expected_revision": {
-                  "maximum": 2147483647,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "object_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "peer": {
-                  "$ref": "#/$defs/peer"
-                },
-                "request_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "verb": {
-                  "const": "plan"
-                }
-              },
-              "required": [
-                "domain",
-                "verb",
-                "request_id",
-                "authority_id",
-                "peer",
-                "object_id",
-                "expected_revision"
-              ],
-              "type": "object"
-            },
-            {
-              "additionalProperties": false,
-              "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "authority_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "domain": {
-                  "const": "native_schedule"
-                },
-                "expected_revision": {
-                  "maximum": 2147483647,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "idempotency_key": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "object_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "peer": {
-                  "$ref": "#/$defs/peer"
-                },
-                "request_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "value": {
-                  "$ref": "#/$defs/native_schedule_definition"
-                },
-                "verb": {
-                  "const": "update"
-                }
-              },
-              "required": [
-                "domain",
-                "verb",
-                "request_id",
-                "authority_id",
-                "peer",
-                "object_id",
-                "expected_revision",
-                "idempotency_key",
-                "approval_id",
-                "value"
-              ],
-              "type": "object"
-            },
-            {
-              "additionalProperties": false,
-              "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "authority_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "domain": {
-                  "const": "native_schedule"
-                },
-                "expected_revision": {
-                  "maximum": 2147483647,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "idempotency_key": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "object_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "peer": {
-                  "$ref": "#/$defs/peer"
-                },
-                "request_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "verb": {
-                  "const": "enable"
-                }
-              },
-              "required": [
-                "domain",
-                "verb",
-                "request_id",
-                "authority_id",
-                "peer",
-                "object_id",
-                "expected_revision",
-                "idempotency_key",
-                "approval_id"
-              ],
-              "type": "object"
-            },
-            {
-              "additionalProperties": false,
-              "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "authority_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "domain": {
-                  "const": "native_schedule"
-                },
-                "expected_revision": {
-                  "maximum": 2147483647,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "idempotency_key": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "object_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "peer": {
-                  "$ref": "#/$defs/peer"
-                },
-                "request_id": {
-                  "$ref": "#/$defs/uuid"
-                },
-                "verb": {
-                  "const": "disable"
-                }
-              },
-              "required": [
-                "domain",
-                "verb",
-                "request_id",
-                "authority_id",
-                "peer",
-                "object_id",
-                "expected_revision",
-                "idempotency_key",
-                "approval_id"
               ],
               "type": "object"
             },
@@ -1644,10 +1809,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision"
               ],
@@ -1656,8 +1821,198 @@
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
+                "authority_id": {
                   "$ref": "#/$defs/uuid"
+                },
+                "capability_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "proposal": {
+                  "$ref": "#/$defs/native_schedule_proposal"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "plan"
+                }
+              },
+              "required": [
+                "domain",
+                "request_id",
+                "authority_id",
+                "peer",
+                "verb",
+                "capability_sha256",
+                "proposal"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/native_schedule_definition"
+                },
+                "verb": {
+                  "const": "update"
+                }
+              },
+              "required": [
+                "domain",
+                "request_id",
+                "authority_id",
+                "peer",
+                "verb",
+                "object_id",
+                "expected_revision",
+                "value",
+                "idempotency_key",
+                "plan",
+                "approval"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "enable"
+                }
+              },
+              "required": [
+                "domain",
+                "request_id",
+                "authority_id",
+                "peer",
+                "verb",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "plan",
+                "approval"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "disable"
+                }
+              },
+              "required": [
+                "domain",
+                "request_id",
+                "authority_id",
+                "peer",
+                "verb",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "plan",
+                "approval"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1682,6 +2037,9 @@
                 "pending_binding_sha256": {
                   "$ref": "#/$defs/digest"
                 },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
+                },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
                 },
@@ -1691,15 +2049,16 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
+                "pending_binding_sha256",
                 "idempotency_key",
-                "approval_id",
-                "pending_binding_sha256"
+                "plan",
+                "approval"
               ],
               "type": "object"
             },
@@ -1732,10 +2091,10 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision"
               ],
@@ -1747,19 +2106,17 @@
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
                 },
+                "capability_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
                 "domain": {
                   "const": "native_destination"
                 },
-                "expected_revision": {
-                  "maximum": 2147483647,
-                  "minimum": 1,
-                  "type": "integer"
-                },
-                "object_id": {
-                  "$ref": "#/$defs/uuid"
-                },
                 "peer": {
                   "$ref": "#/$defs/peer"
+                },
+                "proposal": {
+                  "$ref": "#/$defs/native_destination_proposal"
                 },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
@@ -1770,20 +2127,20 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
-                "object_id",
-                "expected_revision"
+                "verb",
+                "capability_sha256",
+                "proposal"
               ],
               "type": "object"
             },
             {
               "additionalProperties": false,
               "properties": {
-                "approval_id": {
-                  "$ref": "#/$defs/uuid"
+                "approval": {
+                  "$ref": "#/$defs/control_approval"
                 },
                 "authority_id": {
                   "$ref": "#/$defs/uuid"
@@ -1805,6 +2162,9 @@
                 "peer": {
                   "$ref": "#/$defs/peer"
                 },
+                "plan": {
+                  "$ref": "#/$defs/control_plan"
+                },
                 "request_id": {
                   "$ref": "#/$defs/uuid"
                 },
@@ -1817,15 +2177,16 @@
               },
               "required": [
                 "domain",
-                "verb",
                 "request_id",
                 "authority_id",
                 "peer",
+                "verb",
                 "object_id",
                 "expected_revision",
+                "value",
                 "idempotency_key",
-                "approval_id",
-                "value"
+                "plan",
+                "approval"
               ],
               "type": "object"
             }
@@ -1843,6 +2204,128 @@
         "schema",
         "schema_version",
         "operation"
+      ],
+      "type": "object"
+    },
+    "control_approval": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "approved_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "authority_reference": {
+          "$ref": "#/$defs/authority_reference"
+        },
+        "binding": {
+          "$ref": "#/$defs/control_binding"
+        },
+        "right": {
+          "enum": [
+            "recipe_mutate",
+            "recipe_run",
+            "host_schedule_mutate",
+            "host_schedule_run",
+            "native_configuration_mutate",
+            "native_schedule_mutate"
+          ],
+          "type": "string"
+        },
+        "schema": {
+          "const": "healthmd.agent_control_approval"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "approval_id",
+        "authority_id",
+        "authority_reference",
+        "binding",
+        "right",
+        "approved_at"
+      ],
+      "type": "object"
+    },
+    "control_approval_request": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/control_binding"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.agent_control_approval_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "binding"
+      ],
+      "type": "object"
+    },
+    "control_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "proposal_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/$defs/revision"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "plan_id",
+        "peer",
+        "plan_sha256",
+        "proposal_sha256",
+        "scope_sha256",
+        "capability_sha256",
+        "revisions",
+        "expires_at"
       ],
       "type": "object"
     },
@@ -1888,6 +2371,644 @@
       ],
       "type": "object"
     },
+    "control_plan": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "planning_authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "proposal": {
+          "$ref": "#/$defs/control_proposal"
+        },
+        "proposal_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "required_actions": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_right": {
+          "enum": [
+            "recipe_mutate",
+            "recipe_run",
+            "host_schedule_mutate",
+            "host_schedule_run",
+            "native_configuration_mutate",
+            "native_schedule_mutate"
+          ],
+          "type": "string"
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/$defs/revision"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        },
+        "schema": {
+          "const": "healthmd.agent_control_plan"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "side_effects": {
+          "$ref": "#/$defs/zero_control_effects"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "plan_id",
+        "request_id",
+        "planning_authority_id",
+        "peer",
+        "proposal",
+        "proposal_sha256",
+        "scope_sha256",
+        "capability_sha256",
+        "revisions",
+        "required_right",
+        "issued_at",
+        "expires_at",
+        "required_actions",
+        "side_effects",
+        "plan_sha256"
+      ],
+      "type": "object"
+    },
+    "control_plan_request": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "proposal": {
+          "$ref": "#/$defs/control_proposal"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.agent_control_plan_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "authority_id",
+        "peer",
+        "capability_sha256",
+        "proposal"
+      ],
+      "type": "object"
+    },
+    "control_proposal": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "const": 0,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/recipe_definition"
+            },
+            "verb": {
+              "const": "create"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/recipe_definition"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "run"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "const": 0,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/profile_definition"
+            },
+            "verb": {
+              "const": "create"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/profile_definition"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "activate"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "const": 0,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/schedule"
+            },
+            "verb": {
+              "const": "create"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/schedule"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "pause"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "run_now"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/native_schedule_definition"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "enable"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "disable"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "pending_binding_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "verb": {
+              "const": "discard_pending"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "pending_binding_sha256"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_destination"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/native_destination"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "control_receipt": {
       "additionalProperties": false,
       "properties": {
@@ -1908,6 +3029,26 @@
           "maxItems": 100,
           "minItems": 0,
           "type": "array"
+        },
+        "mutation_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "approval_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "binding": {
+              "$ref": "#/$defs/control_binding"
+            },
+            "request_sha256": {
+              "$ref": "#/$defs/digest"
+            }
+          },
+          "required": [
+            "binding",
+            "approval_id",
+            "request_sha256"
+          ],
+          "type": "object"
         },
         "object_id": {
           "$ref": "#/$defs/uuid"
@@ -2254,6 +3395,14 @@
     "discovery": {
       "additionalProperties": false,
       "properties": {
+        "authority_references": {
+          "items": {
+            "$ref": "#/$defs/authority_reference"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
         "budgets": {
           "$ref": "#/$defs/budgets"
         },
@@ -2274,7 +3423,41 @@
         },
         "control_operations": {
           "items": {
-            "$ref": "#/$defs/id"
+            "enum": [
+              "local_recipe.list",
+              "local_recipe.get",
+              "local_recipe.create",
+              "local_recipe.update",
+              "local_recipe.delete",
+              "local_recipe.run",
+              "local_recipe.plan",
+              "native_profile.list",
+              "native_profile.get",
+              "native_profile.create",
+              "native_profile.update",
+              "native_profile.activate",
+              "native_profile.delete",
+              "native_profile.plan",
+              "host_schedule.list",
+              "host_schedule.get",
+              "host_schedule.create",
+              "host_schedule.update",
+              "host_schedule.pause",
+              "host_schedule.delete",
+              "host_schedule.run_now",
+              "host_schedule.plan",
+              "native_schedule.inspect",
+              "native_schedule.update",
+              "native_schedule.enable",
+              "native_schedule.disable",
+              "native_schedule.inspect_pending",
+              "native_schedule.discard_pending",
+              "native_schedule.plan",
+              "native_destination.inspect",
+              "native_destination.update",
+              "native_destination.plan"
+            ],
+            "type": "string"
           },
           "maxItems": 64,
           "minItems": 0,
@@ -2301,12 +3484,14 @@
               "source_projection",
               "native_profile_control",
               "native_schedule_control",
+              "native_destination_control",
+              "control_plan",
               "zip",
               "profile_dictionary"
             ],
             "type": "string"
           },
-          "maxItems": 9,
+          "maxItems": 11,
           "minItems": 0,
           "type": "array",
           "uniqueItems": true
@@ -2348,6 +3533,24 @@
         },
         "peer": {
           "$ref": "#/$defs/peer"
+        },
+        "projection_catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "projection_products": {
+          "items": {
+            "enum": [
+              "android_source_projection_v1"
+            ],
+            "type": "string"
+          },
+          "maxItems": 1,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "projection_source_catalog": {
+          "$ref": "#/$defs/query_catalog"
         },
         "query_catalog_sha256": {
           "$ref": "#/$defs/digest"
@@ -2420,11 +3623,14 @@
         "features",
         "settings_policies",
         "output_profiles",
+        "projection_products",
+        "projection_catalog_sha256",
         "query_catalog_sha256",
         "query_operations",
         "budgets",
         "output_support",
         "control_operations",
+        "authority_references",
         "lifecycle",
         "configuration_protection",
         "native_grants",
@@ -2482,7 +3688,8 @@
             "snapshot_expired",
             "busy",
             "cancelled",
-            "spool_missing_restart_required"
+            "spool_missing_restart_required",
+            "job_expired"
           ],
           "type": "string"
         },
@@ -2557,37 +3764,94 @@
       "type": "object"
     },
     "exact_time": {
-      "additionalProperties": false,
-      "properties": {
-        "epoch_second": {
-          "maximum": 253402300799,
-          "minimum": -62135596800,
-          "type": "integer"
-        },
-        "nanosecond": {
-          "maximum": 999999999,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "source_offset_seconds": {
-          "oneOf": [
-            {
-              "maximum": 64800,
-              "minimum": -64800,
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "epoch_second": {
+              "maximum": 253402300799,
+              "minimum": -62135596800,
               "type": "integer"
             },
-            {
-              "type": "null"
+            "nanosecond": {
+              "maximum": 999999999,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "precision": {
+              "enum": [
+                "source_nanoseconds",
+                "source_milliseconds",
+                "source_seconds"
+              ],
+              "type": "string"
+            },
+            "source_offset_seconds": {
+              "oneOf": [
+                {
+                  "maximum": 64800,
+                  "minimum": -64800,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
-          ]
+          },
+          "required": [
+            "epoch_second",
+            "nanosecond",
+            "source_offset_seconds",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "epoch_second": {
+              "maximum": 253402300799,
+              "minimum": -62135596800,
+              "type": "integer"
+            },
+            "nanosecond": {
+              "maximum": 999999999,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "precision": {
+              "const": "source_binary64_seconds"
+            },
+            "source_binary64_bits": {
+              "maxLength": 16,
+              "minLength": 16,
+              "pattern": "^[0-9a-f]{16}$",
+              "type": "string"
+            },
+            "source_offset_seconds": {
+              "oneOf": [
+                {
+                  "maximum": 64800,
+                  "minimum": -64800,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "epoch_second",
+            "nanosecond",
+            "source_offset_seconds",
+            "precision",
+            "source_binary64_bits"
+          ],
+          "type": "object"
         }
-      },
-      "required": [
-        "epoch_second",
-        "nanosecond",
-        "source_offset_seconds"
-      ],
-      "type": "object"
+      ]
     },
     "execute": {
       "additionalProperties": false,
@@ -2681,6 +3945,341 @@
       ],
       "type": "object"
     },
+    "generated_intent": {
+      "additionalProperties": false,
+      "properties": {
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "capture_scope": {
+          "$ref": "#/$defs/capture"
+        },
+        "dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "destination": {
+          "$ref": "#/$defs/destination"
+        },
+        "intent_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "product": {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "generated_files"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        "schema": {
+          "const": "healthmd.agent_export_intent"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "settings_policy": {
+          "$ref": "#/$defs/policy"
+        },
+        "timestamp_timezone": {
+          "const": "UTC"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "intent_id",
+        "peer",
+        "destination",
+        "dates",
+        "calendar_timezone",
+        "timestamp_timezone",
+        "capture_scope",
+        "product",
+        "settings_policy"
+      ],
+      "type": "object"
+    },
+    "generated_plan": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_references": {
+          "$ref": "#/$defs/authority_references"
+        },
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "effective_settings": {
+          "$ref": "#/$defs/settings"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "intent": {
+          "$ref": "#/$defs/generated_intent"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "limitations": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "origins": {
+          "items": {
+            "$ref": "#/$defs/origin"
+          },
+          "maxItems": 512,
+          "minItems": 1,
+          "type": "array"
+        },
+        "path_prediction": {
+          "enum": [
+            "exact_requested_days",
+            "template_only_all_available",
+            "deferred_native_entries"
+          ],
+          "type": "string"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "predicted_paths": {
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "maxItems": 4096,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_actions": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "resolved_dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "resolved_metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/$defs/revision"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        },
+        "schema": {
+          "const": "healthmd.agent_export_plan"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "settings_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "side_effects": {
+          "$ref": "#/$defs/zero_control_effects"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "plan_id",
+        "resolved_dates",
+        "resolved_metric_ids",
+        "authority_references",
+        "origins",
+        "revisions",
+        "settings_sha256",
+        "scope_sha256",
+        "capability_sha256",
+        "plan_sha256",
+        "issued_at",
+        "expires_at",
+        "predicted_paths",
+        "path_prediction",
+        "required_actions",
+        "limitations",
+        "side_effects",
+        "intent",
+        "effective_settings"
+      ],
+      "type": "object"
+    },
+    "host_schedule_proposal": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "const": 0,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/schedule"
+            },
+            "verb": {
+              "const": "create"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/schedule"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "pause"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "host_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "run_now"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        }
+      ]
+    },
     "id": {
       "maxLength": 128,
       "minLength": 1,
@@ -2722,53 +4321,129 @@
       "type": "object"
     },
     "intent": {
-      "additionalProperties": false,
-      "properties": {
-        "calendar_timezone": {
-          "$ref": "#/$defs/zone"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/generated_intent"
         },
-        "capture_scope": {
-          "$ref": "#/$defs/capture"
-        },
-        "dates": {
-          "$ref": "#/$defs/dates"
-        },
-        "destination": {
-          "$ref": "#/$defs/destination"
-        },
-        "intent_id": {
-          "$ref": "#/$defs/uuid"
-        },
-        "peer": {
-          "$ref": "#/$defs/peer"
-        },
-        "schema": {
-          "const": "healthmd.agent_export_intent"
-        },
-        "schema_version": {
-          "const": 1,
-          "type": "integer"
-        },
-        "settings_policy": {
-          "$ref": "#/$defs/policy"
-        },
-        "timestamp_timezone": {
-          "const": "UTC"
+        {
+          "$ref": "#/$defs/projection_intent"
         }
-      },
-      "required": [
-        "schema",
-        "schema_version",
-        "intent_id",
-        "peer",
-        "destination",
-        "dates",
-        "calendar_timezone",
-        "timestamp_timezone",
-        "capture_scope",
-        "settings_policy"
-      ],
-      "type": "object"
+      ]
+    },
+    "local_recipe_proposal": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "const": 0,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/recipe_definition"
+            },
+            "verb": {
+              "const": "create"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/recipe_definition"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "local_recipe"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "run"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        }
+      ]
     },
     "manifest": {
       "additionalProperties": false,
@@ -3044,73 +4719,423 @@
         }
       ]
     },
-    "native_identity": {
-      "additionalProperties": false,
-      "properties": {
-        "client_record_id": {
-          "maxLength": 256,
-          "minLength": 0,
-          "type": "string"
-        },
-        "client_record_version": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "identity_kind": {
-          "enum": [
-            "native",
-            "derived_child",
-            "external"
+    "native_destination_proposal": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_destination"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/native_destination"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
           ],
-          "type": "string"
-        },
-        "last_modified": {
-          "$ref": "#/$defs/exact_time"
-        },
-        "origin": {
-          "maxLength": 256,
-          "minLength": 0,
-          "type": "string"
-        },
-        "parent_record_id": {
-          "maxLength": 256,
-          "minLength": 0,
-          "type": "string"
-        },
-        "provider_id": {
-          "$ref": "#/$defs/id"
-        },
-        "record_id": {
-          "maxLength": 256,
-          "minLength": 1,
-          "type": "string"
-        },
-        "record_type": {
-          "$ref": "#/$defs/id"
-        },
-        "source_id": {
-          "enum": [
-            "apple_health",
-            "health_connect",
-            "provider_native"
-          ],
-          "type": "string"
+          "type": "object"
         }
-      },
-      "required": [
-        "source_id",
-        "provider_id",
-        "record_type",
-        "record_id",
-        "identity_kind",
-        "parent_record_id",
-        "origin",
-        "client_record_id",
-        "client_record_version",
-        "last_modified"
-      ],
-      "type": "object"
+      ]
+    },
+    "native_identity": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "identity_kind": {
+              "enum": [
+                "native",
+                "derived_child",
+                "external"
+              ],
+              "type": "string"
+            },
+            "metadata_status": {
+              "additionalProperties": false,
+              "properties": {
+                "client_record_id": {
+                  "const": "not_exposed_by_source"
+                },
+                "client_record_version": {
+                  "const": "not_exposed_by_source"
+                },
+                "last_modified": {
+                  "const": "not_exposed_by_source"
+                }
+              },
+              "required": [
+                "last_modified",
+                "client_record_id",
+                "client_record_version"
+              ],
+              "type": "object"
+            },
+            "origin": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "provider_id": {
+              "const": "apple_health"
+            },
+            "record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "source_id": {
+              "const": "apple_health"
+            }
+          },
+          "required": [
+            "record_type",
+            "record_id",
+            "identity_kind",
+            "source_id",
+            "provider_id",
+            "metadata_status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "client_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "client_record_version": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "identity_kind": {
+              "enum": [
+                "native",
+                "derived_child",
+                "external"
+              ],
+              "type": "string"
+            },
+            "last_modified": {
+              "$ref": "#/$defs/exact_time"
+            },
+            "metadata_status": {
+              "additionalProperties": false,
+              "properties": {
+                "client_record_id": {
+                  "enum": [
+                    "available",
+                    "absent",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "client_record_version": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "last_modified": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "last_modified",
+                "client_record_id",
+                "client_record_version"
+              ],
+              "type": "object"
+            },
+            "origin": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "provider_id": {
+              "const": "health_connect"
+            },
+            "record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "source_id": {
+              "const": "health_connect"
+            }
+          },
+          "required": [
+            "record_type",
+            "record_id",
+            "identity_kind",
+            "source_id",
+            "provider_id",
+            "metadata_status"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "client_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "client_record_version": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "identity_kind": {
+              "enum": [
+                "native",
+                "derived_child",
+                "external"
+              ],
+              "type": "string"
+            },
+            "last_modified": {
+              "$ref": "#/$defs/exact_time"
+            },
+            "metadata_status": {
+              "additionalProperties": false,
+              "properties": {
+                "client_record_id": {
+                  "enum": [
+                    "available",
+                    "absent",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "client_record_version": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "last_modified": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "last_modified",
+                "client_record_id",
+                "client_record_version"
+              ],
+              "type": "object"
+            },
+            "origin": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "source_id": {
+              "const": "provider_native"
+            }
+          },
+          "required": [
+            "record_type",
+            "record_id",
+            "identity_kind",
+            "source_id",
+            "provider_id",
+            "metadata_status"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "native_profile_proposal": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "const": 0,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/profile_definition"
+            },
+            "verb": {
+              "const": "create"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/profile_definition"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "activate"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_profile"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "delete"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        }
+      ]
     },
     "native_schedule_definition": {
       "additionalProperties": false,
@@ -3218,6 +5243,128 @@
         "destination"
       ],
       "type": "object"
+    },
+    "native_schedule_proposal": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "value": {
+              "$ref": "#/$defs/native_schedule_definition"
+            },
+            "verb": {
+              "const": "update"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "enable"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "verb": {
+              "const": "disable"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "const": "native_schedule"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "object_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "pending_binding_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "verb": {
+              "const": "discard_pending"
+            }
+          },
+          "required": [
+            "domain",
+            "verb",
+            "object_id",
+            "expected_revision",
+            "pending_binding_sha256"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "native_type_identifier": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.:$-]{0,255}$",
+      "type": "string"
     },
     "origin": {
       "additionalProperties": false,
@@ -3475,162 +5622,14 @@
       "type": "object"
     },
     "plan": {
-      "additionalProperties": false,
-      "properties": {
-        "capability_sha256": {
-          "$ref": "#/$defs/digest"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/generated_plan"
         },
-        "effective_settings": {
-          "$ref": "#/$defs/settings"
-        },
-        "expires_at": {
-          "$ref": "#/$defs/utc"
-        },
-        "intent": {
-          "$ref": "#/$defs/intent"
-        },
-        "issued_at": {
-          "$ref": "#/$defs/utc"
-        },
-        "limitations": {
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "maxItems": 64,
-          "minItems": 0,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "origins": {
-          "items": {
-            "$ref": "#/$defs/origin"
-          },
-          "maxItems": 512,
-          "minItems": 1,
-          "type": "array"
-        },
-        "path_prediction": {
-          "enum": [
-            "exact_requested_days",
-            "template_only_all_available",
-            "deferred_native_entries"
-          ],
-          "type": "string"
-        },
-        "plan_id": {
-          "$ref": "#/$defs/uuid"
-        },
-        "plan_sha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "predicted_paths": {
-          "items": {
-            "$ref": "#/$defs/path"
-          },
-          "maxItems": 4096,
-          "minItems": 0,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "required_actions": {
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "maxItems": 16,
-          "minItems": 0,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "resolved_dates": {
-          "$ref": "#/$defs/dates"
-        },
-        "resolved_metric_ids": {
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "maxItems": 256,
-          "minItems": 1,
-          "type": "array",
-          "uniqueItems": true
-        },
-        "revisions": {
-          "items": {
-            "$ref": "#/$defs/revision"
-          },
-          "maxItems": 16,
-          "minItems": 0,
-          "type": "array"
-        },
-        "schema": {
-          "const": "healthmd.agent_export_plan"
-        },
-        "schema_version": {
-          "const": 1,
-          "type": "integer"
-        },
-        "scope_sha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "settings_sha256": {
-          "$ref": "#/$defs/digest"
-        },
-        "side_effects": {
-          "additionalProperties": false,
-          "properties": {
-            "health_reads": {
-              "const": 0,
-              "type": "integer"
-            },
-            "output_writes": {
-              "const": 0,
-              "type": "integer"
-            },
-            "quota_consumed": {
-              "const": 0,
-              "type": "integer"
-            },
-            "settings_mutations": {
-              "const": 0,
-              "type": "integer"
-            },
-            "wake_enrollments": {
-              "const": 0,
-              "type": "integer"
-            }
-          },
-          "required": [
-            "health_reads",
-            "output_writes",
-            "quota_consumed",
-            "settings_mutations",
-            "wake_enrollments"
-          ],
-          "type": "object"
+        {
+          "$ref": "#/$defs/projection_plan"
         }
-      },
-      "required": [
-        "schema",
-        "schema_version",
-        "plan_id",
-        "intent",
-        "resolved_dates",
-        "resolved_metric_ids",
-        "effective_settings",
-        "origins",
-        "revisions",
-        "settings_sha256",
-        "scope_sha256",
-        "capability_sha256",
-        "plan_sha256",
-        "issued_at",
-        "expires_at",
-        "predicted_paths",
-        "path_prediction",
-        "required_actions",
-        "limitations",
-        "side_effects"
-      ],
-      "type": "object"
+      ]
     },
     "plan_request": {
       "additionalProperties": false,
@@ -3638,8 +5637,16 @@
         "authority_id": {
           "$ref": "#/$defs/uuid"
         },
+        "authority_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
         "capability_sha256": {
           "$ref": "#/$defs/digest"
+        },
+        "host_authority_reference": {
+          "$ref": "#/$defs/authority_reference"
         },
         "intent": {
           "$ref": "#/$defs/intent"
@@ -3661,6 +5668,8 @@
         "request_id",
         "intent",
         "authority_id",
+        "authority_revision",
+        "host_authority_reference",
         "capability_sha256"
       ],
       "type": "object"
@@ -3793,51 +5802,227 @@
       ],
       "type": "object"
     },
-    "projection": {
+    "projection_intent": {
       "additionalProperties": false,
       "properties": {
         "calendar_timezone": {
           "$ref": "#/$defs/zone"
         },
-        "catalog_sha256": {
-          "$ref": "#/$defs/digest"
+        "capture_scope": {
+          "$ref": "#/$defs/capture"
         },
-        "coverage": {
-          "$ref": "#/$defs/coverage"
+        "dates": {
+          "$ref": "#/$defs/dates"
         },
-        "detail": {
-          "enum": [
-            "summary",
-            "selected_time_series",
-            "native_records"
-          ],
-          "type": "string"
+        "destination": {
+          "$ref": "#/$defs/destination"
         },
-        "is_complete_daily_document": {
-          "const": false
-        },
-        "native_records": {
-          "items": {
-            "$ref": "#/$defs/evidence_item"
-          },
-          "maxItems": 1000,
-          "minItems": 0,
-          "type": "array"
-        },
-        "owner_date": {
-          "$ref": "#/$defs/date"
+        "intent_id": {
+          "$ref": "#/$defs/uuid"
         },
         "peer": {
           "$ref": "#/$defs/peer"
         },
-        "provider_id": {
-          "$ref": "#/$defs/id"
-        },
-        "request_id": {
-          "$ref": "#/$defs/uuid"
+        "product": {
+          "$ref": "#/$defs/projection_product"
         },
         "schema": {
-          "const": "healthmd.source_data_projection"
+          "const": "healthmd.agent_export_intent"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "timestamp_timezone": {
+          "const": "UTC"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "intent_id",
+        "peer",
+        "destination",
+        "dates",
+        "calendar_timezone",
+        "timestamp_timezone",
+        "capture_scope",
+        "product"
+      ],
+      "type": "object"
+    },
+    "projection_output": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "filename_template": {
+              "$ref": "#/$defs/filename"
+            },
+            "folder_template": {
+              "$ref": "#/$defs/path"
+            },
+            "layout": {
+              "const": "per_day"
+            },
+            "media_type": {
+              "const": "application/json"
+            },
+            "profile": {
+              "const": "android-source-projection-v1"
+            },
+            "subfolder": {
+              "$ref": "#/$defs/path"
+            },
+            "write_mode": {
+              "const": "overwrite"
+            }
+          },
+          "required": [
+            "profile",
+            "layout",
+            "subfolder",
+            "folder_template",
+            "filename_template",
+            "media_type",
+            "write_mode"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "filename_template": {
+              "$ref": "#/$defs/filename"
+            },
+            "folder_template": {
+              "$ref": "#/$defs/path"
+            },
+            "layout": {
+              "const": "per_day"
+            },
+            "media_type": {
+              "const": "application/x-ndjson"
+            },
+            "profile": {
+              "const": "android-source-projection-v1"
+            },
+            "subfolder": {
+              "$ref": "#/$defs/path"
+            },
+            "write_mode": {
+              "enum": [
+                "overwrite",
+                "append"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "profile",
+            "layout",
+            "subfolder",
+            "folder_template",
+            "filename_template",
+            "media_type",
+            "write_mode"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "projection_plan": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_references": {
+          "$ref": "#/$defs/authority_references"
+        },
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "effective_projection_output": {
+          "$ref": "#/$defs/projection_output"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "intent": {
+          "$ref": "#/$defs/projection_intent"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "limitations": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "origins": {
+          "items": {
+            "$ref": "#/$defs/origin"
+          },
+          "maxItems": 512,
+          "minItems": 1,
+          "type": "array"
+        },
+        "path_prediction": {
+          "enum": [
+            "exact_requested_days",
+            "template_only_all_available",
+            "deferred_native_entries"
+          ],
+          "type": "string"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "predicted_paths": {
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "maxItems": 4096,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_actions": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "resolved_dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "resolved_metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/$defs/revision"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        },
+        "schema": {
+          "const": "healthmd.agent_export_plan"
         },
         "schema_version": {
           "const": 1,
@@ -3846,47 +6031,59 @@
         "scope_sha256": {
           "$ref": "#/$defs/digest"
         },
-        "selected_series": {
-          "items": {
-            "$ref": "#/$defs/metric_item"
-          },
-          "maxItems": 1000,
-          "minItems": 0,
-          "type": "array"
+        "settings_sha256": {
+          "$ref": "#/$defs/digest"
         },
-        "source_id": {
-          "enum": [
-            "health_connect",
-            "provider_native"
-          ],
-          "type": "string"
-        },
-        "summary": {
-          "items": {
-            "$ref": "#/$defs/metric_item"
-          },
-          "maxItems": 256,
-          "minItems": 0,
-          "type": "array"
+        "side_effects": {
+          "$ref": "#/$defs/zero_control_effects"
         }
       },
       "required": [
         "schema",
         "schema_version",
-        "request_id",
-        "peer",
-        "source_id",
-        "provider_id",
+        "plan_id",
+        "resolved_dates",
+        "resolved_metric_ids",
+        "authority_references",
+        "origins",
+        "revisions",
+        "settings_sha256",
         "scope_sha256",
-        "catalog_sha256",
-        "owner_date",
-        "calendar_timezone",
-        "detail",
-        "is_complete_daily_document",
-        "summary",
-        "selected_series",
-        "native_records",
-        "coverage"
+        "capability_sha256",
+        "plan_sha256",
+        "issued_at",
+        "expires_at",
+        "predicted_paths",
+        "path_prediction",
+        "required_actions",
+        "limitations",
+        "side_effects",
+        "intent",
+        "effective_projection_output"
+      ],
+      "type": "object"
+    },
+    "projection_product": {
+      "additionalProperties": false,
+      "properties": {
+        "output": {
+          "$ref": "#/$defs/projection_output"
+        },
+        "product_id": {
+          "const": "android_source_projection_v1"
+        },
+        "request": {
+          "$ref": "#/$defs/projection_request"
+        },
+        "type": {
+          "const": "source_projection"
+        }
+      },
+      "required": [
+        "type",
+        "product_id",
+        "request",
+        "output"
       ],
       "type": "object"
     },
@@ -3918,7 +6115,7 @@
             "$ref": "#/$defs/id"
           },
           "maxItems": 256,
-          "minItems": 0,
+          "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
@@ -3939,6 +6136,9 @@
         },
         "peer": {
           "$ref": "#/$defs/peer"
+        },
+        "projection_catalog_sha256": {
+          "$ref": "#/$defs/digest"
         },
         "provider_id": {
           "$ref": "#/$defs/id"
@@ -3972,6 +6172,7 @@
         "source_id",
         "provider_id",
         "catalog_sha256",
+        "projection_catalog_sha256",
         "dates",
         "calendar_timezone",
         "selection",
@@ -5959,7 +8160,8 @@
             "local_recipe",
             "host_schedule",
             "native_schedule",
-            "native_destination"
+            "native_destination",
+            "native_credential_reference"
           ],
           "type": "string"
         },
@@ -6388,6 +8590,54 @@
         }
       ]
     },
+    "zero_control_effects": {
+      "additionalProperties": false,
+      "properties": {
+        "content_preview_reads": {
+          "const": 0,
+          "type": "integer"
+        },
+        "credential_enrollments": {
+          "const": 0,
+          "type": "integer"
+        },
+        "earliest_date_reads": {
+          "const": 0,
+          "type": "integer"
+        },
+        "health_reads": {
+          "const": 0,
+          "type": "integer"
+        },
+        "output_writes": {
+          "const": 0,
+          "type": "integer"
+        },
+        "quota_consumed": {
+          "const": 0,
+          "type": "integer"
+        },
+        "settings_mutations": {
+          "const": 0,
+          "type": "integer"
+        },
+        "wake_enrollments": {
+          "const": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "health_reads",
+        "earliest_date_reads",
+        "content_preview_reads",
+        "output_writes",
+        "quota_consumed",
+        "settings_mutations",
+        "credential_enrollments",
+        "wake_enrollments"
+      ],
+      "type": "object"
+    },
     "zone": {
       "maxLength": 128,
       "minLength": 1,
@@ -6472,6 +8722,48 @@
         },
         "type": {
           "const": "plan_response"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/approval_request"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "approval_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/approval"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "approval_response"
         }
       },
       "required": [
@@ -6611,6 +8903,90 @@
       "additionalProperties": false,
       "properties": {
         "payload": {
+          "$ref": "#/$defs/control_plan_request"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "control_plan_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/control_plan"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "control_plan_response"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/control_approval_request"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "control_approval_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/control_approval"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "control_approval_response"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
           "$ref": "#/$defs/control"
         },
         "protocol_version": {
@@ -6724,48 +9100,6 @@
         },
         "type": {
           "const": "query_cancelled"
-        }
-      },
-      "required": [
-        "protocol_version",
-        "type",
-        "payload"
-      ],
-      "type": "object"
-    },
-    {
-      "additionalProperties": false,
-      "properties": {
-        "payload": {
-          "$ref": "#/$defs/projection_request"
-        },
-        "protocol_version": {
-          "const": 4,
-          "type": "integer"
-        },
-        "type": {
-          "const": "projection_request"
-        }
-      },
-      "required": [
-        "protocol_version",
-        "type",
-        "payload"
-      ],
-      "type": "object"
-    },
-    {
-      "additionalProperties": false,
-      "properties": {
-        "payload": {
-          "$ref": "#/$defs/projection"
-        },
-        "protocol_version": {
-          "const": 4,
-          "type": "integer"
-        },
-        "type": {
-          "const": "projection_response"
         }
       },
       "required": [

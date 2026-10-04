@@ -18,7 +18,10 @@ V2 extends the application layer for Android while deliberately reusing the depl
 
 V4 is an independently negotiated agent-control/source-query extension over base v1/v2, not pairing
 selector 4 or a replacement for iPhone query v3. No new unknown hello fields are sent to old Android
-decoders. All planned controls require separate issued authority; no product support is claimed.
+decoders. Sanitized stored authority references enable bounded export bootstrap; native configuration
+uses separate candidate-bound plan/approval relay. No client JSON mints grants. Projection artifacts
+and source-specific native metadata/type/precision remain independent of historical exports.
+All capabilities remain planned; no product support is claimed.
 See the [agent bridge foundation](../agent-bridge/v1/contract.md) and
 [downstream native conformance gates](../agent-bridge/v1/conformance.md).
 

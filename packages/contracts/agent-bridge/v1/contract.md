@@ -18,7 +18,7 @@ Normative grammar: [agent schema](agent.schema.json), [query schema](query.schem
 
 | Boundary | New identity | Decision |
 |---|---|---|
-| Declarative intent, plan, discovery, authority, approval, receipts, control | `healthmd.agent_*` / 1 | Closed independent configuration DTOs; never Shared Setup RPC |
+| Declarative intent, plan, discovery, stored delegation references, authority, approval, receipts, control | `healthmd.agent_*` / 1 | Closed independent configuration DTOs; never Shared Setup RPC |
 | Source-aware typed request / response / catalog | `healthmd.source_query_request`, `healthmd.source_query_response`, `healthmd.source_query_catalog` / 1 | Separate from existing Apple `healthmd.query_request/1` and `query_response/1` |
 | Cursor claims and cancellation | `healthmd.source_query_cursor_claims`, `source_query_cancel`, `source_query_cancelled` / 1 | Native-authenticated, transient, dataset/peer/scope-bound |
 | Android selected extraction | `healthmd.source_projection_request`, `healthmd.source_data_projection` / 1 | B08 new source-shaped product `android_source_projection_v1`; not reserved v2 `android_daily_records_v1` |
@@ -33,7 +33,9 @@ existing contracts. No shared Rust query engine is claimed: the current evaluato
 ## Complete explicit intent and precedence
 
 Every `agent_export_intent/1` contains a selected source/host installation pair, an opaque destination
-binding, explicit dates and IANA timezone, timestamp timezone `UTC`, capture scope and settings policy.
+binding, explicit dates and IANA timezone, timestamp timezone `UTC`, capture scope and a closed `product`.
+`generated_files` requires the daily settings policy below. `source_projection` requires its explicit
+product ID, selector request and projection output; daily `settings_policy` is forbidden in that branch.
 No destination path, basename, SAF URI, bookmark, credential, endpoint secret, trust or purchase object
 crosses the wire. The host owns the mapping from binding ID to its private native root and identity.
 
@@ -92,8 +94,10 @@ URL execution, arbitrary file reads and arbitrary JSON pointers are forbidden.
 ## Dates, owner time and configuration-only planning
 
 Civil date bounds are inclusive in the frozen IANA Gregorian calendar; native reads use half-open
-instants `[start-day midnight, day-after-end midnight)`, not fixed 24-hour arithmetic. Source timestamps
-retain seconds, nanoseconds and nullable original offsets. Owner timezone and source offset are distinct.
+instants `[start-day midnight, day-after-end midnight)`, not fixed 24-hour arithmetic. Source timestamps retain a checked seconds/nanoseconds view, declared **source representation precision**
+and nullable original offsets; HealthKit Date additionally preserves exact returned binary64 bits.
+Nanosecond formatting is not proof of nanosecond storage or sensor accuracy. Owner timezone and source
+offset are distinct.
 
 `past_complete_days` uses an explicit configuration anchor date, excludes that date, and resolves to
 exact bounds before approval. A host recipe/schedule must compute a fresh anchor in its explicit zone
@@ -110,8 +114,9 @@ never clips uncertain history to a silently narrower range or reports full histo
 Planning may read authenticated runtime capability/settings/profile revisions and native readiness
 without side effects. It **must not** invoke earliest-date discovery, content preview, a health query,
 provider login/probe, quota accounting, output writes, native settings mutation, credential enrollment,
-wake enrollment or notification. Counts in `side_effects` are all integer zero. Required native actions
-are descriptions, not actions that the plan performs.
+wake enrollment or notification. `side_effects` explicitly counts health reads, earliest-date reads, content-preview reads, quota,
+output writes, settings mutations, credential enrollments and wake enrollments; all are integer zero.
+Required native actions are descriptions, not actions that the plan performs.
 
 The plan discloses effective settings, resolved selections/dates, origin of every effective setting,
 revision pins, source limits, unresolved history, unsupported choices and exact configuration-derived
@@ -159,10 +164,77 @@ unit/statistic, aliases, registry equivalence and static mapping support. It con
 permission assertions, grants or secrets; query-runtime availability is a different catalog. It must
 not copy HealthKit mappings into Android or use the frozen `hrv` key to equate RMSSD with SDNN.
 
+## Stored authority bootstrap (no plan-time grant creation)
+
+The first export is expressible without a caller inventing an exact-scope grant. Two **previously
+approved private stores** are prerequisites, independent of mobile export preferences:
+
+1. On the source, a native human decision has stored a bounded `agent_export_delegation/1` for the
+   authenticated source+host pair. Pairing alone is insufficient. Its closed bounds specify semantic
+   metrics, calendar zones, exact date limits or authorized-history/max-day policy, formats, profiles,
+   write modes, capture detail and native archive products; allowed products and projection detail/object/
+   field IDs are explicit additional bounds. A generated-files grant cannot implicitly grant projection. It can grant `discover`, `plan` and
+   `export_execute` only, never configuration/schedule mutation, queries or destination credentials.
+2. On the host, its human/native output authorization has already stored a separate export delegation
+   and registered private destination roots. The source-approved destination policy is
+   `authenticated_host_bindings`; the host policy is `registered_host_bindings` with an explicit bounded
+   ID list. The source does not learn roots and the host cannot manufacture source consent. Registering
+   a new root is a separate host authorization step **before** planning, not a planner side effect.
+
+`discovery.authority_references` returns only source-owned, peer-filtered stored references:
+`authority_id`, `issuer: native_source`, `grant_revision`, `grant_sha256`. It may be empty; that means
+native authorization is required before the first plan. No secret, credential, bearer capability,
+bookmark, root or portable grant is returned. Host-owned references (`issuer: authorized_host`) come
+from the host's authenticated private-store catalog, **not** source discovery. `grant_sha256` is the
+canonical digest of the stored sanitized grant/delegation description at that immutable revision.
+Changing any bound, revoking or replacing a grant invalidates its reference; JSON cannot register it.
+A sanitized delegation description is a grammar for review, not a grant-creation request or v4 RPC.
+
+The concrete journey is:
+
+- Discover with the authenticated pair; select an existing native reference and a locally obtained host
+  reference. `plan_request` names the native `authority_id`/`authority_revision`, host reference,
+  capability digest and complete intent. Look up both references in their **issuing** private stores.
+- Resolve configuration-only scope/settings and check both stored delegation bounds. This does **not**
+  demand a pre-existing exact scope hash or allocate a fresh authority ID. For saved/profile policies,
+  resolve only the requested configuration revision. Refuse out-of-bounds choices; do not narrow them.
+- Return `agent_export_plan/1` with both `authority_references`. Pure derivation of each scoped
+  `agent_authority/1` reuses its parent ID/issuer/revision, pins the new scope and the single approved
+  destination binding, and clamps expiry to the plan and parent expiry. The native adapter independently
+  derives it from its own stored record; the host independently derives/checks its own output grant.
+  Derived JSON is **not** new stored authority and cannot widen parent bounds. Current native consent,
+  entitlement, trust/revocation and host output readiness remain independent runtime checks.
+- `approval_request` names the issued plan and full binding. This is a request to check/relay a separately
+  stored human/policy decision, not `approve: true` authorization. Source and host verify their respective
+  delegation/reference and exact issued plan; the stored decision must match the binding. The issuer
+  stores/returns `agent_approval/1` via `approval_response`; caller-supplied IDs/digests do not issue it.
+- Execute the exact plan/approval. Check the two derived scoped authorities, both parent references,
+  installed capabilities, peer/root identity, revisions, consent and entitlement before capture/commit.
+
+A future metric/date scope or another **already host-approved** destination inside both delegations
+uses a fresh request, plan, derived scope, approval and job. Neither edits phone settings nor requests
+new phone destination grants. The old exact approval/derived scope cannot authorize it. Outside a
+parent's bounds, a separate human delegation change is required; planning cannot do that. Unknown
+IDs, copied references from another peer/issuer, expired/revoked parents and substituted root identity
+fail closed. For logical `all_available`, max-day bounds are enforced only after approved execution
+resolves history; overflow rejects, never silently clips. No earliest-date read is needed for delegation
+checking during planning.
+
+Native configuration is deliberately different. A bounded export delegation **never** derives
+configuration authority. Native configuration-read authority has a stored `control_read_scope` (bounded
+object IDs and permitted list/create domains); its scope digest is the canonical digest of that scope.
+Unknown objects/list domains cannot be authorized by caller UUIDs. Read-only planning can use that
+stored inspection grant while Configuration Protection is locked. Mutation requires a separate exact
+candidate-scope native authority and stored native approval decision after any required native unlock.
+Host recipe/schedule authorities are host-issued only; source-issued rights cannot authorize host-store
+mutation and host-issued rights cannot authorize native configuration. Receiving wire references never
+establishes the other issuer's trust: native verification occurs on source, host verification before local
+writes. Synthetic contexts model both private stores; no new signature or portable bearer grant is added.
+
 ## Authority, approval and immutable execution
 
-Pairing proves installation identity only. `agent_authority/1` is a **sanitized description of a
-native/host-issued stored grant**, not a bearer token or a client-authored grant. Receiving a JSON object
+Pairing proves installation identity only. `agent_authority/1` is a **sanitized scoped description**, with explicit issuer, of a native/host-issued
+stored grant or the pure bounded-export derivation above, not a bearer token or a client-authored grant. Receiving a JSON object
 or Shared Setup file never creates rights. Servers check the authenticated peer against their private
 issued-grant/approval records; unknown IDs and replay from another host/source fail closed. Do not derive
 new authority from an MCP annotation or a valid digest alone.
@@ -186,10 +258,11 @@ unlocked; native mutation requires an existing native unlock/consent decision. E
 implies phone profile mutation, native destination rebinding or scheduling authority.
 
 Plan lifetime is at most ten minutes. Approval is bound to **all** of source+host peer, opaque destination
-identity+revision, scope/settings/plan digests, native/profile/recipe revisions, capability digest and
-expiry. Canonical digest is sorted compact UTF-8 JSON (unescaped `/`, no Unicode normalization, no
+identity+revision, both issuer-owned authority references, scope/settings/plan digests,
+native/profile/recipe revisions, capability digest and expiry. Canonical digest is sorted compact UTF-8 JSON (unescaped `/`, no Unicode normalization, no
 floats in metadata). The plan digest excludes only its own `plan_sha256` field. Scope digest includes
-resolved/logical dates, zone, capture axes and resolved metric IDs. Any change requires a new plan and
+resolved/logical dates, zone, capture axes, resolved metric IDs and the entire explicit product (including
+projection selectors, catalog pins and output). Any change requires a new plan and
 approval, never silent replanning. Approval cannot outlive the plan or stored authority. Human approval
 is stored before execution; client-supplied approval IDs are insufficient.
 
@@ -220,10 +293,59 @@ confirmation makes completion/cancellation terminal; local intent is `cancellati
 
 `agent_control_request/1` enumerates fixed verbs only: host recipe create/list/get/update/delete/run;
 native profile create/list/get/update/activate/delete; host schedule create/list/get/update/pause/delete/
-run-now; native schedule inspect/plan/update/enable/disable/inspect-pending/discard-pending; native
-destination inspect/plan/update. Each mutation has a separate stored approval and idempotency key.
-Object references are stable IDs and expected revisions. No display-name fallback or arbitrary files.
-Sanitized `agent_control_receipt` returns bounded typed items/revision/digest/actions, never native secrets.
+run-now; native schedule inspect/update/enable/disable/inspect-pending/discard-pending; native
+destination inspect/update. **All five domains additionally have a typed `plan` branch**, including
+native profiles. Host-owned DTOs execute in host stores locally, not as mobile RPC; v4 relays native
+controls only. No generic dispatcher, display-name fallback or arbitrary file/URL execution is added.
+
+Closed `agent_control_plan_request/1` and the domain-specific `control_request.operation.verb: plan`
+branch both carry the **whole candidate `proposal`**, not just the object to inspect. A proposal has
+one fixed domain/verb, stable object ID, expected revision, and full typed `value` for create/update;
+discard additionally names the pending binding digest. Create preallocates a requested stable ID with
+`expected_revision: 0`, requiring absence at acceptance. That ID is a target, never authority. Action
+verbs bind their exact action and current object/dependency revisions rather than accepting untyped
+patches. The domain-specific plan branch cannot carry a proposal for another domain.
+
+`agent_control_plan/1` echoes the proposal, peer, request/planning-authority IDs, required mutation/run
+right, capability digest, sorted unique revision pins, required native actions and eight zero side-effect
+counts. It reads only authorized configuration. `proposal_sha256` is SHA-256 of canonical proposal;
+`scope_sha256` is SHA-256 of `{peer, proposal, revisions}`; `plan_sha256` excludes only itself. Plan
+expiry is at most ten minutes. Pin the target revision/digest (or absence), referenced profile/recipe
+revisions, existing native destination revision/digest and endpoint credential-**reference** revision.
+Credential rotation or capability/destination/revision changes require a fresh plan. No credential value,
+SAF/bookmark access grant or external endpoint probe is part of the plan.
+
+A zero-health configuration approval journey is now expressible:
+
+1. A native-authorized inspection reference from discovery (or host-local inspection grant) authorizes
+   `control_plan_request` with a complete candidate. Planning while protected/locked remains read-only.
+2. Source/host stores the issued candidate plan identity and returns `control_plan_response`. Missing
+   native bindings return required actions; no planning request performs them or unlocks protection.
+3. After a **separate native** exact candidate-scope authorization/decision (host-local decision for host
+   stores), `control_approval_request` names the exact binding and optionally an already-known authority
+   ID. When omitted, the issuer may select **only** an already stored native/host decision/grant for that
+   binding; absence means approval required, never grant creation. Receiving the request is not the
+   decision. Check issued plan, current revisions, protection, consent and entitlement; record/return
+   `agent_control_approval/1` via `control_approval_response` with the issuer-owned authority reference
+   (ID, issuer, revision, digest). The host learns an initially unknown mutation ID from this response.
+   Exact per-candidate mutation grants need not be enumerated in discovery; discovery exposes existing
+   planning/delegation references, not a grant-enrollment endpoint. Native unlock or other capability
+   changes require a fresh current plan before approval. A read-only/export grant cannot be reused.
+   Planning-authority ID may differ from mutation-authority ID; planning never creates/upgrades either.
+4. Mutation `control_request` carries full **plan and approval records**, idempotency key and exact
+   proposal fields. No `approval_id`-only mutation is accepted. Match the candidate byte-for-byte,
+   issued plan/approval identities, exact mutation-authority reference and rights, peer,
+   revision/capability/expiry and current native gates
+   before an atomic configuration transaction. Rehashing client boxes never makes an issued record.
+5. A mutation `control_receipt` must echo `mutation_binding` (full control binding, approval ID and exact
+   request digest), resulting revision/value digest and native actions. Read receipts omit it. Unknown
+   outcomes replay the persisted receipt, never a second mutation. Index is `(authenticated peer,
+   domain, object_id, idempotency_key)`; exact retries return stored receipts even after expiry/revision
+   advance, while any changed bytes reject. Concurrent requests use CAS, never last-writer-wins.
+
+Sanitized receipts return bounded typed items/revision/digest/actions, never native secrets. No health
+capture occurs in a configuration transaction; recipe/schedule run authority only creates a fresh export
+planning journey, not permission to bypass its export approval.
 
 Recipe values contain name and declarative intent, not health data, pairing rights or approvals.
 Destination/device references are host-local; recipe import/export is separate from Shared Setup and
@@ -266,11 +388,46 @@ reviewed installed catalog are unavailable; multi-provider merged queries are no
 `all_available` means logical full authorized scope, not proof that all history is authorized.
 
 Only explicit `native_evidence` plus `include_evidence_values` and `query_evidence` may return source
-values. Summary is not permission to disclose raw records. Native record identity is provider-qualified:
-Health Connect record ID/data origin/client ID/version/last-modified, HealthKit original UUID, provider
-native ID, or documented external identity. Nested SDK children without native IDs are `derived_child`
-with a parent identity; no fabricated native UUIDs. Exact timestamps retain nanoseconds, nullable offsets
-and zero client record versions. Source strings never become paths or URLs to execute.
+values. Summary is not permission to disclose raw records. Native record identity has **closed source-specific branches**, not an Android-shaped common metadata
+requirement. HealthKit preserves original UUID, exact native object-type identifier and observed origin;
+it omits last-modified/client-ID/client-version and explicitly reports `not_exposed_by_source` for all
+three in `metadata_status`. HKSourceRevision application version and optional HK sync metadata are not
+relabeled client record versions. Sample end, capture time and zero never fill an unavailable field.
+Health Connect preserves its actual record ID/data origin and observed Metadata fields. Nullable client
+ID is omitted with status `absent`; uncaptured metadata is omitted with `not_captured`, never invented.
+Actual observed native version zero remains a value. `available` requires the corresponding member;
+all other statuses forbid one. `not_captured` metadata makes evidence capture incomplete, never complete;
+strict projections require explicit partial acceptance. Supported-but-unset client ID (`absent`) and
+legitimately unexposed source metadata do not fabricate a failure or zero. Provider-native identity only
+carries fields its reviewed source exposes.
+
+Nested SDK children without native IDs are `derived_child` with `parent_record_id` and exact
+`parent_record_type`; they carry no fabricated UUID or copied parent last-modified/client metadata.
+Native/external identities omit parent members rather than using empty strings. Ordinary Health Connect
+Record metadata APIs are not claimed absent; missing capture is distinct from APIs that do not expose
+metadata (HealthKit, nested children, or separately reviewed external/provider products).
+
+`record_type`, catalog `native_record_type` and dictionary `native_type` use a separate case-preserving,
+1–256-character native-identifier grammar (`[A-Za-z_][A-Za-z0-9_.:$-]*`), not registry semantic-ID grammar.
+Examples are `HKQuantityTypeIdentifierStepCount`, `androidx.health.connect.client.records.HeartRateRecord`
+and nested `HeartRateRecord$Sample`. Android catalog identifiers are fully qualified SDK class names;
+Apple identifiers are exact HKObjectType.identifier strings. Unknown/unavailable source mappings omit
+native type instead of inventing another platform's API. Supported/planned catalog rows must have one.
+Native types never replace `metric_id`/selector IDs and are checked against the selected source catalog.
+All source/native identifier strings remain inert; they never become paths or URLs to execute.
+
+Every source time declares `precision`: `source_nanoseconds` (actual Instant representation),
+`source_milliseconds` (nanos divisible by one million), `source_seconds` (nanos zero), or
+`source_binary64_seconds`. For HealthKit Date, the latter requires `source_binary64_bits`: 16 lowercase
+hex digits encoding the exact big-endian IEEE-754 bits of the **returned** `timeIntervalSince1970` value.
+Reject nonfinite bits. Compute total normalized nanoseconds by exact rational decoding and nearest-integer
+rounding, ties to even; split with floor/divmod into epoch seconds plus nonnegative nanos. Verify that
+view against the bits, retain the bits as authority for original precision, and do not claim integer-nanos
+source storage. Session durations use that declared normalized view; it is not finer sensor evidence.
+A last-modified time is source metadata, never substituted for measurement time. Missing original offsets
+stay null, not inferred from the export zone. Native 64-bit client versions require lossless integer
+parsing (including values beyond JavaScript safe integers). The [SDK/source review](source-review.md)
+records the exact evidence and remaining native verification gates.
 
 Values retain statistic and canonical unit. SDK aggregates are explicit native aggregate facts; do not
 resum raw steps to emulate provider priority. Decimal values are strings to preserve exact decimal
@@ -305,12 +462,107 @@ clears iPhone transient snapshots; Android service stop clears Android snapshots
 service sessions may continue after first unlock; no boot/force-stop bypass. Cancellation acknowledgement
 is bound to request/scope/dataset and clears the snapshot.
 
-B08 projection requests use explicit source-native objects/field **IDs**, not arbitrary JSON pointers.
-Summary/selected-series/native-record detail is orthogonal to daily formatting and native archives.
-`source_data_projection/1` is always `is_complete_daily_document: false`; it never relabels Android records
-as Apple daily/HealthKit records or frozen Android v4/v5. Strict partial acceptance defaults false; receipts
-cover every requested day/branch before exposure. B08 must use the durable v4 job/manifest/commit boundary
-for artifacts and exact-resume, not this transient query paging cache. The schema enables a bounded
+## B08 accepted projection product and adapter trace
+
+`source_projection_request/1` is a **selector value**, not a health-read/preview RPC. Draft standalone
+v4 `projection_request`/`projection_response` discriminators are removed before native DTO adoption.
+Projection uses the same issued-plan → stored approval → v4 execute → durable transfer path as exports.
+No health-data-producing endpoint accepts a selector DTO alone.
+
+`agent_export_intent.product` is a closed union. Daily/generated files use `type: generated_files` and
+existing daily output policies. Projection uses `type: source_projection`,
+`product_id: android_source_projection_v1`, full `request: source_projection_request/1` and `output`:
+profile `android-source-projection-v1`, media/write mode, `layout: per_day`, subfolder/folder/basename
+(date tokens only). Daily `settings_policy`, saved/default settings, raw/archive product selectors and
+implicit ZIP/dictionary are forbidden for this branch. Common capture selection/peer/dates/zone must
+exactly match the embedded request; archive is `none`. Projection `native_records` is selected typed
+source evidence, not a complete provider-native snapshot.
+
+The [reviewed projection catalog](reviewed-projection-catalog.json) declares five **planned** bounded
+field/object mappings: Steps daily aggregate, Heart Rate daily average, Steps interval count, Heart Rate
+child-sample BPM, and selected Steps record evidence. Request field IDs explicitly select supported
+members of requested objects; all fields/metric IDs agree. No arbitrary pointers, field reflection,
+unknown-ID fallback, `all_metrics` or unresolved categories in this bounded edition. Other metrics/
+provider products require separately reviewed mappings, not fabricated observations. Discovery separately
+advertises `source_projection`, supported `projection_products` and the exact projection-catalog digest;
+an absent feature has an empty product list/zero digest. Source-catalog and selector-catalog digests are
+both pinned. Discovery supplies `projection_source_catalog` as **health-free** compiled unit/type/
+permission/feature metadata (no queried days/values/missing-record counts); it needs no separate query
+right or metadata health read. Absent projection omits it. The static selector catalog is not an
+installed-provider or implementation availability assertion.
+
+`metric_series` and projection `summary` remain **daily aggregate facts** (native reducer/statistic and
+priority semantics). `selected_series` is instead a list of `source_observation` records: field ID,
+`selection_metric_id` (authorization/attribution only, not a claim of average/sum), native property key,
+point/interval role, original native/derived-child identity, actual start and interval end if exposed,
+owner date, canonical unit and lossless native integer. `heart_rate.samples.bpm` is a point BPM, never
+`heart_rate_avg`'s daily average. Its sample identity retains parent record ID/type and does not copy
+parent modification/client metadata. Interval Steps counts retain original start/end; a point has no
+invented end. Observation ID hashes its canonical record excluding only itself. Neither timestamps nor
+identity may disappear into a daily metric item; do not recompute native daily aggregates from raw points.
+
+The fixture journey `projection-product-*` / `projection-journal-*` / `projection-transfer-*` freezes:
+
+1. Authenticated paired host + previously approved bounded source/host delegation/root references.
+   **Both** delegations explicitly allow this product, detail, objects and fields. No phone settings edit.
+2. Zero-health `plan_request` resolves only this explicit product. Plan returns
+   `effective_projection_output`, empty saved/native setting revisions, origins for every selector/output
+   leaf, resolved/logical dates, paths and eight zero side-effect counts. `settings_sha256` hashes explicit
+   projection output; scope hashes the entire product as well as common capture/dates/metrics.
+3. Separate stored exact decision → bound `approval_request`/response → `execute_request`. **Fingerprint
+   is SHA-256 of canonical full v4 `agent_execute_request/1`**, including issued plan/approval,
+   object/field/detail IDs, both catalogs, media/write/path settings, peer/root, job and idempotency keys.
+   Rehashing/widening JSON is not new authority. Changed bytes require a fresh approval/job.
+4. Before the first source read, durably store `agent_projection_job/1`: exact execute bytes/fingerprint,
+   accepted timestamp, resolved scope and both frozen catalogs; state `accepted`, capture not started.
+   Only then capture selected fields once. Persist same-job projection bytes, v4 artifact manifest,
+   catalog snapshots and immutable spool. `spool_sha256` hashes canonical artifact-ID-sorted
+   `{artifact_id, sha256, byte_count}` rows. Receipts cover every `object.<id>` and `field.<id>` branch
+   including zero/unsupported/partial/failed states, plus every requested day via preserved coverage.
+   Strict partial acceptance defaults false; bounded overflow fails, never drops dense intraday points.
+5. V4 manifest binds **that** job, execute fingerprint, full approval binding and exact new profile/
+   bytes/path/write mode. Base Android-v2 generic `TransferSession.request_fingerprint` carries the
+   same v4 execute digest. Base `ArtifactManifest` is `kind: generated_file`,
+   `schema: {id: healthmd.source_data_projection, major: 1}` and unchanged known file fields; this is
+   generic file carriage, **not** a v2 `generated_files_v1` export request or daily product acceptance.
+   No v2 `export_request`/`export_accepted` is synthesized for this product; v4 receipt is acceptance.
+6. Existing partitions/chunks/acks/frames transfer the immutable bytes. Host cross-checks every
+   overlapping base/v4 field and validates the source-shaped bytes with the frozen catalogs. V4 owns
+   new profile/selector/approval metadata. Journal before/input/after digest-bound commit before append;
+   replay returns `already_committed`, no second append. Final source acknowledgement makes completion.
+7. Resume uses exact request/manifest/frontier and preserved spool/catalogs, not current phone settings,
+   a new query snapshot, current reducer mappings or a recaptured source dataset. Expired query cache
+   is irrelevant. Missing spool returns `spool_missing_restart_required`; changed fingerprint, root,
+   selectors/profile, manifests or bytes reject. Job expiry/revocation still stop work without migration.
+
+`source_data_projection/1` is always `is_complete_daily_document: false`; it never relabels source records
+as Apple daily/HealthKit records, Android v4/v5/raw snapshots or reserved v2 `android_daily_records_v1`.
+
+The independently versioned durable product is `android_source_projection_v1`; its exact
+`artifact.profile` is **`android-source-projection-v1`** (kebab-case artifact IDs are not product IDs).
+It maps only to `healthmd.source_data_projection` **schema version 1**, Android peer and the reviewed
+Health Connect catalog in this edition (provider-native mappings remain unsupported), `is_complete_daily_document: false`:
+
+| Artifact media type | Exact content framing | Write modes |
+|---|---|---|
+| `application/json` | One canonical projection document followed by one LF | `overwrite` |
+| `application/x-ndjson` | Canonical projection lines with LF and unique ascending owner dates; explicit `per_day` product layout emits one owner-date document per artifact | `overwrite`, `append` |
+
+NDJSON append is journaled once under the existing digest-bound commit contract. JSON append is rejected
+rather than concatenating separate objects into an invalid JSON document. Neither media type becomes a
+complete daily document. Media type is
+authoritative; examples use `.json`/`.jsonl`. CSV/Markdown/ZIP media and Markdown merge are not this
+projection profile. This minimal projection product does not imply ZIP/dictionary; any later container
+must be explicitly approved and retain exact inner projection descriptors.
+The profile is not a new frozen daily/output-settings profile: it is absent from `settings.output_profile`
+and does not relabel Apple v8, Android v4/v5, HealthKit archives or Android raw snapshots.
+
+Durable validators cross-check request/peer/source/provider/catalog/detail/owner-date/scope and selectors,
+coverage/explicit partial acceptance, and exact framed bytes/count/SHA-256 against the manifest. Projection
+scope digest is SHA-256 of the projection request excluding only `request_id`; all other controls remain.
+Artifact verification must read preserved bytes, not recapture a transient query snapshot. JSON/NDJSON
+cross-schema positive/negative vectors bind the profile to this schema, reject relabeling/expanded detail,
+and preserve record/value units and identity. The metadata grammar alone is not byte validation. The schema enables a bounded
 projection envelope; production capture/selector/profile evidence and Kotlin/Rust artifact validation
 remain B08 gates.
 
