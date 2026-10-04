@@ -777,11 +777,8 @@ struct MarkdownTemplateView: View {
 
             FormatDivider()
 
-            FormatToggleRow(
-                title: "Workout Details and Metadata",
-                subtitle: "Show these two workout tables in Markdown exports and daily notes. Turn off to keep readable workout summaries without the tables. Structured data and source capture are unchanged.",
-                isOn: $config.includeWorkoutDetailsAndMetadata,
-                accessibilityLabel: "Include workout Details and Metadata tables"
+            FormatWorkoutTableToggleControl(
+                isOn: configurationProtection.protecting($config.includeWorkoutDetailsAndMetadata)
             )
         }
     }

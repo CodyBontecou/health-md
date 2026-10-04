@@ -39,6 +39,11 @@ SHARED_MAC_DISPLAY = (
     APPLE_ROOT / "HealthMd/Shared/Models/HealthMetrics.swift",
     APPLE_ROOT / "HealthMd/Shared/Models/SyncEventHistory.swift",
 )
+# Only the platform-neutral workout presentation declaration before the iOS
+# views is reviewed here; do not silently enroll unrelated format-row copy.
+FOCUSED_IOS_DISPLAY = (
+    APPLE_ROOT / "HealthMd/iOS/Components/FormatA11yComponents.swift",
+)
 MAC_VISIBLE_PARTIAL_FAILURE_UI = {
     APPLE_ROOT / "HealthMd/Shared/Views/ExportPreviewView.swift",
     APPLE_ROOT / "HealthMd/macOS/Views/MacHistoryView.swift",
@@ -98,7 +103,7 @@ EXPECTED_PLURAL_BRANCHES = {
 
 def source_files() -> list[Path]:
     mac_files = [path for path in MAC_ROOT.rglob("*.swift") if "Debug" not in path.parts]
-    return sorted(set(mac_files).union(SHARED_MAC_DISPLAY))
+    return sorted(set(mac_files).union(SHARED_MAC_DISPLAY, FOCUSED_IOS_DISPLAY))
 
 
 def metric_registry_terms(source: str | None = None) -> tuple[list[str], list[str]]:
@@ -301,6 +306,8 @@ def scanned_catalog_keys(strings: dict) -> tuple[dict[str, list[str]], list[str]
     }
     for path in source_files():
         source = path.read_text()
+        if path in FOCUSED_IOS_DISPLAY:
+            source = source.split("\n#if os(iOS)", 1)[0]
         scan_computed = "Views" in path.parts or path in computed_display_files
         for raw, kind, line in scan_source_text(source, scan_computed_returns=scan_computed):
             scanned_count += 1

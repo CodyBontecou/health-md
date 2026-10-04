@@ -66774,6 +66774,21 @@
         }
       }
     },
+    "Include workout Details and Metadata tables" : {
+      "comment" : "iPhone/iPad workout presentation toggle accessibility label; not a capture setting",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Details- und Metadatentabellen für Trainings einbeziehen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Include workout Details and Metadata tables" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Incluir tablas de detalles y metadatos de los entrenamientos" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Inclure les tableaux de détails et de métadonnées des entraînements" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Includi le tabelle dei dettagli e dei metadati degli allenamenti" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ワークアウトの詳細とメタデータの表を含める" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "운동 세부 정보 및 메타데이터 표 포함" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Tabellen met trainingsdetails en metadata opnemen" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Incluir tabelas de detalhes e metadados dos treinos" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "包含体能训练详情和元数据表格" } }
+      }
+    },
     "Included in frontmatter" : {
 
     },
@@ -103247,6 +103262,21 @@
     },
     "Show the onboarding flow again" : {
 
+    },
+    "Show these two workout tables in Markdown exports and daily notes. Turn off to keep readable workout summaries without the tables. Structured data and source capture are unchanged." : {
+      "comment" : "iPhone/iPad workout setting explanation and accessibility hint; presentation only",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Zeige diese beiden Trainingstabellen in Markdown-Exporten und täglichen Notizen. Schalte sie aus, um lesbare Trainingszusammenfassungen ohne die Tabellen zu behalten. Strukturierte Daten und Quelldatenerfassung bleiben unverändert." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show these two workout tables in Markdown exports and daily notes. Turn off to keep readable workout summaries without the tables. Structured data and source capture are unchanged." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Muestra estas dos tablas de entrenamientos en las exportaciones Markdown y las notas diarias. Desactívalo para conservar resúmenes legibles de los entrenamientos sin las tablas. Los datos estructurados y la captura de datos de origen no cambian." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Affiche ces deux tableaux d’entraînement dans les exports Markdown et les notes quotidiennes. Désactivez cette option pour conserver des résumés d’entraînement lisibles sans les tableaux. Les données structurées et la capture des données sources restent inchangées." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Mostra queste due tabelle degli allenamenti nelle esportazioni Markdown e nelle note giornaliere. Disattiva per mantenere riepiloghi leggibili degli allenamenti senza le tabelle. I dati strutturati e l’acquisizione dei dati di origine restano invariati." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Markdownのエクスポートとデイリーノートに、この2つのワークアウトの表を表示します。オフにすると、表なしで読みやすいワークアウトの概要を残します。構造化データとソースデータの取得は変わりません。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Markdown 내보내기와 일일 노트에 이 두 운동 표를 표시합니다. 끄면 표 없이 읽기 쉬운 운동 요약이 유지됩니다. 구조화된 데이터와 원본 데이터 수집은 변경되지 않습니다." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Toon deze twee trainingstabellen in Markdown-exports en dagelijkse notities. Schakel uit om leesbare trainingssamenvattingen zonder de tabellen te behouden. Gestructureerde gegevens en het vastleggen van brongegevens blijven ongewijzigd." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mostra estas duas tabelas de treinos nas exportações Markdown e nas notas diárias. Desative para manter resumos legíveis dos treinos sem as tabelas. Os dados estruturados e a captura de dados de origem permanecem inalterados." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在Markdown导出和每日笔记中显示这两个体能训练表格。关闭后可保留不含表格的易读体能训练摘要。结构化数据和源数据采集保持不变。" } }
+      }
     },
     "Showing a lightweight preview of this %@ file. The full export will still include all data." : {
       "comment" : "macOS production UI",

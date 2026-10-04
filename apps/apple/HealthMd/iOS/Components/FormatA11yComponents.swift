@@ -1,3 +1,23 @@
+import Foundation
+
+/// The workout setting's production presentation boundary; no settings or export mutation.
+struct WorkoutTableTogglePresentation {
+    let title: String
+    let subtitle: String
+    let accessibilityLabel: String
+    var accessibilityHint: String { subtitle }
+    let accessibilityValue: String
+
+    init(isOn: Bool, bundle: Bundle = .main, locale: Locale = .current) {
+        title = String(localized: "Workout Details and Metadata", bundle: bundle, locale: locale)
+        subtitle = String(localized: "Show these two workout tables in Markdown exports and daily notes. Turn off to keep readable workout summaries without the tables. Structured data and source capture are unchanged.", bundle: bundle, locale: locale)
+        accessibilityLabel = String(localized: "Include workout Details and Metadata tables", bundle: bundle, locale: locale)
+        accessibilityValue = isOn
+            ? String(localized: "Enabled", bundle: bundle, locale: locale)
+            : String(localized: "Disabled", bundle: bundle, locale: locale)
+    }
+}
+
 #if os(iOS)
 import SwiftUI
 
@@ -140,6 +160,8 @@ struct FormatToggleControl: View {
     let subtitle: String
     @Binding var isOn: Bool
     let accessibilityLabel: String
+    var localizedAccessibilityValue: String? = nil
+    var localizedAccessibilityHint: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -155,8 +177,8 @@ struct FormatToggleControl: View {
             .toggleStyle(A11ySwitchToggleStyle())
             .tint(Color.accent)
             .accessibilityLabel(accessibilityLabel)
-            .accessibilityValue(isOn ? "Enabled" : "Disabled")
-            .accessibilityHint(subtitle)
+            .modifier(FormatToggleAccessibilityValue(isOn: isOn, localizedValue: localizedAccessibilityValue))
+            .accessibilityHint(localizedAccessibilityHint ?? subtitle)
 
             // Explanations need not compete with the switch thumb for reading width.
             Text(subtitle)
@@ -167,6 +189,39 @@ struct FormatToggleControl: View {
         }
         .padding(.vertical, Spacing.sm)
     }
+}
+
+private struct FormatToggleAccessibilityValue: ViewModifier {
+    let isOn: Bool
+    let localizedValue: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let localizedValue {
+            content.accessibilityValue(localizedValue)
+        } else {
+            // Keep the original literal overload for every unrelated format row.
+            content.accessibilityValue(isOn ? "Enabled" : "Disabled")
+        }
+    }
+}
+
+/// Uses the same native toggle as other format rows, with workout-specific localized copy.
+struct FormatWorkoutTableToggleControl: View {
+    @Binding var isOn: Bool
+    @Environment(\.locale) private var locale
+
+    func control(bundle: Bundle = .main, locale: Locale = .current) -> FormatToggleControl {
+        let copy = WorkoutTableTogglePresentation(isOn: isOn, bundle: bundle, locale: locale)
+        return FormatToggleControl(
+            title: copy.title, subtitle: copy.subtitle, isOn: $isOn,
+            accessibilityLabel: copy.accessibilityLabel,
+            localizedAccessibilityValue: copy.accessibilityValue,
+            localizedAccessibilityHint: copy.accessibilityHint
+        )
+    }
+
+    var body: some View { control(locale: locale) }
 }
 
 struct FormatTextFieldControl: View {
