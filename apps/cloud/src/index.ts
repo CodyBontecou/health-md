@@ -24,6 +24,7 @@ import { reconcileOrphanExportObjects } from "./object-reconciliation";
 import { errorResponse, HttpError, json, parsePositiveInteger, redirect, withSecurityHeaders } from "./http";
 import { decodeBase64, parseExportKeyring } from "./crypto";
 import type { Env } from "./types";
+import { isNativeAuthPath, nativeAuthUnavailable } from "./account-auth-v1/http";
 
 const STATIC_PATHS = new Set(["/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
   "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js", "/style.css"]);
@@ -212,6 +213,9 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (!expectedRequestOrigin(request, env, url)) {
     throw new HttpError(421, "wrong_host", "Request host is not configured for this service.");
   }
+  // No live adapter/registration exists. Pilot approval, cookies and env flags cannot
+  // turn this source reservation into native credential issuance. No global query exception.
+  if (isNativeAuthPath(url.pathname)) return nativeAuthUnavailable();
   if (url.search && url.pathname !== "/health") {
     throw new HttpError(400, "invalid_request", "Query parameters are not supported.");
   }
