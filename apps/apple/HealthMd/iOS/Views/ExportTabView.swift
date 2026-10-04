@@ -57,6 +57,7 @@ struct ExportTabView: View {
     @State private var historyRefreshID = UUID()
     @State private var historyProfileID: UUID?
     @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyPreviewWorker = HealthHistoryAssessmentWorker()
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -153,8 +154,8 @@ struct ExportTabView: View {
             #endif
             }
         }
-        // Only this SwiftUI task owns preview work. Every event invalidates its
-        // identity, rather than spawning overlapping observer-owned tasks.
+        // SwiftUI owns the logical waiter; the parent-owned worker retains the
+        // physical provider slot through cancellation until the provider returns.
         .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
         .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
         .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
@@ -165,7 +166,10 @@ struct ExportTabView: View {
             invalidateHistoryPreview()
         }
         .onChange(of: scenePhase) { _, _ in invalidateHistoryPreview() }
-        .onDisappear { historyCoordinator.invalidate() }
+        .onDisappear {
+            historyCoordinator.invalidate()
+            historyPreviewWorker.cancelLogicalWaiter()
+        }
         .geistDialog(
             isPresented: $showHealthPermissionsGuide,
             title: Text("Adjust Health Permissions"),
@@ -476,6 +480,7 @@ struct ExportTabView: View {
 
     private func invalidateHistoryPreview() {
         historyCoordinator.invalidate()
+        historyPreviewWorker.cancelLogicalWaiter()
         historyRefreshID = UUID()
         historyAssessment = nil
     }
@@ -483,7 +488,10 @@ struct ExportTabView: View {
     private func refreshHistoryAssessment() async {
         guard scenePhase == .active else { return }
         let request = historyPreviewRequest
-        let result = await historyCoordinator.assess(scope: request.scope, isCurrent: {
+        let result = await historyCoordinator.assessPreview(
+            worker: historyPreviewWorker,
+            notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope),
+            scope: request.scope, isCurrent: {
             request == historyPreviewRequest && scenePhase == .active
         }, operation: {
             await healthKitManager.assessHistoryAccess(scope: request.scope)

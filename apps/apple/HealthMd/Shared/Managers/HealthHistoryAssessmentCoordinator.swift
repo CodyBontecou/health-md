@@ -6,6 +6,19 @@ import Foundation
 final class HealthHistoryAssessmentCoordinator {
     private var revision = UUID()
 
+    /// Shared phone-preview seam. The caller owns the worker across view tasks.
+    func assessPreview(
+        worker: HealthHistoryAssessmentWorker,
+        notCompleted: HealthHistoryAssessment,
+        scope: HealthHistoryScope,
+        isCurrent: () -> Bool,
+        operation: @escaping @MainActor () async -> HealthHistoryAssessment
+    ) async -> HealthHistoryAssessment? {
+        await assess(scope: scope, isCurrent: isCurrent) {
+            await worker.assess(notCompleted: notCompleted, operation: operation)
+        }
+    }
+
     func invalidate() { revision = UUID() }
     func beginRequest() -> UUID {
         invalidate()
