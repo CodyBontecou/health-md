@@ -65,7 +65,14 @@ internal class CountingEntropy : SyntheticEntropy {
 internal class CountingClock : SyntheticClock {
     val calls = AtomicInteger()
     val value = AtomicLong(100)
-    override fun seconds(): Long { calls.incrementAndGet(); return value.get() }
+    private val scripted = java.util.ArrayDeque<Long>()
+    fun script(vararg samples: Long) { synchronized(scripted) { samples.forEach { scripted.addLast(it) } } }
+    override fun seconds(): Long {
+        calls.incrementAndGet()
+        val sample = synchronized(scripted) { if (scripted.isEmpty()) null else scripted.removeFirst() }
+        if (sample != null) value.set(sample)
+        return value.get()
+    }
 }
 internal class ReviewSink : SyntheticConsentPort {
     val calls = AtomicInteger()
@@ -109,11 +116,11 @@ internal class FaultVault : SyntheticAccountVault {
                 image = when (fault) {
                     VaultFault.NOOP -> image
                     VaultFault.PARTIAL -> VaultImage(candidate.processOwner, candidate.localGeneration, candidate.signedOut,
-                        record?.let { VaultSession(null, it.localGeneration, it.expiresAt, it.installationBinding) }, candidate.receipt)
+                        record?.let { VaultSession(null, it.localGeneration, it.expiresAt, it.installationBinding, it.requestStartedAtSeconds) }, candidate.receipt)
                     VaultFault.WRONG_OWNER -> VaultImage(Any(), candidate.localGeneration, candidate.signedOut, record, candidate.receipt)
                     VaultFault.WRONG_GENERATION -> VaultImage(candidate.processOwner, candidate.localGeneration + 1, candidate.signedOut, record, candidate.receipt)
                     VaultFault.WRONG_INSTALLATION -> VaultImage(candidate.processOwner, candidate.localGeneration, candidate.signedOut,
-                        record?.let { VaultSession(it.session, it.localGeneration, it.expiresAt, reference(99)) }, candidate.receipt)
+                        record?.let { VaultSession(it.session, it.localGeneration, it.expiresAt, reference(99), it.requestStartedAtSeconds) }, candidate.receipt)
                     VaultFault.MISSING_RECEIPT -> VaultImage(candidate.processOwner, candidate.localGeneration, candidate.signedOut, record, Any())
                     else -> candidate
                 }

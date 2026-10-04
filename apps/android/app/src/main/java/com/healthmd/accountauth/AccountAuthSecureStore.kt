@@ -8,9 +8,11 @@ class VaultSession internal constructor(
     internal val localGeneration: Long,
     internal val expiresAt: Long,
     internal val installationBinding: String,
+    internal val requestStartedAtSeconds: Long,
 ) {
     internal fun same(other: VaultSession): Boolean = localGeneration == other.localGeneration &&
         expiresAt == other.expiresAt && installationBinding == other.installationBinding &&
+        requestStartedAtSeconds == other.requestStartedAtSeconds &&
         session != null && other.session != null && session.same(other.session)
     override fun toString(): String = "VaultSession(<redacted>)"
 }
@@ -64,7 +66,7 @@ internal class RevocationOnlyMemory private constructor(
     val expiresAt: Long,
     val obligation: Any,
 ) {
-    fun request(): AuthRequestPlan = AuthRequestPlan.revoke(registration, refresh, installation)
+    fun request(window: AuthRequestWindow): AuthRequestPlan = AuthRequestPlan.revoke(registration, refresh, installation, window)
     override fun toString(): String = "RevocationOnlyMemory(<redacted>, memory-only)"
     companion object {
         fun capture(registration: SyntheticRegistration, record: VaultSession, generation: Long, obligation: Any): RevocationOnlyMemory {

@@ -93,8 +93,7 @@ class AccountAuthCallbackTest {
         rig.clock.value.set(400)
         checkSource(rig.owner.acceptCallback(timed) == AuthAction.REJECTED && rig.owner.status().lastFence?.reason == FenceReason.TIMEOUT &&
             rig.transport.count() == 0, "timeout at equality")
-        rig.clock.value.set(100)
-        rig.signIn()
+        rig.signIn() // keep nondecreasing clock after timeout; do not manufacture a rollback
         checkSource(rig.owner.acceptCallback(rig.callback()) == AuthAction.REJECTED && rig.transport.count(AuthRequestKind.CODE) == 1, "callback replay one consumption")
     }
 }

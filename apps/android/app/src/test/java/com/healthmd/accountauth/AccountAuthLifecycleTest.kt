@@ -213,9 +213,9 @@ class AccountAuthLifecycleTest {
                 1 -> rig.vault.inject(VaultImage(Any(), original.localGeneration, false, record, original.receipt))
                 2 -> rig.vault.inject(VaultImage(original.processOwner, original.localGeneration + 1, false, record, original.receipt))
                 3 -> rig.vault.inject(VaultImage(original.processOwner, original.localGeneration, false,
-                    VaultSession(null, record.localGeneration, record.expiresAt, record.installationBinding), original.receipt))
+                    VaultSession(null, record.localGeneration, record.expiresAt, record.installationBinding, record.requestStartedAtSeconds), original.receipt))
                 4 -> rig.vault.inject(VaultImage(original.processOwner, original.localGeneration, false,
-                    VaultSession(record.session, record.localGeneration, record.expiresAt, reference(12)), original.receipt))
+                    VaultSession(record.session, record.localGeneration, record.expiresAt, reference(12), record.requestStartedAtSeconds), original.receipt))
             }
             checkSource(rig.owner.refresh() == AuthAction.UNCERTAIN && rig.transport.count(AuthRequestKind.REFRESH) == 0 &&
                 !rig.owner.status().accountOperationsAllowed, "actual invalid load before request")
@@ -312,7 +312,7 @@ class AccountAuthLifecycleTest {
                 rig.owner.status().localErasure == LocalErasure.VERIFIED, "actual closed revoke acknowledgement")
         }
         val wrong = AuthRig(); wrong.signIn(); wrong.owner.signOut()
-        wrong.transport.handler = { request -> SyntheticReply(AuthRequestPlan.refresh(SyntheticRegistration.android(AndroidAuthChannel.PLAY), decodeFixture()),
+        wrong.transport.handler = { request -> SyntheticReply(AuthRequestPlan.refresh(SyntheticRegistration.android(AndroidAuthChannel.PLAY), decodeFixture(), request.window),
             request.url, 200, bytes("{\"revoked\":true}")) }
         checkSource(wrong.owner.revokeRemote() == AuthAction.UNCERTAIN && wrong.owner.status().remoteRevocation == RemoteRevocation.PENDING, "uncorrelated revoke denied")
     }
@@ -344,7 +344,7 @@ class AccountAuthLifecycleTest {
         rig.vault.fault = VaultFault.NOOP
         checkSource(rig.owner.signOut() == AuthAction.UNCERTAIN && rig.vault.inspect()!!.same(old), "failed durable fence leaves old row, not proof of intent")
         for (partial in listOf(false, true)) {
-            if (partial) rig.vault.inject(VaultImage(Any(), -1, false, VaultSession(null, -1, -1, "corrupt"), Any()))
+            if (partial) rig.vault.inject(VaultImage(Any(), -1, false, VaultSession(null, -1, -1, "corrupt", -1), Any()))
             val owner = AccountAuthCoordinator.forSyntheticTests(AndroidAuthChannel.PLAY, rig.ports)
             val reads = rig.vault.reads.get()
             checkSource(owner.restore() == AuthAction.UNAVAILABLE && owner.status().namespace == null && rig.vault.reads.get() == reads, "no durable attestation available")

@@ -26,6 +26,8 @@ class AccountAuthCoordinator private constructor(
     initialLocalGeneration: Long,
 ) {
     private val ownerLock = ReentrantLock()
+    private val clockLock = ReentrantLock()
+    private var lastClockSample: Long? = null // process-local monotonic observations, not an OS clock proof
     private val refreshLock = ReentrantLock()
     private val revokeLock = ReentrantLock()
     private val processOwner = Any()
@@ -60,11 +62,14 @@ class AccountAuthCoordinator private constructor(
     }
 
     private fun available(): Boolean = admitted && registration != null && !exhausted
-    private fun now(): Long {
+    private fun now(): Long = clockLock.withLock {
         val value = try { ports?.clock?.seconds() ?: reject(AuthRejection.UNAVAILABLE) }
             catch (_: Exception) { reject(AuthRejection.UNAVAILABLE) }
         if (value !in 0..AccountAuthWire.MAX_SERVER_GENERATION - 300) reject(AuthRejection.UNAVAILABLE)
-        return value
+        val previous = lastClockSample
+        if (previous != null && value < previous) reject(AuthRejection.CLOCK_ROLLBACK)
+        lastClockSample = value
+        value
     }
     private fun owns(capture: Capture): Boolean = !exhausted && generation == capture.generation &&
         operation === capture.id && registration === capture.registration
@@ -163,7 +168,8 @@ class AccountAuthCoordinator private constructor(
         }
         try {
             val code = (callback as CallbackResult.Code).code
-            val plan = AuthRequestPlan.code(attempt.capture.registration, code, attempt.secrets)
+            val window = AuthRequestWindow.capture(now())
+            val plan = AuthRequestPlan.code(attempt.capture.registration, code, attempt.secrets, window)
             val context = WireContext.forSyntheticTests(attempt.capture.registration.clientId, attempt.secrets.installationId, attempt.scope)
             ownerLock.withLock {
                 if (!owns(attempt.capture)) return AuthAction.REJECTED
@@ -172,11 +178,14 @@ class AccountAuthCoordinator private constructor(
                 remoteObligations.add(attempt.capture.id)
                 activeFamilyObligation = attempt.capture.id
             }
-            return when (val reply = tokenReply(ports!!.transport, plan, context)) {
+            window.requireCurrent(now())
+            val reply = tokenReply(ports!!.transport, plan, context)
+            window.requireCurrent(now()) // actual receipt/decode completion, never a new lease origin
+            return when (reply) {
                 is TokenReply.Failure -> fail(attempt.capture, true)
                 is TokenReply.Session -> {
                     AccountAuthWire.requireInitial(reply.value)
-                    install(attempt.capture, attempt.expectedVault, reply.value, false)
+                    install(attempt.capture, attempt.expectedVault, reply.value, window, false)
                 }
             }
         } catch (_: Exception) { return fail(attempt.capture, true) }
@@ -195,13 +204,14 @@ class AccountAuthCoordinator private constructor(
         if (uncertain) AuthAction.UNCERTAIN else AuthAction.REJECTED
     }
 
-    private fun install(capture: Capture, expected: VaultImage?, session: NativeSession, refresh: Boolean): AuthAction {
+    private fun install(capture: Capture, expected: VaultImage?, session: NativeSession, window: AuthRequestWindow, refresh: Boolean): AuthAction {
+        val expiresAt = window.leaseBound(session.expiresIn, now())
         val candidate = VaultImage(processOwner, capture.generation, false,
-            VaultSession(session, capture.generation, now() + session.expiresIn, session.installationId), Any())
+            VaultSession(session, capture.generation, expiresAt, session.installationId, window.startedAtSeconds), Any())
         val gate = AccountCommitGate { atomicInstall ->
             ownerLock.withLock {
                 if (!owns(capture) || phase !in setOf(AccountPhase.EXCHANGING, AccountPhase.REFRESHING)) reject(AuthRejection.LOCAL_FENCE)
-                if (candidate.normal!!.expiresAt <= now()) reject(AuthRejection.LOCAL_FENCE)
+                window.requireCurrent(now(), expiresAt) // source-owned authoritative installation seam
                 atomicInstall()
             }
         }
@@ -214,7 +224,8 @@ class AccountAuthCoordinator private constructor(
         val readback = try { ports!!.vault.readNormal() } catch (_: Exception) { return fail(capture, true) }
         return ownerLock.withLock {
             if (!owns(capture)) return AuthAction.REJECTED
-            if (!same(candidate, readback) || candidate.normal!!.expiresAt <= now()) return fail(capture, true)
+            window.requireCurrent(now(), expiresAt) // readback visibility cannot extend deadline/TTL
+            if (!same(candidate, readback)) return fail(capture, true)
             normal = candidate; operation = null; phase = AccountPhase.SIGNED_IN; erasure = LocalErasure.NOT_REQUESTED
             if (refresh) AuthAction.REFRESHED else AuthAction.INSTALLED
         }
@@ -231,11 +242,11 @@ class AccountAuthCoordinator private constructor(
             val capture: Capture
             val expected: VaultImage
             val previous: NativeSession
+            val window: AuthRequestWindow
             ownerLock.withLock {
                 if (!available() || generation != arrival.localGeneration) return AuthAction.REJECTED
                 expected = normal ?: return AuthAction.REJECTED
                 previous = expected.normal?.session ?: return AuthAction.REJECTED
-                if (!expected.same(arrival)) return if (phase == AccountPhase.SIGNED_IN) AuthAction.COALESCED else AuthAction.REJECTED
                 if (phase != AccountPhase.SIGNED_IN) return AuthAction.REJECTED
                 val time = try { now() } catch (_: Exception) {
                     normal = null; operation = null; phase = AccountPhase.AUTHENTICATION_UNCERTAIN
@@ -247,19 +258,24 @@ class AccountAuthCoordinator private constructor(
                     if (remoteObligations.isNotEmpty()) remote = RemoteRevocation.PENDING
                     return AuthAction.UNCERTAIN
                 }
+                if (!expected.same(arrival)) return AuthAction.COALESCED // only a still-live, non-rollback replacement
+                window = AuthRequestWindow.capture(time) // conservatively includes serialized load/request interval
                 capture = Capture(Any(), generation, registration!!)
                 operation = capture.id; phase = AccountPhase.REFRESHING
             }
             try {
                 val loaded = ports!!.vault.readNormal()
                 if (!same(expected, loaded)) reject(AuthRejection.VAULT_UNCERTAIN)
-                val plan = AuthRequestPlan.refresh(capture.registration, previous)
+                val plan = AuthRequestPlan.refresh(capture.registration, previous, window)
                 val context = WireContext.forSyntheticTests(previous.clientId, previous.installationId, previous.scope)
-                when (val reply = tokenReply(ports.transport, plan, context)) {
+                window.requireCurrent(now())
+                val reply = tokenReply(ports.transport, plan, context)
+                window.requireCurrent(now())
+                when (reply) {
                     is TokenReply.Failure -> fail(capture, true)
                     is TokenReply.Session -> {
                         AccountAuthWire.requireRefresh(previous, reply.value)
-                        install(capture, expected, reply.value, true)
+                        install(capture, expected, reply.value, window, true)
                     }
                 }
             } catch (_: Exception) { fail(capture, true) } // Never replay or resurrect a spent parent.
@@ -309,17 +325,21 @@ class AccountAuthCoordinator private constructor(
 
     /** Explicit synthetic retry, separate from refresh; proof never appears in normal vault/status. */
     fun revokeRemote(): AuthAction = revokeLock.withLock {
+        val window: AuthRequestWindow
         val proof = ownerLock.withLock {
             if (!admitted) return AuthAction.UNAVAILABLE
             val held = revokeOnly ?: return if (remote == RemoteRevocation.CONFIRMED) AuthAction.REVOKED else AuthAction.REJECTED
             val time = try { now() } catch (_: Exception) { return AuthAction.UNCERTAIN }
             if (held.generation != generation || held.expiresAt <= time) { revokeOnly = null; return AuthAction.REJECTED }
+            window = AuthRequestWindow.capture(time)
             held
         }
         try {
-            val request = proof.request()
+            val request = proof.request(window)
+            window.requireCurrent(now(), proof.expiresAt)
             val reply = ports!!.transport.sendOnce(request)
             reply.correlate(request)
+            window.requireCurrent(now(), proof.expiresAt)
             if (reply.status != 200) {
                 val failure = AccountAuthWire.decodeFailure(reply.bytes())
                 if (failure.httpStatus != reply.status) reject(AuthRejection.TRANSPORT_UNCERTAIN)
@@ -327,7 +347,8 @@ class AccountAuthCoordinator private constructor(
             }
             AccountAuthWire.requireRevoked(reply.bytes()) // A 2xx response alone cannot acknowledge revocation.
             ownerLock.withLock {
-                if (generation != proof.generation || revokeOnly !== proof || proof.expiresAt <= now()) return AuthAction.REJECTED
+                if (generation != proof.generation || revokeOnly !== proof) return AuthAction.REJECTED
+                window.requireCurrent(now(), proof.expiresAt) // final current acknowledgement commit, no TTL rebasing
                 remoteObligations.remove(proof.obligation)
                 remote = if (remoteObligations.isEmpty()) RemoteRevocation.CONFIRMED else RemoteRevocation.PENDING
                 revokeOnly = null

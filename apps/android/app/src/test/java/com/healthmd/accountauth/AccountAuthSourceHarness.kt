@@ -9,7 +9,7 @@ import kotlin.system.exitProcess
 fun main(args: Array<String>) {
     checkSource(args.size == 1, "harness repository root")
     System.setProperty("healthmd.accountauth.root", args[0])
-    val suites = listOf(AccountAuthWireTest(), AccountAuthCallbackTest(), AccountAuthTransportTest(), AccountAuthLifecycleTest())
+    val suites = listOf(AccountAuthWireTest(), AccountAuthCallbackTest(), AccountAuthTransportTest(), AccountAuthLifecycleTest(), AccountAuthTimingTest())
     var passed = 0
     val actualPassed = mutableSetOf<String>()
     for (suite in suites) {

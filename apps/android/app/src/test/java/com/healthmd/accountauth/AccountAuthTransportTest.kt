@@ -14,9 +14,12 @@ class AccountAuthTransportTest {
         val secrets = secret()
         val code = AuthorizationCode("hmd_acode_${reference(7)}")
         val session = decodeFixture()
-        val plans = listOf(AuthRequestPlan.code(registration, code, secrets), AuthRequestPlan.refresh(registration, session),
-            AuthRequestPlan.revoke(registration, session.refreshToken, session.installationId))
+        val window = AuthRequestWindow.capture(100)
+        val plans = listOf(AuthRequestPlan.code(registration, code, secrets, window), AuthRequestPlan.refresh(registration, session, window),
+            AuthRequestPlan.revoke(registration, session.refreshToken, session.installationId, window))
         for (plan in plans) {
+            checkSource(plan.window === window && plan.window.startedAtSeconds == 100L &&
+                plan.window.deadlineAtSeconds == 105L && plan.window.timeoutSeconds == 5L, "closed finite source request window")
             checkSource(plan.method == "POST" && !plan.allowCookies && !plan.allowRedirects && plan.transparentRetries == 0 &&
                 plan.responseByteLimit == 8192 && plan.headers == mapOf("Content-Type" to "application/json", "Accept" to "application/json"), "exact request policy")
             checkSource(plan.url == if (plan.kind == AuthRequestKind.REVOKE) registration.revokeEndpoint else registration.tokenEndpoint, "pinned request URL")
@@ -44,7 +47,7 @@ class AccountAuthTransportTest {
         val ctx = WireContext.forSyntheticTests(session.clientId, session.installationId, session.scope)
         val row = fixture("fixtures/native-client-vectors.json").getValue("response_cases").jsonArray.map { it.jsonObject }
             .first { it.text("id") == "success-synthetic-android-play" }
-        val plan = AuthRequestPlan.refresh(registration, session)
+        val plan = AuthRequestPlan.refresh(registration, session, AuthRequestWindow.capture(100))
         for (type in listOf("application/json", "application/json; charset=utf-8")) {
             val headers = SyntheticReply.sourceJsonHeaders().map { if (it.first == "Content-Type") it.first to type else it } +
                 listOf("Content-Security-Policy" to "default-src 'none'; frame-ancestors 'none'; base-uri 'none'", "X-Frame-Options" to "DENY")
@@ -64,7 +67,7 @@ class AccountAuthTransportTest {
         val row = fixture("fixtures/native-client-vectors.json").getValue("response_cases").jsonArray.map { it.jsonObject }
             .first { it.text("id") == "success-synthetic-android-play" }
         val body = raw(row)
-        val plan = AuthRequestPlan.refresh(registration, session)
+        val plan = AuthRequestPlan.refresh(registration, session, AuthRequestWindow.capture(100))
         val source = SyntheticReply.sourceJsonHeaders()
         val headers = mutableListOf<List<Pair<String, String>>>()
         for (media in listOf("text/html", "application/json; charset=utf-16", "application/json; charset=iso-8859-1", "application/json; charset=utf-8; extra=1")) {
@@ -91,7 +94,7 @@ class AccountAuthTransportTest {
         }
         rejection("redirect despite final exact URL") { tokenReply(SyntheticAuthTransport { request -> SyntheticReply(request, request.url, 200, body, redirectHops = 1) }, plan, ctx) }
         rejection("reply for a different request") {
-            tokenReply(SyntheticAuthTransport { request -> SyntheticReply(AuthRequestPlan.refresh(registration, session), request.url, 200, body) }, plan, ctx)
+            tokenReply(SyntheticAuthTransport { request -> SyntheticReply(AuthRequestPlan.refresh(registration, session, plan.window), request.url, 200, body) }, plan, ctx)
         }
         for (invalid in listOf(ByteArray(0), ByteArray(8193))) rejection("bounded response receipt") {
             tokenReply(SyntheticAuthTransport { request -> SyntheticReply(request, request.url, 200, invalid) }, plan, ctx)
@@ -101,7 +104,7 @@ class AccountAuthTransportTest {
 
     @Test fun everyFixedFailureRequiresItsActualStatusAndNeverReturnsSession() {
         val session = decodeFixture()
-        val plan = AuthRequestPlan.refresh(registration, session)
+        val plan = AuthRequestPlan.refresh(registration, session, AuthRequestWindow.capture(100))
         val ctx = WireContext.forSyntheticTests(session.clientId, session.installationId, session.scope)
         for (failure in AuthFailure.entries) {
             val body = bytes("{\"error\":\"${failure.wireName}\"}")

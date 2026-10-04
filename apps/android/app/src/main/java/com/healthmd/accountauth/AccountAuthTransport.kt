@@ -28,6 +28,7 @@ class AuthRequestPlan private constructor(
     val kind: AuthRequestKind,
     val url: String,
     private val body: ByteArray,
+    val window: AuthRequestWindow,
 ) {
     val method: String get() = "POST"
     val headers: Map<String, String> = Collections.unmodifiableMap(linkedMapOf("Content-Type" to "application/json", "Accept" to "application/json"))
@@ -39,32 +40,32 @@ class AuthRequestPlan private constructor(
     override fun toString(): String = "AuthRequestPlan(kind=$kind, body=<redacted>)"
 
     companion object {
-        private fun create(kind: AuthRequestKind, registration: SyntheticRegistration, fields: Map<String, String>): AuthRequestPlan {
+        private fun create(kind: AuthRequestKind, registration: SyntheticRegistration, fields: Map<String, String>, window: AuthRequestWindow): AuthRequestPlan {
             // All outbound fields use this finite ASCII subset; no caller JSON, override, cookie or bearer.
             if (fields.values.any { value -> value.any { it.code !in 0x20..0x7e || it == '"' || it == '\\' } }) {
                 reject(AuthRejection.INVALID_TRANSITION)
             }
             val bytes = fields.entries.joinToString(",", "{", "}") { "\"${it.key}\":\"${it.value}\"" }.toByteArray(StandardCharsets.UTF_8)
             if (bytes.size > AccountAuthWire.BODY_BYTES) reject(AuthRejection.INVALID_TRANSITION)
-            return AuthRequestPlan(kind, if (kind == AuthRequestKind.REVOKE) registration.revokeEndpoint else registration.tokenEndpoint, bytes)
+            return AuthRequestPlan(kind, if (kind == AuthRequestKind.REVOKE) registration.revokeEndpoint else registration.tokenEndpoint, bytes, window)
         }
-        internal fun code(registration: SyntheticRegistration, code: AuthorizationCode, secrets: AttemptSecrets): AuthRequestPlan {
+        internal fun code(registration: SyntheticRegistration, code: AuthorizationCode, secrets: AttemptSecrets, window: AuthRequestWindow): AuthRequestPlan {
             if (!AccountAuthPKCE.isToken(code.wire, "hmd_acode_") || !AccountAuthPKCE.isReference(secrets.installationId)) reject(AuthRejection.INVALID_TRANSITION)
             AccountAuthPKCE.s256(secrets.verifier)
             return create(AuthRequestKind.CODE, registration, linkedMapOf("grant_type" to "authorization_code",
                 "client_id" to registration.clientId, "redirect_uri" to registration.callback, "code" to code.wire,
-                "code_verifier" to secrets.verifier, "installation_id" to secrets.installationId))
+                "code_verifier" to secrets.verifier, "installation_id" to secrets.installationId), window)
         }
-        internal fun refresh(registration: SyntheticRegistration, session: NativeSession): AuthRequestPlan {
+        internal fun refresh(registration: SyntheticRegistration, session: NativeSession, window: AuthRequestWindow): AuthRequestPlan {
             if (session.clientId != registration.clientId || !AccountAuthPKCE.isToken(session.refreshToken.wire, "hmd_nrf_") ||
                 !AccountAuthPKCE.isReference(session.installationId)) reject(AuthRejection.INVALID_TRANSITION)
             return create(AuthRequestKind.REFRESH, registration, linkedMapOf("grant_type" to "refresh_token",
-                "client_id" to registration.clientId, "installation_id" to session.installationId, "refresh_token" to session.refreshToken.wire))
+                "client_id" to registration.clientId, "installation_id" to session.installationId, "refresh_token" to session.refreshToken.wire), window)
         }
-        internal fun revoke(registration: SyntheticRegistration, refresh: RefreshToken, installationId: String): AuthRequestPlan {
+        internal fun revoke(registration: SyntheticRegistration, refresh: RefreshToken, installationId: String, window: AuthRequestWindow): AuthRequestPlan {
             if (!AccountAuthPKCE.isToken(refresh.wire, "hmd_nrf_") || !AccountAuthPKCE.isReference(installationId)) reject(AuthRejection.INVALID_TRANSITION)
             return create(AuthRequestKind.REVOKE, registration, linkedMapOf("refresh_token" to refresh.wire,
-                "client_id" to registration.clientId, "installation_id" to installationId))
+                "client_id" to registration.clientId, "installation_id" to installationId), window)
         }
     }
 }
@@ -104,13 +105,14 @@ class SyntheticReply(
     override fun toString(): String = "SyntheticReply(<redacted>, not qualified transport)"
 }
 
-/** Must send exactly once, with no cookies/authenticator/logging/redirect/replay. Only test fakes admitted. */
+/** Fake-only: no cookie/authenticator/logging/redirect/replay. Finite window is NOT an executed network timer. */
 fun interface SyntheticAuthTransport { fun sendOnce(plan: AuthRequestPlan): SyntheticReply }
 
 internal sealed interface TokenReply {
     class Session(val value: NativeSession) : TokenReply
     class Failure(val value: AuthFailure) : TokenReply
 }
+/** Raw fake receipt decoding only; owner MUST enforce window/lease at receipt, commit and visibility. */
 internal fun tokenReply(transport: SyntheticAuthTransport, plan: AuthRequestPlan, context: WireContext): TokenReply {
     val reply = transport.sendOnce(plan)
     reply.correlate(plan)
