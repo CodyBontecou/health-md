@@ -171,6 +171,17 @@ impl BackendError {
 pub trait HealthDataBackend: Send + Sync {
     fn capabilities(&self) -> BackendCapabilities;
 
+    /// Offline selected-source support, distinct from the fixed adapter/tool catalog.
+    /// Unknown installed-peer support is null, never inferred from tool availability.
+    async fn selected_source_capabilities(&self, _context: &CallContext) -> Value {
+        serde_json::json!({
+            "status": "unknown",
+            "supports_queries": null,
+            "supports_local_file_exports": null,
+            "supports_local_raw_exports": null
+        })
+    }
+
     async fn readiness(&self, context: &CallContext) -> Result<Value, BackendError>;
 
     async fn doctor(&self, context: &CallContext) -> Result<Value, BackendError>;

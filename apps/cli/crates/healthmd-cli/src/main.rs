@@ -54,7 +54,7 @@ const WELCOME_TEXT: &str = concat!(
     "Secure, direct access to Health.md on your iPhone or Android device.\n\n",
     "Get started:\n",
     "  healthmd direct pair    Pair a mobile device\n",
-    "  healthmd setup codex    Set up Codex and pair an iPhone\n",
+    "  healthmd setup codex    Set up Codex and pair a phone\n",
     "  healthmd status         Check connection readiness\n\n",
     "Run `healthmd --help` to see all commands.\n",
 );
@@ -119,7 +119,7 @@ enum Command {
     Direct(DirectArgs),
     /// Serve Health.md's fixed Model Context Protocol surface.
     Mcp(McpArgs),
-    /// Configure a supported local AI host and pair the iPhone when needed.
+    /// Configure a supported local AI host and pair a mobile source when needed.
     Setup(SetupArgs),
 }
 
@@ -207,7 +207,7 @@ struct SetupArgs {
 
 #[derive(Debug, Subcommand)]
 enum SetupCommand {
-    /// Configure Codex to use this executable, then pair an iPhone if none is trusted.
+    /// Configure Codex to use this executable, then pair a phone if none is trusted.
     Codex(SetupCodexArgs),
 }
 
@@ -220,7 +220,7 @@ struct SetupCodexArgs {
     #[arg(long)]
     skip_pairing: bool,
 
-    /// Maximum seconds to wait for iPhone pairing (30 through 600).
+    /// Maximum seconds to wait for mobile pairing (30 through 600).
     #[arg(long, default_value_t = 180)]
     pairing_timeout: u64,
 }
@@ -240,6 +240,7 @@ struct StatusArgs {
     long_about = "Export either a validated platform-native raw artifact or production-generated Health.md files. Every execution requires exactly one date selection. Raw mode requires --raw; generated-file mode requires an existing absolute --destination directory. Running `healthmd export` with an incomplete request returns local guidance and never contacts a device.",
     after_help = "MODES:\n  Raw artifact:\n    healthmd export --last 7 --raw --output week.json\n    healthmd export --all --raw --full-corpus --output corpus.json\n    Omit --output to stream validated JSON/NDJSON to stdout. --full-corpus requests\n    every public type supported by the source and authorized by the user; it cannot read\n    a platform-private database.\n\n  Generated files:\n    healthmd export --yesterday --destination <EXISTING_ABSOLUTE_DIRECTORY>\n    The mobile app's production exporters create files; the host validates and binds\n    the destination before transfer.\n\nDATE SELECTION (choose exactly one):\n  --yesterday | --last DAYS | --from YYYY-MM-DD --to YYYY-MM-DD | --all\n\nDISCOVERY:\n  Run `healthmd export` without a complete mode/date selection to receive structured\n  requirements, platform constraints, and argv examples without contacting a device."
 )]
+#[allow(clippy::struct_excessive_bools)]
 struct ExportArgs {
     #[command(flatten)]
     dates: DateArgs,
@@ -266,8 +267,9 @@ struct ExportArgs {
     #[arg(long, visible_alias = "use-iphone-settings")]
     use_device_settings: bool,
 
-    /// Export profile UUID to resolve on the iPhone for this request.
-    /// Cannot combine with --use-iphone-settings or selectors.
+    /// Authoritative hyphenated export-profile UUID on the selected phone.
+    /// Cannot combine with saved settings or selectors. Requires an advertised policy;
+    /// iOS profiles are unavailable until explicit capability negotiation exists.
     #[arg(long = "profile", value_name = "PROFILE_ID")]
     profile_id: Option<String>,
 
@@ -395,9 +397,9 @@ struct SelectionArgs {
     #[arg(long, conflicts_with_all = ["metrics", "categories"])]
     all_metrics: bool,
 
-    /// Summary values or lossless source-record detail.
-    #[arg(long, value_enum, default_value = "summary")]
-    detail: Detail,
+    /// Summary values (default) or lossless source-record detail.
+    #[arg(long, value_enum)]
+    detail: Option<Detail>,
 
     /// Canonical object alias or absolute JSON Pointer for extract (for example sleep or archive).
     #[arg(long = "object", value_name = "ALIAS")]
@@ -1010,6 +1012,14 @@ async fn direct_reset_trust(confirm: bool) -> Result<Value, CommandError> {
 }
 
 async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError> {
+    direct_pair_with_policy(options, port, false).await
+}
+
+async fn direct_pair_with_policy(
+    options: PairArgs,
+    port: u16,
+    first_mobile: bool,
+) -> Result<Value, CommandError> {
     if !(10..=600).contains(&options.timeout) {
         return Err(usage_error(
             "pair timeout must be between 10 and 600 seconds",
@@ -1041,21 +1051,35 @@ async fn direct_pair(options: PairArgs, port: u16) -> Result<Value, CommandError
             .join(", ")
     };
     let client = DirectClient::open().map_err(client_error)?;
-    let result = client
-        .pair(
-            &legacy_apple_code,
-            &shared_code,
-            port,
-            Duration::from_secs(options.timeout),
-            |bound_port| {
-                eprintln!(
-                    "Open Health.md → Direct CLI Access and scan the universal QR, or enter computer address {address_text}, port {bound_port}, and shared 20-digit code {shared_code}. Legacy iOS code: {legacy_apple_code}."
-                );
-                print_pairing_qr(&addresses, bound_port, &shared_code);
-            },
-        )
-        .await
-        .map_err(map_direct_pair_error)?;
+    let on_listening = |bound_port| {
+        eprintln!(
+            "Open Health.md → Direct CLI Access and scan the universal QR, or enter computer address {address_text}, port {bound_port}, and shared 20-digit code {shared_code}. Legacy iOS code: {legacy_apple_code}."
+        );
+        print_pairing_qr(&addresses, bound_port, &shared_code);
+    };
+    let timeout = Duration::from_secs(options.timeout);
+    let result = if first_mobile {
+        client
+            .pair_first_mobile(
+                &legacy_apple_code,
+                &shared_code,
+                port,
+                timeout,
+                on_listening,
+            )
+            .await
+    } else {
+        client
+            .pair(
+                &legacy_apple_code,
+                &shared_code,
+                port,
+                timeout,
+                on_listening,
+            )
+            .await
+    }
+    .map_err(map_direct_pair_error)?;
     Ok(json!({
         "schema": "healthmd.direct_pairing_result",
         "schema_version": 1,
@@ -1099,47 +1123,32 @@ async fn setup_codex_pairing(
     }
     let client = DirectClient::open().map_err(client_error)?;
     let paired_devices = client.paired_devices().await.map_err(client_error)?;
-    let iphone_devices = paired_devices
+    // All trusted mobile sources participate; selection never filters Android to re-pair.
+    let ids = paired_devices
         .iter()
-        .filter(|device| {
-            device.platform.is_none()
-                || device.platform == Some(healthmd_protocol::wire::PeerPlatform::Ios)
-        })
+        .map(|device| device.installation_id.0)
         .collect::<Vec<_>>();
-    if let Some(device_id) = requested_device {
-        if !iphone_devices
-            .iter()
-            .any(|device| device.installation_id.0 == device_id)
-        {
-            return Err(CommandError {
+    let selected =
+        onboarding::select_setup_device(&ids, requested_device).map_err(|error| match error {
+            onboarding::SetupDeviceSelectionError::NotPaired => CommandError {
                 code: "direct_device_not_found",
-                message: format!(
-                    "No paired iPhone has installation ID {}",
-                    device_id.to_string().to_lowercase()
-                ),
-            });
-        }
+                message: "The selected mobile source is not paired.".into(),
+            },
+            onboarding::SetupDeviceSelectionError::Ambiguous => CommandError {
+                code: "direct_device_selection_required",
+                message: "More than one mobile source is paired; rerun setup with --device UUID"
+                    .into(),
+            },
+        })?;
+    if let Some(device_id) = selected {
         return Ok(SetupPairing {
             device_id: Some(device_id),
             status: "already_paired",
             receipt: Value::Null,
         });
     }
-    if iphone_devices.len() == 1 {
-        return Ok(SetupPairing {
-            device_id: Some(iphone_devices[0].installation_id.0),
-            status: "already_paired",
-            receipt: Value::Null,
-        });
-    }
-    if iphone_devices.len() > 1 {
-        return Err(CommandError {
-            code: "direct_device_selection_required",
-            message: "More than one iPhone is paired; rerun setup with --device UUID".into(),
-        });
-    }
     drop(client);
-    let result = direct_pair(
+    let result = direct_pair_with_policy(
         PairArgs {
             pairing_code: None,
             android_pairing_code: None,
@@ -1147,21 +1156,16 @@ async fn setup_codex_pairing(
             timeout: pairing_timeout,
         },
         port,
+        true,
     )
     .await?;
-    if result.pointer("/device/platform").and_then(Value::as_str) != Some("ios") {
-        return Err(CommandError {
-            code: "direct_source_unsupported",
-            message: "Codex health analysis requires a paired iPhone".into(),
-        });
-    }
     let device_id = result
         .pointer("/device/installation_id")
         .and_then(Value::as_str)
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or_else(|| CommandError {
             code: "invalid_direct_response",
-            message: "The pairing receipt did not identify the paired iPhone".into(),
+            message: "The pairing receipt did not identify the paired phone".into(),
         })?;
     Ok(SetupPairing {
         device_id: Some(device_id),
@@ -1215,14 +1219,15 @@ async fn setup_codex(
         },
         "pairing": {
             "status": pairing.status,
+            "supported_sources": ["ios", "android"],
             "device_id": pairing.device_id.map(|value| value.to_string().to_lowercase()),
             "receipt": pairing.receipt
         },
         "restart_codex": receipt.changed,
         "message": if options.skip_pairing {
-            "Codex is configured. Run `healthmd setup codex` with Health.md open on iPhone to pair."
+            "Codex is configured. Run `healthmd setup codex` with Health.md open on iPhone or Android to pair."
         } else {
-            "Codex is configured for the paired iPhone. Restart Codex, keep Health.md foreground, and call healthmd_doctor."
+            "Codex is configured for the selected phone. Restart Codex, keep Health.md foreground, and call healthmd_doctor. Android typed queries are unsupported; raw and generated-file exports use application v2."
         }
     }))
 }
@@ -1372,7 +1377,16 @@ async fn direct_export(
     let selected_source = source_client
         .selected_source(device)
         .await
-        .map_err(client_error)?;
+        .map_err(map_direct_client_error)?;
+    if !options.raw {
+        return direct_file_export(
+            options,
+            selected_source.installation_id.0,
+            port,
+            source_client,
+        )
+        .await;
+    }
     if selected_source.platform == Some(healthmd_protocol::wire::PeerPlatform::Android) {
         return direct_android_export(
             options,
@@ -1381,9 +1395,6 @@ async fn direct_export(
             source_client,
         )
         .await;
-    }
-    if !options.raw {
-        return direct_file_export(options, device, port).await;
     }
     if options.destination.is_some() {
         return Err(usage_error("--destination cannot be used with --raw"));
@@ -1533,99 +1544,15 @@ async fn direct_android_export(
         });
     }
 
-    if options.output.is_some() {
-        return Err(usage_error("--output requires --raw"));
-    }
-    if options.selection.all_metrics
-        || !options.selection.metrics.is_empty()
-        || !options.selection.categories.is_empty()
-        || !options.selection.objects.is_empty()
-        || !options.selection.fields.is_empty()
-        || !options.selection.sources.is_empty()
-    {
-        return Err(usage_error(
-            "Android generated-file direct export uses saved device selections or a profile; remove CLI selectors",
-        ));
-    }
-    let profile_reference = options
-        .profile_id
-        .as_deref()
-        .map(str::trim)
-        .filter(|id| !id.is_empty())
-        .map(|profile_id| v2::ProfileReference {
-            profile_id: profile_id.to_owned(),
-            name: None,
-        });
-    if options
-        .profile_id
-        .as_deref()
-        .is_some_and(|id| id.trim().is_empty())
-    {
-        return Err(usage_error("--profile requires a non-empty profile ID"));
-    }
-    if profile_reference.is_some() && options.use_device_settings {
-        return Err(usage_error(
-            "--profile cannot combine with --use-device-settings; the profile owns the settings scope",
-        ));
-    }
-    let (settings_policy, profile_reference) = match profile_reference {
-        Some(reference) => (v2::SettingsPolicy::Profile, Some(reference)),
-        None => (v2::SettingsPolicy::SavedDeviceSettings, None),
-    };
-    let destination_path = options
-        .destination
-        .ok_or_else(|| usage_error("direct generated-file export requires --destination"))?;
-    let destination =
-        GeneratedDestination::open(&destination_path).map_err(map_direct_file_error)?;
-    let display_name = destination
-        .root()
-        .file_name()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.is_empty())
-        .unwrap_or("Health Exports")
-        .to_owned();
-    let request = v2::ExportRequest {
-        job_id: Uuid::new_v4(),
-        created_at,
-        expires_at,
-        source_installation_id: source_id,
-        date_selection,
-        product: v2::ExportProduct::GeneratedFilesV1 {
-            settings_policy,
-            profile_reference,
-        },
-        destination: Some(v2::DestinationBinding {
-            binding_sha256: destination
-                .binding_sha256()
-                .map_err(map_direct_file_error)?,
-            display_name,
-        }),
-    };
-    wait_for_wake_window(&client, Some(source_id), port, options.wake).await?;
-    let result = client
-        .export_android(
-            request,
-            Some(destination.root().to_path_buf()),
-            Some(source_id),
-            port,
-            timeout,
-        )
-        .await
-        .map_err(map_direct_file_error)?;
-    Ok(CommandSuccess {
-        output: CommandOutput::Artifact {
-            source: result.receipt.path,
-            output: None,
-        },
-        exit_code: 0,
-    })
+    Err(usage_error("Android raw export requires --raw"))
 }
 
 #[allow(clippy::too_many_lines)]
 async fn direct_file_export(
     options: ExportArgs,
-    device: Option<Uuid>,
+    source_id: Uuid,
     port: u16,
+    client: DirectClient,
 ) -> Result<CommandSuccess, CommandError> {
     if options.output.is_some() {
         return Err(usage_error("--output requires --raw"));
@@ -1633,6 +1560,19 @@ async fn direct_file_export(
     if !options.selection.objects.is_empty() || !options.selection.fields.is_empty() {
         return Err(usage_error(
             "--object and --field are available only with extract",
+        ));
+    }
+    if options.selection.detail.is_some()
+        && (options.profile_id.is_some()
+            || options.use_device_settings
+            || client
+                .selected_source_kind(Some(source_id))
+                .await
+                .map_err(map_direct_client_error)?
+                == healthmd_client::direct::SourceKind::Android)
+    {
+        return Err(usage_error(
+            "detail selectors cannot combine with saved settings, profiles, or Android generated files",
         ));
     }
     let destination = options
@@ -1648,7 +1588,7 @@ async fn direct_file_export(
         .profile_id
         .as_deref()
         .map(|profile_id| ProfileReference {
-            profile_id: profile_id.trim().to_owned(),
+            profile_id: profile_id.to_owned(),
             name: None,
         });
     let invocation = GeneratedFileExportInput {
@@ -1665,15 +1605,30 @@ async fn direct_file_export(
         Local::now().date_naive(),
     )
     .map_err(operation_input_error)?;
-    let client = DirectClient::open().map_err(client_error)?;
-    wait_for_wake_window(&client, device, port, options.wake).await?;
-    let result = client
-        .export_files(invocation.request, device, port, invocation.timeout)
+    let plan = client
+        .prepare_generated_files(
+            invocation.request,
+            invocation.uses_source_default,
+            Some(source_id),
+        )
         .await
         .map_err(map_direct_file_error)?;
+    wait_for_wake_window(&client, Some(plan.source_id()), port, options.wake).await?;
+    let result = client
+        .export_generated_files(plan, port, invocation.timeout)
+        .await
+        .map_err(map_direct_file_error)?;
+    let source = match result {
+        healthmd_client::generated_files::GeneratedFileExportResult::Ios(result) => {
+            result.receipt.response_path
+        }
+        healthmd_client::generated_files::GeneratedFileExportResult::Android(result) => {
+            result.receipt.path
+        }
+    };
     Ok(CommandSuccess {
         output: CommandOutput::Artifact {
-            source: result.receipt.response_path,
+            source,
             output: None,
         },
         exit_code: 0,
@@ -2032,7 +1987,7 @@ fn operation_selection_options(options: &SelectionArgs) -> SelectionOptions {
         metric_ids: options.metrics.clone(),
         categories: options.categories.clone(),
         all_metrics: options.all_metrics,
-        detail: match options.detail {
+        detail: match options.detail.unwrap_or_default() {
             Detail::Summary => SelectionDetail::Summary,
             Detail::Lossless => SelectionDetail::Lossless,
         },
@@ -2302,6 +2257,7 @@ fn client_error(error: ClientError) -> CommandError {
 #[allow(clippy::needless_pass_by_value)]
 fn map_direct_pair_error(error: ClientError) -> CommandError {
     let code = match error {
+        ClientError::PairingConflict => "direct_pairing_conflict",
         ClientError::InvalidTrustState => "direct_trust_invalid",
         ClientError::CredentialStore(_) => "direct_storage_unavailable",
         ClientError::CredentialMutationOutcomeUnknown => "direct_storage_outcome_unknown",
@@ -2329,6 +2285,7 @@ fn map_direct_client_error(error: ClientError) -> CommandError {
         ClientError::CredentialMutationOutcomeUnknown => "direct_storage_outcome_unknown",
         ClientError::DeviceSelectionRequired(_) => "direct_device_selection_required",
         ClientError::DeviceNotPaired(_) => "direct_device_not_paired",
+        ClientError::ExportUnsupported => "direct_export_unsupported",
         ClientError::ExportPaused(_) => "direct_export_paused",
         ClientError::CancellationPending(_) => "direct_cancellation_pending",
         ClientError::JobNotResumable(_, _) => "direct_job_not_resumable",
@@ -2341,6 +2298,9 @@ fn map_direct_client_error(error: ClientError) -> CommandError {
 
 fn direct_error(code: &'static str, _error: impl std::fmt::Display) -> CommandError {
     let message = match code {
+        "direct_pairing_conflict" => {
+            "A mobile source is already paired. Select the existing source explicitly."
+        }
         "direct_pairing_failed" => {
             "Direct pairing failed. Verify the one-time code and source app."
         }
@@ -2358,6 +2318,9 @@ fn direct_error(code: &'static str, _error: impl std::fmt::Display) -> CommandEr
             "More than one mobile source is paired. Select one explicitly."
         }
         "direct_device_not_paired" => "The selected mobile source is not paired.",
+        "direct_export_unsupported" => {
+            "The selected source does not advertise the requested export product, settings policy, or selectors."
+        }
         "direct_export_paused" => "The durable direct export paused and can be resumed.",
         "direct_cancellation_pending" => {
             "Cancellation is pending delivery to the authenticated mobile source."

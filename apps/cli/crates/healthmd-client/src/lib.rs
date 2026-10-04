@@ -5,6 +5,7 @@
 pub mod credentials;
 pub mod direct;
 pub mod file_receiver;
+pub mod generated_files;
 mod generated_path;
 pub mod handshake;
 pub mod job;
@@ -55,8 +56,12 @@ pub enum ClientError {
     TimedOut,
     #[error("the local direct mobile waiter was cancelled")]
     WaitCancelled,
-    #[error("the direct iPhone does not support bounded query protocol v3")]
+    #[error("the selected mobile source does not support bounded typed queries")]
     QueryUnsupported,
+    #[error(
+        "the selected mobile source does not advertise the requested export settings or product"
+    )]
+    ExportUnsupported,
     #[error("the direct iPhone query was rejected ({code}): {message}")]
     QueryRejected {
         code: String,

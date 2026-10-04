@@ -35,14 +35,14 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
     OperationDefinition {
         name: "healthmd_status",
         title: "Check Health.md readiness",
-        description: "Check paired foreground iPhone readiness over the authenticated direct channel.",
+        description: "Check selected foreground mobile-source readiness and installed capabilities over the authenticated direct channel.",
         kind: OperationKind::Readiness,
         local_only: false,
     },
     OperationDefinition {
         name: "healthmd_doctor",
         title: "Diagnose Health.md readiness",
-        description: "Diagnose local direct pairing and foreground iPhone query/export readiness. When unpaired, follow its healthmd_pairing_start guidance instead of running a shell pairing command.",
+        description: "Diagnose local direct pairing and selected foreground mobile query/export readiness. When unpaired, follow its healthmd_pairing_start guidance instead of running a shell pairing command.",
         kind: OperationKind::Readiness,
         local_only: false,
     },
@@ -56,7 +56,7 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
     OperationDefinition {
         name: "healthmd_metrics",
         title: "List Health.md metrics",
-        description: "List canonical queryable metric IDs, categories, units, and availability requirements.",
+        description: "List the Apple typed-query metric catalog, categories, units, and availability requirements. Catalog presence is not selected-source support; Android typed queries remain unsupported.",
         kind: OperationKind::Catalog,
         local_only: false,
     },
@@ -125,22 +125,22 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
     },
     OperationDefinition {
         name: "healthmd_pairing_start",
-        title: "Show an iPhone pairing QR code",
-        description: "Preferred MCP onboarding path: after explicit user interaction, start a bounded first-iPhone pairing listener and return a native image/png QR code to render directly. Tell the user to scan it with Health.md's in-app Direct CLI scanner; external custom-URL opens are not pairing consent. Do not substitute healthmd setup codex, healthmd direct pair, or a reconstructed terminal QR. Refuses when trust or a device pin already exists.",
+        title: "Show a mobile pairing QR code",
+        description: "Preferred MCP onboarding path: after explicit user interaction, start a bounded first-mobile iPhone/Android pairing listener and return a native image/png QR code to render directly. Tell the user to scan it with Health.md's in-app Direct CLI scanner; external custom-URL opens are not pairing consent. Do not substitute healthmd setup codex, healthmd direct pair, or a reconstructed terminal QR. Refuses when trust or a device pin already exists.",
         kind: OperationKind::Pairing,
         local_only: true,
     },
     OperationDefinition {
         name: "healthmd_pairing_status",
-        title: "Check iPhone pairing status",
-        description: "Check the status of a bounded local iPhone pairing session after its QR code is shown.",
+        title: "Check mobile pairing status",
+        description: "Check a bounded local mobile pairing session after its QR code is shown. The paired platform is reported only after authenticated negotiation.",
         kind: OperationKind::Pairing,
         local_only: true,
     },
     OperationDefinition {
         name: "healthmd_export_files",
         title: "Export Health.md files",
-        description: "After explicit user approval, run a durable connected-iPhone generated-file export into an explicit existing desktop destination.",
+        description: "After explicit user approval, run a durable generated-file export from the explicitly selected iPhone (v1) or Android phone (v2) into an existing desktop destination. Omitted policy uses iOS requested dates or Android saved settings. Android rejects request-scoped selectors; profiles own scope and require an installed-peer policy advertisement. Unknown or blocked profiles fail closed without saved-settings fallback.",
         kind: OperationKind::Export,
         local_only: true,
     },
@@ -457,6 +457,12 @@ fn export_files_schema() -> Value {
         "type": "object",
         "additionalProperties": false,
         "required": ["date_selection", "destination"],
+        "examples": [
+            {"date_selection": "all_available", "settings_policy": "saved_device_settings", "destination": "/existing/exports"},
+            {"date_selection": "all_available", "settings_policy": "profile",
+                "profile_reference": {"profileID": "11111111-2222-4333-8444-555555555555", "name": "Weekly Sleep"},
+                "destination": "/existing/exports"}
+        ],
         "properties": {
             "date_selection": {"type": "string", "enum": ["explicit_range", "all_available"]},
             "date_range": {
@@ -466,14 +472,51 @@ fn export_files_schema() -> Value {
                     "end": {"type": "string", "description": "Inclusive yyyy-MM-dd end date"}
                 }
             },
-            "settings_policy": {"type": "string", "enum": ["requested_dates_only", "current_iphone_settings"]},
+            "settings_policy": {
+                "type": "string",
+                "enum": ["requested_dates_only", "current_iphone_settings", "saved_device_settings", "profile"],
+                "description": "Omit for source default: requested dates on iOS, saved settings on Android. saved_device_settings and legacy current_iphone_settings use saved settings on either source. Explicit requested_dates_only is unsupported on Android. Profile owns scope; iOS profiles require a future explicit advertisement and currently fail closed."
+            },
+            "profile_reference": {
+                "type": "object", "additionalProperties": false, "required": ["profileID"],
+                "properties": {
+                    "profileID": {"type": "string", "minLength": 36, "maxLength": 36, "pattern": crate::normalize::PROFILE_ID_PATTERN,
+                        "description": "Authoritative hyphenated UUID (case preserved). Unknown IDs fail closed; a name never replaces the ID."},
+                    "name": {"type": "string", "minLength": 1, "maxLength": crate::normalize::MAXIMUM_PROFILE_NAME_CHARACTERS,
+                        "pattern": crate::normalize::PROFILE_NAME_PATTERN,
+                        "not": {"pattern": "[\\u0000-\\u001f\\u007f-\\u009f]|[\\u2028\\u2029]$"},
+                        "description": "Optional display-only name: 1–128 characters, no outer whitespace or controls."}
+                }
+            },
             "metric_ids": {"type": "array", "maxItems": MAXIMUM_METRIC_IDS, "uniqueItems": true, "items": {"type": "string"}},
             "categories": {"type": "array", "maxItems": MAXIMUM_CATEGORIES, "uniqueItems": true, "items": {"type": "string"}},
             "all_metrics": {"type": "boolean"},
             "detail_level": {"type": "string", "enum": ["summary", "lossless"]},
             "wait_timeout_seconds": {"type": "number", "minimum": MINIMUM_EXPORT_TIMEOUT_SECONDS, "maximum": MAXIMUM_EXPORT_TIMEOUT_SECONDS},
             "destination": {"type": "string", "description": "Existing absolute destination directory. It is validated and bound durably before transfer."}
-        }
+        },
+        "allOf": [
+            {
+                "if": {"required": ["settings_policy"], "properties": {"settings_policy": {"const": "profile"}}},
+                "then": {"required": ["profile_reference"], "not": {"anyOf": [
+                    {"required": ["metric_ids"]}, {"required": ["categories"]},
+                    {"required": ["all_metrics"]}, {"required": ["detail_level"]}
+                ]}},
+                "else": {"not": {"required": ["profile_reference"]}}
+            },
+            {
+                "if": {"required": ["settings_policy"], "properties": {"settings_policy": {"enum": ["current_iphone_settings", "saved_device_settings"]}}},
+                "then": {"not": {"anyOf": [
+                    {"required": ["metric_ids"]}, {"required": ["categories"]},
+                    {"required": ["all_metrics"]}, {"required": ["detail_level"]}
+                ]}}
+            },
+            {
+                "if": {"properties": {"date_selection": {"const": "explicit_range"}}},
+                "then": {"required": ["date_range"]},
+                "else": {"not": {"required": ["date_range"]}}
+            }
+        ]
     })
 }
 

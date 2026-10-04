@@ -247,12 +247,18 @@ impl V2ArtifactReceiver {
             if destination.binding_sha256()? != binding.binding_sha256 {
                 return Err(invalid("generated-file destination binding changed"));
             }
-            destination.validate_stage_admission(
-                relative_path,
-                manifest.byte_count,
-                v2_write_mode(write_mode),
-                1,
-            )?;
+            // After an interrupted final delivery, append/merge may already have installed the
+            // larger digest-bound stage. Re-admitting it as a new input would reject valid replay
+            // (or tempt a second append). The persisted plan is checked against stage/current
+            // digests during finalize; new plans still require the original amplification bound.
+            if !journal.commit_plans.contains_key(&manifest.artifact_id) {
+                destination.validate_stage_admission(
+                    relative_path,
+                    manifest.byte_count,
+                    v2_write_mode(write_mode),
+                    1,
+                )?;
+            }
         }
         journal.manifests.insert(manifest.artifact_id, manifest);
         journal.updated_at = Utc::now();
@@ -621,6 +627,24 @@ impl V2ArtifactReceiver {
         })
     }
 
+    /// Load the digest-validated generated-file receipt, never an arbitrary caller path.
+    ///
+    /// # Errors
+    ///
+    /// Rejects non-file jobs, incomplete jobs, oversized metadata, and changed receipt bytes.
+    pub fn generated_file_receipt(&self, job_id: Uuid) -> Result<Value, ClientError> {
+        let receipt = self.receipt(job_id)?;
+        if receipt.product_id != ProductId::GeneratedFilesV1 {
+            return Err(invalid("job does not contain a generated-file receipt"));
+        }
+        serde_json::from_slice(&read_bounded(
+            &receipt.path,
+            MAXIMUM_DURABLE_JSON_BYTES,
+            "file receipt exceeds the durable metadata limit",
+        )?)
+        .map_err(|_| invalid("generated-file receipt is malformed"))
+    }
+
     fn finalize_raw_snapshot(
         &self,
         journal: &ReceiverJournal,
@@ -777,7 +801,16 @@ impl V2ArtifactReceiver {
             .filter_map(|manifest| manifest.relative_path.clone())
             .collect();
         paths.sort();
-        let payload = json!({
+        let v2::ExportProduct::GeneratedFilesV1 {
+            settings_policy,
+            profile_reference,
+        } = &journal.request.product
+        else {
+            return Err(invalid(
+                "generated-file receipt has an incompatible product",
+            ));
+        };
+        let mut payload = json!({
             "schema": "healthmd.android_direct_file_receipt",
             "schema_version": 1,
             "platform": "android",
@@ -786,8 +819,13 @@ impl V2ArtifactReceiver {
             "destination_path": destination.root(),
             "files_written": paths.len(),
             "relative_paths": paths,
+            "total_bytes": manifests.iter().map(|manifest| manifest.byte_count).sum::<u64>(),
+            "settings_policy": settings_policy,
             "message": "Android export files were committed to the explicit destination."
         });
+        if let Some(reference) = profile_reference {
+            payload["profile_reference"] = json!(reference);
+        }
         let response_path = self
             .response_directory(journal.request.job_id)?
             .join("file-receipt.json");
@@ -2274,6 +2312,10 @@ fn invalid(message: &str) -> ClientError {
 fn storage_error(error: io::Error) -> ClientError {
     ClientError::Storage(error.to_string())
 }
+
+#[cfg(test)]
+#[path = "v2_generated_receiver_tests.rs"]
+mod generated_tests;
 
 #[cfg(test)]
 mod tests {

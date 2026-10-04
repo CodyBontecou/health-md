@@ -130,7 +130,7 @@ pub async fn query(
 ) -> Result<Value, QueryError> {
     let invocation = healthmd_operations::query_invocation(operation, &arguments)
         .map_err(|_| QueryError::InvalidArguments)?;
-    let backend = direct_backend::DirectIphoneBackend::open(&options)
+    let backend = direct_backend::DirectMobileBackend::open(&options)
         .map_err(|_| QueryError::DirectInitialization)?;
     execute_query_invocation(Arc::new(backend), invocation, cancellation).await
 }
@@ -241,7 +241,7 @@ pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
 
 #[allow(clippy::too_many_lines)]
 async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(), ServeError> {
-    let backend = direct_backend::DirectIphoneBackend::open(&options)?;
+    let backend = direct_backend::DirectMobileBackend::open(&options)?;
     let dispatcher = stdio_dispatcher(Arc::new(backend), surface);
 
     let (line_sender, mut line_receiver) = mpsc::channel::<Vec<u8>>(32);
@@ -420,7 +420,7 @@ pub async fn serve_http(
             .map_err(HttpServeError::Http)?;
     }
     let backend =
-        direct_backend::DirectIphoneBackend::open(&options).map_err(HttpServeError::Direct)?;
+        direct_backend::DirectMobileBackend::open(&options).map_err(HttpServeError::Direct)?;
     let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
         Arc::new(backend),
         healthmd_mcp::SurfaceProfile::RemoteReadOnly,
@@ -474,7 +474,7 @@ pub async fn serve_http(
         .validate_unauthenticated()
         .map_err(HttpServeError::Http)?;
     let backend =
-        direct_backend::DirectIphoneBackend::open(&options).map_err(HttpServeError::Direct)?;
+        direct_backend::DirectMobileBackend::open(&options).map_err(HttpServeError::Direct)?;
     let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
         Arc::new(backend),
         healthmd_mcp::SurfaceProfile::RemoteReadOnly,

@@ -3,7 +3,7 @@ use std::{collections::VecDeque, sync::Arc, time::Duration};
 use chrono::{DateTime, Utc};
 use healthmd_client::{
     ClientError,
-    direct::{DirectClient, PairingResult},
+    direct::{DirectClient, PairingResult, SourceKind},
 };
 use healthmd_operations::PairingStartResult;
 use qrcode::{QrCode, types::Color};
@@ -63,7 +63,7 @@ impl PairingCoordinatorError {
     pub const fn message(self) -> &'static str {
         match self {
             Self::InvalidTimeout => "Pairing timeout must be between 30 and 600 seconds.",
-            Self::Busy => "Another direct iPhone operation or pairing session is active.",
+            Self::Busy => "Another direct mobile operation or pairing session is active.",
             Self::AlreadyPaired => {
                 "A mobile source is already paired. Use healthmd_doctor instead of starting another onboarding session."
             }
@@ -71,15 +71,15 @@ impl PairingCoordinatorError {
                 "This MCP server is pinned to a device that is not locally paired. Remove the stale device selection before onboarding."
             }
             Self::AddressUnavailable => {
-                "No eligible LAN or Tailscale IPv4 address is available for iPhone pairing."
+                "No eligible LAN or Tailscale IPv4 address is available for mobile pairing."
             }
             Self::SecureRandomUnavailable => {
                 "The operating system could not generate a secure one-time pairing code."
             }
             Self::ListenerUnavailable => {
-                "The bounded local iPhone pairing listener could not be started."
+                "The bounded local mobile pairing listener could not be started."
             }
-            Self::QrUnavailable => "The iPhone pairing QR code could not be generated.",
+            Self::QrUnavailable => "The mobile pairing QR code could not be generated.",
             Self::TrustInvalid => {
                 "Saved direct trust is invalid. Explicitly reset local trust and forget the CLI in Health.md before pairing again."
             }
@@ -87,9 +87,9 @@ impl PairingCoordinatorError {
                 "The local Health.md CLI installation identity is invalid and must be repaired before pairing."
             }
             Self::StorageUnavailable => {
-                "Native secure storage is unavailable for local iPhone pairing."
+                "Native secure storage is unavailable for local mobile pairing."
             }
-            Self::SessionNotFound => "The local iPhone pairing session was not found.",
+            Self::SessionNotFound => "The local mobile pairing session was not found.",
         }
     }
 }
@@ -101,6 +101,7 @@ enum PairingState {
     Paired {
         installation_id: Uuid,
         display_name: String,
+        source: SourceKind,
     },
     TimedOut,
     Failed {
@@ -147,7 +148,7 @@ impl PairingCoordinator {
         }
     }
 
-    /// Start one bounded local iPhone pairing listener and return its scan-ready QR image.
+    /// Start one bounded first-mobile pairing listener and return its scan-ready QR image.
     ///
     /// # Errors
     ///
@@ -183,8 +184,8 @@ impl PairingCoordinator {
         let address = preferred_pairing_address(&local_ipv4_addresses())
             .ok_or(PairingCoordinatorError::AddressUnavailable)?;
         let legacy_apple_code = generate_numeric_code(6)?;
-        // The QR exposes only the shared high-entropy selector-3 code. This MCP surface remains
-        // iPhone-scoped, so pair_first_ios rejects and forgets an Android peer after negotiation.
+        // Selector 3 is source-neutral. Hello negotiation identifies the scanned phone;
+        // neither its pairing selector nor the QR code implies a platform.
         let shared_code = generate_numeric_code(20)?;
         let operation_guard = Arc::clone(&self.operation_gate)
             .try_lock_owned()
@@ -225,7 +226,7 @@ impl PairingCoordinator {
         let task = tokio::spawn(async move {
             let _operation_guard = operation_guard;
             let result = client
-                .pair_first_ios(
+                .pair_first_mobile(
                     &legacy_apple_code_for_listener,
                     &shared_code_for_listener,
                     configured_port,
@@ -249,7 +250,7 @@ impl PairingCoordinator {
             Err(_) => {
                 start_guard.abort_with(PairingState::Failed {
                     code: "healthmd_pairing_listener_unavailable",
-                    message: "The bounded local iPhone pairing listener could not be started.",
+                    message: "The bounded local mobile pairing listener could not be started.",
                 });
                 return Err(PairingCoordinatorError::ListenerUnavailable);
             }
@@ -295,7 +296,7 @@ impl PairingCoordinator {
                 expires_at,
                 bound_port,
                 "waiting_for_scan",
-                "Open foreground Health.md, go to Sync > Direct CLI Access, tap Scan Pairing QR, and scan this image; pairing starts automatically.",
+                "On iPhone or Android, open foreground Health.md > Direct CLI Access > Scan Pairing QR and scan this image; manual entry remains available in the app.",
             ),
             qr_png,
         })
@@ -350,7 +351,7 @@ impl Drop for PairingStartGuard {
             self.abort.abort();
             let _ = self.state.send(PairingState::Failed {
                 code: "healthmd_pairing_start_cancelled",
-                message: "The local iPhone pairing listener stopped before its QR code was returned.",
+                message: "The local mobile pairing listener stopped before its QR code was returned.",
             });
         }
     }
@@ -372,6 +373,7 @@ fn terminal_pairing_state(result: Result<PairingResult, ClientError>) -> Pairing
         Ok(result) => PairingState::Paired {
             installation_id: result.device.installation_id.0,
             display_name: result.device.display_name,
+            source: result.source,
         },
         Err(ClientError::PairingConflict) => PairingState::Failed {
             code: PairingCoordinatorError::AlreadyPaired.code(),
@@ -396,7 +398,7 @@ fn terminal_pairing_state(result: Result<PairingResult, ClientError>) -> Pairing
         },
         Err(_) => PairingState::Failed {
             code: "healthmd_pairing_failed",
-            message: "Local iPhone pairing failed. Keep Health.md foreground and scan a fresh QR with its in-app Direct CLI scanner.",
+            message: "Local mobile pairing failed. Keep Health.md foreground and scan a fresh QR with its in-app Direct CLI scanner.",
         },
     }
 }
@@ -409,7 +411,7 @@ fn pairing_status_value(session: &PairingSession, state: &PairingState) -> Value
             session.expires_at,
             session.bound_port,
             "starting_listener",
-            "The bounded local iPhone pairing listener is starting.",
+            "The bounded local mobile pairing listener is starting.",
         ),
         PairingState::WaitingForScan => pairing_receipt(
             session.id,
@@ -417,11 +419,12 @@ fn pairing_status_value(session: &PairingSession, state: &PairingState) -> Value
             session.expires_at,
             session.bound_port,
             "waiting_for_scan",
-            "In foreground Health.md, open Sync > Direct CLI Access, tap Scan Pairing QR, and scan the displayed image; pairing starts automatically.",
+            "On iPhone or Android, open foreground Health.md > Direct CLI Access > Scan Pairing QR and scan the displayed image; pairing starts automatically.",
         ),
         PairingState::Paired {
             installation_id,
             display_name,
+            source,
         } => {
             let mut value = pairing_receipt(
                 session.id,
@@ -429,12 +432,13 @@ fn pairing_status_value(session: &PairingSession, state: &PairingState) -> Value
                 session.expires_at,
                 session.bound_port,
                 "paired",
-                "The iPhone is paired with this Health.md CLI installation.",
+                "The phone is paired with this Health.md CLI installation. Call healthmd_doctor for installed-source capabilities.",
             );
             value["device"] = json!({
                 "installation_id": installation_id.to_string().to_lowercase(),
                 "name": display_name,
-                "platform": "ios"
+                "platform": source.wire_name(),
+                "typed_queries": if *source == SourceKind::Android { json!(false) } else { Value::Null }
             });
             value
         }
@@ -478,6 +482,7 @@ fn pairing_receipt(
         "schema": "healthmd.pairing_session",
         "schema_version": 1,
         "pairing_session_id": id.clone(),
+        "supported_sources": ["ios", "android"],
         "status": status,
         "started_at": started_at,
         "expires_at": expires_at,
@@ -785,6 +790,35 @@ mod tests {
                 .address,
             "100.70.1.2"
         );
+    }
+
+    #[test]
+    fn post_pairing_receipts_report_authenticated_platform_without_promising_android_queries() {
+        for source in [SourceKind::Ios, SourceKind::Android] {
+            let (_sender, state) = watch::channel(PairingState::WaitingForScan);
+            let session = PairingSession {
+                id: Uuid::nil(),
+                started_at: Utc::now(),
+                expires_at: Utc::now(),
+                bound_port: 17647,
+                state,
+            };
+            let value = pairing_status_value(
+                &session,
+                &PairingState::Paired {
+                    installation_id: Uuid::nil(),
+                    display_name: "Synthetic phone".into(),
+                    source,
+                },
+            );
+            assert_eq!(value["device"]["platform"], source.wire_name());
+            assert_eq!(value["supported_sources"], json!(["ios", "android"]));
+            if source == SourceKind::Android {
+                assert_eq!(value["device"]["typed_queries"], false);
+            }
+            assert!(!value.to_string().contains("healthmd://"));
+            assert!(!value.to_string().contains("code="));
+        }
     }
 
     #[test]

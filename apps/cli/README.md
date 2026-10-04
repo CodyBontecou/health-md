@@ -387,23 +387,27 @@ writes the packaged MCP catalog from the shared registry and CI rejects stale ou
 The default `healthmd` build includes only the local stdio MCP transport. It communicates directly
 with the foreground Health.md app on a paired iPhone or Android device over the authenticated,
 encrypted channel on port `17647`; the Health.md Mac app, an OAuth service, and a health-data cloud
-are not required. Typed query tools remain iPhone-only, while full-corpus raw jobs work with either
-mobile protocol.
+are not required. Typed query tools remain iPhone-only; full-corpus raw and generated-file jobs
+select iOS v1 or Android v2 without switching phones or falling back. `healthmd_capabilities`
+distinguishes the fixed `catalog_availability` from `selected_source` support. Unknown installed
+support is `null`; `healthmd_doctor` negotiates the selected phone's actual capabilities. Android
+never claims typed-query support.
 Release archives intentionally use this local-first default feature set. Pairing and MCP deliberately run through the same installed,
 signed executable identity so native credentials never require a second application's Keychain ACL.
 
-For Codex, one command configures the fixed stdio entry, prompts for iPhone pairing when needed, and
-pins the paired device:
+For Codex, one command configures the fixed stdio entry, prompts for iPhone or Android pairing when
+needed, and pins the selected device. Existing trust is never filtered by platform; multiple trusted
+phones require an explicit `--device` UUID:
 
 ```bash
 healthmd setup codex
 ```
 
-Keep Health.md foreground on iPhone, open **Sync → Direct CLI Access**, tap **Scan Pairing QR**,
-and scan the displayed image. The in-app camera scan is the explicit pairing action: Health.md
+Keep Health.md foreground on the selected iPhone or Android phone, open **Direct CLI Access**
+(under **Sync** on iPhone), tap **Scan Pairing QR**, and scan the displayed image. The in-app camera scan is the explicit pairing action: Health.md
 validates the bounded Manual IP endpoint and one-time code and starts the authenticated connection
 automatically without a second **Pair** tap. External custom-URL opens are rejected. Manual entry
-under **Sync → Direct CLI Access** remains the fallback.
+in the native **Direct CLI Access** screen remains the fallback when camera access is unavailable.
 Restart Codex after a changed configuration. The generated entry launches `healthmd mcp serve` and marks export, resume, and
 cancel tools for approval. `healthmd-mcp` remains an installed compatibility launcher. On Unix it
 replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
@@ -435,7 +439,7 @@ third-party cloud service. The iPhone must already be paired and remain foregrou
 
 A complete local desktop MCP client can onboard without opening a separate terminal. Call
 `healthmd_pairing_start`, render the returned `image/png`, and ask the user to open Health.md's
-**Sync → Direct CLI Access → Scan Pairing QR** screen and scan it. Health.md starts pairing
+**Direct CLI Access → Scan Pairing QR** screen on either iPhone or Android and scan it. Health.md starts pairing
 immediately from that in-app scan; no second Pair tap is required. Poll `healthmd_pairing_status`
 with the returned `pairing_session_id` until it reports
 `paired`, `timed_out`, or `failed`. The listener defaults to 180
@@ -450,6 +454,35 @@ which renders the existing native image block without copying the QR payload int
 it inside a collapsible tool result. These two tools are available only through local stdio and are
 absent from Streamable HTTP and OAuth catalogs; remote callers cannot list or read the pairing UI
 resource.
+
+### Generated-file settings and profiles
+
+CLI and MCP use the same source-bound generated-file dispatcher. An omitted settings policy means
+requested dates on iOS, but saved export settings on Android. MCP `saved_device_settings` (or its
+legacy `current_iphone_settings` alias) corresponds to CLI `--use-device-settings`. An explicit
+MCP `requested_dates_only` policy and all metric/category/detail selectors are unsupported on
+Android generated-file jobs; they fail before capture rather than becoming saved settings.
+
+Use `healthmd export --all --profile <PROFILE_UUID> --destination <EXISTING_ABSOLUTE_DIRECTORY>`
+or the equivalent MCP arguments:
+
+```json
+{"date_selection":"all_available","settings_policy":"profile","profile_reference":{"profileID":"11111111-2222-4333-8444-555555555555","name":"Weekly Sleep"},"destination":"/existing/exports"}
+```
+
+The ID and path above are illustrative; use the native profile's actual ID and an existing host
+folder. `profileID` is an authoritative hyphenated UUID (case preserved). The optional MCP `name`
+is display-only: 1–128 Unicode characters, without outer whitespace or controls. A name cannot
+replace the ID. Profiles own output scope and cannot combine with saved-settings policy or any
+selectors. Unknown IDs and imported profiles awaiting native rebinding fail closed, never falling
+back to saved settings. Profile discovery/CRUD is not part of this tool.
+
+Android must advertise the `profile` settings policy before the request is sent. **iOS profiles
+currently return unsupported**: the Apple hello has no explicit profile-policy advertisement.
+Query v3, app marketing versions, and canonical-extraction support are not substitutes for that
+capability. Existing daily schemas and historic direct-protocol/crypto fixtures are unchanged.
+Android receives only an immutable destination digest and basename, never the desktop path;
+start, offline status, and resume expose its digest-validated generated-file receipt.
 
 An experimental, source-build-only read-only Streamable HTTP profile exposes the same application
 for loopback development or a single-owner direct-backed endpoint. It is absent from default release
