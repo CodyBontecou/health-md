@@ -318,6 +318,58 @@ nonisolated struct GoogleDriveGeneratedArtifact: Equatable, Sendable {
     }
 }
 
+/// Private generation authority. Requested scope is never evidence of capture completion.
+nonisolated struct GoogleDriveCaptureEvidence: Codable, Equatable, Sendable {
+    nonisolated struct Failure: Codable, Equatable, Sendable {
+        let date: Date
+        let reason: String
+    }
+
+    let requestedDates: [Date]
+    let completedDates: [Date]
+    let failures: [Failure]
+    let partialFailures: [ExportPartialFailure]
+    let wasCancelled: Bool
+    let hadTerminalRangeFailure: Bool
+    let dailyNoteUpdateCount: Int
+    let dailyNoteSkipCount: Int
+
+    var exportedDates: [Date] {
+        completedDates.filter { date in !failures.contains { $0.date == date } }
+    }
+
+    var isValid: Bool {
+        let requested = Set(requestedDates)
+        let completed = Set(completedDates)
+        let failed = Set(failures.map(\.date))
+        return !requested.isEmpty && requestedDates == requested.sorted() &&
+            completedDates == completed.sorted() && failures.count == failed.count &&
+            completed.isSubset(of: requested) && failed.isSubset(of: requested) &&
+            completed.union(failed) == requested &&
+            failures.allSatisfy { !completed.contains($0.date) || $0.reason == "no_health_data" }
+    }
+
+    @MainActor
+    static func recording(dates: [Date], result: ExportOrchestrator.ExportResult) -> Self? {
+        guard let completed = result.completedDates else { return nil }
+        let requested = Array(Set(dates)).sorted()
+        let completedDates = Array(Set(completed)).sorted()
+        let failures = requested.compactMap { date -> Failure? in
+            if let failure = result.failedDateDetails.first(where: { $0.date == date }) {
+                return Failure(date: date, reason: failure.reason.rawValue)
+            }
+            // Unprocessed/cancelled dates have no capture proof, even if no query error was emitted.
+            return completedDates.contains(date) ? nil : Failure(date: date, reason: "unknown")
+        }
+        let evidence = Self(requestedDates: requested, completedDates: completedDates, failures: failures,
+            partialFailures: result.partialFailures, wasCancelled: result.wasCancelled,
+            hadTerminalRangeFailure: result.hadTerminalRangeFailure,
+            dailyNoteUpdateCount: result.dailyNoteUpdateCount, dailyNoteSkipCount: result.dailyNoteSkipCount)
+        guard evidence.isValid, evidence.exportedDates.count == result.successCount else { return nil }
+        return evidence
+    }
+}
+
 /// Destination-neutral immutable renderer output. Artifact order is authoritative.
 nonisolated struct GoogleDriveGeneratedArtifactBundle: Equatable, Sendable {
     static let version = 1
@@ -327,6 +379,8 @@ nonisolated struct GoogleDriveGeneratedArtifactBundle: Equatable, Sendable {
     let sourceDates: [Date]
     let settingsDigest: String
     let rendererIdentity: String
+    let captureEvidence: GoogleDriveCaptureEvidence?
+    let settingsSnapshotData: Data?
     let artifacts: [GoogleDriveGeneratedArtifact]
     let digest: String
 
@@ -336,7 +390,9 @@ nonisolated struct GoogleDriveGeneratedArtifactBundle: Equatable, Sendable {
         sourceDates: [Date],
         settingsDigest: String,
         rendererIdentity: String,
-        artifacts: [GoogleDriveGeneratedArtifact]
+        artifacts: [GoogleDriveGeneratedArtifact],
+        captureEvidence: GoogleDriveCaptureEvidence? = nil,
+        settingsSnapshotData: Data? = nil
     ) throws {
         guard artifacts.count <= 10_000,
               Set(artifacts.map { GoogleDrivePath.collisionKey($0.relativePath) }).count == artifacts.count else {
@@ -347,6 +403,16 @@ nonisolated struct GoogleDriveGeneratedArtifactBundle: Equatable, Sendable {
         self.sourceDates = sourceDates.sorted()
         self.settingsDigest = settingsDigest
         self.rendererIdentity = rendererIdentity
+        if let evidence = captureEvidence {
+            guard evidence.isValid, evidence.requestedDates == Array(Set(sourceDates)).sorted() else {
+                throw GoogleDriveError(.remoteConflict)
+            }
+        }
+        if let snapshot = settingsSnapshotData, GoogleDriveDigest.sha256(snapshot) != settingsDigest {
+            throw GoogleDriveError(.remoteConflict)
+        }
+        self.captureEvidence = captureEvidence
+        self.settingsSnapshotData = settingsSnapshotData
         self.artifacts = artifacts
         self.digest = GoogleDriveDigest.framedSHA256(
             [String(Self.version), operationID.uuidString.lowercased(), profileID?.uuidString.lowercased() ?? "", settingsDigest, rendererIdentity]

@@ -86,6 +86,8 @@ final class GoogleDriveDestinationRunner {
             if await journalStore.contains(operationID: bundle.operationID) {
                 let existing = try await journalStore.load(operationID: bundle.operationID)
                 guard existing.bundleDigest == bundle.digest,
+                      existing.captureEvidence == bundle.captureEvidence,
+                      existing.settingsDigest == bundle.settingsDigest,
                       existing.destinationSnapshot == GoogleDriveDestinationSnapshot(destination: destination) else {
                     throw GoogleDriveError(.remoteConflict)
                 }
@@ -143,6 +145,10 @@ final class GoogleDriveDestinationRunner {
             throw GoogleDriveError(.ambiguousCommit)
         }
         return await journalStore.contains(operationID: operationID)
+    }
+
+    func registerResidualOperation(parentID: UUID, residualID: UUID) async throws {
+        try await journalStore.registerResidualOperation(parentID: parentID, residualID: residualID)
     }
 
     func acknowledge(operationID: UUID) async throws {
@@ -524,7 +530,9 @@ final class GoogleDriveDestinationRunner {
     }
 
     private func preflightAll(journal: GoogleDriveOperationJournal, accessToken: String) async throws {
-        for artifact in journal.artifacts {
+        for artifact in journal.artifacts where artifact.phase != .verified {
+            // Verified append/update artifacts have already replaced this baseline. Rechecking
+            // the obsolete version would block residual capture or tempt callers to reapply it.
             guard let baseline = artifact.baselineMetadata else { continue }
             let current = try await api.metadata(
                 id: baseline.id,

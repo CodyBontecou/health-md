@@ -197,12 +197,17 @@ nonisolated struct GoogleDriveJournalArtifact: Codable, Equatable, Sendable {
 }
 
 nonisolated struct GoogleDriveOperationJournal: Codable, Equatable, Identifiable, Sendable {
-    static let currentVersion = 1
+    static let currentVersion = 2
 
     let version: Int
     let id: UUID
     let profileID: UUID?
+    /// Requested scope, not proof that any date generated an artifact.
     let sourceDates: [Date]
+    let captureEvidence: GoogleDriveCaptureEvidence?
+    let settingsDigest: String?
+    let settingsSnapshotData: Data?
+    var residualOperationIDs: [UUID]
     let destinationSnapshot: GoogleDriveDestinationSnapshot
     let bundleDigest: String
     let rendererIdentity: String
@@ -221,12 +226,19 @@ nonisolated struct GoogleDriveOperationJournal: Codable, Equatable, Identifiable
         bundleDigest: String,
         rendererIdentity: String,
         createdAt: Date,
-        artifacts: [GoogleDriveJournalArtifact]
+        artifacts: [GoogleDriveJournalArtifact],
+        captureEvidence: GoogleDriveCaptureEvidence? = nil,
+        settingsDigest: String? = nil,
+        settingsSnapshotData: Data? = nil
     ) {
         version = Self.currentVersion
         self.id = id
         self.profileID = profileID
         self.sourceDates = sourceDates
+        self.captureEvidence = captureEvidence
+        self.settingsDigest = settingsDigest
+        self.settingsSnapshotData = settingsSnapshotData
+        residualOperationIDs = []
         self.destinationSnapshot = destinationSnapshot
         self.bundleDigest = bundleDigest
         self.rendererIdentity = rendererIdentity
@@ -311,16 +323,17 @@ actor GoogleDriveJournalStore {
             bundleDigest: bundle.digest,
             rendererIdentity: bundle.rendererIdentity,
             createdAt: now(),
-            artifacts: journalArtifacts
+            artifacts: journalArtifacts,
+            captureEvidence: bundle.captureEvidence,
+            settingsDigest: bundle.settingsDigest,
+            settingsSnapshotData: bundle.settingsSnapshotData
         )
         try save(journal)
         return journal
     }
 
     func save(_ journal: GoogleDriveOperationJournal) throws {
-        guard journal.version == GoogleDriveOperationJournal.currentVersion else {
-            throw GoogleDriveError(.remoteConflict)
-        }
+        guard Self.isSupported(journal) else { throw GoogleDriveError(.remoteConflict) }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         try GoogleDriveProtectedFileStore.write(
@@ -349,9 +362,9 @@ actor GoogleDriveJournalStore {
                 GoogleDriveOperationJournal.self,
                 from: Data(contentsOf: journalURL(operationID: operationID))
             )
-            guard journal.version == GoogleDriveOperationJournal.currentVersion else {
-                throw GoogleDriveError(.remoteConflict)
-            }
+            // v1 had only requested sourceDates. No safe migration can reconstruct capture
+            // coverage from its spools: leave those bytes intact and refuse success/recapture.
+            guard Self.isSupported(journal) else { throw GoogleDriveError(.remoteConflict) }
             return journal
         } catch let error as GoogleDriveError {
             throw error
@@ -368,7 +381,7 @@ actor GoogleDriveJournalStore {
         return urls.compactMap { url in
             guard let data = try? Data(contentsOf: url),
                   let journal = try? JSONDecoder().decode(GoogleDriveOperationJournal.self, from: data),
-                  journal.version == GoogleDriveOperationJournal.currentVersion,
+                  Self.isSupported(journal),
                   !journal.historyAcknowledged else { return nil }
             return journal
         }.sorted { $0.createdAt < $1.createdAt }
@@ -422,9 +435,7 @@ actor GoogleDriveJournalStore {
                     GoogleDriveOperationJournal.self,
                     from: Data(contentsOf: url)
                 )
-                guard journal.version == GoogleDriveOperationJournal.currentVersion else {
-                    throw GoogleDriveError(.remoteConflict)
-                }
+                guard Self.isSupported(journal) else { throw GoogleDriveError(.remoteConflict) }
                 return journal
             } catch let error as GoogleDriveError {
                 throw error
@@ -455,7 +466,7 @@ actor GoogleDriveJournalStore {
         for url in urls {
             guard let data = try? Data(contentsOf: url),
                   let journal = try? JSONDecoder().decode(GoogleDriveOperationJournal.self, from: data),
-                  journal.version == GoogleDriveOperationJournal.currentVersion else { continue }
+                  Self.isSupported(journal) else { continue }
             if journal.historyAcknowledged, journal.createdAt < cutoff {
                 try remove(operationID: journal.id)
             } else if !journal.historyAcknowledged, journal.createdAt < unresolvedCutoff {
@@ -465,6 +476,28 @@ actor GoogleDriveJournalStore {
                 try remove(operationID: journal.id)
             }
         }
+    }
+
+    func registerResidualOperation(parentID: UUID, residualID: UUID) throws {
+        var journal = try load(operationID: parentID)
+        guard parentID != residualID else { throw GoogleDriveError(.remoteConflict) }
+        if !journal.residualOperationIDs.contains(residualID) {
+            journal.residualOperationIDs.append(residualID)
+            journal.residualOperationIDs.sort { $0.uuidString < $1.uuidString }
+            try save(journal)
+        }
+    }
+
+    private static func isSupported(_ journal: GoogleDriveOperationJournal) -> Bool {
+        guard journal.version == GoogleDriveOperationJournal.currentVersion,
+              journal.residualOperationIDs.count <= 10_000,
+              !journal.residualOperationIDs.contains(journal.id),
+              Set(journal.residualOperationIDs).count == journal.residualOperationIDs.count else { return false }
+        if let evidence = journal.captureEvidence,
+           !evidence.isValid || evidence.requestedDates != Array(Set(journal.sourceDates)).sorted() { return false }
+        if let snapshot = journal.settingsSnapshotData,
+           GoogleDriveDigest.sha256(snapshot) != journal.settingsDigest { return false }
+        return true
     }
 
     private func appendAbandonedNotice(_ journal: GoogleDriveOperationJournal) throws {

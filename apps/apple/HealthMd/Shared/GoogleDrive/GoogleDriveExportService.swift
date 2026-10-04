@@ -119,7 +119,8 @@ final class GoogleDriveArtifactBundleProducer {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        let settingsDigest = GoogleDriveDigest.sha256(try encoder.encode(settingsSnapshot))
+        let settingsData = try encoder.encode(settingsSnapshot)
+        let settingsDigest = GoogleDriveDigest.sha256(settingsData)
         let rendererIdentity = settingsSnapshot.appleExportEnginePin.map {
             "\($0.profile)/artifact_plan_\($0.artifactPlanVersion)/\($0.coreSourceRevision)"
         } ?? "apple_health_data_v8/native"
@@ -129,7 +130,9 @@ final class GoogleDriveArtifactBundleProducer {
             sourceDates: dates,
             settingsDigest: settingsDigest,
             rendererIdentity: rendererIdentity,
-            artifacts: artifacts
+            artifacts: artifacts,
+            captureEvidence: GoogleDriveCaptureEvidence.recording(dates: dates, result: result),
+            settingsSnapshotData: settingsData
         )
         return (bundle, result)
     }
@@ -191,6 +194,9 @@ final class GoogleDriveExportService {
     func resumeRecoverableOperation(_ operationID: UUID) async -> GoogleDriveRecoveredOperation? {
         do {
             let journal = try await runner.recoveryJournal(operationID: operationID)
+            guard let evidence = journal.captureEvidence, evidence.isValid else {
+                throw GoogleDriveError(.remoteConflict)
+            }
             destinationStore.reload()
             guard let destination = destinationStore.destination(
                 id: journal.destinationSnapshot.destinationID
@@ -208,7 +214,7 @@ final class GoogleDriveExportService {
                 profileID: journal.profileID,
                 sourceDates: journal.sourceDates,
                 destinationID: destination.id,
-                result: Self.resumedResult(driveResult, dates: journal.sourceDates)
+                result: Self.resumedResult(driveResult, dates: journal.sourceDates, evidence: evidence)
             )
         } catch {
             return nil
@@ -218,8 +224,18 @@ final class GoogleDriveExportService {
     /// Called only after the owning manual/scheduled path durably records its terminal history.
     /// Until then the verified journal remains recoverable and cannot be retention-pruned.
     func acknowledgeCompletedOperation(_ operationID: UUID) async {
-        guard await runner.hasJournal(operationID: operationID) else { return }
+        var visited: Set<UUID> = []
+        await acknowledge(operationID, visited: &visited)
+    }
+
+    private func acknowledge(_ operationID: UUID, visited: inout Set<UUID>) async {
+        guard visited.insert(operationID).inserted,
+              let journal = try? await runner.recoveryJournal(operationID: operationID),
+              journal.captureEvidence?.isValid == true else { return }
         try? await runner.acknowledge(operationID: operationID)
+        for residualID in journal.residualOperationIDs {
+            await acknowledge(residualID, visited: &visited)
+        }
     }
 
     func export(
@@ -247,12 +263,35 @@ final class GoogleDriveExportService {
             // A corrupt existing journal fails closed in `resume`; it is never overwritten by a
             // newly rendered bundle.
             if try await runner.hasRecoverableJournal(operationID: operationID) {
+                let journal = try await runner.recoveryJournal(operationID: operationID)
+                let normalized = Array(Set(dates)).sorted()
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.sortedKeys]
+                guard let evidence = journal.captureEvidence, evidence.isValid,
+                      journal.profileID == profileID,
+                      journal.settingsDigest == GoogleDriveDigest.sha256(try encoder.encode(settingsSnapshot)),
+                      Set(normalized).isSubset(of: Set(evidence.requestedDates)) else {
+                    throw GoogleDriveError(.remoteConflict)
+                }
                 let resumed = await runner.resume(
                     operationID: operationID,
                     destination: destination,
                     accessToken: token
                 )
-                return Self.resumedResult(resumed, dates: dates)
+                if resumed.isComplete, !normalized.isEmpty,
+                   normalized.allSatisfy({ date in
+                       !evidence.completedDates.contains(date) && evidence.failures.contains { $0.date == date }
+                   }) {
+                    // The stable scheduled request UUID is not an upload identity for failed
+                    // capture. Journal the deterministic child handle before generating new bytes.
+                    let residualID = Self.residualOperationID(parentID: operationID, dates: normalized)
+                    try await runner.registerResidualOperation(parentID: operationID, residualID: residualID)
+                    return await export(operationID: residualID, profileID: profileID,
+                        destinationSnapshot: destinationSnapshot, dates: normalized,
+                        healthKitManager: healthKitManager, settingsSnapshot: settingsSnapshot,
+                        externalIntegrations: externalIntegrations, onProgress: onProgress)
+                }
+                return Self.resumedResult(resumed, dates: normalized, evidence: evidence)
             }
 
             let (bundle, generationResult) = try await producer.produce(
@@ -272,43 +311,10 @@ final class GoogleDriveExportService {
                 destination: destination,
                 accessToken: token
             )
-            guard driveResult.errorID == nil else {
-                let error = GoogleDriveError(driveResult.errorID!)
-                if driveResult.verifiedArtifactCount > 0 {
-                    return ExportOrchestrator.ExportResult(
-                        successCount: min(generationResult.successCount, dates.count),
-                        totalCount: dates.count,
-                        failedDateDetails: generationResult.failedDateDetails + [FailedDateDetail(
-                            date: dates.last ?? Date(),
-                            reason: .fileWriteError,
-                            errorDetails: error.id.rawValue
-                        )],
-                        partialFailures: generationResult.partialFailures,
-                        looseAggregateFileCount: driveResult.verifiedArtifactCount,
-                        authoritativeFileCount: driveResult.verifiedArtifactCount,
-                        isFileCategoryBreakdownComplete: false,
-                        dailyNoteUpdateCount: generationResult.dailyNoteUpdateCount,
-                        dailyNoteSkipCount: generationResult.dailyNoteSkipCount,
-                        hadTerminalRangeFailure: true,
-                        completedDates: generationResult.completedDates
-                    )
-                }
-                return Self.failure(dates: dates, error: error)
+            guard let evidence = bundle.captureEvidence, evidence.isValid else {
+                return Self.failure(dates: dates, error: GoogleDriveError(.remoteConflict))
             }
-            return ExportOrchestrator.ExportResult(
-                successCount: generationResult.successCount,
-                totalCount: generationResult.totalCount,
-                failedDateDetails: generationResult.failedDateDetails,
-                partialFailures: generationResult.partialFailures,
-                looseAggregateFileCount: driveResult.verifiedArtifactCount,
-                authoritativeFileCount: driveResult.verifiedArtifactCount,
-                isFileCategoryBreakdownComplete: false,
-                dailyNoteUpdateCount: generationResult.dailyNoteUpdateCount,
-                dailyNoteSkipCount: generationResult.dailyNoteSkipCount + driveResult.skippedArtifactCount,
-                wasCancelled: generationResult.wasCancelled,
-                hadTerminalRangeFailure: generationResult.hadTerminalRangeFailure,
-                completedDates: generationResult.completedDates
-            )
+            return Self.resumedResult(driveResult, dates: dates, evidence: evidence)
         } catch let error as GoogleDriveError {
             return Self.failure(dates: dates, error: error)
         } catch is CancellationError {
@@ -326,37 +332,47 @@ final class GoogleDriveExportService {
 
     private static func resumedResult(
         _ driveResult: GoogleDriveRunResult,
-        dates: [Date]
+        dates: [Date],
+        evidence: GoogleDriveCaptureEvidence
     ) -> ExportOrchestrator.ExportResult {
-        guard let errorID = driveResult.errorID else {
-            return ExportOrchestrator.ExportResult(
-                successCount: dates.count,
-                totalCount: dates.count,
-                failedDateDetails: [],
-                looseAggregateFileCount: driveResult.verifiedArtifactCount,
-                authoritativeFileCount: driveResult.verifiedArtifactCount,
-                isFileCategoryBreakdownComplete: false,
-                dailyNoteSkipCount: driveResult.skippedArtifactCount,
-                completedDates: dates
-            )
+        let normalized = Array(Set(dates)).sorted()
+        guard evidence.isValid, Set(normalized).isSubset(of: Set(evidence.requestedDates)) else {
+            return failure(dates: normalized, error: GoogleDriveError(.remoteConflict))
+        }
+        let captureFailures = evidence.failures.filter { normalized.contains($0.date) }.map {
+            FailedDateDetail(date: $0.date, reason: ExportFailureReason(rawValue: $0.reason) ?? .unknown)
+        }
+        let complete = driveResult.isComplete
+        let uploadFailures = complete ? [] : normalized.filter { date in
+            !captureFailures.contains { $0.date == date }
+        }.map {
+            FailedDateDetail(date: $0, reason: .fileWriteError,
+                errorDetails: (driveResult.errorID ?? .ambiguousCommit).rawValue)
         }
         return ExportOrchestrator.ExportResult(
-            successCount: 0,
-            totalCount: dates.count,
-            failedDateDetails: dates.map {
-                FailedDateDetail(
-                    date: $0,
-                    reason: .fileWriteError,
-                    errorDetails: errorID.rawValue
-                )
-            },
+            // A verified artifact prefix is not proof that any entire owner date exported.
+            successCount: complete ? evidence.exportedDates.filter { normalized.contains($0) }.count : 0,
+            totalCount: normalized.count,
+            failedDateDetails: captureFailures + uploadFailures,
+            partialFailures: evidence.partialFailures.filter { normalized.contains($0.date) },
             looseAggregateFileCount: driveResult.verifiedArtifactCount,
             authoritativeFileCount: driveResult.verifiedArtifactCount,
             isFileCategoryBreakdownComplete: false,
-            dailyNoteSkipCount: driveResult.skippedArtifactCount,
-            hadTerminalRangeFailure: true,
-            completedDates: []
+            dailyNoteUpdateCount: complete ? evidence.dailyNoteUpdateCount : 0,
+            dailyNoteSkipCount: evidence.dailyNoteSkipCount + driveResult.skippedArtifactCount,
+            wasCancelled: evidence.wasCancelled,
+            hadTerminalRangeFailure: evidence.hadTerminalRangeFailure,
+            completedDates: complete ? evidence.completedDates.filter { normalized.contains($0) } : []
         )
+    }
+
+    private static func residualOperationID(parentID: UUID, dates: [Date]) -> UUID {
+        let digest = GoogleDriveDigest.framedSHA256(
+            ["healthmd.drive.capture-residual.v1", parentID.uuidString.lowercased()]
+                + dates.map { String($0.timeIntervalSinceReferenceDate.bitPattern) }
+        )
+        let hex = String(digest.prefix(32))
+        return UUID(uuidString: "\(hex.prefix(8))-\(hex.dropFirst(8).prefix(4))-\(hex.dropFirst(12).prefix(4))-\(hex.dropFirst(16).prefix(4))-\(hex.dropFirst(20))")!
     }
 
     private static func failure(
