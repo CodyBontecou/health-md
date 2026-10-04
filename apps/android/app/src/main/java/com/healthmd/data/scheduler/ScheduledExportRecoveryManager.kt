@@ -12,6 +12,7 @@ import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.APIRecoveryExecution
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -26,6 +27,7 @@ import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.ExportMode
+import com.healthmd.util.runCatchingCancellable
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.nio.charset.StandardCharsets
@@ -131,6 +133,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         settingsSnapshotJson = request.settingsSnapshotJson,
                         apiOperationId = request.apiOperationId,
                         folderOperationId = request.folderOperationId,
+                        apiAuthorityJson = request.apiAuthorityJson,
+                        apiJournalRequired = request.apiJournalRequired,
                     )
                 }
 
@@ -143,7 +147,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 val target = operation.target
                 val targetDates = requests.map { it.date }.distinct().sorted()
                 val resumesStoredAPI = target == ExportTarget.API_ENDPOINT &&
-                    operation.apiOperationId != null
+                    operation.apiOperationId != null && operation.apiJournalRequired
                 val destinationFingerprint = operation.destinationFingerprint
                 val enginePin = operation.enginePin
                 val settingsSnapshotJson = operation.settingsSnapshotJson
@@ -155,7 +159,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         settingsSnapshotJson = settingsSnapshotJson,
                     )
                 } else null
-                if (!isDestinationReady(settings, target, destinationFingerprint)) continue
+                if (!isDestinationReady(settings, target, destinationFingerprint, operation.apiAuthorityJson)) continue
                 val restoredOutputSettings = runCatching {
                     if (settingsSnapshotJson == null) {
                         // Explicit old-request compatibility: output settings are read at recovery.
@@ -170,12 +174,40 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     Timber.e(error, "Scheduled recovery settings snapshot is invalid")
                 }.getOrNull()
                 // Inject the exact persisted pin only after restoring the immutable settings.
-                val targetSettings = (restoredOutputSettings ?: settings).copy(
+                var targetSettings = (restoredOutputSettings ?: settings).copy(
                     exportTarget = target,
                     scheduledExportTarget = target,
                     executionEnginePin = enginePin,
                     executionEngineAuthorityIsFrozen = true,
                 )
+                if (target == ExportTarget.API_ENDPOINT) {
+                    val operationId = requireNotNull(durableApiOperationId)
+                    targetSettings = targetSettings.copy(
+                        executionAPIRecoveryRequired = true,
+                        executionAPIRecovery = APIRecoveryExecution(
+                            operation.apiAuthorityJson, null, operationId, settingsSnapshotJson,
+                            requireExistingJournal = operation.apiJournalRequired,
+                            onJournalPrepared = {
+                                val marked = settingsRepository.updateExportSettingsAtomically { latest ->
+                                    ScheduledExportPendingRequests.markAPIJournalRequired(latest, targetDates,
+                                        requireNotNull(operation.apiAuthorityJson), operationId,
+                                        allowUnassignedOperation = operation.apiOperationId == null)
+                                }
+                                targetDates.all { date -> ScheduledExportPendingRequests.pendingRequests(marked).any {
+                                    it.date == date && it.apiAuthorityJson == operation.apiAuthorityJson &&
+                                        it.apiOperationId == operationId && it.apiJournalRequired
+                                } }
+                            },
+                        ) {
+                            val latest = settingsRepository.getExportSettings()
+                            requests.all { request -> ScheduledExportPendingRequests.pendingRequests(latest).any {
+                                it.date == request.date && it.exportTarget == target &&
+                                    it.apiAuthorityJson == request.apiAuthorityJson &&
+                                    (it.apiOperationId == request.apiOperationId || it.apiOperationId == operationId)
+                            } } && isDestinationReady(latest, target, destinationFingerprint, operation.apiAuthorityJson)
+                        },
+                    )
+                }
                 val recoveryFolderUri = if (target == ExportTarget.DEVICE_FOLDER) {
                     settingsRepository.getExportFolderUri()
                 } else {
@@ -284,6 +316,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     )
                 }
 
+                if (targetSettings.executionAPIRecovery?.isStillAuthorized?.invoke() == false) continue
                 // Record the attempt before clearing any pending identity. A history failure leaves
                 // both the pending request and exact journal available for another reconciliation.
                 exportHistoryRepository.insertEntry(
@@ -312,6 +345,12 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     targetResult.failedDateDetails
                 }
                 latestSettings = settingsRepository.updateExportSettingsAtomically { currentSettings ->
+                    if (target == ExportTarget.API_ENDPOINT && requests.any { request ->
+                        ScheduledExportPendingRequests.pendingRequests(currentSettings).none {
+                            it.date == request.date && it.apiAuthorityJson == request.apiAuthorityJson &&
+                                (it.apiOperationId == request.apiOperationId || it.apiOperationId == durableApiOperationId)
+                        }
+                    }) return@updateExportSettingsAtomically currentSettings
                     ScheduledExportPendingRequests.applyAttemptResult(
                         settings = currentSettings,
                         attemptedDates = targetDates,
@@ -323,13 +362,17 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         apiOperationIds = targetResult.retryOperationIds,
                         folderOperationIds = targetResult.retryFolderOperationIds,
                         freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
+                        apiAuthorityJson = operation.apiAuthorityJson,
                     )
                 }
                 val allFailuresDetachedForFreshCapture =
                     targetResult.failedDateDetails.all { failure ->
                         failure.date in targetResult.freshCaptureRetryDates
                     }
-                if (durableApiOperationId != null &&
+                if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && targetResult.isFullSuccess && durableApiOperationId != null) {
+                    rawSnapshotService?.discardCompletedDurableOperation(durableApiOperationId)
+                }
+                if (targetSettings.exportMode != ExportMode.RAW_SNAPSHOT && durableApiOperationId != null &&
                     targetResult.retryOperationIds.isEmpty() &&
                     !targetResult.wasCancelled &&
                     allFailuresDetachedForFreshCapture
@@ -466,8 +509,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private suspend fun hasResumableStoredAPIRequest(settings: ExportSettings): Boolean =
         ScheduledExportPendingRequests.pendingRequests(settings).any { request ->
             request.exportTarget == ExportTarget.API_ENDPOINT &&
-                request.apiOperationId != null &&
-                isDestinationReady(settings, request.exportTarget, request.destinationFingerprint)
+                request.apiOperationId != null && request.apiJournalRequired &&
+                isDestinationReady(settings, request.exportTarget, request.destinationFingerprint, request.apiAuthorityJson)
         }
 
     private suspend fun hasResumableStoredFolderRequest(settings: ExportSettings): Boolean {
@@ -508,8 +551,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
 
     private suspend fun destinationBlocker(settings: ExportSettings): ScheduledExportRecoveryBlocker? {
         val requests = ScheduledExportPendingRequests.pendingRequests(settings)
-        val groups = requests.groupBy { it.exportTarget to it.destinationFingerprint }.keys
-        if (groups.any { (target, fingerprint) -> isDestinationReady(settings, target, fingerprint) }) {
+        val groups = requests.map { Triple(it.exportTarget, it.destinationFingerprint, it.apiAuthorityJson) }.distinct()
+        if (groups.any { (target, fingerprint, authority) -> isDestinationReady(settings, target, fingerprint, authority) }) {
             return null
         }
 
@@ -530,13 +573,17 @@ class ScheduledExportRecoveryManager @Inject constructor(
         settings: ExportSettings,
         target: ExportTarget,
         destinationFingerprint: String?,
+        apiAuthorityJson: String? = null,
     ): Boolean = when (target) {
         ExportTarget.DEVICE_FOLDER -> !settingsRepository.getExportFolderUri().isNullOrBlank()
-        ExportTarget.API_ENDPOINT -> APIExportEndpoint.isConfigured(settings.apiEndpointUrl) &&
-            destinationFingerprint == (
-                apiCredentialStore?.destinationFingerprint(settings.apiEndpointUrl)
-                    ?: APIExportEndpoint.fingerprint(settings.apiEndpointUrl)
-                )
+        ExportTarget.API_ENDPOINT -> {
+            val credentials = apiCredentialStore
+            runCatchingCancellable {
+                val configuration = credentials?.requestConfiguration(settings.apiEndpointUrl)
+                configuration != null && configuration.destinationFingerprint == destinationFingerprint &&
+                    credentials.matchesRecoveryAuthority(apiAuthorityJson, configuration, null)
+            }.getOrDefault(false)
+        }
     }
 
     private fun historyEntry(
@@ -609,6 +656,8 @@ private data class PendingRecoveryOperation(
     val settingsSnapshotJson: String?,
     val apiOperationId: String?,
     val folderOperationId: String?,
+    val apiAuthorityJson: String?,
+    val apiJournalRequired: Boolean,
 )
 
 data class ScheduledExportRecoveryStatus(

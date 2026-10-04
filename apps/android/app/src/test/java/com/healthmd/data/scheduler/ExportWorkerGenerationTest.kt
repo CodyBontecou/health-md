@@ -9,6 +9,8 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.export.APIExportRequestConfiguration
+import com.healthmd.data.export.APIRecoveryAuthorities
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
@@ -573,7 +575,8 @@ class ExportWorkerGenerationTest {
 
         val result = worker.doWork()
 
-        assertThat(result).isEqualTo(ListenableWorker.Result.success())
+        assertThat(result.outputData.getString(ExportWorker.API_AUTHORITY_ERROR))
+            .isEqualTo("api_recovery_authority_required")
         coVerify(exactly = 0) { apiRunner.exportDates(any(), any()) }
     }
 
@@ -598,6 +601,15 @@ class ExportWorkerGenerationTest {
                 expedited = false,
             )
         }
+        val configuration = APIExportRequestConfiguration("https://example.test/health", "Bearer synthetic", emptyList(), API_FINGERPRINT)
+        val authority = APIRecoveryAuthorities.create(configuration, null)
+        coEvery { apiCredentialStore.requestConfiguration(any()) } answers {
+            configuration.copy(endpointUrl = firstArg())
+        }
+        coEvery { apiCredentialStore.matchesRecoveryAuthority(any(), any(), any()) } answers {
+            APIRecoveryAuthorities.matches(firstArg(), secondArg(), thirdArg())
+        }
+        every { stateStore.loadAdmission() } returns admission?.copy(apiAuthorityJson = authority)
         every { stateStore.matchesAdmission(any(), any(), any()) } returns admissionMatches
         every { stateStore.isAdmissionExecutionCompleted(any(), any(), any()) } returns false
         every { stateStore.markAdmissionExecutionCompleted(any(), any(), any()) } returns admissionMatches

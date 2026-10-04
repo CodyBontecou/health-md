@@ -68,6 +68,7 @@ class ScheduledProfileEntryStore @Inject constructor(
             val previous = existing.firstOrNull { it.profileId == entry.profileId }
             // UI drafts may have been opened before a worker recorded success. Configuration
             // saves must never move the durable catch-up frontier backwards.
+            val reconfigured = previous?.let { scheduleChanged(it, entry) } == true
             val merged = entry.copy(
                 lastSuccessEpochMillis = latest(
                     previous?.lastSuccessEpochMillis,
@@ -80,7 +81,8 @@ class ScheduledProfileEntryStore @Inject constructor(
                 // A configuration draft may predate a worker's cancellation checkpoint. Preserve
                 // exact residual groups until the worker clears them individually.
                 pendingExports = previous?.pendingExports ?: entry.pendingExports,
-                recoveryGeneration = previous?.recoveryGeneration ?: entry.recoveryGeneration,
+                recoveryGeneration = if (reconfigured) Math.addExact(requireNotNull(previous).recoveryGeneration, 1L)
+                    else previous?.recoveryGeneration ?: entry.recoveryGeneration,
             )
             val updated = existing.filterNot { it.profileId == entry.profileId } + merged
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
@@ -114,7 +116,13 @@ class ScheduledProfileEntryStore @Inject constructor(
             if (expectedRecoveryGeneration != null &&
                 existing[index].recoveryGeneration != expectedRecoveryGeneration
             ) return@edit
-            val changed = change(existing[index])
+            val requested = change(existing[index])
+            val changed = requested.copy(recoveryGeneration = maxOf(
+                requested.recoveryGeneration,
+                if (expectedRecoveryGeneration == null && scheduleChanged(existing[index], requested)) {
+                    Math.addExact(existing[index].recoveryGeneration, 1L)
+                } else existing[index].recoveryGeneration,
+            ))
             require(changed.profileId == profileId) { "Scheduled profile update cannot change identity." }
             if (
                 changed.isEnabled &&
@@ -127,6 +135,40 @@ class ScheduledProfileEntryStore @Inject constructor(
             persisted = true
         }
         return persisted
+    }
+
+    /** Pins a new API occurrence before capture; an existing group is never reauthorized. */
+    suspend fun admitAPIExport(
+        profileId: String,
+        expectedRecoveryGeneration: Long,
+        pending: ScheduledProfilePendingExport,
+    ): Boolean = updateForGeneration(profileId, expectedRecoveryGeneration) { current ->
+        require(current.isEnabled && pending.target == com.healthmd.domain.model.ExportTarget.API_ENDPOINT)
+        require(com.healthmd.data.export.APIRecoveryAuthorities.isValid(pending.apiAuthorityJson))
+        val existing = current.pendingExports.firstOrNull { it.id == pending.id }
+        require(existing == null || existing == pending)
+        current.copy(pendingExports = if (existing == null) current.pendingExports + pending else current.pendingExports)
+    }
+
+    /** Persists missing-journal refusal before any external delivery, with the discard fence. */
+    suspend fun markAPIJournalRequired(
+        profileId: String,
+        expectedRecoveryGeneration: Long,
+        pendingId: String,
+        authority: String,
+        operationId: String,
+    ): Boolean {
+        var matched = false
+        val persisted = updateForGeneration(profileId, expectedRecoveryGeneration) { current ->
+            if (!current.isEnabled || current.pendingExports.none {
+                    it.id == pendingId && it.apiAuthorityJson == authority && it.durableOperationId == operationId
+                }) return@updateForGeneration current
+            matched = true
+            current.copy(pendingExports = current.pendingExports.map {
+                if (it.id == pendingId) it.copy(apiJournalRequired = true) else it
+            })
+        }
+        return persisted && matched
     }
 
     /**
@@ -285,18 +327,22 @@ class ScheduledProfileEntryStore @Inject constructor(
         return finished
     }
 
-    /**
-     * Decodes the persisted list. A missing or blank key is the legitimate fresh-store state and
-     * behaves as an empty list. Only a malformed *present* payload returns null, so write paths
-     * still fail closed instead of overwriting other entries after a corrupt read.
-     */
+    private fun scheduleChanged(first: ScheduledProfileEntry, second: ScheduledProfileEntry): Boolean =
+        first.isEnabled != second.isEnabled || first.anchorEpochDay != second.anchorEpochDay ||
+            first.cadenceUnit != second.cadenceUnit || first.cadenceValue != second.cadenceValue ||
+            first.weekdayIso != second.weekdayIso || first.dateWindow != second.dateWindow ||
+            first.hour != second.hour || first.minute != second.minute || first.lookbackDays != second.lookbackDays ||
+            first.zoneId != second.zoneId || first.todayRefreshEnabled != second.todayRefreshEnabled ||
+            first.todayRefreshIntervalHours != second.todayRefreshIntervalHours
+
     private fun latest(first: Long?, second: Long?): Long? =
         listOfNotNull(first, second).maxOrNull()
 
+    /** Malformed present state blocks writes; missing state alone represents a fresh store. */
     private fun decode(raw: String?): List<ScheduledProfileEntry>? {
         if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse { error ->
-            Timber.e(error, "Scheduled profile entries failed to decode; blocking entry writes")
+        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse {
+            Timber.e("Scheduled profile entries failed to decode; blocking entry writes")
             null
         }
     }

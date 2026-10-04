@@ -69,6 +69,7 @@ class ScheduledExportRecoveryManagerTest {
             override suspend fun clearAuthorization() = Unit
             override suspend fun destinationFingerprint(endpointUrl: String): String = fingerprint
         }
+        val authority = credentials.createRecoveryAuthority("https://api.example.com/ingest", null)
         val manager = manager(
             settingsRepository = FakeSettingsRepository(
                 initialSettings = ExportSettings(
@@ -80,6 +81,8 @@ class ScheduledExportRecoveryManagerTest {
                             exportTarget = ExportTarget.API_ENDPOINT,
                             destinationFingerprint = fingerprint,
                             apiOperationId = "11111111-2222-3333-4444-555555555555",
+                            apiAuthorityJson = authority,
+                            apiJournalRequired = true,
                         ),
                     ),
                 ),

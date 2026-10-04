@@ -70,6 +70,7 @@ interface APIExportCaptureSource {
 
 private class HealthRepositoryAPIExportCaptureSource(
     private val healthRepository: HealthRepository,
+    private val credentialStore: APIExportCredentialStore,
 ) : APIExportCaptureSource {
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
 
@@ -86,6 +87,18 @@ private class HealthRepositoryAPIExportCaptureSource(
     }
 
     override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
+        suspend fun verifyBeforeRead() {
+            if (settings.executionAPIRecoveryRequired) {
+                val configuration = try {
+                    credentialStore.requestConfiguration(settings.apiEndpointUrl)
+                } catch (error: Throwable) {
+                    rethrowCancellationOrFatal(error)
+                    throw APIRecoveryAuthorityException()
+                } ?: throw APIRecoveryAuthorityException()
+                settings.apiRecoveryGuard(credentialStore, configuration).verify()
+            }
+        }
+        verifyBeforeRead()
         val effectiveSelection = settings.effectiveDataTypeSelection()
         val captured = healthRepository.fetchHealthDataRange(
             dates = listOf(date),
@@ -97,6 +110,7 @@ private class HealthRepositoryAPIExportCaptureSource(
             .filtered(settings.metricSelection)
         if (filtered.hasAnyData) return filtered
 
+        verifyBeforeRead()
         return healthRepository.fetchHealthData(date)
             .filtered(effectiveSelection)
             .filtered(settings.metricSelection)
@@ -129,7 +143,7 @@ class APIEndpointExportRunner private constructor(
         uploader: APIExportUploader,
         credentialStore: APIExportCredentialStore,
     ) : this(
-        captureSource = HealthRepositoryAPIExportCaptureSource(healthRepository),
+        captureSource = HealthRepositoryAPIExportCaptureSource(healthRepository, credentialStore),
         envelopeBuilder = envelopeBuilder,
         uploader = uploader,
         credentialStore = credentialStore,
@@ -158,7 +172,7 @@ class APIEndpointExportRunner private constructor(
         operationStore: FileAPIExportOperationStore,
         diagnosticSink: ShadowExportDiagnosticSink,
     ) : this(
-        captureSource = HealthRepositoryAPIExportCaptureSource(healthRepository),
+        captureSource = HealthRepositoryAPIExportCaptureSource(healthRepository, credentialStore),
         envelopeBuilder = envelopeBuilder,
         uploader = uploader,
         credentialStore = credentialStore,
@@ -236,14 +250,28 @@ class APIEndpointExportRunner private constructor(
         // Resolve exactly once, before the first provider call. A malformed/wrong-profile answer
         // fails closed to the byte-compatible legacy implementation.
         val resolvedMode = resolveModeOnce(normalizedDates, frozenSettings)
-        val requestConfiguration = credentialStore.requestConfiguration(endpoint)?.frozenCopy()
-            ?: return configurationFailure(normalizedDates, ExportFailureReason.INVALID_API_ENDPOINT)
+        val requestConfiguration = try {
+            credentialStore.requestConfiguration(endpoint)?.frozenCopy()
+        } catch (error: Throwable) {
+            rethrowCancellationOrFatal(error)
+            return authorityFailure(normalizedDates)
+        } ?: return authorityFailure(normalizedDates)
         if (expectedDestinationFingerprint != null &&
             requestConfiguration.destinationFingerprint != expectedDestinationFingerprint
         ) {
             return configurationFailure(normalizedDates, ExportFailureReason.INVALID_API_ENDPOINT)
         }
 
+        if (frozenSettings.executionAPIRecoveryRequired &&
+            (frozenSettings.executionAPIRecovery?.operationId != durableOperationId ||
+                frozenSettings.executionAPIRecovery?.settingsSnapshotJson != durableSettingsSnapshotJson)
+        ) return authorityFailure(normalizedDates)
+        val authorityGuard = frozenSettings.apiRecoveryGuard(credentialStore, requestConfiguration)
+        try {
+            authorityGuard.verify()
+        } catch (_: APIRecoveryAuthorityException) {
+            return authorityFailure(normalizedDates)
+        }
         val enginePinJson = frozenSettings.executionEnginePin?.let(ExportEnginePinCodec::encodeCanonical)
         if (durableOperationId != null) {
             val store = operationStore ?: return preparationFailure(normalizedDates)
@@ -263,11 +291,18 @@ class APIEndpointExportRunner private constructor(
                 ) {
                     return preparationFailure(normalizedDates)
                 }
+                if (frozenSettings.executionAPIRecoveryRequired &&
+                    existing.apiAuthorityJson != frozenSettings.executionAPIRecovery?.authorityJson
+                ) return authorityFailure(normalizedDates)
                 return commitDurable(
                     operation = existing,
                     requestConfiguration = requestConfiguration,
                     invocationDates = normalizedDates,
+                    authorityGuard = authorityGuard,
                 )
+            }
+            if (frozenSettings.executionAPIRecovery?.requireExistingJournal == true) {
+                return preparationFailure(normalizedDates)
             }
         }
 
@@ -289,7 +324,11 @@ class APIEndpointExportRunner private constructor(
                 // Consent is optional; preserve the established capture and failure behavior.
             }
         }
-        val capture = captureDates(normalizedDates, snapshot.settings, onProgress)
+        val capture = try {
+            captureDates(normalizedDates, snapshot.settings, onProgress, authorityGuard = authorityGuard)
+        } catch (_: APIRecoveryAuthorityException) {
+            return authorityFailure(normalizedDates)
+        }
         if (capture.wasCancelled) {
             return cancelledResult(normalizedDates, capture.failedDateDetails)
         }
@@ -331,6 +370,7 @@ class APIEndpointExportRunner private constructor(
                     mode = validated.mode,
                     enginePinJson = enginePinJson,
                     settingsSnapshotJson = durableSettingsSnapshotJson,
+                    apiAuthorityJson = frozenSettings.executionAPIRecovery?.authorityJson,
                     requestedDates = normalizedDates,
                     recordDates = capture.records.mapTo(linkedSetOf(), HealthData::date),
                     captureFailures = capture.failedDateDetails,
@@ -342,12 +382,14 @@ class APIEndpointExportRunner private constructor(
                             bytes = body.bytes,
                         )
                     },
-                ).also { store.create(it) }
+                ).also { authorityGuard.verify(); store.create(it) }
+            } catch (_: APIRecoveryAuthorityException) {
+                return authorityFailure(normalizedDates)
             } catch (error: Throwable) {
                 rethrowCancellationOrFatal(error)
                 return preparationFailure(normalizedDates)
             }
-            return commitDurable(durable, requestConfiguration, normalizedDates)
+            return commitDurable(durable, requestConfiguration, normalizedDates, authorityGuard)
         }
 
         return commit(
@@ -356,6 +398,7 @@ class APIEndpointExportRunner private constructor(
             requestedDates = normalizedDates,
             records = capture.records,
             failedDateDetails = capture.failedDateDetails,
+            authorityGuard = authorityGuard,
         )
     }
 
@@ -506,6 +549,7 @@ class APIEndpointExportRunner private constructor(
         settings: ExportSettings,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)?,
         stopAfterRecordCount: Int? = null,
+        authorityGuard: APIRecoveryGuard? = null,
     ): CaptureResult {
         val records = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
@@ -517,6 +561,7 @@ class APIEndpointExportRunner private constructor(
             } catch (_: CancellationException) {
                 return CaptureResult(records, failures, attempted, wasCancelled = true)
             }
+            authorityGuard?.verify()
             attempted += date
             onProgress?.invoke(index + 1, dates.size, date.toString())
             if (captureSource.isBeforeFirstUnlock()) {
@@ -534,6 +579,8 @@ class APIEndpointExportRunner private constructor(
                 }
             } catch (_: CancellationException) {
                 return CaptureResult(records, failures, attempted, wasCancelled = true)
+            } catch (error: APIRecoveryAuthorityException) {
+                throw error
             } catch (error: SecurityException) {
                 failures += FailedDateDetail(date, classifySecurityException(error), error.message)
             } catch (error: Exception) {
@@ -635,11 +682,13 @@ class APIEndpointExportRunner private constructor(
         operation: DurableAPIExportOperation,
         requestConfiguration: APIExportRequestConfiguration,
         invocationDates: List<LocalDate>,
+        authorityGuard: APIRecoveryGuard,
     ): ExportResult {
         val store = operationStore ?: return preparationFailure(operation.requestedDates)
         var frontier = operation.acknowledgedBatchCount
         var lastStatusCode: Int? = null
         try {
+            authorityGuard.markJournalPrepared()
             while (frontier < operation.batches.size) {
                 coroutineContext.ensureActive()
                 val batch = operation.batches[frontier]
@@ -652,11 +701,13 @@ class APIEndpointExportRunner private constructor(
                     body = PreparedAPIBody(batch.relativePath, batch.bytes),
                     requestConfiguration = requestConfiguration,
                     maxAttempts = attempts,
+                    authorityGuard = authorityGuard,
                 )
                 lastStatusCode = upload.statusCode
                 // Acknowledgement is persisted before the next body. If the process dies after the
                 // server response but before this commit, the exact same body is retransmitted;
                 // arbitrary HTTP endpoints cannot provide stronger than at-least-once delivery.
+                authorityGuard.verify()
                 store.acknowledge(operation.operationId, frontier)
                 frontier += 1
             }
@@ -675,6 +726,12 @@ class APIEndpointExportRunner private constructor(
                 unresolvedDetails = null,
                 lastStatusCode = lastStatusCode,
                 wasCancelled = true,
+            )
+        } catch (_: APIRecoveryAuthorityException) {
+            return durableResult(
+                operation, frontier, invocationDates,
+                unresolvedReason = ExportFailureReason.INVALID_API_ENDPOINT,
+                unresolvedDetails = "api_recovery_authority_required",
             )
         } catch (error: APIExportClientException) {
             val safeDetails = error.statusCode?.let { "HTTP $it" }
@@ -744,6 +801,7 @@ class APIEndpointExportRunner private constructor(
         requestedDates: List<LocalDate>,
         records: List<HealthData>,
         failedDateDetails: List<FailedDateDetail>,
+        authorityGuard: APIRecoveryGuard,
     ): ExportResult {
         val barrier = ExportCommitBarrier()
         barrier.markMaterialized()
@@ -763,6 +821,7 @@ class APIEndpointExportRunner private constructor(
                     body = body,
                     requestConfiguration = requestConfiguration,
                     maxAttempts = attempts,
+                    authorityGuard = authorityGuard,
                 )
                 lastStatusCode = result.statusCode
             }
@@ -777,6 +836,9 @@ class APIEndpointExportRunner private constructor(
         } catch (_: CancellationException) {
             barrier.failIfOpen()
             return cancelledResult(requestedDates, failedDateDetails)
+        } catch (_: APIRecoveryAuthorityException) {
+            barrier.failIfOpen()
+            return authorityFailure(requestedDates)
         } catch (error: APIExportClientException) {
             barrier.failIfOpen()
             val safeDetails = error.statusCode?.let { "HTTP $it" }
@@ -801,10 +863,12 @@ class APIEndpointExportRunner private constructor(
         body: PreparedAPIBody,
         requestConfiguration: APIExportRequestConfiguration,
         maxAttempts: Int,
+        authorityGuard: APIRecoveryGuard,
     ): APIExportUploadResult {
         var attempt = 1
         while (true) {
             try {
+                authorityGuard.verify()
                 return uploader.upload(
                     endpointUrl = requestConfiguration.endpointUrl,
                     payload = body.bytes.decodeToString(),
@@ -946,6 +1010,12 @@ class APIEndpointExportRunner private constructor(
         successCount = 0,
         totalCount = dates.size,
         failedDateDetails = dates.map { FailedDateDetail(it, reason) },
+        target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
+    )
+
+    private fun authorityFailure(dates: List<LocalDate>): ExportResult = ExportResult(
+        0, dates.size,
+        dates.map { FailedDateDetail(it, ExportFailureReason.INVALID_API_ENDPOINT, "api_recovery_authority_required") },
         target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
     )
 

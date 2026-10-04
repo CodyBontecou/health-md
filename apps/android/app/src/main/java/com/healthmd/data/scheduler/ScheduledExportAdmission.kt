@@ -1,6 +1,7 @@
 package com.healthmd.data.scheduler
 
 import androidx.work.Data
+import com.healthmd.data.export.APIRecoveryAuthorities
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
@@ -12,6 +13,8 @@ internal data class ScheduledExportAdmission(
     val operationId: String,
     val workRequestId: UUID,
     val phase: ScheduledExportAdmissionPhase = ScheduledExportAdmissionPhase.ACTIVE,
+    /** Private evidence is persisted by the state store, never in WorkManager Data or alarms. */
+    val apiAuthorityJson: String? = null,
 ) {
     init {
         requireNotNull(occurrence.generation) {
@@ -20,6 +23,7 @@ internal data class ScheduledExportAdmission(
         require(catchUpThroughMillis >= occurrence.triggerAtMillis) {
             "Scheduled export catch-up cannot precede its occurrence."
         }
+        require(apiAuthorityJson == null || APIRecoveryAuthorities.isValid(apiAuthorityJson))
         require(operationId.matches(OPERATION_ID_PATTERN)) {
             "Scheduled export operation ID is invalid."
         }

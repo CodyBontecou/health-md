@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.healthmd.data.export.APIRecoveryAuthorities
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
@@ -375,6 +376,13 @@ private fun JsonObject.withFailClosedPendingMetadata(): JsonObject {
             val pin = ExportEnginePinCodec.decodeOrNull(encodedPin.toString())
             if (pin == null || pin.engine == ExportEngineMode.legacy) {
                 fields = fields + ("enginePin" to JsonNull)
+            }
+        }
+
+        if (request.containsKey("apiAuthorityJson")) {
+            val evidence = request["apiAuthorityJson"]
+            if (evidence !is JsonPrimitive || !evidence.isString || !APIRecoveryAuthorities.isValid(evidence.content)) {
+                fields = fields + ("apiAuthorityJson" to JsonPrimitive("invalid-api-recovery-authority"))
             }
         }
 

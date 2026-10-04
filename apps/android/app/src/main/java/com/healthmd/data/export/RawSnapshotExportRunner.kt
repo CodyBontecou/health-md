@@ -60,6 +60,8 @@ interface RawSnapshotService {
         allowInteractiveRouteConsent: Boolean = false,
     ): ExportResult
 
+    suspend fun discardCompletedDurableOperation(operationId: String) = Unit
+
     /** Performs the same native source read as an export without writing or uploading a user artifact. */
     suspend fun previewRange(
         startDate: LocalDate,
@@ -78,6 +80,11 @@ class RawSnapshotExportRunner @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val rawRepositoryRegistry: RawHealthRepositoryRegistry = RawHealthRepositoryRegistry.healthConnectOnly(rawRepository),
 ) : RawSnapshotService {
+    private val scheduledAPIStore = ScheduledRawAPIExportStore(File(context.noBackupFilesDir, "scheduled-raw-api-v1"))
+
+    override suspend fun discardCompletedDurableOperation(operationId: String) {
+        scheduledAPIStore.discardCompleted(operationId)
+    }
 
     override suspend fun exportRange(
         startDate: LocalDate,
@@ -101,7 +108,11 @@ class RawSnapshotExportRunner @Inject constructor(
         }
 
         val apiConfiguration = if (target == ExportTarget.API_ENDPOINT) {
-            val captured = credentialStore.requestConfiguration(settings.apiEndpointUrl)
+            val captured = try {
+                credentialStore.requestConfiguration(settings.apiEndpointUrl)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) { null }
                 ?: return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT)
             val scheme = runCatching { URI(captured.endpointUrl).scheme }.getOrNull()
             if (!scheme.equals("https", ignoreCase = true)) {
@@ -115,8 +126,13 @@ class RawSnapshotExportRunner @Inject constructor(
             captured.copy(requestHeaders = captured.requestHeaders.toList())
         } else null
 
-        val zone = ZoneId.systemDefault()
+        val zone = settings.executionAPIRecovery?.settingsSnapshotJson?.let {
+            com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec.decodeOrNull(it)?.ianaTimeZone
+        }?.let(ZoneId::of) ?: ZoneId.systemDefault()
         val request = buildRequest(startDate, endDate, zone, settings)
+        if (target == ExportTarget.API_ENDPOINT && (settings.executionAPIRecoveryRequired || settings.executionAPIRecovery != null)) {
+            return exportScheduledAPI(startDate, endDate, settings, request, providerIds, requireNotNull(apiConfiguration))
+        }
         val runProviders: suspend () -> ExportResult = {
             val results = mutableListOf<ExportResult>()
             for (providerId in providerIds) {
@@ -395,6 +411,106 @@ class RawSnapshotExportRunner @Inject constructor(
             raw?.finalLocation?.let { location -> cleanupPrivateArtifact(File(location)) }
         }
     }
+
+    private suspend fun exportScheduledAPI(
+        startDate: LocalDate,
+        endDate: LocalDate,
+        settings: ExportSettings,
+        request: RawSnapshotRequest,
+        providerIds: List<String>,
+        configuration: APIExportRequestConfiguration,
+    ): ExportResult {
+        val execution = settings.executionAPIRecovery
+        val guard = settings.apiRecoveryGuard(credentialStore, configuration)
+        var operation: ScheduledRawAPIExportStore.Operation? = null
+        val dates = generateSequence(startDate) { current ->
+            if (current < endDate) current.plusDays(1) else null
+        }.toList()
+        try {
+            guard.verify()
+            val context = requireNotNull(execution)
+            check(context.settingsSnapshotJson != null)
+            operation = scheduledAPIStore.open(
+                ScheduledRawAPIExportStore.Operation(
+                    operationId = context.operationId, authorityJson = requireNotNull(context.authorityJson),
+                    settingsSnapshotJson = context.settingsSnapshotJson, ownerEpochDays = dates.map(LocalDate::toEpochDay),
+                    request = request, providerIds = providerIds,
+                ),
+                requireExisting = context.requireExistingJournal,
+            )
+            // Materialize every provider before ANY upload; an unknown delivery cannot cause later
+            // providers to be captured using today's source state on recovery.
+            for (index in providerIds.indices) {
+                val current = requireNotNull(operation)
+                if (current.slots[index].result != null) continue
+                guard.verify()
+                operation = scheduledAPIStore.markCaptureStarted(current, index)
+                val repository = rawRepositoryRegistry.repositoryFor(providerIds[index])
+                    ?: error("Raw API provider is unavailable.")
+                var produced: RawExportResult? = null
+                try {
+                    produced = RawSnapshotExportOrchestrator(context = this.context, repository = repository,
+                        storage = NoBackupRawExportStorage(this.context)).export(request)
+                    operation = scheduledAPIStore.prepare(requireNotNull(operation), index, produced)
+                } finally {
+                    produced?.finalLocation?.let { cleanupPrivateArtifact(File(it)) }
+                }
+            }
+            for (index in providerIds.indices) {
+                val current = requireNotNull(operation)
+                val slot = current.slots[index]
+                val raw = requireNotNull(slot.result)
+                if (raw.manifest.status != RawSnapshotStatus.COMPLETE) {
+                    return rawRecoveryFailure(startDate, dates, context.operationId, ExportFailureReason.RAW_PARTIAL)
+                }
+                if (slot.acknowledged) continue
+                val file = scheduledAPIStore.artifact(current, index)
+                guard.markJournalPrepared()
+                uploadRaw(providerIds[index], request, configuration, raw, file)
+                guard.verify()
+                operation = scheduledAPIStore.acknowledge(current, index)
+            }
+            return ExportResult(providerIds.size, providerIds.size, target = ExportTarget.API_ENDPOINT,
+                exportMode = ExportMode.RAW_SNAPSHOT, artifactCount = 0)
+        } catch (_: APIRecoveryAuthorityException) {
+            return rawRecoveryFailure(startDate, dates, execution?.operationId, ExportFailureReason.INVALID_API_ENDPOINT)
+        } catch (_: CancellationException) {
+            return rawRecoveryFailure(startDate, dates, execution?.operationId, ExportFailureReason.RAW_CANCELLED, cancelled = true)
+        } catch (error: RawSnapshotApiException) {
+            return rawRecoveryFailure(startDate, dates, execution?.operationId,
+                if (error.statusCode == null) ExportFailureReason.NETWORK_ERROR else ExportFailureReason.API_REJECTED)
+        } catch (_: Exception) {
+            return rawRecoveryFailure(startDate, dates, execution?.operationId, ExportFailureReason.UNKNOWN)
+        }
+    }
+
+    private suspend fun uploadRaw(
+        providerId: String, request: RawSnapshotRequest, configuration: APIExportRequestConfiguration,
+        raw: RawExportResult, artifact: File,
+    ) = apiClient.upload(
+        endpointUrl = configuration.endpointUrl,
+        artifact = CompletedRawSnapshot.file(artifact, raw.format),
+        authorizationHeader = configuration.authorizationHeader,
+        headers = configuration.requestHeaders.filterNot { it.name.lowercase() in MANAGED_HEADER_NAMES }
+            .map { RawApiHeader(it.name, it.value) } + listOf(
+                RawApiHeader(HEADER_SCHEMA, "healthmd.raw-snapshot; version=1"),
+                RawApiHeader(HEADER_EXPORT_ID, raw.snapshotId),
+                RawApiHeader(HEADER_CHECKSUM, raw.manifest.logicalChecksumSha256),
+                RawApiHeader(HEADER_ARTIFACT_CHECKSUM, raw.artifactChecksumSha256),
+                RawApiHeader(HEADER_CALENDAR_ZONE, request.calendarZoneId.orEmpty()),
+                RawApiHeader(HEADER_PROVIDER, providerId),
+            ),
+    )
+
+    private fun rawRecoveryFailure(
+        date: LocalDate, dates: List<LocalDate>, operationId: String?, reason: ExportFailureReason,
+        cancelled: Boolean = false,
+    ) = failure(date, ExportTarget.API_ENDPOINT, reason, cancelled = cancelled).copy(
+        failedDateDetails = listOf(FailedDateDetail(date, reason,
+            if (reason == ExportFailureReason.INVALID_API_ENDPOINT) "api_recovery_authority_required" else "raw_api_recovery_retained")),
+        retryOperationIds = operationId?.let { id -> dates.associateWith { id } }.orEmpty(),
+        remainingDates = if (cancelled) dates.toSet() else emptySet(),
+    )
 
     private fun RawExportResult.toProductResult(date: LocalDate, target: ExportTarget): ExportResult = when (manifest.status) {
         RawSnapshotStatus.COMPLETE -> ExportResult(1, 1, target = target, exportMode = ExportMode.RAW_SNAPSHOT)
