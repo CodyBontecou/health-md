@@ -176,6 +176,77 @@ class HomebrewReleaseScriptTests(unittest.TestCase):
         identical = self.run_freshness("0.1.0", current, candidate)
         self.assertEqual(identical.returncode, 0, identical.stderr)
 
+    def test_freshness_allows_stable_build_metadata_release(self) -> None:
+        current = self.root / "tap" / "healthmd.rb"
+        candidate = self.root / "candidate.rb"
+        version = "1.2.3+build.1"
+        self.write_formula(candidate, version)
+        first = self.run_freshness(version, current, candidate)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertIn(f"first release {version}", first.stdout)
+        self.write_formula(current, "1.2.2+build.999")
+        newer = self.run_freshness(version, current, candidate)
+        self.assertEqual(newer.returncode, 0, newer.stderr)
+        self.assertIn(f"1.2.2+build.999 -> {version}", newer.stdout)
+        current.write_bytes(candidate.read_bytes())
+        identical = self.run_freshness(version, current, candidate)
+        self.assertEqual(identical.returncode, 0, identical.stderr)
+        self.assertIn(f"idempotent {version}", identical.stdout)
+
+    def test_freshness_build_metadata_preserves_semver_precedence(self) -> None:
+        current = self.root / "tap" / "healthmd.rb"
+        candidate = self.root / "candidate.rb"
+        upgrades = [
+            ("1.2.2+build.999", "1.2.3+build.1"),
+            ("1.2.3-rc.2+build.999", "1.2.3-rc.10+build.1"),
+            ("1.2.3-rc.10+build.999", "1.2.3+build.1"),
+            ("1.2.3+build.999", "1.2.4-alpha.1+build.1"),
+        ]
+        for older, newer in upgrades:
+            with self.subTest(older=older, newer=newer):
+                self.write_formula(current, older)
+                self.write_formula(candidate, newer)
+                upgrade = self.run_freshness(newer, current, candidate)
+                self.assertEqual(upgrade.returncode, 0, upgrade.stderr)
+                self.write_formula(current, newer)
+                self.write_formula(candidate, older)
+                rollback = self.run_freshness(older, current, candidate)
+                self.assertNotEqual(rollback.returncode, 0)
+                self.assertIn("rollback", rollback.stderr)
+
+    def test_freshness_build_metadata_keeps_published_versions_immutable(self) -> None:
+        current = self.root / "tap" / "healthmd.rb"
+        candidate = self.root / "candidate.rb"
+        same_precedence = [
+            ("1.2.3+build.1", "1.2.3+build.1"),
+            ("1.2.3+build.1", "1.2.3+build.2"),
+            ("1.2.3+build.2", "1.2.3+build.1"),
+            ("1.2.3", "1.2.3+build.1"),
+            ("1.2.3+build.1", "1.2.3"),
+            ("1.2.3-rc.1+build.1", "1.2.3-rc.1+build.2"),
+        ]
+        for published, proposed in same_precedence:
+            with self.subTest(published=published, proposed=proposed):
+                self.write_formula(current, published, marker="published")
+                self.write_formula(candidate, proposed)
+                rewrite = self.run_freshness(proposed, current, candidate)
+                self.assertNotEqual(rewrite.returncode, 0)
+                self.assertIn("immutable", rewrite.stderr)
+
+    def test_freshness_build_metadata_requires_exact_release_plan_version(self) -> None:
+        current = self.root / "tap" / "healthmd.rb"
+        candidate = self.root / "candidate.rb"
+        for embedded, planned in [
+            ("1.2.3+build.1", "1.2.3+build.2"),
+            ("1.2.3+build.1", "1.2.3"),
+            ("1.2.3", "1.2.3+build.1"),
+        ]:
+            with self.subTest(embedded=embedded, planned=planned):
+                self.write_formula(candidate, embedded)
+                mismatch = self.run_freshness(planned, current, candidate)
+                self.assertNotEqual(mismatch.returncode, 0)
+                self.assertIn("differs from the release plan", mismatch.stderr)
+
     def test_freshness_rejects_rollback_and_same_version_rewrite(self) -> None:
         current = self.root / "tap" / "healthmd.rb"
         candidate = self.root / "candidate.rb"
@@ -217,7 +288,10 @@ class HomebrewReleaseScriptTests(unittest.TestCase):
     def test_freshness_rejects_invalid_versions_and_metadata_rewrites(self) -> None:
         current = self.root / "tap" / "healthmd.rb"
         candidate = self.root / "candidate.rb"
-        for version in ["01.1.0", "0.1.0-alpha.01", "0.1.0-", "0.1.0-a..b"]:
+        for version in [
+            "01.1.0", "0.1.0-alpha.01", "0.1.0-", "0.1.0-a..b",
+            "1.2.3+", "1.2.3+build..1", "1.2.3+build_1",
+        ]:
             with self.subTest(version=version):
                 self.write_formula(candidate, version)
                 result = self.run_freshness(version, current, candidate)
