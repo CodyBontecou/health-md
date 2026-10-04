@@ -81,17 +81,33 @@ final class FeedbackReporter: ObservableObject {
     }
 }
 
+/// Ephemeral editor state shared by the sheet and synthetic pasteboard tests.
+struct FeedbackReportDraft {
+    var reportText: String {
+        didSet {
+            if reportText != oldValue { copied = false }
+        }
+    }
+    private(set) var copied = false
+
+    mutating func copy(using write: (String) -> Bool) {
+        copied = write(reportText)
+    }
+
+    var copyConfirmation: String { copied ? String(localized: "Copied") : "" }
+    var copyAccessibilityLabel: String { copied ? String(localized: "Report copied") : "" }
+}
+
 /// An entirely local alternative: editable, selectable text plus an explicit copy action.
 /// It does not try another external URL or send/store any report automatically.
 struct FeedbackFailureView: View {
     let failure: FeedbackReporter.Failure
-    @State private var reportText: String
-    @State private var copied = false
+    @State private var draft: FeedbackReportDraft
     @Environment(\.dismiss) private var dismiss
 
     init(failure: FeedbackReporter.Failure) {
         self.failure = failure
-        _reportText = State(initialValue: failure.reportText)
+        _draft = State(initialValue: FeedbackReportDraft(reportText: failure.reportText))
     }
 
     var body: some View {
@@ -102,22 +118,24 @@ struct FeedbackFailureView: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text("Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data.")
                 .font(Typography.caption())
-            TextEditor(text: $reportText)
+            TextEditor(text: $draft.reportText)
                 .font(Typography.monoCaption())
                 .accessibilityLabel("Feedback report")
                 .frame(minHeight: 180)
             HStack {
                 Button("Copy Report") {
-                    #if os(iOS)
-                    UIPasteboard.general.string = reportText
-                    copied = true
-                    #elseif os(macOS)
-                    NSPasteboard.general.clearContents()
-                    copied = NSPasteboard.general.setString(reportText, forType: .string)
-                    #endif
+                    draft.copy { text in
+                        #if os(iOS)
+                        UIPasteboard.general.string = text
+                        return true
+                        #elseif os(macOS)
+                        NSPasteboard.general.clearContents()
+                        return NSPasteboard.general.setString(text, forType: .string)
+                        #endif
+                    }
                 }
-                Text(copied ? String(localized: "Copied") : "")
-                    .accessibilityLabel(copied ? String(localized: "Report copied") : "")
+                Text(draft.copyConfirmation)
+                    .accessibilityLabel(draft.copyAccessibilityLabel)
                 Spacer()
                 Button("Done") { dismiss() }
             }

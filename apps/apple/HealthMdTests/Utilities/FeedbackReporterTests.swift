@@ -72,6 +72,44 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertNil(reporter.failure)
     }
 
+    func testEditingAfterCopyClearsVisibleAndAccessibleConfirmationUntilRecopied() {
+        var draft = FeedbackReportDraft(reportText: "Synthetic template")
+        var pasteboard = ""
+        let write: (String) -> Bool = { text in
+            pasteboard = text
+            return true
+        }
+
+        XCTAssertEqual(draft.copyConfirmation, "")
+        XCTAssertEqual(draft.copyAccessibilityLabel, "")
+        draft.copy(using: write)
+        XCTAssertEqual(pasteboard, "Synthetic template")
+        XCTAssertEqual(draft.copyConfirmation, String(localized: "Copied"))
+        XCTAssertEqual(draft.copyAccessibilityLabel, String(localized: "Report copied"))
+
+        draft.reportText = "Synthetic edited report"
+        XCTAssertFalse(draft.copied)
+        XCTAssertEqual(draft.copyConfirmation, "", "Do not claim the edited report was copied")
+        XCTAssertEqual(draft.copyAccessibilityLabel, "", "Accessibility must clear too")
+        XCTAssertEqual(pasteboard, "Synthetic template", "Editing must not write the clipboard")
+
+        draft.copy(using: write)
+        XCTAssertEqual(pasteboard, "Synthetic edited report")
+        XCTAssertEqual(draft.copyConfirmation, String(localized: "Copied"))
+        XCTAssertEqual(draft.copyAccessibilityLabel, String(localized: "Report copied"))
+    }
+
+    func testUnchangedEditorTextKeepsConfirmationButFailedCopyClearsIt() {
+        var draft = FeedbackReportDraft(reportText: "Synthetic report")
+        draft.copy { _ in true }
+        draft.reportText = "Synthetic report"
+        XCTAssertTrue(draft.copied, "An unchanged editor update is not an edit")
+        draft.copy { _ in false }
+        XCTAssertFalse(draft.copied)
+        XCTAssertEqual(draft.copyConfirmation, "")
+        XCTAssertEqual(draft.copyAccessibilityLabel, "")
+    }
+
     #if os(iOS)
     func testFailedMailWaitsForSheetDismissalThenOffersLocalFallback() throws {
         let reporter = makeReporter { _, _ in XCTFail("Mail failure must not open another app") }
