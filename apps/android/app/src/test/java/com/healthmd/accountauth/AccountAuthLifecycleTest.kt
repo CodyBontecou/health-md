@@ -399,6 +399,32 @@ class AccountAuthLifecycleTest {
         } finally { point.release() }
     }
 
+    @Test fun priorVerifiedEraseIsSupersededBeforeReauthCustodyCanCommitWithUnreadableProof() {
+        for (fault in listOf(VaultFault.UNREADABLE_AFTER_COMMIT, VaultFault.LOST_REPLY_AND_UNREADABLE)) {
+            val rig = AuthRig(); rig.signIn()
+            checkSource(rig.owner.signOut() == AuthAction.FENCED && rig.owner.status().localErasure == LocalErasure.VERIFIED, "prior correlated erasure verified")
+            val callback = rig.begin()
+            checkSource(rig.owner.status().localErasure == LocalErasure.NOT_REQUESTED, "new attempt supersedes historical erase proof before custody")
+            rig.vault.fault = fault
+            checkSource(rig.owner.acceptCallback(callback) == AuthAction.UNCERTAIN, "actual reauth commit lacks readable proof")
+            val populated = rig.vault.inspect()
+            checkSource(populated?.normal?.session != null && populated.signedOut == false, "actual new credentials committed despite lost/unreadable reply")
+            val status = rig.owner.status()
+            checkSource(status.phase == AccountPhase.AUTHENTICATION_UNCERTAIN && status.namespace == null &&
+                status.localErasure == LocalErasure.NOT_REQUESTED && status.remoteRevocation == RemoteRevocation.PENDING,
+                "historical erase cannot certify current populated uncertain row")
+            checkSource(rig.owner.begin(TEST_SCOPE) == AuthAction.REJECTED && rig.owner.refresh() == AuthAction.REJECTED, "fresh auth required, no parent replay")
+            rig.vault.failReads = false; rig.vault.fault = VaultFault.NONE
+            val recreated = AccountAuthCoordinator.forSyntheticTests(AndroidAuthChannel.PLAY, rig.ports)
+            val reads = rig.vault.reads.get()
+            checkSource(recreated.restore() == AuthAction.UNAVAILABLE && rig.vault.reads.get() == reads &&
+                recreated.begin(TEST_SCOPE) == AuthAction.UNCERTAIN, "populated stale row is not restoration authority")
+            checkSource(rig.owner.signOut() == AuthAction.FENCED && rig.owner.status().remoteRevocation == RemoteRevocation.PENDING,
+                "verified new local erase does not erase possible remote-family obligations")
+        }
+        println("ERASURE prior-proof-supersession actual-committed-reauth/unreadable=2 includes-lost-commit-reply")
+    }
+
     @Test fun unknownRevocationObligationCapFailsBeforeMorePortsOrInventedExpiry() {
         val rig = AuthRig()
         repeat(20) { rig.signIn(); checkSource(rig.owner.signOut() == AuthAction.FENCED, "actual unresolved family") }

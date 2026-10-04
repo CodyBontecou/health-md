@@ -78,7 +78,7 @@ internal class ReviewSink : SyntheticConsentPort {
     }
 }
 
-internal enum class VaultFault { NONE, NOOP, LOST_REPLY, BEFORE_COMMIT, UNREADABLE_AFTER_COMMIT, STALE_READBACK, PARTIAL, WRONG_OWNER, WRONG_GENERATION, WRONG_INSTALLATION, MISSING_RECEIPT }
+internal enum class VaultFault { NONE, NOOP, LOST_REPLY, BEFORE_COMMIT, UNREADABLE_AFTER_COMMIT, LOST_REPLY_AND_UNREADABLE, STALE_READBACK, PARTIAL, WRONG_OWNER, WRONG_GENERATION, WRONG_INSTALLATION, MISSING_RECEIPT }
 internal class FaultVault : SyntheticAccountVault {
     private val lock = Any()
     private var image: VaultImage? = null
@@ -117,12 +117,12 @@ internal class FaultVault : SyntheticAccountVault {
                     VaultFault.MISSING_RECEIPT -> VaultImage(candidate.processOwner, candidate.localGeneration, candidate.signedOut, record, Any())
                     else -> candidate
                 }
-                if (fault == VaultFault.UNREADABLE_AFTER_COMMIT) failReads = true
+                if (fault in setOf(VaultFault.UNREADABLE_AFTER_COMMIT, VaultFault.LOST_REPLY_AND_UNREADABLE)) failReads = true
                 if (fault == VaultFault.STALE_READBACK) staleRead = true
             }
         }
         afterCommit.getAndSet(null)?.invoke() // real committed row, prior to owner readback/visibility
-        if (fault == VaultFault.LOST_REPLY) throw IllegalStateException("synthetic lost reply")
+        if (fault in setOf(VaultFault.LOST_REPLY, VaultFault.LOST_REPLY_AND_UNREADABLE)) throw IllegalStateException("synthetic lost reply")
     }
     fun inject(value: VaultImage?) { synchronized(lock) { image = value } }
     fun inspect(): VaultImage? = synchronized(lock) { image }

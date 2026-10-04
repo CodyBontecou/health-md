@@ -99,7 +99,11 @@ class AccountAuthCoordinator private constructor(
                 remote = RemoteRevocation.PENDING; phase = AccountPhase.AUTHENTICATION_UNCERTAIN
                 return AuthAction.UNCERTAIN // bound memory; no invented retention/expiry cleanup
             }
-            Capture(Any(), generation, registration!!).also { operation = it.id; phase = AccountPhase.STARTING }
+            Capture(Any(), generation, registration!!).also {
+                operation = it.id; phase = AccountPhase.STARTING
+                // A prior erase receipt is historical once a new attempt can install credentials.
+                erasure = LocalErasure.NOT_REQUESTED
+            }
         }
         try {
             val requested = canonicalScope(scope)
