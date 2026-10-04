@@ -241,42 +241,66 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         )
     }
 
-    func testHistoryDiscoveryStopsAtHundredPageSafetyLimit() async {
+    func testHistoryDiscoveryContinuesBeyondHundredPagesAnd2500Records() async throws {
         var cycleRequests = 0
+        var recordsReturned = 0
         ExternalIntegrationURLProtocolStub.setHandler { request in
             guard request.url?.path.hasSuffix("/cycle") == true else {
                 return Self.response(request, status: 200, json: ["records": []])
             }
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            XCTAssertNil(query.first { $0.name == "start" })
+            XCTAssertNil(query.first { $0.name == "end" })
+            XCTAssertEqual(query.first { $0.name == "limit" }?.value, "25")
+            XCTAssertEqual(
+                query.first { $0.name == "nextToken" }?.value,
+                cycleRequests == 0 ? nil : "history-cursor-\(cycleRequests)"
+            )
             cycleRequests += 1
-            return Self.response(request, status: 200, json: [
-                "records": [["id": cycleRequests, "start": "2026-01-01T00:00:00Z"]],
-                "next_token": "history-cursor-\(cycleRequests)"
-            ])
+            let lastPage = cycleRequests == 101
+            let count = lastPage ? 1 : 25
+            recordsReturned += count
+            var page: [String: Any] = [
+                "records": (0..<count).map { [
+                    "id": cycleRequests * 25 + $0,
+                    "start": lastPage ? "2010-01-02T03:04:05Z" : "2026-01-01T00:00:00Z"
+                ] as [String: Any] }
+            ]
+            if !lastPage { page["next_token"] = "history-cursor-\(cycleRequests)" }
+            return Self.response(request, status: 200, json: page)
         }
 
-        do {
-            _ = try await client.discoverEarliestAvailableDate(
-                provider: .whoop,
-                token: token()
-            )
-            XCTFail("Expected bounded history discovery failure")
-        } catch {
-            XCTAssertEqual(error as? ExternalProviderAPIError, .invalidResponse)
-        }
-        XCTAssertEqual(cycleRequests, 100)
+        let earliest = try await client.discoverEarliestAvailableDate(
+            provider: .whoop,
+            token: token()
+        )
+        XCTAssertEqual(cycleRequests, 101)
+        XCTAssertEqual(recordsReturned, 2501)
+        XCTAssertEqual(earliest, ISO8601DateFormatter().date(from: "2010-01-02T03:04:05Z"))
     }
 
-    func testPaginationStopsAtHundredPageSafetyLimitWithBoundedFailure() async throws {
+    func testDailyPaginationContinuesBeyondHundredPages() async throws {
         var cycleRequests = 0
         ExternalIntegrationURLProtocolStub.setHandler { request in
             guard request.url?.path.hasSuffix("/cycle") == true else {
                 return Self.response(request, status: 200, json: ["records": []])
             }
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            XCTAssertEqual(query.first { $0.name == "start" }?.value, "2026-07-13T07:00:00Z")
+            XCTAssertEqual(query.first { $0.name == "end" }?.value, "2026-07-14T07:00:00Z")
+            XCTAssertEqual(
+                query.first { $0.name == "nextToken" }?.value,
+                cycleRequests == 0 ? nil : "cursor-\(cycleRequests)"
+            )
             cycleRequests += 1
-            return Self.response(request, status: 200, json: [
-                "records": [["id": cycleRequests]],
-                "next_token": "cursor-\(cycleRequests)"
-            ])
+            var page: [String: Any] = [
+                "records": (0..<25).map { [
+                    "id": cycleRequests * 25 + $0,
+                    "start": "2026-07-13T09:00:00Z"
+                ] as [String: Any] }
+            ]
+            if cycleRequests < 102 { page["next_token"] = "cursor-\(cycleRequests)" }
+            return Self.response(request, status: 200, json: page)
         }
 
         let record = try await client.fetchDailyRecord(
@@ -287,12 +311,257 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
             now: calendar.date(byAdding: .day, value: 1, to: exportDate)!
         )
 
-        XCTAssertEqual(cycleRequests, 100)
-        XCTAssertEqual(record.payloads.filter { $0.name == "cycles" || $0.name.hasPrefix("cycles_page_") }.count, 100)
-        let paginationFailure = try XCTUnwrap(record.payloads.first { $0.name == "cycles_pagination" })
-        XCTAssertEqual(paginationFailure.statusCode, 0)
-        XCTAssertEqual(paginationFailure.error, "WHOOP pagination exceeded the 100-page safety limit.")
-        XCTAssertFalse(paginationFailure.endpoint.contains("cursor-100"))
+        XCTAssertEqual(cycleRequests, 102)
+        XCTAssertEqual(record.payloads.filter { $0.name == "cycles" || $0.name.hasPrefix("cycles_page_") }.count, 102)
+        XCTAssertTrue(record.payloads.allSatisfy { $0.error == nil })
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let sidecar = String(decoding: try encoder.encode(record), as: UTF8.self)
+        XCTAssertFalse(sidecar.contains("cursor-"))
+        XCTAssertTrue(sidecar.contains("cycles_page_101"))
+        XCTAssertTrue(sidecar.contains("cycles_page_102"))
+        let whoop = try XCTUnwrap(HealthProviderSections.normalized(from: [record])?.whoop)
+        XCTAssertEqual(whoop.captureStatus, .complete)
+        XCTAssertEqual(whoop.cycles.count, 2550)
+        XCTAssertEqual(whoop.resources.first { $0.resource == .cycles }?.recordCount, 2550)
+        XCTAssertTrue(whoop.cycles.contains { $0.id == "2574" })
+    }
+
+    func testHistoryDiscoveryRejectsImmediateAndMultiCursorLoops() async {
+        for cursors in [["same"], ["a", "b"], (0..<101).map { "long-loop-\($0)" }] {
+            var requestCount = 0
+            ExternalIntegrationURLProtocolStub.setHandler { request in
+                requestCount += 1
+                return Self.response(request, status: 200, json: [
+                    "records": [["id": requestCount, "start": "2026-01-01T00:00:00Z"]],
+                    "next_token": cursors[(requestCount - 1) % cursors.count]
+                ])
+            }
+            do {
+                _ = try await client.discoverEarliestAvailableDate(
+                    provider: .whoop,
+                    token: token(scope: "read:cycles")
+                )
+                XCTFail("Expected cursor-cycle rejection")
+            } catch {
+                XCTAssertEqual(error as? ExternalProviderAPIError, .invalidResponse)
+            }
+            // Constant-memory cycle detection can revisit a cursor, but must
+            // reject even a >100-page cycle within a bounded number of requests.
+            XCTAssertLessThanOrEqual(requestCount, cursors.count * 3 + 1)
+        }
+    }
+
+    func testDailyPaginationRejectsImmediateAndMultiCursorLoopsWithoutExposingCursors() async throws {
+        for cursors in [["same"], ["a", "b"], (0..<101).map { "long-loop-\($0)" }] {
+            var cycleRequests = 0
+            ExternalIntegrationURLProtocolStub.setHandler { request in
+                guard request.url?.path.hasSuffix("/cycle") == true else {
+                    return Self.response(request, status: 200, json: ["records": []])
+                }
+                cycleRequests += 1
+                return Self.response(request, status: 200, json: [
+                    "records": [["id": cycleRequests, "start": "2026-07-13T09:00:00Z"] as [String: Any]],
+                    "next_token": cursors[(cycleRequests - 1) % cursors.count]
+                ])
+            }
+            let record = try await client.fetchDailyRecord(
+                provider: .whoop,
+                date: exportDate,
+                token: token(),
+                calendar: calendar,
+                now: calendar.date(byAdding: .day, value: 1, to: exportDate)!
+            )
+            XCTAssertLessThanOrEqual(cycleRequests, cursors.count * 3 + 1)
+            let failure = try XCTUnwrap(record.payloads.first { $0.name == "cycles_pagination" })
+            XCTAssertEqual(failure.statusCode, 0)
+            XCTAssertEqual(failure.error, "WHOOP returned a repeated pagination cursor.")
+            XCTAssertTrue(record.payloads.contains { $0.name == "cycles" && $0.error == nil })
+            XCTAssertTrue(record.payloads.filter { $0.name == "recovery" || $0.name == "sleep" || $0.name == "workouts" }.allSatisfy { $0.error == nil })
+            let whoop = try XCTUnwrap(HealthProviderSections.normalized(from: [record])?.whoop)
+            XCTAssertEqual(whoop.captureStatus, .partial)
+            XCTAssertEqual(whoop.cycles.count, cycleRequests)
+            XCTAssertEqual(whoop.resources.first { $0.resource == .cycles }?.status, .failure)
+            XCTAssertFalse(failure.endpoint.contains("long-loop-"))
+            XCTAssertTrue(failure.endpoint.contains("redacted"))
+        }
+    }
+
+    func testHistoryDiscoveryDeadlineBoundsFreshCursorStreamsWithoutReturningPartialLowerBound() async {
+        let clock = WHOOPHistoryTestClock()
+        let boundedClient = ExternalProviderAPIClient(session: session, whoopHistoryClock: clock.now)
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            clock.advance(by: .seconds(16 * 60))
+            return Self.response(request, status: 200, json: [
+                "records": [["start": "2026-01-01T00:00:00Z"]],
+                "next_token": "fresh-\(requestCount)"
+            ])
+        }
+        do {
+            _ = try await boundedClient.discoverEarliestAvailableDate(provider: .whoop, token: token())
+            XCTFail("Expected traversal deadline failure, not a partial history date")
+        } catch {
+            XCTAssertEqual(error as? ExternalProviderAPIError, .requestFailed(
+                statusCode: 0,
+                message: "WHOOP history discovery exceeded the time safety limit. Try again later."
+            ))
+        }
+        XCTAssertEqual(requestCount, 1)
+    }
+
+    func testHistoryDiscoveryDeadlineCancelsAnInFlightResponse() async {
+        let started = expectation(description: "History request started")
+        let stopped = expectation(description: "History request cancelled")
+        WHOOPHangingURLProtocol.setCallbacks(onStart: { started.fulfill() }, onStop: { stopped.fulfill() })
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [WHOOPHangingURLProtocol.self]
+        let hangingSession = URLSession(configuration: configuration)
+        defer {
+            hangingSession.invalidateAndCancel()
+            WHOOPHangingURLProtocol.reset()
+        }
+        let boundedClient = ExternalProviderAPIClient(session: hangingSession, whoopHistoryDuration: .seconds(1))
+        do {
+            _ = try await boundedClient.discoverEarliestAvailableDate(
+                provider: .whoop, token: token(scope: "read:cycles")
+            )
+            XCTFail("Expected in-flight history deadline failure")
+        } catch {
+            XCTAssertEqual(error as? ExternalProviderAPIError, .requestFailed(
+                statusCode: 0,
+                message: "WHOOP history discovery exceeded the time safety limit. Try again later."
+            ))
+        }
+        await fulfillment(of: [started, stopped], timeout: 2)
+    }
+
+    func testHistoryDiscoveryAndDailyPaginationCancelInFlightResponses() async {
+        for historyDiscovery in [true, false] {
+            let started = expectation(description: "Provider request started")
+            let stopped = expectation(description: "Provider request cancelled")
+            WHOOPHangingURLProtocol.setCallbacks(onStart: { started.fulfill() }, onStop: { stopped.fulfill() })
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.protocolClasses = [WHOOPHangingURLProtocol.self]
+            let hangingSession = URLSession(configuration: configuration)
+            defer {
+                hangingSession.invalidateAndCancel()
+                WHOOPHangingURLProtocol.reset()
+            }
+            let hangingClient = ExternalProviderAPIClient(session: hangingSession)
+            let operation = Task {
+                if historyDiscovery {
+                    _ = try await hangingClient.discoverEarliestAvailableDate(provider: .whoop, token: token())
+                } else {
+                    _ = try await hangingClient.fetchDailyRecord(
+                        provider: .whoop, date: exportDate, token: token(), calendar: calendar, now: exportDate
+                    )
+                }
+            }
+            await fulfillment(of: [started], timeout: 2)
+            operation.cancel()
+            do {
+                try await operation.value
+                XCTFail("Expected cancellation rather than a partial result")
+            } catch {
+                XCTAssertTrue(error is CancellationError)
+            }
+            await fulfillment(of: [stopped], timeout: 2)
+        }
+    }
+
+    func testHistoryDiscoveryAndDailyPaginationHonorCancellationBeforeRequest() async {
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let cancelledHistory = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await client.discoverEarliestAvailableDate(provider: .whoop, token: token())
+        }
+        do {
+            _ = try await cancelledHistory.value
+            XCTFail("Expected cancelled history traversal")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        let cancelledDaily = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await client.fetchDailyRecord(
+                provider: .whoop,
+                date: exportDate,
+                token: token(),
+                calendar: calendar,
+                now: exportDate
+            )
+        }
+        do {
+            _ = try await cancelledDaily.value
+            XCTFail("Expected cancelled daily traversal")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(requestCount, 0)
+    }
+
+    func testHistoryDiscoveryAndDailyPaginationRejectMalformedOrOversizedContinuationCursors() async throws {
+        for cursor: Any in [42, String(repeating: "x", count: 4_097)] {
+            var requestCount = 0
+            ExternalIntegrationURLProtocolStub.setHandler { request in
+                requestCount += 1
+                return Self.response(request, status: 200, json: [
+                    "records": [["start": "2026-01-01T00:00:00Z"]],
+                    "next_token": cursor
+                ])
+            }
+            do {
+                _ = try await client.discoverEarliestAvailableDate(
+                    provider: .whoop, token: token(scope: "read:cycles")
+                )
+                XCTFail("Expected invalid continuation, not successful completion")
+            } catch {
+                XCTAssertEqual(error as? ExternalProviderAPIError, .invalidResponse)
+            }
+            XCTAssertEqual(requestCount, 1)
+            let record = try await client.fetchDailyRecord(
+                provider: .whoop,
+                date: exportDate,
+                token: token(scope: "read:cycles"),
+                calendar: calendar,
+                now: calendar.date(byAdding: .day, value: 1, to: exportDate)!
+            )
+            XCTAssertEqual(requestCount, 2)
+            XCTAssertTrue(record.payloads.contains { $0.name == "cycles" && $0.error != nil })
+        }
+    }
+
+    func testDailyPaginationFreshCursorStreamRemainsBoundedByAggregateResponseBudget() async throws {
+        let boundedClient = ExternalProviderAPIClient(
+            session: session,
+            maximumResponseBytes: 1_024,
+            maximumProviderDayResponseBytes: 240
+        )
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 200, json: [
+                "records": [], "next_token": "fresh-\(requestCount)"
+            ])
+        }
+        let record = try await boundedClient.fetchDailyRecord(
+            provider: .whoop,
+            date: exportDate,
+            token: token(scope: "read:cycles"),
+            calendar: calendar,
+            now: calendar.date(byAdding: .day, value: 1, to: exportDate)!
+        )
+        XCTAssertLessThan(requestCount, 10)
+        XCTAssertTrue(record.payloads.contains {
+            $0.error == "WHOOP response exceeded the provider safety limit."
+        })
+        XCTAssertEqual(HealthProviderSections.normalized(from: [record])?.whoop?.captureStatus, .partial)
     }
 
     func testStravaPaginationContinuesUntilProviderReturnsPartialPage() async throws {
@@ -540,5 +809,63 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
             headerFields: headers
         )!
         return (response, data)
+    }
+}
+
+/// Produces headers but never finishes the body, so timeout/cancellation tests
+/// exercise the real URLSession loader without sleeps or provider traffic.
+private final class WHOOPHangingURLProtocol: URLProtocol {
+    private static let lock = NSLock()
+    private static var onStart: (() -> Void)?
+    private static var onStop: (() -> Void)?
+
+    static func setCallbacks(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.onStart = onStart
+        self.onStop = onStop
+    }
+
+    static func reset() {
+        lock.lock()
+        defer { lock.unlock() }
+        onStart = nil
+        onStop = nil
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        Self.lock.lock()
+        let callback = Self.onStart
+        Self.lock.unlock()
+        callback?()
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+    }
+
+    override func stopLoading() {
+        Self.lock.lock()
+        let callback = Self.onStop
+        Self.lock.unlock()
+        callback?()
+    }
+}
+
+nonisolated private final class WHOOPHistoryTestClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var instant = ContinuousClock.now
+
+    @Sendable func now() -> ContinuousClock.Instant {
+        lock.lock()
+        defer { lock.unlock() }
+        return instant
+    }
+
+    func advance(by duration: Duration) {
+        lock.lock()
+        defer { lock.unlock() }
+        instant = instant.advanced(by: duration)
     }
 }
