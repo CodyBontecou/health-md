@@ -610,6 +610,141 @@ final class AppleContextAutomationTests: XCTestCase {
         XCTAssertEqual(jobs.jobResponse(jobID: scope.id).failureReason, "job_not_found")
     }
 
+    func testMacUnavailableNativeRootNeverAdmitsOrAcquiresAndSameIDRetriesAfterRecovery() async throws {
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let scope = request(phone: peer, mac: service.installationID)
+        let temporary = root.appendingPathComponent("purgeable")
+        let support = root.appendingPathComponent("stable-support")
+        let files = ContextStorageFileManager(temporaryURL: temporary)
+        let journal = AppleContextJournal(root: root.appendingPathComponent("mapping"))
+        let adapter = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: journal, contextReadiness: { nil }))
+        let jobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(
+            storageRoot: MacConnectedExportJobStorageRoot(fileManager: files), fileManager: files))
+        var receipts: [AppleContextReceipt] = []
+        var acquisitions: [IPhoneExportRequest] = []
+        service.testMessageSendObserver = {
+            if case .appleContext(.receipt(let receipt)) = $0 { receipts.append(receipt) }
+            if case .iphoneExportRequest(let request) = $0 { acquisitions.append(request) }
+        }
+        adapter.handle(.refresh(scope), sync: service, jobs: jobs, destination: destination(service))
+        for _ in 0..<100 where receipts.isEmpty { await Task.yield() }
+        XCTAssertEqual(receipts.map(\.state), [.unavailable])
+        XCTAssertEqual(journal.record(scope.id)?.request, scope)
+        XCTAssertEqual(journal.record(scope.id)?.jobWasAdmitted, false)
+        XCTAssertFalse(journal.hasUncertainAuthority(scope.id))
+        XCTAssertTrue(acquisitions.isEmpty)
+        XCTAssertNil(jobs.contextRequest(jobID: scope.id))
+        XCTAssertNil(jobs.activeJobID)
+
+        var admissions = 0
+        let rejected = await jobs.requestExport(.init(
+            jobID: scope.id, startDate: scope.startDate, endDate: scope.endDate,
+            requestedDateIdentifiers: scope.ownerDates, requestedBy: .cli,
+            settingsPolicy: .requestedDatesOnly, responseMode: .contextStore,
+            rawProfile: nil, canonicalSelection: scope.selection, waitTimeoutSeconds: 0.001
+        ), syncService: service, destinationStatus: destination(service), onDurableAdmission: { admissions += 1 })
+        XCTAssertEqual(rejected.status, .unavailable)
+        XCTAssertEqual(rejected.failureReason, "job_storage_unavailable")
+        XCTAssertNotEqual(rejected.durable, true)
+        XCTAssertEqual(admissions, 0)
+        XCTAssertTrue(acquisitions.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: temporary.appendingPathComponent("Health.md").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: support.path))
+
+        files.supportURL = support
+        adapter.handle(.status(scope), sync: service, jobs: jobs, destination: destination(service))
+        for _ in 0..<100 where acquisitions.isEmpty { await Task.yield() }
+        XCTAssertEqual(acquisitions.count, 1)
+        XCTAssertTrue(scope.matches(try XCTUnwrap(acquisitions.first)))
+        XCTAssertEqual(acquisitions.first?.jobID, scope.id)
+        XCTAssertEqual(journal.record(scope.id)?.jobWasAdmitted, true)
+        XCTAssertEqual(receipts.map(\.state), [.unavailable, .pending])
+        XCTAssertEqual(jobs.jobResponse(jobID: scope.id).durable, true)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: temporary.path))
+        jobs.cancelRequestForDisconnectedClient(jobID: scope.id)
+        for _ in 0..<20 { await Task.yield() }
+    }
+
+    func testMacNativeResolverRecoveryBeforeAdmissionUsesStableRootAcrossTemporaryPurgeAndRestart() async throws {
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let scope = request(phone: peer, mac: service.installationID)
+        let temporary = root.appendingPathComponent("purgeable")
+        let support = root.appendingPathComponent("stable-support")
+        let mapping = root.appendingPathComponent("mapping")
+        let files = ContextStorageFileManager(temporaryURL: temporary)
+        let originalRoot = MacConnectedExportJobStorageRoot(fileManager: files)
+        let jobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(storageRoot: originalRoot, fileManager: files))
+        XCTAssertNil(originalRoot.url)
+        // The automation journal becomes writable only AFTER native initialization failed.
+        files.supportURL = support
+        let adapter = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: mapping), contextReadiness: { nil }))
+        var acquisitions: [IPhoneExportRequest] = []
+        service.testMessageSendObserver = { if case .iphoneExportRequest(let value) = $0 { acquisitions.append(value) } }
+        adapter.handle(.refresh(scope), sync: service, jobs: jobs, destination: destination(service))
+        for _ in 0..<100 where acquisitions.isEmpty { await Task.yield() }
+        let original = try XCTUnwrap(acquisitions.first)
+        let stableJobs = support.appendingPathComponent("Health.md/ConnectedExportJobs", isDirectory: true)
+        XCTAssertEqual(originalRoot.url, stableJobs)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: stableJobs.appendingPathComponent(scope.id.uuidString + "/record.json").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: temporary.path))
+        XCTAssertEqual(adapter.journal.record(scope.id)?.jobWasAdmitted, true)
+        files.supportURL = root.appendingPathComponent("different-support")
+        XCTAssertEqual(jobs.jobResponse(jobID: scope.id).durable, true)
+        XCTAssertEqual(originalRoot.url, stableJobs, "A live admitted job must never switch roots")
+        jobs.cancelRequestForDisconnectedClient(jobID: scope.id)
+        for _ in 0..<20 { await Task.yield() }
+
+        // Purging unrelated ephemeral storage cannot lose the acknowledged native job.
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        try Data("synthetic purgeable data".utf8).write(to: temporary.appendingPathComponent("sentinel"))
+        try FileManager.default.removeItem(at: temporary)
+        files.supportURL = support
+        let restarted = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: mapping), contextReadiness: { nil }))
+        let restoredJobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(
+            storageRoot: MacConnectedExportJobStorageRoot(fileManager: files), fileManager: files))
+        XCTAssertEqual(restoredJobs.contextRequest(jobID: scope.id), original)
+        restarted.handle(.status(scope), sync: service, jobs: restoredJobs, destination: destination(service))
+        for _ in 0..<100 where acquisitions.count < 2 { await Task.yield() }
+        XCTAssertEqual(acquisitions, [original, original], "Restart must resume the byte-identical durable identity")
+        XCTAssertEqual(restarted.journal.record(scope.id)?.request, scope)
+        restoredJobs.cancelRequestForDisconnectedClient(jobID: scope.id)
+        for _ in 0..<20 { await Task.yield() }
+    }
+
+    func testMacMissingPreviouslyAdmittedNativeJobRemainsUnavailableWithoutRecreation() async throws {
+        let peer = UUID()
+        let service = service(peerID: peer)
+        let scope = request(phone: peer, mac: service.installationID)
+        let mapping = root.appendingPathComponent("mapping")
+        let jobsRoot = root.appendingPathComponent("jobs")
+        let adapter = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: mapping), contextReadiness: { nil }))
+        let jobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: jobsRoot))
+        var acquisitions: [IPhoneExportRequest] = []
+        var receipts: [AppleContextReceipt] = []
+        service.testMessageSendObserver = {
+            if case .iphoneExportRequest(let value) = $0 { acquisitions.append(value) }
+            if case .appleContext(.receipt(let value)) = $0 { receipts.append(value) }
+        }
+        adapter.handle(.refresh(scope), sync: service, jobs: jobs, destination: destination(service))
+        for _ in 0..<100 where acquisitions.isEmpty { await Task.yield() }
+        XCTAssertEqual(acquisitions.count, 1)
+        XCTAssertEqual(adapter.journal.record(scope.id)?.jobWasAdmitted, true)
+        jobs.cancelRequestForDisconnectedClient(jobID: scope.id)
+        for _ in 0..<20 { await Task.yield() }
+        try FileManager.default.removeItem(at: jobsRoot.appendingPathComponent(scope.id.uuidString))
+        let restarted = LifecycleHarness.retain(MacContextAutomationCoordinator(journal: AppleContextJournal(root: mapping), contextReadiness: { nil }))
+        let restoredJobs = LifecycleHarness.retain(MacIPhoneExportRequestCoordinator(rootURL: jobsRoot))
+        restarted.handle(.status(scope), sync: service, jobs: restoredJobs, destination: destination(service))
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(receipts.last?.state, .unavailable)
+        XCTAssertEqual(acquisitions.count, 1)
+        XCTAssertNil(restoredJobs.contextRequest(jobID: scope.id))
+        XCTAssertEqual(restarted.journal.record(scope.id)?.jobWasAdmitted, true)
+        XCTAssertEqual(restarted.journal.record(scope.id)?.request, scope)
+    }
+
     func testMacRoundTripDoesNotBlockIngressAndCompletesOnlyAfterEncryptedCommitWithoutFiles() async throws {
         let peer = UUID()
         let service = service(peerID: peer)

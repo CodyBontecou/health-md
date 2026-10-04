@@ -216,9 +216,9 @@ final class MacContextAutomationCoordinator: ObservableObject {
         case .failure, .cancelled:
             state = .failed
         case .unavailable:
-            // Busy is a durable request-level availability response, not a job
-            // acceptance. A native persistence failure still emits NO ack/send.
-            if response.failureReason == "export_in_progress" {
+            // Busy/unresolved storage are request-level availability, never job
+            // admission. A native write failure still emits NO pending ack/send.
+            if response.failureReason == "export_in_progress" || response.failureReason == "job_storage_unavailable" {
                 publishState(request, state: .unavailable, sync: sync)
                 return
             }
