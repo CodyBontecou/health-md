@@ -1293,18 +1293,26 @@ fn object_store_tls_ca_file_failures_precede_any_connection() {
     let index = fresh_index(&corpus, "ca-policy.json");
     let scratch = corpus.root.path().join("ca-scratch");
     std::fs::create_dir(&scratch).expect("scratch directory");
+    // A leading slash alone is root-relative on Windows. Keep the unreadable-file
+    // case under our private native root so it passes path policy on every host.
+    let missing = scratch.join("missing-ca.pem");
+    assert!(
+        missing.is_absolute(),
+        "missing CA has a native absolute path"
+    );
+    assert!(!missing.exists(), "missing CA fixture must not exist");
     let garbage = scratch.join("garbage.pem");
     std::fs::write(&garbage, b"definitely not a PEM certificate").expect("write garbage");
     let directory = scratch.join("directory.pem");
     std::fs::create_dir(&directory).expect("scratch subdirectory");
 
-    for (ca_value, expected) in [
+    let cases = [
         (
             "relative-ca.pem",
             "the object store CA certificate path must be absolute",
         ),
         (
-            "/nonexistent/absolute/object-store-ca.pem",
+            missing.to_str().expect("utf-8 missing CA path"),
             "the object store CA certificate could not be read",
         ),
         (
@@ -1315,7 +1323,23 @@ fn object_store_tls_ca_file_failures_precede_any_connection() {
             garbage.to_str().expect("utf-8 garbage path"),
             "the object store CA certificate is not valid PEM",
         ),
-    ] {
+    ];
+    #[cfg(windows)]
+    let cases = cases.into_iter().chain([
+        (
+            r"C:relative\ca.pem",
+            "the object store CA certificate path must be absolute",
+        ),
+        (
+            r"\root-relative\ca.pem",
+            "the object store CA certificate path must be absolute",
+        ),
+        (
+            "/nonexistent/absolute/object-store-ca.pem",
+            "the object store CA certificate path must be absolute",
+        ),
+    ]);
+    for (ca_value, expected) in cases {
         let arguments = object_store_arguments(&url, &grant, &index);
         let mut command = Command::new(env!("CARGO_BIN_EXE_healthmd"));
         command.args(&arguments).stdin(Stdio::null());
@@ -1334,6 +1358,16 @@ fn object_store_tls_ca_file_failures_precede_any_connection() {
         assert!(
             stderr.contains(expected),
             "stable health-free failure for {ca_value:?}: expected {expected:?}, saw {stderr:?}"
+        );
+        assert!(
+            output.stdout.is_empty(),
+            "no MCP output before the store opens"
+        );
+        assert!(
+            !stderr.contains(ca_value)
+                && !stderr.contains(TEST_ACCESS_KEY_ID)
+                && !stderr.contains(TEST_SECRET_ACCESS_KEY),
+            "CA policy errors must not disclose paths or credential material"
         );
     }
 
