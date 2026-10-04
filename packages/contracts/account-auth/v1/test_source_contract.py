@@ -238,6 +238,23 @@ class SourceContractTests(unittest.TestCase):
             self.assertTrue(parsed.hostname.endswith(".example"))
             self.assertFalse(parsed.query or parsed.fragment or parsed.username or parsed.password or parsed.port)
 
+    def test_reviewed_token_metadata_is_not_sync_or_account_authority(self):
+        self.assertEqual(set(POLICY["token_success_keys"]), {
+            "token_type", "access_token", "expires_in", "refresh_token", "session_id", "scope",
+            "issuer", "environment", "audience", "client_id", "installation_id", "account_id", "session_generation",
+        })
+        binding = POLICY["native_account_binding"]
+        self.assertEqual(binding["namespace"], ["issuer", "environment", "account_id"])
+        self.assertEqual(binding["subject_source"], "authoritative_account_and_grant_records")
+        self.assertEqual(binding["credential_bindings"], ["audience", "client_id", "installation_id", "session_id", "session_generation"])
+        for key in ("subject_is_authority", "server_generation_is_local_account_generation",
+                    "sign_in_sets_sync_opt_in", "native_wire_and_secure_storage_qualified"):
+            self.assertFalse(binding[key])
+        model = ROOT / "apps/cloud/src/account-auth-v1/model.ts"
+        if model.exists():  # AS01-only worktrees need not contain the later source slice.
+            body = model.read_text().split("export interface NativeSessionResponse {", 1)[1].split("}", 1)[0]
+            self.assertEqual(set(re.findall(r"\b([a-z_]+)\s*:", body)), set(POLICY["token_success_keys"]))
+
     def test_callback_vectors(self):
         for vector in VECTORS["callback_vectors"]:
             context = {"environment": "synthetic", "client_id": "synthetic-apple-ios", "pending": True, "generation_matches": True}

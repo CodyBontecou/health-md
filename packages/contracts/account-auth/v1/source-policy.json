@@ -56,6 +56,19 @@
   "callback_error_keys": ["error", "state", "iss"],
   "code_request_keys": ["grant_type", "client_id", "redirect_uri", "code", "code_verifier", "installation_id"],
   "refresh_request_keys": ["grant_type", "client_id", "installation_id", "refresh_token"],
+  "token_success_keys": [
+    "token_type", "access_token", "expires_in", "refresh_token", "session_id", "scope",
+    "issuer", "environment", "audience", "client_id", "installation_id", "account_id", "session_generation"
+  ],
+  "native_account_binding": {
+    "namespace": ["issuer", "environment", "account_id"],
+    "subject_source": "authoritative_account_and_grant_records",
+    "subject_is_authority": false,
+    "credential_bindings": ["audience", "client_id", "installation_id", "session_id", "session_generation"],
+    "server_generation_is_local_account_generation": false,
+    "sign_in_sets_sync_opt_in": false,
+    "native_wire_and_secure_storage_qualified": false
+  },
   "routes": [
     {"id": "authorize_page", "method": "GET", "path": "/account/authorize", "credential_kinds": ["none", "browser_session"], "native_scopes": [], "gate": "auth", "public_reference_only": true},
     {"id": "decision", "method": "POST", "path": "/api/account-auth/v1/decision", "credential_kinds": ["browser_session"], "native_scopes": [], "gate": "auth", "browser_csrf": true},
