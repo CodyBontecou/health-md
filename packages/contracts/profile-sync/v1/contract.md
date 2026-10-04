@@ -1,6 +1,6 @@
 # Health.md profile-sync v1 (proposed source contract)
 
-**Proposed / deferred / synthetic-first / not registered or shipped.** AS05 adds codecs and conformance artifacts, not synchronization, native reconciliation, account authorization, persistence, a privacy policy, or rollout approval. AS01's [source design](../../../../docs/architecture/account-profile-sync-source-design.md) and [approval ledger](../../../../docs/architecture/account-sync-evidence-ledger.md) remain governing. Live registrations/adapters/privacy and product/mobile/physical approvals remain unavailable. AS18 is undecided.
+**Proposed / deferred source registration / synthetic-first / inactive and not shipped.** AS05 adds codecs and conformance artifacts, not synchronization, native reconciliation, account authorization, persistence, a privacy policy, or rollout approval. AS01's [source design](../../../../docs/architecture/account-profile-sync-source-design.md) and [approval ledger](../../../../docs/architecture/account-sync-evidence-ledger.md) remain governing. Live registrations/adapters/privacy and product/mobile/physical approvals remain unavailable. AS18 is undecided.
 
 Outcome: explicitly selected portable profiles can eventually be published and reviewed across devices without copying local execution authority. Signing in transfers zero profiles. Sync does not read HealthKit/Health Connect, query providers, upload exports, activate profiles/schedules, grant request/MCP/read/upload authority, or alter charts or frozen work.
 
