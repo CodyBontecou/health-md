@@ -63,9 +63,59 @@ The latest page mentions framework `getCurrentDeviceDataSource` and `FEATURE_MAT
 not be hardcoded or conflated with user identity. Fresh installed OS/module/provider/version evidence
 is still required by B06/B22. No live provider availability was observed.
 
-Apple source/SDK-specific semantics were reviewed from the repository's production selectors,
-contracts, authorization and evaluator code. This lane did not retrieve current official Apple pages
-or run native health APIs; that vendor/runtime review remains a B09/Apple adapter gate, not a claimed pass.
+Apple production selectors/contracts/authorization/evaluator were reviewed; the identity refinement also
+inspected the **installed iOS Simulator SDK 26.5 public headers** (Xcode 26.6, build 17F113), including
+`HKObject.h`, `HKSample.h`, `HKObjectType.h`, `HKTypeIdentifiers.h`, `HKMetadata.h` and Foundation `NSDate.h`.
+Header copies/digests and a fresh pinned Android `javap` identity dump are retained in lane evidence.
+This is current local SDK/API evidence, not a device observation or Rust/Swift/Kotlin DTO pass. No live
+HealthKit call ran, and current Apple web pages were not retrieved; broader vendor/runtime review is
+still a native-adapter gate.
+
+## Native identity, metadata and time evidence (B05 refinement)
+
+- [`HKObject`](https://developer.apple.com/documentation/healthkit/hkobject) public SDK header exposes
+  original UUID, source/sourceRevision, nullable device and metadata. [`HKSample`](https://developer.apple.com/documentation/healthkit/hksample)
+  adds sampleType, startDate/endDate and duration state. Neither exposes an Android-style system
+  last-modified timestamp or client-record ID/version. The existing
+  [Swift evidence projector](../../../../apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift)
+  reads original UUID, exact objectTypeIdentifier and sample start/end; it does not provide those Android
+  fields. `HKSourceRevision.version` is source-application version, **not** record version.
+- `HKMetadata.h` defines optional `HKMetadataKeySyncIdentifier`/`HKMetadataKeySyncVersion` as client-supplied
+  sync/replacement metadata. They are not a system last-modified timestamp or automatically equivalent
+  Health Connect client metadata. This view does not map them into `client_record_*`; if later needed,
+  retain them as independently named source metadata after review. No zero version, capture-time
+  timestamp or sample-end timestamp fills an unsupported field.
+- [`HKObjectType.identifier`](https://developer.apple.com/documentation/healthkit/hkobjecttype/identifier)
+  is the exact HealthKit type string. SDK declarations include `HKQuantityTypeIdentifierStepCount` and
+  `HKQuantityTypeIdentifierHeartRate`. Canonical production capture preserves `sample.sampleType.identifier`;
+  the new `record_type`/catalog `native_record_type` grammar preserves case, unlike semantic selection IDs.
+- Pinned `connect-client:1.2.0-alpha02` `Metadata` has `getId`, `getDataOrigin`, `getLastModifiedTime: Instant`,
+  nullable client ID and signed-long client version. The
+  [production mapper](../../../../apps/android/app/src/main/java/com/healthmd/rawexport/RawHealthConnectMapper.kt)
+  preserves those actual values, Instant seconds/nanos and nullable ZoneOffset. `Record.getMetadata`
+  establishes ownership by the actual SDK record; class names such as
+  `androidx.health.connect.client.records.HeartRateRecord` are exact SDK identifiers, not `heart_rate_avg`.
+- `HeartRateRecord.Sample` is a nested SDK child with time/beats-per-minute but **no Record Metadata or
+  native record ID**; it is a derived child with parent identity, never a new native UUID. `MedicalResource`
+  is a separate class, not a `Record` exposing ordinary `Metadata`; its first typed-query row stays
+  unavailable. Provider-native records likewise carry only their own reviewed API metadata, not copied
+  Health Connect/HealthKit fields.
+- Foundation `NSDate.h` defines `NSTimeInterval` as `double` and `timeIntervalSince1970` with that type.
+  HealthKit timestamps therefore do **not** prove integer nanosecond storage/accuracy. The new view keeps
+  exact returned IEEE-754 binary64 epoch-seconds bits and labels a checked nanosecond-normalized view;
+  it does not assert nanosecond sensor precision. Android Instant seconds/nanos retain source nanosecond
+  representation; provider milliseconds/seconds are explicitly labeled and cannot carry extra precision.
+  A missing original zone offset stays null; the export calendar or current device zone is not invented
+  as a source offset.
+
+Source-specific closed identity branches now omit unsupported fields and require `metadata_status`:
+`available` means the actual source value is present, `absent` is only a supported-but-unset client ID,
+`not_captured` reports missing capture without substituting a value, and `not_exposed_by_source` forbids
+one. HealthKit sets all three Android metadata statuses to not-exposed and admits no corresponding
+value members. Derived children admit no copied parent system metadata. Ordinary captured Health
+Connect records can retain actual version zero; zero is not an unavailable sentinel. Unavailable HC
+catalog rows with no equivalent native type omit `native_record_type` rather than inventing an HK type.
+All of these fixture cases are synthetic; installed-provider/native availability is still unverified.
 
 ## Bounded reviewed metric catalog
 
@@ -101,13 +151,14 @@ Source records retain metadata/native identity; aggregate facts have no fabricat
 | Fixed operation | Native boundary / deterministic rule | Dates, missingness and evidence |
 |---|---|---|
 | `metric_catalog` (`healthmd_metrics`) | Read registry + SDK/provider feature/permission/history configuration; no health query | No values. Installed support/permission/feature/unverified history reported independently; offline catalog is planning only |
-| `metric_series` / charts | Native SDK facts in reviewed units/statistics; deterministic sorting/page projection | Civil-day facts, no hidden carry-forward; native exact time only when actually present. Gaps/partial history remain gaps. PNG consumers must reject mixed/unknown units |
+| `metric_series` / charts | Native SDK facts in reviewed units/statistics; deterministic sorting/page projection | **Daily aggregate facts**, not intraday source observations; no hidden carry-forward. Gaps/partial history remain gaps. PNG consumers must reject mixed/unknown units |
+| B08 selected projection | Explicit projection intent/selectors, source-observation identities/timestamps and pre-read durable v4 acceptance | `steps.count` retains StepsRecord start/end/count; `heart_rate.samples.bpm` retains Sample time/BPM and parent identity, never daily average or copied Metadata. Exact v4 fingerprint/manifest/spool governs transfer/resume; not a transient selector RPC |
 | `sleep_session_listing` | HC native sessions/stages; source-start noon journal identity; all valid sessions additive only in explicitly labeled native summary | Exact session timestamps uncut; summary interval clipped to journal. UNKNOWN/SLEEPING/LIGHT/Core remain distinct; no guessed nap/main-sleep classification from duration. Unsupported nap classification explicitly unclassified; include-naps=false cannot silently drop unknowns |
 | `workout_listing` | HC ExerciseSession records including native activity; no fuzzy cross-provider dedup | Source-start owner day, exact unclipped interval. Route is not implied by session listing or normal READ_EXERCISE; explicit native route grant only, absent route/PHR not empty success |
 | `coverage` | Receipt of every planned read branch and authorized window, not query value presence alone | Complete-empty only when supported branch succeeded with no records. Unknown first grant/history/revoked permission produces unavailable/partial with exact reason; SDK error strings never exposed |
 | `period_comparison` | Unique explicit per-metric descriptors; period reduction of labeled daily facts only | Both periods inside selection, expected unit exact; missing siblings prevent delta, no saturation/causation. Count uses checked exact integer arithmetic |
 | `workout_sleep_alignment` | Each workout paired with first following eligible sleep start, tie-break native qualified identity; noncausal factual temporal relation | No overlapping/pre-workout sleep guessed as recovery. Include eligible adjacent-day capture only after explicit approved scope expansion; otherwise partial/unavailable. Window physiology must stay selected/authorized; no hidden metric reads |
-| `source_record_listing` | Exact native IDs, metadata origin/client ID/version and timestamp; child identity explicitly derived | Explicit native-evidence authority/detail. SDK raw snapshot/provider schema remains native, no fabricated HKObject, UUID, device or permission conclusion |
+| `source_record_listing` | Exact native IDs/types and source-specific observed metadata/precision; unavailable metadata omitted, child identity explicitly derived | Explicit native-evidence authority/detail. SDK raw snapshot/provider schema remains native, no fabricated HKObject, UUID, device or permission conclusion |
 | `derive_packet` | Bounded typed factual packet: wellness/training/doctor-visit facts, no free text medical interpretation | Only selected metrics/dates/sources/detail. Coverage and evidence references from captured dataset; kind does not widen scope or authorize PHR/clinical access |
 
 All operations use Health Connect history and provider feature checks, one bounded cancellation-aware
@@ -120,6 +171,16 @@ Affected future producers/consumers: Rust `healthmd-protocol` models/digests (no
 Connectivity/native settings resolver/exporter/query adapter, Kotlin direct-protocol/native repositories,
 portable CLI/client/operations/MCP/catalog/Apps/PNG, website capability docs, external Obsidian readers of
 shipped profile bytes plus new dictionary/projection if adopted. No product implementation changed here.
+
+The refinement additionally rechecked Rust v2 `ExportAccepted`/`ProductId` and generic transfer DTOs:
+`android_daily_records_v1` stays reserved; `generated_files_v1` is not a projection acceptance disguise.
+Only v4 accepts/journals this product. V2 `TransferSession` can carry the v4 request fingerprint, and its
+unchanged `ArtifactManifest` permits generic `kind: generated_file`, string schema ID/major and existing
+media/path/mode/byte/digest fields. Frames/partition/final-ack structures remain unchanged. The new v4
+adapter, selector capture, native v2 decode and physical transfer/resume have **not** been run.
+[Projection catalog](reviewed-projection-catalog.json) is five bounded planned mappings from pinned SDK
+StepsRecord count/start/end, COUNT_TOTAL, HeartRateRecord BPM_AVG and Sample time/beatsPerMinute APIs;
+parent Sample identity has no own native metadata. This is not implementation/provider qualification.
 
 Coordinator reported baseline Rust vectors/tests and Swift Connectivity 55 passing independently;
 this lane does not attribute that to new v4 conformance. Baseline `make check-core-registry` already failed

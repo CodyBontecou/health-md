@@ -961,7 +961,7 @@
       "id": "agent.export.zero-health-plan",
       "name": "Configuration-only export planning",
       "classification": "planned",
-      "summary": "Resolve configuration without health reads, earliest-date discovery, preview, quota, output, settings, credential or wake enrollment writes; preserve unresolved logical history.",
+      "summary": "Use existing native/host stored references and bounded export delegation to resolve configuration without health, earliest-date, preview, quota, output, settings, credential or wake enrollment work; preserve unresolved logical history.",
       "profiles": [],
       "platforms": {
         "apple": {"state": "planned", "target": "B10: implement read-only capabilities/settings planner and zero-read fake backend tests on iPhone and CLI/MCP."},
@@ -985,7 +985,7 @@
       "id": "direct.source-aware-queries",
       "name": "Source-aware fixed typed query extension",
       "classification": "planned",
-      "summary": "Independently negotiate source-aware fixed query/catalog/evidence views with native units/statistics, provider/history evidence and authenticated bounded cursors; existing iPhone v3 remains unchanged.",
+      "summary": "Independently negotiate fixed source-aware queries with exact native types, source-specific available/missing metadata and timestamp precision, native units/statistics/history and authenticated bounded cursors; iPhone v3 is unchanged.",
       "profiles": [],
       "platforms": {
         "apple": {"state": "planned", "target": "B07: review source-aware adapter and catalog for the existing Swift evaluator without replacing iPhone query v3 or claiming a shared Rust query engine."},
@@ -997,7 +997,7 @@
       "id": "direct.scoped-source-projection",
       "name": "Scoped source-shaped extraction view",
       "classification": "planned",
-      "summary": "Explicit summary/series/native-record projections and complete receipts remain independently versioned rather than relabeling selected data as a complete daily document.",
+      "summary": "Explicit projection product/selector approvals and pre-read job journals bind exact v4 execute fingerprints to source_data_projection/1 artifacts; intraday series retain identity/time, generic transfer/resume never relabels daily/raw or recaptures.",
       "profiles": [],
       "platforms": {
         "apple": {"state": "planned", "target": "B08 consumer review: preserve existing Apple extraction and review any source-aware projection adapter independently; no shipped Apple schema changes."},
@@ -1021,7 +1021,7 @@
       "id": "agent.native-profile-controls",
       "name": "Separately authorized mobile profile controls",
       "classification": "planned",
-      "summary": "Sanitized typed inspection and revision-bound profile mutations preserve Configuration Protection, native grants, imported rebind blocks and the last-profile invariant.",
+      "summary": "Bounded stored inspection scopes and zero-health native-profile candidate plans bind separate native approval, values and revisions; preserve Configuration Protection, imported rebind blocks and the last-profile invariant.",
       "profiles": [],
       "platforms": {
         "apple": {"state": "planned", "target": "B12: implement Swift native profile transactions and separate configuration grant/approval checks through v4."},
@@ -1045,7 +1045,7 @@
       "id": "agent.native-schedule-destination-controls",
       "name": "Native schedule and destination configuration controls",
       "classification": "planned",
-      "summary": "Separate authority for native target disclosure, schedule mutations and exact pending-recovery discard; strings never grant folders/credentials or retarget frozen work.",
+      "summary": "Candidate-bound native target/schedule plans, separate native approvals and exact pending-recovery discard pin target/profile/credential-reference revisions; strings never grant folders/credentials or retarget frozen work.",
       "profiles": [],
       "platforms": {
         "apple": {"state": "planned", "target": "B14: implement native binding/protection, cadence and future-work-only mutations with explicit human rebind actions."},

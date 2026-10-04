@@ -124,7 +124,7 @@
           "$ref": "#/$defs/id"
         },
         "native_record_type": {
-          "$ref": "#/$defs/id"
+          "$ref": "#/$defs/native_type_identifier"
         },
         "owner_rule": {
           "enum": [
@@ -186,7 +186,6 @@
         "registry_equivalence",
         "unit",
         "statistics",
-        "native_record_type",
         "source_statistic",
         "owner_rule",
         "availability",
@@ -524,37 +523,94 @@
       "type": "object"
     },
     "exact_time": {
-      "additionalProperties": false,
-      "properties": {
-        "epoch_second": {
-          "maximum": 253402300799,
-          "minimum": -62135596800,
-          "type": "integer"
-        },
-        "nanosecond": {
-          "maximum": 999999999,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "source_offset_seconds": {
-          "oneOf": [
-            {
-              "maximum": 64800,
-              "minimum": -64800,
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "epoch_second": {
+              "maximum": 253402300799,
+              "minimum": -62135596800,
               "type": "integer"
             },
-            {
-              "type": "null"
+            "nanosecond": {
+              "maximum": 999999999,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "precision": {
+              "enum": [
+                "source_nanoseconds",
+                "source_milliseconds",
+                "source_seconds"
+              ],
+              "type": "string"
+            },
+            "source_offset_seconds": {
+              "oneOf": [
+                {
+                  "maximum": 64800,
+                  "minimum": -64800,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
-          ]
+          },
+          "required": [
+            "epoch_second",
+            "nanosecond",
+            "source_offset_seconds",
+            "precision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "epoch_second": {
+              "maximum": 253402300799,
+              "minimum": -62135596800,
+              "type": "integer"
+            },
+            "nanosecond": {
+              "maximum": 999999999,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "precision": {
+              "const": "source_binary64_seconds"
+            },
+            "source_binary64_bits": {
+              "maxLength": 16,
+              "minLength": 16,
+              "pattern": "^[0-9a-f]{16}$",
+              "type": "string"
+            },
+            "source_offset_seconds": {
+              "oneOf": [
+                {
+                  "maximum": 64800,
+                  "minimum": -64800,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "epoch_second",
+            "nanosecond",
+            "source_offset_seconds",
+            "precision",
+            "source_binary64_bits"
+          ],
+          "type": "object"
         }
-      },
-      "required": [
-        "epoch_second",
-        "nanosecond",
-        "source_offset_seconds"
-      ],
-      "type": "object"
+      ]
     },
     "id": {
       "maxLength": 128,
@@ -628,72 +684,279 @@
       "type": "object"
     },
     "native_identity": {
-      "additionalProperties": false,
-      "properties": {
-        "client_record_id": {
-          "maxLength": 256,
-          "minLength": 0,
-          "type": "string"
-        },
-        "client_record_version": {
-          "maximum": 9223372036854775807,
-          "minimum": 0,
-          "type": "integer"
-        },
-        "identity_kind": {
-          "enum": [
-            "native",
-            "derived_child",
-            "external"
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "identity_kind": {
+              "enum": [
+                "native",
+                "derived_child",
+                "external"
+              ],
+              "type": "string"
+            },
+            "metadata_status": {
+              "additionalProperties": false,
+              "properties": {
+                "client_record_id": {
+                  "const": "not_exposed_by_source"
+                },
+                "client_record_version": {
+                  "const": "not_exposed_by_source"
+                },
+                "last_modified": {
+                  "const": "not_exposed_by_source"
+                }
+              },
+              "required": [
+                "last_modified",
+                "client_record_id",
+                "client_record_version"
+              ],
+              "type": "object"
+            },
+            "origin": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "provider_id": {
+              "const": "apple_health"
+            },
+            "record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "source_id": {
+              "const": "apple_health"
+            }
+          },
+          "required": [
+            "record_type",
+            "record_id",
+            "identity_kind",
+            "source_id",
+            "provider_id",
+            "metadata_status"
           ],
-          "type": "string"
+          "type": "object"
         },
-        "last_modified": {
-          "$ref": "#/$defs/exact_time"
-        },
-        "origin": {
-          "maxLength": 256,
-          "minLength": 0,
-          "type": "string"
-        },
-        "parent_record_id": {
-          "maxLength": 256,
-          "minLength": 0,
-          "type": "string"
-        },
-        "provider_id": {
-          "$ref": "#/$defs/id"
-        },
-        "record_id": {
-          "maxLength": 256,
-          "minLength": 1,
-          "type": "string"
-        },
-        "record_type": {
-          "$ref": "#/$defs/id"
-        },
-        "source_id": {
-          "enum": [
-            "apple_health",
-            "health_connect",
-            "provider_native"
+        {
+          "additionalProperties": false,
+          "properties": {
+            "client_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "client_record_version": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "identity_kind": {
+              "enum": [
+                "native",
+                "derived_child",
+                "external"
+              ],
+              "type": "string"
+            },
+            "last_modified": {
+              "$ref": "#/$defs/exact_time"
+            },
+            "metadata_status": {
+              "additionalProperties": false,
+              "properties": {
+                "client_record_id": {
+                  "enum": [
+                    "available",
+                    "absent",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "client_record_version": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "last_modified": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "last_modified",
+                "client_record_id",
+                "client_record_version"
+              ],
+              "type": "object"
+            },
+            "origin": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "provider_id": {
+              "const": "health_connect"
+            },
+            "record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "source_id": {
+              "const": "health_connect"
+            }
+          },
+          "required": [
+            "record_type",
+            "record_id",
+            "identity_kind",
+            "source_id",
+            "provider_id",
+            "metadata_status"
           ],
-          "type": "string"
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "client_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "client_record_version": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "identity_kind": {
+              "enum": [
+                "native",
+                "derived_child",
+                "external"
+              ],
+              "type": "string"
+            },
+            "last_modified": {
+              "$ref": "#/$defs/exact_time"
+            },
+            "metadata_status": {
+              "additionalProperties": false,
+              "properties": {
+                "client_record_id": {
+                  "enum": [
+                    "available",
+                    "absent",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "client_record_version": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                },
+                "last_modified": {
+                  "enum": [
+                    "available",
+                    "not_captured",
+                    "not_exposed_by_source"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "last_modified",
+                "client_record_id",
+                "client_record_version"
+              ],
+              "type": "object"
+            },
+            "origin": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "parent_record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "record_id": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "record_type": {
+              "$ref": "#/$defs/native_type_identifier"
+            },
+            "source_id": {
+              "const": "provider_native"
+            }
+          },
+          "required": [
+            "record_type",
+            "record_id",
+            "identity_kind",
+            "source_id",
+            "provider_id",
+            "metadata_status"
+          ],
+          "type": "object"
         }
-      },
-      "required": [
-        "source_id",
-        "provider_id",
-        "record_type",
-        "record_id",
-        "identity_kind",
-        "parent_record_id",
-        "origin",
-        "client_record_id",
-        "client_record_version",
-        "last_modified"
-      ],
-      "type": "object"
+      ]
+    },
+    "native_type_identifier": {
+      "maxLength": 256,
+      "minLength": 1,
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.:$-]{0,255}$",
+      "type": "string"
     },
     "packet": {
       "additionalProperties": false,
@@ -786,6 +1049,9 @@
         "peer": {
           "$ref": "#/$defs/peer"
         },
+        "projection_catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
         "provider_id": {
           "$ref": "#/$defs/id"
         },
@@ -804,7 +1070,7 @@
         },
         "selected_series": {
           "items": {
-            "$ref": "#/$defs/metric_item"
+            "$ref": "#/$defs/source_observation"
           },
           "maxItems": 1000,
           "minItems": 0,
@@ -835,6 +1101,7 @@
         "provider_id",
         "scope_sha256",
         "catalog_sha256",
+        "projection_catalog_sha256",
         "owner_date",
         "calendar_timezone",
         "detail",
@@ -843,6 +1110,109 @@
         "selected_series",
         "native_records",
         "coverage"
+      ],
+      "type": "object"
+    },
+    "projection_catalog": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_profile": {
+          "const": "android-source-projection-v1"
+        },
+        "contains_health_values": {
+          "const": false
+        },
+        "fields": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "field_id": {
+                "$ref": "#/$defs/id"
+              },
+              "native_record_type": {
+                "$ref": "#/$defs/native_type_identifier"
+              },
+              "native_value_key": {
+                "$ref": "#/$defs/native_type_identifier"
+              },
+              "object_id": {
+                "enum": [
+                  "daily_summary",
+                  "selected_series",
+                  "native_records"
+                ],
+                "type": "string"
+              },
+              "parent_record_type": {
+                "$ref": "#/$defs/native_type_identifier"
+              },
+              "selection_metric_id": {
+                "$ref": "#/$defs/id"
+              },
+              "unit": {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              "value_role": {
+                "enum": [
+                  "daily_aggregate",
+                  "point",
+                  "interval_total",
+                  "native_record"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "field_id",
+              "object_id",
+              "selection_metric_id",
+              "native_record_type",
+              "native_value_key",
+              "unit",
+              "value_role"
+            ],
+            "type": "object"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array"
+        },
+        "implementation_state": {
+          "const": "planned"
+        },
+        "product_id": {
+          "const": "android_source_projection_v1"
+        },
+        "provider_id": {
+          "const": "health_connect"
+        },
+        "schema": {
+          "const": "healthmd.source_projection_catalog"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "sdk_version": {
+          "const": "1.2.0-alpha02"
+        },
+        "source_id": {
+          "const": "health_connect"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "product_id",
+        "artifact_profile",
+        "source_id",
+        "provider_id",
+        "sdk_version",
+        "implementation_state",
+        "contains_health_values",
+        "fields"
       ],
       "type": "object"
     },
@@ -874,7 +1244,7 @@
             "$ref": "#/$defs/id"
           },
           "maxItems": 256,
-          "minItems": 0,
+          "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
@@ -895,6 +1265,9 @@
         },
         "peer": {
           "$ref": "#/$defs/peer"
+        },
+        "projection_catalog_sha256": {
+          "$ref": "#/$defs/digest"
         },
         "provider_id": {
           "$ref": "#/$defs/id"
@@ -928,6 +1301,7 @@
         "source_id",
         "provider_id",
         "catalog_sha256",
+        "projection_catalog_sha256",
         "dates",
         "calendar_timezone",
         "selection",
@@ -2915,6 +3289,82 @@
       ],
       "type": "object"
     },
+    "source_observation": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "field_id": {
+          "$ref": "#/$defs/id"
+        },
+        "identity": {
+          "$ref": "#/$defs/native_identity"
+        },
+        "native_value_key": {
+          "$ref": "#/$defs/native_type_identifier"
+        },
+        "observation_id": {
+          "$ref": "#/$defs/digest"
+        },
+        "observation_kind": {
+          "enum": [
+            "point",
+            "interval_total"
+          ],
+          "type": "string"
+        },
+        "owner_date": {
+          "$ref": "#/$defs/date"
+        },
+        "selection_metric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "start": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "type": {
+          "const": "source_observation"
+        },
+        "unit": {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        },
+        "value": {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "integer"
+            },
+            "value": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "type",
+        "observation_id",
+        "field_id",
+        "selection_metric_id",
+        "owner_date",
+        "identity",
+        "start",
+        "native_value_key",
+        "observation_kind",
+        "unit",
+        "value"
+      ],
+      "type": "object"
+    },
     "utc": {
       "format": "date-time",
       "maxLength": 20,
@@ -3013,6 +3463,9 @@
     },
     {
       "$ref": "#/$defs/query_cancelled"
+    },
+    {
+      "$ref": "#/$defs/projection_catalog"
     },
     {
       "$ref": "#/$defs/projection_request"
