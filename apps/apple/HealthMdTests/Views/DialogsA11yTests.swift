@@ -229,27 +229,9 @@ final class DialogsA11yTests: XCTestCase {
         XCTAssertGreaterThan(currentScroll.contentSize.height, oldContentHeight)
     }
 
-    func testProductionHistoryContainerRetainsDistinctMessageAndRealActionIdentifiers() {
-        let scope = HealthHistoryScope(metricIDs: ["steps"], startDate: Date(timeIntervalSince1970: 1_800_000_000),
-            endDate: Date(timeIntervalSince1970: 1_800_086_400), timeZoneIdentifier: "UTC",
-            allAvailable: true, profileID: nil)
-        let assessment = HealthHistoryAssessment(id: UUID(), assessedAt: scope.endDate, scope: scope,
-            types: [HealthHistoryTypeAssessment(id: "HKQuantityTypeIdentifierStepCount", directMetricIDs: ["steps"],
-                dependencyMetricIDs: [], dependencyReasons: [], access: .unknown)], evidenceSource: "synthetic_ui_fixture")
-        let host = A11yHosting(HealthHistoryDisclosureContent(assessment: assessment, isExecution: false,
-            reviewAccess: {}).modifier(HealthHistoryWarningAccessibilityContainer()))
-        defer { host.close() }
-        _ = host.measured()
-        let identifiers = accessibilityObjects(in: host.window).compactMap {
-            ($0 as? any UIAccessibilityIdentification)?.accessibilityIdentifier
-        }
-        XCTAssertEqual(identifiers.filter { $0 == "export.historyWarning" }.count, 1,
-                       "One containing card must own its ID rather than overwrite every child")
-        XCTAssertTrue(identifiers.contains("export.historyWarning.message"))
-        XCTAssertTrue(identifiers.contains("export.historyWarning.reviewAccess"))
-        XCTAssertTrue(identifiers.contains("export.historyWarning.details"))
-        XCTAssertFalse(identifiers.contains("export.historyWarning.execution"), "Preview remains distinct from execution")
-    }
+    // History's virtual SwiftUI AX identifiers are asserted by native
+    // HistoryA11yUITests and the phone/iPad HistoryAuthorizationJourneyUITests.
+    // UIView traversal cannot enumerate those accessibility-server nodes.
 
     func testProductionLabeledFieldLiveEnvironmentSizeRemeasuresWithoutModalBoundary() throws {
         let original = "  synthetic_identifier_without_normalization  "

@@ -17,10 +17,16 @@ struct HealthHistoryDisclosureContent: View {
                     : "Rechecked for this export. Query completion is not proof of full history.")
                     .accessibilityIdentifier("export.historyWarning.execution")
             }
-            Button("Review Health Access", action: reviewAccess)
-                .accessibilityIdentifier("export.historyWarning.reviewAccess")
-                .accessibilityHint("Shows instructions for reviewing Health.md access in Apple Health")
-            DisclosureGroup("History access details") {
+            Button(action: reviewAccess) {
+                Text("Review Health Access")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, Spacing.s2)
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("export.historyWarning.reviewAccess")
+            .accessibilityHint("Shows instructions for reviewing Health.md access in Apple Health")
+            DisclosureGroup {
                 ForEach(assessment.types) { type in
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         typeDetail(type)
@@ -28,6 +34,12 @@ struct HealthHistoryDisclosureContent: View {
                     }
                     .accessibilityElement(children: .combine)
                 }
+            } label: {
+                Text("History access details")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, Spacing.s2)
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .accessibilityIdentifier("export.historyWarning.details")
         }
@@ -50,9 +62,9 @@ struct HealthHistoryDisclosureContent: View {
     }
 }
 
-/// A real accessibility container owns the card ID. The actual phone root
-/// showed duplicate parent IDs and missing child IDs; identifier propagation
-/// is a hypothesis. This containment repair still needs hosted Root validation.
+/// The card owns one container ID while its native AX children keep distinct
+/// message/action IDs. Verify virtual SwiftUI nodes through native XCUITest,
+/// not in-process UIView enumeration.
 struct HealthHistoryWarningAccessibilityContainer: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -68,10 +80,22 @@ struct HealthHistoryPendingContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("This check is advisory. If it takes too long, continue with unverified history or cancel the check. Cancelling does not prove the framework stopped its work.")
-            Button("Continue without history verification", action: continueUnverified)
-                .accessibilityIdentifier("export.historyWarning.continueUnverified")
-            Button("Cancel history check", action: cancel)
-                .accessibilityIdentifier("export.historyWarning.cancelCheck")
+            Button(action: continueUnverified) {
+                Text("Continue without history verification")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, Spacing.s2)
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("export.historyWarning.continueUnverified")
+            Button(action: cancel) {
+                Text("Cancel history check")
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, Spacing.s2)
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityIdentifier("export.historyWarning.cancelCheck")
         }
         .font(.footnote)
     }

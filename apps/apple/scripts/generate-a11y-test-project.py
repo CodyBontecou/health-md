@@ -53,11 +53,13 @@ for namespace in ("Status", "ConfigurationProtection"):
 (out / "AccessibilityIdentifiers.generated.swift").write_text("enum AccessibilityID {\n" + "\n".join(ids_excerpts) + "\n}\n")
 shared = source("HealthMd/Shared/Theme/DesignSystem.swift")
 dialogs = [source(f"HealthMd/Shared/Views/{name}.swift") for name in ("GeistDialog", "DialogsA11yComponents")]
+history = [source("HealthMd/Shared/Views/HealthHistoryDisclosureContent.swift"),
+           source("HealthMd/Shared/Models/HealthHistoryAssessment.swift")]
 lanes = ("Dialogs", "Format", "Reading", "Scheduling", "Onboarding")
 components = [source(f"HealthMd/iOS/Components/{lane}A11yComponents.swift") for lane in lanes if lane != "Dialogs"]
-scenarios = [source(f"AccessibilityTests/Scenarios/{lane}A11yScenario.swift") for lane in lanes]
+scenarios = [source(f"AccessibilityTests/Scenarios/{lane}A11yScenario.swift") for lane in lanes + ("History",)]
 lane_tests = [source(f"HealthMdTests/Views/{lane}A11yTests.swift") for lane in lanes]
-lane_ui_tests = [source(f"AccessibilityTests/UITests/{lane}A11yUITests.swift") for lane in lanes]
+lane_ui_tests = [source(f"AccessibilityTests/UITests/{lane}A11yUITests.swift") for lane in lanes + ("History",)]
 protection = [source("HealthMd/Shared/Models/ConfigurationProtection.swift"), source("HealthMd/Shared/TestMode.swift")]
 tests = source("HealthMdTests/Views/A11yFoundationTests.swift")
 helper = source("HealthMdTests/Support/A11yHosting.swift")
@@ -76,7 +78,7 @@ spec = {
                         source("HealthMd/iOS/Components/A11ySwitchToggleStyle.swift"),
                         source("HealthMd/iOS/Components/A11ySelectionMenu.swift"),
                         str(out / "AccessibilityIdentifiers.generated.swift"), str(out / "StatusComponents.generated.swift"),
-                        source("AccessibilityTests/Host/A11ySyntheticApp.swift"), str(assets)] + fonts + dialogs + components + scenarios + protection,
+                        source("AccessibilityTests/Host/A11ySyntheticApp.swift"), str(assets)] + fonts + dialogs + history + components + scenarios + protection,
             "info": {"path": str(out / "Info.plist"), "properties": {
                 "UIAppFonts": [Path(p).name for p in fonts], "UILaunchScreen": {},
                 "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait", "UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"]}},
