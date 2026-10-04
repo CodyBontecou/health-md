@@ -5,7 +5,7 @@ description: Stel Health.md in op Android, exporteer Health Connect-gegevens naa
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Van Health Connect naar privébestanden</p>
-  <p>Health.md voor Android leest Health Connect op je apparaat en schrijft Markdown, Obsidian Bases, JSON of CSV naar mappen die je zelf kiest. Je hebt geen Health.md-account, cloud voor gezondheidsgegevens of abonnement nodig.</p>
+  <p>Health.md voor Android leest Health Connect op je apparaat en schrijft Markdown, Obsidian Bases, JSON of CSV naar mappen die je zelf kiest. Voor deze mapexport heb je geen Health.md-account, cloud voor gezondheidsgegevens of abonnement nodig.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Download via Google Play</a>
     <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Download via F-Droid</a>
@@ -139,12 +139,14 @@ Health.md voor Android verwerkt gegevens lokaal:
 
 - Health Connect-records worden op je Android-apparaat gelezen.
 - Exports worden rechtstreeks naar de mappen geschreven die je kiest.
-- Health.md beheert geen cloud voor gezondheidsgegevens.
+- Mapexports en directe apparaatvragen maken standaard geen serverkopie bij Health.md.
 - Instellingen en exportgeschiedenis blijven op het apparaat.
 - Google Play verwerkt de betaling.
 - Mappen van externe providers worden gesynchroniseerd volgens de voorwaarden van die provider.
 
 Wil je alles zo veel mogelijk lokaal houden, voer dan handmatige exports uit naar een lokale map op het apparaat en schakel geplande exports en synchronisatie via providers uit.
+
+De afzonderlijke, optionele Health.md Cloud-pilot is uitsluitend voor één eigenaar en bewaart alleen bewust geüploade API-exports. Er is geen openbare registratie of automatische apparaatsynchronisatie; deze mapworkflow uploadt niets naar de pilot. Het [privacybeleid](/privacy-policy.html) beschrijft bewaartermijnen, verwijdering, opslagquota en verliesrisico’s zonder back-up.
 
 ## Gerelateerde documentatie
 
@@ -156,4 +158,4 @@ Wil je alles zo veel mogelijk lokaal houden, voer dan handmatige exports uit naa
   <a href="/nl/docs/visualizations-roadmap/"><span>Obsidian</span>Hoe geëxporteerde JSON en Markdown de Health.md-visualisaties aansturen.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Laatst bijgewerkt op 31 augustus 2026</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Laatst bijgewerkt op 4 oktober 2026</p>

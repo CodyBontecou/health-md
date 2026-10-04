@@ -5,7 +5,7 @@ description: Android용 Health.md를 설정하고, Health Connect 데이터를 M
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Health Connect에서 비공개 파일로</p>
-  <p>Android용 Health.md는 기기 내 Health Connect 데이터를 읽고 Markdown, Obsidian Bases, JSON 또는 CSV 형식으로 사용자가 선택한 폴더에 저장합니다. Health.md 계정도, 건강 데이터 클라우드도, 구독도 필요하지 않습니다.</p>
+  <p>Android용 Health.md는 기기 내 Health Connect 데이터를 읽고 Markdown, Obsidian Bases, JSON 또는 CSV 형식으로 사용자가 선택한 폴더에 저장합니다. 이 폴더 내보내기에는 Health.md 계정, 건강 데이터 클라우드 또는 구독이 필요하지 않습니다.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Google Play에서 다운로드</a>
     <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">F-Droid에서 다운로드</a>
@@ -139,12 +139,14 @@ Android용 Health.md는 로컬 우선 방식입니다.
 
 - Health Connect 기록은 Android 기기에서 읽습니다.
 - 내보내기 파일은 사용자가 선택한 폴더에 직접 저장됩니다.
-- Health.md는 건강 데이터 클라우드 서비스를 운영하지 않습니다.
+- 기본적으로 폴더 내보내기와 기기 직접 쿼리는 Health.md 서버에 사본을 만들지 않습니다.
 - 설정과 내보내기 기록은 기기에 유지됩니다.
 - 결제는 Google Play에서 처리합니다.
 - 제공자 기반 폴더는 해당 제공자의 약관에 따라 동기화됩니다.
 
 가장 엄격한 로컬 설정을 원한다면 로컬 기기 폴더로 수동 내보내기를 실행하고 예약된 내보내기와 제공자 기반 동기화를 비활성화한 상태로 두세요.
+
+별도의 선택형 Health.md Cloud 파일럿은 단일 소유자 전용이며 의도적으로 업로드한 API 내보내기만 보관합니다. 공개 가입은 없으며 기기 자동 동기화도 없습니다. 이 폴더 워크플로는 파일럿에 업로드하지 않습니다. 보관, 삭제, 용량 제한 및 백업이 없어 발생할 수 있는 손실 위험은 [개인정보 처리방침](/privacy-policy.html)을 참고하세요.
 
 ## 관련 문서
 
@@ -156,4 +158,4 @@ Android용 Health.md는 로컬 우선 방식입니다.
   <a href="/ko/docs/visualizations-roadmap/"><span>Obsidian</span>내보낸 JSON과 Markdown으로 Health.md 시각화를 구현하는 방식.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">최종 업데이트: 2026-08-31</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">최종 업데이트: 2026-10-04</p>

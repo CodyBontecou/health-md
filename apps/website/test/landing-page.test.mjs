@@ -42,7 +42,7 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Move your<br>health forward\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
-  assert.match(index, /Local-first by default\.[\s\S]*optional Health\.md Cloud pilot/);
+  assert.match(index, /Local-first by default\.[\s\S]*optional single-owner Health\.md Cloud pilot[\s\S]*no public signup/);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
   assert.equal((index.match(/<section/g) ?? []).length, 5);
@@ -156,7 +156,7 @@ test("scheduling showcase explains recurring on-device exports", async () => {
 test("agent showcase connects scoped questions to contextual answers", async () => {
   assert.match(index, /<section class="agent-showcase" id="agents"/);
   assert.match(index, /Your health data,<br>ready for questions\./);
-  assert.match(index, /directly from a paired device, or opt in to querying retained cloud exports/);
+  assert.match(index, /from a paired device\. The separate single-owner cloud pilot can query only exports intentionally uploaded to it/);
   assert.match(index, /href="docs\/guides\/connect-agent\/"[\s\S]*?Connect an agent/);
   assert.match(index, /href="docs\/cli\/"[\s\S]*?Explore CLI &amp; MCP/);
   assert.ok(index.indexOf("Connect an agent") < index.indexOf("Explore CLI &amp; MCP"));
@@ -203,7 +203,7 @@ test("privacy policy uses the landing design and describes the current app surfa
   assert.match(privacyPolicy, /<header class="site-header">/);
   assert.match(privacyPolicy, /<footer class="site-footer">/);
   assert.match(privacyPolicy, /Privacy,<br>in plain language\./);
-  assert.match(privacyPolicy, /Last updated: September 28, 2026/);
+  assert.match(privacyPolicy, /Last updated: October 4, 2026/);
   assert.match(privacyPolicy, /Scheduled Apple exports:[\s\S]*?APNs token/);
   assert.match(privacyPolicy, /Lossless files and direct results may preserve exact timestamps/);
   assert.match(privacyPolicy, /Android medical records \(FHIR\)/);

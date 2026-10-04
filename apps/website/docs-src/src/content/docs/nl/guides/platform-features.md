@@ -83,7 +83,9 @@ Sommige gegevens worden bewust **niet als gelijkwaardig behandeld** tussen platf
 |---|---|---|---|---|
 | Gratis laag | ✓ 10 handmatige of geplande exportacties | — | ✓ 10 handmatige exportacties | — |
 | Ontgrendeling | ✓ eenmalige aankoop voor levenslang (individueel / gezin) | ◐ dezelfde Apple-ontgrendeling | ✓ eenmalige aankoop voor levenslang, planning inbegrepen | — |
-| Privacy met lokale verwerking | ✓ geen Health.md-cloud voor gezondheidsgegevens | ✓ | ✓ | △ gepland |
+| Privacy met lokale verwerking | ✓ standaard geen cloudkopie | ✓ | ✓ | △ gepland |
 | Verslag voor de zorgverlener (één PDF voor afspraken) | ✓ | — | ✓ | — |
 
-Health.md beheert geen cloud voor gezondheidsgegevens. Gezondheidsgegevens kunnen bestaan in bestemmingen die je zelf kiest, in versleutelde lokale context en in een afgebakende privé-overdrachtstoestand. Elke map, Mac, API-endpoint of CLI-bestemming wordt expliciet geconfigureerd. Profielen en planningen blijven lokaal op het apparaat waar ze zijn aangemaakt. Voor de workflow van elk platform: zie [Exportprofielen](/nl/docs/export-profiles/), de [Android-handleiding](/nl/docs/android/) en de [iPhone-exportgids](/nl/docs/export/).
+Exports en directe apparaatvragen maken standaard geen serverkopie bij Health.md. De afzonderlijke, optionele Health.md Cloud-pilot is uitsluitend voor één eigenaar en bewaart alleen bewust geüploade API-exports. Er is geen openbare registratie of automatische apparaatsynchronisatie. Het [privacybeleid](/privacy-policy.html) beschrijft bewaartermijnen, verwijdering, opslagquota en verliesrisico’s zonder back-up.
+
+Gezondheidsgegevens kunnen bestaan in bestemmingen die je zelf kiest, in versleutelde lokale context en in een afgebakende privé-overdrachtstoestand. Elke map, Mac, API-endpoint of CLI-bestemming wordt expliciet geconfigureerd. Profielen en planningen blijven lokaal op het apparaat waar ze zijn aangemaakt. Voor de workflow van elk platform: zie [Exportprofielen](/nl/docs/export-profiles/), de [Android-handleiding](/nl/docs/android/) en de [iPhone-exportgids](/nl/docs/export/).

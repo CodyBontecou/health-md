@@ -76,7 +76,7 @@
             "name": "Does Health.md store health data in its cloud?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. Health.md processes health data on user-controlled devices and sends it only to destinations or paired clients the user chooses; Health.md does not keep a server-side health corpus."
+              "text": "Not by default. Core exports and direct device queries do not create a Health.md server copy. The optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it; separately authorized read-only cloud MCP calls can return retained fields. There is no public signup and no automatic device sync."
             }
           },
           {
@@ -154,7 +154,7 @@
         <div class="about-signals" role="list" aria-label="Health.md at a glance">
           <div role="listitem"><span>Founded</span><strong>2026</strong></div>
           <div role="listitem"><span>Founder</span><strong>Cody Bontecou</strong></div>
-          <div role="listitem"><span>Health.md cloud copies</span><strong>None</strong></div>
+          <div role="listitem"><span>Health.md cloud copies by default</span><strong>None</strong></div>
         </div>
       </div>
     </section>
@@ -208,7 +208,7 @@
             <div>
               <span>01</span>
               <h3>Local-first, with an optional cloud pilot</h3>
-              <p>The apps require no Health.md account by default. The user's device and chosen destination remain the working data boundary unless they opt in to sending exports to the separate Health.md Cloud pilot. That pilot retains uploaded exports for its owner; direct device queries are not automatically synced to it. Unlike account-based online services such as Guava and FitnessSyncer, the default workflow requires no product account.</p>
+              <p>The apps require no Health.md account by default. The user's device and chosen destination remain the working data boundary unless they opt in to sending exports to the separate Health.md Cloud pilot. That optional single-owner pilot retains API exports intentionally uploaded to it; it has no public signup and no automatic device sync. Direct device queries are not automatically stored there. See the <a href="/privacy-policy.html#retention">privacy policy</a> for retention, deletion, and the pilot's unbacked storage limits. Unlike account-based online services such as Guava and FitnessSyncer, the default workflow requires no product account.</p>
             </div>
             <div>
               <span>02</span>
@@ -333,7 +333,7 @@
             </div>
             <div>
               <h3>Does Health.md store health data in its cloud?</h3>
-              <p>No. Health.md processes health data on user-controlled devices and sends it only to destinations or paired clients the user chooses; Health.md does not keep a server-side health corpus.</p>
+              <p>Not by default. Core exports and direct device queries do not create a Health.md server copy. The optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it; separately authorized read-only cloud MCP calls can return retained fields. There is no public signup and no automatic device sync.</p>
             </div>
             <div>
               <h3>Which platforms does Health.md support?</h3>
