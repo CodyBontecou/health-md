@@ -1,0 +1,255 @@
+{
+  "budgets": {
+    "cursor_idle_seconds": 600,
+    "cursor_lifetime_seconds": 3600,
+    "max_calendar_days": 366000,
+    "max_capture_seconds": 120,
+    "max_page_bytes": 1048576,
+    "max_page_items": 1000,
+    "max_snapshot_bytes": 67108864
+  },
+  "feature_statuses": [
+    {
+      "feature": "skin_temperature",
+      "status": "unverified"
+    }
+  ],
+  "history": {
+    "days_considered": 0,
+    "days_with_values": 0,
+    "history": {
+      "feature_status": "error",
+      "state": "unverified"
+    },
+    "missing": [],
+    "missing_count": 0,
+    "missing_truncated": false,
+    "status": "unavailable"
+  },
+  "metrics": [
+    {
+      "availability": "planned",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "android.hrv_rmssd",
+      "native_record_type": "heart_rate_variability_rmssd",
+      "owner_rule": "source_start_civil_day",
+      "registry_equivalence": "platform_distinct",
+      "source_statistic": "latest_same_day_exact_record",
+      "statistics": [
+        "average",
+        "latest",
+        "maximum",
+        "minimum"
+      ],
+      "target_or_reason": "B06 native capture; B07 source-aware dispatch",
+      "type": "catalog_metric",
+      "unit": "ms"
+    },
+    {
+      "availability": "unavailable",
+      "evidence_value_support": true,
+      "feature_gate": "FEATURE_PERSONAL_HEALTH_RECORD",
+      "metric_id": "android.medical_resources",
+      "native_record_type": "medical_resource",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "platform_distinct",
+      "source_statistic": "PHR_not_medication_dose_event",
+      "statistics": [
+        "count"
+      ],
+      "target_or_reason": "No reviewed Health Connect equivalent or alias approval",
+      "type": "catalog_metric",
+      "unit": "unitless"
+    },
+    {
+      "availability": "planned",
+      "evidence_value_support": true,
+      "feature_gate": "FEATURE_SKIN_TEMPERATURE",
+      "metric_id": "android.skin_temperature",
+      "native_record_type": "skin_temperature",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "platform_distinct",
+      "source_statistic": "SkinTemperatureRecord.TEMPERATURE_DELTA_AVG_MIN_MAX",
+      "statistics": [
+        "average",
+        "maximum",
+        "minimum"
+      ],
+      "target_or_reason": "B06 native capture; B07 source-aware dispatch",
+      "type": "catalog_metric",
+      "unit": "degC_delta"
+    },
+    {
+      "availability": "planned",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "blood_oxygen",
+      "native_record_type": "oxygen_saturation",
+      "owner_rule": "source_start_civil_day",
+      "registry_equivalence": "platform_exact_or_unavailable",
+      "source_statistic": "Percentage.value_divided_by_100",
+      "statistics": [
+        "average",
+        "latest",
+        "maximum",
+        "minimum"
+      ],
+      "target_or_reason": "B06 native capture; B07 source-aware dispatch",
+      "type": "catalog_metric",
+      "unit": "ratio"
+    },
+    {
+      "availability": "unavailable",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "clinical_medication_records",
+      "native_record_type": "healthkit_clinical_record",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "platform_exact_or_unavailable",
+      "source_statistic": "current_App_Store_clinical_capture_disabled",
+      "statistics": [
+        "count"
+      ],
+      "target_or_reason": "No reviewed Health Connect equivalent or alias approval",
+      "type": "catalog_metric",
+      "unit": "unitless"
+    },
+    {
+      "availability": "planned",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "heart_rate_avg",
+      "native_record_type": "heart_rate",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "mapped_alias",
+      "source_statistic": "HeartRateRecord.BPM_AVG",
+      "statistics": [
+        "average"
+      ],
+      "target_or_reason": "B06 native capture; B07 source-aware dispatch",
+      "type": "catalog_metric",
+      "unit": "bpm"
+    },
+    {
+      "availability": "unavailable",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "hrv",
+      "native_record_type": "healthkit_sdnn",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "platform_exact_or_unavailable",
+      "source_statistic": "HKStatistics.discreteAverage",
+      "statistics": [
+        "average"
+      ],
+      "target_or_reason": "No reviewed Health Connect equivalent or alias approval",
+      "type": "catalog_metric",
+      "unit": "ms"
+    },
+    {
+      "availability": "unavailable",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "sleep_core",
+      "native_record_type": "sleep_session",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "mapped_alias",
+      "source_statistic": "historical_light_core_alias_not_query_authority",
+      "statistics": [
+        "duration_sum"
+      ],
+      "target_or_reason": "No reviewed Health Connect equivalent or alias approval",
+      "type": "catalog_metric",
+      "unit": "hours"
+    },
+    {
+      "availability": "planned",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "sleep_total",
+      "native_record_type": "sleep_session",
+      "owner_rule": "noon_to_noon_additive_native",
+      "registry_equivalence": "platform_exact_or_unavailable",
+      "source_statistic": "native_noon_journal_additive_clipped_intervals",
+      "statistics": [
+        "duration_sum"
+      ],
+      "target_or_reason": "B06 native capture; B07 source-aware dispatch",
+      "type": "catalog_metric",
+      "unit": "hours"
+    },
+    {
+      "availability": "planned",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "steps",
+      "native_record_type": "steps",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "platform_exact_or_unavailable",
+      "source_statistic": "StepsRecord.COUNT_TOTAL",
+      "statistics": [
+        "count",
+        "sum"
+      ],
+      "target_or_reason": "B06 native capture; B07 source-aware dispatch",
+      "type": "catalog_metric",
+      "unit": "steps"
+    },
+    {
+      "availability": "planned",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "workouts",
+      "native_record_type": "exercise_session",
+      "owner_rule": "source_start_civil_day",
+      "registry_equivalence": "platform_exact_or_unavailable",
+      "source_statistic": "native_identity_listing",
+      "statistics": [
+        "count"
+      ],
+      "target_or_reason": "B06 native capture; B07 source-aware dispatch",
+      "type": "catalog_metric",
+      "unit": "count"
+    },
+    {
+      "availability": "unavailable",
+      "evidence_value_support": true,
+      "feature_gate": "",
+      "metric_id": "wrist_temperature",
+      "native_record_type": "healthkit_wrist_temperature",
+      "owner_rule": "civil_day_aggregate",
+      "registry_equivalence": "platform_exact_or_unavailable",
+      "source_statistic": "HealthKit_most_recent",
+      "statistics": [
+        "latest"
+      ],
+      "target_or_reason": "No reviewed Health Connect equivalent or alias approval",
+      "type": "catalog_metric",
+      "unit": "degC"
+    }
+  ],
+  "operations": [
+    "coverage",
+    "derive_packet",
+    "metric_catalog",
+    "metric_series",
+    "period_comparison",
+    "sleep_session_listing",
+    "source_record_listing",
+    "workout_listing",
+    "workout_sleep_alignment"
+  ],
+  "peer": {
+    "host_installation_id": "00000000-0000-4000-8000-000000000002",
+    "platform": "android",
+    "source_installation_id": "00000000-0000-4000-8000-000000000001"
+  },
+  "provider_availability": "unverified",
+  "provider_id": "health_connect",
+  "provider_version": "synthetic-not-qualified",
+  "schema": "healthmd.source_query_catalog",
+  "schema_version": 1,
+  "sdk_version": "1.2.0-alpha02",
+  "source_id": "health_connect"
+}

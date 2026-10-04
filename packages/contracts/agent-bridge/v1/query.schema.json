@@ -1,0 +1,3024 @@
+{
+  "$defs": {
+    "alignment_item": {
+      "additionalProperties": false,
+      "properties": {
+        "gap_nanoseconds": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "type": "string"
+        },
+        "physiology": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        },
+        "relation": {
+          "const": "first_following_sleep_start"
+        },
+        "sleep": {
+          "$ref": "#/$defs/session_item"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "unavailable"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "const": "alignment"
+        },
+        "workout": {
+          "$ref": "#/$defs/session_item"
+        }
+      },
+      "required": [
+        "type",
+        "workout",
+        "relation",
+        "gap_nanoseconds",
+        "status",
+        "physiology"
+      ],
+      "type": "object"
+    },
+    "budgets": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor_idle_seconds": {
+          "maximum": 600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "cursor_lifetime_seconds": {
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_calendar_days": {
+          "maximum": 366000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_capture_seconds": {
+          "maximum": 120,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_page_bytes": {
+          "maximum": 1048576,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "max_page_items": {
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_snapshot_bytes": {
+          "maximum": 67108864,
+          "minimum": 1024,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_page_items",
+        "max_page_bytes",
+        "max_snapshot_bytes",
+        "max_capture_seconds",
+        "max_calendar_days",
+        "cursor_idle_seconds",
+        "cursor_lifetime_seconds"
+      ],
+      "type": "object"
+    },
+    "catalog_item": {
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "enum": [
+            "planned",
+            "unavailable",
+            "supported",
+            "permission_required",
+            "feature_unavailable",
+            "history_unverified"
+          ],
+          "type": "string"
+        },
+        "evidence_value_support": {
+          "type": "boolean"
+        },
+        "feature_gate": {
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "string"
+        },
+        "metric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "native_record_type": {
+          "$ref": "#/$defs/id"
+        },
+        "owner_rule": {
+          "enum": [
+            "civil_day_aggregate",
+            "source_start_civil_day",
+            "noon_to_noon_additive_native",
+            "source_start_noon_journal"
+          ],
+          "type": "string"
+        },
+        "registry_equivalence": {
+          "enum": [
+            "platform_exact_or_unavailable",
+            "mapped_alias",
+            "platform_distinct"
+          ],
+          "type": "string"
+        },
+        "source_statistic": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "statistics": {
+          "items": {
+            "enum": [
+              "sum",
+              "average",
+              "minimum",
+              "maximum",
+              "latest",
+              "count",
+              "duration_sum"
+            ],
+            "type": "string"
+          },
+          "maxItems": 7,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "target_or_reason": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": {
+          "const": "catalog_metric"
+        },
+        "unit": {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "metric_id",
+        "registry_equivalence",
+        "unit",
+        "statistics",
+        "native_record_type",
+        "source_statistic",
+        "owner_rule",
+        "availability",
+        "target_or_reason",
+        "feature_gate",
+        "evidence_value_support"
+      ],
+      "type": "object"
+    },
+    "comparison_item": {
+      "additionalProperties": false,
+      "properties": {
+        "delta": {
+          "$ref": "#/$defs/value"
+        },
+        "first": {
+          "$ref": "#/$defs/metric_item"
+        },
+        "metric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "second": {
+          "$ref": "#/$defs/metric_item"
+        },
+        "statistic": {
+          "enum": [
+            "sum",
+            "average",
+            "minimum",
+            "maximum",
+            "latest",
+            "count",
+            "duration_sum"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "const": "comparison"
+        },
+        "unit": {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "metric_id",
+        "unit",
+        "statistic",
+        "first",
+        "second"
+      ],
+      "type": "object"
+    },
+    "coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "days_considered": {
+          "maximum": 366000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "days_with_values": {
+          "maximum": 366000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "history": {
+          "additionalProperties": false,
+          "properties": {
+            "boundary": {
+              "$ref": "#/$defs/date"
+            },
+            "feature_status": {
+              "enum": [
+                "available",
+                "unavailable",
+                "error",
+                "not_applicable"
+              ],
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "full_granted",
+                "bounded",
+                "unverified",
+                "not_applicable"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "state",
+            "feature_status"
+          ],
+          "type": "object"
+        },
+        "missing": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "metric_id": {
+                "$ref": "#/$defs/id"
+              },
+              "range": {
+                "$ref": "#/$defs/range"
+              },
+              "reason": {
+                "enum": [
+                  "no_records",
+                  "unsupported",
+                  "permission_required",
+                  "history_limited",
+                  "history_unverified",
+                  "failure",
+                  "skipped",
+                  "cancelled"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "range",
+              "metric_id",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array"
+        },
+        "missing_count": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "missing_truncated": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "complete_empty",
+            "partial",
+            "unavailable",
+            "failed",
+            "cancelled"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "days_considered",
+        "days_with_values",
+        "missing_count",
+        "missing_truncated",
+        "missing",
+        "history"
+      ],
+      "type": "object"
+    },
+    "cursor_claims": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "dataset_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "nonce": {
+          "$ref": "#/$defs/uuid"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "position": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "query_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "schema": {
+          "const": "healthmd.source_query_cursor_claims"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "peer",
+        "query_sha256",
+        "dataset_sha256",
+        "catalog_sha256",
+        "authority_revision",
+        "position",
+        "issued_at",
+        "expires_at",
+        "nonce"
+      ],
+      "type": "object"
+    },
+    "date": {
+      "format": "date",
+      "maxLength": 10,
+      "minLength": 10,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "type": "string"
+    },
+    "dates": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "range": {
+              "$ref": "#/$defs/range"
+            },
+            "type": {
+              "const": "exact"
+            }
+          },
+          "required": [
+            "type",
+            "range"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "all_available"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "anchor_date": {
+              "$ref": "#/$defs/date"
+            },
+            "days": {
+              "maximum": 3650,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "const": "past_complete_days"
+            }
+          },
+          "required": [
+            "type",
+            "days",
+            "anchor_date"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "digest": {
+      "maxLength": 64,
+      "minLength": 64,
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "evidence_item": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "evidence_id": {
+          "$ref": "#/$defs/digest"
+        },
+        "identity": {
+          "$ref": "#/$defs/native_identity"
+        },
+        "metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "start": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "type": {
+          "const": "evidence"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "evidence_id",
+        "identity",
+        "start",
+        "end",
+        "metric_ids",
+        "values"
+      ],
+      "type": "object"
+    },
+    "exact_time": {
+      "additionalProperties": false,
+      "properties": {
+        "epoch_second": {
+          "maximum": 253402300799,
+          "minimum": -62135596800,
+          "type": "integer"
+        },
+        "nanosecond": {
+          "maximum": 999999999,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source_offset_seconds": {
+          "oneOf": [
+            {
+              "maximum": 64800,
+              "minimum": -64800,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "epoch_second",
+        "nanosecond",
+        "source_offset_seconds"
+      ],
+      "type": "object"
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+      "type": "string"
+    },
+    "metric_item": {
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "enum": [
+            "available",
+            "missing",
+            "unsupported",
+            "permission_required",
+            "history_limited",
+            "failed",
+            "skipped"
+          ],
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "metric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "owner_date": {
+          "$ref": "#/$defs/date"
+        },
+        "statistic": {
+          "enum": [
+            "sum",
+            "average",
+            "minimum",
+            "maximum",
+            "latest",
+            "count",
+            "duration_sum"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "const": "metric"
+        },
+        "unit": {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "required": [
+        "type",
+        "metric_id",
+        "owner_date",
+        "unit",
+        "statistic",
+        "availability",
+        "evidence_ids"
+      ],
+      "type": "object"
+    },
+    "native_identity": {
+      "additionalProperties": false,
+      "properties": {
+        "client_record_id": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "client_record_version": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "identity_kind": {
+          "enum": [
+            "native",
+            "derived_child",
+            "external"
+          ],
+          "type": "string"
+        },
+        "last_modified": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "origin": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "parent_record_id": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "record_type": {
+          "$ref": "#/$defs/id"
+        },
+        "source_id": {
+          "enum": [
+            "apple_health",
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "provider_id",
+        "record_type",
+        "record_id",
+        "identity_kind",
+        "parent_record_id",
+        "origin",
+        "client_record_id",
+        "client_record_version",
+        "last_modified"
+      ],
+      "type": "object"
+    },
+    "packet": {
+      "additionalProperties": false,
+      "properties": {
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "daily_wellness",
+            "training",
+            "doctor_visit"
+          ],
+          "type": "string"
+        },
+        "medical_interpretation": {
+          "const": false
+        }
+      },
+      "required": [
+        "kind",
+        "facts",
+        "medical_interpretation"
+      ],
+      "type": "object"
+    },
+    "peer": {
+      "additionalProperties": false,
+      "properties": {
+        "host_installation_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "platform": {
+          "enum": [
+            "apple",
+            "android"
+          ],
+          "type": "string"
+        },
+        "source_installation_id": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "required": [
+        "source_installation_id",
+        "host_installation_id",
+        "platform"
+      ],
+      "type": "object"
+    },
+    "projection": {
+      "additionalProperties": false,
+      "properties": {
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "detail": {
+          "enum": [
+            "summary",
+            "selected_time_series",
+            "native_records"
+          ],
+          "type": "string"
+        },
+        "is_complete_daily_document": {
+          "const": false
+        },
+        "native_records": {
+          "items": {
+            "$ref": "#/$defs/evidence_item"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "owner_date": {
+          "$ref": "#/$defs/date"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_data_projection"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "selected_series": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "source_id": {
+          "enum": [
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        },
+        "summary": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "source_id",
+        "provider_id",
+        "scope_sha256",
+        "catalog_sha256",
+        "owner_date",
+        "calendar_timezone",
+        "detail",
+        "is_complete_daily_document",
+        "summary",
+        "selected_series",
+        "native_records",
+        "coverage"
+      ],
+      "type": "object"
+    },
+    "projection_request": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_partial": {
+          "type": "boolean"
+        },
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "detail": {
+          "enum": [
+            "summary",
+            "selected_time_series",
+            "native_records"
+          ],
+          "type": "string"
+        },
+        "field_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "object_ids": {
+          "items": {
+            "enum": [
+              "daily_summary",
+              "selected_series",
+              "native_records",
+              "capture_manifest"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_projection_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        },
+        "source_id": {
+          "enum": [
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "source_id",
+        "provider_id",
+        "catalog_sha256",
+        "dates",
+        "calendar_timezone",
+        "selection",
+        "detail",
+        "object_ids",
+        "field_ids",
+        "allow_partial"
+      ],
+      "type": "object"
+    },
+    "query_cancel": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "query_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_query_cancel"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "query_sha256",
+        "dataset_sha256"
+      ],
+      "type": "object"
+    },
+    "query_cancelled": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "query_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_query_cancelled"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "source_acknowledged": {
+          "const": true
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "query_sha256",
+        "dataset_sha256",
+        "source_acknowledged"
+      ],
+      "type": "object"
+    },
+    "query_catalog": {
+      "additionalProperties": false,
+      "properties": {
+        "budgets": {
+          "$ref": "#/$defs/budgets"
+        },
+        "feature_statuses": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "feature": {
+                "$ref": "#/$defs/id"
+              },
+              "status": {
+                "enum": [
+                  "available",
+                  "unavailable",
+                  "error",
+                  "unverified"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "feature",
+              "status"
+            ],
+            "type": "object"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "history": {
+          "$ref": "#/$defs/coverage"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/catalog_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 9,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_availability": {
+          "enum": [
+            "available",
+            "unavailable",
+            "update_required",
+            "unverified"
+          ],
+          "type": "string"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "provider_version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "schema": {
+          "const": "healthmd.source_query_catalog"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "sdk_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_id": {
+          "enum": [
+            "apple_health",
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "peer",
+        "source_id",
+        "provider_id",
+        "sdk_version",
+        "provider_version",
+        "provider_availability",
+        "feature_statuses",
+        "metrics",
+        "operations",
+        "budgets",
+        "history"
+      ],
+      "type": "object"
+    },
+    "query_operation": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "metric_catalog"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "metric_series"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "coverage"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "workout_listing"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "source_record_listing"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "include_naps": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "sleep_session_listing"
+            },
+            "window": {
+              "additionalProperties": false,
+              "properties": {
+                "duration_seconds": {
+                  "maximum": 86400,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "start_offset_seconds": {
+                  "maximum": 86400,
+                  "minimum": -86400,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "start_offset_seconds",
+                "duration_seconds"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "type",
+            "include_naps",
+            "window"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "include_naps": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "workout_sleep_alignment"
+            },
+            "window": {
+              "additionalProperties": false,
+              "properties": {
+                "duration_seconds": {
+                  "maximum": 86400,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "start_offset_seconds": {
+                  "maximum": 86400,
+                  "minimum": -86400,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "start_offset_seconds",
+                "duration_seconds"
+              ],
+              "type": "object"
+            },
+            "workout_activity": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "required": [
+            "type",
+            "include_naps",
+            "workout_activity",
+            "window"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "aggregations": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_unit": {
+                    "maxLength": 32,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "sum",
+                      "average",
+                      "minimum",
+                      "maximum",
+                      "latest",
+                      "count",
+                      "duration_sum"
+                    ],
+                    "type": "string"
+                  },
+                  "metric_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "metric_id",
+                  "kind",
+                  "expected_unit"
+                ],
+                "type": "object"
+              },
+              "maxItems": 256,
+              "minItems": 1,
+              "type": "array"
+            },
+            "first": {
+              "$ref": "#/$defs/range"
+            },
+            "second": {
+              "$ref": "#/$defs/range"
+            },
+            "type": {
+              "const": "period_comparison"
+            }
+          },
+          "required": [
+            "type",
+            "first",
+            "second",
+            "aggregations"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "detail_ids": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "kind": {
+              "enum": [
+                "daily_wellness",
+                "training",
+                "doctor_visit"
+              ],
+              "type": "string"
+            },
+            "type": {
+              "const": "derive_packet"
+            }
+          },
+          "required": [
+            "type",
+            "kind",
+            "detail_ids"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "query_page": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        "max_bytes": {
+          "maximum": 1048576,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "max_items": {
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_items",
+        "max_bytes"
+      ],
+      "type": "object"
+    },
+    "query_request": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "authority_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "budgets": {
+          "$ref": "#/$defs/budgets"
+        },
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "detail": {
+          "enum": [
+            "summary",
+            "native_evidence"
+          ],
+          "type": "string"
+        },
+        "include_evidence_values": {
+          "type": "boolean"
+        },
+        "operation": {
+          "$ref": "#/$defs/query_operation"
+        },
+        "page": {
+          "$ref": "#/$defs/query_page"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_query_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        },
+        "source_id": {
+          "enum": [
+            "apple_health",
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "source_id",
+        "provider_id",
+        "catalog_sha256",
+        "authority_id",
+        "authority_revision",
+        "dates",
+        "calendar_timezone",
+        "selection",
+        "detail",
+        "include_evidence_values",
+        "operation",
+        "page",
+        "budgets"
+      ],
+      "type": "object"
+    },
+    "query_response": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog": {
+              "$ref": "#/$defs/query_catalog"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/catalog_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "metric_catalog"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at",
+            "catalog"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/metric_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "metric_series"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {},
+              "maxItems": 0,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "coverage"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/session_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "workout_listing"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/session_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "sleep_session_listing"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/comparison_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "period_comparison"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/alignment_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "workout_sleep_alignment"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/evidence_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "source_record_listing"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {},
+              "maxItems": 0,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "derive_packet"
+            },
+            "packet": {
+              "$ref": "#/$defs/packet"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at",
+            "packet"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "range": {
+      "additionalProperties": false,
+      "properties": {
+        "end_date": {
+          "$ref": "#/$defs/date"
+        },
+        "start_date": {
+          "$ref": "#/$defs/date"
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date"
+      ],
+      "type": "object"
+    },
+    "selection": {
+      "additionalProperties": false,
+      "properties": {
+        "all_metrics": {
+          "type": "boolean"
+        },
+        "category_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "provider_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "metric_ids",
+        "category_ids",
+        "source_ids",
+        "provider_ids",
+        "all_metrics"
+      ],
+      "type": "object"
+    },
+    "session_item": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_or_stage": {
+          "$ref": "#/$defs/id"
+        },
+        "classification": {
+          "enum": [
+            "principal",
+            "nap",
+            "unclassified",
+            "completed_workout"
+          ],
+          "type": "string"
+        },
+        "duration_nanoseconds": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "type": "string"
+        },
+        "end": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "evidence_ids": {
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "identity": {
+          "$ref": "#/$defs/native_identity"
+        },
+        "kind": {
+          "enum": [
+            "sleep",
+            "workout"
+          ],
+          "type": "string"
+        },
+        "owner_date": {
+          "$ref": "#/$defs/date"
+        },
+        "stages": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "end": {
+                "$ref": "#/$defs/exact_time"
+              },
+              "raw_type": {
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": "integer"
+              },
+              "start": {
+                "$ref": "#/$defs/exact_time"
+              },
+              "symbol": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "required": [
+              "raw_type",
+              "symbol",
+              "start",
+              "end"
+            ],
+            "type": "object"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "start": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "type": {
+          "const": "session"
+        }
+      },
+      "required": [
+        "type",
+        "kind",
+        "owner_date",
+        "identity",
+        "start",
+        "end",
+        "activity_or_stage",
+        "duration_nanoseconds",
+        "classification",
+        "stages",
+        "evidence_ids"
+      ],
+      "type": "object"
+    },
+    "utc": {
+      "format": "date-time",
+      "maxLength": 20,
+      "minLength": 20,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "uuid": {
+      "maxLength": 36,
+      "minLength": 36,
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "value": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "integer"
+            },
+            "value": {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "decimal"
+            },
+            "value": {
+              "maxLength": 80,
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "value": {
+              "maxLength": 1024,
+              "minLength": 0,
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "zone": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "$id": "https://healthmd.app/contracts/agent-bridge/v1/source-query",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/query_request"
+    },
+    {
+      "$ref": "#/$defs/query_response"
+    },
+    {
+      "$ref": "#/$defs/query_catalog"
+    },
+    {
+      "$ref": "#/$defs/cursor_claims"
+    },
+    {
+      "$ref": "#/$defs/query_cancel"
+    },
+    {
+      "$ref": "#/$defs/query_cancelled"
+    },
+    {
+      "$ref": "#/$defs/projection_request"
+    },
+    {
+      "$ref": "#/$defs/projection"
+    }
+  ]
+}
