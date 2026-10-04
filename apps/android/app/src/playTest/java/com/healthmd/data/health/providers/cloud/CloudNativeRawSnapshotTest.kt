@@ -602,24 +602,54 @@ class CloudNativeRawSnapshotTest {
 
     @Test
     fun whoopRecoveryMetricSelectionsNeitherFetchCyclesNorFailOnMissingCyclePermission() = runTest {
+        val responseCases = listOf(
+            listOf("{\"records\":[]}"),
+            listOf(
+                "{\n \"records\":[{\"cycle_id\":101,\"native_unknown\":true}],\"next_token\":\"recovery-page-2\"\n}",
+                "{\"records\":[],\"next_token\":null}",
+            ),
+        )
         for (metrics in listOf(setOf("hrv"), setOf("resting_hr"), setOf("hrv", "resting_hr"))) {
-            val requests = mutableListOf<CloudHttpRequest>()
-            val api = client { request ->
-                requests += request
-                if (request.url.path.endsWith("/cycle")) CloudHttpResponse(403) else
-                    CloudHttpResponse(200, body = "{\"records\":[]}".toByteArray())
-            }
-            val items = CloudRawHealthDataProvider(WhoopCloudDataProvider(api), api)
-                .stream(request(selectedMetrics = metrics)).toList()
+            for (bodies in responseCases) {
+                val requests = mutableListOf<CloudHttpRequest>()
+                var recoveryPages = 0
+                val api = client { request ->
+                    requests += request
+                    if (request.url.path == "/developer/v2/recovery") {
+                        CloudHttpResponse(200, "application/json", body = bodies[recoveryPages++].toByteArray())
+                    } else CloudHttpResponse(403)
+                }
+                // Exercise metric selection at the raw boundary, not preselected endpoint keys.
+                val items = CloudRawHealthDataProvider(WhoopCloudDataProvider(api), api)
+                    .stream(request(selectedMetrics = metrics)).toList()
 
-            assertThat(requests.map { it.url.path }).containsExactly("/developer/v2/recovery")
-            assertThat(items.filterIsInstance<RawExportItem.Record>().map { it.record.providerPayload!!.endpointKey })
-                .containsExactly(WhoopCloudDataProvider.RECOVERY)
-            val reports = items.filterIsInstance<RawExportItem.TypeReport>().associate { it.report.typeKey to it.report }
-            assertThat(reports.getValue(WhoopCloudDataProvider.CYCLE).status).isEqualTo(RawTypeStatus.NOT_SELECTED)
-            assertThat(reports.getValue(WhoopCloudDataProvider.RECOVERY).status).isEqualTo(RawTypeStatus.EXPORTED)
-            assertThat(items.filterIsInstance<RawExportItem.Issue>()).isEmpty()
-            assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.COMPLETE)
+                assertThat(requests.map { it.url.path })
+                    .containsExactlyElementsIn(List(bodies.size) { "/developer/v2/recovery" }).inOrder()
+                val rangeQuery = "start=2026-01-01T00%3A00%3A00Z&end=2026-01-02T00%3A00%3A00Z&limit=25"
+                assertThat(requests.map { it.url.query }).containsExactlyElementsIn(
+                    bodies.indices.map { if (it == 0) rangeQuery else "$rangeQuery&nextToken=recovery-page-2" },
+                ).inOrder()
+                val payloads = items.filterIsInstance<RawExportItem.Record>().map { it.record.providerPayload!! }
+                assertThat(payloads.map { it.endpointKey })
+                    .containsExactlyElementsIn(List(bodies.size) { WhoopCloudDataProvider.RECOVERY }).inOrder()
+                assertThat(payloads.map { it.pageOrdinal })
+                    .containsExactlyElementsIn((1..bodies.size).toList()).inOrder()
+                payloads.forEachIndexed { index, payload ->
+                    val exact = bodies[index].toByteArray()
+                    assertThat(Base64.getDecoder().decode(payload.responseBytesBase64)).isEqualTo(exact)
+                    assertThat(payload.responseText).isEqualTo(bodies[index])
+                    assertThat(payload.responseSha256).isEqualTo(RawJson.sha256(exact))
+                    assertThat(payload.queryMetadata).doesNotContainKey("nexttoken")
+                }
+                val reports = items.filterIsInstance<RawExportItem.TypeReport>().associate { it.report.typeKey to it.report }
+                assertThat(reports.getValue(WhoopCloudDataProvider.CYCLE).status).isEqualTo(RawTypeStatus.NOT_SELECTED)
+                assertThat(reports.getValue(WhoopCloudDataProvider.RECOVERY).status).isEqualTo(RawTypeStatus.EXPORTED)
+                assertThat(reports.filterKeys { it != WhoopCloudDataProvider.RECOVERY }.values.all {
+                    it.status == RawTypeStatus.NOT_SELECTED
+                }).isTrue()
+                assertThat(items.filterIsInstance<RawExportItem.Issue>()).isEmpty()
+                assertThat(items.filterIsInstance<RawExportItem.Status>().last().status).isEqualTo(RawSnapshotStatus.COMPLETE)
+            }
         }
     }
 
