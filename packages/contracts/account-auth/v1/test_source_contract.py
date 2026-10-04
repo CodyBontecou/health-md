@@ -246,6 +246,11 @@ class SourceContractTests(unittest.TestCase):
         binding = POLICY["native_account_binding"]
         self.assertEqual(binding["namespace"], ["issuer", "environment", "account_id"])
         self.assertEqual(binding["subject_source"], "authoritative_account_and_grant_records")
+        self.assertEqual(binding["server_generation_minimum"], 0)
+        self.assertEqual(binding["server_generation_maximum"], 9_007_199_254_740_991)
+        self.assertEqual(binding["initial_server_generation"], 0)
+        self.assertEqual(binding["initial_scope_rule"], "exact_captured_requested_scopes")
+        self.assertEqual(binding["refresh_scope_rule"], "unchanged_current_scopes")
         self.assertEqual(binding["credential_bindings"], ["audience", "client_id", "installation_id", "session_id", "session_generation"])
         for key in ("subject_is_authority", "server_generation_is_local_account_generation",
                     "sign_in_sets_sync_opt_in", "native_wire_and_secure_storage_qualified"):
@@ -254,6 +259,51 @@ class SourceContractTests(unittest.TestCase):
         if model.exists():  # AS01-only worktrees need not contain the later source slice.
             body = model.read_text().split("export interface NativeSessionResponse {", 1)[1].split("}", 1)[0]
             self.assertEqual(set(re.findall(r"\b([a-z_]+)\s*:", body)), set(POLICY["token_success_keys"]))
+
+    def test_native_client_vector_integrity_and_pkce(self):
+        # Corpus/integrity evidence only. Actual native parser/lifecycle consumers
+        # must execute these cases; this check does not implement those adapters.
+        vectors = load(HERE / "fixtures/native-client-vectors.json")
+        self.assertTrue(vectors["synthetic_only"])
+        self.assertEqual(vectors["status"], "proposed_disabled_source_not_os_or_authority_proof")
+        self.assertTrue((ROOT / vectors["callback_vectors_source"]).is_file())
+        responses = vectors["response_cases"]
+        errors = vectors["error_cases"]
+        self.assertEqual(len(responses), 73)
+        self.assertEqual(len(errors), 15)
+        self.assertEqual(len({c["id"] for c in responses + errors}), len(responses) + len(errors))
+        positive_clients = set()
+        for case in responses:
+            if not case["valid"]:
+                continue
+            response = json.loads(case["raw"], object_pairs_hook=unique_object)
+            self.assertEqual(response, case["expected"])
+            self.assertEqual(set(response), set(POLICY["token_success_keys"]))
+            self.assertLessEqual(len(case["raw"].encode()), POLICY["bounds"]["auth_body_bytes"])
+            context = case["context"]
+            for key in ("issuer", "environment", "audience", "client_id", "installation_id", "scope"):
+                self.assertEqual(response[key], context[key])
+            self.assertIn(context["client_id"], {c["client_id"] for c in REGISTRY["clients"]})
+            positive_clients.add(context["client_id"])
+            self.assertIs(type(response["session_generation"]), int)
+            self.assertLessEqual(0, response["session_generation"])
+            self.assertLessEqual(response["session_generation"], POLICY["native_account_binding"]["server_generation_maximum"])
+            self.assertIs(type(response["expires_in"]), int)
+            self.assertLess(0, response["expires_in"])
+            self.assertLessEqual(response["expires_in"], POLICY["bounds"]["access_seconds"])
+            for key, kind in (("access_token", "native_access"), ("refresh_token", "native_refresh")):
+                prefix = POLICY["token_prefixes"][kind]
+                self.assertTrue(response[key].startswith(prefix))
+                self.assertTrue(base64url32(response[key][len(prefix):]))
+            self.assertTrue(base64url32(response["session_id"]))
+        self.assertEqual(positive_clients, {c["client_id"] for c in REGISTRY["clients"]})
+        self.assertEqual(len(vectors["pkce_vectors"]), 3)
+        for vector in vectors["pkce_vectors"]:
+            self.assertTrue(re.fullmatch(r"[A-Za-z0-9._~-]{43,128}", vector["verifier"]))
+            challenge = base64.urlsafe_b64encode(hashlib.sha256(vector["verifier"].encode()).digest()).decode().rstrip("=")
+            self.assertEqual(challenge, vector["challenge"])
+        self.assertIn("restart_stale_or_corrupt_no_resurrection", vectors["lifecycle_required"])
+        self.assertIn("no_health_or_profile_or_destination_or_schedule_or_purchase_effects", vectors["lifecycle_required"])
 
     def test_callback_vectors(self):
         for vector in VECTORS["callback_vectors"]:

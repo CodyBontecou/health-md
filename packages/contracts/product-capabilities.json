@@ -39,6 +39,54 @@
   ],
   "capabilities": [
     {
+      "id": "account.optional-native-sign-in",
+      "name": "Optional configuration account sign-in",
+      "classification": "planned",
+      "summary": "Disabled synthetic configuration-only account authority exists; native sign-in, real browser consent, OS custody and registration remain unqualified. Signing in must preserve local-only use and never enable sync or health/export powers.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "AS03 closed native parser/lifecycle followed by approved browser/Keychain/callback/settings integration and AS12 iPhone/iPadOS/macOS qualification; real registration requires named mobile/security approval."},
+        "android": {"state": "planned", "target": "AS04 common Play/F-Droid closed parser/lifecycle followed by approved browser/Keystore/claimed-link/settings integration and AS12 physical/channel qualification, without Google identity dependencies."}
+      },
+      "evidence": [
+        "packages/contracts/account-auth/v1/contract.md",
+        "apps/cloud/docs/native-account-auth-source.md",
+        "docs/architecture/account-sync-evidence-ledger.md"
+      ]
+    },
+    {
+      "id": "account.selected-portable-profile-sync",
+      "name": "Selected portable profile synchronization",
+      "classification": "planned",
+      "summary": "Independent proposed v1 codecs preserve portable preference bytes and exclude local authority. No durable service, native reconciliation/apply or dashboard profile library is enabled; sign-in transfers no profiles.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "AS06 private revision service, AS07 deterministic reconciliation and AS08 protected Apple mapping/pending-revision integration, then AS12 iPhone/iPadOS/macOS qualification and separately approved configuration privacy policy."},
+        "android": {"state": "planned", "target": "AS06 private revision service, AS07 deterministic reconciliation and AS09 common-channel protected native integration, then AS12 Play/F-Droid qualification and separately approved configuration privacy policy."}
+      },
+      "evidence": [
+        "packages/contracts/profile-sync/v1/contract.md",
+        "packages/contracts/account-auth/v1/field-scope.json",
+        "docs/architecture/account-sync-evidence-ledger.md"
+      ]
+    },
+    {
+      "id": "account.local-revision-approval",
+      "name": "Local immutable synchronized-revision approval",
+      "classification": "planned",
+      "summary": "Fetched candidates must remain distinct from accepted execution snapshots and frozen jobs; new adoption stays unbound/blocked, with local protection, grants and explicit revision review before execution. Existing import-only gates do not qualify sync revisions.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "AS08/AS10 atomic native mapping/binding/protection/revision checks across manual, intent, direct and schedule admission; preserve frozen jobs, then AS12 supported-device qualification."},
+        "android": {"state": "planned", "target": "AS09/AS10 atomic common-channel native mapping/binding/protection/revision checks across UI, automation, direct and schedule admission; preserve frozen jobs, then AS12 physical qualification."}
+      },
+      "evidence": [
+        "packages/contracts/profile-sync/v1/contract.md",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ExecutionGate.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/settings/ExportProfileRepository.kt"
+      ]
+    },
+    {
       "id": "export.daily-files",
       "name": "Daily local export files",
       "classification": "shared",

@@ -126,7 +126,7 @@ function validateShape(v: SyncJson, candidate: ObjectJson): void {
     for (const child of v) validateShape(child, object(candidate.items));
   }
 }
-function sortedUnique(values: SyncJson): string[] {
+function sortedUnique(values: SyncJson | undefined): string[] {
   check(Array.isArray(values)); const result = values.map(text);
   check(result.every((s, i) => i === 0 || result[i - 1]! < s)); return result;
 }

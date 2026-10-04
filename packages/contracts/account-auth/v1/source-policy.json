@@ -65,6 +65,11 @@
     "subject_source": "authoritative_account_and_grant_records",
     "subject_is_authority": false,
     "credential_bindings": ["audience", "client_id", "installation_id", "session_id", "session_generation"],
+    "server_generation_minimum": 0,
+    "server_generation_maximum": 9007199254740991,
+    "initial_server_generation": 0,
+    "initial_scope_rule": "exact_captured_requested_scopes",
+    "refresh_scope_rule": "unchanged_current_scopes",
     "server_generation_is_local_account_generation": false,
     "sign_in_sets_sync_opt_in": false,
     "native_wire_and_secure_storage_qualified": false

@@ -8,6 +8,12 @@ on:
       - 'apps/cloud/**'
       - 'docs/architecture/adr-0007-healthmd-cloud.md'
       - 'docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md'
+      - 'packages/contracts/account-auth/**'
+      - 'packages/contracts/profile-sync/**'
+      - 'packages/contracts/shared-setup/v2/**'
+      - 'packages/contracts/validate.py'
+      - 'docs/architecture/account-profile-sync-source-design.md'
+      - 'docs/architecture/account-sync-evidence-ledger.md'
       - 'packages/contracts/product-capabilities.json'
       - 'packages/contracts/manifest.json'
       - '.github/workflows/cloud-ci.yml'
@@ -37,6 +43,13 @@ jobs:
           cache-dependency-path: apps/cloud/package-lock.json
       - name: Install locked cloud dependencies
         run: npm ci
+      - name: Validate deferred account/profile contracts and frozen setup regressions
+        working-directory: .
+        run: |
+          python3 packages/contracts/validate.py
+          python3 packages/contracts/account-auth/v1/test_source_contract.py
+          python3 packages/contracts/profile-sync/v1/test_contract.py
+          python3 -m unittest discover -s packages/contracts -p test_validate_shared_setup.py
       - name: Typecheck and unit tests (synthetic only)
         run: npm run check
       - name: Verify production remains fail-closed and unapproved

@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "669146de6cc795011f7b17f30808de673b75956430cb8afed3f0219b5aac16d9",
+      "sha256": "1768e738b7c530bb27bea9a3ef9e55f8fd48d62b9ea0a041480e5cecd46a4f47",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -26,6 +26,146 @@
     }
   ],
   "contracts": [
+    {
+      "id": "healthmd.account_auth",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Proposed default-unavailable synthetic native configuration account authority; no working browser consent, live registration, native OS custody or production approval.",
+      "specification": "packages/contracts/account-auth/v1/contract.md",
+      "authorities": [
+        "packages/contracts/account-auth/v1/contract.md",
+        "packages/contracts/account-auth/v1/source-policy.json",
+        "packages/contracts/account-auth/v1/field-scope.json"
+      ],
+      "implementations": [
+        "apps/cloud/src/account-auth-v1/authority.ts",
+        "apps/cloud/src/account-auth-v1/http.ts",
+        "apps/cloud/src/account-auth-v1/parsing.ts"
+      ],
+      "consumers": [
+        "apps/cloud/test/account-auth-v1.test.ts",
+        "packages/contracts/account-auth/v1/test_source_contract.py"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/account-auth/v1/fixtures/security-vectors.json",
+          "sha256": "27a8cf83735ecd022b96d65a9e7a0b0c38d27b3addca469ab08e93d34eeb7708",
+          "provenance": "Reviewed AS01 symbolic design predicates; not runtime or OS qualification.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/account-auth/v1/fixtures/native-client-vectors.json",
+          "sha256": "0453dc3cb7e5f78e53eb82c648ae3c7b876b9ff507a8659d3914298daab47435",
+          "provenance": "Coordinator synthetic closed response/fixed-error/PKCE corpus and required lifecycle seams; integrity checked, native consumers and OS proof remain gated.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.profile_sync",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Proposed independent exact-byte portable profile/revision/read/fixed-error codecs; finite synthetic conformance, not authenticated storage, reconciliation, native apply or a shipped contract.",
+      "specification": "packages/contracts/profile-sync/v1/contract.md",
+      "authorities": [
+        "packages/contracts/profile-sync/v1/contract.md",
+        "packages/contracts/profile-sync/v1/portable-content.schema.json",
+        "packages/contracts/profile-sync/v1/profile-sync.schema.json",
+        "packages/contracts/profile-sync/v1/source-pins.json"
+      ],
+      "implementations": [
+        "apps/cloud/src/profile-sync-v1-contract.ts",
+        "apps/apple/HealthMd/Shared/AccountSync/ProfileSyncV1.swift",
+        "apps/android/app/src/main/java/com/healthmd/accountsync/ProfileSyncV1.kt",
+        "packages/contracts/profile-sync/v1/validator.py"
+      ],
+      "consumers": [
+        "apps/cloud/test/profile-sync-v1-contract.test.ts",
+        "apps/apple/HealthMdTests/AccountSync/ProfileSyncV1Tests.swift",
+        "apps/android/app/src/test/java/com/healthmd/accountsync/ProfileSyncV1Test.kt",
+        "packages/contracts/profile-sync/v1/test_contract.py"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/android-1.json",
+          "sha256": "625bc563f392674c376ce46dc0ff792d5d717845efc5707489bfafa2420b7ec7",
+          "provenance": "Deterministic pinned AS05 synthetic content; Python/TS/Swift/Kotlin exact parser/hash conformance, not native apply.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/android-2.json",
+          "sha256": "92aed3c4e736d4f0b48a91bf7f228dbda2d974599ab4a88b62be42815a2bcf4f",
+          "provenance": "Deterministic pinned AS05 synthetic content; Python/TS/Swift/Kotlin exact parser/hash conformance, not native apply.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/apple-1.json",
+          "sha256": "513bed5adc21dc278a86394d61f48a2a8cfe29bca38594bacd59a5b05e4ac6bb",
+          "provenance": "Deterministic pinned AS05 synthetic content; Python/TS/Swift/Kotlin exact parser/hash conformance, not native apply.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/apple-2.json",
+          "sha256": "98d7fe3f208ba84ca2eb93a0fa3d0cbcca0d5b473c58a67e717e7f8873987953",
+          "provenance": "Deterministic pinned AS05 synthetic content; Python/TS/Swift/Kotlin exact parser/hash conformance, not native apply.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/apple-3.json",
+          "sha256": "deae5e41a15dd180e9e1bf62adb5dd96cbc5530032841e34c39d9e02c3fe48cb",
+          "provenance": "Deterministic pinned AS05 synthetic content; Python/TS/Swift/Kotlin exact parser/hash conformance, not native apply.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/apple-4.json",
+          "sha256": "7d1a5fb36f71e1515aaf1f5c77d79164f6fcb24c5544c1e46b9afdd8e7749550",
+          "provenance": "Deterministic pinned AS05 synthetic content; Python/TS/Swift/Kotlin exact parser/hash conformance, not native apply.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/content-vectors.json",
+          "sha256": "4ad7726bf7ed34da1a4b0e9d6b6bfac20a02fc3824d17bd99afd9002d4cf1e44",
+          "provenance": "AS05 manifest of ten exact synthetic content/hash fixtures derived from the pinned frozen-v2 projection.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/foreign-local-edit.json",
+          "sha256": "607d543fc3075ce337c244ef499843cca888a09f0d7f357510a15d4b4f1d8a77",
+          "provenance": "AS05 synthetic foreign-extension retention after local portable editing; not native persistence proof.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/foreign-unchanged.json",
+          "sha256": "67ec3b0fed9b32b6e7a5842c873f60c19ad9cfd5c650fdbcd1fd58078d526696",
+          "provenance": "AS05 synthetic unchanged foreign extension; actual native/core adapter remains unqualified.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/parser-cases.json",
+          "sha256": "5637d2f08c88d6f639c9a3116624113f2156c424e9dc98bd62c9f6a59dabb9d9",
+          "provenance": "257 deterministic AS05 lexical/content/record/mutation/read/error/page vectors exercised by actual Python/TS/Swift/Kotlin source codecs.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/registry-current.json",
+          "sha256": "8831ab2e53eb2f3e43ff05ca72af030178932a8942f80314dddb01bb25de95fd",
+          "provenance": "AS05 byte-pinned registry content fixture; Kotlin host registry injection is not actual core/Android adapter proof.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/scenarios.json",
+          "sha256": "c4afbeba954d8145787acf0083adbfb8c3f50447eca4438740df7ce58cb7ff82",
+          "provenance": "Thirty AS05 test-only source scenario predicates after real parsing; not implemented reconciliation, transaction or durable storage.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/fixtures/unicode-exact.json",
+          "sha256": "d24a37d3b0b2152f393dbdc7d3f01438c7a6643fc8029d8d6ed4480dff631c74",
+          "provenance": "AS05 synthetic exact Unicode content/hash bytes; accepted names are never trimmed or normalized.",
+          "mirrors": []
+        }
+      ]
+    },
     {
       "id": "healthmd.direct.ios",
       "version": 1,
