@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import accountWorker from "../src/account-worker";
+import core from "../src/index";
 import ingestWorker from "../src/ingest-worker";
 import maintenanceWorker from "../src/maintenance-worker";
 import type { Env, LifecycleMessage } from "../src/types";
@@ -161,6 +162,40 @@ describe("split production Worker profiles", () => {
       new Request("https://account.healthmd.app/api/repair/devices/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
         { method: "DELETE" }),
     ]) expect((await accountWorker.fetch(request, env)).status).toBe(404);
+  });
+
+  it("keeps native auth unavailable despite legacy approval and denies peer profiles", async () => {
+    const paths = [
+      ["GET", "/account/authorize"], ["POST", "/api/account-auth/v1/decision"],
+      ["POST", "/api/account-auth/v1/token"], ["GET", "/api/account-auth/v1/sessions"],
+      ["POST", "/api/account-auth/v1/revoke"],
+    ];
+    for (const [method, path] of paths) {
+      const account = profile("account", "https://account.healthmd.app");
+      const request = new Request(`https://account.healthmd.app${path}`, { method });
+      const response = await accountWorker.fetch(request, account);
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: "unavailable" });
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect((await ingestWorker.fetch(new Request(`https://api.healthmd.app${path}`, { method }),
+        profile("ingest", "https://api.healthmd.app"))).status).toBe(404);
+      expect((await maintenanceWorker.fetch(new Request(`https://maintenance.healthmd.app${path}`, { method }),
+        profile("maintenance", "https://maintenance.healthmd.app"))).status).toBe(404);
+      const combined = { ...account, SERVICE_PROFILE: "combined" as const };
+      expect((await core.fetch(request, combined)).status).toBe(503);
+      const pilot = { ...combined, AUTH_MODE: "password" as const, AUTH_SIGNUP_MODE: "closed" as const,
+        PASSWORD_PEPPER_B64: Buffer.alloc(32, 9).toString("base64"), CLOUD_RUNTIME_APPROVED: undefined,
+        VM_PERSONAL_MVP_NO_BACKUP_ACK: "I_ACCEPT_PERMANENT_DATA_LOSS" as const,
+        REVISION_RETENTION_DAYS: "unlimited" };
+      expect((await core.fetch(request, pilot)).status).toBe(503);
+    }
+    const env = profile("account", "https://account.healthmd.app");
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/account/authorize?state=x"), env))
+      .status).toBe(404);
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/api/profile-sync/v1/read",
+      { method: "POST" }), env)).status).toBe(404);
+    expect((await accountWorker.fetch(new Request("https://account.healthmd.app/api/profile-sync/v1/mutate",
+      { method: "POST" }), env)).status).toBe(404);
   });
 
   it("gives maintenance no public HTTP surface and fails closed on profile mismatch", async () => {

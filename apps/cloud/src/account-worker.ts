@@ -2,6 +2,7 @@ import core, { validateConfiguration } from "./index";
 import { errorResponse, json, requestMatchesPublicEndpoint, withSecurityHeaders } from "./http";
 import { recordHttpMetric } from "./telemetry";
 import type { Env } from "./types";
+import { isNativeAuthPath } from "./account-auth-v1/http";
 
 const GET_ROUTES = new Set([
   "/", "/health", "/login", "/login.html", "/dashboard", "/dashboard.html", "/dashboard.js",
@@ -19,6 +20,8 @@ const POST_ROUTES = new Set([
 
 function allowed(request: Request): boolean {
   const path = new URL(request.url).pathname;
+  if (isNativeAuthPath(path)) return (path === "/account/authorize" ||
+    path === "/api/account-auth/v1/sessions") ? request.method === "GET" : request.method === "POST";
   if (request.method === "GET") {
     return GET_ROUTES.has(path) || /^\/api\/exports\/[a-f0-9-]{36}\/download$/u.test(path) ||
       /^\/api\/(?:exports|days)\/page\/[0-9]{1,7}$/u.test(path) ||
