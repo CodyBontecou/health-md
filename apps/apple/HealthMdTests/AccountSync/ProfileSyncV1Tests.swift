@@ -36,7 +36,13 @@ enum ProfileSyncV1FixtureConformance {
             var accepted = true
             do {
                 switch row["entry"] as! String {
-                case "content": _ = try ProfileSyncV1.Content.parse(bytes)
+                case "content":
+                    let content = try ProfileSyncV1.Content.parse(bytes)
+                    if let expected = row["expected_name"] as? String {
+                        let parsed = try ProfileSyncV1.parseJSON(Data(content.contentJSON.utf8), maximum: ProfileSyncV1.contentMaximum) as! [String: Any]
+                        let name = (parsed["profile"] as! [String: Any])["name"] as! String
+                        try require(Data(name.utf8) == Data(expected.utf8) && Data(content.contentJSON.utf8) == bytes && content.hash == row["expected_content_hash"] as! String, id)
+                    }
                 case "json": _ = try ProfileSyncV1.parseJSON(bytes, maximum: ProfileSyncV1.contentMaximum)
                 case "record": _ = try ProfileSyncV1.Record.parse(bytes)
                 case "mutation":
@@ -45,11 +51,26 @@ enum ProfileSyncV1FixtureConformance {
                         try require(mutation.requestHash == expected && ProfileSyncV1.mutationHash(bytes) == expected, id)
                         try require(ProfileSyncV1.mutationHash(bytes + Data([32])) != expected, id + " exact mutation bytes")
                     }
-                case "read": _ = try ProfileSyncV1.parseRead(bytes)
+                case "read":
+                    let read = try ProfileSyncV1.parseRead(bytes)
+                    if let expected = row["expected_read"] as? [String: Any] { try checkRead(read, expected, id) }
+                case "error":
+                    let error = try ProfileSyncV1.parseError(bytes)
+                    if let expected = row["expected_result"] as? String {
+                        try require(error.result.rawValue == expected, id)
+                        let successes: [(Data) throws -> Void] = [
+                            { _ = try ProfileSyncV1.parseRead($0) }, { _ = try ProfileSyncV1.parsePage($0) },
+                            { _ = try ProfileSyncV1.parseMutation($0) }, { _ = try ProfileSyncV1.Record.parse($0) }]
+                        for parse in successes {
+                            var rejected = false
+                            do { try parse(bytes) } catch is ProfileSyncV1Error { rejected = true }
+                            try require(rejected, id + " not success")
+                        }
+                    }
                 case "page": _ = try ProfileSyncV1.parsePage(bytes)
                 default: throw Failure(caseID: id)
                 }
-            } catch { accepted = false }
+            } catch is ProfileSyncV1Error { accepted = false }
             try require(accepted == row["valid"] as! Bool, id)
         }
         let scenarios = try load("scenarios.json")["scenarios"] as! [[String: Any]]
@@ -66,7 +87,18 @@ enum ProfileSyncV1FixtureConformance {
         let a = (before["profile"] as! NSDictionary)["platform_extensions"] as! NSDictionary
         let b = (after["profile"] as! NSDictionary)["platform_extensions"] as! NSDictionary
         try require((a["android"] as! NSDictionary).isEqual(b["android"]), "foreign exact local edit")
-        return "\(vectors.count) content fixtures, \(cases.count) parser cases, \(scenarios.count) test-only source scenarios"
+        let reads = cases.filter { $0["expected_read"] != nil }.count, errors = cases.filter { $0["expected_result"] != nil }.count
+        try require(reads == 6 && errors == 11, "typed read/fixed error coverage")
+        return "\(vectors.count) content fixtures, \(cases.count) parser cases, \(scenarios.count) test-only source scenarios, \(reads) typed reads, \(errors) fixed errors"
+    }
+    private static func checkRead(_ read: ProfileSyncV1.ReadRequest, _ expected: [String: Any], _ id: String) throws {
+        if expected["mode"] as! String == "revision" {
+            guard case .revision(let profile, let revision, let hash) = read else { throw Failure(caseID: id + " revision case") }
+            try require(profile == expected["profile_id"] as! String && revision == (expected["content_revision"] as! NSNumber).int64Value && hash == expected["content_hash"] as! String, id)
+        } else {
+            guard case .page(let mode, let cursor, let limit) = read else { throw Failure(caseID: id + " page case") }
+            try require(mode.rawValue == expected["mode"] as! String && cursor == expected["cursor"] as? String && limit == expected["limit"] as! Int, id)
+        }
     }
     // Test-only source predicates; NOT production reconciliation/transactions/authorization.
     private static func outcome(_ s: [String: Any], remote r: ProfileSyncV1.Record) throws -> String {

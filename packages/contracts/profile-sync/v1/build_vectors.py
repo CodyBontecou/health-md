@@ -2,7 +2,7 @@
 import copy
 import json
 from pathlib import Path
-from validator import HERE, digest, mutation_digest
+from validator import HERE, digest, mutation_digest, ERROR_RESULTS, NAME_EDGE_WHITESPACE, NAME_LINE_BREAKS
 from build_source_artifacts import compact, write_json
 
 
@@ -40,9 +40,9 @@ def main():
     write_json("fixtures/content-vectors.json", manifest)
 
     cases = []
-    def add(name, value, entry="content", valid=False):
+    def add(name, value, entry="content", valid=False, **expected):
         encoded = raw(value) if not isinstance(value, str) else value
-        row = {"id": name, "entry": entry, "raw": encoded, "valid": valid}
+        row = {"id": name, "entry": entry, "raw": encoded, "valid": valid, **expected}
         if entry == "mutation" and valid: row["request_hash"] = mutation_digest(encoded.encode())
         cases.append(row)
     def patch(name, path, value, original=base):
@@ -81,6 +81,15 @@ def main():
     patch("name-trim", ["profile", "name"], " Synthetic ")
     patch("name-empty", ["profile", "name"], "")
     patch("name-control", ["profile", "name"], "Synthetic\u007f")
+    for cp in sorted(NAME_EDGE_WHITESPACE):
+        for side in ("leading", "trailing"):
+            name = chr(cp) + "Synthetic edge" if side == "leading" else "Synthetic edge" + chr(cp)
+            patch(f"name-edge-u{cp:04x}-{side}", ["profile", "name"], name)
+    for cp in sorted(NAME_LINE_BREAKS): patch(f"name-interior-line-u{cp:04x}", ["profile", "name"], "Synthetic" + chr(cp) + "name")
+    for label, name in {"format-leading": "\u180e\u200b\u2060Synthetic", "format-trailing": "Synthetic\u180e\u200b\u2060",
+                        "decomposed": "Synthetic e\u0301", "composed": "Synthetic é"}.items():
+        named = copy.deepcopy(base); named["profile"]["name"] = name
+        add("valid-name-" + label, named, valid=True, expected_name=name, expected_content_hash=digest(raw(named).encode()))
     patch("short-field-control", ["profile", "presentation", "frontmatter", "date_key"], "date\nkey")
     patch("short-field-trailing-control", ["profile", "presentation", "frontmatter", "date_key"], "date\n")
     trailing_metric = copy.deepcopy(base)
@@ -161,8 +170,38 @@ def main():
     add("mutation-secret", dict(create, access_token="synthetic"), "mutation")
     add("mutation-unknown", dict(create, future=True), "mutation")
     read = {"schema": "healthmd.profile_sync", "schema_version": 1, "mode": "changes", "cursor": None, "limit": 8}
-    add("valid-read", read, "read", True); add("read-account", dict(read, account_id="synthetic"), "read")
+    def add_read(name, value):
+        add(name, value, "read", True, expected_read={k: v for k, v in value.items() if k not in {"schema", "schema_version"}})
+    add_read("valid-read", read)
+    add_read("valid-read-changes-cursor", dict(read, cursor="psc_" + "e" * 64, limit=1))
+    add_read("valid-read-snapshot-first", dict(read, mode="snapshot"))
+    add_read("valid-read-snapshot-next", dict(read, mode="snapshot", cursor="psc_" + "f" * 64, limit=2))
+    revision_read = {"schema": "healthmd.profile_sync", "schema_version": 1, "mode": "revision", "profile_id": record["profile_id"], "content_revision": 1, "content_hash": content_hash}
+    add_read("valid-read-revision", revision_read)
+    add_read("valid-read-revision-safe-boundary", dict(revision_read, content_revision=9007199254740991))
+    add("read-account", dict(read, account_id="synthetic"), "read")
     add("read-limit", dict(read, limit=9), "read"); add("read-cursor", dict(read, cursor="caller-account|1"), "read")
+    for name, value in [("read-limit-zero", dict(read, limit=0)), ("read-limit-boolean", dict(read, limit=True)),
+        ("read-limit-fraction", dict(read, limit=1.0)), ("read-unknown-mode", dict(read, mode="future")),
+        ("read-future-version", dict(read, schema_version=2)), ("read-mixed-shape", dict(read, profile_id=record["profile_id"])),
+        ("read-missing-cursor", {k: v for k, v in read.items() if k != "cursor"}),
+        ("read-revision-zero", dict(revision_read, content_revision=0)), ("read-revision-boolean", dict(revision_read, content_revision=True)),
+        ("read-revision-missing-hash", {k: v for k, v in revision_read.items() if k != "content_hash"}),
+        ("read-revision-invalid-id", dict(revision_read, profile_id="local-synthetic")),
+        ("read-revision-invalid-hash", dict(revision_read, content_hash="0" * 63))]: add(name, value, "read")
+    add("read-over-bytes", raw(read) + " " * 8192, "read")
+    # Existing fixed-error wire grammar; new bounded parser returns NON-success only.
+    error = {"schema": "healthmd.profile_sync", "schema_version": 1, "result": "resync_required"}
+    for result in ERROR_RESULTS: add("valid-error-" + result, dict(error, result=result), "error", True, expected_result=result)
+    for key in ("account_id", "profile_id", "content_json", "message", "next_cursor"):
+        add("error-reflection-" + key, dict(error, **{key: "synthetic-private"}), "error")
+    for i, value in enumerate(["success", "future", None, True, 1, {}]): add("error-result-" + str(i), dict(error, result=value), "error")
+    add("error-future-version", dict(error, schema_version=2), "error")
+    add("error-boolean-version", dict(error, schema_version=True), "error")
+    add("error-missing-result", {k: v for k, v in error.items() if k != "result"}, "error")
+    add("error-duplicate-result", raw(error).replace('"result":"resync_required"', '"result":"resync_required","result":"gone"'), "error")
+    add("error-over-bytes", raw(error) + " " * 8192, "error")
+    cases.append({"id": "error-bad-utf8", "entry": "error", "hex": "ff", "valid": False})
     page = {"schema": "healthmd.profile_sync", "schema_version": 1, "mode": "snapshot", "snapshot_id": "pss_" + "c" * 32, "high_watermark": 1, "items": [record], "next_cursor": None, "complete": True}
     add("valid-page", page, "page", True)
     add("duplicate-snapshot-id", dict(page, items=[record, record]), "page")

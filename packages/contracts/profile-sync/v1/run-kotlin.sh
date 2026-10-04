@@ -14,6 +14,7 @@ stdlib=$(jar org.jetbrains.kotlin kotlin-stdlib 2.1.0)
 reflect=$(jar org.jetbrains.kotlin kotlin-reflect 2.1.0)
 script=$(jar org.jetbrains.kotlin kotlin-script-runtime 2.1.0)
 daemon=$(jar org.jetbrains.kotlin kotlin-daemon-embeddable 2.1.0)
+trove=$(jar org.jetbrains.intellij.deps trove4j 1.0.20200330)
 plugin=$(jar org.jetbrains.kotlin kotlin-serialization-compiler-plugin-embeddable 2.1.0)
 json=$(jar org.jetbrains.kotlinx kotlinx-serialization-json-jvm 1.7.3)
 core=$(jar org.jetbrains.kotlinx kotlinx-serialization-core-jvm 1.7.3)
@@ -22,7 +23,7 @@ annotations=$(jar org.jetbrains annotations 13.0)
 junit=$(jar junit junit 4.13.2)
 cp="$stdlib:$json:$core:$annotations:$junit"
 mkdir -p "$out"
-java -Xmx768m -Djava.io.tmpdir="$out" -cp "$compiler:$stdlib:$reflect:$script:$daemon:$coroutines:$annotations" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler \
+java -Xmx768m -Djava.io.tmpdir="$out" -cp "$compiler:$stdlib:$reflect:$script:$daemon:$trove:$coroutines:$annotations" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler \
   -no-stdlib -no-reflect -jvm-target 17 -classpath "$cp" -Xplugin="$plugin" \
   "$root/apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Models.kt" \
   "$root/apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupV2Codec.kt" \

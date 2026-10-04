@@ -25,6 +25,12 @@ SAFE_MAX = 9_007_199_254_740_991
 DOMAIN = b"healthmd.profile_sync.portable/v1\x00"
 SCHEMA = json.loads((HERE / "portable-content.schema.json").read_bytes())
 TRANSPORT = "healthmd.profile_sync"
+ERROR_RESULTS = ("unavailable", "invalid", "requires_upgrade", "conflict", "gone", "not_found",
+                 "resync_required", "idempotency_mismatch", "intent_expired", "verification_pending", "quota_exceeded")
+# Explicit finite v1 subset, not Python/JS/Foundation/Kotlin trim semantics.
+NAME_EDGE_WHITESPACE = frozenset([*range(0x0009, 0x000E), 0x0020, 0x0085, 0x00A0, 0x1680,
+                                *range(0x2000, 0x200B), 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF])
+NAME_LINE_BREAKS = frozenset([0x0085, 0x2028, 0x2029])
 
 
 class Invalid(ValueError):
@@ -135,7 +141,8 @@ class ValidatedContent:
             v2._reject_sensitive_shared_setup_v2(w, "sync")
             p = content["profile"]
             name = p["name"]
-            require(name == name.strip() and not any(ord(c) < 32 or ord(c) == 127 for c in name))
+            require(bool(name) and ord(name[0]) not in NAME_EDGE_WHITESPACE and ord(name[-1]) not in NAME_EDGE_WHITESPACE)
+            require(not any(ord(c) < 32 or ord(c) == 127 or ord(c) in NAME_LINE_BREAKS for c in name))
             require(p["export"]["formats"] == sorted(set(p["export"]["formats"])))
             ids = p["metrics"]["enabled_ids"]
             require(ids == sorted(set(ids)))
@@ -281,6 +288,14 @@ def parse_read(raw: bytes):
         require(type(value["limit"]) is int and 1 <= value["limit"] <= 8)
         if value["cursor"] is not None:
             opaque(value["cursor"], "psc_", 64)
+    return value
+
+
+def parse_error(raw: bytes):
+    value = strict_json(raw, 8192)
+    discriminant(value)
+    exact(value, "schema schema_version result")
+    require(type(value["result"]) is str and value["result"] in ERROR_RESULTS)
     return value
 
 

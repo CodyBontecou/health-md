@@ -7,7 +7,8 @@ from pathlib import Path
 from build_source_artifacts import build_schema, compact
 from build_transport_schema import build as build_transport
 from validator import (HERE, ROOT, Invalid, SCHEMA, ValidatedContent, digest,
-                       parse_record, parse_mutation, parse_read, parse_page, strict_json, mutation_digest, v2)
+                       parse_record, parse_mutation, parse_read, parse_page, parse_error, strict_json, mutation_digest, v2,
+                       ERROR_RESULTS, NAME_EDGE_WHITESPACE)
 
 
 def encode(value):
@@ -55,19 +56,32 @@ class ProfileSyncContractTests(unittest.TestCase):
         self.assertEqual(len(rows), 10)
 
     def test_actual_full_parser_negative_and_positive_vectors(self):
-        parsers = {"content": ValidatedContent.parse, "json": lambda b: strict_json(b, 262_144), "record": parse_record, "mutation": parse_mutation, "read": parse_read, "page": parse_page}
+        parsers = {"content": ValidatedContent.parse, "json": lambda b: strict_json(b, 262_144), "record": parse_record, "mutation": parse_mutation, "read": parse_read, "error": parse_error, "page": parse_page}
         cases = self.load("parser-cases.json")["cases"]
         for c in cases:
             with self.subTest(case=c["id"]):
                 raw = b" " * c["repeat"] if "repeat" in c else bytes.fromhex(c["hex"]) if "hex" in c else c["raw"].encode()
                 if c["valid"]:
-                    parsers[c["entry"]](raw)
+                    result = parsers[c["entry"]](raw)
+                    if "expected_name" in c:
+                        self.assertEqual(json.loads(result.raw)["profile"]["name"], c["expected_name"])
+                        self.assertEqual(result.raw, raw)
+                        self.assertEqual(result.sha256, c["expected_content_hash"])
+                    if "expected_read" in c:
+                        self.assertEqual({k: v for k, v in result.items() if k not in {"schema", "schema_version"}}, c["expected_read"])
+                    if "expected_result" in c:
+                        self.assertEqual(result["result"], c["expected_result"])
+                        for success in (parse_read, parse_page, parse_record, parse_mutation):
+                            with self.assertRaises(Invalid): success(raw)
                     if "request_hash" in c:
                         self.assertEqual(mutation_digest(raw), c["request_hash"])
                         self.assertNotEqual(mutation_digest(raw + b" "), c["request_hash"])
                 else:
                     with self.assertRaises(Invalid): parsers[c["entry"]](raw)
-        self.assertGreaterEqual(len(cases), 135)
+        self.assertEqual(sum("expected_read" in c for c in cases), 6)
+        self.assertEqual({c["expected_result"] for c in cases if "expected_result" in c}, set(ERROR_RESULTS))
+        self.assertEqual(sum(c["id"].startswith("name-edge-u") for c in cases), 2 * len(NAME_EDGE_WHITESPACE))
+        self.assertEqual(len(cases), 257)
 
     def test_shared_source_scenarios_traverse_real_parser(self):
         rows = self.load("scenarios.json")["scenarios"]

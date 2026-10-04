@@ -50,6 +50,18 @@ class ProfileSyncV1(private val sharedSetup: SharedSetupV2Codec = SharedSetupV2C
                                    private val records: List<Record>, val nextCursor: String?) {
         val items: List<Record> get() = records.toList()
     }
+    // Immutable selectors only; parsing is not authenticated owner/cursor authority.
+    sealed interface ReadRequest {
+        enum class PageMode(val wireValue: String) { CHANGES("changes"), SNAPSHOT("snapshot") }
+        class Page internal constructor(val mode: PageMode, val cursor: String?, val limit: Int) : ReadRequest
+        class Revision internal constructor(val profileId: String, val contentRevision: Long, val contentHash: String) : ReadRequest
+    }
+    enum class ErrorResult(val wireValue: String) {
+        UNAVAILABLE("unavailable"), INVALID("invalid"), REQUIRES_UPGRADE("requires_upgrade"), CONFLICT("conflict"),
+        GONE("gone"), NOT_FOUND("not_found"), RESYNC_REQUIRED("resync_required"), IDEMPOTENCY_MISMATCH("idempotency_mismatch"),
+        INTENT_EXPIRED("intent_expired"), VERIFICATION_PENDING("verification_pending"), QUOTA_EXCEEDED("quota_exceeded")
+    }
+    class FixedError internal constructor(val result: ErrorResult)
     fun parseContent(bytes: ByteArray, expectedHash: String? = null): Content = Content.validated(this, bytes, expectedHash)
     fun parseRecord(bytes: ByteArray): Record = Record.validated(this, bytes)
     fun parseMutation(bytes: ByteArray): Mutation {
@@ -67,17 +79,23 @@ class ProfileSyncV1(private val sharedSetup: SharedSetupV2Codec = SharedSetupV2C
         val content = if (op in listOf("create", "update")) parseContent(text(root["content_json"]).encodeToByteArray(), opaque(root["content_hash"], "", 64)) else null
         return Mutation(op, id, base, profile, if (op == "reorder") integer(root["order_key"], 0) else null, content, mutationHash(snapshot))
     }
-    fun parseRead(bytes: ByteArray): String {
+    fun parseRead(bytes: ByteArray): ReadRequest {
         val root = obj(parseJson(bytes, 8192)); discriminate(root)
-        val mode = text(root["mode"]); need(mode in listOf("changes", "snapshot", "revision"))
+        val mode = text(root["mode"])
         if (mode == "revision") {
             exact(root, "schema schema_version mode profile_id content_revision content_hash")
-            opaque(root["profile_id"], "psp_"); integer(root["content_revision"]); opaque(root["content_hash"], "", 64)
-        } else {
-            exact(root, "schema schema_version mode cursor limit"); need(integer(root["limit"]) <= 8)
-            if (root["cursor"] != JsonNull) opaque(root["cursor"], "psc_", 64)
+            return ReadRequest.Revision(opaque(root["profile_id"], "psp_"), integer(root["content_revision"]), opaque(root["content_hash"], "", 64))
         }
-        return mode
+        val pageMode = ReadRequest.PageMode.entries.firstOrNull { it.wireValue == mode } ?: throw Invalid()
+        exact(root, "schema schema_version mode cursor limit")
+        val limit = integer(root["limit"]); need(limit <= 8)
+        return ReadRequest.Page(pageMode, if (root["cursor"] == JsonNull) null else opaque(root["cursor"], "psc_", 64), limit.toInt())
+    }
+    // Fixed non-success only; no private reflection, cursor progression or retry effects.
+    fun parseError(bytes: ByteArray): FixedError {
+        val root = obj(parseJson(bytes, 8192)); discriminate(root); exact(root, "schema schema_version result")
+        val result = ErrorResult.entries.firstOrNull { it.wireValue == text(root["result"]) } ?: throw Invalid()
+        return FixedError(result)
     }
     fun parsePage(bytes: ByteArray): Page {
         val root = obj(parseJson(bytes)); discriminate(root)
@@ -98,6 +116,9 @@ class ProfileSyncV1(private val sharedSetup: SharedSetupV2Codec = SharedSetupV2C
     }
     private fun validateContent(root: JsonObject): List<String> {
         val profile = obj(root["profile"])
+        val name = text(profile["name"])
+        need(name.isNotEmpty() && name.first().code !in nameEdgeWhitespace && name.last().code !in nameEdgeWhitespace)
+        need(name.none { it.code < 32 || it.code == 127 || it.code in nameLineBreaks })
         val witness = JsonObject(mapOf(
             "schema" to JsonPrimitive("healthmd.shared_setup"), "schema_version" to JsonPrimitive(2),
             "created_by" to JsonObject(mapOf("platform" to root.getValue("origin_platform"), "app_version" to JsonPrimitive("profile-sync-v1-witness"))),
@@ -107,7 +128,6 @@ class ProfileSyncV1(private val sharedSetup: SharedSetupV2Codec = SharedSetupV2C
         ))
         // Actual shipped v2 typed decode and semantic/security validation, not a success oracle.
         need(sharedSetup.decode(witness.toString().encodeToByteArray()) is SharedSetupVersionedDecodeResult.Valid, "v2")
-        need(text(profile["name"]).none { it.code < 32 || it.code == 127 })
         val ext = obj(profile["platform_extensions"])
         if (ext["apple"] != JsonNull) {
             val apple = obj(ext["apple"])["schedule"]!!
@@ -139,6 +159,10 @@ class ProfileSyncV1(private val sharedSetup: SharedSetupV2Codec = SharedSetupV2C
         const val CONTENT_MAX = 262_144
         const val WIRE_MAX = 4_194_304
         const val SAFE_MAX = 9_007_199_254_740_991L
+        // All finite edge-policy points are BMP. No platform trim() or name rewrite.
+        private val nameEdgeWhitespace = setOf(0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x0020, 0x0085, 0x00A0, 0x1680,
+            0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF)
+        private val nameLineBreaks = setOf(0x0085, 0x2028, 0x2029)
         private val json = Json { isLenient = false }
         private fun need(ok: Boolean, category: String = "invalid") { if (!ok) throw Invalid(category) }
         private fun obj(v: JsonElement?): JsonObject = v as? JsonObject ?: throw Invalid()

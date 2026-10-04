@@ -7,8 +7,10 @@ describe("proposed profile-sync v1: real bounded parser + full portable semantic
   it("uses the shared content, lexical, metadata and source-scenario fixtures", async () => {
     const result = await runConformance(codec, fileURLToPath(new URL("../../..", import.meta.url)));
     expect(result.fixtures).toBe(10);
-    expect(result.parserCases).toBe(152);
+    expect(result.parserCases).toBe(257);
     expect(result.scenarios).toBe(30);
+    expect(result.readRequests).toBe(6);
+    expect(result.fixedErrors).toBe(11);
   });
   it("cannot fabricate a validated immutable content/reference from unchecked JSON", () => {
     expect(codec.ValidatedProfileSyncV1Content.isValidated({ contentJson: "{}", hash: "0".repeat(64) })).toBe(false);

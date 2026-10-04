@@ -78,6 +78,22 @@ enum ProfileSyncV1 {
             self.mode = mode; self.snapshotID = id; self.highWatermark = high; self.items = items; self.nextCursor = cursor
         }
     }
+    // Immutable selectors only; parsing does not authenticate owner/cursor authority.
+    enum ReadRequest: Sendable, Equatable {
+        enum PageMode: String, Sendable { case changes, snapshot }
+        case page(mode: PageMode, cursor: String?, limit: Int)
+        case revision(profileID: String, contentRevision: Int64, contentHash: String)
+    }
+    enum ErrorResult: String, Sendable, CaseIterable {
+        case unavailable, invalid, conflict, gone
+        case requiresUpgrade = "requires_upgrade", notFound = "not_found", resyncRequired = "resync_required"
+        case idempotencyMismatch = "idempotency_mismatch", intentExpired = "intent_expired"
+        case verificationPending = "verification_pending", quotaExceeded = "quota_exceeded"
+    }
+    struct FixedError: Sendable, Equatable {
+        let result: ErrorResult
+        fileprivate init(_ result: ErrorResult) { self.result = result }
+    }
     static func parseMutation(_ data: Data) throws -> Mutation {
         let root = try object(parseJSON(data)); try discriminate(root)
         let op = try string(root["operation"]); try need(["create", "update", "reorder", "delete"].contains(op))
@@ -92,17 +108,25 @@ enum ProfileSyncV1 {
         let content = ["create", "update"].contains(op) ? try Content.parse(Data(string(root["content_json"]).utf8), expectedHash: opaque(root["content_hash"], "", length: 64)) : nil
         return Mutation(op, id, base, profile, op == "reorder" ? try integer(root["order_key"], minimum: 0) : nil, content, mutationHash(data))
     }
-    static func parseRead(_ data: Data) throws -> String {
+    static func parseRead(_ data: Data) throws -> ReadRequest {
         let root = try object(parseJSON(data, maximum: 8192)); try discriminate(root)
-        let mode = try string(root["mode"]); try need(["changes", "snapshot", "revision"].contains(mode))
+        let mode = try string(root["mode"])
         if mode == "revision" {
             try exact(root, "schema schema_version mode profile_id content_revision content_hash")
-            _ = try opaque(root["profile_id"], "psp_"); _ = try integer(root["content_revision"]); _ = try opaque(root["content_hash"], "", length: 64)
-        } else {
-            try exact(root, "schema schema_version mode cursor limit"); try need(integer(root["limit"]) <= 8)
-            if !(root["cursor"] is NSNull) { _ = try opaque(root["cursor"], "psc_", length: 64) }
+            return .revision(profileID: try opaque(root["profile_id"], "psp_"), contentRevision: try integer(root["content_revision"]), contentHash: try opaque(root["content_hash"], "", length: 64))
         }
-        return mode // Adapter registration will choose a typed read DTO, not an unchecked JSON bypass.
+        guard let pageMode = ReadRequest.PageMode(rawValue: mode) else { throw ProfileSyncV1Error.invalid }
+        try exact(root, "schema schema_version mode cursor limit")
+        let limit = try integer(root["limit"]); try need(limit <= 8)
+        let cursor = root["cursor"] is NSNull ? nil : try opaque(root["cursor"], "psc_", length: 64)
+        return .page(mode: pageMode, cursor: cursor, limit: Int(limit))
+    }
+    // Fixed non-success only; no private reflection, cursor progression or retry effects.
+    static func parseError(_ data: Data) throws -> FixedError {
+        let root = try object(parseJSON(data, maximum: 8192)); try discriminate(root)
+        try exact(root, "schema schema_version result")
+        guard let result = try ErrorResult(rawValue: string(root["result"])) else { throw ProfileSyncV1Error.invalid }
+        return FixedError(result)
     }
     static func parsePage(_ data: Data) throws -> Page {
         let root = try object(parseJSON(data)); try discriminate(root)
@@ -300,9 +324,17 @@ enum ProfileSyncV1 {
         default: break
         }
     }
+    // Explicit finite v1 policy, before frozen v2's platform-specific trimming check.
+    private static let nameEdgeWhitespace: Set<UInt32> = [0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x0020, 0x0085, 0x00A0, 0x1680,
+        0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200A, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]
+    private static let nameLineBreaks: Set<UInt32> = [0x0085, 0x2028, 0x2029]
     private static func validateContent(_ root: [String: Any]) throws -> [String] {
         // Actual existing v2 grammar/semantics validator, not an injected success oracle.
-        var profile = try object(root["profile"]); profile["bundle_id"] = "profile-001"
+        var profile = try object(root["profile"])
+        let nameScalars = try string(profile["name"]).unicodeScalars.map(\.value)
+        try need(!nameScalars.isEmpty && !nameEdgeWhitespace.contains(nameScalars.first!) && !nameEdgeWhitespace.contains(nameScalars.last!))
+        try need(!nameScalars.contains { $0 < 32 || $0 == 127 || nameLineBreaks.contains($0) })
+        profile["bundle_id"] = "profile-001"
         let witness: [String: Any] = ["schema": "healthmd.shared_setup", "schema_version": 2,
             "created_by": ["platform": try string(root["origin_platform"]), "app_version": "profile-sync-v1-witness"],
             "metric_registry": root["metric_registry"]!, "metric_aliases": root["metric_aliases"]!,
@@ -319,8 +351,6 @@ enum ProfileSyncV1 {
         }
         let extensions = try object(profile["platform_extensions"])
         if !(extensions["android"] is NSNull) { try strictRelative(string(object(object(extensions["android"])["export"])["subfolder"])) }
-        let name = try string(profile["name"])
-        try need(!name.unicodeScalars.contains { $0.value < 32 || $0.value == 127 })
         // Independent v1 adds foreign Apple schedule congruence (v2 native readers only check origin).
         let ext = try object(profile["platform_extensions"])
         if !(ext["apple"] is NSNull) {

@@ -29,7 +29,13 @@ object ProfileSyncV1FixtureConformance {
             }
             val result = runCatching {
                 when (c.getValue("entry").jsonPrimitive.content) {
-                    "content" -> codec.parseContent(bytes)
+                    "content" -> {
+                        val content = codec.parseContent(bytes)
+                        c["expected_name"]?.let {
+                            val name = ProfileSyncV1.parseJson(content.contentJson.encodeToByteArray(), ProfileSyncV1.CONTENT_MAX).jsonObject.getValue("profile").jsonObject.getValue("name").jsonPrimitive.content
+                            need(name == it.jsonPrimitive.content && content.contentJson.encodeToByteArray().contentEquals(bytes) && content.hash == c.getValue("expected_content_hash").jsonPrimitive.content, id)
+                        }
+                    }
                     "json" -> ProfileSyncV1.parseJson(bytes, ProfileSyncV1.CONTENT_MAX)
                     "record" -> codec.parseRecord(bytes)
                     "mutation" -> {
@@ -40,7 +46,18 @@ object ProfileSyncV1FixtureConformance {
                             need(ProfileSyncV1.mutationHash(bytes + byteArrayOf(32)) != expected, "$id exact mutation bytes")
                         }
                     }
-                    "read" -> codec.parseRead(bytes)
+                    "read" -> {
+                        val read = codec.parseRead(bytes)
+                        c["expected_read"]?.let { checkRead(read, it.jsonObject, id) }
+                    }
+                    "error" -> {
+                        val error = codec.parseError(bytes)
+                        c["expected_result"]?.let {
+                            need(error.result.wireValue == it.jsonPrimitive.content, id)
+                            val successes: List<(ByteArray) -> Any> = listOf(codec::parseRead, codec::parsePage, codec::parseMutation, codec::parseRecord)
+                            successes.forEach { parse -> need(runCatching { parse(bytes) }.exceptionOrNull() is ProfileSyncV1.Invalid, "$id not success") }
+                        }
+                    }
                     "page" -> codec.parsePage(bytes)
                     else -> error("Unknown fixture entry")
                 }
@@ -61,7 +78,19 @@ object ProfileSyncV1FixtureConformance {
         val after = Json.parseToJsonElement(File(directory, "foreign-local-edit.json").readText()).jsonObject
         need(before.getValue("profile").jsonObject.getValue("platform_extensions").jsonObject["android"] ==
             after.getValue("profile").jsonObject.getValue("platform_extensions").jsonObject["android"], "foreign exact local edit")
-        return "${vectors.size} content fixtures, ${cases.size} parser cases, ${scenarios.size} test-only source scenarios"
+        val reads = cases.count { "expected_read" in it.jsonObject }; val errors = cases.count { "expected_result" in it.jsonObject }
+        need(reads == 6 && errors == 11, "typed read/fixed error coverage")
+        return "${vectors.size} content fixtures, ${cases.size} parser cases, ${scenarios.size} test-only source scenarios, $reads typed reads, $errors fixed errors"
+    }
+    private fun checkRead(read: ProfileSyncV1.ReadRequest, expected: JsonObject, id: String) {
+        when (read) {
+            is ProfileSyncV1.ReadRequest.Page -> check(expected.getValue("mode").jsonPrimitive.content == read.mode.wireValue &&
+                (if (expected.getValue("cursor") == JsonNull) null else expected.getValue("cursor").jsonPrimitive.content) == read.cursor &&
+                expected.getValue("limit").jsonPrimitive.int == read.limit) { "$id page case/fields" }
+            is ProfileSyncV1.ReadRequest.Revision -> check(expected.getValue("mode").jsonPrimitive.content == "revision" &&
+                expected.getValue("profile_id").jsonPrimitive.content == read.profileId && expected.getValue("content_revision").jsonPrimitive.long == read.contentRevision &&
+                expected.getValue("content_hash").jsonPrimitive.content == read.contentHash) { "$id revision case/fields" }
+        }
     }
     // Test-only specification predicates; never production reconciliation or account authority.
     private fun outcome(s: JsonObject, r: ProfileSyncV1.Record): String {

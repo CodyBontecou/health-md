@@ -161,9 +161,15 @@ function scan(v: SyncJson, endpoint = false, path: readonly string[] = []): void
     }
   }
 }
+// Explicit finite v1 policy; do not call platform trim() or rewrite name bytes.
+const NAME_EDGE_WHITESPACE = new Set([0x0009, 0x000a, 0x000b, 0x000c, 0x000d, 0x0020, 0x0085, 0x00a0, 0x1680,
+  0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff]);
+const NAME_LINE_BREAKS = new Set([0x0085, 0x2028, 0x2029]);
 function semantics(root: ObjectJson): readonly string[] {
   const p = object(root.profile), exp = object(p.export), individual = object(p.individual_entries), daily = object(p.daily_notes);
-  const name = text(p.name); check(name === name.trim() && !/[\u0000-\u001f\u007f]/u.test(name));
+  const name = text(p.name), nameScalars = Array.from(name, c => c.codePointAt(0)!);
+  check(nameScalars.length > 0 && !NAME_EDGE_WHITESPACE.has(nameScalars[0]!) && !NAME_EDGE_WHITESPACE.has(nameScalars.at(-1)!));
+  check(!nameScalars.some(cp => cp < 32 || cp === 127 || NAME_LINE_BREAKS.has(cp)));
   sortedUnique(exp.formats); const ids = sortedUnique(object(p.metrics).enabled_ids!);
   for (const [s, filename] of [[exp.folder_template, false], [exp.filename_template, true], [individual.entries_folder, false], [individual.filename_template, true], [daily.folder, false], [daily.filename_template, true]] as const) relative(text(s), filename);
   const rows = object(individual.metrics);
@@ -267,14 +273,28 @@ export async function parseProfileSyncV1Mutation(bytes: Uint8Array): Promise<Pro
   const content = operation === "create" || operation === "update" ? await ValidatedProfileSyncV1Content.parse(new TextEncoder().encode(text(o.content_json)), opaque(o.content_hash, "", 64)) : null;
   return Object.freeze({ operation, mutationId, baseRevision, profileId, orderKey: operation === "reorder" ? integer(o.order_key, 0) : null, content, requestHash: await profileSyncV1MutationHash(snapshot) });
 }
-export function parseProfileSyncV1Read(bytes: Uint8Array): Readonly<ObjectJson> {
-  const o = object(parseProfileSyncJson(bytes, 8192)); discriminate(o); check(["changes", "snapshot", "revision"].includes(text(o.mode)));
-  if (o.mode === "revision") {
-    exact(o, "schema schema_version mode profile_id content_revision content_hash"); opaque(o.profile_id, "psp_"); integer(o.content_revision); opaque(o.content_hash, "", 64);
-  } else {
-    exact(o, "schema schema_version mode cursor limit"); check(integer(o.limit) <= 8); if (o.cursor !== null) opaque(o.cursor, "psc_", 64);
+/** Validated selectors only; cursor/revision shape is not authenticated owner authority. */
+export type ProfileSyncV1Read =
+  | Readonly<{ mode: "changes" | "snapshot"; cursor: string | null; limit: number }>
+  | Readonly<{ mode: "revision"; profileId: string; contentRevision: number; contentHash: string }>;
+export function parseProfileSyncV1Read(bytes: Uint8Array): ProfileSyncV1Read {
+  const o = object(parseProfileSyncJson(bytes, 8192)); discriminate(o); const mode = text(o.mode);
+  check(mode === "changes" || mode === "snapshot" || mode === "revision");
+  if (mode === "revision") {
+    exact(o, "schema schema_version mode profile_id content_revision content_hash");
+    return Object.freeze({ mode, profileId: opaque(o.profile_id, "psp_"), contentRevision: integer(o.content_revision), contentHash: opaque(o.content_hash, "", 64) });
   }
-  return Object.freeze(o);
+  exact(o, "schema schema_version mode cursor limit"); const limit = integer(o.limit); check(limit <= 8);
+  return Object.freeze({ mode, cursor: o.cursor === null ? null : opaque(o.cursor, "psc_", 64), limit });
+}
+const FIXED_ERROR_RESULTS = ["unavailable", "invalid", "requires_upgrade", "conflict", "gone", "not_found", "resync_required", "idempotency_mismatch", "intent_expired", "verification_pending", "quota_exceeded"] as const;
+export type ProfileSyncV1ErrorResult = typeof FIXED_ERROR_RESULTS[number];
+export interface ProfileSyncV1FixedError { readonly result: ProfileSyncV1ErrorResult }
+/** Fixed non-success only. No private echo, cursor advancement, retry or other effects. */
+export function parseProfileSyncV1Error(bytes: Uint8Array): Readonly<ProfileSyncV1FixedError> {
+  const o = object(parseProfileSyncJson(bytes, 8192)); discriminate(o); exact(o, "schema schema_version result");
+  const result = FIXED_ERROR_RESULTS.find(value => value === o.result); check(result !== undefined);
+  return Object.freeze({ result });
 }
 export async function parseProfileSyncV1Page(bytes: Uint8Array): Promise<Readonly<{ mode: string; snapshotId: string; highWatermark: number; items: readonly ValidatedProfileSyncV1Record[]; nextCursor: string | null }>> {
   const o = object(parseProfileSyncJson(bytes)); discriminate(o); exact(o, "schema schema_version mode snapshot_id high_watermark items next_cursor complete");

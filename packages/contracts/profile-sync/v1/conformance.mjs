@@ -28,7 +28,7 @@ export async function runConformance(codec, root) {
   const dir = resolve(root, "packages/contracts/profile-sync/v1/fixtures");
   const load = name => JSON.parse(readFileSync(resolve(dir, name), "utf8"));
   const encode = v => new TextEncoder().encode(JSON.stringify(v));
-  let fixtures = 0, parserCases = 0, scenarios = 0;
+  let fixtures = 0, parserCases = 0, scenarios = 0, readRequests = 0, fixedErrors = 0;
   const vectors = load("content-vectors.json");
   for (const [id, row] of Object.entries(vectors.positive)) {
     const bytes = new Uint8Array(readFileSync(resolve(dir, row.file)));
@@ -48,12 +48,32 @@ export async function runConformance(codec, root) {
       record: b => codec.ValidatedProfileSyncV1Record.parse(b),
       mutation: codec.parseProfileSyncV1Mutation,
       read: codec.parseProfileSyncV1Read,
+      error: codec.parseProfileSyncV1Error,
       page: codec.parseProfileSyncV1Page,
     }[c.entry];
     assert.ok(parse, c.id);
     let accepted = true;
     try {
       const result = await parse(bytes);
+      if (c.expected_name) {
+        assert.equal(JSON.parse(result.contentJson).profile.name, c.expected_name, c.id);
+        assert.equal(result.contentJson, c.raw, c.id);
+        assert.equal(result.hash, c.expected_content_hash, c.id);
+      }
+      if (c.expected_read) {
+        const e = c.expected_read;
+        assert.deepEqual(result, e.mode === "revision" ? { mode: "revision", profileId: e.profile_id, contentRevision: e.content_revision, contentHash: e.content_hash } : { mode: e.mode, cursor: e.cursor, limit: e.limit }, c.id);
+        assert.ok(Object.isFrozen(result), c.id); readRequests++;
+      }
+      if (c.expected_result) {
+        assert.deepEqual(result, { result: c.expected_result }, c.id);
+        assert.ok(Object.isFrozen(result), c.id);
+        // A known error cannot become a successful read/page/reference/mutation.
+        for (const success of [codec.parseProfileSyncV1Read, codec.parseProfileSyncV1Page, codec.parseProfileSyncV1Mutation, b => codec.ValidatedProfileSyncV1Record.parse(b)]) {
+          await assert.rejects(async () => success(bytes), codec.ProfileSyncV1Error, c.id);
+        }
+        fixedErrors++;
+      }
       if (c.request_hash) {
         assert.equal(result.requestHash, c.request_hash, c.id);
         assert.equal(await codec.profileSyncV1MutationHash(bytes), c.request_hash, c.id);
@@ -86,5 +106,6 @@ export async function runConformance(codec, root) {
   assert.equal(codec.ValidatedProfileSyncV1Content.isValidated(Object.create(codec.ValidatedProfileSyncV1Content.prototype)), false);
   assert.equal(codec.ValidatedProfileSyncV1Record.isValidated(Object.create(codec.ValidatedProfileSyncV1Record.prototype)), false);
   assert.throws(() => Reflect.construct(codec.ValidatedProfileSyncV1Content, [Symbol(), "{}", "0".repeat(64), []]), codec.ProfileSyncV1Error);
-  return { fixtures, parserCases, scenarios, scope: "real codecs + test-only source scenario predicates; no auth/storage/native apply" };
+  assert.equal(readRequests, 6); assert.equal(fixedErrors, 11);
+  return { fixtures, parserCases, scenarios, readRequests, fixedErrors, scope: "real codecs + test-only source scenario predicates; no auth/storage/native apply" };
 }

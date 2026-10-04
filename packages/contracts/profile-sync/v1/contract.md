@@ -32,7 +32,7 @@ V1 intentionally tightens these cases without editing v2:
 - Every numeric token is an integer: no Boolean-as-number, decimal, exponent, `-0`, non-finite value, string/null revision or value beyond `2^53-1`.
 - Missing required nullable fields fail; null is not absence. Empty relative path components, including a trailing slash, fail.
 - Common and Apple schedule presence/cadence must agree whenever Apple is present, including foreign preservation. A native client unable to edit both meanings must preserve them unchanged and report requires-action.
-- Short frontmatter labels/identifiers exclude U+0000–001F and U+007F, as do profile names.
+- Short frontmatter labels/identifiers exclude U+0000–001F and U+007F. Profile names use an explicit finite v1 scalar policy before native v2 reuse, never a platform `strip`/`trim`: reject edge U+0009–000D, U+0020, U+0085 (NEL), U+00A0, U+1680, U+2000–200A, U+2028–2029, U+202F, U+205F, U+3000 and U+FEFF (BOM). Reject U+0000–001F, U+007F, U+0085, U+2028 and U+2029 anywhere in a name (the last three are Unicode line breaks rejected by the frozen Apple short-string validator). No Unicode-property/locale/version-dependent whitespace lookup is authority here. Accepted names retain exact original scalar spelling and bytes, including composed/decomposed text and non-whitespace format scalars U+180E/U+200B/U+2060; never normalize or trim. This finite source subset repairs the evidenced Python NEL/JS BOM differential without rewriting v2 or claiming product naming approval.
 - Endpoint hints use literal ASCII RFC3986 path characters only, with no percent, query, fragment, userinfo, backslash, raw space, non-ASCII path or network-path prefix. This is a reversible source safety choice: frozen Apple v2's `percentEncodedPath` setter can trap on otherwise schema-shaped raw characters. Such existing intent remains local/requires-action; do not normalize/drop it or claim product approval for the narrower v1 subset.
 - Native identity/path/credential-looking material in user-authored strings is rejected using the shared negative corpus. This is not a guarantee that arbitrary prose contains no private data.
 - Object keys are unique after decoded Unicode **NFC comparison**, including escaped key aliases. Reject ambiguous canonically equivalent keys; never rewrite them. This prevents Swift dictionaries silently merging distinct scalar sequences. Other strings, names and content bytes are not normalized or case-folded.
@@ -42,7 +42,7 @@ All v1 objects are closed, except the explicitly typed `custom_values` and indiv
 ## Bounds and hashing (proposed source choices, not retention promises)
 
 - Content input: at most **262,144 encoded bytes**.
-- Transport input/output: at most **4,194,304 encoded bytes**; read request at most **8,192 bytes**.
+- Transport input/output: at most **4,194,304 encoded bytes**; read request and fixed-error response at most **8,192 bytes**.
 - Root depth 0, maximum depth 20, maximum 512 members/items per container, 16,384 JSON value nodes, 65,536 scalars per key/content string. Transport strings may hold the bounded nested JSON text; nested content gets its own stricter checks.
 - All integers fit `0...9007199254740991` where nonnegative; revisions/sequences start at 1. Content field ranges, arrays and path/template caps otherwise reuse v2. Raw UTF-8, duplicate keys, surrogate pairs and size are checked before lossy versioned decoding. A UTF-8 BOM and trailing non-whitespace data fail.
 - Pages contain at most 8 items, and must also fit the aggregate byte bound. Server shrinks a page to fit; it never splits/reformats a content string.
@@ -98,7 +98,7 @@ Scope idempotency to trusted `(issuer, environment, account)` plus mutation ID, 
 
 Success is one validated record from the mutation's linearization point, correlated to the captured outbound request/context. It is not a proof of latest head after concurrent changes. AS06 must atomically commit object, immutable content, event and idempotency receipt and verify exact durable readback before emitting success; codec parsing alone is not this proof. Exhausted safe counters/quota fail without partial effects. AS06 chooses reviewed quotas/retention and persistent transaction implementation separately.
 
-Fixed errors contain only `{schema, schema_version, result}`. Reserved results: `unavailable`, `invalid`, `requires_upgrade`, `conflict`, `gone`, `not_found`, `resync_required`, `idempotency_mismatch`, `intent_expired`, `verification_pending`, `quota_exceeded`. No reflected private body/ID/account/profile text. Routes, authentication and error-response adapters are AS02/AS06, not installed here. Current codec success parsers deliberately do not turn an error body into validated content or advance state.
+Fixed errors contain only `{schema, schema_version, result}`. Reserved results: `unavailable`, `invalid`, `requires_upgrade`, `conflict`, `gone`, `not_found`, `resync_required`, `idempotency_mismatch`, `intent_expired`, `verification_pending`, `quota_exceeded`. The bounded closed error parser returns only an immutable known-result enum/DTO. Unknown/future results, success-looking values, extra/private body/ID/account/profile/message/cursor fields, duplicates, bad integers/UTF-8 and byte overflow fail. This DTO is always NON-success: no accepted reference, cursor progression, implicit retry, state transition or private reflection. Tests feed every known error through read/page/mutation/record success parsers and require rejection. HTTP/authentication/error-response adapters remain AS02/AS06, not installed here.
 
 ## Bounded reads, consistent resync and no resurrection
 
@@ -106,6 +106,8 @@ Read requests are closed:
 
 - `{mode:"changes"|"snapshot", cursor:null|opaque, limit:1...8}` plus schema/version;
 - `{mode:"revision", profile_id, content_revision, content_hash}` plus schema/version.
+
+`parseRead` returns an immutable typed page selector (changes/snapshot mode, exact nullable cursor, bounded limit) or revision selector (exact profile ID, content revision, content hash), not raw JSON or mode-only text. TS narrows by `mode`; Swift uses `ReadRequest.page`/`.revision`; Kotlin uses sealed `ReadRequest.Page`/`.Revision` with page-mode enum. Every positive read vector asserts case and all fields, including non-null cursors and the safe revision boundary. These selectors are not authenticated cursor/owner proof.
 
 Cursors are `psc_` + 64 lowercase hex opaque references, not caller account/sequence selectors. Server lookup must authenticate and bind owner/mode/snapshot/high-watermark/position/expiry before reading content. Format validation is not cursor authentication. Source-only test bounds: maximum 100 live profiles, 15-minute consistent-view cursor lease and at most 256 retained change events before a cursor requires reset. These are reversible deterministic test choices, **not selected production quotas/retention/deletion policy**; missing real policy denies persistence.
 
@@ -115,32 +117,35 @@ Freeze a consistent live view at the snapshot high-watermark, including concurre
 
 Revision reads return exact retained immutable content and its original validated reference/record, never "latest" substituted for a requested hash. Missing/expired revisions are unavailable, not reconstructed. Historical reads are not head events and cannot regress a local head or make a deleted object runnable. Config authority/policy/ownership still applies.
 
-## Trusted account/environment binding — mandatory deferred AS02 seam
+## Trusted account/environment binding — reviewed AS02 source; native binding still gated
 
 **This lane does not implement account identity.** The profile-sync wire grammar intentionally has no caller account/environment field. A session/family ID identifies a revocable grant and can change across logins; it is not stable account identity. Names/email/native/cloud IDs/cursors/hashes are not account credentials.
 
-Expected server boundary (type names descriptive, not a claim that AS02 already exports them):
+Read-only reviewed coordinator integration `c29022c8216383444a2855659a7cd91fd66695d6` supplies the disabled synthetic AS02 `ConfigPrincipal` and `NativeSessionResponse` source choices:
 
 ```text
-AS02 authenticated config authority -> VerifiedConfigurationPrincipal
-  reviewed registered issuer + environment + config audience
-  server-owned stable account key resolved from authoritative account/session rows
-  active account/family and current scopes/opt-in
+AS02 authenticated config authority -> ConfigPrincipal
+  registered issuer + environment + config audience
+  stable server-owned accountId from authoritative account/grant rows
+  clientId + installationId + sessionId + current scopes/sessionGeneration
+AS06 independently checks sync opt-in, selected intent and reviewed privacy policy
 AS06 read/mutate(store, principal, parsed body) -> owner-scoped result
 ```
 
-Issuer/environment come from reviewed service registration, never `PUBLIC_ORIGIN`, caller JSON, a supplied token claim or discovered provider. Account key comes from the authenticated server record, never an echoed selector. Every ID/cursor/event/content/receipt/store lookup and mutation is scoped to that principal and rechecks ownership/status at commit. Wrong-owner IDs cannot reveal another head. Browser and native credentials retain AS01's distinct scope/Origin/CSRF rules; a codec caller supplying strings is not an authorized principal.
+Issuer/environment come from reviewed service registration, never `PUBLIC_ORIGIN`, caller JSON, a supplied token claim or discovered provider. Account key comes from the authenticated server record, never an echoed selector. Every ID/cursor/event/content/receipt/store lookup and mutation is scoped to that principal and rechecks ownership/status at commit. AS02's issued-principal identity and authoritative commit recheck prove active account/grant/scopes, **not sync opt-in, privacy policy or selected-profile consent**; future adapters must independently recheck those. Wrong-owner IDs cannot reveal another head. Browser and native credentials retain AS01's distinct scope/Origin/CSRF rules; a codec caller supplying strings is not an authorized principal.
 
-Native AS07–AS09 additionally require a **verified stable account binding** obtained from that trusted account authority during the reviewed native auth/bootstrap flow. The current frozen AS01 proposed token success shape does **not** specify this stable native account-subject delivery. Therefore this is a mandatory **deferred AS02 adapter/interface gate**, not something this lane silently derives. AS02/coordinator must specify and test an authenticated, audience/issuer/environment/current-attempt-bound non-secret stable subject or opaque account partition handle and securely bind it to the native session. It remains stable across refresh/new families for the same account, changes on account replacement, and is neither an email nor a session/family identifier. No fallback if absent/mismatched. A native caller-entered account label or bare profile response cannot supply it.
+The reviewed token source response now delivers the server-owned stable `(issuer, environment, account_id)` plus `audience`, `client_id`, `installation_id`, session ID and `session_generation`. Namespace remains stable across refresh/new families for the same account; account replacement cannot inherit mappings. `session_generation` is a **nonnegative safe server integer**: actual authority initializes family generation **0**, increments on refresh, and `NativeAttempt` accepts `>=0`. The reviewed prose/brief saying positive was a coordinator wording error, not actual implementation semantics; this lane does not change auth/AS01 files. This server grant generation is distinct from the local account-switch generation and neither is standalone authority.
 
-Only after that seam exists:
+Source delivery is no longer an unspecified AS02 interface gate. However **AS03/AS04's bounded duplicate-safe native wire parser, exact registered issuer/environment/audience/client/installation/attempt/transport correlation, secure device-only storage and lifecycle binding remain mandatory unqualified gates**. The typed in-memory `NativeAttempt` is not that native proof. No sid/family/name/echoed-account fallback if binding is absent/mismatched; a bare profile response cannot supply it.
 
-1. The native auth adapter captures an immutable verified `(issuer, environment, audience, stable account subject)` with a local monotonically changing **account generation**, separately from credentials. Store normal credentials/binding in the reviewed device-only secure account/environment namespace. The generation is a local cancellation/ownership fence, not a credential.
+Only after the native binding gate is qualified:
+
+1. The native auth adapter captures immutable verified namespace `(issuer, environment, account_id)` plus credential audience/client/installation/session/server generation and a separately monotonically changing local **account generation**. Store normal credentials/binding in the reviewed device-only secure namespace. The local generation is a cancellation/ownership fence, not a credential.
 2. Persist mapping/outbox/cursor/candidate provenance under that owner tuple; map cloud ID to separately generated native ID. Capture owner/generation/expected outbound operation and immutable request bytes before sending with the matching configuration credential to the trusted service.
 3. Bind results to the authenticated transport/request/session owner. On return recheck current binding/generation, expected request fingerprint, monotonic revisions/snapshot context, opt-in and local protection at the authoritative mutation commit. A parsed record alone is never enough to enqueue/apply/map under an account.
 4. Switch/sign-out advances generation, stops sync, quarantines old owner's outbox/cache/mappings and rejects late responses. It does not copy credentials/grants/purchases, migrate pending writes, infer ownership from same-name profiles, or silently remove existing local profiles/independent schedules.
 
-The `fence` fixtures use explicit synthetic owner/generation sentinels in a **test-only envelope**, not wire account authority or implemented secure queue/mapping reconciliation. AS02's trusted-binding proof and AS07 native ownership/outbox/storage implementation remain unqualified.
+The `fence` fixtures use explicit synthetic owner/generation sentinels in a **test-only envelope**, not wire account authority or implemented secure queue/mapping reconciliation. Real native trusted-binding proof (AS03/AS04) and AS07 ownership/outbox/storage implementation remain unqualified.
 
 ## Selected publish/adopt/keep-both and conflicts
 
@@ -161,14 +166,14 @@ Local protection is rechecked at commit after asynchronous work; initial UI perm
 
 ## Source APIs, fixtures and verification boundary
 
-**Not yet safe to freeze for consumers.** Final post-edit TS/Swift/Kotlin conformance and component typechecks/build registration remain unqualified at this handoff's resource frontier. In particular Swift's replacement string lexer requires compilation/runtime qualification, and native `parseRead` currently validates but returns only the mode, not a consumer-ready typed cursor/revision request. Error adapters, authoritative owner binding and real multi-page/outbox/transaction behavior are not supplied. Review and qualify these seams before AS06/AS07 integration; do not infer qualification from earlier versions' runs.
+**Proposed typed codec seams only; coordinator review is required before disabled synthetic consumer source use.** Final-source conformance receipts, any unresolved parser/toolchain defects and component qualification are recorded in the AS05 report/TODO, not inferred from older runs. Read/error DTOs supply no authenticated owner binding, HTTP adapter, opt-in/privacy/selection proof, multi-page/outbox/reconciliation/store transaction or native apply. Native app/core/physical integration and consumer registration/freeze remain coordinator gates.
 
-- TS: `ValidatedProfileSyncV1Content.parse`, `ValidatedProfileSyncV1Record.parse`, `parseProfileSyncV1Mutation`, `parseProfileSyncV1Read`, `parseProfileSyncV1Page`, exact `profileSyncV1Hash`/`profileSyncV1MutationHash`; immutable content/reference and runtime brands. No routes/auth/storage.
-- Swift: `ProfileSyncV1.Content.parse`, `.Record.parse`, `parseMutation`, `parseRead`, `parsePage`, `contentHash`/`mutationHash`. Real v2 codec plus closed field/security/registry checks; no core build required for the host runner.
-- Kotlin: `ProfileSyncV1.parseContent`, `parseRecord`, `parseMutation`, `parseRead`, `parsePage`, `contentHash`/`mutationHash`. Real v2 codec and serialization DTOs; host runner injects **byte-pinned registry rows**, never a success validator. Actual core/Android registry adapter remains unverified by that runner.
+- TS: `ValidatedProfileSyncV1Content.parse`, `ValidatedProfileSyncV1Record.parse`, `parseProfileSyncV1Mutation`, `parseProfileSyncV1Read` -> discriminated `ProfileSyncV1Read`, `parseProfileSyncV1Error` -> `ProfileSyncV1FixedError`, `parseProfileSyncV1Page`, exact `profileSyncV1Hash`/`profileSyncV1MutationHash`; immutable content/reference and runtime brands. No routes/auth/storage.
+- Swift: `ProfileSyncV1.Content.parse`, `.Record.parse`, `parseMutation`, `parseRead` -> `ReadRequest`, `parseError` -> `FixedError`, `parsePage`, `contentHash`/`mutationHash`. Real v2 codec plus closed field/security/registry checks; no core build required for the host runner.
+- Kotlin: `ProfileSyncV1.parseContent`, `parseRecord`, `parseMutation`, `parseRead` -> sealed `ReadRequest`, `parseError` -> `FixedError`, `parsePage`, `contentHash`/`mutationHash`. Real v2 codec and serialization DTOs; host runner injects **byte-pinned registry rows**, never a success validator. Actual core/Android registry adapter remains unverified by that runner.
 - Python: `validator.py`, `test_contract.py`, deterministic schema/vector builders and full-content/reference validation.
 
-`fixtures/content-vectors.json` covers Apple policies, Android compatibility/raw, current/changed registry, Unicode and foreign unchanged/local-edit overlays. `parser-cases.json` covers malformed/duplicate/escaped/NFC-equivalent keys, UTF-8/BOM/surrogates, byte/depth/text/map bounds, prohibited native/health/secret/runtime fields and strings, URI/path safety, strict revisions/versions, registry/alias/schedule contradictions, hash references, mutations, reads and pages. `scenarios.json` covers publish/lost ack/replay, conflicts, reorder, resync/tombstones, account/env/generation fences, same names, adopt/keep-both, protection, preservation and candidate-vs-accepted snapshots.
+`fixtures/content-vectors.json` covers Apple policies, Android compatibility/raw, current/changed registry, Unicode and foreign unchanged/local-edit overlays. `parser-cases.json` covers malformed/duplicate/escaped/NFC-equivalent keys, UTF-8/BOM/surrogates, byte/depth/text/map bounds, prohibited native/health/secret/runtime fields and strings, URI/path safety, strict revisions/versions, registry/alias/schedule contradictions, hash references, mutations, typed page/revision reads, all known fixed errors and malformed/private/success-shaped errors, pages and the explicit edge-Unicode name subset. `scenarios.json` covers publish/lost ack/replay, conflicts, reorder, resync/tombstones, account/env/generation fences, same names, adopt/keep-both, protection, preservation and candidate-vs-accepted snapshots.
 
 Scenario predicates in the runners are explicitly **test-only source oracles**, not production server CAS/idempotency/storage, AS07 reconciliation or native transaction/IO/physical evidence. Parsing exercises actual codec code before those predicates; passing them does not supply missing runtime authority/durability/race proof.
 
@@ -188,6 +193,6 @@ bash packages/contracts/profile-sync/v1/run-swift.sh
 bash packages/contracts/profile-sync/v1/run-kotlin.sh
 ```
 
-Native runners use owned `.build` or `PROFILE_SYNC_BUILD_DIR` scratch. Kotlin reads existing cached compiler/serialization/JUnit jars only; no Gradle, installation or cache copy. Node's runtime transformation/conformance is not full Cloud TypeScript/Vitest/Worker qualification. Full Xcode/Gradle/core builds require coordinator admission. Exact run receipts, failures, resource-blocked post-edit checks and outstanding gates are in the AS05 TODO/report, not implied by runnable scripts.
+Native runners use owned `.build` or `PROFILE_SYNC_BUILD_DIR` scratch. Kotlin reads existing explicitly versioned cached compiler/Trove4j/serialization/JUnit jars only; no Gradle, installation or cache copy. Node's runtime transformation/conformance is not full Cloud TypeScript/Vitest/Worker qualification. Full Xcode/Gradle/core builds require coordinator admission. Exact run receipts, failures, resource-blocked post-edit checks and outstanding gates are in the AS05 TODO/report, not implied by runnable scripts.
 
 Coordinator registers manifest/capability/CI and native project/test hooks centrally after source review. No existing manifest, schema fixture, ledger, lockfile, build/project registration, exporter/daily/API/direct/core/CLI/website/Obsidian byte changes are made here. Affected future consumers are Cloud account config, Apple/Android sync/apply adapters and dashboard; CLI/local MCP/direct/website/provider/store paths receive no new authority. Real privacy/key/retention/deletion/region policy, stable native account binding, durable service/reconciliation, local execution-review transaction, physical/accessibility and product/rollout gates remain pending.
