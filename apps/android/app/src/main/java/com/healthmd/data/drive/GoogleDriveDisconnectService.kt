@@ -25,12 +25,12 @@ class GoogleDriveDisconnectService @Inject constructor(
     private val schedules: ScheduledProfileEntryStore,
 ) {
     suspend fun disconnect(destinationId: String, revoke: suspend (String) -> Unit): Boolean {
-        if (!admitted()) return false
+        if (!admitted() || !destinations.isMutationSafe()) return false
         val destination = destinations.find(destinationId)
         if (!admitted()) return false
         val accountName = destination?.let { destinations.accountName(it) }
         // Account lookup may suspend. Never start destructive SDK revocation using old admission.
-        if (!admitted()) return false
+        if (!admitted() || !destinations.isMutationSafe()) return false
         if (accountName != null) {
             try {
                 revoke(accountName)
@@ -47,6 +47,7 @@ class GoogleDriveDisconnectService @Inject constructor(
             if (prefs[ConfigurationProtectionPersistence.enabledKey] == true) return@edit
             // Prepare/validate all preference changes before touching encrypted authority.
             // These helpers operate on this snapshot, never call DataStore.edit recursively.
+            destinations.validateForMutation(prefs)
             val affected = profiles.detachGoogleDriveDestination(prefs, destinationId)
             schedules.disableForDisconnect(prefs, affected)
             SettingsRepositoryImpl.disableGoogleDriveSchedule(prefs)

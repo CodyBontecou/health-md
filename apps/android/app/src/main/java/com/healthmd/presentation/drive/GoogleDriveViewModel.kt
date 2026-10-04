@@ -62,6 +62,10 @@ class GoogleDriveViewModel @Inject constructor(
         mutableState.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             if (configurationProtected()) return@launch
+            if (!destinationStore.isMutationSafe()) {
+                mutableState.update { it.copy(busy = false, error = GoogleDriveErrorId.REMOTE_CONFLICT) }
+                return@launch
+            }
             expectedDestinationId = mutableState.value.destination?.id
             val action = authorization.beginPicker(expectedDestinationId)
             if (configurationProtected()) return@launch
@@ -132,9 +136,11 @@ class GoogleDriveViewModel @Inject constructor(
     private fun refresh() {
         viewModelScope.launch {
             val id = selectionStore.get()
+            val readable = destinationStore.isMutationSafe()
             mutableState.update {
                 it.copy(
-                    readiness = authorization.readiness(),
+                    readiness = if (readable) authorization.readiness() else GoogleDriveReadiness.Unavailable(GoogleDriveErrorId.REMOTE_CONFLICT),
+                    error = GoogleDriveErrorId.REMOTE_CONFLICT.takeUnless { readable },
                     destination = id?.let { selected -> destinationStore.find(selected) },
                 )
             }

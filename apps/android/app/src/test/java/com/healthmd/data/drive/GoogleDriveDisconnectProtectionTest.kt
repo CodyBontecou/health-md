@@ -176,6 +176,24 @@ class GoogleDriveDisconnectProtectionTest {
         assertThat(managed.lookup(destination.id, pathHash)).isEqualTo(GoogleDriveManagedObjectLookup.Missing)
     }
 
+    @Test fun `unreadable destination envelope blocks disconnect without unrelated configuration writes`() = runTest {
+        seed()
+        val key = stringPreferencesKey("export_destinations_v1")
+        val valid = checkNotNull(dataStore.data.first()[key])
+        val unreadable = listOf("{torn", "{}", """{"version":1,"records":false}""", valid.replace("\"version\":1", "\"version\":99"))
+        unreadable.forEach { raw ->
+            dataStore.edit { it[key] = raw }
+            val before = snapshot()
+            var revocations = 0
+            val result = runCatching { service.disconnect(destination.id) { revocations++ } }
+            assertThat(result.getOrNull()).isNotEqualTo(true)
+            assertThat(snapshot()).isEqualTo(before)
+            assertThat(accounts.values).containsExactly("account", "synthetic-account")
+            assertThat(accounts.removals).isEqualTo(0)
+            assertThat(revocations).isEqualTo(0)
+        }
+    }
+
     @Test fun `cancelled delayed revocation never removes local authority`() = runTest {
         seed()
         val entered = CompletableDeferred<Unit>()

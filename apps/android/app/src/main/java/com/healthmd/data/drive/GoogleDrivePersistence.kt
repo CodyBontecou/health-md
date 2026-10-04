@@ -71,11 +71,7 @@ class EncryptedGoogleDriveAccountAuthorityStore @Inject constructor(
     }
 }
 
-@Serializable
-private data class DriveDestinationEnvelope(
-    val version: Int = 1,
-    val records: List<JsonElement> = emptyList(),
-)
+enum class GoogleDriveDestinationStoreState { ABSENT, VALID, CORRUPT, UNSUPPORTED }
 
 /** Per-record tolerant persistence: unknown kinds/versions survive every known-record mutation. */
 @Singleton
@@ -90,17 +86,19 @@ class GoogleDriveDestinationStore @Inject constructor(
 
     suspend fun find(id: String): GoogleDriveDestination? = all().firstOrNull { it.id == id }
 
+    suspend fun state(): GoogleDriveDestinationStoreState = load(dataStore.data.first()[key]).state
+
+    suspend fun isMutationSafe(): Boolean = state() in setOf(
+        GoogleDriveDestinationStoreState.ABSENT, GoogleDriveDestinationStoreState.VALID,
+    )
+
     suspend fun save(destination: GoogleDriveDestination, accountName: String) {
-        accountStore.save(destination.accountReferenceId, accountName)
         dataStore.edit { prefs ->
-            val records = decodeEnvelope(prefs[key]).toMutableList()
-            val index = records.indexOfFirst { recordId(it) == destination.id }
-            val encoded = json.encodeToJsonElement(GoogleDriveDestination.serializer(), destination)
-            if (index >= 0) records[index] = encoded else records += encoded
-            prefs[key] = json.encodeToString(
-                DriveDestinationEnvelope.serializer(),
-                DriveDestinationEnvelope(records = records),
-            )
+            val loaded = mutationRecords(prefs)
+            val envelope = encodedUpsert(loaded, destination)
+            // Validate the serialized preference snapshot before changing encrypted authority.
+            accountStore.save(destination.accountReferenceId, accountName)
+            prefs[key] = envelope
         }
     }
 
@@ -109,13 +107,7 @@ class GoogleDriveDestinationStore @Inject constructor(
         var saved = false
         dataStore.edit { prefs ->
             if (prefs[ConfigurationProtectionPersistence.enabledKey] == true) return@edit
-            val records = decodeEnvelope(prefs[key]).toMutableList()
-            val index = records.indexOfFirst { recordId(it) == destination.id }
-            val encoded = json.encodeToJsonElement(GoogleDriveDestination.serializer(), destination)
-            if (index >= 0) records[index] = encoded else records += encoded
-            val envelope = json.encodeToString(
-                DriveDestinationEnvelope.serializer(), DriveDestinationEnvelope(records = records),
-            )
+            val envelope = encodedUpsert(mutationRecords(prefs), destination)
             // This edit holds the same serialization boundary as the protection setting.
             accountStore.save(destination.accountReferenceId, accountName)
             prefs[key] = envelope
@@ -136,34 +128,74 @@ class GoogleDriveDestinationStore @Inject constructor(
 
     /** Holds the caller's admitted edit while removing encrypted authority (no nested edit). */
     internal suspend fun removeForDisconnect(prefs: MutablePreferences, id: String) {
-        val records = decodeEnvelope(prefs[key])
-        val destination = records.mapNotNull(::decodeKnown).firstOrNull { it.id == id }
-        val kept = records.filterNot { recordId(it) == id }
-        val envelope = json.encodeToString(
-            DriveDestinationEnvelope.serializer(), DriveDestinationEnvelope(records = kept),
-        )
+        val loaded = mutationRecords(prefs)
+        val destination = loaded.records.mapNotNull(::decodeKnown).firstOrNull { it.id == id }
+        // Unknown records, even ones with this ID, are not ours to erase.
+        val kept = loaded.records.filterNot { decodeKnown(it)?.id == id }
+        val envelope = encodeEnvelope(loaded, kept)
         destination?.let { accountStore.remove(it.accountReferenceId) }
-        if (kept.size != records.size) prefs[key] = envelope
+        if (kept.size != loaded.records.size) prefs[key] = envelope
     }
 
     suspend fun accountName(destination: GoogleDriveDestination): String? =
         accountStore.accountName(destination.accountReferenceId)
 
-    suspend fun hasOpaqueRecords(): Boolean = rawRecords().any { decodeKnown(it) == null }
+    suspend fun hasOpaqueRecords(): Boolean = when (val loaded = load(dataStore.data.first()[key])) {
+        is DestinationRecords.Valid -> loaded.records.any { decodeKnown(it) == null }
+        DestinationRecords.Absent -> false
+        DestinationRecords.Corrupt, DestinationRecords.Unsupported -> true
+    }
+
+    /** Disconnect validates this same edit snapshot before profile/schedule/selection changes. */
+    internal fun validateForMutation(prefs: MutablePreferences) { mutationRecords(prefs) }
 
     private suspend fun rawRecords(): List<JsonElement> =
-        decodeEnvelope(dataStore.data.first()[key])
+        (load(dataStore.data.first()[key]) as? DestinationRecords.Valid)?.records.orEmpty()
 
-    private fun decodeEnvelope(raw: String?): List<JsonElement> {
-        if (raw.isNullOrBlank()) return emptyList()
+    private fun mutationRecords(prefs: MutablePreferences): DestinationRecords.Valid = when (val loaded = load(prefs[key])) {
+        DestinationRecords.Absent -> DestinationRecords.Valid(emptyList())
+        is DestinationRecords.Valid -> loaded
+        DestinationRecords.Corrupt, DestinationRecords.Unsupported -> error("destination store is unreadable")
+    }
+
+    private fun encodedUpsert(loaded: DestinationRecords.Valid, destination: GoogleDriveDestination): String {
+        val records = loaded.records.toMutableList()
+        val matches = records.indices.filter { recordId(records[it]) == destination.id }
+        check(matches.size <= 1 && matches.all { decodeKnown(records[it]) != null }) { "opaque destination identity" }
+        val encoded = json.encodeToJsonElement(GoogleDriveDestination.serializer(), destination)
+        if (matches.isEmpty()) records += encoded else records[matches.single()] = encoded
+        return encodeEnvelope(loaded, records)
+    }
+
+    private fun encodeEnvelope(loaded: DestinationRecords.Valid, records: List<JsonElement>): String = JsonObject(
+        loaded.envelope + mapOf("version" to JsonPrimitive(1), "records" to JsonArray(records)),
+    ).toString()
+
+    private fun load(raw: String?): DestinationRecords {
+        if (raw == null) return DestinationRecords.Absent
         return runCatching {
-            val root = json.parseToJsonElement(raw)
-            when (root) {
-                is JsonArray -> root.toList() // additive migration from a pre-envelope prototype
-                is JsonObject -> root["records"]?.let { it as? JsonArray }?.toList().orEmpty()
-                else -> emptyList()
+            when (val root = json.parseToJsonElement(raw)) {
+                // The documented pre-envelope prototype is the only legacy shape we migrate.
+                is JsonArray -> DestinationRecords.Valid(root.toList())
+                is JsonObject -> {
+                    val version = root["version"] as? JsonPrimitive
+                    if (version == null || version.isString || version.intOrNull == null) DestinationRecords.Corrupt
+                    else if (version.intOrNull != 1) DestinationRecords.Unsupported
+                    else (root["records"] as? JsonArray)?.let {
+                        DestinationRecords.Valid(it.toList(), root)
+                    } ?: DestinationRecords.Corrupt
+                }
+                else -> DestinationRecords.Corrupt
             }
-        }.getOrDefault(emptyList())
+        }.getOrElse { DestinationRecords.Corrupt }
+    }
+
+    private sealed class DestinationRecords(val state: GoogleDriveDestinationStoreState) {
+        data object Absent : DestinationRecords(GoogleDriveDestinationStoreState.ABSENT)
+        data object Corrupt : DestinationRecords(GoogleDriveDestinationStoreState.CORRUPT)
+        data object Unsupported : DestinationRecords(GoogleDriveDestinationStoreState.UNSUPPORTED)
+        data class Valid(val records: List<JsonElement>, val envelope: Map<String, JsonElement> = emptyMap()) :
+            DestinationRecords(GoogleDriveDestinationStoreState.VALID)
     }
 
     private fun decodeKnown(element: JsonElement): GoogleDriveDestination? = runCatching {

@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Rule
@@ -75,6 +76,61 @@ class GoogleDriveModelsPersistenceTest {
         assertThat(store.all()).isEmpty()
         assertThat(store.hasOpaqueRecords()).isTrue()
         assertThat(accounts.values).isEmpty()
+    }
+
+    @Test
+    fun `unreadable destination envelopes reject mutations before encrypted authority changes`() = runTest {
+        val key = stringPreferencesKey("export_destinations_v1")
+        val unreadable = listOf(
+            "{torn",
+            "",
+            "{}",
+            """{"version":1,"records":{}}""",
+            """{"version":2,"records":[{"id":"opaque"}],"future":"kept"}""",
+            """{"version":"future","records":[]}""",
+            "null",
+        )
+        unreadable.forEachIndexed { index, raw ->
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also(scopes::add)
+            val dataStore = PreferenceDataStoreFactory.create(
+                scope = scope,
+                produceFile = { temporaryFolder.newFile("unreadable-$index.preferences_pb") },
+            )
+            dataStore.edit { it[key] = raw }
+            val accounts = FakeAccountStore()
+            val store = GoogleDriveDestinationStore(dataStore, accounts)
+            val before = dataStore.data.first().asMap()
+            assertThat(store.state()).isEqualTo(
+                if (raw.contains("\"version\":2")) GoogleDriveDestinationStoreState.UNSUPPORTED
+                else GoogleDriveDestinationStoreState.CORRUPT,
+            )
+
+            assertThat(runCatching { store.save(destination(), "synthetic-account") }.isFailure).isTrue()
+            assertThat(runCatching { store.saveBindingIfAllowed(destination(), "synthetic-account") }.isFailure).isTrue()
+            assertThat(runCatching { store.remove(destination().id) }.isFailure).isTrue()
+
+            assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+            assertThat(accounts.writes).isEqualTo(0)
+            assertThat(accounts.removals).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun `prototype array migration preserves opaque scalar and object records`() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also(scopes::add)
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = scope,
+            produceFile = { temporaryFolder.newFile("prototype.preferences_pb") },
+        )
+        val key = stringPreferencesKey("export_destinations_v1")
+        dataStore.edit { it[key] = """[17,{"kind":"future","id":"opaque","payload":"kept"}]""" }
+        val store = GoogleDriveDestinationStore(dataStore, FakeAccountStore())
+        assertThat(store.saveBindingIfAllowed(destination(), "synthetic-account")).isTrue()
+        store.remove(destination().id)
+        assertThat(dataStore.data.first()[key]).isEqualTo(
+            """{"version":1,"records":[17,{"kind":"future","id":"opaque","payload":"kept"}]}""",
+        )
+        assertThat(store.hasOpaqueRecords()).isTrue()
     }
 
     @Test
@@ -146,11 +202,15 @@ class GoogleDriveModelsPersistenceTest {
 
     private class FakeAccountStore : GoogleDriveAccountAuthorityStore {
         val values = mutableMapOf<String, String>()
+        var writes = 0
+        var removals = 0
         override suspend fun save(referenceId: String, accountName: String) {
+            writes++
             values[referenceId] = accountName
         }
         override suspend fun accountName(referenceId: String): String? = values[referenceId]
         override suspend fun remove(referenceId: String) {
+            removals++
             values.remove(referenceId)
         }
     }

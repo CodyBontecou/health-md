@@ -20,6 +20,7 @@ class GoogleDriveBindingService @Inject constructor(
         expectedDestinationId: String? = null,
     ): DriveApiResult<GoogleDriveDestination> {
         if (!admitted()) return protectedFailure()
+        if (!destinationStore.isMutationSafe()) return DriveApiResult.Failure(GoogleDriveErrorId.REMOTE_CONFLICT)
         if (grant.selectedFolderIds.size != 1) return DriveApiResult.Failure(GoogleDriveErrorId.FOLDER_UNAVAILABLE)
         val about = when (val result = api.about(grant.accessToken)) {
             is DriveApiResult.Success -> result.value
@@ -62,7 +63,11 @@ class GoogleDriveBindingService @Inject constructor(
             lastValidatedAtEpochMillis = System.currentTimeMillis(),
         )
         // The store rechecks inside its DataStore edit, before encrypted authority is saved.
-        if (!destinationStore.saveBindingIfAllowed(destination, grant.accountName)) return protectedFailure()
+        try {
+            if (!destinationStore.saveBindingIfAllowed(destination, grant.accountName)) return protectedFailure()
+        } catch (_: IllegalStateException) {
+            return DriveApiResult.Failure(GoogleDriveErrorId.REMOTE_CONFLICT)
+        }
         return DriveApiResult.Success(destination)
     }
 
