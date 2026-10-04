@@ -6,6 +6,7 @@ import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.HealthProviderRegistry
 import com.healthmd.data.health.HealthRepositoryImpl
+import com.healthmd.data.health.SleepAttributionCaptureFixture
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
@@ -34,6 +35,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TimeZone
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 class ExportOrchestratorRangeTest {
 
@@ -293,6 +295,39 @@ class ExportOrchestratorRangeTest {
             .containsExactly(ExportFailureReason.NO_HEALTH_DATA, ExportFailureReason.NO_HEALTH_DATA)
         assertThat(healthRepository.rangeCalls).isEqualTo(1)
         assertThat(healthRepository.singleDayCalls).isEqualTo(0)
+    }
+
+    @Test
+    fun `sleep only morning export and preview never retry the empty start day`() = runTest {
+        val fixture = SleepAttributionCaptureFixture()
+        val previousZone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(fixture.zone))
+            val exportRepository = RecordingExportRepository()
+            val orchestrator = ExportOrchestrator(fixture.repository, exportRepository)
+            val dates = listOf(fixture.startDay, fixture.wakeDay)
+            val settings = ExportSettings(
+                exportFormat = ExportFormat.JSON,
+                exportFormats = setOf(ExportFormat.JSON),
+                dataTypes = fixture.selection,
+            )
+
+            val result = orchestrator.exportDates(dates, settings)
+            val preview = orchestrator.previewDates(dates, settings)
+
+            assertThat(result.successCount).isEqualTo(1)
+            assertThat(result.failedDateDetails.single().date).isEqualTo(fixture.startDay)
+            assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.NO_HEALTH_DATA)
+            assertThat(exportRepository.exported.map { it.date }).containsExactly(fixture.wakeDay)
+            assertThat(exportRepository.exported.single().sleep.awakeTime).isEqualTo(30.minutes)
+            assertThat(preview.previewedDateCount).isEqualTo(1)
+            assertThat(exportRepository.previewed.map { it.date }).containsExactly(fixture.wakeDay)
+            assertThat(fixture.singleDayReads).isEmpty()
+            assertThat(fixture.observedContexts).hasSize(3)
+            assertThat(fixture.observedContexts.distinct()).containsExactly(fixture.zone to SleepDayAttribution.MORNING_ENDS)
+        } finally {
+            TimeZone.setDefault(previousZone)
+        }
     }
 
     private fun ninetyDays(): List<LocalDate> {

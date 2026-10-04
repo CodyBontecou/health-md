@@ -5,6 +5,7 @@ import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
+import com.healthmd.data.health.SleepAttributionCaptureFixture
 import com.healthmd.direct.protocol.ArtifactFormat
 import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.ExportArtifactPlan
@@ -29,6 +30,9 @@ import java.nio.file.Files
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 
 class DirectGeneratedFilesProducerTest {
@@ -92,6 +96,44 @@ class DirectGeneratedFilesProducerTest {
                 .isEmpty()
         } finally {
             fixture.root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun sleepOnlyMorningFilesKeepWakeDayOnceWithoutSingleDateFallback() = runTest {
+        val fixture = SleepAttributionCaptureFixture()
+        val producer = DirectGeneratedFilesProducer(
+            healthRepository = fixture.repository,
+            markdownExporter = MarkdownExporter(),
+            jsonExporter = JsonExporter(),
+            csvExporter = CsvExporter(),
+            obsidianBasesExporter = ObsidianBasesExporter(),
+        )
+        val settings = ExportSettings.newInstallDefaults().copy(
+            exportFormat = ExportFormat.JSON,
+            exportFormats = setOf(ExportFormat.JSON),
+            dataTypes = fixture.selection,
+        )
+        val root = Files.createTempDirectory("direct-generated-sleep-test").toFile()
+        try {
+            val files = producer.produce(
+                root,
+                listOf(fixture.startDay, fixture.wakeDay),
+                settings,
+                AndroidCaptureContext(fixture.zone, SleepDayAttribution.MORNING_ENDS),
+            )
+
+            assertThat(files).hasSize(1)
+            assertThat(files.single().format).isEqualTo(ArtifactFormat.JSON)
+            val record = Json.parseToJsonElement(files.single().file.readText()).jsonObject
+            assertThat(record.getValue("date").jsonPrimitive.content).isEqualTo(fixture.wakeDay.toString())
+            val sleep = record.getValue("sleep").jsonObject
+            assertThat(sleep.getValue("awakeTime").jsonPrimitive.content.toDouble()).isEqualTo(30 * 60.0)
+            assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(495 * 60.0)
+            assertThat(fixture.singleDayReads).isEmpty()
+            assertThat(fixture.observedContexts).containsExactly(fixture.zone to SleepDayAttribution.MORNING_ENDS)
+        } finally {
+            root.deleteRecursively()
         }
     }
 

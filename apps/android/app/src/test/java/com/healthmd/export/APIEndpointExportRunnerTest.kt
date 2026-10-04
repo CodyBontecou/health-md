@@ -12,6 +12,7 @@ import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.HealthProviderRegistry
 import com.healthmd.data.health.HealthRepositoryImpl
+import com.healthmd.data.health.SleepAttributionCaptureFixture
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
@@ -34,6 +35,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -170,6 +172,50 @@ class APIEndpointExportRunnerTest {
                 capturedZone to SleepDayAttribution.MORNING_ENDS,
             ).inOrder()
             assertThat(uploader.calls).isEqualTo(1)
+        } finally {
+            TimeZone.setDefault(previousZone)
+        }
+    }
+
+    @Test
+    fun sleepOnlyMorningApiUploadContainsWakeDayOnceAndNoStartDayFallback() = runTest {
+        val fixture = SleepAttributionCaptureFixture()
+        val uploader = CapturingUploader()
+        val jsonExporter = JsonExporter()
+        val runner = APIEndpointExportRunner(
+            healthRepository = fixture.repository,
+            envelopeBuilder = APIExportEnvelopeBuilder(jsonExporter),
+            jsonExporter = jsonExporter,
+            uploader = uploader,
+            credentialStore = credentials(),
+        )
+        val previousZone = TimeZone.getDefault()
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(fixture.zone))
+            val result = runner.exportDates(
+                dates = listOf(fixture.startDay, fixture.wakeDay),
+                settings = ExportSettings(
+                    exportTarget = ExportTarget.API_ENDPOINT,
+                    apiEndpointUrl = "https://api.example.com/healthmd",
+                    dataTypes = fixture.selection,
+                ),
+            )
+
+            assertThat(result.successCount).isEqualTo(1)
+            assertThat(result.failedDateDetails.single().date).isEqualTo(fixture.startDay)
+            assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.NO_HEALTH_DATA)
+            assertThat(uploader.calls).isEqualTo(1)
+            val records = Json.parseToJsonElement(requireNotNull(uploader.payload)).jsonObject.getValue("records").jsonArray
+            assertThat(records).hasSize(1)
+            assertThat(records.single().jsonObject.getValue("date").jsonPrimitive.content).isEqualTo(fixture.wakeDay.toString())
+            val sleep = records.single().jsonObject.getValue("sleep").jsonObject
+            assertThat(sleep.getValue("awakeTime").jsonPrimitive.content.toDouble()).isEqualTo(30 * 60.0)
+            assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(495 * 60.0)
+            assertThat(fixture.singleDayReads).isEmpty()
+            assertThat(fixture.observedContexts).containsExactly(
+                fixture.zone to SleepDayAttribution.MORNING_ENDS,
+                fixture.zone to SleepDayAttribution.MORNING_ENDS,
+            ).inOrder()
         } finally {
             TimeZone.setDefault(previousZone)
         }
