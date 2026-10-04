@@ -38,6 +38,13 @@ current formula with:
 brew install CodyBontecou/tap/healthmd
 ```
 
+The workflow normalizes the generated formula in an isolated synthetic tap before it enters the
+signed checksum closure. After the GitHub Release becomes public, the exact Sigstore-authenticated
+formula must clean-install on ARM64 and Intel macOS plus ARM64 and x86-64 Linux, preserve both
+packaged binaries byte-for-byte, pass the installed macOS Developer ID checks, and
+complete a real `healthmd-mcp` handshake before the tap can change. Gatekeeper qualification uses
+the stapled DMG containing byte-identical signed binaries, not bare executable assessment.
+
 Before publishing the first stable release, decide whether the tap should continue tracking
 prereleases. Set `publish-prereleases = false` first if stable users must not receive later preview
 upgrades.
@@ -110,8 +117,8 @@ Developer ID identity is crossing principals and must explicitly unpair/re-pair 
 must never delete or silently migrate trust.
 
 `sha256.sum` covers all five binary archives, both notarized DMGs, both generated installers, the
-Homebrew formula, the public signing-identity ledger, every per-artifact checksum, and the three
-SBOM assets. The workflow signs it with a
+normalized Homebrew formula, the public signing-identity ledger, every per-artifact checksum, and
+the three SBOM assets. The workflow signs it with a
 keyless Sigstore identity and publishes `sha256.sum.sigstore.json`. Verify a downloaded release
 with the exact tag identity before trusting its checksums:
 
@@ -135,8 +142,12 @@ binaries, `stapler validate` plus Gatekeeper assessment on each DMG (Apple suppo
 stapling a ticket to, nor Gatekeeper assessment of, a bare executable — the binaries' notarization
 evidence is the accepted, stapled DMG carrying byte-identical copies), and — only while the
 ledger's Windows identity is `qualified` — a valid expected Authenticode signer plus timestamp on
-both Windows executables and the PowerShell installer. A checksum, signing, notarization,
-stapling, credential-upgrade, or post-extraction failure leaves the GitHub Release in draft state.
+both Windows executables and the PowerShell installer. After publication, the Homebrew qualification
+matrix compares each installed binary byte-for-byte with its signed release archive; on macOS it
+repeats the strict signature, identifier, Team ID, and designated-requirement checks. A checksum,
+signing, notarization, stapling, credential-upgrade, or post-extraction failure leaves the GitHub
+Release in draft state. A later Homebrew qualification failure leaves the already-public versioned
+release intact but blocks every tap mutation.
 
 ## Release checks
 
@@ -200,7 +211,12 @@ signing, assembly, upload, or publication can start until qualification succeeds
 creates a draft with bounded read-after-create recovery, executes every packaged binary on its
 native runner, validates installers and checksums, builds SBOMs, and then waits for approval on the
 protected `cli-release` environment. Only that final job changes the draft to public, with
-`make_latest=false` so Apple remains the repository-wide latest release. Never publish an artifact
+`make_latest=false` so Apple remains the repository-wide latest release. Homebrew then needs public
+anonymous access to those exact versioned archives, so its four clean-install gates run after GitHub
+publication but before the credentialed tap job. The tap job re-verifies the Sigstore manifest before
+obtaining tap credentials, serializes cross-version writes, rejects stale-version rollback and
+same-version rewrites, pushes without force, and fetches the remote branch to prove its
+`Formula/healthmd.rb` blob is byte-identical to the sealed release asset. Never publish an artifact
 built from uncommitted source.
 
 Keep the two required human decisions, but avoid unattended approval idle time by starting the
@@ -354,14 +370,21 @@ Homebrew formula still require their own recovery decisions.
 
 ## Homebrew publication recovery
 
-A GitHub Release can be public even if the final tap update fails. Inspect the failed
-`publish-homebrew-formula` job, retrieve the sealed `healthmd.rb` workflow artifact, and verify its
-versioned (never `/releases/latest`) URLs and archive hashes against the Sigstore-verified
-`sha256.sum`. Run `brew style`, applicable `brew audit`, and clean install/upgrade tests on macOS and
-Linux before committing the formula idempotently to `CodyBontecou/homebrew-tap`.
+A GitHub Release can be public even if Homebrew qualification or the final tap update fails. Inspect
+the failed `qualify-homebrew-formula` or `publish-homebrew-formula` job, retrieve the sealed
+`healthmd.rb` workflow artifact, and verify its versioned (never `/releases/latest`) URLs and archive
+hashes against the Sigstore-verified `sha256.sum`. Normal releases already run strict style and
+clean-install checks on every supported macOS/Linux architecture. For manual recovery, rerun those
+checks plus applicable `brew audit` and upgrade coverage before committing the exact sealed formula
+idempotently to `CodyBontecou/homebrew-tap`.
 
-If the formula is wrong, revert its tap commit or publish a reviewed correction; never mutate the
-release archives. User recovery is `brew update`, `brew upgrade healthmd`, or `brew uninstall
+If a push reports an unknown outcome, fetch the tap first. Treat an exact remote formula match as
+successful reconciliation; otherwise stop without force-pushing. Ordinary release automation must
+never replace a newer tap formula with an older signed version or rewrite different bytes under the
+same version. An intentional rollback uses a separately reviewed manual recovery commit. If the
+formula is wrong, revert its tap commit or publish a reviewed correction; never mutate the release
+archives. User recovery
+is `brew update`, `brew upgrade healthmd`, or `brew uninstall
 healthmd` followed by a verified reinstall. Remove the tap only when intended with `brew untap
 CodyBontecou/tap`. Homebrew is not a Windows recovery path; use the exact versioned,
 checksum-verified ZIP or PowerShell installer there, and require Authenticode only after the ledger

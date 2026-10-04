@@ -124,8 +124,12 @@ signing jobs skip and the archive/installer ship unsigned with Sigstore-checksum
 when the ledger records a `qualified` publisher, both Windows executables and the PowerShell
 installer are Authenticode-signed and native jobs require an exact match with the protected
 variable. Native runners verify every extracted macOS signature (and every Windows signature once
-qualified). The remote draft assets are then compared byte-for-byte with the qualified
+qualified). The generated Homebrew formula is normalized in an isolated tap before the checksum
+closure is signed. The remote draft assets are then compared byte-for-byte with the qualified
 workflow artifacts before the separate protected `cli-release` environment can publish them.
+After publication, the sealed formula clean-installs on every supported macOS/Linux architecture,
+preserves the signed binaries byte-for-byte, and completes an installed MCP handshake before a
+serialized, anti-rollback tap job pushes and remotely rechecks the exact formula blob.
 
 The repository variables, `cli-signing` environment secrets, rollback/key-compromise/crates-yank/
 Homebrew runbooks, and mobile compatibility requirements are documented in

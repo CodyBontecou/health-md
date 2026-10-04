@@ -124,6 +124,13 @@ jobs:
           cmp LICENSE crates/healthmd-mcp/LICENSE
           cmp LICENSE crates/healthmd-cli/LICENSE
           bash -n .github/workflows/wait-for-crate.sh
+          bash -n scripts/normalize-homebrew-formula.sh
+          bash -n scripts/verify-sealed-homebrew-formula.sh
+          python3 -m py_compile \
+            scripts/check-homebrew-formula-freshness.py \
+            scripts/smoke-mcp-stdio.py \
+            scripts/test-homebrew-release-scripts.py
+          python3 scripts/test-homebrew-release-scripts.py
           bash -n scripts/download-draft-release-assets.sh
           bash scripts/test-download-draft-release-assets.sh
           dist_version="$(awk -F'"' '/cargo-dist-version/ { print $2 }' dist-workspace.toml)"
@@ -139,6 +146,15 @@ jobs:
           # generated workflow, so validate the distribution plan rather than requiring
           # byte-for-byte generated workflow output under apps/cli/.github.
           dist plan --allow-dirty >/dev/null
+          version="$(cargo metadata --no-deps --format-version=1 | \
+            jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
+          rm -rf target/distrib
+          dist build --tag="healthmd-cli/v${version}" --allow-dirty \
+            --artifacts=global --output-format=json > /dev/null
+          export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+          scripts/normalize-homebrew-formula.sh \
+            target/distrib/healthmd.rb target/distrib/sha256.sum
+          (cd target/distrib && sha256sum --check sha256.sum)
       - name: Test default local build
         run: cargo test --workspace --locked
       - name: Test every optional feature
@@ -290,9 +306,12 @@ jobs:
           assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
           tools = responses[2]["result"]["tools"]
           tool_names = {tool["name"] for tool in tools}
-          assert len(tools) == 19
+          expected_tools = json.loads(pathlib.Path("crates/healthmd-mcp/assets/mcp-tools-v1.json").read_text())
+          expected_names = {tool["name"] for tool in expected_tools}
+          assert tool_names == expected_names, (tool_names, expected_names)
+          assert len(tools) == len(expected_tools) == len(tool_names), "duplicate or missing MCP declarations"
           assert "healthmd_metric_chart" in tool_names
-          assert {"healthmd_pairing_start", "healthmd_pairing_status"} <= tool_names
+          assert {"healthmd_pairing_start", "healthmd_pairing_status", "healthmd_export_raw", "healthmd_raw_artifact_read"} <= tool_names
           sleep = next(tool for tool in tools if tool["name"] == "healthmd_sleep_sessions")
           assert len(sleep["inputSchema"]["properties"]["dates"]["oneOf"]) == 2
           assert sleep["inputSchema"]["examples"][0]["all_pages"] is True
