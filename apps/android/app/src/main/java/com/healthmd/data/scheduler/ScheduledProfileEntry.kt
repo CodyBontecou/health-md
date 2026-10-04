@@ -42,6 +42,9 @@ data class ScheduledProfilePendingExport(
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
     val durableOperationId: String? = null,
+    /** Private original authority, captured before any permission check or health read. */
+    val apiAuthorityJson: String? = null,
+    val apiJournalRequired: Boolean = false,
 ) {
     val ownerDates: List<LocalDate>
         get() = ownerEpochDays.distinct().sorted().map(LocalDate::ofEpochDay)
@@ -219,7 +222,11 @@ object ScheduledProfileOccurrenceMath {
                     .thenBy { it.id },
             )
             .firstNotNullOfOrNull { pending ->
-                val dates = pending.ownerDates.filterNot { it.isAfter(yesterday) }
+                val dates = if (pending.target == ExportTarget.API_ENDPOINT &&
+                    pending.apiAuthorityJson != null && pending.durableOperationId != null
+                ) {
+                    pending.ownerDates
+                } else pending.ownerDates.filterNot { it.isAfter(yesterday) }
                 dates.takeIf { it.isNotEmpty() }?.let {
                     ScheduledProfileEntry.DueOccurrence(
                         entry = entry,

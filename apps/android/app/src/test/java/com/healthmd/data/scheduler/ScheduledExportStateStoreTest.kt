@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.data.export.APIExportRequestConfiguration
+import com.healthmd.data.export.APIRecoveryAuthorities
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import java.time.LocalDate
@@ -109,6 +111,27 @@ class ScheduledExportStateStoreTest {
         assertThat(reloaded.pendingArmOccurrence()).isEqualTo(next)
         assertThat(reloaded.completePendingArm(next.id)).isTrue()
         assertThat(reloaded.pendingArmOccurrence()).isNull()
+    }
+
+    @Test
+    fun privateAPIEvidenceSurvivesReloadButNeverEntersWorkDataAndCorruptionInvalidatesAdmission() {
+        val original = occurrence("generation-api", 1_800_000_000_000L)
+        val admitted = original.copy(configuration = original.configuration.copy(
+            target = ExportTarget.API_ENDPOINT, destinationFingerprint = "a".repeat(64)))
+        val next = admitted.copy(triggerAtMillis = admitted.triggerAtMillis + 900_000)
+        val evidence = APIRecoveryAuthorities.create(APIExportRequestConfiguration(
+            "https://synthetic.example.test", "Bearer synthetic", emptyList(), "a".repeat(64)), null)
+        val admission = ScheduledExportAdmission.create(admitted, admitted.triggerAtMillis, false)
+            .copy(apiAuthorityJson = evidence)
+        val store = ScheduledExportStateStore(context)
+        store.save(admitted)
+        assertThat(store.prepareAdmission(admission, next)).isTrue()
+        assertThat(ScheduledExportStateStore(context).loadAdmission()?.apiAuthorityJson).isEqualTo(evidence)
+        assertThat(admission.inputData.keyValueMap.values).doesNotContain(evidence)
+        assertThat(admission.inputData.keyValueMap.keys).doesNotContain("apiAuthorityJson")
+        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE).edit()
+            .putString("admission_v2_api_authority", "corrupt-authority").commit()
+        assertThat(ScheduledExportStateStore(context).loadAdmission()).isNull()
     }
 
     @Test

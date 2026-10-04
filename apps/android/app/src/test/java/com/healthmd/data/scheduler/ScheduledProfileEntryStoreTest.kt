@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.data.export.APIExportRequestConfiguration
+import com.healthmd.data.export.APIRecoveryAuthorities
 import io.mockk.mockk
 import java.time.LocalDate
 import java.time.ZoneId
@@ -59,6 +61,24 @@ class ScheduledProfileEntryStoreTest {
         hour = hour,
         zoneId = "UTC",
     )
+
+    @Test
+    fun `prepared delivery fence persists and stale discard callback cannot recreate it`() = runTest {
+        store.upsert(entry("alpha").copy(isEnabled = true, lastSuccessEpochMillis = 1234L))
+        val authority = APIRecoveryAuthorities.create(APIExportRequestConfiguration(
+            "https://synthetic.example.test", null, emptyList(), "a".repeat(64)), "alpha")
+        val pending = ScheduledProfilePendingExport("pending", listOf(1L), 1000L, "snapshot",
+            ExportTarget.API_ENDPOINT, "Synthetic", durableOperationId = "operation", apiAuthorityJson = authority)
+        assertThat(store.admitAPIExport("alpha", 0L, pending)).isTrue()
+        assertThat(store.markAPIJournalRequired("alpha", 0L, pending.id, authority, "wrong-operation")).isFalse()
+        assertThat(store.markAPIJournalRequired("alpha", 0L, pending.id, authority, "operation")).isTrue()
+        val reloaded = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
+        assertThat(reloaded.entry("alpha")!!.pendingExports.single().apiJournalRequired).isTrue()
+        assertThat(store.discardPendingRecovery("alpha")).isTrue()
+        assertThat(store.markAPIJournalRequired("alpha", 0L, pending.id, authority, "operation")).isFalse()
+        assertThat(reloaded.entry("alpha")!!.pendingExports).isEmpty()
+        assertThat(reloaded.entry("alpha")!!.lastSuccessEpochMillis).isEqualTo(1234L)
+    }
 
     @Test
     fun `upsert creates the first entry when the key is absent`() = runTest {
@@ -325,7 +345,9 @@ class ScheduledProfileEntryStoreTest {
         val stored = store.entry("alpha")!!
         assertThat(stored.hour).isEqualTo(10)
         assertThat(stored.pendingExports).isEmpty()
-        assertThat(stored.recoveryGeneration).isEqualTo(1L)
+        // Both toggles and discard fence prior callbacks; an unchanged draft cannot revive them.
+        assertThat(stored.recoveryGeneration).isEqualTo(3L)
+        assertThat(store.recordRetry("alpha", 2_000L, null, listOf(pending), 1L)).isFalse()
     }
 
     @Test

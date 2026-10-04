@@ -50,6 +50,7 @@ internal data class DurableAPIExportOperation(
     val captureFailures: List<FailedDateDetail>,
     val batches: List<DurableAPIExportBatch>,
     val acknowledgedBatchCount: Int = 0,
+    val apiAuthorityJson: String? = null,
 ) {
     init {
         require(operationId.matches(OPERATION_ID_PATTERN))
@@ -68,7 +69,7 @@ internal data class DurableAPIExportOperation(
         operationId == other.operationId &&
             destinationFingerprint == other.destinationFingerprint &&
             mode == other.mode && enginePinJson == other.enginePinJson &&
-            settingsSnapshotJson == other.settingsSnapshotJson &&
+            settingsSnapshotJson == other.settingsSnapshotJson && apiAuthorityJson == other.apiAuthorityJson &&
             requestedDates == other.requestedDates && recordDates == other.recordDates &&
             captureFailures == other.captureFailures && batches.size == other.batches.size &&
             batches.zip(other.batches).all { (a, b) -> a.contentEquals(b) }
@@ -200,6 +201,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
             mode = mode,
             enginePinJson = metadata.enginePinJson,
             settingsSnapshotJson = metadata.settingsSnapshotJson,
+            apiAuthorityJson = metadata.apiAuthorityJson,
             requestedDates = metadata.requestedDates.map(LocalDate::parse),
             recordDates = metadata.recordDates.mapTo(linkedSetOf(), LocalDate::parse),
             captureFailures = metadata.captureFailures.map {
@@ -220,6 +222,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
         mode = mode.name,
         enginePinJson = enginePinJson,
         settingsSnapshotJson = settingsSnapshotJson,
+        apiAuthorityJson = apiAuthorityJson,
         requestedDates = requestedDates.map(LocalDate::toString),
         recordDates = recordDates.sorted().map(LocalDate::toString),
         captureFailures = captureFailures.map {
@@ -281,6 +284,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
         val mode: String,
         val enginePinJson: String? = null,
         val settingsSnapshotJson: String? = null,
+        val apiAuthorityJson: String? = null,
         val requestedDates: List<String>,
         val recordDates: List<String>,
         val captureFailures: List<StoredFailure>,
