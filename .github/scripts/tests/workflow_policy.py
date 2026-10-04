@@ -91,7 +91,11 @@ def evaluate(expression: str, context: dict):
 
 
 def render(value: str, context: dict) -> str:
-    return EXPRESSION.sub(lambda match: str(evaluate(match.group(1), context)), value)
+    def replacement(match):
+        result = evaluate(match.group(1), context)
+        return str(result).lower() if isinstance(result, bool) else str(result)
+
+    return EXPRESSION.sub(replacement, value)
 
 
 def permitted(job: dict, context: dict) -> bool:
@@ -107,7 +111,7 @@ def context(name: str, event="workflow_dispatch", tag="", author="human", releas
             "ref": "refs/heads/main" if event == "workflow_dispatch" else f"refs/tags/{tag}",
             "sha": "dispatch-sha",
             "run_id": "123",
-            "event": {"release": {"tag_name": tag, "author": {"login": author}},
+            "event": {"release": {"tag_name": tag, "author": {"login": author, "type": "Bot" if author.endswith("[bot]") else "User"}},
                       "inputs": {"release_tag": release_tag}},
         },
         "inputs": {"release_tag": release_tag},
