@@ -1,0 +1,15 @@
+{
+  "schema": "healthmd.agent_data_ingest",
+  "schema_version": 1,
+  "artifact_kind": "health_data_daily",
+  "platform": "apple",
+  "artifact_schema": "healthmd.health_data",
+  "artifact_schema_version": 8,
+  "owner_date": "2026-03-15",
+  "physical_format": "json",
+  "media_type": "application/json",
+  "byte_count": 20480,
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "record_count": 512,
+  "completeness": { "type": "complete" }
+}

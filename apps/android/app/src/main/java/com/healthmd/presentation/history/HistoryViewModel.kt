@@ -5,12 +5,14 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.R
+import com.healthmd.data.export.AgentDataGatewayExportRunner
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AgentDataGatewayEndpoint
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -44,6 +46,7 @@ class HistoryViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val fileExportManager: FileExportManager,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
+    private val agentDataGatewayExportRunner: AgentDataGatewayExportRunner? = null,
     private val rawSnapshotService: RawSnapshotService? = null,
 ) : ViewModel() {
 
@@ -101,6 +104,14 @@ class HistoryViewModel @Inject constructor(
                     }
                     return@launch
                 }
+                if (entry.target == ExportTarget.AGENT_DATA_GATEWAY &&
+                    !AgentDataGatewayEndpoint.isConfigured(settings.agentDataGatewayUrl)
+                ) {
+                    _uiState.update {
+                        it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_api_required))
+                    }
+                    return@launch
+                }
                 if (!healthRepository.hasPermissions()) {
                     _uiState.update {
                         it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_permissions_required))
@@ -147,6 +158,19 @@ class HistoryViewModel @Inject constructor(
                     ).also {
                         Timber.w("API export service unavailable while retrying export history")
                     }
+                    ExportTarget.AGENT_DATA_GATEWAY -> agentDataGatewayExportRunner?.exportDates(
+                        retryDates,
+                        settings.copy(exportTarget = ExportTarget.AGENT_DATA_GATEWAY),
+                    ) ?: ExportResult(
+                        successCount = 0,
+                        totalCount = retryDates.size,
+                        failedDateDetails = retryDates.map {
+                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
+                        },
+                        target = ExportTarget.AGENT_DATA_GATEWAY,
+                    ).also {
+                        Timber.w("Agent Data gateway service unavailable while retrying export history")
+                    }
                 }
 
                 exportHistoryRepository.insertEntry(
@@ -163,6 +187,8 @@ class HistoryViewModel @Inject constructor(
                         targetLabel = when (entry.target) {
                             ExportTarget.API_ENDPOINT ->
                                 APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                            ExportTarget.AGENT_DATA_GATEWAY ->
+                                AgentDataGatewayEndpoint.redactedDescription(settings.agentDataGatewayUrl)
                             ExportTarget.DEVICE_FOLDER ->
                                 folderUri?.let(fileExportManager::getFolderDisplayName)
                                     ?.trim()

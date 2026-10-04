@@ -310,6 +310,13 @@ class SharedSetupV2Mapper(
                     kind = "api_endpoint",
                     apiEndpoint = endpointHint(profile.apiEndpointUrl),
                 )
+                // Shared Setup v2 has no gateway DestinationKind by contract: exporting a
+                // gateway-targeted profile into a setup bundle fails closed instead of
+                // fabricating a device-folder or API intent. (Compile-required exhaustiveness
+                // branch only; no wire grammar change.)
+                ExportTarget.AGENT_DATA_GATEWAY -> throw IllegalArgumentException(
+                    "Agent Data gateway destinations are not part of Shared Setup v2 bundles.",
+                )
             },
             schedule = schedule?.toSharedSetupV2Schedule(),
             platformExtensions = SharedSetupV2PlatformExtensions(

@@ -1,0 +1,21 @@
+{
+  "schema": "healthmd.agent_data_grant",
+  "schema_version": 1,
+  "metrics": {
+    "type": "explicit",
+    "metric_ids": ["healthmd.health_data#/activity/steps"]
+  },
+  "sources": {
+    "type": "explicit",
+    "source_ids": ["healthmd.health_data"]
+  },
+  "dates": {
+    "type": "exact",
+    "start_date": "2026-03-15",
+    "end_date": "2026-03-31"
+  },
+  "times": { "type": "all_available" },
+  "detail_levels": ["common"],
+  "bulk_download": false
+}
+

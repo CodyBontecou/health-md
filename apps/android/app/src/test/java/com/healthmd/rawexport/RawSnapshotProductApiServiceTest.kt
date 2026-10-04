@@ -2,6 +2,7 @@ package com.healthmd.rawexport
 
 import android.content.Context
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.export.AgentDataGatewayUploadClient
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportRequestConfiguration
 import com.healthmd.data.export.RawSnapshotExportRunner
@@ -157,6 +158,7 @@ class RawSnapshotProductApiServiceTest {
                 apiClient = RawSnapshotApiClient(client),
                 credentialStore = credentialStore,
                 settingsRepository = settingsRepository,
+                agentDataGatewayClient = AgentDataGatewayUploadClient(client),
             ),
         )
     }

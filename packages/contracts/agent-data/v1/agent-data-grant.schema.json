@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/agent-data/v1/agent-data-grant.schema.json",
+  "title": "Health.md Agent Data Grant v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "metrics",
+    "sources",
+    "dates",
+    "times",
+    "detail_levels",
+    "bulk_download"
+  ],
+  "properties": {
+    "schema": { "const": "healthmd.agent_data_grant" },
+    "schema_version": { "const": 1 },
+    "metrics": { "$ref": "#/$defs/metric_selection" },
+    "sources": { "$ref": "#/$defs/source_selection" },
+    "dates": { "$ref": "#/$defs/date_selection" },
+    "times": { "$ref": "#/$defs/time_selection" },
+    "detail_levels": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": { "enum": ["common", "lossless"] }
+    },
+    "bulk_download": { "type": "boolean" }
+  },
+  "$defs": {
+    "metric_selection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "all_available" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "metric_ids"],
+          "properties": {
+            "type": { "const": "explicit" },
+            "metric_ids": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 512,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+            }
+          }
+        }
+      ]
+    },
+    "source_selection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "all_available" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "source_ids"],
+          "properties": {
+            "type": { "const": "explicit" },
+            "source_ids": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 128,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+            }
+          }
+        }
+      ]
+    },
+    "date_selection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "all_available" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "start_date", "end_date"],
+          "properties": {
+            "type": { "const": "exact" },
+            "start_date": { "type": "string", "format": "date" },
+            "end_date": { "type": "string", "format": "date" }
+          }
+        }
+      ]
+    },
+    "time_selection": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "all_available" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "start_inclusive", "end_exclusive"],
+          "properties": {
+            "type": { "const": "exact" },
+            "start_inclusive": { "type": "string", "format": "date-time" },
+            "end_exclusive": { "type": "string", "format": "date-time" }
+          }
+        }
+      ]
+    }
+  }
+}
+

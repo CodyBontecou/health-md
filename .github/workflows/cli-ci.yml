@@ -13,6 +13,7 @@ on:
       - 'packages/contracts/**'
       - 'packages/healthmd-core-rust/**'
       - '.github/workflows/cli-*.yml'
+      - '.gitattributes'
   workflow_dispatch:
   workflow_call:
     inputs:
@@ -56,6 +57,7 @@ jobs:
             packages/contracts/**
             packages/healthmd-core-rust/**
             .github/workflows/cli-*.yml
+            .gitattributes
 
   msrv:
     name: Rust 1.85 MSRV
@@ -118,6 +120,7 @@ jobs:
             --features streamable-http --locked
           python3 scripts/update-mcp-shared-assets.py --check
           python3 scripts/test-safe-extract-release.py
+          python3 scripts/test_fixture_checkout.py
           python3 ../../packages/contracts/validate.py
           cmp LICENSE crates/healthmd-operations/LICENSE
           cmp LICENSE crates/healthmd-client/LICENSE
@@ -290,9 +293,12 @@ jobs:
           assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
           tools = responses[2]["result"]["tools"]
           tool_names = {tool["name"] for tool in tools}
-          assert len(tools) == 19
+          expected_tools = json.loads(pathlib.Path("crates/healthmd-mcp/assets/mcp-tools-v1.json").read_text())
+          expected_names = {tool["name"] for tool in expected_tools}
+          assert tool_names == expected_names, (tool_names, expected_names)
+          assert len(tools) == len(expected_tools) == len(tool_names), "duplicate or missing MCP declarations"
           assert "healthmd_metric_chart" in tool_names
-          assert {"healthmd_pairing_start", "healthmd_pairing_status"} <= tool_names
+          assert {"healthmd_pairing_start", "healthmd_pairing_status", "healthmd_export_raw", "healthmd_raw_artifact_read"} <= tool_names
           sleep = next(tool for tool in tools if tool["name"] == "healthmd_sleep_sessions")
           assert len(sleep["inputSchema"]["properties"]["dates"]["oneOf"]) == 2
           assert sleep["inputSchema"]["examples"][0]["all_pages"] is True

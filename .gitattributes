@@ -8,6 +8,12 @@ packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/*.json text eol=
 packages/healthmd-core-rust/crates/healthmd-core/registry/*.json text eol=lf
 apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v*.json text eol=lf
 
+# Packaged CLI mirrors and their producer sources retain reviewed bytes on Windows.
+apps/cli/crates/healthmd-operations/tests/fixtures/agent-data-v1/*.json text eol=lf
+apps/cli/crates/healthmd-cli/tests/fixtures/*.json text eol=lf
+apps/apple/docs/reference/generated/automation/api-export-v2-provider-sidecar.json text eol=lf
+apps/android/app/src/test/resources/raw-export/v1/minimal-snapshot.json text eol=lf
+
 # UniFFI snapshots preserve the pinned generator's output byte-for-byte.
 apps/android/healthmd-core/src/main/kotlin/com/healthmd/core/healthmd_core_uniffi.kt -whitespace
 apps/apple/Packages/HealthMdCoreRust/Bindings/HealthmdCoreFFI.h -whitespace

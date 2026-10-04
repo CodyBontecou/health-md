@@ -42,6 +42,7 @@ All new pages below are first-pass drafts written from source. The next editoria
 | Automation | [Automation intents](./automation-intents.md) | Trigger exports from Tasker or adb; launcher shortcuts. | Draft | Medium | `automation/AutomationReceiver.kt`, [`android-automation-intents`](../android-automation-intents.md) |
 | Automation | [Export history and retry](./export-history-retry.md) | Review recent runs and retry failed dates from Room-backed history. | Draft | Medium | `data/history/`, `presentation/history/HistoryScreen.kt` |
 | Automation | [API endpoint export](./api-endpoint-export.md) | Send the `healthmd.api_export` envelope to your HTTP(S) endpoint with encrypted auth. | Draft | Medium | `data/export/API*`, [`api-endpoint-export`](../api-endpoint-export.md) |
+| Automation | [Agent Data gateway export](./agent-data-gateway.md) | Upload each exported artifact file unchanged to an ingestion gateway (`POST /v1/ingest`, protocol v1). | Draft | Medium | `data/export/AgentData*`, [`agent-data contract`](../../../../packages/contracts/agent-data/v1/contract.md) |
 | Devices | [Direct CLI](./direct-cli.md) | Pair with the standalone `healthmd` CLI over LAN or Tailscale for computer-side exports. | Draft | Medium | `presentation/directcli/`, [`android-desktop-destination`](../android-desktop-destination.md) |
 | Devices | [Home-screen widgets](./widgets.md) | Glance widgets: Health Summary, Activity, Heart Range, Sleep. | Existing | Medium | `widget/` |
 | Devices | [Wear OS companion](./wear-os.md) | Tiles and complications; phone stays authoritative. | Needs QA (unreleased) | Low | [`wear-os.md`](./wear-os.md) + runbook [`wear-os-implementation.md`](./wear-os-implementation.md) |
@@ -58,9 +59,10 @@ All new pages below are first-pass drafts written from source. The next editoria
 5. **Automate with Scheduled Exports:** [Scheduled exports](./scheduled-exports.md)
 6. **Trigger Exports from Tasker:** [Automation intents](./automation-intents.md)
 7. **Send Health Data to Your Own API:** [API endpoint export](./api-endpoint-export.md)
-8. **Pair Your Phone with Your Computer's CLI:** [Direct CLI](./direct-cli.md)
-9. **Archive Everything, Losslessly:** [Raw API snapshots](./raw-snapshots.md)
-10. **One PDF for Your Next Appointment:** [Clinician report](./clinician-report.md)
+8. **Upload Artifacts to an Agent Data Gateway:** [Agent Data gateway export](./agent-data-gateway.md)
+9. **Pair Your Phone with Your Computer's CLI:** [Direct CLI](./direct-cli.md)
+10. **Archive Everything, Losslessly:** [Raw API snapshots](./raw-snapshots.md)
+11. **One PDF for Your Next Appointment:** [Clinician report](./clinician-report.md)
 
 ## Documentation rules
 

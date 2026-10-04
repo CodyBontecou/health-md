@@ -170,6 +170,10 @@ class ExportEnginePinPlanner @Inject constructor() {
             ExportTarget.API_ENDPOINT ->
                 settings.exportMode == ExportMode.COMPATIBILITY &&
                     settings.selectedExportFormats.isNotEmpty()
+            ExportTarget.AGENT_DATA_GATEWAY ->
+                // Folder-parity rendering: the gateway runs the same daily-aggregate planner
+                // the device-folder destination runs.
+                AndroidDailyAggregateExportPlanner.supportsNonLegacy(settings)
         }
 
         fun supportsNewDirectGeneratedFilesPin(settings: ExportSettings): Boolean =

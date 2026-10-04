@@ -198,6 +198,12 @@ enum ExportIntentRunner {
             apiSettings.endpointURLString = endpoint.endpointURLString
             apiSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
         }
+        if let profile,
+           let gatewayID = destinationStore.agentDataGatewayBinding(profileID: profile.id),
+           let gateway = destinationStore.agentDataGateway(id: gatewayID) {
+            let gatewaySettings = AgentDataGatewaySettings()
+            gatewaySettings.endpointURLString = gateway.endpointURLString
+        }
     }
 
     /// Convenience for intent entry points: resolves the live dependency

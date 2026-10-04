@@ -1,0 +1,15 @@
+{
+  "schema": "healthmd.agent_ingest_response",
+  "schema_version": 1,
+  "outcome": "rejected",
+  "rejection": { "code": "checksum_invalid" },
+  "partition": {
+    "owner_date": "2026-03-17",
+    "authoritative": {
+      "revision_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "completeness": { "type": "complete" }
+    },
+    "complete_revision_present": true,
+    "partial_revision_present": false
+  }
+}

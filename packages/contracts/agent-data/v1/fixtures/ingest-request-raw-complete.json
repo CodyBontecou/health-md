@@ -1,0 +1,15 @@
+{
+  "schema": "healthmd.agent_data_ingest",
+  "schema_version": 1,
+  "artifact_kind": "raw_snapshot",
+  "platform": "android",
+  "artifact_schema": "healthmd.raw-snapshot",
+  "artifact_schema_version": 1,
+  "owner_date": "2026-03-18",
+  "physical_format": "ndjson",
+  "media_type": "application/x-ndjson",
+  "byte_count": 47104,
+  "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "record_count": 384,
+  "completeness": { "type": "complete" }
+}

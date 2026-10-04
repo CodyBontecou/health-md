@@ -78,10 +78,17 @@ class ExportProfileCoordinator @Inject constructor(
         if (profileRepository.getProfiles().isEmpty()) {
             val target = current.scheduledExportTarget
             val endpointUrl = current.apiEndpointUrl.takeIf { it.isNotBlank() }
+            val gatewayUrl = current.agentDataGatewayUrl.takeIf { it.isNotBlank() }
             profileRepository.migrateDefaultIfNeeded(
-                settingsSnapshotJson = snapshotFactory.captureFromCurrent(current, target, endpointUrl),
+                settingsSnapshotJson = snapshotFactory.captureFromCurrent(
+                    current,
+                    target,
+                    endpointUrl,
+                    gatewayUrl,
+                ),
                 target = target,
                 apiEndpointUrl = endpointUrl,
+                agentDataGatewayUrl = gatewayUrl,
             )
         }
         val active = profileRepository.getActiveProfile() ?: return@withLock false
@@ -248,10 +255,12 @@ class ExportProfileCoordinator @Inject constructor(
         val current = settingsRepository.getExportSettings()
         val target = current.scheduledExportTarget
         val endpointUrl = current.apiEndpointUrl.takeIf { it.isNotBlank() }
-        val snapshotJson = snapshotFactory.captureFromCurrent(current, target, endpointUrl)
+        val gatewayUrl = current.agentDataGatewayUrl.takeIf { it.isNotBlank() }
+        val snapshotJson = snapshotFactory.captureFromCurrent(current, target, endpointUrl, gatewayUrl)
         if (snapshotJson == active.settingsSnapshotJson &&
             target == active.target &&
-            endpointUrl == active.apiEndpointUrl
+            endpointUrl == active.apiEndpointUrl &&
+            gatewayUrl == active.agentDataGatewayUrl
         ) {
             // Nothing output-affecting changed: schedule/retry bookkeeping writes or the
             // activation apply round-trip. Skip the write and the timestamp churn.
@@ -262,6 +271,7 @@ class ExportProfileCoordinator @Inject constructor(
             settingsSnapshotJson = snapshotJson,
             target = target,
             apiEndpointUrl = endpointUrl,
+            agentDataGatewayUrl = gatewayUrl,
         )
     }
 
