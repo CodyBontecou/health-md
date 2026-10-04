@@ -23,6 +23,27 @@
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
         "apps/android/app/src/main/java/com/healthmd/domain/registry/HealthMdCoreRegistryAdapter.kt"
       ]
+    },
+    {
+      "id": "healthmd.capability_index",
+      "version": 1,
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/capability-index-v1.json",
+      "sha256": "5826dd9cf75dde3160f55e77390898f85717cb8cd19193c8e9b9324135a8fe8b",
+      "implementations": [
+        "packages/healthmd-core-rust/scripts/import-native-registry.py",
+        "packages/contracts/validate.py"
+      ]
+    },
+    {
+      "id": "healthmd.shared_setup.android_recovery_coverage",
+      "version": 1,
+      "path": "packages/contracts/portability-inventory/android-agent-recovery/v1/inventory.json",
+      "sha256": "2b87371817cf1cef6413feb7617d7f4f5f1227926bae1979275ef846d9c0e558",
+      "implementations": [
+        "packages/contracts/validate.py",
+        "packages/contracts/test_validate_android_recovery_coverage.py",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupAndroidProfileFieldCoverageTest.kt"
+      ]
     }
   ],
   "contracts": [

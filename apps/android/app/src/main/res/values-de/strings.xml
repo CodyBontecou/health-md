@@ -1401,4 +1401,9 @@
     <string name="fdroid_onboarding_access_body">Die offizielle F-Droid-Version enthält alle lokalen Export- und Automatisierungsfunktionen kostenlos.</string>
     <string name="fdroid_onboarding_no_purchase">Kein Kauf, keine Wiederherstellung, kein Preis und kein Play-Konto erforderlich.</string>
     <string name="fdroid_onboarding_no_play_services">Geplante Exporte funktionieren ohne Google Play Billing.</string>
+    <string name="profile_schedule_discard_recovery">Ausstehende Wiederherstellung verwerfen</string>
+    <string name="profile_schedule_discard_recovery_named">Ausstehende Wiederherstellung für %1$s verwerfen</string>
+    <string name="profile_schedule_discard_recovery_title">Ausstehende Wiederherstellung für %1$s verwerfen?</string>
+    <string name="profile_schedule_discard_recovery_body">Den geplanten Wiederholungsversuch dieses Profils stoppen und die ausstehenden Exporttage sowie die eingefrorenen Exporteinstellungen entfernen. Der nächste geplante Lauf verwendet das aktuelle Profil und den aktuellen Zeitplan. Dein Profil, deine API-Zugangsdaten, der Exportverlauf und bereits exportierte Daten bleiben erhalten. Ein bereits erfolgter Upload oder eine bereits geschriebene Datei kann dadurch nicht rückgängig gemacht werden.</string>
+    <string name="profile_schedule_discard_recovery_failed">Die ausstehende Wiederherstellung konnte nicht vollständig verworfen werden. Prüfe das Profil und versuche es erneut.</string>
 </resources>

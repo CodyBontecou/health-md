@@ -34,6 +34,11 @@ where
 pub mod option {
     use super::*;
 
+    /// Serialize an optional timestamp using Swift's whole-second strategy.
+    ///
+    /// # Errors
+    ///
+    /// Returns the serializer's error when the timestamp or null cannot be emitted.
     pub fn serialize<S>(value: &Option<DateTime<Utc>>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -44,6 +49,11 @@ pub mod option {
         }
     }
 
+    /// Decode an optional RFC 3339 timestamp and normalize a present value to UTC.
+    ///
+    /// # Errors
+    ///
+    /// Returns a deserialization error for a non-string value or an invalid timestamp.
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
     where
         D: Deserializer<'de>,

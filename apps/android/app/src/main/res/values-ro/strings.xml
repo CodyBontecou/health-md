@@ -1449,4 +1449,9 @@
     <string name="fdroid_onboarding_access_body">Versiunea oficială F-Droid include gratuit toate funcțiile locale de export și automatizare.</string>
     <string name="fdroid_onboarding_no_purchase">Nu sunt necesare cumpărarea, restaurarea, un preț sau un cont Play.</string>
     <string name="fdroid_onboarding_no_play_services">Exporturile programate funcționează fără Google Play Billing.</string>
+    <string name="profile_schedule_discard_recovery">Renunță la recuperarea în așteptare</string>
+    <string name="profile_schedule_discard_recovery_named">Renunță la recuperarea în așteptare pentru %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Renunți la recuperarea în așteptare pentru %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Oprește reîncercarea programată a acestui profil și elimină datele în așteptare și setările de export fixate. Următoarea execuție programată va folosi profilul și programarea curente. Profilul, datele de autentificare API, istoricul exporturilor și datele deja exportate sunt păstrate. Aceasta nu poate anula un transfer sau un fișier deja scris.</string>
+    <string name="profile_schedule_discard_recovery_failed">Recuperarea în așteptare nu a putut fi eliminată complet. Verifică profilul și încearcă din nou.</string>
 </resources>

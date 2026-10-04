@@ -26,7 +26,9 @@ python3 ../contracts/validate.py
 
 It owns stable semantic and persisted native identities, order, source units/aggregation metadata, aliases, output keys, profile availability, and explicit platform non-equivalences. It does not own SDK type objects or runtime availability decisions.
 
-`import-native-registry.py` checks the immutable pre-cutover Apple/Android snapshots plus the reviewed semantic crosswalk and is retained as independent migration evidence. `generate-registry-adapters.py` projects the authoritative JSON into thin Swift/Kotlin catalog constants and generated website/reference data. Generated regions are committed and checked for drift; edit the registry, not generated rows.
+`import-native-registry.py` checks the immutable pre-cutover Apple/Android snapshots plus the reviewed semantic crosswalk and is retained as independent migration evidence. The entire v1 registry, including its historical capability lists, remains digest-frozen because semantic/render fixtures bind those exact bytes. `native-baseline-capability-index-v1.json` records that original metadata; the importer rejects any resulting registry digest change.
+
+Current capability governance is independently generated as `capability-index-v1.json`, bound to `packages/contracts/product-capabilities.json`. Its known/available IDs describe source governance, never installed-build support, native permissions, or physical qualification. Planned additions must not alter old semantic/render identities. `generate-registry-adapters.py` projects the unchanged metric JSON into thin Swift/Kotlin catalog constants and generated website/reference data. Generated regions are committed and checked for drift; do not edit generated rows.
 
 ## Semantic input and reduction
 

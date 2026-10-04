@@ -2,7 +2,9 @@ package com.healthmd.direct
 
 import com.google.common.truth.Truth.assertThat
 import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Test
+import org.w3c.dom.Element
 
 class DirectCliReleaseReadinessTest {
     private fun repoRoot(): File {
@@ -96,7 +98,22 @@ class DirectCliReleaseReadinessTest {
         assertThat(manifest).contains("android.permission.CAMERA")
         assertThat(manifest).contains("android.hardware.camera.any")
         assertThat(manifest).contains("android:required=\"false\"")
-        assertThat(manifest).doesNotContain("android:scheme=\"healthmd\"")
+        // The existing static Cloud handoff is not pairing/configuration authority.
+        // Keep a closed custom-scheme allowlist rather than forbidding unrelated app routes.
+        val xml = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+            setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        }.newDocumentBuilder().parse(manifest.byteInputStream())
+        val data = xml.getElementsByTagName("data")
+        val android = "http://schemas.android.com/apk/res/android"
+        val customRoutes = (0 until data.length).map { data.item(it) as Element }
+            .filter { it.getAttributeNS(android, "scheme") == "healthmd" }
+        assertThat(customRoutes).hasSize(1)
+        customRoutes.single().let { route ->
+            assertThat(route.attributes.length).isEqualTo(3)
+            assertThat(route.getAttributeNS(android, "host")).isEqualTo("cloud")
+            assertThat(route.getAttributeNS(android, "path")).isEqualTo("/requests")
+        }
 
         val build = read("app/build.gradle.kts")
         assertThat(build).contains("libs.androidx.camera.camera2")

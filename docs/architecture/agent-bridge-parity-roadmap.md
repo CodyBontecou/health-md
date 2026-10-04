@@ -6,6 +6,20 @@
 - **Audit task:** `TODO-f721bd3c`.
 - **Scope:** Android/iPhone direct CLI/MCP parity and agent-owned export/configuration workflows, plus verified adjacent native export/recovery gaps. This is not an exhaustive new watch, accessibility, billing, or cloud-service audit.
 
+## Implementation progress (2026-10-04)
+
+The dedicated `goal/agent-bridge/integration` branch now includes the first serial wave through
+`363d8693e`: reviewed deferred B01/B05 contracts, B02/B03 portable mobile-source repairs,
+partial B04 profile discovery, B16 before-capture Android recovery authority, and Worker-only
+B15 FCM. The audit findings below retain their original baseline context; consult the
+[implementation ledger](../qa/agent-bridge-implementation.md) for current commits, tests,
+failures, preservation decisions and remaining acceptance.
+
+Central checks preserve frozen export/protocol/registry/Shared Setup bytes. Native DTOs,
+source v4 execution/query/projection, permissioned controls, recipes/schedules, ZIP/dictionaries,
+and the complete four-way no-settings journey remain unfinished. New capabilities stay planned;
+no physical, installed-build, live-provider or release qualification is inferred.
+
 ## Product outcome
 
 After initial native permission and pairing setup, a user can ask an authorized agent to select data, plan an export, choose formats and computer paths, execute it, inspect the receipt, change future output settings, and recover interrupted work without routinely navigating mobile settings.

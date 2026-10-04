@@ -1503,4 +1503,9 @@
     <string name="fdroid_onboarding_access_body">Офіційна версія F-Droid безкоштовно включає всі локальні функції експорту й автоматизації.</string>
     <string name="fdroid_onboarding_no_purchase">Купівля, відновлення, ціна й обліковий запис Play не потрібні.</string>
     <string name="fdroid_onboarding_no_play_services">Експорт за розкладом працює без Google Play Billing.</string>
+    <string name="profile_schedule_discard_recovery">Відкинути очікуване відновлення</string>
+    <string name="profile_schedule_discard_recovery_named">Відкинути очікуване відновлення для %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Відкинути очікуване відновлення для %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Зупинити заплановану повторну спробу цього профілю та видалити очікувані дати й зафіксовані налаштування експорту. Наступний запуск за розкладом використовуватиме поточні профіль і розклад. Ваш профіль, облікові дані API, історія експорту та вже експортовані дані зберігаються. Це не скасовує вже виконане надсилання або запис файлу.</string>
+    <string name="profile_schedule_discard_recovery_failed">Не вдалося повністю відкинути очікуване відновлення. Перевірте профіль і спробуйте ще раз.</string>
 </resources>

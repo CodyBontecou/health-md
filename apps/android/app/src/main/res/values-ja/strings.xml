@@ -1226,4 +1226,9 @@
     <string name="fdroid_onboarding_access_body">公式 F-Droid ビルドでは、ローカルのエクスポート機能と自動化機能をすべて無料で利用できます。</string>
     <string name="fdroid_onboarding_no_purchase">購入、復元、価格、Play アカウントは不要です。</string>
     <string name="fdroid_onboarding_no_play_services">予約エクスポートは Google Play Billing なしで動作します。</string>
+    <string name="profile_schedule_discard_recovery">保留中の復旧を破棄</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s の保留中の復旧を破棄</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s の保留中の復旧を破棄しますか？</string>
+    <string name="profile_schedule_discard_recovery_body">このプロファイルの予約された再試行を停止し、保留中の日付と固定されたエクスポート設定を削除します。次回の予約実行では、現在のプロファイルとスケジュールを使用します。プロファイル、API 認証情報、エクスポート履歴、すでにエクスポートしたデータは保持されます。すでに行われたアップロードやファイルの書き込みは取り消せません。</string>
+    <string name="profile_schedule_discard_recovery_failed">保留中の復旧を完全に破棄できませんでした。プロファイルを確認して再試行してください。</string>
 </resources>

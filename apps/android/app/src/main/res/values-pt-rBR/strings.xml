@@ -1449,4 +1449,9 @@
     <string name="fdroid_onboarding_access_body">A versão oficial do F-Droid inclui gratuitamente todos os recursos locais de exportação e automação.</string>
     <string name="fdroid_onboarding_no_purchase">Não é necessário comprar, restaurar, pagar ou ter uma conta do Play.</string>
     <string name="fdroid_onboarding_no_play_services">As exportações agendadas funcionam sem o Google Play Billing.</string>
+    <string name="profile_schedule_discard_recovery">Descartar recuperação pendente</string>
+    <string name="profile_schedule_discard_recovery_named">Descartar recuperação pendente de %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Descartar recuperação pendente de %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Interrompa a nova tentativa agendada deste perfil e remova as datas pendentes e as configurações de exportação fixadas. A próxima execução agendada usará o perfil e o agendamento atuais. Seu perfil, credenciais de API, histórico de exportação e dados já exportados serão mantidos. Isso não pode desfazer um envio ou um arquivo já gravado.</string>
+    <string name="profile_schedule_discard_recovery_failed">Não foi possível descartar completamente a recuperação pendente. Verifique o perfil e tente novamente.</string>
 </resources>

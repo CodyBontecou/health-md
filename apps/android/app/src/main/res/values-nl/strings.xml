@@ -1401,4 +1401,9 @@
     <string name="fdroid_onboarding_access_body">De officiële F-Droid-versie bevat gratis alle lokale export- en automatiseringsfuncties.</string>
     <string name="fdroid_onboarding_no_purchase">Geen aankoop, herstel, prijs of Play-account vereist.</string>
     <string name="fdroid_onboarding_no_play_services">Geplande exports werken zonder Google Play Billing.</string>
+    <string name="profile_schedule_discard_recovery">Herstel in wachtrij verwijderen</string>
+    <string name="profile_schedule_discard_recovery_named">Herstel in wachtrij voor %1$s verwijderen</string>
+    <string name="profile_schedule_discard_recovery_title">Herstel in wachtrij voor %1$s verwijderen?</string>
+    <string name="profile_schedule_discard_recovery_body">Stop de geplande nieuwe poging van dit profiel en verwijder de wachtende datums en vastgelegde exportinstellingen. De volgende geplande uitvoering gebruikt het huidige profiel en schema. Je profiel, API-inloggegevens, exportgeschiedenis en al geëxporteerde gegevens blijven behouden. Een al uitgevoerde upload of geschreven bestand kan hiermee niet ongedaan worden gemaakt.</string>
+    <string name="profile_schedule_discard_recovery_failed">Het herstel in de wachtrij kon niet volledig worden verwijderd. Controleer het profiel en probeer het opnieuw.</string>
 </resources>

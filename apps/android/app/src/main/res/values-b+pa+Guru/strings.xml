@@ -1375,4 +1375,9 @@
     <string name="fdroid_onboarding_access_body">ਅਧਿਕਾਰਤ F-Droid ਬਿਲਡ ਵਿੱਚ ਸਾਰੀਆਂ ਲੋਕਲ ਐਕਸਪੋਰਟ ਅਤੇ ਆਟੋਮੇਸ਼ਨ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਮੁਫ਼ਤ ਸ਼ਾਮਲ ਹਨ।</string>
     <string name="fdroid_onboarding_no_purchase">ਖਰੀਦ, ਰੀਸਟੋਰ, ਕੀਮਤ ਜਾਂ Play ਖਾਤੇ ਦੀ ਲੋੜ ਨਹੀਂ ਹੈ।</string>
     <string name="fdroid_onboarding_no_play_services">ਤਹਿ ਕੀਤੇ ਐਕਸਪੋਰਟ Google Play Billing ਤੋਂ ਬਿਨਾਂ ਕੰਮ ਕਰਦੇ ਹਨ।</string>
+    <string name="profile_schedule_discard_recovery">ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s ਦੀ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s ਦੀ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰਨੀ ਹੈ?</string>
+    <string name="profile_schedule_discard_recovery_body">ਇਸ ਪ੍ਰੋਫਾਈਲ ਦੀ ਤਹਿ ਕੀਤੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਰੋਕੋ ਅਤੇ ਇਸ ਦੀਆਂ ਬਕਾਇਆ ਤਾਰੀਖਾਂ ਤੇ ਨਿਸ਼ਚਿਤ ਐਕਸਪੋਰਟ ਸੈਟਿੰਗਾਂ ਹਟਾਓ। ਅਗਲੀ ਤਹਿ ਕੀਤੀ ਕਾਰਵਾਈ ਮੌਜੂਦਾ ਪ੍ਰੋਫਾਈਲ ਅਤੇ ਸਮਾਂ-ਸਾਰਣੀ ਵਰਤੇਗੀ। ਤੁਹਾਡੀ ਪ੍ਰੋਫਾਈਲ, API ਪ੍ਰਮਾਣ ਪੱਤਰ, ਐਕਸਪੋਰਟ ਇਤਿਹਾਸ ਅਤੇ ਪਹਿਲਾਂ ਐਕਸਪੋਰਟ ਕੀਤਾ ਡਾਟਾ ਸੁਰੱਖਿਅਤ ਰਹਿਣਗੇ। ਪਹਿਲਾਂ ਕੀਤੇ ਅੱਪਲੋਡ ਜਾਂ ਲਿਖੀ ਫਾਈਲ ਨੂੰ ਇਸ ਨਾਲ ਵਾਪਸ ਨਹੀਂ ਕੀਤਾ ਜਾ ਸਕਦਾ।</string>
+    <string name="profile_schedule_discard_recovery_failed">ਬਕਾਇਆ ਰਿਕਵਰੀ ਪੂਰੀ ਤਰ੍ਹਾਂ ਰੱਦ ਨਹੀਂ ਹੋ ਸਕੀ। ਪ੍ਰੋਫਾਈਲ ਦੀ ਜਾਂਚ ਕਰਕੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
 </resources>

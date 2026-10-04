@@ -1449,4 +1449,9 @@
     <string name="fdroid_onboarding_access_body">La version F-Droid officielle inclut gratuitement toutes les fonctions locales d’exportation et d’automatisation.</string>
     <string name="fdroid_onboarding_no_purchase">Aucun achat, rétablissement, prix ou compte Play n’est requis.</string>
     <string name="fdroid_onboarding_no_play_services">Les exportations planifiées fonctionnent sans Google Play Billing.</string>
+    <string name="profile_schedule_discard_recovery">Abandonner la reprise en attente</string>
+    <string name="profile_schedule_discard_recovery_named">Abandonner la reprise en attente de %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Abandonner la reprise en attente de %1$s ?</string>
+    <string name="profile_schedule_discard_recovery_body">Arrêtez la nouvelle tentative planifiée de ce profil et supprimez ses dates en attente et ses paramètres d’exportation figés. La prochaine exécution planifiée utilisera le profil et la planification actuels. Votre profil, vos identifiants API, l’historique d’exportation et les données déjà exportées sont conservés. Cela ne peut pas annuler un envoi ou un fichier déjà écrit.</string>
+    <string name="profile_schedule_discard_recovery_failed">La reprise en attente n’a pas pu être entièrement abandonnée. Vérifiez le profil et réessayez.</string>
 </resources>

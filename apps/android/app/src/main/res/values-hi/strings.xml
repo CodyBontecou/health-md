@@ -1375,4 +1375,9 @@
     <string name="fdroid_onboarding_access_body">आधिकारिक F-Droid बिल्ड में सभी स्थानीय एक्सपोर्ट और ऑटोमेशन सुविधाएँ मुफ़्त शामिल हैं।</string>
     <string name="fdroid_onboarding_no_purchase">खरीद, रीस्टोर, कीमत या Play खाते की आवश्यकता नहीं है।</string>
     <string name="fdroid_onboarding_no_play_services">शेड्यूल किए गए एक्सपोर्ट Google Play Billing के बिना काम करते हैं।</string>
+    <string name="profile_schedule_discard_recovery">लंबित पुनर्प्राप्ति छोड़ें</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s की लंबित पुनर्प्राप्ति छोड़ें</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s की लंबित पुनर्प्राप्ति छोड़ें?</string>
+    <string name="profile_schedule_discard_recovery_body">इस प्रोफ़ाइल का शेड्यूल किया गया पुनः प्रयास रोकें और उसकी लंबित तारीखें तथा तय की गई एक्सपोर्ट सेटिंग्स हटाएँ। अगला शेड्यूल किया गया रन वर्तमान प्रोफ़ाइल और शेड्यूल का उपयोग करेगा। आपकी प्रोफ़ाइल, API क्रेडेंशियल, एक्सपोर्ट इतिहास और पहले से एक्सपोर्ट किया गया डेटा सुरक्षित रहेंगे। यह पहले से किए गए अपलोड या लिखी गई फ़ाइल को वापस नहीं कर सकता।</string>
+    <string name="profile_schedule_discard_recovery_failed">लंबित पुनर्प्राप्ति पूरी तरह नहीं छोड़ी जा सकी। प्रोफ़ाइल जाँचें और फिर कोशिश करें।</string>
 </resources>

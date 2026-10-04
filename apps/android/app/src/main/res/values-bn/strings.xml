@@ -1375,4 +1375,9 @@
     <string name="fdroid_onboarding_access_body">অফিসিয়াল F-Droid বিল্ডে সব লোকাল এক্সপোর্ট ও অটোমেশন সুবিধা বিনামূল্যে অন্তর্ভুক্ত।</string>
     <string name="fdroid_onboarding_no_purchase">কেনা, পুনরুদ্ধার, মূল্য বা Play অ্যাকাউন্টের প্রয়োজন নেই।</string>
     <string name="fdroid_onboarding_no_play_services">নির্ধারিত এক্সপোর্ট Google Play Billing ছাড়াই কাজ করে।</string>
+    <string name="profile_schedule_discard_recovery">অপেক্ষমাণ পুনরুদ্ধার বাতিল করুন</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s-এর অপেক্ষমাণ পুনরুদ্ধার বাতিল করুন</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s-এর অপেক্ষমাণ পুনরুদ্ধার বাতিল করবেন?</string>
+    <string name="profile_schedule_discard_recovery_body">এই প্রোফাইলের নির্ধারিত পুনঃচেষ্টা বন্ধ করুন এবং অপেক্ষমাণ তারিখ ও স্থির এক্সপোর্ট সেটিংস মুছে ফেলুন। পরবর্তী নির্ধারিত এক্সপোর্ট বর্তমান প্রোফাইল ও সময়সূচি ব্যবহার করবে। আপনার প্রোফাইল, API শংসাপত্র, এক্সপোর্টের ইতিহাস এবং ইতিমধ্যে এক্সপোর্ট করা ডেটা অক্ষত থাকবে। ইতিমধ্যে আপলোড করা ডেটা বা লেখা ফাইল এই কাজের মাধ্যমে ফিরিয়ে নেওয়া যায় না।</string>
+    <string name="profile_schedule_discard_recovery_failed">অপেক্ষমাণ পুনরুদ্ধার পুরোপুরি বাতিল করা যায়নি। প্রোফাইলটি পরীক্ষা করে আবার চেষ্টা করুন।</string>
 </resources>

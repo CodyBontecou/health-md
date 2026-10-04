@@ -1342,4 +1342,9 @@
     <string name="fdroid_onboarding_access_body">Ресми F-Droid нұсқасы барлық жергілікті экспорт және автоматтандыру мүмкіндіктерін тегін қамтиды.</string>
     <string name="fdroid_onboarding_no_purchase">Сатып алу, қалпына келтіру, баға немесе Play аккаунты қажет емес.</string>
     <string name="fdroid_onboarding_no_play_services">Жоспарланған экспорттар Google Play Billing қызметінсіз жұмыс істейді.</string>
+    <string name="profile_schedule_discard_recovery">Күтудегі қалпына келтіруден бас тарту</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s үшін күтудегі қалпына келтіруден бас тарту</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s үшін күтудегі қалпына келтіруден бас тартасыз ба?</string>
+    <string name="profile_schedule_discard_recovery_body">Осы профильдің жоспарланған қайталау әрекетін тоқтатып, күтудегі күндер мен бекітілген экспорт параметрлерін жойыңыз. Келесі жоспарланған іске қосу ағымдағы профиль мен кестені пайдаланады. Профиліңіз, API тіркелгі деректері, экспорт тарихы және экспортталған деректер сақталады. Бұрын орындалған жүктеп жіберуді немесе файл жазуды кері қайтару мүмкін емес.</string>
+    <string name="profile_schedule_discard_recovery_failed">Күтудегі қалпына келтіруден толық бас тарту мүмкін болмады. Профильді тексеріп, қайталап көріңіз.</string>
 </resources>

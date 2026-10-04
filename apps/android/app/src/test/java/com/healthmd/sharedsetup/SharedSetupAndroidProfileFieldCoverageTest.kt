@@ -18,10 +18,13 @@ import com.healthmd.domain.model.MetricTrackingConfig
 import com.healthmd.domain.model.PendingScheduledExportRequest
 import com.healthmd.domain.model.RawSnapshotSettings
 import java.io.File
+import java.security.MessageDigest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -164,15 +167,56 @@ class SharedSetupAndroidProfileFieldCoverageTest {
             )
         }
 
-    private fun ledgerObject() = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
+    @Test
+    fun recoverySupplementIsPrivateOnlyAndPinsHistoricalInventory() {
+        val supplement = Json.parseToJsonElement(ledgerFile(SUPPLEMENT_PATH).readText()).jsonObject
+        assertEquals(
+            setOf("schema", "schema_version", "target_contract", "base_inventory", "audited_git_base", "fields"),
+            supplement.keys,
+        )
+        assertEquals("healthmd.shared_setup.android_recovery_coverage", supplement.getValue("schema").jsonPrimitive.content)
+        assertEquals(1, supplement.getValue("schema_version").jsonPrimitive.content.toInt())
+        assertTrue(supplement.getValue("audited_git_base").jsonPrimitive.content.matches(Regex("[0-9a-f]{40}")))
+        val base = supplement.getValue("base_inventory").jsonObject
+        assertEquals(setOf("path", "sha256"), base.keys)
+        assertEquals(BASE_PATH, base.getValue("path").jsonPrimitive.content)
+        val digest = MessageDigest.getInstance("SHA-256").digest(ledgerFile().readBytes())
+            .joinToString("") { "%02x".format(it.toInt() and 255) }
+        assertEquals("Historical portability ledger must remain immutable", BASE_SHA256, digest)
+        assertEquals(digest, base.getValue("sha256").jsonPrimitive.content)
+        assertEquals(
+            Json.parseToJsonElement(ledgerFile().readText()).jsonObject.getValue("target_contract"),
+            supplement.getValue("target_contract"),
+        )
+        val additions = rows(supplement)
+        assertTrue("Private supplement must contain reviewed fields", additions.isNotEmpty())
+        additions.forEach { row ->
+            assertEquals("Recovery fields cannot become portable authority", PROHIBITED, row.disposition)
+            assertNull(row.contractPath)
+            assertTrue(row.evidence.isNotBlank())
+        }
+        val keys = additions.map(FieldRow::key)
+        assertEquals(keys.size, keys.toSet().size)
+        assertEquals(keys.sortedWith(compareBy<FieldKey>({ it.sourceType }, { it.serializedField })), keys)
+    }
+
+    private fun ledgerObject(): JsonObject {
+        val base = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
+        val supplement = Json.parseToJsonElement(ledgerFile(SUPPLEMENT_PATH).readText()).jsonObject
+        val combined = base.getValue("fields").jsonArray + supplement.getValue("fields").jsonArray
+        return JsonObject(base + ("fields" to JsonArray(combined.sortedWith(
+            compareBy({ it.jsonObject.getValue("source_type").jsonPrimitive.content },
+                { it.jsonObject.getValue("serialized_field").jsonPrimitive.content }),
+        ))))
+    }
 
     /** Mirrors the established Android root-fixture lookup used by Shared Setup contract tests. */
-    private fun ledgerFile(): File {
+    private fun ledgerFile(relativePath: String = BASE_PATH): File {
         var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
         while (directory != null) {
             val candidate = File(
                 directory,
-                "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
+                relativePath,
             )
             if (candidate.isFile) return candidate
             directory = directory.parentFile
@@ -235,6 +279,9 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     }
 
     private companion object {
+        const val BASE_PATH = "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"
+        const val SUPPLEMENT_PATH = "packages/contracts/portability-inventory/android-agent-recovery/v1/inventory.json"
+        const val BASE_SHA256 = "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789"
         const val DESCRIPTOR = "descriptor"
         const val SUPPLEMENTAL = "supplemental"
 
@@ -272,6 +319,8 @@ class SharedSetupAndroidProfileFieldCoverageTest {
             FieldKey("CustomFrontmatterField", "outputKey"),
             FieldKey("DataTypeSelection", "enabledCount"),
             FieldKey("DataTypeSelection", "hasAnySelected"),
+            FieldKey("ExportSettings", "executionAPIRecovery"),
+            FieldKey("ExportSettings", "executionAPIRecoveryRequired"),
             FieldKey("ExportSettings", "executionEngineAuthorityIsFrozen"),
             FieldKey("ExportSettings", "executionEnginePin"),
             FieldKey("ExportSettings", "selectedExportFormats"),

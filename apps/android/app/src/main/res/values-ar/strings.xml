@@ -1594,4 +1594,9 @@
     <string name="fdroid_onboarding_access_body">يتضمن إصدار F-Droid الرسمي جميع ميزات التصدير المحلي والأتمتة مجانًا.</string>
     <string name="fdroid_onboarding_no_purchase">لا يلزم شراء أو استعادة أو سعر أو حساب Play.</string>
     <string name="fdroid_onboarding_no_play_services">تعمل عمليات التصدير المجدولة بدون Google Play Billing.</string>
+    <string name="profile_schedule_discard_recovery">تجاهل الاسترداد المعلّق</string>
+    <string name="profile_schedule_discard_recovery_named">تجاهل الاسترداد المعلّق لـ %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">تجاهل الاسترداد المعلّق لـ %1$s؟</string>
+    <string name="profile_schedule_discard_recovery_body">أوقف إعادة محاولة التصدير المجدول لهذا الملف الشخصي واحذف تواريخه المعلّقة وإعدادات التصدير المثبّتة. سيستخدم التشغيل المجدول التالي الملف الشخصي والجدول الحاليين. يُحتفظ بالملف الشخصي وبيانات اعتماد API وسجل التصدير والبيانات المصدّرة بالفعل. لا يمكن لهذا الإجراء التراجع عن رفع بيانات أو كتابة ملف تمّت بالفعل.</string>
+    <string name="profile_schedule_discard_recovery_failed">تعذّر تجاهل الاسترداد المعلّق بالكامل. تحقّق من الملف الشخصي وحاول مجددًا.</string>
 </resources>
