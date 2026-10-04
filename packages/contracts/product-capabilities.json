@@ -944,6 +944,138 @@
       "evidence": [
         "docs/architecture/adr-0001-shared-rust-uniffi-core.md"
       ]
+    },
+    {
+      "id": "agent.export.explicit-settings",
+      "name": "Request-owned export settings and capture",
+      "classification": "planned",
+      "summary": "Describe complete scoped output independently of mobile settings, preserving separate series and native archive axes and host-opaque destinations.",
+      "profiles": ["apple-v8", "android-frozen-v4", "android-analytical-v5"],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B09: implement v4 explicit-settings resolver and production exporter journal; prove preferences unchanged and Swift/Rust same-intent conformance."},
+        "android": {"state": "planned", "target": "B09: implement v4 scoped settings through Kotlin production exporters, opaque destinations and immutable journals; qualify Kotlin/Rust conformance."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/source-review.md"]
+    },
+    {
+      "id": "agent.export.zero-health-plan",
+      "name": "Configuration-only export planning",
+      "classification": "planned",
+      "summary": "Resolve configuration without health reads, earliest-date discovery, preview, quota, output, settings, credential or wake enrollment writes; preserve unresolved logical history.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B10: implement read-only capabilities/settings planner and zero-read fake backend tests on iPhone and CLI/MCP."},
+        "android": {"state": "planned", "target": "B10: implement read-only capabilities/settings planner with provider/history uncertainty and zero-read Kotlin/CLI/MCP tests."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md"]
+    },
+    {
+      "id": "agent.export.bound-execution",
+      "name": "Bound approved execution and immutable recovery",
+      "classification": "planned",
+      "summary": "Bind issued approval to peer, destination, scope, settings, revisions, capabilities and expiry; resume exact journal and commit append/merge idempotently.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B09/B10: implement v4 stored plan/approval verification, frozen request journals and source-acknowledged receipts; retain host-safe commits."},
+        "android": {"state": "planned", "target": "B09/B10: implement v4 stored plan/approval verification and immutable native artifact recovery, with Kotlin/Rust receipt and commit tests."}
+      },
+      "evidence": ["packages/contracts/direct-protocol/v4/protocol.md", "packages/contracts/agent-bridge/v1/conformance.md"]
+    },
+    {
+      "id": "direct.source-aware-queries",
+      "name": "Source-aware fixed typed query extension",
+      "classification": "planned",
+      "summary": "Independently negotiate source-aware fixed query/catalog/evidence views with native units/statistics, provider/history evidence and authenticated bounded cursors; existing iPhone v3 remains unchanged.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B07: review source-aware adapter and catalog for the existing Swift evaluator without replacing iPhone query v3 or claiming a shared Rust query engine."},
+        "android": {"state": "planned", "target": "B06/B07: implement pinned Health Connect capture/evaluator and independent v4 source-query dispatch, then Kotlin/Rust/MCP/Apps/PNG and physical qualification."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/source-review.md", "packages/contracts/agent-bridge/v1/query.schema.json", "packages/contracts/direct-protocol/v4/protocol.md"]
+    },
+    {
+      "id": "direct.scoped-source-projection",
+      "name": "Scoped source-shaped extraction view",
+      "classification": "planned",
+      "summary": "Explicit summary/series/native-record projections and complete receipts remain independently versioned rather than relabeling selected data as a complete daily document.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B08 consumer review: preserve existing Apple extraction and review any source-aware projection adapter independently; no shipped Apple schema changes."},
+        "android": {"state": "planned", "target": "B08: implement android_source_projection_v1 selected durable artifacts and Kotlin/Rust validators over approved Health Connect scope; no unified-v9 writer prerequisite."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/query.schema.json"]
+    },
+    {
+      "id": "agent.host-recipes",
+      "name": "Host-owned export recipe controls",
+      "classification": "planned",
+      "summary": "Typed private recipe CRUD with CAS revisions and separately approved fresh-plan runs; no phone-setting mutation, stored health data or portable pairing authority.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B11: implement shared CLI/MCP private recipe store and immutable run plans for selected iPhone sources."},
+        "android": {"state": "planned", "target": "B11: implement the same host recipe contract routed to selected Android sources after B09/B10."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/conformance.md"]
+    },
+    {
+      "id": "agent.native-profile-controls",
+      "name": "Separately authorized mobile profile controls",
+      "classification": "planned",
+      "summary": "Sanitized typed inspection and revision-bound profile mutations preserve Configuration Protection, native grants, imported rebind blocks and the last-profile invariant.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B12: implement Swift native profile transactions and separate configuration grant/approval checks through v4."},
+        "android": {"state": "planned", "target": "B12: implement Kotlin native profile transactions with separate configuration authority and imported-profile execution gates."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md"]
+    },
+    {
+      "id": "agent.host-schedule-controls",
+      "name": "Host-owned recipe schedule controls",
+      "classification": "planned",
+      "summary": "Bounded typed scheduling with exact recipe revisions/calendar/DST/catch-up and duplicate-run recovery; never grants unattended health authorization.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B13: qualify portable host schedules and native credential/session readiness while retaining foreground iPhone requirements."},
+        "android": {"state": "planned", "target": "B13: qualify the same host scheduler against already-active user-started Android service lifecycle and honest wait-only wake behavior."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/conformance.md"]
+    },
+    {
+      "id": "agent.native-schedule-destination-controls",
+      "name": "Native schedule and destination configuration controls",
+      "classification": "planned",
+      "summary": "Separate authority for native target disclosure, schedule mutations and exact pending-recovery discard; strings never grant folders/credentials or retarget frozen work.",
+      "profiles": [],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B14: implement native binding/protection, cadence and future-work-only mutations with explicit human rebind actions."},
+        "android": {"state": "planned", "target": "B14 after B12 and B16: implement SAF/endpoint/native schedule workflows preserving original pending credential/destination authority."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md"]
+    },
+    {
+      "id": "agent.export.zip-packaging",
+      "name": "Explicit agent-controlled ZIP packaging",
+      "classification": "planned",
+      "summary": "Optional bounded ZIP containers preserve exact production inner files/profile/digests and explicit loose-file/companion semantics; not a native health archive.",
+      "profiles": ["apple-v8", "android-frozen-v4", "android-analytical-v5"],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B09/B17: wire existing native ZIP packaging through v4 explicit settings and immutable artifact manifests."},
+        "android": {"state": "planned", "target": "B17 after B09: implement native streaming ZIP writer, safe staging and exact inner/container validation without changing frozen settings/snapshot bytes."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/source-review.md"]
+    },
+    {
+      "id": "agent.export.profile-dictionary",
+      "name": "Explicit profile-correct dictionary companions",
+      "classification": "planned",
+      "summary": "Independently versioned static dictionary/catalog meanings disclose exact profile/schema/native mappings without health values or runtime permission claims.",
+      "profiles": ["apple-v8", "android-frozen-v4", "android-analytical-v5"],
+      "platforms": {
+        "apple": {"state": "planned", "target": "B09/B18: expose optional native Apple dictionary through explicit v4 plans and manifest validation, preserving shipped profile rules."},
+        "android": {"state": "planned", "target": "B18 after B05/B09: generate Android profile_dictionary/1 from registry and reviewed native mappings, retaining RMSSD/SDNN, skin/wrist and clinical distinctions."}
+      },
+      "evidence": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/agent.schema.json"]
     }
   ]
 }

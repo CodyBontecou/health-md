@@ -13,6 +13,7 @@ import json
 import math
 import os
 import re
+import runpy
 import struct
 import sys
 from datetime import datetime
@@ -3578,6 +3579,12 @@ def validate_rollup_production_fixture(root: Path, path: Path) -> None:
             fail(f"{context}: canonical Bases fixture must include all metric projections")
 
 
+def validate_agent_bridge_asset(root: Path, path: Path) -> None:
+    """Additive validator for new deferred assets; historical validators are unchanged."""
+    module = runpy.run_path(str(root / "packages/contracts/agent-bridge/v1/validation.py"))
+    module["validate_asset"](root, path, validate_json_schema_subset, fail)
+
+
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
     manifest_path = root / "packages/contracts/manifest.json"
     manifest = require_exact_keys(
@@ -3703,6 +3710,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     validate_v2_profile_policy_fixture(fixture_path)
                 else:
                     fail(f"{fixture_context}: unknown healthmd.direct.android fixture file")
+            elif identifier in {"healthmd.agent_bridge", "healthmd.source_query", "healthmd.direct.agent-bridge"}:
+                validate_agent_bridge_asset(root, fixture_path)
             elif identifier == "healthmd.semantic_input":
                 if fixture_path.name == "range-profile-revision-v2.json":
                     validate_semantic_range_capability_fixture(fixture_path)

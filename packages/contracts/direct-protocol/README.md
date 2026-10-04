@@ -8,12 +8,19 @@ These specifications define the authenticated direct-device protocols used by th
 | Application v2 | Android / Kotlin | Rust CLI | [`v2/protocol.md`](v2/protocol.md) | [`v2/fixtures/interop.json`](v2/fixtures/interop.json) |
 | Shared pairing profile v3 | iOS / Android | Rust CLI/MCP | [`pairing-v3/protocol.md`](pairing-v3/protocol.md) | [`pairing-v3/fixtures/shared-pairing-v3.json`](pairing-v3/fixtures/shared-pairing-v3.json) |
 | Query v3 | iPhone / Swift | Rust CLI/MCP | [`v3/protocol.md`](v3/protocol.md) | [`v3/fixtures/swift-reference.json`](v3/fixtures/swift-reference.json) |
+| **Deferred extension v4** | Planned iPhone / Android adapters | Planned Rust CLI/MCP | [`v4/protocol.md`](v4/protocol.md) | [Synthetic specification candidates](../agent-bridge/v1/fixtures/conformance.json); native conformance not run |
 
 Query v3 is an additive, capability-gated iPhone query extension. It is independent of pairing
 profile v3, which adds shared 20-digit iOS/Android QR onboarding without changing either application
 protocol. Legacy Apple selector 1 and Android selector 2 remain compatible.
 
 V2 extends the application layer for Android while deliberately reusing the deployed transport framing and binary transfer frame. It does not replace iPhone application v1. Peers negotiate the highest compatible application version and Android fails closed rather than downgrading to v1.
+
+V4 is an independently negotiated agent-control/source-query extension over base v1/v2, not pairing
+selector 4 or a replacement for iPhone query v3. No new unknown hello fields are sent to old Android
+decoders. All planned controls require separate issued authority; no product support is claimed.
+See the [agent bridge foundation](../agent-bridge/v1/contract.md) and
+[downstream native conformance gates](../agent-bridge/v1/conformance.md).
 
 ## Implementations
 

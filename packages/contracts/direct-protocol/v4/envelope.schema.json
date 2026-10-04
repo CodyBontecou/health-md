@@ -1,0 +1,6800 @@
+{
+  "$defs": {
+    "alignment_item": {
+      "additionalProperties": false,
+      "properties": {
+        "gap_nanoseconds": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "type": "string"
+        },
+        "physiology": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        },
+        "relation": {
+          "const": "first_following_sleep_start"
+        },
+        "sleep": {
+          "$ref": "#/$defs/session_item"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "partial",
+            "unavailable"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "const": "alignment"
+        },
+        "workout": {
+          "$ref": "#/$defs/session_item"
+        }
+      },
+      "required": [
+        "type",
+        "workout",
+        "relation",
+        "gap_nanoseconds",
+        "status",
+        "physiology"
+      ],
+      "type": "object"
+    },
+    "approval": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "approved_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "rights": {
+          "items": {
+            "enum": [
+              "export_execute",
+              "recipe_run",
+              "host_schedule_run",
+              "native_configuration_mutate",
+              "native_schedule_mutate"
+            ],
+            "type": "string"
+          },
+          "maxItems": 5,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "schema": {
+          "const": "healthmd.agent_approval"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "approval_id",
+        "authority_id",
+        "binding",
+        "rights",
+        "approved_at"
+      ],
+      "type": "object"
+    },
+    "archive": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "none"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "apple_healthkit_canonical_v1"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "enum": [
+                "json",
+                "ndjson"
+              ],
+              "type": "string"
+            },
+            "include_exercise_routes": {
+              "type": "boolean"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "record_scope": {
+              "enum": [
+                "selected",
+                "all_authorized_supported"
+              ],
+              "type": "string"
+            },
+            "type": {
+              "const": "android_provider_native_snapshot_v1"
+            }
+          },
+          "required": [
+            "type",
+            "provider_id",
+            "record_scope",
+            "format",
+            "include_exercise_routes"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "byte_count": {
+          "maximum": 1099511627776,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "media_type": {
+          "enum": [
+            "application/json",
+            "application/x-ndjson",
+            "text/csv",
+            "text/markdown",
+            "application/zip"
+          ],
+          "type": "string"
+        },
+        "profile": {
+          "enum": [
+            "apple-v8",
+            "android-frozen-v4",
+            "android-analytical-v5",
+            "apple-healthkit-canonical-v1",
+            "android-provider-native-snapshot-v1",
+            "profile-dictionary-v1",
+            "zip-container-v1"
+          ],
+          "type": "string"
+        },
+        "relative_path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "write_mode": {
+          "enum": [
+            "overwrite",
+            "append",
+            "merge_markdown",
+            "merge_markdown_preserving_preamble"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "relative_path",
+        "media_type",
+        "byte_count",
+        "sha256",
+        "write_mode",
+        "profile"
+      ],
+      "type": "object"
+    },
+    "binding": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "destination": {
+          "$ref": "#/$defs/destination"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/$defs/revision"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "settings_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "peer",
+        "destination",
+        "plan_sha256",
+        "settings_sha256",
+        "scope_sha256",
+        "capability_sha256",
+        "revisions",
+        "expires_at"
+      ],
+      "type": "object"
+    },
+    "budgets": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor_idle_seconds": {
+          "maximum": 600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "cursor_lifetime_seconds": {
+          "maximum": 3600,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_calendar_days": {
+          "maximum": 366000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_capture_seconds": {
+          "maximum": 120,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_page_bytes": {
+          "maximum": 1048576,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "max_page_items": {
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_snapshot_bytes": {
+          "maximum": 67108864,
+          "minimum": 1024,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_page_items",
+        "max_page_bytes",
+        "max_snapshot_bytes",
+        "max_capture_seconds",
+        "max_calendar_days",
+        "cursor_idle_seconds",
+        "cursor_lifetime_seconds"
+      ],
+      "type": "object"
+    },
+    "cancel": {
+      "additionalProperties": false,
+      "properties": {
+        "approval_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "job_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "schema": {
+          "const": "healthmd.agent_cancel_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "job_id",
+        "peer",
+        "request_sha256",
+        "authority_id",
+        "approval_id"
+      ],
+      "type": "object"
+    },
+    "capture": {
+      "additionalProperties": false,
+      "properties": {
+        "compatibility_detail": {
+          "enum": [
+            "summary",
+            "selected_time_series"
+          ],
+          "type": "string"
+        },
+        "native_archive": {
+          "$ref": "#/$defs/archive"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        }
+      },
+      "required": [
+        "selection",
+        "compatibility_detail",
+        "native_archive"
+      ],
+      "type": "object"
+    },
+    "catalog_item": {
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "enum": [
+            "planned",
+            "unavailable",
+            "supported",
+            "permission_required",
+            "feature_unavailable",
+            "history_unverified"
+          ],
+          "type": "string"
+        },
+        "evidence_value_support": {
+          "type": "boolean"
+        },
+        "feature_gate": {
+          "maxLength": 128,
+          "minLength": 0,
+          "type": "string"
+        },
+        "metric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "native_record_type": {
+          "$ref": "#/$defs/id"
+        },
+        "owner_rule": {
+          "enum": [
+            "civil_day_aggregate",
+            "source_start_civil_day",
+            "noon_to_noon_additive_native",
+            "source_start_noon_journal"
+          ],
+          "type": "string"
+        },
+        "registry_equivalence": {
+          "enum": [
+            "platform_exact_or_unavailable",
+            "mapped_alias",
+            "platform_distinct"
+          ],
+          "type": "string"
+        },
+        "source_statistic": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "statistics": {
+          "items": {
+            "enum": [
+              "sum",
+              "average",
+              "minimum",
+              "maximum",
+              "latest",
+              "count",
+              "duration_sum"
+            ],
+            "type": "string"
+          },
+          "maxItems": 7,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "target_or_reason": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": {
+          "const": "catalog_metric"
+        },
+        "unit": {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "metric_id",
+        "registry_equivalence",
+        "unit",
+        "statistics",
+        "native_record_type",
+        "source_statistic",
+        "owner_rule",
+        "availability",
+        "target_or_reason",
+        "feature_gate",
+        "evidence_value_support"
+      ],
+      "type": "object"
+    },
+    "commit": {
+      "additionalProperties": false,
+      "properties": {
+        "after_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "artifact_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "before_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "commit_key": {
+          "$ref": "#/$defs/digest"
+        },
+        "destination": {
+          "$ref": "#/$defs/destination"
+        },
+        "input_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "job_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "relative_path": {
+          "$ref": "#/$defs/path"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "schema": {
+          "const": "healthmd.agent_commit_receipt"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "committed",
+            "already_committed",
+            "conflict"
+          ],
+          "type": "string"
+        },
+        "write_mode": {
+          "enum": [
+            "overwrite",
+            "append",
+            "merge_markdown",
+            "merge_markdown_preserving_preamble"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "job_id",
+        "artifact_id",
+        "peer",
+        "destination",
+        "request_sha256",
+        "manifest_sha256",
+        "relative_path",
+        "write_mode",
+        "input_sha256",
+        "before_sha256",
+        "after_sha256",
+        "commit_key",
+        "status"
+      ],
+      "type": "object"
+    },
+    "comparison_item": {
+      "additionalProperties": false,
+      "properties": {
+        "delta": {
+          "$ref": "#/$defs/value"
+        },
+        "first": {
+          "$ref": "#/$defs/metric_item"
+        },
+        "metric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "second": {
+          "$ref": "#/$defs/metric_item"
+        },
+        "statistic": {
+          "enum": [
+            "sum",
+            "average",
+            "minimum",
+            "maximum",
+            "latest",
+            "count",
+            "duration_sum"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "const": "comparison"
+        },
+        "unit": {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "metric_id",
+        "unit",
+        "statistic",
+        "first",
+        "second"
+      ],
+      "type": "object"
+    },
+    "control": {
+      "additionalProperties": false,
+      "properties": {
+        "operation": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "local_recipe"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "list"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "local_recipe"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "get"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "local_recipe"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/recipe_definition"
+                },
+                "verb": {
+                  "const": "create"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "local_recipe"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/recipe_definition"
+                },
+                "verb": {
+                  "const": "update"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "local_recipe"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "delete"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "local_recipe"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "run"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_profile"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "list"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_profile"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "get"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_profile"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/profile_definition"
+                },
+                "verb": {
+                  "const": "create"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_profile"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/profile_definition"
+                },
+                "verb": {
+                  "const": "update"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_profile"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "activate"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_profile"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "delete"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "list"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "get"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/schedule"
+                },
+                "verb": {
+                  "const": "create"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/schedule"
+                },
+                "verb": {
+                  "const": "update"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "pause"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "delete"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "host_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "run_now"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "inspect"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "plan"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/native_schedule_definition"
+                },
+                "verb": {
+                  "const": "update"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "enable"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "disable"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "inspect_pending"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_schedule"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "pending_binding_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "discard_pending"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id",
+                "pending_binding_sha256"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_destination"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "inspect"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_destination"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "verb": {
+                  "const": "plan"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "approval_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "authority_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "domain": {
+                  "const": "native_destination"
+                },
+                "expected_revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "idempotency_key": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "object_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "peer": {
+                  "$ref": "#/$defs/peer"
+                },
+                "request_id": {
+                  "$ref": "#/$defs/uuid"
+                },
+                "value": {
+                  "$ref": "#/$defs/native_destination"
+                },
+                "verb": {
+                  "const": "update"
+                }
+              },
+              "required": [
+                "domain",
+                "verb",
+                "request_id",
+                "authority_id",
+                "peer",
+                "object_id",
+                "expected_revision",
+                "idempotency_key",
+                "approval_id",
+                "value"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "schema": {
+          "const": "healthmd.agent_control_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "operation"
+      ],
+      "type": "object"
+    },
+    "control_item": {
+      "additionalProperties": false,
+      "properties": {
+        "object_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/recipe_definition"
+            },
+            {
+              "$ref": "#/$defs/profile_definition"
+            },
+            {
+              "$ref": "#/$defs/schedule"
+            },
+            {
+              "$ref": "#/$defs/native_schedule_definition"
+            },
+            {
+              "$ref": "#/$defs/native_destination"
+            }
+          ]
+        },
+        "value_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "object_id",
+        "revision",
+        "value_sha256",
+        "value"
+      ],
+      "type": "object"
+    },
+    "control_receipt": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "enum": [
+            "local_recipe",
+            "native_profile",
+            "host_schedule",
+            "native_schedule",
+            "native_destination"
+          ],
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/control_item"
+          },
+          "maxItems": 100,
+          "minItems": 0,
+          "type": "array"
+        },
+        "object_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "previous_revision": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "required_actions": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "revision": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "schema": {
+          "const": "healthmd.agent_control_receipt"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "conflict",
+            "requires_native_action",
+            "denied",
+            "pending_recovery_retained"
+          ],
+          "type": "string"
+        },
+        "value_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "domain",
+        "status",
+        "object_id",
+        "previous_revision",
+        "revision",
+        "value_sha256",
+        "items",
+        "required_actions"
+      ],
+      "type": "object"
+    },
+    "coverage": {
+      "additionalProperties": false,
+      "properties": {
+        "days_considered": {
+          "maximum": 366000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "days_with_values": {
+          "maximum": 366000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "history": {
+          "additionalProperties": false,
+          "properties": {
+            "boundary": {
+              "$ref": "#/$defs/date"
+            },
+            "feature_status": {
+              "enum": [
+                "available",
+                "unavailable",
+                "error",
+                "not_applicable"
+              ],
+              "type": "string"
+            },
+            "state": {
+              "enum": [
+                "full_granted",
+                "bounded",
+                "unverified",
+                "not_applicable"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "state",
+            "feature_status"
+          ],
+          "type": "object"
+        },
+        "missing": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "metric_id": {
+                "$ref": "#/$defs/id"
+              },
+              "range": {
+                "$ref": "#/$defs/range"
+              },
+              "reason": {
+                "enum": [
+                  "no_records",
+                  "unsupported",
+                  "permission_required",
+                  "history_limited",
+                  "history_unverified",
+                  "failure",
+                  "skipped",
+                  "cancelled"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "range",
+              "metric_id",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array"
+        },
+        "missing_count": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "missing_truncated": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "complete",
+            "complete_empty",
+            "partial",
+            "unavailable",
+            "failed",
+            "cancelled"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "days_considered",
+        "days_with_values",
+        "missing_count",
+        "missing_truncated",
+        "missing",
+        "history"
+      ],
+      "type": "object"
+    },
+    "daily_notes": {
+      "additionalProperties": false,
+      "properties": {
+        "create_if_missing": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "filename_template": {
+          "$ref": "#/$defs/filename"
+        },
+        "folder_template": {
+          "$ref": "#/$defs/path"
+        },
+        "only": {
+          "type": "boolean"
+        },
+        "section_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "enabled",
+        "only",
+        "folder_template",
+        "filename_template",
+        "create_if_missing",
+        "section_ids"
+      ],
+      "type": "object"
+    },
+    "date": {
+      "format": "date",
+      "maxLength": 10,
+      "minLength": 10,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "type": "string"
+    },
+    "dates": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "range": {
+              "$ref": "#/$defs/range"
+            },
+            "type": {
+              "const": "exact"
+            }
+          },
+          "required": [
+            "type",
+            "range"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "all_available"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "anchor_date": {
+              "$ref": "#/$defs/date"
+            },
+            "days": {
+              "maximum": 3650,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "const": "past_complete_days"
+            }
+          },
+          "required": [
+            "type",
+            "days",
+            "anchor_date"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "destination": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "host_installation_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "identity_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "binding_id",
+        "identity_sha256",
+        "revision",
+        "host_installation_id"
+      ],
+      "type": "object"
+    },
+    "dictionary": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "none"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "filename_template": {
+              "$ref": "#/$defs/filename"
+            },
+            "format": {
+              "enum": [
+                "json",
+                "markdown"
+              ],
+              "type": "string"
+            },
+            "type": {
+              "const": "profile_dictionary_v1"
+            }
+          },
+          "required": [
+            "type",
+            "format",
+            "filename_template"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "digest": {
+      "maxLength": 64,
+      "minLength": 64,
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "discovery": {
+      "additionalProperties": false,
+      "properties": {
+        "budgets": {
+          "$ref": "#/$defs/budgets"
+        },
+        "capability_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "configuration_protection": {
+          "enum": [
+            "locked",
+            "unlocked_native"
+          ],
+          "type": "string"
+        },
+        "control_operations": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "entitlement": {
+          "enum": [
+            "satisfied",
+            "required"
+          ],
+          "type": "string"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "features": {
+          "items": {
+            "enum": [
+              "explicit_settings",
+              "zero_health_plan",
+              "bound_execution",
+              "source_query",
+              "source_projection",
+              "native_profile_control",
+              "native_schedule_control",
+              "zip",
+              "profile_dictionary"
+            ],
+            "type": "string"
+          },
+          "maxItems": 9,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "issued_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "lifecycle": {
+          "enum": [
+            "iphone_foreground_protected_data",
+            "android_user_started_service_after_first_unlock"
+          ],
+          "type": "string"
+        },
+        "native_grants": {
+          "enum": [
+            "satisfied",
+            "required",
+            "unverified"
+          ],
+          "type": "string"
+        },
+        "output_profiles": {
+          "items": {
+            "enum": [
+              "apple-v8",
+              "android-frozen-v4",
+              "android-analytical-v5"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "output_support": {
+          "$ref": "#/$defs/output_support"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "query_catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "query_operations": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 9,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "required_actions": {
+          "items": {
+            "enum": [
+              "open_mobile_app",
+              "unlock_mobile",
+              "grant_health_access",
+              "grant_history_access",
+              "native_configuration_unlock",
+              "native_destination_rebind",
+              "purchase_required"
+            ],
+            "type": "string"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "schema": {
+          "const": "healthmd.agent_discovery"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "settings_policies": {
+          "items": {
+            "enum": [
+              "explicit",
+              "saved_device_settings",
+              "profile"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source_calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "capability_revision",
+        "capability_sha256",
+        "issued_at",
+        "expires_at",
+        "source_calendar_timezone",
+        "features",
+        "settings_policies",
+        "output_profiles",
+        "query_catalog_sha256",
+        "query_operations",
+        "budgets",
+        "output_support",
+        "control_operations",
+        "lifecycle",
+        "configuration_protection",
+        "native_grants",
+        "entitlement",
+        "required_actions"
+      ],
+      "type": "object"
+    },
+    "discovery_request": {
+      "additionalProperties": false,
+      "properties": {
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.agent_discovery_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer"
+      ],
+      "type": "object"
+    },
+    "error": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "invalid_request",
+            "unsupported_capability",
+            "unsupported_metric",
+            "permission_required",
+            "history_unverified",
+            "configuration_protected",
+            "entitlement_required",
+            "native_rebind_required",
+            "revision_conflict",
+            "approval_required",
+            "binding_changed",
+            "plan_expired",
+            "unsafe_path",
+            "path_collision",
+            "query_budget_exceeded",
+            "cursor_invalid",
+            "snapshot_expired",
+            "busy",
+            "cancelled",
+            "spool_missing_restart_required"
+          ],
+          "type": "string"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "schema": {
+          "const": "healthmd.agent_error"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "code",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "evidence_item": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "evidence_id": {
+          "$ref": "#/$defs/digest"
+        },
+        "identity": {
+          "$ref": "#/$defs/native_identity"
+        },
+        "metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "start": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "type": {
+          "const": "evidence"
+        },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "evidence_id",
+        "identity",
+        "start",
+        "end",
+        "metric_ids",
+        "values"
+      ],
+      "type": "object"
+    },
+    "exact_time": {
+      "additionalProperties": false,
+      "properties": {
+        "epoch_second": {
+          "maximum": 253402300799,
+          "minimum": -62135596800,
+          "type": "integer"
+        },
+        "nanosecond": {
+          "maximum": 999999999,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "source_offset_seconds": {
+          "oneOf": [
+            {
+              "maximum": 64800,
+              "minimum": -64800,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "epoch_second",
+        "nanosecond",
+        "source_offset_seconds"
+      ],
+      "type": "object"
+    },
+    "execute": {
+      "additionalProperties": false,
+      "properties": {
+        "approval": {
+          "$ref": "#/$defs/approval"
+        },
+        "idempotency_key": {
+          "$ref": "#/$defs/uuid"
+        },
+        "job_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "plan": {
+          "$ref": "#/$defs/plan"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.agent_execute_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "job_id",
+        "idempotency_key",
+        "plan",
+        "approval"
+      ],
+      "type": "object"
+    },
+    "filename": {
+      "maxLength": 255,
+      "minLength": 1,
+      "type": "string"
+    },
+    "frontmatter": {
+      "additionalProperties": false,
+      "properties": {
+        "custom_fields": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "$ref": "#/$defs/id"
+              },
+              "value": {
+                "maxLength": 4096,
+                "minLength": 0,
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "value"
+            ],
+            "type": "object"
+          },
+          "maxItems": 128,
+          "minItems": 0,
+          "type": "array"
+        },
+        "enabled_field_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "include_capture_diagnostics": {
+          "type": "boolean"
+        },
+        "include_units": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled_field_ids",
+        "custom_fields",
+        "include_units",
+        "include_capture_diagnostics"
+      ],
+      "type": "object"
+    },
+    "id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+      "type": "string"
+    },
+    "individual_entries": {
+      "additionalProperties": false,
+      "properties": {
+        "category_folders": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "filename_template": {
+          "$ref": "#/$defs/filename"
+        },
+        "folder_template": {
+          "$ref": "#/$defs/path"
+        },
+        "metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "enabled",
+        "metric_ids",
+        "folder_template",
+        "filename_template",
+        "category_folders"
+      ],
+      "type": "object"
+    },
+    "intent": {
+      "additionalProperties": false,
+      "properties": {
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "capture_scope": {
+          "$ref": "#/$defs/capture"
+        },
+        "dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "destination": {
+          "$ref": "#/$defs/destination"
+        },
+        "intent_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "schema": {
+          "const": "healthmd.agent_export_intent"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "settings_policy": {
+          "$ref": "#/$defs/policy"
+        },
+        "timestamp_timezone": {
+          "const": "UTC"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "intent_id",
+        "peer",
+        "destination",
+        "dates",
+        "calendar_timezone",
+        "timestamp_timezone",
+        "capture_scope",
+        "settings_policy"
+      ],
+      "type": "object"
+    },
+    "manifest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 4096,
+          "minItems": 0,
+          "type": "array"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "branch_statuses": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "record_count": {
+                "maximum": 2147483647,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "selector_id": {
+                "$ref": "#/$defs/id"
+              },
+              "status": {
+                "enum": [
+                  "success",
+                  "unsupported",
+                  "skipped",
+                  "failure",
+                  "cancelled"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "selector_id",
+              "status",
+              "record_count"
+            ],
+            "type": "object"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        },
+        "capture_status": {
+          "enum": [
+            "complete",
+            "complete_empty",
+            "partial",
+            "failed",
+            "cancelled"
+          ],
+          "type": "string"
+        },
+        "job_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "schema": {
+          "const": "healthmd.agent_artifact_manifest"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "job_id",
+        "request_sha256",
+        "binding",
+        "artifacts",
+        "capture_status",
+        "branch_statuses"
+      ],
+      "type": "object"
+    },
+    "markdown": {
+      "additionalProperties": false,
+      "properties": {
+        "custom_template": {
+          "maxLength": 65536,
+          "minLength": 0,
+          "type": "string"
+        },
+        "placeholder_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 128,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "style": {
+          "enum": [
+            "tables",
+            "lists"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "style",
+        "custom_template",
+        "placeholder_ids"
+      ],
+      "type": "object"
+    },
+    "metric_item": {
+      "additionalProperties": false,
+      "properties": {
+        "availability": {
+          "enum": [
+            "available",
+            "missing",
+            "unsupported",
+            "permission_required",
+            "history_limited",
+            "failed",
+            "skipped"
+          ],
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "metric_id": {
+          "$ref": "#/$defs/id"
+        },
+        "owner_date": {
+          "$ref": "#/$defs/date"
+        },
+        "statistic": {
+          "enum": [
+            "sum",
+            "average",
+            "minimum",
+            "maximum",
+            "latest",
+            "count",
+            "duration_sum"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "const": "metric"
+        },
+        "unit": {
+          "maxLength": 32,
+          "minLength": 1,
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "required": [
+        "type",
+        "metric_id",
+        "owner_date",
+        "unit",
+        "statistic",
+        "availability",
+        "evidence_ids"
+      ],
+      "type": "object"
+    },
+    "native_destination": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "binding_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "const": "existing_native_binding"
+            }
+          },
+          "required": [
+            "type",
+            "binding_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "credential_reference_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "disclosure_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "host": {
+              "maxLength": 253,
+              "minLength": 1,
+              "type": "string"
+            },
+            "path": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            },
+            "port": {
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "query_omitted": {
+              "const": true
+            },
+            "scheme": {
+              "const": "https"
+            },
+            "type": {
+              "const": "endpoint_disclosure"
+            }
+          },
+          "required": [
+            "type",
+            "scheme",
+            "host",
+            "port",
+            "path",
+            "query_omitted",
+            "credential_reference_id",
+            "disclosure_sha256"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "device_folder",
+                "connected_mac",
+                "api_endpoint"
+              ],
+              "type": "string"
+            },
+            "type": {
+              "const": "requires_native_rebind"
+            }
+          },
+          "required": [
+            "type",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "native_identity": {
+      "additionalProperties": false,
+      "properties": {
+        "client_record_id": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "client_record_version": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "identity_kind": {
+          "enum": [
+            "native",
+            "derived_child",
+            "external"
+          ],
+          "type": "string"
+        },
+        "last_modified": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "origin": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "parent_record_id": {
+          "maxLength": 256,
+          "minLength": 0,
+          "type": "string"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "record_type": {
+          "$ref": "#/$defs/id"
+        },
+        "source_id": {
+          "enum": [
+            "apple_health",
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "provider_id",
+        "record_type",
+        "record_id",
+        "identity_kind",
+        "parent_record_id",
+        "origin",
+        "client_record_id",
+        "client_record_version",
+        "last_modified"
+      ],
+      "type": "object"
+    },
+    "native_schedule_definition": {
+      "additionalProperties": false,
+      "properties": {
+        "cadence": {
+          "additionalProperties": false,
+          "properties": {
+            "anchor_date": {
+              "$ref": "#/$defs/date"
+            },
+            "unit": {
+              "enum": [
+                "days",
+                "weeks",
+                "months"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maximum": 365,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value",
+            "unit",
+            "anchor_date"
+          ],
+          "type": "object"
+        },
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catch_up": {
+          "enum": [
+            "skip",
+            "one_latest_complete_window"
+          ],
+          "type": "string"
+        },
+        "destination": {
+          "$ref": "#/$defs/native_destination"
+        },
+        "dst_fold": {
+          "const": "first_occurrence"
+        },
+        "dst_gap": {
+          "const": "skip"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "iso_weekday": {
+          "maximum": 7,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "local_time": {
+          "additionalProperties": false,
+          "properties": {
+            "hour": {
+              "maximum": 23,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "minute": {
+              "maximum": 59,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "hour",
+            "minute"
+          ],
+          "type": "object"
+        },
+        "lookback_days": {
+          "maximum": 365,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "recipe_or_profile_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "recipe_or_profile_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "recipe_or_profile_id",
+        "recipe_or_profile_revision",
+        "calendar_timezone",
+        "cadence",
+        "local_time",
+        "iso_weekday",
+        "lookback_days",
+        "dst_gap",
+        "dst_fold",
+        "catch_up",
+        "enabled",
+        "destination"
+      ],
+      "type": "object"
+    },
+    "origin": {
+      "additionalProperties": false,
+      "properties": {
+        "origin": {
+          "enum": [
+            "request",
+            "saved_device_settings",
+            "profile",
+            "resolved_calendar",
+            "catalog"
+          ],
+          "type": "string"
+        },
+        "pointer": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "pointer",
+        "origin",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "output_support": {
+      "additionalProperties": false,
+      "properties": {
+        "compatibility_detail": {
+          "items": {
+            "enum": [
+              "summary",
+              "selected_time_series"
+            ],
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "formats": {
+          "items": {
+            "enum": [
+              "csv",
+              "json",
+              "markdown",
+              "obsidian_bases"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "max_artifacts": {
+          "maximum": 4096,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_path_bytes": {
+          "maximum": 4096,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "native_archive_products": {
+          "items": {
+            "enum": [
+              "none",
+              "apple_healthkit_canonical_v1",
+              "android_provider_native_snapshot_v1"
+            ],
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "path_tokens": {
+          "items": {
+            "enum": [
+              "year",
+              "month",
+              "day",
+              "date",
+              "metric",
+              "category",
+              "record_id"
+            ],
+            "type": "string"
+          },
+          "maxItems": 7,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "setting_pointers": {
+          "items": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^/[a-z0-9_/]+$",
+            "type": "string"
+          },
+          "maxItems": 512,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "write_modes": {
+          "items": {
+            "enum": [
+              "overwrite",
+              "append",
+              "merge_markdown",
+              "merge_markdown_preserving_preamble"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "formats",
+        "write_modes",
+        "compatibility_detail",
+        "native_archive_products",
+        "setting_pointers",
+        "path_tokens",
+        "max_artifacts",
+        "max_path_bytes"
+      ],
+      "type": "object"
+    },
+    "packaging": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "loose_files"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "filename_template": {
+              "$ref": "#/$defs/filename"
+            },
+            "include_loose_files": {
+              "type": "boolean"
+            },
+            "manifest": {
+              "const": "healthmd.agent_artifact_manifest/1"
+            },
+            "max_entries": {
+              "maximum": 4096,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "max_uncompressed_bytes": {
+              "maximum": 1073741824,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "const": "zip"
+            }
+          },
+          "required": [
+            "type",
+            "filename_template",
+            "include_loose_files",
+            "max_uncompressed_bytes",
+            "max_entries",
+            "manifest"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "packet": {
+      "additionalProperties": false,
+      "properties": {
+        "facts": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "daily_wellness",
+            "training",
+            "doctor_visit"
+          ],
+          "type": "string"
+        },
+        "medical_interpretation": {
+          "const": false
+        }
+      },
+      "required": [
+        "kind",
+        "facts",
+        "medical_interpretation"
+      ],
+      "type": "object"
+    },
+    "path": {
+      "maxLength": 4096,
+      "minLength": 0,
+      "type": "string"
+    },
+    "peer": {
+      "additionalProperties": false,
+      "properties": {
+        "host_installation_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "platform": {
+          "enum": [
+            "apple",
+            "android"
+          ],
+          "type": "string"
+        },
+        "source_installation_id": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "required": [
+        "source_installation_id",
+        "host_installation_id",
+        "platform"
+      ],
+      "type": "object"
+    },
+    "plan": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "effective_settings": {
+          "$ref": "#/$defs/settings"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "intent": {
+          "$ref": "#/$defs/intent"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "limitations": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "origins": {
+          "items": {
+            "$ref": "#/$defs/origin"
+          },
+          "maxItems": 512,
+          "minItems": 1,
+          "type": "array"
+        },
+        "path_prediction": {
+          "enum": [
+            "exact_requested_days",
+            "template_only_all_available",
+            "deferred_native_entries"
+          ],
+          "type": "string"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "predicted_paths": {
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "maxItems": 4096,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required_actions": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "resolved_dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "resolved_metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "revisions": {
+          "items": {
+            "$ref": "#/$defs/revision"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array"
+        },
+        "schema": {
+          "const": "healthmd.agent_export_plan"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "settings_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "side_effects": {
+          "additionalProperties": false,
+          "properties": {
+            "health_reads": {
+              "const": 0,
+              "type": "integer"
+            },
+            "output_writes": {
+              "const": 0,
+              "type": "integer"
+            },
+            "quota_consumed": {
+              "const": 0,
+              "type": "integer"
+            },
+            "settings_mutations": {
+              "const": 0,
+              "type": "integer"
+            },
+            "wake_enrollments": {
+              "const": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "health_reads",
+            "output_writes",
+            "quota_consumed",
+            "settings_mutations",
+            "wake_enrollments"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "plan_id",
+        "intent",
+        "resolved_dates",
+        "resolved_metric_ids",
+        "effective_settings",
+        "origins",
+        "revisions",
+        "settings_sha256",
+        "scope_sha256",
+        "capability_sha256",
+        "plan_sha256",
+        "issued_at",
+        "expires_at",
+        "predicted_paths",
+        "path_prediction",
+        "required_actions",
+        "limitations",
+        "side_effects"
+      ],
+      "type": "object"
+    },
+    "plan_request": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "capability_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "intent": {
+          "$ref": "#/$defs/intent"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.agent_plan_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "intent",
+        "authority_id",
+        "capability_sha256"
+      ],
+      "type": "object"
+    },
+    "policy": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "settings": {
+              "$ref": "#/$defs/settings"
+            },
+            "type": {
+              "const": "explicit"
+            }
+          },
+          "required": [
+            "type",
+            "settings"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": {
+              "const": "saved_device_settings"
+            }
+          },
+          "required": [
+            "type",
+            "expected_revision"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "expected_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "profile_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "type": {
+              "const": "profile"
+            }
+          },
+          "required": [
+            "type",
+            "profile_id",
+            "expected_revision"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "presentation": {
+      "additionalProperties": false,
+      "properties": {
+        "display_units": {
+          "enum": [
+            "metric",
+            "imperial"
+          ],
+          "type": "string"
+        },
+        "frontmatter": {
+          "$ref": "#/$defs/frontmatter"
+        },
+        "group_by_category": {
+          "type": "boolean"
+        },
+        "include_metadata": {
+          "type": "boolean"
+        },
+        "locale": {
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        "machine_units": {
+          "const": "canonical"
+        },
+        "markdown": {
+          "$ref": "#/$defs/markdown"
+        }
+      },
+      "required": [
+        "display_units",
+        "machine_units",
+        "locale",
+        "include_metadata",
+        "group_by_category",
+        "frontmatter",
+        "markdown"
+      ],
+      "type": "object"
+    },
+    "profile_definition": {
+      "additionalProperties": false,
+      "properties": {
+        "capture_scope": {
+          "$ref": "#/$defs/capture"
+        },
+        "destination": {
+          "$ref": "#/$defs/native_destination"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "settings": {
+          "$ref": "#/$defs/settings"
+        }
+      },
+      "required": [
+        "name",
+        "capture_scope",
+        "settings",
+        "destination"
+      ],
+      "type": "object"
+    },
+    "projection": {
+      "additionalProperties": false,
+      "properties": {
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "coverage": {
+          "$ref": "#/$defs/coverage"
+        },
+        "detail": {
+          "enum": [
+            "summary",
+            "selected_time_series",
+            "native_records"
+          ],
+          "type": "string"
+        },
+        "is_complete_daily_document": {
+          "const": false
+        },
+        "native_records": {
+          "items": {
+            "$ref": "#/$defs/evidence_item"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "owner_date": {
+          "$ref": "#/$defs/date"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_data_projection"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "scope_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "selected_series": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "source_id": {
+          "enum": [
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        },
+        "summary": {
+          "items": {
+            "$ref": "#/$defs/metric_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "source_id",
+        "provider_id",
+        "scope_sha256",
+        "catalog_sha256",
+        "owner_date",
+        "calendar_timezone",
+        "detail",
+        "is_complete_daily_document",
+        "summary",
+        "selected_series",
+        "native_records",
+        "coverage"
+      ],
+      "type": "object"
+    },
+    "projection_request": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_partial": {
+          "type": "boolean"
+        },
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "detail": {
+          "enum": [
+            "summary",
+            "selected_time_series",
+            "native_records"
+          ],
+          "type": "string"
+        },
+        "field_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "object_ids": {
+          "items": {
+            "enum": [
+              "daily_summary",
+              "selected_series",
+              "native_records",
+              "capture_manifest"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_projection_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        },
+        "source_id": {
+          "enum": [
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "source_id",
+        "provider_id",
+        "catalog_sha256",
+        "dates",
+        "calendar_timezone",
+        "selection",
+        "detail",
+        "object_ids",
+        "field_ids",
+        "allow_partial"
+      ],
+      "type": "object"
+    },
+    "query_cancel": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "query_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_query_cancel"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "query_sha256",
+        "dataset_sha256"
+      ],
+      "type": "object"
+    },
+    "query_cancelled": {
+      "additionalProperties": false,
+      "properties": {
+        "dataset_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "query_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_query_cancelled"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "source_acknowledged": {
+          "const": true
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "query_sha256",
+        "dataset_sha256",
+        "source_acknowledged"
+      ],
+      "type": "object"
+    },
+    "query_catalog": {
+      "additionalProperties": false,
+      "properties": {
+        "budgets": {
+          "$ref": "#/$defs/budgets"
+        },
+        "feature_statuses": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "feature": {
+                "$ref": "#/$defs/id"
+              },
+              "status": {
+                "enum": [
+                  "available",
+                  "unavailable",
+                  "error",
+                  "unverified"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "feature",
+              "status"
+            ],
+            "type": "object"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array"
+        },
+        "history": {
+          "$ref": "#/$defs/coverage"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/catalog_item"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 9,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_availability": {
+          "enum": [
+            "available",
+            "unavailable",
+            "update_required",
+            "unverified"
+          ],
+          "type": "string"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "provider_version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "schema": {
+          "const": "healthmd.source_query_catalog"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "sdk_version": {
+          "maxLength": 64,
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_id": {
+          "enum": [
+            "apple_health",
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "peer",
+        "source_id",
+        "provider_id",
+        "sdk_version",
+        "provider_version",
+        "provider_availability",
+        "feature_statuses",
+        "metrics",
+        "operations",
+        "budgets",
+        "history"
+      ],
+      "type": "object"
+    },
+    "query_operation": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "metric_catalog"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "metric_series"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "coverage"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "workout_listing"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "source_record_listing"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "include_naps": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "sleep_session_listing"
+            },
+            "window": {
+              "additionalProperties": false,
+              "properties": {
+                "duration_seconds": {
+                  "maximum": 86400,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "start_offset_seconds": {
+                  "maximum": 86400,
+                  "minimum": -86400,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "start_offset_seconds",
+                "duration_seconds"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "type",
+            "include_naps",
+            "window"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "include_naps": {
+              "type": "boolean"
+            },
+            "type": {
+              "const": "workout_sleep_alignment"
+            },
+            "window": {
+              "additionalProperties": false,
+              "properties": {
+                "duration_seconds": {
+                  "maximum": 86400,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "start_offset_seconds": {
+                  "maximum": 86400,
+                  "minimum": -86400,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "start_offset_seconds",
+                "duration_seconds"
+              ],
+              "type": "object"
+            },
+            "workout_activity": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "required": [
+            "type",
+            "include_naps",
+            "workout_activity",
+            "window"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "aggregations": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "expected_unit": {
+                    "maxLength": 32,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "sum",
+                      "average",
+                      "minimum",
+                      "maximum",
+                      "latest",
+                      "count",
+                      "duration_sum"
+                    ],
+                    "type": "string"
+                  },
+                  "metric_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "metric_id",
+                  "kind",
+                  "expected_unit"
+                ],
+                "type": "object"
+              },
+              "maxItems": 256,
+              "minItems": 1,
+              "type": "array"
+            },
+            "first": {
+              "$ref": "#/$defs/range"
+            },
+            "second": {
+              "$ref": "#/$defs/range"
+            },
+            "type": {
+              "const": "period_comparison"
+            }
+          },
+          "required": [
+            "type",
+            "first",
+            "second",
+            "aggregations"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "detail_ids": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "kind": {
+              "enum": [
+                "daily_wellness",
+                "training",
+                "doctor_visit"
+              ],
+              "type": "string"
+            },
+            "type": {
+              "const": "derive_packet"
+            }
+          },
+          "required": [
+            "type",
+            "kind",
+            "detail_ids"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "query_page": {
+      "additionalProperties": false,
+      "properties": {
+        "cursor": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        "max_bytes": {
+          "maximum": 1048576,
+          "minimum": 1024,
+          "type": "integer"
+        },
+        "max_items": {
+          "maximum": 1000,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_items",
+        "max_bytes"
+      ],
+      "type": "object"
+    },
+    "query_request": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "authority_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "budgets": {
+          "$ref": "#/$defs/budgets"
+        },
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catalog_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "dates": {
+          "$ref": "#/$defs/dates"
+        },
+        "detail": {
+          "enum": [
+            "summary",
+            "native_evidence"
+          ],
+          "type": "string"
+        },
+        "include_evidence_values": {
+          "type": "boolean"
+        },
+        "operation": {
+          "$ref": "#/$defs/query_operation"
+        },
+        "page": {
+          "$ref": "#/$defs/query_page"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/id"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "schema": {
+          "const": "healthmd.source_query_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "selection": {
+          "$ref": "#/$defs/selection"
+        },
+        "source_id": {
+          "enum": [
+            "apple_health",
+            "health_connect",
+            "provider_native"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "peer",
+        "source_id",
+        "provider_id",
+        "catalog_sha256",
+        "authority_id",
+        "authority_revision",
+        "dates",
+        "calendar_timezone",
+        "selection",
+        "detail",
+        "include_evidence_values",
+        "operation",
+        "page",
+        "budgets"
+      ],
+      "type": "object"
+    },
+    "query_response": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog": {
+              "$ref": "#/$defs/query_catalog"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/catalog_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "metric_catalog"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at",
+            "catalog"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/metric_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "metric_series"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {},
+              "maxItems": 0,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "coverage"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/session_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "workout_listing"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/session_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "sleep_session_listing"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/comparison_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "period_comparison"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/alignment_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "workout_sleep_alignment"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {
+                "$ref": "#/$defs/evidence_item"
+              },
+              "maxItems": 1000,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "source_record_listing"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "calendar_timezone": {
+              "$ref": "#/$defs/zone"
+            },
+            "catalog_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "coverage": {
+              "$ref": "#/$defs/coverage"
+            },
+            "dataset_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "expires_at": {
+              "$ref": "#/$defs/utc"
+            },
+            "items": {
+              "items": {},
+              "maxItems": 0,
+              "minItems": 0,
+              "type": "array"
+            },
+            "limitation_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "limitations": {
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "limitations_truncated": {
+              "type": "boolean"
+            },
+            "next_cursor": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            },
+            "operation": {
+              "const": "derive_packet"
+            },
+            "packet": {
+              "$ref": "#/$defs/packet"
+            },
+            "peer": {
+              "$ref": "#/$defs/peer"
+            },
+            "provider_id": {
+              "$ref": "#/$defs/id"
+            },
+            "query_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "schema": {
+              "const": "healthmd.source_query_response"
+            },
+            "schema_version": {
+              "const": 1,
+              "type": "integer"
+            },
+            "source_descriptor_count": {
+              "maximum": 2147483647,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "source_descriptors": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "origin": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "provider_id": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/digest"
+                  },
+                  "source_id": {
+                    "$ref": "#/$defs/id"
+                  }
+                },
+                "required": [
+                  "source_id",
+                  "provider_id",
+                  "origin",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "minItems": 0,
+              "type": "array"
+            },
+            "source_descriptors_truncated": {
+              "type": "boolean"
+            },
+            "source_id": {
+              "enum": [
+                "apple_health",
+                "health_connect",
+                "provider_native"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "schema_version",
+            "request_id",
+            "operation",
+            "peer",
+            "source_id",
+            "provider_id",
+            "query_sha256",
+            "dataset_sha256",
+            "catalog_sha256",
+            "calendar_timezone",
+            "items",
+            "coverage",
+            "limitations",
+            "limitation_count",
+            "limitations_truncated",
+            "source_descriptors",
+            "source_descriptor_count",
+            "source_descriptors_truncated",
+            "expires_at",
+            "packet"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "range": {
+      "additionalProperties": false,
+      "properties": {
+        "end_date": {
+          "$ref": "#/$defs/date"
+        },
+        "start_date": {
+          "$ref": "#/$defs/date"
+        }
+      },
+      "required": [
+        "start_date",
+        "end_date"
+      ],
+      "type": "object"
+    },
+    "receipt": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_count": {
+          "maximum": 4096,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "committed_partition_count": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "frontier_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "job_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "schema": {
+          "const": "healthmd.agent_execution_receipt"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "source_acknowledged": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "accepted",
+            "paused",
+            "complete",
+            "complete_empty",
+            "partial",
+            "failed",
+            "cancellation_pending",
+            "cancelled",
+            "expired"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "job_id",
+        "binding",
+        "request_sha256",
+        "manifest_sha256",
+        "status",
+        "source_acknowledged",
+        "artifact_count",
+        "committed_partition_count",
+        "frontier_sha256",
+        "expires_at"
+      ],
+      "type": "object"
+    },
+    "recipe_definition": {
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "$ref": "#/$defs/intent"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "intent"
+      ],
+      "type": "object"
+    },
+    "resume": {
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "committed_partition_count": {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "destination": {
+          "$ref": "#/$defs/destination"
+        },
+        "frontier_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "job_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "peer": {
+          "$ref": "#/$defs/peer"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "schema": {
+          "const": "healthmd.agent_resume_request"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "job_id",
+        "peer",
+        "destination",
+        "binding",
+        "request_sha256",
+        "manifest_sha256",
+        "committed_partition_count",
+        "frontier_sha256"
+      ],
+      "type": "object"
+    },
+    "revision": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "enum": [
+            "device_settings",
+            "native_profile",
+            "local_recipe",
+            "host_schedule",
+            "native_schedule",
+            "native_destination"
+          ],
+          "type": "string"
+        },
+        "object_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "domain",
+        "object_id",
+        "revision",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "schedule": {
+      "additionalProperties": false,
+      "properties": {
+        "cadence": {
+          "additionalProperties": false,
+          "properties": {
+            "anchor_date": {
+              "$ref": "#/$defs/date"
+            },
+            "unit": {
+              "enum": [
+                "days",
+                "weeks",
+                "months"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maximum": 365,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "value",
+            "unit",
+            "anchor_date"
+          ],
+          "type": "object"
+        },
+        "calendar_timezone": {
+          "$ref": "#/$defs/zone"
+        },
+        "catch_up": {
+          "enum": [
+            "skip",
+            "one_latest_complete_window"
+          ],
+          "type": "string"
+        },
+        "destination": {
+          "$ref": "#/$defs/destination"
+        },
+        "dst_fold": {
+          "const": "first_occurrence"
+        },
+        "dst_gap": {
+          "const": "skip"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "iso_weekday": {
+          "maximum": 7,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "local_time": {
+          "additionalProperties": false,
+          "properties": {
+            "hour": {
+              "maximum": 23,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "minute": {
+              "maximum": 59,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "hour",
+            "minute"
+          ],
+          "type": "object"
+        },
+        "lookback_days": {
+          "maximum": 365,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "recipe_or_profile_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "recipe_or_profile_revision": {
+          "maximum": 2147483647,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "recipe_or_profile_id",
+        "recipe_or_profile_revision",
+        "calendar_timezone",
+        "cadence",
+        "local_time",
+        "iso_weekday",
+        "lookback_days",
+        "dst_gap",
+        "dst_fold",
+        "catch_up",
+        "enabled",
+        "destination"
+      ],
+      "type": "object"
+    },
+    "selection": {
+      "additionalProperties": false,
+      "properties": {
+        "all_metrics": {
+          "type": "boolean"
+        },
+        "category_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 32,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "metric_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 256,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "provider_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source_ids": {
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "metric_ids",
+        "category_ids",
+        "source_ids",
+        "provider_ids",
+        "all_metrics"
+      ],
+      "type": "object"
+    },
+    "session_item": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_or_stage": {
+          "$ref": "#/$defs/id"
+        },
+        "classification": {
+          "enum": [
+            "principal",
+            "nap",
+            "unclassified",
+            "completed_workout"
+          ],
+          "type": "string"
+        },
+        "duration_nanoseconds": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "type": "string"
+        },
+        "end": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "evidence_ids": {
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "identity": {
+          "$ref": "#/$defs/native_identity"
+        },
+        "kind": {
+          "enum": [
+            "sleep",
+            "workout"
+          ],
+          "type": "string"
+        },
+        "owner_date": {
+          "$ref": "#/$defs/date"
+        },
+        "stages": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "end": {
+                "$ref": "#/$defs/exact_time"
+              },
+              "raw_type": {
+                "maximum": 2147483647,
+                "minimum": -2147483648,
+                "type": "integer"
+              },
+              "start": {
+                "$ref": "#/$defs/exact_time"
+              },
+              "symbol": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "required": [
+              "raw_type",
+              "symbol",
+              "start",
+              "end"
+            ],
+            "type": "object"
+          },
+          "maxItems": 1000,
+          "minItems": 0,
+          "type": "array"
+        },
+        "start": {
+          "$ref": "#/$defs/exact_time"
+        },
+        "type": {
+          "const": "session"
+        }
+      },
+      "required": [
+        "type",
+        "kind",
+        "owner_date",
+        "identity",
+        "start",
+        "end",
+        "activity_or_stage",
+        "duration_nanoseconds",
+        "classification",
+        "stages",
+        "evidence_ids"
+      ],
+      "type": "object"
+    },
+    "settings": {
+      "additionalProperties": false,
+      "properties": {
+        "daily_notes": {
+          "$ref": "#/$defs/daily_notes"
+        },
+        "dictionary": {
+          "$ref": "#/$defs/dictionary"
+        },
+        "filename_template": {
+          "$ref": "#/$defs/filename"
+        },
+        "folder_template": {
+          "$ref": "#/$defs/path"
+        },
+        "formats": {
+          "items": {
+            "enum": [
+              "csv",
+              "json",
+              "markdown",
+              "obsidian_bases"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "individual_entries": {
+          "$ref": "#/$defs/individual_entries"
+        },
+        "output_profile": {
+          "enum": [
+            "apple-v8",
+            "android-frozen-v4",
+            "android-analytical-v5"
+          ],
+          "type": "string"
+        },
+        "packaging": {
+          "$ref": "#/$defs/packaging"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "subfolder": {
+          "$ref": "#/$defs/path"
+        },
+        "write_mode": {
+          "enum": [
+            "overwrite",
+            "append",
+            "merge_markdown",
+            "merge_markdown_preserving_preamble"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "formats",
+        "output_profile",
+        "subfolder",
+        "folder_template",
+        "filename_template",
+        "write_mode",
+        "presentation",
+        "individual_entries",
+        "daily_notes",
+        "packaging",
+        "dictionary"
+      ],
+      "type": "object"
+    },
+    "utc": {
+      "format": "date-time",
+      "maxLength": 20,
+      "minLength": 20,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "uuid": {
+      "maxLength": 36,
+      "minLength": 36,
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "value": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "integer"
+            },
+            "value": {
+              "maximum": 9007199254740991,
+              "minimum": -9007199254740991,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "decimal"
+            },
+            "value": {
+              "maxLength": 80,
+              "minLength": 1,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "value": {
+              "maxLength": 1024,
+              "minLength": 0,
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "zone": {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "$id": "https://healthmd.app/contracts/direct/v4/envelope",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/discovery_request"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "discovery_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/discovery"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "discovery_response"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/plan_request"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "plan_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/plan"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "plan_response"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/execute"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "execute_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/cancel"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "cancel_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/receipt"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "execution_receipt"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/resume"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "resume_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/manifest"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "artifact_manifest"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/commit"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "commit_receipt"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/control"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "control_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/control_receipt"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "control_receipt"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/query_request"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "query_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/query_response"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "query_response"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/query_cancel"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "query_cancel"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/query_cancelled"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "query_cancelled"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/projection_request"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "projection_request"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/projection"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "projection_response"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/error"
+        },
+        "protocol_version": {
+          "const": 4,
+          "type": "integer"
+        },
+        "type": {
+          "const": "rejected"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "type",
+        "payload"
+      ],
+      "type": "object"
+    }
+  ]
+}
