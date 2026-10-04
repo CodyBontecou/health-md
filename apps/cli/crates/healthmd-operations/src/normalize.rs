@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, fs, path::Path, time::Duration};
 
-use chrono::{DateTime, Duration as ChronoDuration, NaiveDate, Utc};
+use chrono::{DateTime, Duration as ChronoDuration, NaiveDate, Timelike as _, Utc};
 use healthmd_protocol::{
     encoding::SwiftUuid,
     models::{
@@ -305,9 +305,8 @@ pub struct GeneratedFileExportInput {
     pub dates: DateOptions,
     pub selection: SelectionOptions,
     pub use_device_settings: bool,
-    /// Export profile resolved on the iPhone by stable UUID (phase 5). When
-    /// present, the request uses `SettingsPolicy::Profile`; selectors must be
-    /// empty because the profile owns the settings scope.
+    /// Export profile resolved on the selected phone by authoritative hyphenated UUID.
+    /// Selectors must be empty because the profile owns the settings scope.
     pub profile: Option<ProfileReference>,
     pub destination: String,
     pub timeout: Duration,
@@ -317,6 +316,9 @@ pub struct GeneratedFileExportInput {
 pub struct GeneratedFileExportInvocation {
     pub request: ExportRequest,
     pub timeout: Duration,
+    /// Omitted policy: iOS uses requested dates; Android uses saved device settings.
+    /// An explicit requested-dates policy must never be reinterpreted as saved settings.
+    pub uses_source_default: bool,
 }
 
 impl GeneratedFileExportInput {
@@ -350,16 +352,12 @@ impl GeneratedFileExportInput {
                     "profile policy cannot combine with device settings; the profile owns settings",
                 ));
             }
-            if self.selection.is_requested() {
+            if self.selection.is_requested() || self.selection.detail != SelectionDetail::Summary {
                 return Err(OperationInputError::invalid(
                     "profile policy cannot combine with metric/category selectors; the profile owns scope",
                 ));
             }
-            if profile.profile_id.trim().is_empty() {
-                return Err(OperationInputError::invalid(
-                    "profile reference requires a profile ID",
-                ));
-            }
+            validate_profile_reference(profile)?;
         }
         let (settings_policy, profile_reference) = if let Some(profile) = self.profile.clone() {
             (SettingsPolicy::Profile, Some(profile))
@@ -372,7 +370,9 @@ impl GeneratedFileExportInput {
             request: ExportRequest {
                 protocol_version: 1,
                 job_id: SwiftUuid(job_id),
-                created_at,
+                created_at: created_at
+                    .with_nanosecond(0)
+                    .ok_or_else(|| OperationInputError::invalid("invalid creation time"))?,
                 date_selection: self.dates.resolve(today)?,
                 settings_policy,
                 profile_reference,
@@ -384,8 +384,45 @@ impl GeneratedFileExportInput {
                 }),
             },
             timeout: self.timeout,
+            uses_source_default: !self.use_device_settings && self.profile.is_none(),
         })
     }
+}
+
+/// Exact grammar shared by CLI guidance, MCP schemas, and normalization.
+pub const PROFILE_ID_PATTERN: &str =
+    "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
+pub const MAXIMUM_PROFILE_NAME_CHARACTERS: usize = 128;
+// Explicit Unicode White_Space/control ranges match Rust trim/is_control, unlike JS \\s (BOM).
+pub const PROFILE_NAME_PATTERN: &str = "^[^\\u0000-\\u0020\\u007f-\\u00a0\\u1680\\u2000-\\u200a\\u2028-\\u2029\\u202f\\u205f\\u3000](?:[^\\u0000-\\u001f\\u007f-\\u009f]*[^\\u0000-\\u0020\\u007f-\\u00a0\\u1680\\u2000-\\u200a\\u2028-\\u2029\\u202f\\u205f\\u3000])?$";
+
+/// Validate an authoritative UUID and optional display-only name without rewriting either.
+///
+/// # Errors
+///
+/// Rejects non-hyphenated UUIDs, empty/padded/oversized names, and control characters.
+pub fn validate_profile_reference(reference: &ProfileReference) -> Result<(), OperationInputError> {
+    if reference.profile_id.len() != 36
+        || Uuid::parse_str(&reference.profile_id).is_err()
+        || ![8, 13, 18, 23]
+            .iter()
+            .all(|index| reference.profile_id.as_bytes()[*index] == b'-')
+    {
+        return Err(OperationInputError::invalid(
+            "profileID must be a hyphenated UUID; names cannot replace the authoritative ID",
+        ));
+    }
+    if reference.name.as_ref().is_some_and(|name| {
+        name.is_empty()
+            || name.trim() != name
+            || name.chars().count() > MAXIMUM_PROFILE_NAME_CHARACTERS
+            || name.chars().any(char::is_control)
+    }) {
+        return Err(OperationInputError::invalid(
+            "profile name must contain 1 through 128 characters, without outer whitespace or controls",
+        ));
+    }
+    Ok(())
 }
 
 /// Parse the local-MCP full public/authorized corpus request shared by iOS and Android adapters.
@@ -586,11 +623,16 @@ pub fn generated_file_export_from_value(
     let mut profile: Option<ProfileReference> = None;
     match arguments
         .get("settings_policy")
-        .and_then(Value::as_str)
+        .map(|value| {
+            value
+                .as_str()
+                .ok_or_else(|| OperationInputError::invalid("invalid settings_policy"))
+        })
+        .transpose()?
         .unwrap_or("requested_dates_only")
     {
         "requested_dates_only" => {}
-        "current_iphone_settings" => use_device_settings = true,
+        "current_iphone_settings" | "saved_device_settings" => use_device_settings = true,
         "profile" => {
             let reference = arguments
                 .get("profile_reference")
@@ -612,11 +654,20 @@ pub fn generated_file_export_from_value(
                 profile_id: profile_id.to_owned(),
                 name: reference
                     .get("name")
-                    .and_then(Value::as_str)
-                    .map(str::to_owned),
+                    .map(|value| {
+                        value.as_str().map(str::to_owned).ok_or_else(|| {
+                            OperationInputError::invalid("profile name must be a string")
+                        })
+                    })
+                    .transpose()?,
             });
         }
         _ => return Err(OperationInputError::invalid("invalid settings_policy")),
+    }
+    if profile.is_none() && arguments.contains_key("profile_reference") {
+        return Err(OperationInputError::invalid(
+            "profile_reference requires settings_policy profile",
+        ));
     }
     let timeout_seconds = arguments
         .get("wait_timeout_seconds")
@@ -658,12 +709,12 @@ pub fn generated_file_export_from_value(
     {
         return Err(OperationInputError::invalid("invalid metric selection"));
     }
-    if has_selection && use_device_settings {
+    if has_selection && (use_device_settings || profile.is_some()) {
         return Err(OperationInputError::invalid(
-            "selection requires requested_dates_only",
+            "selectors cannot combine with saved settings or a profile",
         ));
     }
-    GeneratedFileExportInput {
+    let mut invocation = GeneratedFileExportInput {
         dates,
         selection,
         use_device_settings,
@@ -671,7 +722,9 @@ pub fn generated_file_export_from_value(
         destination,
         timeout,
     }
-    .build(job_id, created_at, today)
+    .build(job_id, created_at, today)?;
+    invocation.uses_source_default = !arguments.contains_key("settings_policy");
+    Ok(invocation)
 }
 
 /// Resolve an existing absolute non-symlink directory to its canonical UTF-8 path.
@@ -1097,6 +1150,81 @@ mod tests {
                     NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()
                 )
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn profile_schema_and_parser_share_authoritative_grammar_and_conflicts() {
+        let directory = tempfile::tempdir().unwrap();
+        let base = serde_json::json!({
+            "date_selection": "all_available", "destination": directory.path(),
+            "settings_policy": "profile", "profile_reference": {
+                "profileID": "11111111-2222-4333-8444-555555555555", "name": "Weekly Sleep"
+            }
+        });
+        let parse = |value: &Value| {
+            generated_file_export_from_value(
+                value,
+                Uuid::nil(),
+                Utc::now(),
+                NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+            )
+        };
+        let invocation = parse(&base).unwrap();
+        assert!(!invocation.uses_source_default);
+        assert_eq!(invocation.request.settings_policy, SettingsPolicy::Profile);
+        assert!(invocation.request.canonical_selection.is_none());
+        for bad_id in [
+            "Weekly Sleep",
+            "",
+            "11111111222243338444555555555555",
+            " 11111111-2222-4333-8444-555555555555",
+        ] {
+            let mut value = base.clone();
+            value["profile_reference"]["profileID"] = serde_json::json!(bad_id);
+            assert!(parse(&value).is_err());
+        }
+        for bad_name in [
+            serde_json::json!(null),
+            serde_json::json!(1),
+            serde_json::json!(""),
+            serde_json::json!(" padded"),
+            serde_json::json!("trailing "),
+            serde_json::json!("control\nname"),
+            serde_json::json!("x".repeat(129)),
+        ] {
+            let mut value = base.clone();
+            value["profile_reference"]["name"] = bad_name;
+            assert!(parse(&value).is_err());
+        }
+        for (key, argument) in [
+            ("all_metrics", serde_json::json!(false)),
+            ("metric_ids", serde_json::json!([])),
+            ("categories", serde_json::json!([])),
+            ("detail_level", serde_json::json!("summary")),
+        ] {
+            let mut value = base.clone();
+            value[key] = argument;
+            assert!(parse(&value).is_err());
+        }
+        for policy in [
+            "requested_dates_only",
+            "current_iphone_settings",
+            "saved_device_settings",
+        ] {
+            let mut value = base.clone();
+            value["settings_policy"] = serde_json::json!(policy);
+            assert!(parse(&value).is_err()); // orphaned reference, never ignored
+        }
+        let schema = crate::registry::tool_catalog(
+            crate::SurfaceProfile::LocalDirect,
+            Some("healthmd_export_files"),
+        )
+        .unwrap();
+        assert_eq!(
+            schema["tool"]["inputSchema"]["properties"]["profile_reference"]["properties"]["profileID"]
+                ["pattern"],
+            PROFILE_ID_PATTERN
         );
     }
 

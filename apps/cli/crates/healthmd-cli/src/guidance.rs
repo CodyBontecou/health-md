@@ -68,6 +68,17 @@ impl ErrorContext {
     }
 }
 
+fn profile_reference_guidance() -> Value {
+    json!({
+        "profileID": "Authoritative hyphenated UUID; names cannot replace the ID.",
+        "id_pattern": healthmd_operations::normalize::PROFILE_ID_PATTERN,
+        "name": "MCP optional display-only name: 1–128 characters; no outer whitespace or controls.",
+        "conflicts": ["saved settings", "metric/category/source/detail selectors"],
+        "missing_or_blocked": "fail closed; never fall back to saved settings"
+    })
+}
+
+#[allow(clippy::too_many_lines)]
 pub(super) fn export(missing_dates: bool, missing_mode: bool) -> Value {
     let mut missing = Vec::new();
     if missing_dates {
@@ -126,7 +137,8 @@ pub(super) fn export(missing_dates: bool, missing_mode: bool) -> Value {
                     "--all-metrics",
                     "--detail <summary|lossless>"
                 ],
-                "platform_note": "Android generated files use saved device settings or a profile and do not accept CLI metric/category selectors."
+                "platform_note": "Android generated files use saved device settings or an advertised profile policy and do not accept CLI metric/category/detail selectors. iOS profiles fail closed until explicit policy advertisement exists.",
+                "profile_reference": profile_reference_guidance()
             },
             {
                 "name": "raw",
@@ -401,7 +413,7 @@ pub(super) fn group(group: &'static str) -> Value {
             "Configure a supported local AI host.",
             vec![json!({
                 "command": "healthmd setup codex",
-                "description": "Configure Codex to launch this executable and pair an iPhone when needed."
+                "description": "Configure Codex to launch this executable and pair an iPhone or Android phone when needed. Android typed queries remain unsupported."
             })],
         ),
         _ => ("Choose one documented Health.md command.", root_commands()),

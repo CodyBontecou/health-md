@@ -61,7 +61,7 @@ p { line-height: 1.45; }
 </style>
 </head>
 <body>
-<main id="app" aria-live="polite"><div class="empty">Starting secure iPhone pairing…</div></main>
+<main id="app" aria-live="polite"><div class="empty">Starting secure mobile pairing…</div></main>
 <script>
 (() => {
   "use strict";
@@ -147,14 +147,14 @@ p { line-height: 1.45; }
     const card = element("section", "card");
     const shell = element("div", "qr-shell");
     const qr = element("img");
-    qr.alt = "Short-lived Health.md iPhone pairing QR code";
+    qr.alt = "Short-lived Health.md iPhone or Android pairing QR code";
     qr.src = `data:image/png;base64,${image.data}`;
     shell.append(qr);
 
     const copy = element("div", "copy");
     copy.append(element("span", "status", "Waiting for scan"));
     copy.append(element("h1", "", "Scan with Health.md"));
-    copy.append(element("p", "instructions", "On your iPhone, open Health.md → Sync → Direct CLI Access → Scan Pairing QR. Keep Health.md foregrounded while it connects."));
+    copy.append(element("p", "instructions", "On your iPhone or Android phone, open Health.md → Direct CLI Access → Scan Pairing QR. Keep Health.md foregrounded while it connects. Manual entry remains available in the app if the camera is unavailable."));
     copy.append(element("p", "meta", expirationLabel(receipt && receipt.expires_at)));
     copy.append(element("p", "meta", "The scan begins pairing immediately; no second Pair tap is required."));
     card.append(shell, copy);
@@ -174,7 +174,7 @@ p { line-height: 1.45; }
     switch (message.method) {
       case "ui/notifications/tool-input-partial":
       case "ui/notifications/tool-input":
-        showStatus("Starting secure iPhone pairing…");
+        showStatus("Starting secure mobile pairing…");
         break;
       case "ui/notifications/tool-result": renderToolResult(message.params); break;
       case "ui/notifications/tool-cancelled": showStatus("Pairing start was cancelled.", message.params && message.params.reason, true); break;

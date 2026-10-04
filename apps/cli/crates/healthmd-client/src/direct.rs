@@ -411,6 +411,34 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         .await
     }
 
+    /// Onboard the first foreground mobile source, with no platform inferred from selector 3.
+    ///
+    /// # Errors
+    ///
+    /// Rejects existing trust atomically and returns the bounded errors documented by [`Self::pair`].
+    pub async fn pair_first_mobile<F>(
+        &self,
+        legacy_apple_pairing_code: &str,
+        shared_pairing_code: &str,
+        port: u16,
+        timeout: Duration,
+        on_listening: F,
+    ) -> Result<PairingResult, ClientError>
+    where
+        F: FnOnce(u16),
+    {
+        self.pair_expected_source(
+            legacy_apple_pairing_code,
+            shared_pairing_code,
+            port,
+            timeout,
+            None,
+            NewPairingPolicy::RequireNoOtherTrust,
+            on_listening,
+        )
+        .await
+    }
+
     #[allow(clippy::too_many_arguments)]
     async fn pair_expected_source<F>(
         &self,
@@ -899,6 +927,24 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 "Android destination does not match the requested product".into(),
             ));
         }
+        if generated {
+            let destination =
+                GeneratedDestination::open(destination_root.as_ref().ok_or_else(|| {
+                    ClientError::InvalidTransfer(
+                        "Android generated-file destination is missing".into(),
+                    )
+                })?)?;
+            let digest = destination.binding_sha256()?;
+            if request
+                .destination
+                .as_ref()
+                .is_none_or(|binding| binding.binding_sha256 != digest)
+            {
+                return Err(ClientError::InvalidTransfer(
+                    "Android destination binding changed".into(),
+                ));
+            }
+        }
         let destination_root = destination_root
             .map(|path| {
                 path.to_str().map(ToOwned::to_owned).ok_or_else(|| {
@@ -994,11 +1040,26 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 .products
                 .iter()
                 .find(|product| product.product_id == requested_product)
-                .ok_or_else(|| {
-                    ClientError::InvalidTransfer(
-                        "the Android app does not advertise the requested export product".into(),
-                    )
-                })?;
+                .ok_or(ClientError::ExportUnsupported)?;
+            if let v2::ExportProduct::GeneratedFilesV1 {
+                settings_policy,
+                profile_reference,
+            } = &request.product
+            {
+                if !capability.settings_policies.contains(settings_policy)
+                    || capability.artifact_schema.id != "healthmd.generated-files"
+                    || capability.artifact_schema.major != 1
+                    || !capability.supports_resume
+                {
+                    return Err(ClientError::ExportUnsupported);
+                }
+                if (*settings_policy == v2::SettingsPolicy::Profile) != profile_reference.is_some()
+                {
+                    return Err(ClientError::InvalidTransfer(
+                        "invalid Android profile policy".into(),
+                    ));
+                }
+            }
             if let v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
                 provider_id,
                 format,
@@ -1052,6 +1113,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 if matches!(
                     error,
                     ClientError::InvalidTransfer(_)
+                        | ClientError::ExportUnsupported
                         | ClientError::Cancelled
                         | ClientError::JobNotResumable(_, _)
                 ) {
@@ -1100,6 +1162,29 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     /// Returns an error when the job is absent, expired, or corrupt.
     pub fn v2_job_record(&self, job_id: Uuid) -> Result<V2JobRecord, ClientError> {
         V2JobStore::new(self.layout.clone())?.load(job_id)
+    }
+
+    /// Read a digest-validated iOS file receipt, retaining the source's partial outcome.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a missing, incomplete, expired, or changed job/receipt.
+    pub fn generated_file_receipt(&self, job_id: Uuid) -> Result<FileExportReceipt, ClientError> {
+        let jobs = JobStore::new(self.layout.clone())?;
+        FileReceiver::new(self.layout.clone(), jobs).receipt(job_id)
+    }
+
+    /// Read a digest-validated Android generated-file receipt without contacting the source.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a missing, incomplete, expired, or changed job/receipt.
+    pub fn android_generated_file_receipt(
+        &self,
+        job_id: Uuid,
+    ) -> Result<serde_json::Value, ClientError> {
+        let jobs = V2JobStore::new(self.layout.clone())?;
+        V2ArtifactReceiver::new(self.layout.clone(), jobs).generated_file_receipt(job_id)
     }
 
     /// Start or resume a durable strict-raw export over Manual IP/Tailscale.
@@ -1254,6 +1339,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         port: u16,
         timeout: Duration,
     ) -> Result<FileExportResult, ClientError> {
+        // There is no explicit Apple profile-policy capability in the deployed hello model.
+        // Fail before job creation/contact rather than send fields to an older installed peer.
+        if request.settings_policy == healthmd_protocol::models::SettingsPolicy::Profile
+            || request.profile_reference.is_some()
+        {
+            return Err(ClientError::ExportUnsupported);
+        }
         if request.response_mode != ResponseMode::WriteFiles || request.raw_profile.is_some() {
             return Err(ClientError::InvalidTransfer(
                 "generated-file request has incompatible response settings".into(),
@@ -1333,6 +1425,11 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                     "the iPhone cannot negotiate bounded direct transfer".into(),
                 )
             })?;
+            if !peer.supports_durable_jobs
+                || (request.canonical_selection.is_some() && !peer.supports_canonical_extraction)
+            {
+                return Err(ClientError::ExportUnsupported);
+            }
             connection
                 .channel
                 .send(&DirectMessage::ExportRequest(Unlabeled::from(
@@ -1369,6 +1466,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 if matches!(
                     error,
                     ClientError::InvalidTransfer(_)
+                        | ClientError::ExportUnsupported
                         | ClientError::Cancelled
                         | ClientError::JobNotResumable(_, _)
                 ) {

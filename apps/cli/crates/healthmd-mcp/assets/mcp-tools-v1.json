@@ -6,7 +6,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "Check paired foreground iPhone readiness over the authenticated direct channel.",
+    "description": "Check selected foreground mobile-source readiness and installed capabilities over the authenticated direct channel.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
@@ -23,7 +23,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "Diagnose local direct pairing and foreground iPhone query/export readiness. When unpaired, follow its healthmd_pairing_start guidance instead of running a shell pairing command.",
+    "description": "Diagnose local direct pairing and selected foreground mobile query/export readiness. When unpaired, follow its healthmd_pairing_start guidance instead of running a shell pairing command.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
@@ -57,7 +57,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "List canonical queryable metric IDs, categories, units, and availability requirements.",
+    "description": "List the Apple typed-query metric catalog, categories, units, and availability requirements. Catalog presence is not selected-source support; Android typed queries remain unsupported.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
@@ -3435,7 +3435,7 @@
       "openWorldHint": false,
       "readOnlyHint": false
     },
-    "description": "Preferred MCP onboarding path: after explicit user interaction, start a bounded first-iPhone pairing listener and return a native image/png QR code to render directly. Tell the user to scan it with Health.md's in-app Direct CLI scanner; external custom-URL opens are not pairing consent. Do not substitute healthmd setup codex, healthmd direct pair, or a reconstructed terminal QR. Refuses when trust or a device pin already exists.",
+    "description": "Preferred MCP onboarding path: after explicit user interaction, start a bounded first-mobile iPhone/Android pairing listener and return a native image/png QR code to render directly. Tell the user to scan it with Health.md's in-app Direct CLI scanner; external custom-URL opens are not pairing consent. Do not substitute healthmd setup codex, healthmd direct pair, or a reconstructed terminal QR. Refuses when trust or a device pin already exists.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3451,7 +3451,7 @@
       "type": "object"
     },
     "name": "healthmd_pairing_start",
-    "title": "Show an iPhone pairing QR code"
+    "title": "Show a mobile pairing QR code"
   },
   {
     "annotations": {
@@ -3460,7 +3460,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "Check the status of a bounded local iPhone pairing session after its QR code is shown.",
+    "description": "Check a bounded local mobile pairing session after its QR code is shown. The paired platform is reported only after authenticated negotiation.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -3475,7 +3475,7 @@
       "type": "object"
     },
     "name": "healthmd_pairing_status",
-    "title": "Check iPhone pairing status"
+    "title": "Check mobile pairing status"
   },
   {
     "_meta": {
@@ -3487,9 +3487,137 @@
       "openWorldHint": false,
       "readOnlyHint": false
     },
-    "description": "After explicit user approval, run a durable connected-iPhone generated-file export into an explicit existing desktop destination.",
+    "description": "After explicit user approval, run a durable generated-file export from the explicitly selected iPhone (v1) or Android phone (v2) into an existing desktop destination. Omitted policy uses iOS requested dates or Android saved settings. Android rejects request-scoped selectors; profiles own scope and require an installed-peer policy advertisement. Unknown or blocked profiles fail closed without saved-settings fallback.",
     "inputSchema": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "else": {
+            "not": {
+              "required": [
+                "profile_reference"
+              ]
+            }
+          },
+          "if": {
+            "properties": {
+              "settings_policy": {
+                "const": "profile"
+              }
+            },
+            "required": [
+              "settings_policy"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "metric_ids"
+                  ]
+                },
+                {
+                  "required": [
+                    "categories"
+                  ]
+                },
+                {
+                  "required": [
+                    "all_metrics"
+                  ]
+                },
+                {
+                  "required": [
+                    "detail_level"
+                  ]
+                }
+              ]
+            },
+            "required": [
+              "profile_reference"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "settings_policy": {
+                "enum": [
+                  "current_iphone_settings",
+                  "saved_device_settings"
+                ]
+              }
+            },
+            "required": [
+              "settings_policy"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "metric_ids"
+                  ]
+                },
+                {
+                  "required": [
+                    "categories"
+                  ]
+                },
+                {
+                  "required": [
+                    "all_metrics"
+                  ]
+                },
+                {
+                  "required": [
+                    "detail_level"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "else": {
+            "not": {
+              "required": [
+                "date_range"
+              ]
+            }
+          },
+          "if": {
+            "properties": {
+              "date_selection": {
+                "const": "explicit_range"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "date_range"
+            ]
+          }
+        }
+      ],
+      "examples": [
+        {
+          "date_selection": "all_available",
+          "destination": "/existing/exports",
+          "settings_policy": "saved_device_settings"
+        },
+        {
+          "date_selection": "all_available",
+          "destination": "/existing/exports",
+          "profile_reference": {
+            "name": "Weekly Sleep",
+            "profileID": "11111111-2222-4333-8444-555555555555"
+          },
+          "settings_policy": "profile"
+        }
+      ],
       "properties": {
         "all_metrics": {
           "type": "boolean"
@@ -3546,10 +3674,39 @@
           "type": "array",
           "uniqueItems": true
         },
+        "profile_reference": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "description": "Optional display-only name: 1–128 characters, no outer whitespace or controls.",
+              "maxLength": 128,
+              "minLength": 1,
+              "not": {
+                "pattern": "[\\u0000-\\u001f\\u007f-\\u009f]|[\\u2028\\u2029]$"
+              },
+              "pattern": "^[^\\u0000-\\u0020\\u007f-\\u00a0\\u1680\\u2000-\\u200a\\u2028-\\u2029\\u202f\\u205f\\u3000](?:[^\\u0000-\\u001f\\u007f-\\u009f]*[^\\u0000-\\u0020\\u007f-\\u00a0\\u1680\\u2000-\\u200a\\u2028-\\u2029\\u202f\\u205f\\u3000])?$",
+              "type": "string"
+            },
+            "profileID": {
+              "description": "Authoritative hyphenated UUID (case preserved). Unknown IDs fail closed; a name never replaces the ID.",
+              "maxLength": 36,
+              "minLength": 36,
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "profileID"
+          ],
+          "type": "object"
+        },
         "settings_policy": {
+          "description": "Omit for source default: requested dates on iOS, saved settings on Android. saved_device_settings and legacy current_iphone_settings use saved settings on either source. Explicit requested_dates_only is unsupported on Android. Profile owns scope; iOS profiles require a future explicit advertisement and currently fail closed.",
           "enum": [
             "requested_dates_only",
-            "current_iphone_settings"
+            "current_iphone_settings",
+            "saved_device_settings",
+            "profile"
           ],
           "type": "string"
         },

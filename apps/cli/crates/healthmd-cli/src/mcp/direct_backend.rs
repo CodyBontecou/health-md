@@ -15,9 +15,9 @@ use healthmd_client::{
         RawArtifactPlatform, SourceKind, SourceStatus, StatusResult, WakeWindow,
     },
     file_receiver::FileReceiptPayload,
+    generated_files::GeneratedFileExportResult,
     job::{JobRecord, JobState},
     v2_job::V2JobRecord,
-    v2_receiver::V2ArtifactReceipt,
 };
 use healthmd_operations::{
     BackendCapabilities, BackendError, CallContext, CallerIdentity, CallerMode, HealthDataBackend,
@@ -40,7 +40,7 @@ use crate::pairing::{PairingCoordinator, PairingCoordinatorError};
 
 use super::{ServeError, ServeOptions};
 
-pub struct DirectIphoneBackend {
+pub struct DirectMobileBackend {
     client: Arc<DirectClient>,
     configuration: DirectBackendConfiguration,
     operation_gate: Arc<Mutex<()>>,
@@ -56,7 +56,7 @@ struct DirectBackendConfiguration {
     wake_requests: bool,
 }
 
-impl DirectIphoneBackend {
+impl DirectMobileBackend {
     pub fn open(options: &ServeOptions) -> Result<Self, ServeError> {
         let wake_window = configured_wake_window(options)?;
         let wake_requests = std::env::var("HEALTHMD_NO_WAKE").ok().as_deref() != Some("1");
@@ -135,7 +135,7 @@ impl DirectIphoneBackend {
 }
 
 #[async_trait]
-impl HealthDataBackend for DirectIphoneBackend {
+impl HealthDataBackend for DirectMobileBackend {
     fn capabilities(&self) -> BackendCapabilities {
         BackendCapabilities {
             source_kind: "paired_mobile".to_owned(),
@@ -143,7 +143,24 @@ impl HealthDataBackend for DirectIphoneBackend {
             supports_queries: true,
             supports_local_file_exports: true,
             requires_foreground_source: true,
-            instructions: "For an unpaired iPhone, call healthmd_pairing_start. Its negotiated MCP App renders the native image/png QR inline; if the host does not support MCP Apps, render the returned image directly. Tell the user to scan it from Health.md's Direct CLI Access screen, and poll healthmd_pairing_status; never run healthmd setup codex, healthmd direct pair, or reconstruct terminal QR glyphs from an MCP client. External custom-URL opens are not pairing consent. Android pairing remains an explicit out-of-MCP `healthmd direct pair` workflow. Keep Health.md foreground on the paired phone. On iPhone, use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. On iPhone or Android, healthmd_export_raw captures the complete supported public and user-authorized corpus into a private job-bound artifact; traverse it only with healthmd_raw_artifact_read. No Health.md Mac app or health-data cloud is required.".to_owned(),
+            instructions: "For an unpaired iPhone or Android phone, call healthmd_pairing_start. Its negotiated MCP App renders the native image/png QR inline; if the host does not support MCP Apps, render the returned image directly. Tell the user to scan it from Health.md's Direct CLI Access screen, and poll healthmd_pairing_status; never run healthmd setup codex, healthmd direct pair, or reconstruct terminal QR glyphs from an MCP client. External custom-URL opens are not pairing consent. The same QR supports iPhone and Android; manual entry remains available in the native app. Inspect healthmd_doctor for selected-source support; catalog availability is not installed-peer support. Android typed queries remain unsupported. Keep Health.md foreground on the paired phone. On iPhone, use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. On iPhone or Android, healthmd_export_raw captures the complete supported public and user-authorized corpus into a private job-bound artifact; traverse it only with healthmd_raw_artifact_read. No Health.md Mac app or health-data cloud is required.".to_owned(),
+        }
+    }
+
+    async fn selected_source_capabilities(&self, _context: &CallContext) -> Value {
+        match self
+            .client
+            .selected_source_kind(self.configuration.device_id)
+            .await
+        {
+            Ok(source) => source_capabilities(source),
+            Err(error) => json!({
+                "status": "unselected",
+                "error": backend_error(&error, None).code,
+                "supports_queries": false,
+                "supports_local_file_exports": false,
+                "supports_local_raw_exports": false
+            }),
         }
     }
 
@@ -210,8 +227,17 @@ impl HealthDataBackend for DirectIphoneBackend {
         context: &CallContext,
         request: QueryPageRequest,
     ) -> Result<Value, BackendError> {
+        let source = self
+            .client
+            .selected_source(self.configuration.device_id)
+            .await
+            .map_err(|error| backend_error(&error, None))?;
+        if source.platform == Some(healthmd_protocol::wire::PeerPlatform::Android) {
+            return Err(backend_error(&ClientError::QueryUnsupported, None));
+        }
+        let selected = Some(source.installation_id.0);
         let _gate = self.operation_gate.lock().await;
-        self.wait_for_active_source(context).await?;
+        self.wait_for_active_source_on(context, selected).await?;
         let detail_level = match request.detail_level {
             QueryDetailLevel::Summary => DirectQueryDetailLevel::Summary,
             QueryDetailLevel::Lossless => DirectQueryDetailLevel::Lossless,
@@ -225,7 +251,7 @@ impl HealthDataBackend for DirectIphoneBackend {
                     detail_level,
                     query: request.query,
                 },
-                self.configuration.device_id,
+                selected,
                 self.configuration.port,
                 self.configuration.timeout,
             )
@@ -247,20 +273,34 @@ impl HealthDataBackend for DirectIphoneBackend {
             Local::now().date_naive(),
         )
         .map_err(|_| BackendError::new("healthmd_invalid_export", "Invalid export arguments."))?;
-        let _gate = self.operation_gate.lock().await;
-        self.wait_for_active_source(context).await?;
-        self.client
-            .export_files(
+        let plan = self
+            .client
+            .prepare_generated_files(
                 invocation.request,
+                invocation.uses_source_default,
                 self.configuration.device_id,
-                self.configuration.port,
-                invocation.timeout,
             )
             .await
-            .map(|result| export_success(&result.receipt.payload))
-            .map_err(|error| backend_error(&error, Some(job_id)))
+            .map_err(|error| backend_error(&error, Some(job_id)))?;
+        let _gate = self.operation_gate.lock().await;
+        self.wait_for_active_source_on(context, Some(plan.source_id()))
+            .await?;
+        let result = self
+            .client
+            .export_generated_files(plan, self.configuration.port, invocation.timeout)
+            .await
+            .map_err(|error| backend_error(&error, Some(job_id)))?;
+        match result {
+            GeneratedFileExportResult::Ios(result) => Ok(export_success(&result.receipt.payload)),
+            GeneratedFileExportResult::Android(_) => self
+                .client
+                .android_generated_file_receipt(job_id)
+                .map(bounded_file_receipt)
+                .map_err(|error| backend_error(&error, Some(job_id))),
+        }
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn start_raw_export(
         &self,
         context: &CallContext,
@@ -498,7 +538,22 @@ impl HealthDataBackend for DirectIphoneBackend {
     ) -> Result<Value, BackendError> {
         match self.client.job_record(job_id) {
             Ok(record) => {
-                let mut receipt = ios_job_receipt(&record);
+                let mut receipt = if record.state == JobState::Completed
+                    && record.request.response_mode == ResponseMode::WriteFiles
+                {
+                    export_success(
+                        &self
+                            .client
+                            .generated_file_receipt(job_id)
+                            .map_err(|error| backend_error(&error, Some(job_id)))?
+                            .payload,
+                    )
+                } else {
+                    ios_job_receipt(&record)
+                };
+                receipt["state"] = json!(record.state);
+                receipt["expires_at"] = json!(record.expires_at);
+                receipt["settings_policy"] = json!(record.request.settings_policy);
                 if record.request.response_mode == ResponseMode::RawJson
                     && record.state == JobState::Completed
                     && record.response_artifact.is_some()
@@ -516,7 +571,21 @@ impl HealthDataBackend for DirectIphoneBackend {
                     .client
                     .v2_job_record(job_id)
                     .map_err(|error| backend_error(&error, Some(job_id)))?;
-                let mut receipt = android_job_receipt(&record);
+                let mut receipt = if record.state == JobState::Completed
+                    && matches!(
+                        record.request.product,
+                        v2::ExportProduct::GeneratedFilesV1 { .. }
+                    ) {
+                    bounded_file_receipt(
+                        self.client
+                            .android_generated_file_receipt(job_id)
+                            .map_err(|error| backend_error(&error, Some(job_id)))?,
+                    )
+                } else {
+                    android_job_receipt(&record)
+                };
+                receipt["state"] = json!(record.state);
+                receipt["expires_at"] = json!(record.request.expires_at);
                 if matches!(
                     record.request.product,
                     v2::ExportProduct::AndroidProviderNativeSnapshotV1 { .. }
@@ -598,7 +667,7 @@ impl HealthDataBackend for DirectIphoneBackend {
                     self.wait_for_active_source_on(context, Some(pinned))
                         .await?;
                 }
-                let result = self
+                let _result = self
                     .client
                     .resume_android(job_id, Some(pinned), self.configuration.port, timeout)
                     .await
@@ -613,7 +682,10 @@ impl HealthDataBackend for DirectIphoneBackend {
                         .map_err(|error| backend_error(&error, Some(job_id)))?;
                     Ok(durable_raw_export_success(job_id, &artifact))
                 } else {
-                    Ok(android_artifact_success(job_id, &result.receipt))
+                    self.client
+                        .android_generated_file_receipt(job_id)
+                        .map(bounded_file_receipt)
+                        .map_err(|error| backend_error(&error, Some(job_id)))
                 }
             }
             Err(error) => Err(backend_error(&error, Some(job_id))),
@@ -745,6 +817,7 @@ fn wake_backend_error(error: &ClientError, wake_window: WakeWindow) -> BackendEr
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn status_value(result: &StatusResult, wake: &Value) -> Value {
     let query = result.peer_capabilities.query.as_ref();
     match &result.status {
@@ -752,7 +825,8 @@ fn status_value(result: &StatusResult, wake: &Value) -> Value {
             let source_available = source.app_active && source.protected_data_available;
             let query_ready = source_available && source.can_trigger_queries.unwrap_or(false);
             let raw_export_ready = source_available && source.can_trigger_raw_exports;
-            let ready = query_ready || raw_export_ready;
+            let file_export_ready = source_available && source.can_trigger_file_exports;
+            let ready = query_ready || raw_export_ready || file_export_ready;
             json!({
                 "schema": "healthmd.direct_readiness",
                 "schema_version": 1,
@@ -760,6 +834,14 @@ fn status_value(result: &StatusResult, wake: &Value) -> Value {
                 "ready": ready,
                 "query_ready": query_ready,
                 "raw_export_ready": raw_export_ready,
+                "file_export_ready": file_export_ready,
+                "selected_source_support": {
+                    "platform": "ios",
+                    "supports_queries": query.is_some(),
+                    "supports_local_file_exports": source.can_trigger_file_exports,
+                    "supports_local_raw_exports": source.can_trigger_raw_exports,
+                    "profile_policy": "unsupported_without_explicit_advertisement"
+                },
                 "message": if query_ready {
                     "The authenticated direct iPhone query and export service is ready."
                 } else if raw_export_ready {
@@ -803,19 +885,32 @@ fn status_value(result: &StatusResult, wake: &Value) -> Value {
             let raw_export_supported = source
                 .available_products
                 .contains(&v2::ProductId::AndroidProviderNativeSnapshotV1);
-            let raw_export_ready =
-                source.app_active && source.protected_data_available && raw_export_supported;
+            let available = source.app_active && source.protected_data_available;
+            let raw_export_ready = available && raw_export_supported;
+            let file_export_supported = source
+                .available_products
+                .contains(&v2::ProductId::GeneratedFilesV1);
+            let file_export_ready = available && file_export_supported;
+            let ready = raw_export_ready || file_export_ready;
             json!({
                 "schema": "healthmd.direct_readiness",
                 "schema_version": 1,
-                "status": if raw_export_ready { "ready" } else { "unavailable" },
-                "ready": raw_export_ready,
+                "status": if ready { "ready" } else { "unavailable" },
+                "ready": ready,
                 "query_ready": false,
                 "raw_export_ready": raw_export_ready,
-                "message": if raw_export_ready {
-                    "The authenticated direct Android raw-export service is ready; typed queries are unsupported."
+                "file_export_ready": file_export_ready,
+                "selected_source_support": {
+                    "platform": "android",
+                    "supports_queries": false,
+                    "supports_local_file_exports": file_export_supported,
+                    "supports_local_raw_exports": raw_export_supported,
+                    "products": result.android_capabilities.as_ref().map(|hello| &hello.products)
+                },
+                "message": if ready {
+                    "The authenticated direct Android export service is ready; typed queries are unsupported."
                 } else {
-                    "The Android direct raw-export service is not ready. Keep Health.md foreground with Direct CLI Access enabled."
+                    "The Android direct export service is not ready. Keep Health.md foreground with Direct CLI Access enabled."
                 },
                 "device_name": source.source.display_name,
                 "application_protocol_version": result.application_protocol_version,
@@ -943,15 +1038,29 @@ fn attach_raw_artifact_metadata(
     });
 }
 
-fn android_artifact_success(job_id: Uuid, receipt: &V2ArtifactReceipt) -> Value {
+fn bounded_file_receipt(mut receipt: Value) -> Value {
+    if let Some(paths) = receipt
+        .get_mut("relative_paths")
+        .and_then(Value::as_array_mut)
+    {
+        let count = paths.len();
+        paths.truncate(256);
+        receipt["relative_path_count"] = json!(count);
+        receipt["relative_paths_truncated"] = json!(count > 256);
+    }
+    receipt["product"] = json!("generated_files");
+    receipt
+}
+
+fn source_capabilities(source: SourceKind) -> Value {
     json!({
-        "job_id": job_id,
-        "status": normalized_raw_status(&receipt.status),
-        "platform": "android",
-        "product": format!("{:?}", receipt.product_id).to_lowercase(),
-        "byte_count": receipt.byte_count,
-        "sha256": receipt.sha256,
-        "message": "Health.md completed and validated the Android direct export."
+        "status": "selected",
+        "platform": source.wire_name(),
+        "supports_queries": if source == SourceKind::Android { json!(false) } else { Value::Null },
+        "supports_local_file_exports": Value::Null,
+        "supports_local_raw_exports": Value::Null,
+        "support_basis": "trusted_platform_only; installed capabilities require healthmd_doctor",
+        "profile_policy": if source == SourceKind::Ios { "unsupported_without_explicit_advertisement" } else { "requires_settings_policy_advertisement" }
     })
 }
 
@@ -1003,6 +1112,10 @@ fn ios_job_receipt(record: &JobRecord) -> Value {
         value["destination_path"] = Value::String(destination.root_path.clone());
     }
     value["platform"] = json!("ios");
+    value["settings_policy"] = json!(record.request.settings_policy);
+    if let Some(reference) = &record.request.profile_reference {
+        value["profile_reference"] = json!(reference);
+    }
     value["product"] = json!(if record.request.response_mode == ResponseMode::RawJson {
         "raw_corpus"
     } else {
@@ -1057,6 +1170,21 @@ fn android_job_receipt(record: &V2JobRecord) -> Value {
             _ => "The durable direct Android export has not reached a terminal state.",
         }
     });
+    if !raw {
+        if let Some(destination) = &record.destination_root {
+            value["destination_path"] = json!(destination);
+        }
+        if let v2::ExportProduct::GeneratedFilesV1 {
+            settings_policy,
+            profile_reference,
+        } = &record.request.product
+        {
+            value["settings_policy"] = json!(settings_policy);
+            if let Some(reference) = profile_reference {
+                value["profile_reference"] = json!(reference);
+            }
+        }
+    }
     if raw && record.response_artifact.is_some() {
         value["artifact_access"] = json!({
             "tool": "healthmd_raw_artifact_read",
@@ -1112,7 +1240,12 @@ fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
         ),
         ClientError::QueryUnsupported => (
             "healthmd_query_unsupported",
-            "The paired iPhone does not advertise direct query support.",
+            "The selected mobile source does not advertise typed query support.",
+            false,
+        ),
+        ClientError::ExportUnsupported => (
+            "healthmd_export_unsupported",
+            "The selected source does not advertise the requested export product, settings policy, or selectors.",
             false,
         ),
         ClientError::QueryRejected { retryable, .. } => (
@@ -1235,7 +1368,7 @@ mod tests {
 
     #[test]
     fn android_readiness_advertises_raw_without_claiming_typed_queries() {
-        let result = StatusResult {
+        let mut result = StatusResult {
             status: SourceStatus::Android(v2::SourceStatus {
                 source: v2::SourceIdentity {
                     installation_id: Uuid::new_v4(),
@@ -1262,6 +1395,40 @@ mod tests {
         assert_eq!(readiness["query_ready"], false);
         assert_eq!(readiness["raw_export_ready"], true);
         assert_eq!(readiness["device_name"], "Android fixture");
+        if let SourceStatus::Android(source) = &mut result.status {
+            source.available_products = vec![v2::ProductId::GeneratedFilesV1];
+        }
+        let files = status_value(&result, &json!({"enabled": false}));
+        assert_eq!(files["ready"], true);
+        assert_eq!(files["raw_export_ready"], false);
+        assert_eq!(files["file_export_ready"], true);
+        assert_eq!(files["selected_source_support"]["supports_queries"], false);
+    }
+
+    #[test]
+    fn file_receipts_preserve_partial_outcomes_and_bound_path_lists() {
+        let value = export_success(&FileReceiptPayload {
+            job_id: SwiftUuid(Uuid::nil()),
+            status: "partial_success".into(),
+            destination_path: "/synthetic/exports".into(),
+            files_written: 1,
+            total_bytes: 5,
+            relative_paths: vec!["daily.md".into()],
+            success_count: 1,
+            total_count: 2,
+            failed_date_identifiers: vec!["synthetic-day".into()],
+        });
+        assert_eq!(value["status"], "partial_success");
+        assert_eq!(value["failed_date_identifier_count"], 1);
+        let paths = (0..300)
+            .map(|index| format!("file-{index}.md"))
+            .collect::<Vec<_>>();
+        let android = bounded_file_receipt(json!({"status": "success", "relative_paths": paths,
+            "settings_policy": "profile", "profile_reference": {"profile_id": "11111111-2222-4333-8444-555555555555"}}));
+        assert_eq!(android["relative_path_count"], 300);
+        assert_eq!(android["relative_paths"].as_array().unwrap().len(), 256);
+        assert_eq!(android["relative_paths_truncated"], true);
+        assert_eq!(android["settings_policy"], "profile");
     }
 
     #[test]
