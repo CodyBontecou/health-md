@@ -23,7 +23,7 @@ const absoluteClaims = [
   /Health\.md\s+never\s+(?:stores?|retains?|keeps?)\s+(?:your\s+)?health\s+data/i,
   /Health\.md\s+does not\s+(?:store|retain|keep)\s+(?:your\s+)?health\s+data(?!\s+(?:by default|unless))/i,
   /Health\.md\s+does not keep\s+a\s+server-side\s+health\s+corpus/i,
-  /\b(?:there is no|keeps no)\s+(?:Health\.md\s+)?health-data\s+cloud(?!\s+(?:hop|in (?:this|the) (?:path|loop)))/i,
+  /\b(?:there is no|keeps no)\s+(?:Health\.md\s+)?health-data\s+cloud(?!\s+hop)/i,
   /\bHealth\.md\s+(?:does not|doesn't)\s+(?:operate|run|provide)\s+a\s+health-data\s+cloud/i,
   /Health\.md cloud copies\s*None\b/i,
   /there is no Health\.md cloud account for your health archive/i,
@@ -121,6 +121,8 @@ export async function checkBuiltPublicPrivacy(outputRoot) {
     const source = await fs.readFile(path.join(ROOT, 'content/blog', `${slug}.md`), 'utf8');
     const updated = source.match(/^updated: "([^"]+)"$/m)[1].slice(0, 10);
     assert.equal(dates.get(`https://healthmd.app/blog/${slug}/`), updated, `${slug}: stale built blog revision date`);
+    const file = path.join('blog', slug, 'index.html');
+    assertPilotBoundaries(await read(file), defaultLocale, file);
   }
   for (const file of publicPrivacyPages) assertPilotBoundaries(await read(file), defaultLocale, file);
   for (const { code } of publishedLocales('landing')) {
@@ -138,6 +140,8 @@ export async function checkBuiltPublicPrivacy(outputRoot) {
       const copy = await read(guide);
       assertPilotBoundaries(copy, code, guide);
       assert.ok(copy.includes('href="/privacy-policy.html"'), `${guide}: missing canonical privacy policy link`);
+      const markdown = guide.replace(/index\.html$/, 'index.md');
+      assertPilotBoundaries(await read(markdown), code, markdown);
     }
   }
   const cliIndex = await read('docs/cli/llms.txt');

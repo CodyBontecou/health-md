@@ -1,16 +1,20 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
+import { marked } from 'marked';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { defaultLocale, publishedLocales } from '../i18n/locales.mjs';
 import { routePath } from '../i18n/routes.mjs';
-import { loadCatalog, renderLanding } from '../scripts/build-localized-pages.mjs';
-import { renderLegalPage } from '../scripts/build-localized-legal-pages.mjs';
+import { buildBlog } from '../scripts/build-blog.mjs';
+import { buildLocalizedLanding, loadCatalog, renderLanding } from '../scripts/build-localized-pages.mjs';
+import { buildLocalizedLegalPages, renderLegalPage } from '../scripts/build-localized-legal-pages.mjs';
 import { renderLocalizedSitemap } from '../scripts/build-localized-sitemap.mjs';
 import {
   assertPilotBoundaries,
   assertPublicPrivacyCopy,
+  checkBuiltPublicPrivacy,
   publicPrivacyPages,
 } from '../scripts/check-public-privacy.mjs';
 
@@ -99,6 +103,7 @@ test('guard rejects each prior blanket promise in body, metadata, and JSON-LD se
     'Health.md does not keep a server-side health corpus.',
     'Health.md does not store your health data.',
     'There is no Health.md health-data cloud.',
+    'There is no Health.md health-data cloud in the loop.',
     'Health.md keeps no health-data cloud.',
     'Health.md cloud copies None',
     'Health.md does not provide a health-data cloud.',
@@ -131,6 +136,40 @@ test('guard rejects each prior blanket promise in body, metadata, and JSON-LD se
     ]) assert.throws(() => assertPublicPrivacyCopy(html, 'regression'), /unqualified no-cloud promise/);
   }
   assert.doesNotThrow(() => assertPublicPrivacyCopy('<p>Health.md does not store your health data by default. Direct CLI requests do not use a Health.md health-data cloud. There is no Health.md health-data cloud hop or account in this direct workflow.</p>', 'local scope'));
+});
+
+test('built guard independently verifies translated Markdown and rendered blog disclosures', async () => {
+  const output = await mkdtemp(path.join(os.tmpdir(), 'healthmd-public-privacy-'));
+  const stage = async (file, content) => {
+    await mkdir(path.dirname(path.join(output, file)), { recursive: true });
+    await writeFile(path.join(output, file), content);
+  };
+  try {
+    await buildLocalizedLegalPages(output);
+    await buildBlog({ outputRoot: output });
+    for (const file of publicPrivacyPages) await stage(file, await read(file));
+    await stage('docs/cli/llms.txt', await read('docs-src/agent-docs/cli-llms.txt'));
+    for (const { code, path: localePath } of publishedLocales('landing')) {
+      await buildLocalizedLanding({ outputRoot: output, locale: code });
+      for (const slug of ['android', 'guides/platform-features']) {
+        const markdown = await read(path.join('docs-src/src/content/docs', localePath, `${slug}.md`));
+        await stage(path.join(localePath, 'docs', slug, 'index.md'), markdown);
+        await stage(path.join(localePath, 'docs', slug, 'index.html'), marked.parse(markdown));
+      }
+    }
+    await checkBuiltPublicPrivacy(output);
+    const file = 'de/docs/android/index.md';
+    const markdown = await readFile(path.join(output, file), 'utf8');
+    await stage(file, markdown.replace('nur für einen Eigentümer', 'für alle Benutzer'));
+    await assert.rejects(checkBuiltPublicPrivacy(output), /index\.md: missing localized pilot boundary/);
+    await stage(file, markdown);
+    const blog = 'blog/local-first-health-data-architecture/index.html';
+    const html = await readFile(path.join(output, blog), 'utf8');
+    await stage(blog, html.replace('optional single-owner', 'optional multi-user'));
+    await assert.rejects(checkBuiltPublicPrivacy(output), /index\.html: missing localized pilot boundary/);
+  } finally {
+    await rm(output, { recursive: true, force: true });
+  }
 });
 
 test('guard rejects JSON-LD/visible answer divergence even when both mention the pilot', () => {
