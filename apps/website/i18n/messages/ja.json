@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | 健康管理を、さらに一歩先へ",
-      "meta.description": "Apple HealthとHealth Connectのデータを、選んだファイル、スクリプト、エージェントにつなぐローカルファーストの橋渡しです。Health.mdはヘルスデータを保存しません。",
+      "meta.description": "Apple HealthとHealth Connectをファイル、スクリプト、エージェントにつなぐローカルファーストの橋渡しです。任意のHealth.md Cloudパイロットは単一所有者向けで、意図的にアップロードしたエクスポートのみを保存します。一般公開の登録はありません。",
       "meta.ogTitle": "健康管理を、さらに一歩先へ",
       "meta.twitterDescription": "Apple HealthとHealth Connectのデータを、いつものツールにつなぐプライベートなローカルブリッジです。",
       "schema.description": "Health.mdは、Apple HealthとAndroid Health Connectをローカルファイル、自動化、CLIワークフロー、ローカルエージェントにつなぐプライベートな橋渡しです。",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Google PlayでHealth.mdを入手",
       "fdroidAlt": "F-DroidでHealth.mdを入手",
       "fdroidBadgeKicker": "オープンソース版",
-      "trust": "Health.mdはヘルスデータを保存しません。<br>エクスポート先はすべて自分で選べます。",
+      "trust": "標準ではローカルで処理します。<br>任意のHealth.md Cloudパイロットは単一所有者向けで、意図的にアップロードしたエクスポートのみを保存します。一般公開の登録はありません。",
       "exportsTitle": "ヘルスデータを、<br>そのまま扱えるファイルに。",
       "exportsLede": "指標を選び、Markdown、JSON、CSV、Obsidian Basesとしてエクスポートできます。",
       "exportPhoneLabel": "白いiPhone 17 Proに表示されたApple Healthのサマリー",
@@ -76,7 +76,7 @@
       "savesWhereDetail": "フォルダ、Obsidian Vault、APIから選べます。",
       "unlockNote": "スケジュールエクスポートの実行時はiPhoneのロックを解除しておく必要があります。",
       "agentTitle": "ヘルスデータに、<br>質問できる。",
-      "agentLede": "Health.mdをCodex、Claude、またはターミナルに接続すれば、Health.mdクラウドを経由せず、指標、睡眠、ワークアウト、データのカバレッジを正確に照会できます。",
+      "agentLede": "Health.mdをCodex、Claude、またはターミナルに接続し、ペアリング済みデバイスから指標、睡眠、ワークアウト、データのカバレッジを正確に照会できます。別のクラウドパイロットが照会できるのは、意図的にアップロードしたエクスポートのみです。",
       "connectAgent": "エージェントを接続",
       "exploreCli": "CLI &amp; MCPを見る",
       "agentInterfaceLabel": "エージェントのインターフェースを選択",

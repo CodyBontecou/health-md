@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | Zet de volgende stap met je gezondheid",
-      "meta.description": "Een brug met lokale verwerking van Apple Health en Health Connect naar de bestanden, scripts en agents die je kiest. Health.md slaat je gezondheidsgegevens niet op.",
+      "meta.description": "Een lokale brug van Apple Health en Health Connect naar bestanden, scripts en agents. De optionele Health.md Cloud-pilot is uitsluitend voor één eigenaar en bewaart alleen bewust geüploade exports; geen openbare registratie.",
       "meta.ogTitle": "Zet de volgende stap met je gezondheid",
       "meta.twitterDescription": "Een lokale privéverbinding van Apple Health en Health Connect naar de tools die je al gebruikt.",
       "schema.description": "Health.md is een privéverbinding van Apple Health en Android Health Connect naar lokale bestanden, automatisering, CLI-workflows en lokale agents.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Download Health.md via Google Play",
       "fdroidAlt": "Download Health.md via F-Droid",
       "fdroidBadgeKicker": "OPEN-SOURCEVERSIE",
-      "trust": "Health.md slaat je gezondheidsgegevens niet op.<br>Jij kiest elke exportbestemming.",
+      "trust": "Standaard lokaal.<br>De optionele Health.md Cloud-pilot is uitsluitend voor één eigenaar en bewaart alleen bewust geüploade exports; geen openbare registratie.",
       "exportsTitle": "Je gezondheidsgegevens,<br>als gewone bestanden.",
       "exportsLede": "Kies je meetwaarden. Exporteer ze als Markdown, JSON, CSV of Obsidian Bases.",
       "exportPhoneLabel": "Apple Health-overzicht weergegeven op een witte iPhone 17 Pro",
@@ -76,7 +76,7 @@
       "savesWhereDetail": "Kies een map, Obsidian-kluis of API.",
       "unlockNote": "Je iPhone moet ontgrendeld zijn wanneer een geplande export wordt uitgevoerd.",
       "agentTitle": "Je gezondheidsgegevens,<br>klaar voor je vragen.",
-      "agentLede": "Verbind Health.md met Codex, Claude of je terminal. Stel exacte vragen over meetwaarden, slaap, work-outs en dekking zonder gegevens via een Health.md-cloud te sturen.",
+      "agentLede": "Verbind Health.md met Codex, Claude of je terminal voor exacte vragen over meetwaarden, slaap, work-outs en dekking vanaf een gekoppeld apparaat. De afzonderlijke cloudpilot kan alleen bewust geüploade exports bevragen.",
       "connectAgent": "Een agent verbinden",
       "exploreCli": "Bekijk CLI &amp; MCP",
       "agentInterfaceLabel": "Kies een agentinterface",

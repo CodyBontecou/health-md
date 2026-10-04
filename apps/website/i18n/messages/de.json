@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | Der nächste Schritt für Ihre Gesundheit",
-      "meta.description": "Eine lokale Brücke von Apple Health und Health Connect zu den Dateien, Skripten und Agenten Ihrer Wahl. Health.md speichert Ihre Gesundheitsdaten nicht.",
+      "meta.description": "Eine lokale Brücke von Apple Health und Health Connect zu Dateien, Skripten und Agenten. Der optionale Health.md Cloud-Pilot ist nur für einen Eigentümer vorgesehen und speichert ausschließlich bewusst hochgeladene Exporte; keine öffentliche Registrierung.",
       "meta.ogTitle": "Der nächste Schritt für Ihre Gesundheit",
       "meta.twitterDescription": "Eine private, lokale Brücke von Apple Health und Health Connect zu den Tools, die Sie bereits verwenden.",
       "schema.description": "Health.md ist eine private Brücke von Apple Health und Android Health Connect zu lokalen Dateien, Automatisierungen, CLI-Workflows und lokalen Agenten.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Health.md bei Google Play herunterladen",
       "fdroidAlt": "Health.md über F-Droid beziehen",
       "fdroidBadgeKicker": "OPEN-SOURCE-VERSION",
-      "trust": "Health.md speichert Ihre Gesundheitsdaten nicht.<br>Sie wählen jedes Exportziel selbst.",
+      "trust": "Standardmäßig lokal.<br>Der optionale Health.md Cloud-Pilot ist nur für einen Eigentümer vorgesehen und speichert ausschließlich bewusst hochgeladene Exporte; keine öffentliche Registrierung.",
       "exportsTitle": "Ihre Gesundheitsdaten<br>als gewöhnliche Dateien.",
       "exportsLede": "Wählen Sie Ihre Metriken. Exportieren Sie sie als Markdown, JSON, CSV oder Obsidian Bases.",
       "exportPhoneLabel": "Apple Health-Zusammenfassung auf einem weißen iPhone 17 Pro",
@@ -76,7 +76,7 @@
       "savesWhereDetail": "Wählen Sie einen Ordner, Obsidian-Vault oder eine API.",
       "unlockNote": "Ihr iPhone muss entsperrt sein, wenn ein geplanter Export ausgeführt wird.",
       "agentTitle": "Ihre Gesundheitsdaten:<br>bereit für Fragen.",
-      "agentLede": "Verbinden Sie Health.md mit Codex, Claude oder Ihrem Terminal. Stellen Sie präzise Fragen zu Metriken, Schlaf, Trainingseinheiten und Datenabdeckung, ohne Daten durch eine Health.md-Cloud zu leiten.",
+      "agentLede": "Verbinden Sie Health.md mit Codex, Claude oder Ihrem Terminal für präzise Fragen zu Metriken, Schlaf, Trainingseinheiten und Datenabdeckung von einem gekoppelten Gerät. Der separate Cloud-Pilot kann nur bewusst hochgeladene Exporte abfragen.",
       "connectAgent": "Agenten verbinden",
       "exploreCli": "CLI &amp; MCP entdecken",
       "agentInterfaceLabel": "Agentenoberfläche auswählen",

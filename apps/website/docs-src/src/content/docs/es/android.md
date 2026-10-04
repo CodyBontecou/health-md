@@ -5,7 +5,7 @@ description: Configura Health.md for Android, exporta datos de Health Connect a 
 
 <div class="docs-hero">
   <p class="docs-eyebrow">De Health Connect a archivos privados</p>
-  <p>Health.md for Android lee Health Connect en el dispositivo y escribe Markdown, Obsidian Bases, JSON o CSV en las carpetas que elijas. No necesitas una cuenta de Health.md, una nube para tus datos de salud ni una suscripción.</p>
+  <p>Health.md for Android lee Health Connect en el dispositivo y escribe Markdown, Obsidian Bases, JSON o CSV en las carpetas que elijas. Este flujo de exportación a carpetas no requiere una cuenta de Health.md, una nube para tus datos de salud ni una suscripción.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Descargar en Google Play</a>
     <a class="docs-button-secondary" href="https://f-droid.org/packages/com.healthmd.android/" target="_blank" rel="noopener">Descargar en F-Droid</a>
@@ -139,12 +139,14 @@ Health.md for Android prioriza el almacenamiento local:
 
 - Los registros de Health Connect se leen en tu dispositivo Android.
 - Las exportaciones se escriben directamente en las carpetas que elijas.
-- Health.md no ofrece un servicio en la nube para datos de salud.
+- Por defecto, las exportaciones a carpetas y las consultas directas al dispositivo no crean una copia en los servidores de Health.md.
 - Los ajustes y el historial de exportaciones permanecen en el dispositivo.
 - Google Play gestiona la facturación.
 - Las carpetas asociadas a un proveedor se sincronizan según las condiciones de ese proveedor.
 
 Si quieres la configuración local más estricta, ejecuta exportaciones manuales a una carpeta local del dispositivo y deja desactivadas las exportaciones programadas y la sincronización con proveedores.
+
+El piloto separado y opcional de Health.md Cloud es para un único propietario y conserva solo las exportaciones de API enviadas intencionalmente. No hay registro público ni sincronización automática de dispositivos; este flujo de carpetas no sube datos al piloto. Consulta la [política de privacidad](/privacy-policy.html) sobre conservación, eliminación, cuota y riesgos de pérdida sin copias de seguridad.
 
 ## Documentación relacionada
 
@@ -156,4 +158,4 @@ Si quieres la configuración local más estricta, ejecuta exportaciones manuales
   <a href="/es/docs/visualizations-roadmap/"><span>Obsidian</span>Cómo el JSON y el Markdown exportados alimentan las visualizaciones de Health.md.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última actualización: 2026-08-31</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última actualización: 2026-10-04</p>

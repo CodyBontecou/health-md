@@ -3,7 +3,7 @@ title: "What local-first health-data architecture actually means."
 description: "A concrete look at Health.md's phone reads, user-controlled destinations, direct transport, credentials, optional providers, and cloud boundaries."
 lead: "Local-first is an architectural boundary, not a slogan: know where health records are read, where they travel, and who controls every destination."
 date: "2026-09-22T13:50:00.000Z"
-updated: "2026-09-22T13:50:00.000Z"
+updated: "2026-10-04"
 category: "Engineering"
 draft: false
 tags:
@@ -25,7 +25,7 @@ The simplest workflow has no Health.md health-data server:
 2. Health.md builds the selected output on-device;
 3. it writes into a folder the user chose.
 
-That folder may be local, in an Obsidian vault, or exposed by a sync provider. If the user chooses iCloud Drive, Google Drive, OneDrive, Syncthing, or Obsidian Sync, that provider's own network and privacy model applies. “Health.md has no cloud hop” does not mean a user-selected destination cannot sync.
+That folder may be local, in an Obsidian vault, or exposed by a sync provider. If the user chooses iCloud Drive, Google Drive, OneDrive, Syncthing, or Obsidian Sync, that provider's own network and privacy model applies. The local folder workflow has no Health.md server hop, but a user-selected destination can still sync.
 
 ## Direct computer access
 
@@ -44,6 +44,12 @@ The bundled Mac MCP server is a production component of the Mac app. The standal
 Local-first does not ban networks. It makes remote movement explicit.
 
 The iPhone API Endpoint target POSTs selected JSON to a URL the user configures. Android raw snapshots can be sent to an explicitly selected HTTPS endpoint under stricter redirect and checksum rules. Connected provider features contact the provider the user chose. These are disclosed destinations, not a hidden Health.md relay.
+
+### Separate optional cloud pilot
+
+The optional single-owner Health.md Cloud pilot retains only API exports intentionally uploaded to it. There is no public signup and no automatic device sync. Local folder exports and direct CLI queries do not automatically create a copy there. A separately authorized read-only cloud MCP endpoint can return retained fields to an agent; agent hosts and model providers may process or retain those values under their own policies.
+
+The pilot retains original API-export JSON envelopes, including historical revisions and embedded source data, without an age cutoff, subject to its quota. It runs on an unbacked VM: disk, key, or VM loss can permanently destroy exports. Account deletion disables access immediately; background erasure is not instantaneous. It is not a generally available multi-user service. See the [privacy policy](/privacy-policy.html#retention) for the full boundaries.
 
 ## Analytics and billing boundaries
 

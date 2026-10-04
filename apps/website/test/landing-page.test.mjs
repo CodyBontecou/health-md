@@ -42,7 +42,7 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Move your<br>health forward\./);
   assert.match(index, /A private bridge for your health data<br>to your files, scripts, and agents\./);
   assert.match(index, /Your data\. Your rules\./);
-  assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
+  assert.match(index, /Local-first by default\.[\s\S]*optional single-owner Health\.md Cloud pilot[\s\S]*no public signup/);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
   assert.equal((index.match(/<section/g) ?? []).length, 5);
@@ -156,7 +156,7 @@ test("scheduling showcase explains recurring on-device exports", async () => {
 test("agent showcase connects scoped questions to contextual answers", async () => {
   assert.match(index, /<section class="agent-showcase" id="agents"/);
   assert.match(index, /Your health data,<br>ready for questions\./);
-  assert.match(index, /without routing data through a Health\.md cloud/);
+  assert.match(index, /from a paired device\. The separate single-owner cloud pilot can query only exports intentionally uploaded to it/);
   assert.match(index, /href="docs\/guides\/connect-agent\/"[\s\S]*?Connect an agent/);
   assert.match(index, /href="docs\/cli\/"[\s\S]*?Explore CLI &amp; MCP/);
   assert.ok(index.indexOf("Connect an agent") < index.indexOf("Explore CLI &amp; MCP"));
@@ -185,12 +185,14 @@ test("agent showcase connects scoped questions to contextual answers", async () 
   await access(path.join(ROOT, "assets/app-icon/healthmd-mark.png"));
 });
 
-test("product and legal copy reject Health.md server storage without hiding user destinations", () => {
+test("product and legal copy disclose the opt-in, unbacked cloud pilot without implying automatic collection", () => {
   const publicCopy = `${index}\n${privacyPolicy}\n${terms}`;
-  assert.match(privacyPolicy, /Health\.md does not collect or store (?:Apple Health, Health Connect, or other )?health data on Health\.md servers/i);
+  assert.match(privacyPolicy, /optional, unbacked single-owner Health\.md Cloud pilot stores API exports/);
+  assert.match(privacyPolicy, /no off-host backup or account recovery/);
   assert.match(privacyPolicy, /user-configured API endpoint/i);
   assert.match(privacyPolicy, /file provider/i);
-  assert.match(terms, /We do not collect or store your health data on Health\.md servers/);
+  assert.match(terms, /optional, unbacked single-owner Health\.md Cloud pilot stores API exports/);
+  assert.doesNotMatch(publicCopy, /Health\.md does not (?:collect or )?store (?:your )?health data/i);
   assert.doesNotMatch(publicCopy, /Hosted Account|hosted-data|serve-hosted|\/data\/v1\//i);
 });
 
@@ -201,7 +203,7 @@ test("privacy policy uses the landing design and describes the current app surfa
   assert.match(privacyPolicy, /<header class="site-header">/);
   assert.match(privacyPolicy, /<footer class="site-footer">/);
   assert.match(privacyPolicy, /Privacy,<br>in plain language\./);
-  assert.match(privacyPolicy, /Last updated: August 6, 2026/);
+  assert.match(privacyPolicy, /Last updated: October 4, 2026/);
   assert.match(privacyPolicy, /Scheduled Apple exports:[\s\S]*?APNs token/);
   assert.match(privacyPolicy, /Lossless files and direct results may preserve exact timestamps/);
   assert.match(privacyPolicy, /Android medical records \(FHIR\)/);
@@ -219,7 +221,7 @@ test("terms of service uses the legal design and covers the current product mode
   assert.match(terms, /<header class="site-header">/);
   assert.match(terms, /<footer class="site-footer">/);
   assert.match(terms, /Terms,<br>made readable\./);
-  assert.match(terms, /Last updated: August 6, 2026/);
+  assert.match(terms, /Last updated: September 28, 2026/);
   assert.match(terms, /consumer apps for iPhone, iPad, Mac, and Android/);
   assert.match(terms, /command-line and MCP tools where made available/);
   assert.match(terms, /preview, source-build, beta, or compatibility path/);

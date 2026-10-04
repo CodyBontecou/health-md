@@ -58,6 +58,16 @@ test("Vercel redirects dashboard and login entry points to the isolated account 
   }
 });
 
+test("Vercel redirects both legacy MCP routes to the AI marketing page", () => {
+  for (const source of ["/mcp", "/mcp/"]) {
+    assert.deepEqual(config.redirects.filter((entry) => entry.source === source), [{
+      source,
+      destination: "/health-data-for-ai/",
+      permanent: true,
+    }], `missing, duplicate, or incorrect MCP marketing redirect for ${source}`);
+  }
+});
+
 test("Vercel redirects clean legal URLs to the canonical html routes", () => {
   for (const locale of publishedLocales('legal')) {
     for (const routeId of ['privacy', 'terms']) {

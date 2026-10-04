@@ -53,10 +53,12 @@ URLs stay canonical. Do not translate commands, schema keys, metric IDs, filenam
 fixtures, code examples, or generated reference artifacts. Localized sample
 fixtures preserve the source values and physical units (human-facing abbreviations may be localized); regional unit conversion is separate product work.
 
-Localized legal pages are published as convenience translations for Spanish, German, French,
-Brazilian Portuguese, Italian, Dutch, Japanese, Korean, and Simplified Chinese. Each translation
-links to the controlling English version. A qualified human must review legal and health terminology
-before enabling any additional legal locale. Localized store badges and documentation social cards
+Legal pages are temporarily published in canonical English only. Previously published convenience
+translations for Spanish, German, French, Brazilian Portuguese, Italian, Dutch, Japanese, Korean,
+and Simplified Chinese predate the optional Health.md Cloud pilot; their source remains as `noindex`
+review drafts but is not shipped in `dist`. Old localized legal URLs temporarily redirect to the
+updated English pages. A qualified human must review each translated legal page before republishing
+it. Localized store badges and documentation social cards
 are required. Landing and first-export
 screenshots are configured in `i18n/locales.mjs`; any English fallback must be declared there. The
 authentic shared onboarding capture at `/docs/assets/docs/iphone-first-export/onboarding-start.webp`

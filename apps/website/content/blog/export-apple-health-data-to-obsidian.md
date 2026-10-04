@@ -3,7 +3,7 @@ title: "How to export Apple Health data to Obsidian."
 description: "A practical guide to exporting Apple Health data into an Obsidian vault with Health.md using Markdown, Obsidian Bases, JSON, CSV, and daily note workflows."
 lead: "Health.md turns the Apple Health data on your iPhone into plain files for an Obsidian vault: Markdown notes, Obsidian Bases-ready frontmatter, JSON, CSV, and optional Daily Note updates."
 date: "2026-06-13"
-updated: "2026-07-16"
+updated: "2026-10-04"
 category: "Workflow guide"
 draft: false
 image: "/assets/blog/export-apple-health-data-to-obsidian/healthmd-export-configuration.png"
@@ -120,7 +120,9 @@ A good starting set for Obsidian is:
 
 ## Keep it local-first
 
-Health.md is designed around files you control. HealthKit reads happen on your Apple devices, and the exported Markdown, Bases, JSON, and CSV files land in the folder you choose. There is no Health.md cloud account for your health archive. If you send exports to a Mac, the Mac acts as a local destination rather than a remote health-data service.
+Health.md is designed around files you control. HealthKit reads happen on your Apple devices, and the exported Markdown, Bases, JSON, and CSV files land in the folder you choose. This Obsidian folder workflow does not require a Health.md cloud account or create a Health.md server copy. If you send exports to a Mac, the Mac acts as a local destination rather than a remote health-data service.
+
+A separate, optional single-owner Health.md Cloud pilot retains API exports intentionally uploaded to it, subject to its quota. There is no public signup and no automatic device sync; this Obsidian folder workflow does not upload to it. The pilot is unbacked, retains accepted revisions without an age cutoff, and erases stored data asynchronously after account deletion disables access. See the [privacy policy](/privacy-policy.html#retention) for retention, deletion, and loss risks.
 
 That local-first shape matters for health data. You can back up the vault, sync it with the provider you already trust, version it with your own tools, or delete the exported files without asking a service to remove your account.
 

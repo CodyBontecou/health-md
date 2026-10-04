@@ -8,7 +8,7 @@
     "blog:build": "node scripts/build-blog.mjs --output dist",
     "test": "node --test",
     "three:bundle": "node scripts/build-three-hero.mjs",
-    "site:check": "node scripts/check-site-links.mjs && node scripts/check-built-locales.mjs && node scripts/check-agent-surfaces.mjs",
+    "site:check": "node scripts/check-site-links.mjs && node scripts/check-built-locales.mjs && node scripts/check-agent-surfaces.mjs && node scripts/check-public-privacy.mjs",
     "i18n:check": "node scripts/check-locales.mjs",
     "i18n:sitemap": "node scripts/build-localized-sitemap.mjs --write-source",
     "i18n:vercel": "node scripts/build-vercel-config.mjs",
