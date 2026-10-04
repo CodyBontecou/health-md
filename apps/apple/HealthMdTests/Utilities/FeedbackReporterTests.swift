@@ -10,8 +10,8 @@ final class FeedbackReporterTests: XCTestCase {
     // macOS 26 / Swift 6 deinit crashes (docs/testing/lifecycle-audit.md).
     private static var retainedReporters: [FeedbackReporter] = []
 
-    private func makeReporter(opener: @escaping FeedbackReporter.Opener) -> FeedbackReporter {
-        let reporter = FeedbackReporter(opener: opener)
+    private func makeReporter(strings: FeedbackFallbackCopy = .init(), opener: @escaping FeedbackReporter.Opener) -> FeedbackReporter {
+        let reporter = FeedbackReporter(opener: opener, strings: strings)
         Self.retainedReporters.append(reporter)
         return reporter
     }
@@ -108,6 +108,65 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertFalse(draft.copied)
         XCTAssertEqual(draft.copyConfirmation, "")
         XCTAssertEqual(draft.copyAccessibilityLabel, "")
+    }
+
+    private func localizedResources(_ language: String) throws -> Bundle {
+        // App-hosted XCTest uses the production app bundle. The isolated native
+        // runner compiles the same catalog into this test bundle, without mocks.
+        let path = [Bundle.main, Bundle(for: Self.self)].compactMap {
+            $0.path(forResource: language, ofType: "lproj")
+        }.first
+        return try XCTUnwrap(path.flatMap(Bundle.init(path:)), "Missing production resources: \(language)")
+    }
+
+    func testFallbackSheetAndHandoffMessagesUseEverySupportedLanguage() throws {
+        let english = FeedbackFallbackCopy(bundle: try localizedResources("en"), locale: Locale(identifier: "en"))
+        func fallbackValues(_ copy: FeedbackFallbackCopy) -> [String] {
+            [copy.mailQueueFailure, copy.emailHandoffFailure, copy.githubHandoffFailure,
+             copy.title, copy.instructions, copy.reportLabel, copy.copyReport, copy.reportCopied]
+        }
+        for language in ["de", "es", "fr", "it", "ja", "ko", "nl", "pt-BR", "zh-Hans"] {
+            let copy = FeedbackFallbackCopy(bundle: try localizedResources(language), locale: Locale(identifier: language))
+            let reporter = makeReporter(strings: copy) { _, completion in completion(false) }
+            reporter.open(.github)
+            let githubFailure = try XCTUnwrap(reporter.failure)
+            XCTAssertEqual(githubFailure.message, copy.githubHandoffFailure)
+            reporter.open(.email)
+            XCTAssertEqual(reporter.failure?.message, copy.emailHandoffFailure)
+            let sheet = FeedbackFailureView(failure: githubFailure, strings: copy)
+            for (actual, source) in zip(fallbackValues(sheet.strings), fallbackValues(english)) {
+                XCTAssertFalse(actual.isEmpty, language)
+                XCTAssertNotEqual(actual, source, "\(language) must not fall back to English recovery copy")
+            }
+        }
+    }
+
+    func testGermanAndJapaneseRecoveryInstructionsAndCopyConfirmation() throws {
+        let expected = [
+            ("de", "Feedback konnte nicht gesendet werden",
+             "Bearbeite den Bericht und kopiere ihn vor dem Schließen. Nichts wird automatisch gesendet. Vermeide private Gesundheitsdaten.",
+             "Feedback-Bericht", "Bericht kopieren", "Kopiert", "Bericht kopiert"),
+            ("ja", "フィードバックを送信できませんでした",
+             "レポートを編集し、閉じる前にコピーしてください。自動的に送信されることはありません。個人の健康データを含めないでください。",
+             "フィードバックのレポート", "レポートをコピー", "コピーされました", "レポートをコピーしました")
+        ]
+        for (language, title, instructions, reportLabel, copyReport, copied, reportCopied) in expected {
+            let copy = FeedbackFallbackCopy(bundle: try localizedResources(language), locale: Locale(identifier: language))
+            XCTAssertEqual(copy.title, title)
+            XCTAssertEqual(copy.instructions, instructions)
+            XCTAssertEqual(copy.reportLabel, reportLabel)
+            XCTAssertEqual(copy.copyReport, copyReport)
+            var draft = FeedbackReportDraft(reportText: "Synthetic report", strings: copy)
+            draft.copy { _ in true }
+            XCTAssertEqual(draft.copyConfirmation, copied)
+            XCTAssertEqual(draft.copyAccessibilityLabel, reportCopied)
+            draft.reportText = "Synthetic edited report"
+            XCTAssertEqual(draft.copyConfirmation, "")
+            XCTAssertEqual(draft.copyAccessibilityLabel, "")
+            draft.copy { _ in true }
+            XCTAssertEqual(draft.copyConfirmation, copied)
+            XCTAssertEqual(draft.copyAccessibilityLabel, reportCopied)
+        }
     }
 
     #if os(iOS)

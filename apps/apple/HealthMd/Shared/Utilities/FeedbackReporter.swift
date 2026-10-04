@@ -27,9 +27,11 @@ final class FeedbackReporter: ObservableObject {
     @Published var failure: Failure?
     private var pendingMailFailure: Failure?
     private let opener: Opener
+    private let strings: FeedbackFallbackCopy
 
-    init(opener: @escaping Opener = FeedbackReporter.openURL) {
+    init(opener: @escaping Opener = FeedbackReporter.openURL, strings: FeedbackFallbackCopy = .init()) {
         self.opener = opener
+        self.strings = strings
     }
 
     func open(_ route: Route) {
@@ -61,11 +63,11 @@ final class FeedbackReporter: ObservableObject {
     private func makeFailure(_ route: Route, mailCompletion: Bool) -> Failure {
         let message: String
         if mailCompletion {
-            message = String(localized: "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed.")
+            message = strings.mailQueueFailure
         } else if route == .email {
-            message = String(localized: "Health.md could not open your email app. You can write and copy a report here to send later or from another device.")
+            message = strings.emailHandoffFailure
         } else {
-            message = String(localized: "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device.")
+            message = strings.githubHandoffFailure
         }
         let body = route == .github ? FeedbackHelper.issueBody : "\n\n\(FeedbackHelper.diagnosticsBlock)"
         let text = "To: \(FeedbackHelper.supportEmail)\nGitHub: https://github.com/\(FeedbackHelper.githubRepo)/issues/new\nSubject: Health.md Feedback\n\n\(body)"
@@ -81,6 +83,32 @@ final class FeedbackReporter: ObservableObject {
     }
 }
 
+/// Production recovery copy with an injectable resource/locale boundary for native tests.
+struct FeedbackFallbackCopy {
+    var bundle: Bundle = .main
+    var locale: Locale = .current
+
+    var mailQueueFailure: String {
+        String(localized: "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed.", bundle: bundle, locale: locale)
+    }
+    var emailHandoffFailure: String {
+        String(localized: "Health.md could not open your email app. You can write and copy a report here to send later or from another device.", bundle: bundle, locale: locale)
+    }
+    var githubHandoffFailure: String {
+        String(localized: "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device.", bundle: bundle, locale: locale)
+    }
+    var title: String {
+        String(localized: "Feedback Could Not Be Sent", bundle: bundle, locale: locale)
+    }
+    var instructions: String {
+        String(localized: "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data.", bundle: bundle, locale: locale)
+    }
+    var reportLabel: String { String(localized: "Feedback report", bundle: bundle, locale: locale) }
+    var copyReport: String { String(localized: "Copy Report", bundle: bundle, locale: locale) }
+    var copied: String { String(localized: "Copied", bundle: bundle, locale: locale) }
+    var reportCopied: String { String(localized: "Report copied", bundle: bundle, locale: locale) }
+}
+
 /// Ephemeral editor state shared by the sheet and synthetic pasteboard tests.
 struct FeedbackReportDraft {
     var reportText: String {
@@ -89,41 +117,49 @@ struct FeedbackReportDraft {
         }
     }
     private(set) var copied = false
+    let strings: FeedbackFallbackCopy
+
+    init(reportText: String, strings: FeedbackFallbackCopy = .init()) {
+        self.reportText = reportText
+        self.strings = strings
+    }
 
     mutating func copy(using write: (String) -> Bool) {
         copied = write(reportText)
     }
 
-    var copyConfirmation: String { copied ? String(localized: "Copied") : "" }
-    var copyAccessibilityLabel: String { copied ? String(localized: "Report copied") : "" }
+    var copyConfirmation: String { copied ? strings.copied : "" }
+    var copyAccessibilityLabel: String { copied ? strings.reportCopied : "" }
 }
 
 /// An entirely local alternative: editable, selectable text plus an explicit copy action.
 /// It does not try another external URL or send/store any report automatically.
 struct FeedbackFailureView: View {
     let failure: FeedbackReporter.Failure
+    let strings: FeedbackFallbackCopy
     @State private var draft: FeedbackReportDraft
     @Environment(\.dismiss) private var dismiss
 
-    init(failure: FeedbackReporter.Failure) {
+    init(failure: FeedbackReporter.Failure, strings: FeedbackFallbackCopy = .init()) {
         self.failure = failure
-        _draft = State(initialValue: FeedbackReportDraft(reportText: failure.reportText))
+        self.strings = strings
+        _draft = State(initialValue: FeedbackReportDraft(reportText: failure.reportText, strings: strings))
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s4) {
-            Text("Feedback Could Not Be Sent")
+            Text(strings.title)
                 .font(Typography.headline())
             Text(failure.message)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data.")
+            Text(strings.instructions)
                 .font(Typography.caption())
             TextEditor(text: $draft.reportText)
                 .font(Typography.monoCaption())
-                .accessibilityLabel("Feedback report")
+                .accessibilityLabel(strings.reportLabel)
                 .frame(minHeight: 180)
             HStack {
-                Button("Copy Report") {
+                Button(strings.copyReport) {
                     draft.copy { text in
                         #if os(iOS)
                         UIPasteboard.general.string = text

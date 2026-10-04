@@ -35823,6 +35823,21 @@
         }
       }
     },
+    "Copy Report" : {
+      "comment" : "Explicit copy action in the local feedback fallback",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bericht kopieren" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy Report" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Copiar informe" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Copier le rapport" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Copia resoconto" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "レポートをコピー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보고서 복사" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Rapport kopiëren" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Copiar relatório" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "复制报告" } }
+      }
+    },
     "Copy profile ID" : {
       "comment" : "Accessibility label for the copy ID button"
     },
@@ -46105,6 +46120,21 @@
     "Edit Schedule…" : {
       "comment" : "Action opening the profile schedule editor"
     },
+    "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data." : {
+      "comment" : "Local feedback recovery and privacy instructions; reports are not sent or stored automatically",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bearbeite den Bericht und kopiere ihn vor dem Schließen. Nichts wird automatisch gesendet. Vermeide private Gesundheitsdaten." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit the report, then copy it before closing. Nothing is sent automatically. Avoid including private health data." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Edita el informe y cópialo antes de cerrar. No se envía nada automáticamente. Evita incluir datos de salud privados." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Modifiez le rapport, puis copiez-le avant de fermer. Rien n’est envoyé automatiquement. Évitez d’inclure des données de santé privées." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Modifica il resoconto e copialo prima di chiudere. Nulla viene inviato automaticamente. Evita di includere dati sanitari privati." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "レポートを編集し、閉じる前にコピーしてください。自動的に送信されることはありません。個人の健康データを含めないでください。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보고서를 편집한 다음 닫기 전에 복사하세요. 아무것도 자동으로 전송되지 않습니다. 개인 건강 데이터는 포함하지 마세요." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Bewerk het rapport en kopieer het voordat je sluit. Er wordt niets automatisch verzonden. Vermijd het opnemen van privégezondheidsgegevens." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Edite o relatório e copie-o antes de fechar. Nada é enviado automaticamente. Evite incluir dados de saúde privados." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "编辑报告，然后在关闭前复制。不会自动发送任何内容。请勿包含私密健康数据。" } }
+      }
+    },
     "Electrocardiograms" : {
       "comment" : "macOS Health metric picker UI",
       "localizations" : {
@@ -55520,6 +55550,36 @@
         }
       }
     },
+    "Feedback Could Not Be Sent" : {
+      "comment" : "Local feedback fallback sheet title",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Feedback konnte nicht gesendet werden" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Feedback Could Not Be Sent" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron enviar los comentarios" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Impossible d’envoyer les commentaires" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Impossibile inviare il feedback" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フィードバックを送信できませんでした" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "피드백을 보낼 수 없습니다" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Feedback kon niet worden verzonden" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Não foi possível enviar o feedback" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法发送反馈" } }
+      }
+    },
+    "Feedback report" : {
+      "comment" : "Accessibility label for the local feedback report editor",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Feedback-Bericht" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Feedback report" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Informe de comentarios" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rapport de commentaires" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Resoconto del feedback" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フィードバックのレポート" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "피드백 보고서" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Feedbackrapport" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Relatório de feedback" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "反馈报告" } }
+      }
+    },
     "Fever" : {
       "comment" : "macOS Health metric picker UI",
       "localizations" : {
@@ -62450,6 +62510,21 @@
         }
       }
     },
+    "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device." : {
+      "comment" : "Rejected GitHub handoff; opening a template is not submission",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Health.md konnte die GitHub-Issue-Vorlage nicht öffnen. Es wurde kein Issue eingereicht. Du kannst hier einen Bericht schreiben und kopieren, um ihn später oder von einem anderen Gerät aus einzureichen." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Health.md could not open the GitHub issue template. No issue was submitted. You can write and copy a report here to submit later or from another device." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Health.md no pudo abrir la plantilla de incidencias de GitHub. No se envió ninguna incidencia. Puedes escribir y copiar un informe aquí para enviarlo más tarde o desde otro dispositivo." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Health.md n’a pas pu ouvrir le modèle de ticket GitHub. Aucun ticket n’a été envoyé. Vous pouvez rédiger et copier un rapport ici pour l’envoyer plus tard ou depuis un autre appareil." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Health.md non ha potuto aprire il modello di segnalazione GitHub. Nessuna segnalazione è stata inviata. Puoi scrivere e copiare un resoconto qui per inviarlo in seguito o da un altro dispositivo." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Health.mdはGitHubのIssueテンプレートを開けませんでした。Issueは送信されていません。ここでレポートを作成してコピーし、後で、または別のデバイスから送信できます。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Health.md가 GitHub 이슈 템플릿을 열지 못했습니다. 이슈는 제출되지 않았습니다. 여기에서 보고서를 작성하고 복사하여 나중에 또는 다른 기기에서 제출할 수 있습니다." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Health.md kon het GitHub-issuesjabloon niet openen. Er is geen issue ingediend. Je kunt hier een rapport schrijven en kopiëren om het later of vanaf een ander apparaat in te dienen." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O Health.md não conseguiu abrir o modelo de issue do GitHub. Nenhuma issue foi enviada. Você pode escrever e copiar um relatório aqui para enviá-lo mais tarde ou de outro dispositivo." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Health.md无法打开GitHub问题模板。尚未提交任何问题。你可以在此编写并复制报告，稍后或从其他设备提交。" } }
+      }
+    },
     "Health.md could not open the selected export folder. The Files, iCloud Drive, or network location may be offline, or the saved folder permission may have expired." : {
       "comment" : "Detailed error: vault access denied",
       "localizations" : {
@@ -62513,6 +62588,21 @@
             "value" : "Health.md 无法打开选定的导出文件夹。文件、iCloud 驱动器或网络位置可能处于离线状态，或者保存的文件夹权限可能已过期。"
           }
         }
+      }
+    },
+    "Health.md could not open your email app. You can write and copy a report here to send later or from another device." : {
+      "comment" : "Rejected email handoff with a local copyable fallback",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Health.md konnte deine E-Mail-App nicht öffnen. Du kannst hier einen Bericht schreiben und kopieren, um ihn später oder von einem anderen Gerät aus zu senden." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Health.md could not open your email app. You can write and copy a report here to send later or from another device." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Health.md no pudo abrir tu app de correo. Puedes escribir y copiar un informe aquí para enviarlo más tarde o desde otro dispositivo." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Health.md n’a pas pu ouvrir votre app de messagerie. Vous pouvez rédiger et copier un rapport ici pour l’envoyer plus tard ou depuis un autre appareil." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Health.md non ha potuto aprire la tua app di posta. Puoi scrivere e copiare un resoconto qui per inviarlo in seguito o da un altro dispositivo." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Health.mdはメールアプリを開けませんでした。ここでレポートを作成してコピーし、後で、または別のデバイスから送信できます。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Health.md가 이메일 앱을 열지 못했습니다. 여기에서 보고서를 작성하고 복사하여 나중에 또는 다른 기기에서 보낼 수 있습니다." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Health.md kon je e-mailapp niet openen. Je kunt hier een rapport schrijven en kopiëren om het later of vanaf een ander apparaat te verzenden." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O Health.md não conseguiu abrir seu app de e-mail. Você pode escrever e copiar um relatório aqui para enviá-lo mais tarde ou de outro dispositivo." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Health.md无法打开你的邮件App。你可以在此编写并复制报告，稍后或从其他设备发送。" } }
       }
     },
     "Health.md could not read one or more requested data types from Apple Health." : {
@@ -75976,6 +76066,21 @@
             "value" : "镁"
           }
         }
+      }
+    },
+    "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed." : {
+      "comment" : "Mail completion failed; Mail editor text is not returned to Health.md",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Mail konnte dein Feedback nicht zum Versand vormerken. Die Zustellung wurde nicht bestätigt. Du kannst hier einen Bericht schreiben und kopieren. In Mail eingegebener Text ist in Health.md nicht verfügbar; gib ihn bei Bedarf unten erneut ein." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mail could not queue your feedback. No delivery was confirmed. You can write and copy a report here. Text entered in Mail is not available to Health.md; re-enter it below if needed." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mail no pudo poner tus comentarios en cola para enviarlos. No se confirmó la entrega. Puedes escribir y copiar un informe aquí. Health.md no tiene acceso al texto introducido en Mail; vuelve a escribirlo abajo si es necesario." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mail n’a pas pu mettre vos commentaires en attente d’envoi. Aucune livraison n’a été confirmée. Vous pouvez rédiger et copier un rapport ici. Health.md n’a pas accès au texte saisi dans Mail ; saisissez-le à nouveau ci-dessous si nécessaire." } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Mail non ha potuto mettere in coda il tuo feedback per l’invio. La consegna non è stata confermata. Puoi scrivere e copiare un resoconto qui. Health.md non ha accesso al testo inserito in Mail; reinseriscilo qui sotto se necessario." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メールはフィードバックを送信待ちにできませんでした。配信は確認されていません。ここでレポートを作成してコピーできます。メールで入力したテキストをHealth.mdは取得できません。必要に応じて下に再入力してください。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Mail이 피드백을 전송 대기열에 추가하지 못했습니다. 전달은 확인되지 않았습니다. 여기에서 보고서를 작성하고 복사할 수 있습니다. Health.md는 Mail에 입력한 텍스트에 접근할 수 없으므로 필요한 경우 아래에 다시 입력하세요." } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Mail kon je feedback niet in de verzendwachtrij plaatsen. De bezorging is niet bevestigd. Je kunt hier een rapport schrijven en kopiëren. Tekst die in Mail is ingevoerd, is niet beschikbaar in Health.md; voer deze zo nodig hieronder opnieuw in." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "O Mail não conseguiu colocar seu feedback na fila de envio. A entrega não foi confirmada. Você pode escrever e copiar um relatório aqui. O Health.md não tem acesso ao texto digitado no Mail; digite-o novamente abaixo, se necessário." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "邮件无法将你的反馈加入发送队列。尚未确认送达。你可以在此编写并复制报告。Health.md无法获取在邮件中输入的文字；如有需要，请在下方重新输入。" } }
       }
     },
     "Make Active & Edit" : {
@@ -95186,6 +95291,21 @@
             "value" : "在 GitHub 上报告错误"
           }
         }
+      }
+    },
+    "Report copied" : {
+      "comment" : "Accessibility confirmation after explicitly copying the current feedback report",
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Bericht kopiert" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Report copied" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Informe copiado" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rapport copié" } },
+        "it" : { "stringUnit" : { "state" : "translated", "value" : "Resoconto copiato" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "レポートをコピーしました" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보고서가 복사되었습니다" } },
+        "nl" : { "stringUnit" : { "state" : "translated", "value" : "Rapport gekopieerd" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Relatório copiado" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "报告已复制" } }
       }
     },
     "Reports are generated on your device and stay private until you explicitly share or save them." : {
