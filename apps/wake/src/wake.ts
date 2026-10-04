@@ -7,6 +7,7 @@
  */
 
 import { sendVisiblePush } from "./apns";
+import { jsonResponse, onlyFields, readJsonBody } from "./http";
 import {
   APNS_TOKEN_RE,
   decideDelivery,
@@ -37,22 +38,6 @@ export interface ApnsConfig {
   bundleId: string;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
-}
-
-async function readJsonBody(request: Request): Promise<Record<string, unknown> | null> {
-  try {
-    const body = await request.json();
-    return body && typeof body === "object" ? (body as Record<string, unknown>) : null;
-  } catch {
-    return null;
-  }
-}
-
 interface RegistrationRow {
   wake_id: string;
   user_id: string;
@@ -61,6 +46,7 @@ interface RegistrationRow {
   peer_label: string | null;
   created_at: number;
   rotated_at: number;
+  registration_version?: number;
 }
 
 function rowToCounter(row: unknown): CounterRow | null {
@@ -88,6 +74,10 @@ function rowToCounter(row: unknown): CounterRow | null {
 export async function handleWakeRegister(request: Request, env: WakeEnv): Promise<Response> {
   const body = await readJsonBody(request);
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
+
+  if (!onlyFields(body, ["userId", "deviceToken", "wakeKeyVerificationHash", "peerLabel", "wakeId"])) {
+    return jsonResponse({ error: "Invalid fields" }, 400);
+  }
 
   const { userId, deviceToken, wakeKeyVerificationHash, peerLabel } = body as {
     userId?: unknown;
@@ -124,9 +114,9 @@ export async function handleWakeRegister(request: Request, env: WakeEnv): Promis
       return jsonResponse({ error: "Invalid wakeId" }, 400);
     }
     const existing = await env.DB.prepare(
-      "SELECT user_id FROM wake_registrations WHERE wake_id = ?",
-    ).bind(existingWakeId).first<{ user_id: string }>();
-    if (!existing || existing.user_id !== userId) {
+      "SELECT * FROM wake_registrations WHERE wake_id = ?",
+    ).bind(existingWakeId).first<RegistrationRow>();
+    if (!existing || existing.user_id !== userId || existing.registration_version === 2) {
       return jsonResponse({ error: "wake_unknown" }, 404);
     }
     await env.DB.prepare(
@@ -151,6 +141,7 @@ export async function handleWakeUnregister(request: Request, env: WakeEnv): Prom
   const body = await readJsonBody(request);
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
 
+  if (!onlyFields(body, ["userId", "wakeId"])) return jsonResponse({ error: "Invalid fields" }, 400);
   const { userId, wakeId } = body as { userId?: unknown; wakeId?: unknown };
   if (typeof userId !== "string" || !USER_ID_RE.test(userId)) {
     return jsonResponse({ error: "Invalid userId" }, 400);
@@ -158,6 +149,11 @@ export async function handleWakeUnregister(request: Request, env: WakeEnv): Prom
   if (typeof wakeId !== "string" || !WAKE_ID_RE.test(wakeId)) {
     return jsonResponse({ error: "Invalid wakeId" }, 400);
   }
+
+  const existing = await env.DB.prepare("SELECT * FROM wake_registrations WHERE wake_id = ?")
+    .bind(wakeId).first<RegistrationRow>();
+  // V1 stays idempotent, but cannot erase v2 rows or reset their delivery policy.
+  if (existing?.registration_version === 2) return jsonResponse({ ok: true });
 
   await env.DB.prepare("DELETE FROM wake_registrations WHERE wake_id = ? AND user_id = ?")
     .bind(wakeId, userId).run();
@@ -174,6 +170,10 @@ export async function handleWakeRequest(
 ): Promise<Response> {
   const body = await readJsonBody(request);
   if (!body) return jsonResponse({ error: "Invalid JSON body" }, 400);
+
+  if (!onlyFields(body, ["wakeId", "nonce", "timestamp", "hmac", "peerLabel"])) {
+    return jsonResponse({ error: "Invalid fields" }, 400);
+  }
 
   const { wakeId, nonce, timestamp, hmac, peerLabel } = body as {
     wakeId?: unknown;
@@ -204,11 +204,11 @@ export async function handleWakeRequest(
   const registration = await env.DB.prepare(
     "SELECT * FROM wake_registrations WHERE wake_id = ?",
   ).bind(wakeId).first<RegistrationRow>();
-  if (!registration) {
+  if (!registration || registration.registration_version === 2) {
     return jsonResponse({ error: "wake_unknown" }, 404);
   }
 
-  // 2. HMAC proves the caller holds the raw key (keyed by the registered hash).
+  // 2. HMAC proves possession of the registered hash (it is itself a secret).
   const hmacValid = await verifyWakeHmac(
     registration.verification_hash,
     nonce,
@@ -267,9 +267,7 @@ export async function handleWakeRequest(
     },
   );
   if (result.status !== 200) {
-    // Honest degradation: the CLI treats any non-delivery as P1-only behavior.
-    // Log only the APNs reason — no identity beyond the opaque wakeId.
-    console.log(`wake ${wakeId} push failed: ${result.status} ${result.reason ?? "unknown"}`);
+    // Honest degradation, without logging raw upstream bodies, reasons, or IDs.
     return jsonResponse({ status: "undeliverable" });
   }
 
