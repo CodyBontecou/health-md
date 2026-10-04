@@ -1,0 +1,79 @@
+{
+  "schema": "healthmd.account_auth.source_capability_classifications",
+  "schema_version": 1,
+  "status": "proposed_not_product_ledger_registration",
+  "source_base": "e9a1d8757b679ea49820893537873ef3002604fe",
+  "capabilities": [
+    {
+      "id": "account.optional-native-sign-in",
+      "classification": "planned",
+      "platforms": {
+        "apple": {"state": "planned", "target": "AS02 disabled authority plus AS03 system-browser sign-in and AS12 qualification separately on iPhone, iPadOS and macOS; real callback registration needs mobile/security owner approval."},
+        "android": {"state": "planned", "target": "AS02 disabled authority plus AS04 system-browser sign-in on Play and F-Droid without Google identity dependencies; AS12 channel callback and physical qualification."}
+      },
+      "evidence": ["apps/cloud/src/auth.ts", "apps/cloud/src/password.ts", "docs/architecture/account-profile-sync-source-design.md"]
+    },
+    {
+      "id": "account.selected-portable-profile-sync",
+      "classification": "planned",
+      "platforms": {
+        "apple": {"state": "planned", "target": "AS05 independent contract, AS08 protected pending-revision/native mapping adapter and AS12 iPhone/iPadOS/macOS qualification; no Shared Setup import-loop implementation."},
+        "android": {"state": "planned", "target": "AS05 independent contract, AS09 protected pending-revision/native mapping adapter and AS12 Play/F-Droid qualification; preserve foreign extensions and local authority."}
+      },
+      "dashboard": {"state": "planned", "target": "AS06 separately approved config persistence and AS11 selected profile library, with config-specific privacy policy and owner activation."},
+      "evidence": ["packages/contracts/shared-setup/v2/contract.md", "packages/contracts/account-auth/v1/field-scope.json"]
+    },
+    {
+      "id": "account.local-revision-approval",
+      "classification": "planned",
+      "platforms": {
+        "apple": {"state": "planned", "target": "AS08/AS10 bind accepted immutable revision/hash to native rebind and execution snapshot, retain Configuration Protection and all manual/intent/direct/schedule checks; AS12 real-device evidence."},
+        "android": {"state": "planned", "target": "AS09/AS10 bind accepted immutable revision/hash to DataStore/native execution state and local grants, with Play/F-Droid and all automation/direct/schedule checks; AS12 real-device evidence."}
+      },
+      "evidence": ["apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV2ExecutionGate.swift", "apps/android/app/src/main/java/com/healthmd/data/settings/ExportProfileRepository.kt"]
+    },
+    {
+      "id": "account.sign-in-grants-health-or-execution",
+      "classification": "unavailable",
+      "platforms": {
+        "apple": {"state": "unavailable", "reason": "Configuration identity cannot authorize HealthKit, destination grants, upload/read tokens, profile activation, schedules or purchases; each is separately local/consented."},
+        "android": {"state": "unavailable", "reason": "Configuration identity cannot authorize Health Connect, SAF grants, upload/read tokens, profile activation, schedules or purchases; each is separately local/consented."}
+      },
+      "evidence": ["packages/contracts/account-auth/v1/source-policy.json", "packages/contracts/shared-setup/v2/contract.md"]
+    },
+    {
+      "id": "account.sync-app-global-preferences-v1",
+      "classification": "unavailable",
+      "platforms": {
+        "apple": {"state": "unavailable", "reason": "Outside this source interface; a separately reviewed settings contract is required, not assumed coverage by portable profile content."},
+        "android": {"state": "unavailable", "reason": "Outside this source interface; provider selection, permission history, onboarding, purchases and protection are not portable profiles."}
+      },
+      "evidence": ["apps/apple/HealthMd/Shared/Models/ConfigurationProtection.swift", "apps/android/app/src/main/java/com/healthmd/domain/repository/SettingsRepository.kt"]
+    },
+    {
+      "id": "profile-preference.healthkit-source-archive",
+      "classification": "apple_only",
+      "platforms": {
+        "apple": {"state": "available"},
+        "android": {"state": "unavailable", "reason": "Health Connect records cannot supply HealthKit canonical archive identity/source/relationship semantics. Preserve the foreign preference without applying it."}
+      },
+      "evidence": ["packages/contracts/shared-setup/v2/contract.md", "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"]
+    },
+    {
+      "id": "profile-preference.health-connect-raw-snapshot",
+      "classification": "android_only",
+      "platforms": {
+        "apple": {"state": "unavailable", "reason": "Android raw-snapshot source/route/page/scope semantics are not a HealthKit source archive. Preserve the foreign preference without applying it."},
+        "android": {"state": "available"}
+      },
+      "evidence": ["packages/contracts/shared-setup/v2/contract.md", "packages/contracts/shared-setup/v2/android-profile-field-coverage.json"]
+    }
+  ],
+  "unchanged_product_ledger_claim": {
+    "id": "export.profiles",
+    "classification": "shared",
+    "qualified_management_targets": ["iphone", "android"],
+    "unqualified_management_targets": ["ipados", "macos"],
+    "evidence": ["packages/contracts/product-capabilities.json", "apps/apple/docs/features/export-profiles.md"]
+  }
+}
