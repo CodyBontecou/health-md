@@ -24,8 +24,11 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Reusable workflows inherit github.workflow from the release caller. Keep
+  # this namespace distinct from the parent and isolate each qualification run
+  # so a later release cannot cancel (or replace a pending) exact-SHA suite.
+  group: apple-ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.release_sha && github.run_id || 'branch' }}
+  cancel-in-progress: ${{ !inputs.release_sha }}
 
 jobs:
   changes:
