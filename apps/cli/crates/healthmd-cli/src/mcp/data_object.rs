@@ -2030,10 +2030,12 @@ mod tests {
         #[test]
         fn ca_path_policy_accepts_unset_and_absolute_only() {
             assert_eq!(validated_ca_certificate_path(None).expect("unset"), None);
-            let absolute = "/absolute/path/ca.pem".to_owned();
+            let absolute = fixture("object-store-tls-ca.pem");
+            assert!(absolute.is_absolute(), "fixture has a native absolute path");
             assert_eq!(
-                validated_ca_certificate_path(Some(absolute.clone())).expect("absolute"),
-                Some(PathBuf::from(absolute))
+                validated_ca_certificate_path(Some(absolute.to_string_lossy().into_owned()))
+                    .expect("absolute"),
+                Some(absolute)
             );
             for value in [
                 "relative/ca.pem".to_owned(),
@@ -2044,6 +2046,17 @@ mod tests {
                     error_text(validated_ca_certificate_path(Some(value.clone()))),
                     "the object store CA certificate path must be absolute",
                     "value {value:?}"
+                );
+            }
+        }
+
+        #[cfg(windows)]
+        #[test]
+        fn ca_path_policy_rejects_drive_relative_and_root_relative_windows_paths() {
+            for value in [r"C:relative\ca.pem", r"\root-relative\ca.pem"] {
+                assert_eq!(
+                    error_text(validated_ca_certificate_path(Some(value.to_owned()))),
+                    "the object store CA certificate path must be absolute"
                 );
             }
         }
