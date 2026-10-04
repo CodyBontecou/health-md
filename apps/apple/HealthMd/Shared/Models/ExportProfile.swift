@@ -151,41 +151,35 @@ final class ExportProfileStore: ObservableObject {
     /// Re-reads persisted state so instances owned by different subsystems
     /// (UI coordinator, SchedulingManager, CLI paths) observe each other's
     /// mutations. Safe on the main thread, matching every existing call site.
+    /// Detail views call this during rendering: publishing equal values would
+    /// invalidate the same observed body again and prevent the UI from idling.
     private func reloadFromDefaults() {
         let hasV2 = ExportProfilePersistence.hasEnvelope(in: userDefaults)
         let key = hasV2 ? Key.listV2 : Key.list
-        if userDefaults.object(forKey: key) == nil {
-            profiles = []
-            opaqueProfileRecords = []
-            persistenceUnavailable = false
-            unknownProfileRecordCount = 0
-            activeProfileID = nil
-            return
+        let decoded = userDefaults.data(forKey: key).flatMap {
+            ExportProfilePersistence.decode($0, envelope: hasV2)
         }
-        guard let data = userDefaults.data(forKey: key),
-              let decoded = ExportProfilePersistence.decode(data, envelope: hasV2) else {
-            profiles = []
-            opaqueProfileRecords = []
-            persistenceUnavailable = true
-            unknownProfileRecordCount = opaqueProfileRecords.count + 1
-            activeProfileID = nil
-            return
+        let loadedProfiles = decoded?.profiles ?? []
+        let loadedOpaque = decoded?.opaque ?? []
+        persistenceUnavailable = userDefaults.object(forKey: key) != nil && decoded == nil
+
+        if loadedProfiles != profiles {
+            profiles = loadedProfiles
         }
-        persistenceUnavailable = false
-        if decoded.profiles != profiles {
-            profiles = decoded.profiles
+        if loadedOpaque != opaqueProfileRecords {
+            opaqueProfileRecords = loadedOpaque
         }
-        if decoded.opaque != opaqueProfileRecords {
-            opaqueProfileRecords = decoded.opaque
+        let unknownCount = loadedOpaque.count + (persistenceUnavailable ? 1 : 0)
+        if unknownProfileRecordCount != unknownCount {
+            unknownProfileRecordCount = unknownCount
         }
-        unknownProfileRecordCount = decoded.opaque.count
         let activeKey = hasV2 ? Key.activeProfileIDV2 : Key.activeProfileID
-        if let idString = userDefaults.string(forKey: activeKey),
-           let id = UUID(uuidString: idString),
-           decodedContainsProfile(withID: id, in: profiles) {
-            activeProfileID = id
-        } else {
-            activeProfileID = nil
+        let persistedID = userDefaults.string(forKey: activeKey).flatMap(UUID.init(uuidString:))
+        let loadedActiveID = persistedID.flatMap {
+            decodedContainsProfile(withID: $0, in: loadedProfiles) ? $0 : nil
+        }
+        if activeProfileID != loadedActiveID {
+            activeProfileID = loadedActiveID
         }
     }
 
