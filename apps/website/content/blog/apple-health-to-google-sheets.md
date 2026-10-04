@@ -26,6 +26,10 @@ Google Sheets is the underrated home for health data. It is free, it is familiar
 
 Every export produces one CSV file per day with the header `Date,Category,Metric,Value,Unit,Timestamp`. The `Value` column is mixed-type: alongside numbers, it contains schema identifiers, time-zone metadata, and raw-capture status. Depending on the metrics and data detail you export, it can also contain clock times, booleans, UUIDs, or quoted JSON. Populated `Timestamp` cells are ISO-8601; many summary rows have no timestamp. Save the files somewhere you can reach from a browser — iCloud Drive, the Files app, or AirDrop them to a Mac.
 
+This guide uses a local folder export followed by a file upload to Google Sheets. Health.md does not upload that local export to its own server; Google stores the file and spreadsheet you import under its own terms. If you choose a synced folder, its provider's rules apply too.
+
+This workflow doesn't use the separate opt-in, single-owner Health.md Cloud pilot. That pilot retains only API exports intentionally sent to it, has no public signup or automatic device sync, and is not generally available. See the [privacy policy](/privacy-policy.html) for that separate destination's boundaries.
+
 ## Step 2: Import into Google Sheets
 
 1. Create a blank spreadsheet in Google Sheets.

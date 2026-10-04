@@ -83,12 +83,13 @@ page; file-upload help lists CSV among supported types).
 
 ## ChatGPT path is file upload
 
-Health.md's MCP surface is the CLI/Mac MCP server (repo: `apps/cli`
-`healthmd-mcp` crate; Mac app bundles an MCP server). The consumer ChatGPT
-product has no MCP client connection to Health.md, so file upload is the
-accurate path there.
+For the file-upload tutorial, the ChatGPT path is to attach an exported file
+to a conversation. This shares a snapshot and does not configure the local
+CLI/MCP connection described as the alternative. It is not a claim about
+every ChatGPT integration or Health.md MCP topology.
 
-Verified: 2026-09-26
-Source: repository structure (`apps/cli`, Mac MCP server docs); conservative
-wording — asserts only what the file-upload path is, not a claim about
-OpenAI's roadmap.
+Verified: 2026-10-04
+Source: `content/blog/analyze-apple-health-with-claude.md`, Step 2 and its
+local-query alternative. This entry describes the tutorial's chosen workflow,
+not a product-wide capability limit. `test/blog-workflow-privacy.test.mjs`
+checks that scope in the article, ledger, and this entry.

@@ -16,10 +16,19 @@ Method: mixed
 - [x] **A new export requires a new upload; Claude only sees the file you hand it.**
   Follows from the Project knowledge model (no live file sync; manual re-upload).
   Conservative wording, no sync capability claimed.
-- [x] **ChatGPT path is file upload; there is no MCP connection to Health.md.**
-  Traced to repo (`apps/cli` `healthmd-mcp` crate, Mac bundled MCP server) —
-  Health.md's MCP surface is CLI/Mac-side. Registry: `verified-snippets.md` →
+- [x] **For this file-upload workflow, ChatGPT receives an attached export; the tutorial does not configure a local CLI/MCP connection.**
+  Scope corrected 2026-10-04: this describes the tutorial's selected path,
+  not every ChatGPT integration or Health.md MCP topology. The local CLI/MCP
+  alternative queries the paired phone; returned values follow the agent's
+  storage and model-provider settings. Registry: `verified-snippets.md` →
   "ChatGPT path is file upload".
+- [x] **The local folder export and deliberate AI upload are separate from the opt-in single-owner cloud pilot.**
+  Traced 2026-10-04 to PR #162's `apps/website/privacy-policy.html` (read-only
+  Scope, Destinations, and Security sections): the pilot retains only
+  intentionally uploaded API exports, has no public signup or automatic
+  device sync, and is not generally available. The tutorial excludes that
+  destination and states that synced folders and AI providers follow their
+  own policies. No pilot or AI upload was executed.
 - [x] **The six example prompts contain no diagnosis or treatment claims.**
   Reviewed individually 2026-09-26: all ask for patterns, summaries, and
   correlations, never diagnoses, treatments, or medical advice.
@@ -27,6 +36,7 @@ Method: mixed
   Checked in the post source; rendered in the prompts section.
 - [x] **Internal links resolve.**
   Covered by the site link checker (`check-site-links.mjs`): `/health-data-for-ai/`,
-  `/blog/query-apple-health-with-claude-or-codex/`, `/docs/guides/connect-agent/`.
+  `/blog/query-apple-health-with-claude-or-codex/`, `/docs/guides/connect-agent/`,
+  `/privacy-policy.html`.
 - [x] **No medical advice anywhere in the post.**
   Full read-through 2026-09-26: the post describes a file-upload workflow only.
