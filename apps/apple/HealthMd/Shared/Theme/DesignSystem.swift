@@ -455,30 +455,8 @@ extension View {
         modifier(GeistPillModifier(tint: tint))
     }
 
-    // Compatibility aliases: existing iOS code can keep the old names while the
-    // implementation now follows the Geist card recipe instead of glass.
-    func liquidGlassCard(cornerRadius: CGFloat = GeistRadius.md, padding: CGFloat = Spacing.s6) -> some View {
-        geistCard(cornerRadius: cornerRadius, padding: padding)
-    }
-
-    func minimalCard(cornerRadius: CGFloat = GeistRadius.md, padding: CGFloat = Spacing.s6) -> some View {
-        geistCard(cornerRadius: cornerRadius, padding: padding)
-    }
-
-    func glassCard(cornerRadius: CGFloat = GeistRadius.md, padding: CGFloat = Spacing.s6) -> some View {
-        geistCard(cornerRadius: cornerRadius, padding: padding)
-    }
-
     func subtleShadow() -> some View {
         shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 2)
-    }
-
-    func liquidGlassShadow() -> some View {
-        subtleShadow()
-    }
-
-    func softGlow(_ color: Color, radius: CGFloat = 0) -> some View {
-        self
     }
 }
 
@@ -557,32 +535,6 @@ struct LiquidGlassCapsuleModifier: ViewModifier {
             .padding(.vertical, Spacing.s2)
             .background((tint ?? Color.bgPrimary).opacity(tint == nil ? 1 : 0.12), in: Capsule())
             .overlay(Capsule().strokeBorder((tint ?? Color.borderSubtle).opacity(tint == nil ? 1 : 0.35), lineWidth: 1))
-    }
-}
-
-// MARK: - Simple Fade Animation
-
-struct SimpleFade: ViewModifier {
-    @State private var isVisible = false
-
-    func body(content: Content) -> some View {
-        content
-            .opacity(isVisible ? 1 : 0)
-            .onAppear {
-                withAnimation(AnimationTimings.smooth) {
-                    isVisible = true
-                }
-            }
-    }
-}
-
-extension View {
-    func simpleFade() -> some View {
-        modifier(SimpleFade())
-    }
-
-    func staggeredAppear(index: Int) -> some View {
-        self
     }
 }
 

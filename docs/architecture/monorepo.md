@@ -2,7 +2,11 @@
 
 ## Status
 
-Implementation began on 2026-07-24. The existing `CodyBontecou/health-md` repository remains canonical. Apple, CLI, Android, and website histories have been imported on `chore/monorepo-foundation`; deployment and old-repository cutover remain pending.
+`CodyBontecou/health-md` is the canonical monorepo. The layout and component ownership below
+describe the current checkout. Migration began on 2026-07-24; branch-era validation and
+operator-owned cutover/deployment evidence are preserved in the [cutover audit](../migration/cutover-audit.md)
+and [cutover checklist](../migration/cutover-checklist.md). Repository structure alone does not
+establish completion of external deployment or release gates.
 
 The monorepo contains six independently built product/service components:
 
@@ -60,7 +64,11 @@ Component release workflows use non-overlapping tag patterns:
 
 Website and wake-service production deploys are commit-based. Wake deployments must use committed, pushed `origin/main` source and remain independent from CLI artifact publication. Non-Apple releases must not become or depend on the repository-wide latest release.
 
-## Migration gates
+## Historical migration gates
+
+This is the original migration plan, not a live completion ledger. Use the linked cutover audit
+and checklist for recorded evidence and outstanding operator-owned gates. Unchecked items below
+retain their original planning state.
 
 1. [x] Record clean source revisions and commit maps.
 2. [x] Move Apple to `apps/apple` and update repository-root workflow paths.
@@ -73,7 +81,10 @@ Website and wake-service production deploys are commit-based. Wake deployments m
 9. [ ] Merge the migration and update/archive old development repositories after cutover.
 10. [ ] Extract shared contracts in a separate change.
 
-## Local validation
+## Historical local validation
+
+These observations belong to the original migration validation, not the current release candidate.
+Use component QA/CI commands to qualify the exact revision under review.
 
 - Shared Rust core: formatting, MSRV, tests, clippy, contract vectors, and host binding-generation checks pass in its independently locked workspace.
 - CLI: formatting, Cargo metadata, cargo-dist plan, and all CLI-workspace tests pass against the shared protocol path dependency.

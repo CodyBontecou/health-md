@@ -76,6 +76,12 @@ HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations \
 
 Update `external-sources.json` deliberately when adopting a new plugin revision, regenerate assets, and commit both changes together. `visualizations:sync` also refreshes the shipped Apple onboarding bundle and its daily/roll-up sample wrappers; drift tests require those resources to remain byte-identical to the website outputs.
 
+## Documentation editing
+
+Use the [source-ownership guide](docs-src/README.md) to choose authored content or its generator.
+Run `npm run docs:navigation`, `npm run i18n:check`, and `npm run docs:check` before pushing
+contributor-guide, localized-guide, or reference-publication changes.
+
 ## Apple reference documentation
 
 Apple reference sources are read directly from the sibling `apps/apple` component. Override discovery with `HEALTHMD_APP_ROOT` or `--source` when testing another checkout.
