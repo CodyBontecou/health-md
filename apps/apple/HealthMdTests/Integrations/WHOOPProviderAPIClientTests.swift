@@ -411,6 +411,31 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         XCTAssertEqual(requestCount, 1)
     }
 
+    func testHistoryDiscoveryExpiredTerminalPageDoesNotReturnALowerBound() async {
+        let clock = WHOOPHistoryTestClock()
+        let boundedClient = ExternalProviderAPIClient(session: session, whoopHistoryClock: clock.now)
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            clock.advance(by: .seconds(16 * 60))
+            return Self.response(request, status: 200, json: [
+                "records": [["start": "2010-01-02T03:04:05Z"]]
+            ])
+        }
+        do {
+            _ = try await boundedClient.discoverEarliestAvailableDate(
+                provider: .whoop, token: token(scope: "read:cycles")
+            )
+            XCTFail("Expected deadline failure, not a terminal-page lower bound")
+        } catch {
+            XCTAssertEqual(error as? ExternalProviderAPIError, .requestFailed(
+                statusCode: 0,
+                message: "WHOOP history discovery exceeded the time safety limit. Try again later."
+            ))
+        }
+        XCTAssertEqual(requestCount, 1)
+    }
+
     func testHistoryDiscoveryDeadlineCancelsAnInFlightResponse() async {
         let started = expectation(description: "History request started")
         let stopped = expectation(description: "History request cancelled")

@@ -426,13 +426,7 @@ struct ExternalProviderAPIClient: Sendable {
         var earliest: Date?
 
         while true {
-            try Task.checkCancellation()
-            guard whoopHistoryClock() < deadline else {
-                throw ExternalProviderAPIError.requestFailed(
-                    statusCode: 0,
-                    message: Self.whoopHistoryTimeoutMessage
-                )
-            }
+            try checkWHOOPHistoryDeadline(deadline)
             if let remaining = await whoopRateLimitGate.remainingSeconds() {
                 throw ExternalProviderAPIError.rateLimited(retryAfterSeconds: remaining)
             }
@@ -465,17 +459,28 @@ struct ExternalProviderAPIClient: Sendable {
                 throw ExternalProviderAPIError.invalidResponse
             }
             for record in records {
+                try checkWHOOPHistoryDeadline(deadline)
                 guard let date = Self.earliestTimestamp(in: record) else {
                     throw ExternalProviderAPIError.invalidResponse
                 }
                 if earliest == nil || date < earliest! { earliest = date }
             }
-            try Task.checkCancellation()
+            try checkWHOOPHistoryDeadline(deadline)
             guard let cursor = try Self.nextWHOOPCursor(in: object) else { return earliest }
             guard traversal.advance(to: cursor) else {
                 throw ExternalProviderAPIError.invalidResponse
             }
             nextToken = cursor
+        }
+    }
+
+    private func checkWHOOPHistoryDeadline(_ deadline: ContinuousClock.Instant) throws {
+        try Task.checkCancellation()
+        guard whoopHistoryClock() < deadline else {
+            throw ExternalProviderAPIError.requestFailed(
+                statusCode: 0,
+                message: Self.whoopHistoryTimeoutMessage
+            )
         }
     }
 
