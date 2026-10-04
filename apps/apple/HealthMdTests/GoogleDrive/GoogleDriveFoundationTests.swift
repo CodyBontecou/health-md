@@ -905,7 +905,8 @@ private actor BindingTestTransport: GoogleDriveHTTPTransport {
     }
 }
 
-private final class BindingTestDefaults: UserDefaults, @unchecked Sendable {
+// The write counter is used only by main-actor tests; UserDefaults is not Sendable.
+private final class BindingTestDefaults: UserDefaults {
     var destinationWrites = 0
     override func set(_ value: Any?, forKey key: String) {
         if key == "googleDrive.destinations.envelope" { destinationWrites += 1 }

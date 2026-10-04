@@ -73,7 +73,7 @@ actor GoogleDriveJournalStore { init() throws {}; func cleanupForDisconnect(dest
     static var removalCount = 0
     func removeAll(destinationID: UUID) throws { Self.removalCount += 1 }
 }
-final class CountingDefaults: UserDefaults, @unchecked Sendable {
+final class CountingDefaults: UserDefaults {
     var destinationWrites = 0
     override func set(_ value: Any?, forKey key: String) { if key == "googleDrive.destinations.envelope" { destinationWrites += 1 }; super.set(value, forKey: key) }
 }
@@ -319,6 +319,38 @@ CHECKS = r'''
 
 
 class DriveConnectionProtectionTests(unittest.TestCase):
+    def test_defaults_doubles_respect_unavailable_superclass_sendability(self):
+        native = (APPLE / "HealthMdTests/GoogleDrive/GoogleDriveFoundationTests.swift").read_text()
+        doubles = [
+            native[
+                native.index("private final class BindingTestDefaults:"):
+                native.index("private final class BindingTestKeychain:")
+            ],
+            STUBS[STUBS.index("final class CountingDefaults:"):STUBS.index("actor Gate {")],
+        ]
+        # Older local SDKs may not mark UserDefaults' Sendable conformance unavailable.
+        # Model that hosted Foundation contract as well as checking the actual local SDK.
+        unavailable_superclass = (
+            "class UserDefaults { func set(_ value: Any?, forKey key: String) {} }\n"
+            "@available(*, unavailable)\n"
+            "extension UserDefaults: @unchecked Sendable {}\n"
+        )
+        with tempfile.TemporaryDirectory(prefix=".drive-defaults-test-", dir=APPLE) as temp:
+            source = Path(temp) / "Defaults.swift"
+            for index, double in enumerate(doubles):
+                for superclass in ["import Foundation\n", unavailable_superclass]:
+                    for language_version in ["5", "6"]:
+                        with self.subTest(
+                            double=index, hosted_contract=superclass == unavailable_superclass,
+                            swift=language_version,
+                        ):
+                            source.write_text(superclass + double)
+                            subprocess.run(
+                                ["swiftc", "-typecheck", "-swift-version", language_version,
+                                 "-warnings-as-errors", str(source)],
+                                check=True, timeout=60,
+                            )
+
     def test_production_connection_and_stores_with_synthetic_acquisition(self):
         production = (APPLE / "HealthMd/Shared/GoogleDrive/GoogleDriveDestinationStore.swift").read_text()
         production = production.replace("import Combine\n", "")
