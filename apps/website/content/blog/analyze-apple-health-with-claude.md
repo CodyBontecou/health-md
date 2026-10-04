@@ -24,7 +24,9 @@ There are two honest ways to do this. This post covers the simple one: export a 
 
 In the Health.md app on your iPhone, run an export for the metrics and date range you're curious about. Choose CSV or JSON — both work for this, and CSV is the friendliest if you also want to peek at the data yourself in a spreadsheet.
 
-What you'll get: one file per day, with columns for `Date`, `Category`, `Metric`, `Value`, `Unit`, and `Timestamp`. Knowing that shape matters, because you'll tell Claude what each column means — it keeps the answers grounded instead of guessed.
+What you'll get: one file per day. CSV uses the header `Date,Category,Metric,Value,Unit,Timestamp`. Tell Claude which `Category` and `Metric` rows you want analyzed and to check their `Unit`. The `Value` field can also contain text or JSON, so it shouldn't treat every row as a numeric measurement.
+
+JSON is a nested daily object, with top-level `date`, `schema`, and `schema_version` fields and sections such as `activity`, `heart`, and `sleep` when those have data. It has fields and arrays, not CSV columns. Ask Claude to inspect the fields actually present, use the `units` and `time_context` metadata, and keep missing values separate from zero.
 
 Keep the export scoped. A month of sleep and steps is plenty for your first pass; you can always export more later.
 

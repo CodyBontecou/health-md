@@ -6,15 +6,22 @@ re-asserting the fact from memory.
 
 ## CSV export header contract
 
-The iPhone export produces one CSV file per day with the header
-`Date,Category,Metric,Value,Unit,Timestamp`. The `Value` column is numeric,
-`Timestamp` is ISO-8601. Summary rows omit the timestamp column; timestamped
-sample rows always include all six fields.
+The iPhone daily export produces one CSV file per day with the header
+`Date,Category,Metric,Value,Unit,Timestamp`. The `Value` column is mixed-type:
+metadata and capture-status strings appear alongside numbers; selected data
+can also add clock times, booleans, UUIDs, or quoted JSON. Filter by Category,
+Metric, and Unit before numeric analysis. Populated `Timestamp` cells are
+ISO-8601. Some summary rows have five fields without Timestamp; six-field
+metadata, diagnostic, and provenance rows may have an empty Timestamp.
+Timestamped sample rows have all six fields.
 
-Verified: 2026-09-26
-Source: built `apple-health-to-csv` landing page HTML (contains the exact
-header string); corroborated by `content/blog/export-apple-health-data-to-obsidian.md`
-("CSV exports use a stable `Date,Category,Metric,Value,Unit,Timestamp` header").
+Verified: 2026-10-04
+Source: `apps/apple/HealthMd/Shared/Export/CSVExporter.swift` and its production-generated
+`apps/apple/docs/reference/generated/core/summary-day.csv`, `lossless-day.csv`,
+and `csv-row-contracts.md` fixtures. The fixtures are produced by
+`apps/apple/HealthMdTests/Documentation/GeneratedExportDocumentation.swift`.
+`test/blog-export-workflows.test.mjs` checks the article and evidence against
+these producer artifacts.
 
 ## Google Sheets week-label formula
 
