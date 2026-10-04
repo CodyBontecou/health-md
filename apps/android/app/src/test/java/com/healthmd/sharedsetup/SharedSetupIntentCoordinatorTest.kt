@@ -8,8 +8,12 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.mockk
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -57,7 +61,7 @@ class SharedSetupIntentCoordinatorTest {
     }
 
     @Test
-    fun `newer async uri is not blocked by an older stalled provider read`() = runTest {
+    fun `newer async uri is not blocked by an older stalled provider read`() = runBlocking {
         val store = mockk<SharedSetupDocumentStore>()
         val firstUri = Uri.parse("content://synthetic/first.healthmdconfig")
         val secondUri = Uri.parse("content://synthetic/second.healthmdconfig")
@@ -70,14 +74,19 @@ class SharedSetupIntentCoordinatorTest {
             byteArrayOf(1)
         }
         io.mockk.every { store.read(secondUri) } returns byteArrayOf(2)
-        // Publish immediately where the read completes so the test observes results
-        // without idling a paused Robolectric main looper.
-        val coordinator = SharedSetupCoordinator(store, publishDispatcher = Dispatchers.Unconfined)
+        // Real provider threads must use a real-time deadline, not runTest's
+        // auto-advanced virtual clock. Join the cancelled job, not an arbitrary delay.
+        val readScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val coordinator = SharedSetupCoordinator(
+            store, publishDispatcher = Dispatchers.Unconfined, externalReadScope = readScope,
+        )
 
         try {
             coordinator.acceptExternalUriAsync(firstUri)
             assertThat(firstStarted.await(5, TimeUnit.SECONDS)).isTrue()
+            val firstRead = requireNotNull(readScope.coroutineContext[Job]).children.single()
             coordinator.acceptExternalUriAsync(secondUri)
+            assertThat(firstRead.isCancelled).isTrue()
 
             val newest = withTimeout(5_000) {
                 coordinator.imports.filterNotNull().first { pending ->
@@ -85,19 +94,22 @@ class SharedSetupIntentCoordinatorTest {
                 }
             }
             assertThat(requireNotNull(newest.bytes)).isEqualTo(byteArrayOf(2))
+            assertThat(releaseFirst.count).isEqualTo(1L)
+            assertThat(firstRead.isCompleted).isFalse()
 
             releaseFirst.countDown()
-            delay(100)
+            withTimeout(5_000) { firstRead.join() }
             assertThat(requireNotNull(coordinator.imports.first()?.bytes))
                 .isEqualTo(byteArrayOf(2))
         } finally {
             releaseFirst.countDown()
             coordinator.finishExternalImport()
+            readScope.cancel()
         }
     }
 
     @Test
-    fun `finish prevents a cancelled stalled read from publishing later`() = runTest {
+    fun `finish prevents a cancelled stalled read from publishing later`() = runBlocking {
         val store = mockk<SharedSetupDocumentStore>()
         val uri = Uri.parse("content://synthetic/stalled.healthmdconfig")
         val started = CountDownLatch(1)
@@ -108,16 +120,22 @@ class SharedSetupIntentCoordinatorTest {
             check(release.await(5, TimeUnit.SECONDS))
             byteArrayOf(9)
         }
-        // Publishing unconfined makes this test stronger: a read that wrongly survives
-        // finish() would publish immediately instead of waiting on a paused looper.
-        val coordinator = SharedSetupCoordinator(store, publishDispatcher = Dispatchers.Unconfined)
+        // Publishing unconfined exposes stale writes immediately; joining the IO job
+        // proves that finish() still suppresses publication after the provider returns.
+        val readScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val coordinator = SharedSetupCoordinator(
+            store, publishDispatcher = Dispatchers.Unconfined, externalReadScope = readScope,
+        )
 
         try {
             coordinator.acceptExternalUriAsync(uri)
             assertThat(started.await(5, TimeUnit.SECONDS)).isTrue()
+            val read = requireNotNull(readScope.coroutineContext[Job]).children.single()
             coordinator.finishExternalImport()
+            assertThat(read.isCancelled).isTrue()
+            assertThat(read.isCompleted).isFalse()
             release.countDown()
-            delay(100)
+            withTimeout(5_000) { read.join() }
 
             assertThat(coordinator.imports.first()).isNull()
             assertThat(coordinator.restorableExternalBytes()).isNull()
@@ -125,6 +143,7 @@ class SharedSetupIntentCoordinatorTest {
         } finally {
             release.countDown()
             coordinator.finishExternalImport()
+            readScope.cancel()
         }
     }
 
