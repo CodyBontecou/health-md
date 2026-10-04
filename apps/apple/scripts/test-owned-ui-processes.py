@@ -142,7 +142,8 @@ if {fault!r}=='signal-order':
   return process
  def numeric(group,number):
   reaped=group in anchors and anchors[group].returncode is not None
-  with pathlib.Path('signal-order').open('a') as f: f.write(str(number)+','+str(reaped)+'\\n')
+  # Signals.__str__ differs before Python 3.11; keep numeric syscall evidence.
+  with pathlib.Path('signal-order').open('a') as f: f.write(str(int(number))+','+str(reaped)+'\\n')
   if number and reaped: raise RuntimeError('forbidden real signal after anchor reap')
   return original_signal(group,number)
  m.subprocess.Popen=spawn; m.os.killpg=numeric
