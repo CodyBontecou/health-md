@@ -10,6 +10,10 @@
       "permanent": true
     },
     { "source": "/index.html", "destination": "/", "permanent": true },
+    { "source": "/dashboard", "destination": "https://account.healthmd.app/dashboard", "permanent": false },
+    { "source": "/dashboard/", "destination": "https://account.healthmd.app/dashboard", "permanent": false },
+    { "source": "/login", "destination": "https://account.healthmd.app/login", "permanent": false },
+    { "source": "/login/", "destination": "https://account.healthmd.app/login", "permanent": false },
     { "source": "/:path*/index.html", "destination": "/:path*/", "permanent": true },
     { "source": "/docs", "destination": "/docs/", "permanent": true },
     "__HEALTHMD_LOCALE_REDIRECTS__",
