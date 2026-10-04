@@ -2,6 +2,7 @@ package com.healthmd.rawchanges
 
 import android.content.Context
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.rawexport.HealthConnectRecordCatalog
 import com.healthmd.rawexport.RawAtomicExportSink
@@ -26,8 +27,6 @@ import com.healthmd.rawexport.RawSnapshotStatus
 import com.healthmd.rawexport.RawTypeReport
 import com.healthmd.rawexport.RawTypeStatus
 import com.healthmd.rawexport.withCanonicalIdentityAndHash
-import com.networknt.schema.JsonSchemaFactory
-import com.networknt.schema.SpecVersion
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.every
@@ -116,16 +115,53 @@ class RawChangesServiceTest {
     }
 
     @Test fun generatedArchiveValidatesAgainstPublishedDraft202012Schema() = runTest {
+        val schema = publishedSchema().loadSchema()
+        val cases = listOf(
+            emptyList(),
+            listOf(
+                NativeChange.Upsert(record("schema-record", 1)),
+                NativeChange.Delete("schema-record"),
+                NativeChange.Delete("unknown-record"),
+            ),
+        )
+        cases.forEach { changes ->
+            val source = FakeSource().apply {
+                pages += NativeChangesPage(changes, SecretChangesToken("terminal"), false, false)
+            }
+            val result = harness(source).service.bootstrap(scope()) { durableReceipt() } as RawChangesResult.Complete
+            val document = ObjectMapper().readTree(File(result.archive.location))
+
+            assertThat(document.get("events").size()).isEqualTo(changes.size)
+            assertThat(schema.validate(document)).isEmpty()
+        }
+    }
+
+    @Test fun publishedSchemaRejectsInvalidArchiveAndTransitiveRawRecordFields() = runTest {
         val source = FakeSource().apply {
-            pages += NativeChangesPage(emptyList(), SecretChangesToken("terminal"), false, false)
+            pages += NativeChangesPage(
+                listOf(NativeChange.Upsert(record("schema-record", 1))), SecretChangesToken("terminal"), false, false,
+            )
         }
         val result = harness(source).service.bootstrap(scope()) { durableReceipt() } as RawChangesResult.Complete
-        val schemaFile = repoFile("docs/export-contract/schemas/healthmd.raw_changes.v1.schema.json")
-        val schema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012).getSchema(schemaFile.toURI())
-        val document = ObjectMapper().readTree(File(result.archive.location))
-
+        val schema = publishedSchema().loadSchema()
+        val document = ObjectMapper().readTree(File(result.archive.location)) as ObjectNode
         assertThat(schema.validate(document)).isEmpty()
+
+        val invalidHeader = document.deepCopy()
+        (invalidHeader.get("header") as ObjectNode).put("version", 2)
+        assertThat(schema.validate(invalidHeader).any { it.type == "const" }).isTrue()
+
+        val invalidRecord = document.deepCopy()
+        (invalidRecord.at("/events/0/record/metadata/lastModifiedTime") as ObjectNode).put("nano", 1_000_000_000)
+        val recordErrors = schema.validate(invalidRecord)
+        assertThat(recordErrors.any {
+            it.type == "maximum" && it.instanceLocation.toString().endsWith("record.metadata.lastModifiedTime.nano")
+        }).isTrue()
     }
+
+    private fun publishedSchema() = RawChangesSchemaValidation(
+        requireNotNull(repoFile("docs/export-contract/schemas/healthmd.raw_changes.v1.schema.json").parentFile),
+    )
 
     @Test fun terminalTokenReceiptMetadataIsCommittedButHeaderDescribesConsumedToken() = runTest {
         val source = FakeSource().apply {
