@@ -124,6 +124,7 @@ jobs:
           ruby -c fastlane/Fastfile
           python3 -m py_compile scripts/*.py scripts/tests/*.py
           python3 scripts/tests/test_android_workflow_action_pins.py
+          python3 scripts/tests/test_run_wear_emulator_smoke.py
           python3 scripts/tests/test_android_release_documentation_policy.py
           python3 scripts/tests/test_extract_wear_release_evidence_archive.py
           python3 scripts/tests/test_validate_wear_release_attestation.py
