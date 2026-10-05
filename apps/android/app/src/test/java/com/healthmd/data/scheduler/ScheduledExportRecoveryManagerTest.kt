@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.export.RecoveryDiscardFence
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
@@ -31,10 +32,63 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import java.time.LocalDate
 import java.time.ZoneId
 
 class ScheduledExportRecoveryManagerTest {
+    @get:Rule val temporaryFolder = TemporaryFolder()
+
+    @Test
+    fun unassignedDefaultDiscardReplaysExactPendingIdentityWithoutClearingANewerOperation() = runTest {
+        val root = temporaryFolder.newFolder()
+        val context = mockk<Context> { every { noBackupFilesDir } returns root }
+        val day = LocalDate.ofEpochDay(10_000)
+        val old = PendingScheduledExportRequest(day, exportTarget = ExportTarget.API_ENDPOINT)
+        val original = ExportSettings(scheduleHour = 8, pendingScheduledExportRequests = listOf(old))
+        val settings = FakeSettingsRepository(initialSettings = original)
+        val health = FakeHealthRepository()
+        val manager = manager(settingsRepository = settings, healthRepository = health, context = context)
+        assertThat(manager.discardPendingAPIRecovery()).isTrue()
+        // Restore crash-left pending bytes while retaining a later unrelated configuration edit.
+        settings.updateExportSettings(original.copy(scheduleHour = 17))
+        manager.inspectPendingRecovery()
+        assertThat(settings.getExportSettings().pendingScheduledExportRequests).isEmpty()
+        assertThat(settings.getExportSettings().scheduleHour).isEqualTo(17)
+        val newer = old.copy(apiOperationId = "newly-admitted-operation")
+        settings.updateExportSettings(original.copy(pendingScheduledExportRequests = listOf(newer)))
+        manager.inspectPendingRecovery()
+        assertThat(settings.getExportSettings().pendingScheduledExportRequests).containsExactly(newer)
+        assertThat(health.fetchedDates).isEmpty()
+    }
+
+    @Test
+    fun startupFinishesDurableDefaultApiDiscardWithoutReadingOrChangingUnrelatedPending() = runTest {
+        val root = java.nio.file.Files.createTempDirectory("default-api-discard").toFile()
+        try {
+            val context = mockk<Context> { every { noBackupFilesDir } returns root }
+            val day = LocalDate.ofEpochDay(10_000)
+            val api = PendingScheduledExportRequest(day, exportTarget = ExportTarget.API_ENDPOINT,
+                apiOperationId = "discarded-operation", apiJournalRequired = true)
+            val folder = PendingScheduledExportRequest(day.minusDays(1), firstFailedAtMillis = 123L)
+            val settings = FakeSettingsRepository(initialSettings = ExportSettings(
+                scheduleEnabled = true, apiEndpointUrl = "https://synthetic.example.test",
+                pendingScheduledExportRequests = listOf(api, folder)), initialFolderUri = "content://synthetic")
+            val health = FakeHealthRepository()
+            val history = FakeExportHistoryRepository()
+            RecoveryDiscardFence(root).discard(listOf("discarded-operation"))
+            val manager = manager(settingsRepository = settings, healthRepository = health,
+                historyRepository = history, context = context)
+
+            manager.inspectPendingRecovery()
+
+            assertThat(settings.getExportSettings().pendingScheduledExportRequests).containsExactly(folder)
+            assertThat(settings.getExportSettings().scheduleEnabled).isTrue()
+            assertThat(health.fetchedDates).isEmpty()
+            assertThat(history.entries).isEmpty()
+        } finally { root.deleteRecursively() }
+    }
 
     @Test
     fun inspectPendingRecovery_returnsReadyWhenAppOpenPrerequisitesAreMet() = runTest {
@@ -496,10 +550,12 @@ class ScheduledExportRecoveryManagerTest {
         historyRepository: FakeExportHistoryRepository = FakeExportHistoryRepository(),
         rawSnapshotService: RawSnapshotService? = null,
         apiCredentialStore: APIExportCredentialStore? = null,
-    ): ScheduledExportRecoveryManager = ScheduledExportRecoveryManager(
-        applicationContext = mockk<Context>(relaxed = true) {
+        context: Context = mockk(relaxed = true) {
             every { resources } returns mockk(relaxed = true)
+            every { noBackupFilesDir } returns temporaryFolder.newFolder()
         },
+    ): ScheduledExportRecoveryManager = ScheduledExportRecoveryManager(
+        applicationContext = context,
         healthRepository = healthRepository,
         exportRepository = exportRepository,
         settingsRepository = settingsRepository,
