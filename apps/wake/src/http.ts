@@ -18,6 +18,36 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+/** Bounded callers only. JSON.parse validates syntax; the token walk rejects
+ * duplicate decoded keys before any parsed value can acquire authority.
+ * String tokens consume escaped quotes/punctuation as a unit. Each object has
+ * its own key set, so sibling objects may legitimately reuse a field name.
+ */
+function parseUniqueJson(text: string): unknown {
+  const value: unknown = JSON.parse(text);
+  const frames: { keys: Set<string> | null; expectingKey: boolean }[] = [];
+  const tokens = /"(?:[^"\\]|\\.)*"|[{}\[\],:]|[^"\s{}\[\],:]+/g;
+  for (const match of text.matchAll(tokens)) {
+    const token = match[0];
+    if (token === "{" || token === "[") {
+      frames.push({ keys: token === "{" ? new Set<string>() : null, expectingKey: true });
+    } else if (token === "}" || token === "]") {
+      frames.pop();
+    } else {
+      const frame = frames[frames.length - 1];
+      if (token === "," && frame) {
+        frame.expectingKey = true;
+      } else if (token.startsWith('"') && frame?.keys && frame.expectingKey) {
+        const key: unknown = JSON.parse(token);
+        if (typeof key !== "string" || frame.keys.has(key)) throw new Error("duplicate_json_key");
+        frame.keys.add(key);
+        frame.expectingKey = false;
+      }
+    }
+  }
+  return value;
+}
+
 async function readText(body: ReadableStream<Uint8Array> | null, maxBytes: number, signal?: AbortSignal): Promise<string> {
   if (!body) throw new Error("body_missing");
   const reader = body.getReader();
@@ -57,7 +87,7 @@ export async function readBoundedJson(response: Response, maxBytes = PROVIDER_MA
     void response.body?.cancel().catch(() => {});
     throw new Error("body_too_large");
   }
-  return JSON.parse(await readText(response.body, maxBytes, signal));
+  return parseUniqueJson(await readText(response.body, maxBytes, signal));
 }
 
 export async function readJsonBody(request: Request): Promise<Record<string, unknown> | null> {
@@ -75,7 +105,7 @@ export async function readJsonBody(request: Request): Promise<Record<string, unk
       }, REQUEST_TIMEOUT_MS);
     });
     const value: unknown = await Promise.race([
-      readText(request.body, REQUEST_MAX_BYTES, controller.signal).then((text) => JSON.parse(text)), deadline,
+      readText(request.body, REQUEST_MAX_BYTES, controller.signal).then(parseUniqueJson), deadline,
     ]);
     return isObject(value) ? value : null;
   } catch {

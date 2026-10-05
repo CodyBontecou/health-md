@@ -38,8 +38,10 @@ of, or ring a v2 row. V2 endpoints cannot manage or ring a v1 row.
 - Documented v1 fields, HMAC bytes/vector, defaults, visible APNs payload,
   delivery/dedupe/rate responses, and idempotent deletion remain supported.
   Unapproved extra fields (previously ignored) now return `400 Invalid fields`,
-  and oversized/stalled bodies return the existing `400 Invalid JSON body`.
-  This validation hardening prevents mixed transport fields or health arguments
+  and oversized/stalled bodies or duplicate decoded object keys return the
+  existing `400 Invalid JSON body`. Escaped key aliases and identical repeated
+  values are duplicates too; a later field cannot hide an earlier unapproved
+  value. This validation hardening prevents mixed transport fields or health arguments
   from being silently accepted. Provider/D1 exceptions are contained without
   raw exception logging. APNs JWT signing is request-local, not globally cached.
 
@@ -49,6 +51,9 @@ All requests are JSON objects with **exactly the approved fields**. There are no
 labels, health fields, operation arguments, metric IDs, calendar dates, URLs,
 provider payloads, topics, conditions, or arbitrary notification copy. Responses
 are JSON with `Cache-Control: no-store`; errors contain fixed codes only.
+Request objects must have unique decoded field names. Duplicate rejection occurs
+before authentication, D1 access or provider dispatch, without reflecting the
+request or logging it. Ordinary v1/v2 fields and proof transcripts are unchanged.
 
 ### POST `/wake/v2/register`
 
@@ -188,6 +193,15 @@ and parsed provider JSON ≤16 KiB; each request-body read/provider fetch+body
 ≤5 seconds; private config ≤16 KiB; PEM ≤8192 characters; RSA modulus 2048–4096
 bits; delivery/OAuth tokens ≤4096 ASCII characters. Request/provider streams
 are cancelled on overflow/deadline; error bodies are discarded without parsing.
+Parsed request/provider JSON rejects duplicate decoded keys in every object,
+including objects nested in arrays. Key comparison follows decoded JSON strings,
+without case folding or Unicode normalization. Repeated keys in separate sibling
+objects and punctuation/escapes inside string values remain valid. An ambiguous
+OAuth response prevents FCM dispatch; an ambiguous FCM acknowledgement cannot
+count as known acceptance. A valid authenticated request has already consumed
+its nonce before provider parsing, even when that parsing later fails; it cannot
+retry that nonce. This is not a claim that a provider notification can be recalled.
+Private service-account configuration parsing is outside this bounded I/O change.
 APNs success/error bodies are discarded, and APNs uses the same bounded
 provider timeout. No provider response, token, hash, raw key, identity, request
 body, or error text is logged or included in public receipts.
@@ -245,6 +259,13 @@ notification handling before this payload can be qualified.
 
 No numeric delivery latency, display reliability, background execution budget,
 or provider quota is inferred from these sources.
+
+2026-10-05 bounded validation follow-up: Workers best-practices and Streams
+references were retrieved again; installed types remain `5.20260903.1`, with an
+additional scratch-only `5.20261005.1` type check. Synthetic HTTP and the existing
+ephemeral local workerd/D1 test cover duplicate enrollment/ring/provider rejection
+and valid legacy/v2 behavior. This is Worker-source qualification only, not native
+FCM enrollment, device notification, deployment or complete B15 qualification.
 
 ## Later gates (not performed here)
 

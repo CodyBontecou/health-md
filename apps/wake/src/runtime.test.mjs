@@ -11,11 +11,16 @@ it("executes v2 enrollment, OAuth/FCM, replay, rotation and revoke on local work
   const bundle = await build({ entryPoints: ["src/index.ts"], bundle: true, format: "esm", platform: "browser", write: false });
   let oauthCalls = 0;
   let deliveryCalls = 0;
+  let ambiguousOAuth = false;
   const localJson = (body) => new LocalResponse(JSON.stringify(body), { headers: { "content-type": "application/json" } });
   // The locked Miniflare 5 alpha exposes a v4 options adapter and outbound service.
   const outboundService = async (request) => {
     if (request.url === "https://oauth2.googleapis.com/token") {
       oauthCalls++;
+      if (ambiguousOAuth) return new LocalResponse(
+        '{"access_token":"synthetic-first","access\\u005ftoken":"synthetic-runtime-access","token_type":"Bearer","expires_in":3600}',
+        { headers: { "content-type": "application/json" } },
+      );
       return localJson({ access_token: "synthetic-runtime-access", token_type: "Bearer", expires_in: 3600 });
     }
     if (request.url === "https://fcm.googleapis.com/v1/projects/synthetic-project/messages:send") {
@@ -47,9 +52,24 @@ it("executes v2 enrollment, OAuth/FCM, replay, rotation and revoke on local work
     const request = (path, body, method = "POST") => mf.dispatchFetch(`https://wake.invalid${path}`, {
       method, headers: { "content-type": "application/json" }, body: JSON.stringify(body),
     });
+    const rawRequest = (path, body) => mf.dispatchFetch(`https://wake.invalid${path}`, {
+      method: "POST", headers: { "content-type": "application/json" }, body,
+    });
     const body = await enrollment({ timestamp });
+    const ambiguousEnrollment = '{"delivery\\u0054oken":{"unapproved":"synthetic-marker"},' + JSON.stringify(body).slice(1);
+    const rejectedEnrollment = await rawRequest("/wake/v2/register", ambiguousEnrollment);
+    expect(rejectedEnrollment.status).toBe(400);
+    expect(await rejectedEnrollment.json()).toEqual({ error: "Invalid JSON body" });
+    expect((await DB.prepare("SELECT wake_id FROM wake_registrations").all()).results).toEqual([]);
     expect(await (await request("/wake/v2/register", body)).json()).toEqual({ wakeId: body.wakeId });
-    const delivery = await (await request("/wake/v2/request", await ringBody(body.wakeId, "cd".repeat(16), WAKE_HASH, timestamp))).json();
+    const firstRing = await ringBody(body.wakeId, "cd".repeat(16), WAKE_HASH, timestamp);
+    const rejectedRing = await rawRequest("/wake/v2/request", '{"hmac":null,' + JSON.stringify(firstRing).slice(1));
+    expect(rejectedRing.status).toBe(400);
+    expect(await rejectedRing.json()).toEqual({ error: "Invalid JSON body" });
+    expect(oauthCalls).toBe(0);
+    expect(deliveryCalls).toBe(0);
+    // The rejected duplicate did not burn this nonce or reserve a delivery.
+    const delivery = await (await request("/wake/v2/request", firstRing)).json();
     expect(oauthCalls).toBe(1);
     expect(deliveryCalls).toBe(1);
     expect(delivery).toEqual({ status: "delivered" });
@@ -68,6 +88,14 @@ it("executes v2 enrollment, OAuth/FCM, replay, rotation and revoke on local work
     expect(await DB.prepare("SELECT transport, registration_version FROM wake_registrations WHERE wake_id = ?").bind(legacy.wakeId).first())
       .toEqual({ transport: "apns", registration_version: 1 });
     expect(oauthCalls).toBe(1);
+    expect(deliveryCalls).toBe(1);
+    const secondBody = await enrollment({ timestamp, wakeId: "14".repeat(16) });
+    expect((await request("/wake/v2/register", secondBody)).status).toBe(200);
+    ambiguousOAuth = true;
+    const secondRing = await ringBody(secondBody.wakeId, "cd".repeat(16), WAKE_HASH, timestamp);
+    expect(await (await request("/wake/v2/request", secondRing)).json()).toEqual({ status: "undeliverable" });
+    expect(await (await request("/wake/v2/request", secondRing)).json()).toEqual({ error: "wake_nonce_replayed" });
+    expect(oauthCalls).toBe(2);
     expect(deliveryCalls).toBe(1);
   } finally { await mf.dispose(); }
 }, 20_000);
